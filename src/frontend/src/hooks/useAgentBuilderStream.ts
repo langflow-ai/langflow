@@ -87,7 +87,7 @@ export function useAgentBuilderStream(sessionId?: string) {
         // Use agent-builder endpoint which properly proxies to Langflow
         abortControllerRef.current = new AbortController();
 
-        const response = await fetch("/api/v1/agent-builder/stream", {
+        const response = await fetch("/api/v1/genesis-studio/agent-builder/stream", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

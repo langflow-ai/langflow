@@ -220,7 +220,8 @@ components:
   config:
     tool_name: data_transformer
     description: Data transformation and standardization tool
-    - format_phone_numbers
+    operations:
+      - format_phone_numbers
   provides:
   - useAs: tools
     in: extraction-agent

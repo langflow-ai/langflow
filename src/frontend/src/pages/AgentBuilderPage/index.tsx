@@ -346,7 +346,7 @@ export default function AgentBuilderPage() {
         <div className="mb-6">
           <div className="flex items-center justify-between gap-2">
             <h1 className="text-xl font-medium" style={{ color: '#350E84' }}>
-              AI Agent Builder
+              AI Studio
             </h1>
             {/* Project Selector */}
             <div className="flex items-center gap-2">

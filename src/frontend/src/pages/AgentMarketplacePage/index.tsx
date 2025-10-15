@@ -1,13 +1,21 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { debounce } from "lodash";
-import { Search, Grid3x3, List, Filter, ChevronDown } from "lucide-react";
+import { Search, Grid3x3, List, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-import AgentCard from "./components/AgentCard";
+import MarketplaceAgentCard from "./components/MarketplaceAgentCard";
 import AgentPagination from "./components/AgentPagination";
 import ListSkeleton from "../MainPage/components/listSkeleton";
-import useGetPublishedAgentsQuery from "@/controllers/API/queries/published-agent/use-get-publshed-agent";
+import { useGetAgentMarketplaceQuery } from "@/controllers/API/queries/agent-marketplace/use-get-agent-marketplace";
 
 export default function AgentMarketplacePage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -15,7 +23,13 @@ export default function AgentMarketplacePage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(12);
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
+  const [selectedCategory, setSelectedCategory] = useState<
+    string | undefined
+  >();
+  const [sortBy, setSortBy] = useState<"name" | "status">("name");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [tagFilter, setTagFilter] = useState<string | "all">("all");
+  const [pendingTag, setPendingTag] = useState<string | "all">("all");
 
   // Debounce the search query
   const debouncedSetSearchQuery = useCallback(
@@ -23,7 +37,7 @@ export default function AgentMarketplacePage() {
       setSearchQuery(value);
       setPageIndex(1); // Reset to first page when searching
     }, 1000),
-    [],
+    []
   );
 
   useEffect(() => {
@@ -34,30 +48,69 @@ export default function AgentMarketplacePage() {
     };
   }, [debouncedSearch, debouncedSetSearchQuery]);
 
-  const { data: publishedAgentsData, isLoading } = useGetPublishedAgentsQuery({
-    page: pageIndex,
-    size: pageSize,
-    category_id: selectedCategory,
-    is_published: true,
-    include_deleted: false,
+  const { data: marketplaceData, isLoading } = useGetAgentMarketplaceQuery(
+    {},
+    {
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  const items = marketplaceData?.items ?? [];
+
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    items.forEach((item) => {
+      const tags = Array.isArray(item.spec?.tags) ? item.spec?.tags : [];
+      tags.forEach((t) => set.add(t));
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [items]);
+
+  useEffect(() => {
+    if (isFilterOpen) {
+      setPendingTag(tagFilter);
+    }
+  }, [isFilterOpen, tagFilter]);
+
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredItemsBySearch = normalizedSearch
+    ? items.filter((item) => {
+        const name = (item.spec?.name ?? item.file_name)?.toLowerCase();
+        const tags = Array.isArray(item.spec?.tags)
+          ? item.spec?.tags.map((t) => t.toLowerCase())
+          : [];
+        return (
+          (name && name.includes(normalizedSearch)) ||
+          tags.some((t) => t.includes(normalizedSearch))
+        );
+      })
+    : items;
+
+  const filteredItems =
+    tagFilter !== "all" && tagFilter.trim() !== ""
+      ? filteredItemsBySearch.filter((item) => {
+          const tags = Array.isArray(item.spec?.tags) ? item.spec?.tags : [];
+          return tags.some((t) => t.toLowerCase() === tagFilter.toLowerCase());
+        })
+      : filteredItemsBySearch;
+
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    if (sortBy === "name") {
+      const an = (a.spec?.name ?? a.file_name).toLowerCase();
+      const bn = (b.spec?.name ?? b.file_name).toLowerCase();
+      return an.localeCompare(bn);
+    }
+    const as = (a.spec?.status ?? "").toString().toLowerCase();
+    const bs = (b.spec?.status ?? "").toString().toLowerCase();
+    return as.localeCompare(bs);
   });
 
-  const agents = publishedAgentsData?.items ?? [];
-  
-
-  const filteredAgents = searchQuery 
-    ? agents.filter(agent => 
-        agent.display_name && 
-        agent.display_name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : agents;
-
-  const paginationData = {
-    page: publishedAgentsData?.page ?? 1,
-    size: publishedAgentsData?.size ?? 12,
-    total: publishedAgentsData?.total ?? 0,
-    pages: publishedAgentsData?.pages ?? 0,
-  };
+  const total = sortedItems.length;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(pageIndex, pages);
+  const start = (currentPage - 1) * pageSize;
+  const end = start + pageSize;
+  const visibleItems = sortedItems.slice(start, end);
 
   const handlePageChange = useCallback((newPageIndex: number) => {
     setPageIndex(newPageIndex);
@@ -69,43 +122,118 @@ export default function AgentMarketplacePage() {
   }, []);
 
   return (
-    <div className="flex h-full w-full flex-col overflow-y-auto bg-gray-50 dark:bg-background">
-      <div className="flex h-full w-full flex-col 3xl:container">
-        <div className="flex flex-1 flex-col p-6">
-          {/* Header */}
-          <div className="mb-6">
-            <h1 className="text-2xl font-semibold text-foreground mb-6">
-              Agent Marketplace
-            </h1>
+    <div className="flex h-full w-full flex-col overflow-y-auto bg-[#FBFAFF] dark:bg-background">
+      <div className="flex h-full w-full flex-col">
+        <div className="mx-auto flex w-full max-w-[1384px] flex-1 flex-col gap-4 p-4 md:p-6">
+          {/* Header + Controls Row */}
+          <div className="flex w-full items-center justify-between gap-4">
+            {/* Left: Title + Search */}
+            <div className="flex items-center gap-4">
+              <h1
+                className="text-[#350E84] text-[21px] font-medium leading-normal not-italic"
+              >
+                Agent Marketplace
+              </h1>
+            </div>
 
-            {/* Search and Controls */}
+            {/* Right: Sort + Filter + View Toggle */}
             <div className="flex items-center gap-3">
               {/* Search Input */}
-              <div className="relative flex-1 max-w-md">
+              <div className="relative w-[500px] max-w-[500px]">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="text"
                   placeholder="Search agents..."
                   value={debouncedSearch}
                   onChange={(e) => setDebouncedSearch(e.target.value)}
-                  className="pl-10"
+                  className="h-9 rounded-md border border-[#EBE8FF]"
                 />
               </div>
 
-              {/* Sort By */}
-              <Button variant="outline" className="gap-2">
-                <span className="text-sm">Sort By</span>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Sort By</span>
+                <Select
+                  value={sortBy}
+                  onValueChange={(v) => setSortBy(v as typeof sortBy)}
+                >
+                  <SelectTrigger className="h-8 w-[160px] rounded-md border border-[#EBE8FF] text-sm">
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">Name</SelectItem>
+                    <SelectItem value="status">Status</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-              {/* Filter */}
-              <Button variant="outline" className="gap-2">
-                <Filter className="h-4 w-4" />
-                <span className="text-sm">Filter</span>
-              </Button>
+              {/* Filter Button + Popover */}
+              <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-2 rounded-md border border-[#EBE8FF]"
+                    aria-label="Filter"
+                  >
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    Filter
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="end"
+                  className="w-[360px] rounded-md border border-[#EBE8FF] bg-white p-4 shadow-md"
+                >
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="text-base font-semibold">Tags</div>
+                      <Select
+                        value={pendingTag}
+                        onValueChange={(v) => setPendingTag(v as string)}
+                      >
+                        <SelectTrigger className="h-10 w-full rounded-md border border-[#EBE8FF] text-sm">
+                          <SelectValue placeholder="All Tags" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-64 overflow-y-auto">
+                          <SelectItem value="all">All Tags</SelectItem>
+                          {allTags.map((t) => (
+                            <SelectItem key={t} value={t}>
+                              {t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 rounded-md border border-[#EBE8FF]"
+                        onClick={() => {
+                          setPendingTag(tagFilter);
+                          setIsFilterOpen(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-9 rounded-md bg-[#350E84] text-white hover:bg-[#2D0B6E]"
+                        onClick={() => {
+                          setTagFilter(pendingTag);
+                          setPageIndex(1);
+                          setIsFilterOpen(false);
+                        }}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
 
               {/* View Toggle */}
-              <div className="flex items-center gap-1 rounded-md border p-1">
+              <div className="flex items-center gap-1 rounded-md border border-[#EBE8FF] p-1">
                 <Button
                   variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="sm"
@@ -131,7 +259,7 @@ export default function AgentMarketplacePage() {
             <div
               className={
                 viewMode === "grid"
-                  ? "grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
+                  ? "grid auto-rows-fr grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
                   : "flex flex-col gap-4"
               }
             >
@@ -145,34 +273,47 @@ export default function AgentMarketplacePage() {
               <div
                 className={
                   viewMode === "grid"
-                    ? "grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
+                    ? "grid auto-rows-fr grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
                     : "flex flex-col gap-4"
                 }
               >
-                {filteredAgents.map((agent) => (
-                  <AgentCard key={agent.id} agent={agent} />
+                {visibleItems.map((item) => (
+                  <MarketplaceAgentCard
+                    key={`${item.folder_name}/${item.file_name}`}
+                    item={item}
+                    viewMode={viewMode}
+                  />
                 ))}
               </div>
 
               {/* Empty State */}
-              {filteredAgents.length === 0 && (
+              {sortedItems.length === 0 && (
                 <div className="flex h-64 items-center justify-center text-muted-foreground">
-                  {searchQuery 
-                    ? "No agents found matching your search."
-                    : "No published agents available yet."
-                  }
+                  {searchQuery
+                    ? "No marketplace agents match your search."
+                    : "No marketplace agents available yet."}
+                </div>
+              )}
+
+              {/* Results Counter */}
+              {!isLoading && total > 0 && (
+                <div className="mt-2 flex items-center justify-end text-xs text-[#444444]">
+                  {`Showing ${start + 1} - ${Math.min(
+                    end,
+                    total
+                  )} results of ${total}`}
                 </div>
               )}
             </>
           )}
 
           {/* Pagination */}
-          {!isLoading && paginationData.total > 0 && (
+          {!isLoading && total > 0 && (
             <div className="mt-6 flex justify-end border-t pt-4">
               <AgentPagination
-                currentPage={paginationData.page}
-                pageSize={paginationData.size}
-                totalPages={paginationData.pages}
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalPages={pages}
                 onPageChange={handlePageChange}
                 onPageSizeChange={handlePageSizeChange}
               />
