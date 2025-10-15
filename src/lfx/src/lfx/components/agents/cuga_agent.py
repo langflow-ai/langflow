@@ -327,7 +327,7 @@ class CugaComponent(ToolCallingAgentComponent):
 
             response_parts.append(f"Processed input: '{current_input}'")
             response_parts.append(f"Available tools: {len(tools)}")
-            final_response = "CUGA Agent Response:\n" + "\n".join(response_parts)
+            # final_response = "CUGA Agent Response:\n" + "\n".join(response_parts)
             last_event: StreamEvent = None
             tool_run_id = None
             # 3. Chain end event with AgentFinish
@@ -351,17 +351,26 @@ class CugaComponent(ToolCallingAgentComponent):
                 if isinstance(event, StreamEvent):
                     tool_run_id = str(uuid.uuid4())
                     last_event = StreamEvent(name=event.name, data=event.data)
-                    yield {"event": "on_tool_start", "run_id": tool_run_id, "name": event.name, "data": {"input": {}}}
+                    tool_event = {
+                        "event": "on_tool_start",
+                        "run_id": tool_run_id,
+                        "name": event.name,
+                        "data": {"input": {}},
+                    }
+                    logger.debug(f"[CUGA] Yielding tool_start event: {event.name}")
+                    yield tool_event
 
                 if isinstance(event, AgentResult):
                     task_result = event
-                    yield {
+                    end_event = {
                         "event": "on_chain_end",
                         "run_id": str(uuid.uuid4()),
                         "name": "CugaAgent",
                         "data": {"output": AgentFinish(return_values={"output": task_result.answer}, log="")},
                     }
-                    logger.info(f"[CUGA] Generated response: {final_response}")
+                    answer_preview = task_result.answer[:100] if task_result.answer else "None"
+                    logger.info(f"[CUGA] Yielding chain_end event with answer: {answer_preview}...")
+                    yield end_event
             # task_result: AgentResult = await cuga_agent.run_task_generic_yield(
             #     eval_mode=False, goal=current_input, on_progress=on_progress
             # )
@@ -421,8 +430,21 @@ class CugaComponent(ToolCallingAgentComponent):
             # Process events using the existing event processing system
             from lfx.base.agents.events import process_agent_events
 
+            # Create a wrapper that forces DB updates for event handlers
+            # This ensures the UI can see loading steps in real-time via polling
+            async def force_db_update_send_message(message, id_=None, *, skip_db_update=False):  # noqa: ARG001
+                # Always persist to DB so polling-based UI shows loading steps in real-time
+                content_blocks_len = len(message.content_blocks[0].contents) if message.content_blocks else 0
+                logger.debug(
+                    f"[CUGA] Sending message update - state: {message.properties.state}, "
+                    f"content_blocks: {content_blocks_len}"
+                )
+                result = await self.send_message(message, id_=id_, skip_db_update=False)
+                logger.debug(f"[CUGA] Message saved to DB with ID: {result.id if result else 'None'}")
+                return result
+
             result = await process_agent_events(
-                event_iterator, agent_message, cast("SendMessageFunctionType", self.send_message)
+                event_iterator, agent_message, cast("SendMessageFunctionType", force_db_update_send_message)
             )
 
             logger.info("[CUGA] Agent run finished successfully.")

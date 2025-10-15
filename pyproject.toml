@@ -134,7 +134,7 @@ dependencies = [
     "fastparquet>=2024.11.0,<2025.0.0",
     "traceloop-sdk>=0.43.1,<1.0.0",
     "vlmrun[all]>=0.2.0",
-    "cuga==0.1.1.dev7",
+    "cuga==0.1.2.dev2",
 
 ]
 
@@ -193,7 +193,6 @@ dev = [
 langflow-base = { workspace = true }
 langflow = { workspace = true }
 lfx = { workspace = true }
-cuga = { path = "../cuga-agent", editable = true }
 
 [tool.uv.workspace]
 members = [
