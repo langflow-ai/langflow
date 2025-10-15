@@ -139,5 +139,49 @@ test(
     await page.getByTestId("handle-agent-shownode-tools-left").first().click();
 
     expect(await page.locator(".react-flow__edge").count()).toBeGreaterThan(0);
+
+    await page.getByTestId("button_run_url").click();
+    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+
+    await page.getByTestId("output-inspection-toolset-urlcomponent").click();
+
+    expect(await page.getByTestId("tool_name").count()).toBeGreaterThan(0);
+
+    expect(await page.getByTestId("tool_description").count()).toBeGreaterThan(
+      0,
+    );
+
+    expect(await page.getByTestId("tool_tags").count()).toBeGreaterThan(0);
+    await page.getByText("Close").last().click();
+
+    await page.getByTestId("sidebar-custom-component-button").click();
+
+    await page.getByTestId("title-Custom Component").click();
+
+    await page.getByTestId("tool-mode-button").click();
+
+    await page.waitForSelector(
+      '[data-testid="output-inspection-toolset-customcomponent"]',
+      {
+        timeout: 100000,
+      },
+    );
+
+    await page.waitForTimeout(1000);
+
+    await page.getByTestId("button_run_custom component").click();
+
+    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+
+    await page
+      .getByTestId("output-inspection-toolset-customcomponent")
+      .last()
+      .click();
+
+    expect(await page.getByTestId("tool_name").count()).toBeGreaterThan(0);
+
+    expect(await page.getByTestId("tool_description").count()).toBe(0);
+
+    expect(await page.getByTestId("tool_tags").count()).toBe(0);
   },
 );
