@@ -1,7 +1,11 @@
+# SECURITY WARNING: This workflow uses pull_request_target to enable commenting on fork PRs.
+# DO NOT checkout or execute code from fork PRs - this could allow malicious code execution with write permissions.
+# Fork PRs are detected and handled safely by skipping checkout/build steps.
+
 name: Update Component Index
 
 on:
-  pull_request:
+  pull_request_target:
     paths:
       - "src/lfx/src/lfx/components/**"
       - "scripts/build_component_index.py"
@@ -15,11 +19,12 @@ jobs:
   update-index:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository (PR)
-        if: github.event_name == 'pull_request'
+      - name: Checkout repository (PR from same repo only)
+        if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout repository (workflow_dispatch)
@@ -29,19 +34,42 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install uv
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository)
         uses: astral-sh/setup-uv@v6
         with:
           version: "latest"
 
       - name: Install dependencies
-        run: uv sync --dev
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository)
+        run: uv sync --dev --project .
+
+      - name: Check if script exists
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository)
+        id: check_script
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Checking for script at: scripts/build_component_index.py"
+          ls -la scripts/ || echo "scripts/ directory not found"
+          if [ ! -f scripts/build_component_index.py ]; then
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Script not found - PR needs to be rebased with main"
+            echo "Repository contents:"
+            ls -la
+            echo "Checking git history for the script:"
+            git log --oneline --all -- scripts/build_component_index.py | head -5 || echo "No history found"
+          else
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Script found"
+          fi
 
       - name: Build component index
+        if: steps.check_script.outputs.exists == 'true'
         env:
           LFX_DEV: "1"
-        run: uv run python scripts/build_component_index.py
+        run: make build_component_index
 
       - name: Check if index changed
+        if: steps.check_script.outputs.exists == 'true'
         id: check_changes
         run: |
           INDEX_FILE="src/lfx/src/lfx/_assets/component_index.json"
@@ -102,7 +130,7 @@ jobs:
           exit 1
 
       - name: Comment on PR (community fork - cannot auto-update)
-        if: steps.check_changes.outputs.changed == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository
         uses: actions/github-script@v7
         with:
           script: |
@@ -110,11 +138,11 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '⚠️ Component index needs to be updated. Please run `uv run python scripts/build_component_index.py` locally and commit the changes.'
+              body: '⚠️ **Component index needs to be updated**\n\nPlease run the following command locally and commit the changes:\n\n```bash\nmake build_component_index\n```\n\nOr alternatively:\n\n```bash\nLFX_DEV=1 uv run python scripts/build_component_index.py\n```\n\nThen commit and push the updated `src/lfx/src/lfx/_assets/component_index.json` file.'
             })
 
       - name: Comment on PR (same repo - auto-updated)
-        if: steps.check_changes.outputs.changed == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        if: steps.check_changes.outputs.changed == 'true' && github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v7
         with:
           script: |
