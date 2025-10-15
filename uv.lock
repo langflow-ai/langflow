@@ -1725,7 +1725,7 @@ wheels = [
 
 [[package]]
 name = "cuga"
-version = "0.1.2.dev2"
+version = "0.1.2.dev3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1750,9 +1750,9 @@ dependencies = [
     { name = "typer" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f4/d1/72e0603a5a3d696e90c0b641bae8d7edc1ac97e8138a0c8970a9892cda16/cuga-0.1.2.dev2.tar.gz", hash = "sha256:4e0f5f7e36c4acd0a91a67919492bc4aa699337d239500c81e533bf8d6815fda", size = 13093138, upload-time = "2025-10-15T16:33:53.299Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5e/eb/37abf11af2242cdf81b7cad5ba7ed0b9c11c97e5c96f492e3a496afd2aa7/cuga-0.1.2.dev3.tar.gz", hash = "sha256:0ef39a2e5ba727aacfdd99463d1fa6d14d0a267ac7e942ed4b04a0d8e628f314", size = 13093206, upload-time = "2025-10-15T18:00:30.947Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a2/57/6bdc2e8e255865bb5edf1c590e00ff3e2e543b8420279a9cb17ada458d3f/cuga-0.1.2.dev2-py3-none-any.whl", hash = "sha256:ed27234683fb31aa916e2bfb4544b736285367e46651b2eabff5fbec20573163", size = 13639577, upload-time = "2025-10-15T16:33:48.509Z" },
+    { url = "https://files.pythonhosted.org/packages/db/40/c084bb6175d5ec8d0f949e208a2c8116efecda99bd249b39ce5adc4ff7bd/cuga-0.1.2.dev3-py3-none-any.whl", hash = "sha256:5ad4e9ec73d0934825e0faa63f8a2b31c47e4e998b436a291bc48fff6b0b4455", size = 13639581, upload-time = "2025-10-15T18:00:26.029Z" },
 ]
 
 [[package]]
@@ -5466,7 +5466,7 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "cryptography", specifier = ">=43.0.1,<44.0.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "cuga", specifier = "==0.1.2.dev2" },
+    { name = "cuga", specifier = "==0.1.2.dev3" },
     { name = "datasets", specifier = ">2.14.7,<4.0.0" },
     { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'", specifier = ">=2.36.1,<3.0.0" },
     { name = "docling-core", specifier = ">=2.36.1,<3.0.0" },

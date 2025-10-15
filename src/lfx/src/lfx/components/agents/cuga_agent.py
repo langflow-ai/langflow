@@ -105,7 +105,14 @@ class CugaComponent(ToolCallingAgentComponent):
         MultilineInput(
             name="policies",
             display_name="Policies",
-            info="Custom instructions or policies for the agent to adhere to during its operation.",
+            info=(
+                "Custom instructions or policies for the agent to adhere to during its operation.\n"
+                "Example:\n"
+                "# Plan\n"
+                "< planning instructions e.g. which tools and when to use>\n"
+                "# Answer\n"
+                "< final answer instructions how to answer>"
+            ),
             value="",
             advanced=False,
         ),
@@ -197,8 +204,8 @@ class CugaComponent(ToolCallingAgentComponent):
             name="web_apps",
             display_name="Web applications",
             info=(
-                "Define a list of web applications that cuga will open when enable browser is true "
-                "currently only supports one web application"
+                "Define a list of web applications that cuga will open when enable browser is true. "
+                "Currently only supports one web application. Example: https://example.com"
             ),
             value="",
             advanced=False,
@@ -404,6 +411,11 @@ class CugaComponent(ToolCallingAgentComponent):
         logger.info("[CUGA] Starting Cuga agent run for message_response.")
         logger.info(f"[CUGA] Agent input value: {self.input_value}")
 
+        # Validate input is not empty
+        if not self.input_value or not str(self.input_value).strip():
+            msg = "Message cannot be empty. Please provide a valid message."
+            raise ValueError(msg)
+
         try:
             llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
 
@@ -457,6 +469,16 @@ class CugaComponent(ToolCallingAgentComponent):
             logger.error(f"[CUGA] Error in message_response: {e}")
             logger.error(f"An error occurred: {e!s}")
             logger.error(f"Traceback: {traceback.format_exc()}")
+
+            # Check if error is related to Playwright installation
+            error_str = str(e).lower()
+            if "playwright install" in error_str:
+                msg = (
+                    "Playwright is not installed. Please install Playwright Chromium using: "
+                    "uv run -m playwright install chromium"
+                )
+                raise ValueError(msg) from e
+
             raise
         else:
             return result
