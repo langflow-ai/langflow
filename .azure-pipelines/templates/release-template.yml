@@ -21,7 +21,7 @@ jobs:
     displayName: 'Setup GIT'
 
   - script: |
-      echo "Build Number: \"$(Build.BuildNumber)\""
+      echo "Build Number: $(Build.BuildNumber)"
       echo "Source Branch: $(Build.SourceBranchName)"
       wget -q https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_amd64
       mv yq_linux_amd64 /usr/local/bin/yq

@@ -12,7 +12,6 @@ import { useCustomPrimaryLoading } from "@/customization/hooks/use-custom-primar
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { LoadingPage } from "../LoadingPage";
-import { envConfig } from "@/config/env";
 
 export function AppInitPage() {
   const refreshStars = useDarkStore((state) => state.refreshStars);
@@ -23,9 +22,7 @@ export function AppInitPage() {
 
   const { isFetched: isLoaded } = useCustomPrimaryLoading();
 
-  // Disable autologin when Keycloak is enabled to prevent authentication conflicts
-  const shouldEnableAutoLogin = isLoaded && !envConfig.keycloakEnabled;
-  const { isFetched, refetch } = useGetAutoLogin({ enabled: shouldEnableAutoLogin });
+  const { isFetched, refetch } = useGetAutoLogin({ enabled: isLoaded });
   useGetVersionQuery({ enabled: isFetched });
   const { isFetched: isConfigFetched } = useGetConfig({ enabled: isFetched });
   useGetGlobalVariables({ enabled: isFetched });
