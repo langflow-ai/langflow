@@ -11,6 +11,8 @@ import { baseURL } from "@/customization/constants";
 import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
 import { customGetAccessToken } from "@/customization/utils/custom-get-access-token";
 import useAuthStore from "@/stores/authStore";
+import { getAccessToken, withAuthHeaders, handleTokenRefresh } from "@/utils/authHelper";
+import { envConfig } from "@/config/env";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { BuildStatus, type EventDeliveryType } from "../../constants/enums";
 import useAlertStore from "../../stores/alertStore";
@@ -47,11 +49,11 @@ function ApiInterceptor() {
   useEffect(() => {
     const unregister = fetchIntercept.register({
       request: (url, config) => {
-        const accessToken = customGetAccessToken();
-
         if (!isExternalURL(url)) {
+          const accessToken = getAccessToken();
+
           if (accessToken && !isAuthorizedURL(config?.url)) {
-            config.headers["Authorization"] = `Bearer ${accessToken}`;
+            config.headers = withAuthHeaders(config.headers || {});
           }
 
           for (const [key, value] of Object.entries(customHeaders)) {
@@ -90,7 +92,7 @@ function ApiInterceptor() {
 
           await tryToRenewAccessToken(error);
 
-          const accessToken = customGetAccessToken();
+          const accessToken = getAccessToken();
 
           if (!accessToken && error?.config?.url?.includes("login")) {
             return Promise.reject(error);
@@ -160,10 +162,10 @@ function ApiInterceptor() {
           console.error(error.message);
         }
 
-        const accessToken = customGetAccessToken();
+        const accessToken = getAccessToken();
 
         if (accessToken && !isAuthorizedURL(config?.url)) {
-          config.headers["Authorization"] = `Bearer ${accessToken}`;
+          config.headers = withAuthHeaders(config.headers || {});
         }
 
         const currentOrigin = window.location.origin;
@@ -210,23 +212,40 @@ function ApiInterceptor() {
 
   async function tryToRenewAccessToken(error: AxiosError) {
     if (isLoginPage) return;
+
     if (error.config?.headers) {
       for (const [key, value] of Object.entries(customHeaders)) {
         error.config.headers[key] = value;
       }
     }
-    mutationRenewAccessToken(undefined, {
-      onSuccess: async () => {
+
+    // Use Keycloak token refresh when Keycloak is enabled
+    if (envConfig.keycloakEnabled) {
+      try {
+        await handleTokenRefresh();
         setAuthenticationErrorCount(0);
         await remakeRequest(error);
         setAuthenticationErrorCount(0);
-      },
-      onError: (error) => {
-        console.error(error);
+      } catch (refreshError) {
+        console.error("Keycloak token refresh failed:", refreshError);
         mutationLogout();
-        return Promise.reject("Authentication error");
-      },
-    });
+        return Promise.reject("Keycloak authentication error");
+      }
+    } else {
+      // Traditional token refresh for non-Keycloak mode
+      mutationRenewAccessToken(undefined, {
+        onSuccess: async () => {
+          setAuthenticationErrorCount(0);
+          await remakeRequest(error);
+          setAuthenticationErrorCount(0);
+        },
+        onError: (error) => {
+          console.error(error);
+          mutationLogout();
+          return Promise.reject("Authentication error");
+        },
+      });
+    }
   }
 
   async function clearBuildVerticesState(error) {
@@ -243,17 +262,14 @@ function ApiInterceptor() {
     const originalRequest = error.config as AxiosRequestConfig;
 
     try {
-      const accessToken = customGetAccessToken();
+      const accessToken = getAccessToken();
 
       if (!accessToken) {
-        throw new Error("Access token not found in cookies");
+        throw new Error("Access token not found");
       }
 
-      // Modify headers in originalRequest
-      originalRequest.headers = {
-        ...(originalRequest.headers as Record<string, string>), // Cast to suppress TypeScript error
-        Authorization: `Bearer ${accessToken}`,
-      };
+      // Modify headers in originalRequest using centralized auth headers
+      originalRequest.headers = withAuthHeaders(originalRequest.headers as Record<string, string> || {});
 
       const response = await axios.request(originalRequest);
       return response.data; // Or handle the response as needed
@@ -295,11 +311,11 @@ async function performStreamingRequest({
   onNetworkError,
   buildController,
 }: StreamingRequestParams) {
-  const headers = {
+  const headers = withAuthHeaders({
     "Content-Type": "application/json",
     // this flag is fundamental to ensure server stops tasks when client disconnects
     Connection: "close",
-  };
+  });
 
   const params = {
     method: method,

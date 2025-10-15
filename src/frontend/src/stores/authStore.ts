@@ -7,6 +7,7 @@ import {
   AI_STUDIO_API_TOKEN,
 } from "@/constants/constants";
 import { envConfig } from "@/config/env";
+import KeycloakService from "@/services/keycloak";
 import type { AuthStoreType } from "@/types/zustand/auth";
 
 const cookies = new Cookies();
@@ -53,9 +54,39 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
   setAuthenticationErrorCount: (authenticationErrorCount) =>
     set({ authenticationErrorCount }),
 
+  // Sync Keycloak authentication state with store
+  syncKeycloakAuthState: () => {
+    if (envConfig.keycloakEnabled) {
+      const keycloakService = KeycloakService.getInstance();
+      const isAuthenticated = keycloakService.isAuthenticated();
+      const token = keycloakService.getToken();
+
+      set({
+        isAuthenticated,
+        accessToken: token || null,
+      });
+
+      if (isAuthenticated && token) {
+        // Sync with cookies for consistency with other parts of the app
+        cookies.set(AI_STUDIO_ACCESS_TOKEN, token);
+        localStorage.setItem(AI_STUDIO_ACCESS_TOKEN, token);
+      }
+    }
+  },
+
   logout: async () => {
     get().setIsAuthenticated(false);
     get().setIsAdmin(false);
+
+    // Handle Keycloak logout
+    if (envConfig.keycloakEnabled) {
+      try {
+        const keycloakService = KeycloakService.getInstance();
+        await keycloakService.logout();
+      } catch (error) {
+        console.error("Keycloak logout error:", error);
+      }
+    }
 
     // Clear cookies and localStorage
     cookies.remove(AI_STUDIO_ACCESS_TOKEN);

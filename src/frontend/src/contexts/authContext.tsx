@@ -45,6 +45,7 @@ export function AuthProvider({ children }): React.ReactElement {
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const fetchApiData = useStoreStore((state) => state.fetchApiData);
   const setIsAuthenticated = useAuthStore((state) => state.setIsAuthenticated);
+  const syncKeycloakAuthState = useAuthStore((state) => state.syncKeycloakAuthState);
 
   const { mutate: mutateLoggedUser } = useGetUserData();
   const { mutate: mutateGetGlobalVariables } = useGetGlobalVariablesMutation();
@@ -72,6 +73,66 @@ export function AuthProvider({ children }): React.ReactElement {
               getUser();
             }
           }
+
+          // Initial sync of Keycloak authentication state
+          syncKeycloakAuthState();
+
+          // Set up Keycloak event handlers for token lifecycle management
+          keycloakService.onTokenExpired(() => {
+            console.log("Keycloak token expired, attempting refresh...");
+            keycloakService.updateToken(30).then((refreshed) => {
+              if (refreshed) {
+                console.log("Keycloak token successfully refreshed");
+                const newToken = keycloakService.getToken();
+                if (newToken) {
+                  setAuthCookie(cookies, AI_STUDIO_ACCESS_TOKEN, newToken);
+                  setLocalStorage(AI_STUDIO_ACCESS_TOKEN, newToken);
+                  setAccessToken(newToken);
+                  // Sync the updated token with store
+                  syncKeycloakAuthState();
+                }
+              } else {
+                console.log("Keycloak token is still valid");
+              }
+            }).catch((error) => {
+              console.error("Failed to refresh Keycloak token:", error);
+              // Logout user if refresh fails
+              keycloakService.logout().catch(console.error);
+            });
+          });
+
+          keycloakService.onAuthError((error) => {
+            console.error("Keycloak authentication error:", error);
+            setIsAuthenticated(false);
+            setAccessToken(null);
+            setUserData(null);
+          });
+
+          keycloakService.onAuthLogout(() => {
+            console.log("Keycloak logout event triggered");
+            setIsAuthenticated(false);
+            setAccessToken(null);
+            setUserData(null);
+            // Clear all auth cookies and localStorage
+            cookies.remove(AI_STUDIO_ACCESS_TOKEN);
+            cookies.remove(AI_STUDIO_API_TOKEN);
+            cookies.remove(AI_STUDIO_REFRESH_TOKEN);
+            localStorage.removeItem(AI_STUDIO_ACCESS_TOKEN);
+          });
+
+          keycloakService.onAuthSuccess(() => {
+            console.log("Keycloak authentication success");
+            const token = keycloakService.getToken();
+            if (token) {
+              setAuthCookie(cookies, AI_STUDIO_ACCESS_TOKEN, token);
+              setLocalStorage(AI_STUDIO_ACCESS_TOKEN, token);
+              setAccessToken(token);
+              setIsAuthenticated(true);
+              getUser();
+              // Sync authentication state with store
+              syncKeycloakAuthState();
+            }
+          });
 
           setKeycloakInitialized(true);
         } catch (error) {
