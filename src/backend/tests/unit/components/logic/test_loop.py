@@ -129,7 +129,10 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
         assert len(data["outputs"][-1]["outputs"]) > 0
 
 
-@pytest.mark.skipif(os.getenv("OPENAI_API_KEY") in {None, "dummy"}, reason="OPENAI_API_KEY is not set")
+from tests.api_keys import has_api_key, get_openai_api_key
+
+
+@pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY is not set")
 def loop_flow():
     """Complete loop flow that processes multiple URLs through a loop."""
     # Create URL component to fetch content from multiple sources
@@ -167,7 +170,7 @@ def loop_flow():
     # Create OpenAI model component for processing
     openai_component = OpenAIModelComponent()
     openai_component.set(
-        api_key=os.getenv("OPENAI_API_KEY"),
+        api_key=get_openai_api_key(),
         model_name="gpt-4.1-mini",
         temperature=0.7,
     )
