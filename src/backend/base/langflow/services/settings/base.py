@@ -280,6 +280,8 @@ class Settings(BaseSettings):
     # MCP Composer
     mcp_composer_enabled: bool = True
     """If set to False, Langflow will not start the MCP Composer service."""
+    mcp_composer_version: str = "~=0.1.0.7"
+    """Version constraint for mcp-composer when using uvx."""
 
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
@@ -496,6 +498,34 @@ class Settings(BaseSettings):
             logger.debug("Adding default components path to components_path")
 
         logger.debug(f"Components path: {value}")
+        return value
+
+    @field_validator("mcp_composer_version", mode="before")
+    @classmethod
+    def validate_mcp_composer_version(cls, value):
+        """Ensure the version string has a version specifier prefix.
+
+        If a bare version like '0.1.0.7' is provided, prepend '~=' to allow patch updates.
+        Supports PEP 440 specifiers: ==, !=, <=, >=, <, >, ~=, ===
+        """
+        if not value:
+            return "~=0.1.0.7"  # Default
+
+        # Check if it already has a version specifier
+        # Order matters: check longer specifiers first to avoid false matches
+        specifiers = ["===", "==", "!=", "<=", ">=", "~=", "<", ">"]
+        if any(value.startswith(spec) for spec in specifiers):
+            return value
+
+        # If it's a bare version number, add ~= prefix
+        # This regex matches version numbers like 0.1.0.7, 1.2.3, etc.
+        import re
+
+        if re.match(r"^\d+(\.\d+)*", value):
+            logger.debug(f"Adding ~= prefix to bare version '{value}' -> '~={value}'")
+            return f"~={value}"
+
+        # If we can't determine, return as-is and let uvx handle it
         return value
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
