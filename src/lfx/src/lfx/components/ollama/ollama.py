@@ -1,4 +1,6 @@
 import asyncio
+import json
+from contextlib import suppress
 from typing import Any
 from urllib.parse import urljoin
 
@@ -8,8 +10,20 @@ from langchain_ollama import ChatOllama
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
-from lfx.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SliderInput
+from lfx.io import (
+    BoolInput,
+    DictInput,
+    DropdownInput,
+    FloatInput,
+    IntInput,
+    MessageTextInput,
+    NestedDictInput,
+    Output,
+    SliderInput,
+)
 from lfx.log.logger import logger
+from lfx.schema.data import Data
+from lfx.schema.dataframe import DataFrame
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
@@ -51,8 +65,12 @@ class ChatOllamaComponent(LCModelComponent):
             range_spec=RangeSpec(min=0, max=1, step=0.01),
             advanced=True,
         ),
-        MessageTextInput(
-            name="format", display_name="Format", info="Specify the format of the output (e.g., json).", advanced=True
+        NestedDictInput(
+            name="format",
+            display_name="Format",
+            info="Specify the format of the output (options: JSON schema).",
+            advanced=True,
+            value=None,
         ),
         DictInput(name="metadata", display_name="Metadata", info="Metadata to add to the run trace.", advanced=True),
         DropdownInput(
@@ -141,6 +159,13 @@ class ChatOllamaComponent(LCModelComponent):
         *LCModelComponent.get_base_inputs(),
     ]
 
+    outputs = [
+        Output(display_name="Text", name="text_output", method="text_response"),
+        Output(display_name="Language Model", name="model_output", method="build_model"),
+        Output(display_name="Data", name="data_output", method="build_data_output"),
+        Output(display_name="DataFrame", name="dataframe_output", method="build_dataframe_output"),
+    ]
+
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         # Mapping mirostat settings to their corresponding values
         mirostat_options = {"Mirostat": 1, "Mirostat 2.0": 2}
@@ -174,7 +199,7 @@ class ChatOllamaComponent(LCModelComponent):
             "base_url": transformed_base_url,
             "model": self.model_name,
             "mirostat": mirostat_value,
-            "format": self.format,
+            "format": self._parse_format_field(self.format),
             "metadata": self.metadata,
             "tags": self.tags.split(",") if self.tags else None,
             "mirostat_eta": mirostat_eta,
@@ -325,3 +350,99 @@ class ChatOllamaComponent(LCModelComponent):
             raise ValueError(msg) from e
 
         return model_ids
+
+    def _parse_format_field(self, format_value: Any) -> Any:
+        """Parse the format field to handle both string and dict inputs.
+
+        The format field can be:
+        - A simple string like "json" (backward compatibility)
+        - A JSON string from NestedDictInput that needs parsing
+        - A dict/JSON schema (already parsed)
+        - None or empty
+
+        Args:
+            format_value: The raw format value from the input field
+
+        Returns:
+            Parsed format value as string, dict, or None
+        """
+        formatted_value = format_value
+        if isinstance(format_value, str):  # parse as json if string
+            with suppress(json.JSONDecodeError):
+                formatted_value = json.loads(format_value)
+
+        return formatted_value or None
+
+    async def _parse_json_response(self) -> Any:
+        """Parse the JSON response from the model.
+
+        This method gets the text response and attempts to parse it as JSON.
+        Works with models that have format='json' or a JSON schema set.
+
+        Returns:
+            Parsed JSON (dict, list, or primitive type)
+
+        Raises:
+            ValueError: If the response is not valid JSON
+        """
+        message = await self.text_response()
+        text = message.text if hasattr(message, "text") else str(message)
+
+        if not text:
+            msg = "No response from model"
+            raise ValueError(msg)
+
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError as e:
+            msg = f"Invalid JSON response. Ensure model supports JSON output. Error: {e}"
+            raise ValueError(msg) from e
+
+    async def build_data_output(self) -> Data:
+        """Build a Data output from the model's JSON response.
+
+        Returns:
+            Data: A Data object containing the parsed JSON response
+        """
+        parsed = await self._parse_json_response()
+
+        # If the response is already a dict, wrap it in Data
+        if isinstance(parsed, dict):
+            return Data(data=parsed)
+
+        # If it's a list, wrap in a results container
+        if isinstance(parsed, list):
+            if len(parsed) == 1:
+                return Data(data=parsed[0])
+            return Data(data={"results": parsed})
+
+        # For primitive types, wrap in a value container
+        return Data(data={"value": parsed})
+
+    async def build_dataframe_output(self) -> DataFrame:
+        """Build a DataFrame output from the model's JSON response.
+
+        Returns:
+            DataFrame: A DataFrame containing the parsed JSON response
+
+        Raises:
+            ValueError: If the response cannot be converted to a DataFrame
+        """
+        parsed = await self._parse_json_response()
+
+        # If it's a list of dicts, convert directly to DataFrame
+        if isinstance(parsed, list):
+            if not parsed:
+                return DataFrame()
+            # Ensure all items are dicts for proper DataFrame conversion
+            if all(isinstance(item, dict) for item in parsed):
+                return DataFrame(parsed)
+            msg = "List items must be dictionaries to convert to DataFrame"
+            raise ValueError(msg)
+
+        # If it's a single dict, wrap in a list to create a single-row DataFrame
+        if isinstance(parsed, dict):
+            return DataFrame([parsed])
+
+        # For primitive types, create a single-column DataFrame
+        return DataFrame([{"value": parsed}])
