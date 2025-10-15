@@ -51,6 +51,9 @@ export default function TemplatesModal({
     },
   ];
 
+  const useCaseIds = categories
+    .find((c) => c.title === "Use Cases")?.items.map((i) => i.id) ?? [];
+
   return (
     <BaseModal size="templates" open={open} setOpen={setOpen} className="p-0">
       <BaseModal.Content className="flex flex-col p-0">
@@ -68,6 +71,7 @@ export default function TemplatesModal({
                 <TemplateContentComponent
                   currentTab={currentTab}
                   categories={categories.flatMap((category) => category.items)}
+                  useCaseIds={useCaseIds}
                 />
               )}
               <BaseModal.Footer>

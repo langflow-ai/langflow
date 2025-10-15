@@ -27,6 +27,7 @@ export interface TemplateCategoryProps {
 export interface TemplateContentProps {
   currentTab: string;
   categories: NavItem[];
+  useCaseIds?: string[];
 }
 
 export interface TemplateCardComponentProps {

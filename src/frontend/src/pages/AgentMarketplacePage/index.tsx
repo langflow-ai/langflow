@@ -124,7 +124,7 @@ export default function AgentMarketplacePage() {
   return (
     <div className="flex h-full w-full flex-col overflow-y-auto bg-[#FBFAFF] dark:bg-background">
       <div className="flex h-full w-full flex-col">
-        <div className="mx-auto flex w-full max-w-[1384px] flex-1 flex-col gap-4 p-4 md:p-6">
+        <div className="flex w-full flex-1 flex-col gap-4 p-4 md:p-6">
           {/* Header + Controls Row */}
           <div className="flex w-full items-center justify-between gap-4">
             {/* Left: Title + Search */}

@@ -341,11 +341,11 @@ export default function AgentBuilderPage() {
 
   return (
     <div className="flex h-full w-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-7xl p-4">
+      <div className="w-full p-4">
         {/* AI Agent Builder Title */}
         <div className="mb-6">
           <div className="flex items-center justify-between gap-2">
-            <h1 className="text-xl font-medium" style={{ color: '#350E84' }}>
+            <h1 className="text-[#350E84] text-[21px] font-medium leading-normal not-italic">
               AI Studio
             </h1>
             {/* Project Selector */}
@@ -356,7 +356,7 @@ export default function AgentBuilderPage() {
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
                 <SelectContent align="end">
-                  {folders.map((f) => (
+                  {folders.filter((f) => f.name !== "Builder Agent").map((f) => (
                     <SelectItem key={f.id} value={f.id!} className="text-sm">
                       {f.name}
                     </SelectItem>
@@ -384,7 +384,7 @@ export default function AgentBuilderPage() {
             Hi <span className="font-medium">{displayName}</span>, What can I help you today?
           </p>
           <p className="text-sm text-muted-foreground text-center max-w-2xl">
-            Build workflows from the library of AI Agents, or create your own custom agent from scratch
+            Build workflows from the library of AI Agents, or author your own custom AI Agent
           </p>
         </div>
 
@@ -395,7 +395,7 @@ export default function AgentBuilderPage() {
               value={promptValue}
               rows={1}
               onChange={(e) => setPromptValue(e.target.value)}
-              placeholder="Describe what you want your agent to do..."
+              placeholder="Describe your agent... e.g., 'Create an agent that can create a clinical summary from a patient chart'"
               className="w-full p-4 pr-12 rounded-lg border border-input bg-background text-sm focus:outline-none"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
