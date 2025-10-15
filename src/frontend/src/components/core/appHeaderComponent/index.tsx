@@ -63,7 +63,7 @@ export default function AppHeader(): JSX.Element {
   // Breadcrumb navigation
   const breadcrumbItems = [
     { label: "/" },
-    { label: "AI Agent Builder", href: "/agent-builder" },
+    { label: "AI Studio", href: "/agent-builder" },
   ];
 
   return (
