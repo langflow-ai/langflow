@@ -3,7 +3,6 @@ from pathlib import Path
 import pytest
 from lfx.services.settings.auth import AuthSettings
 from lfx.services.settings.constants import DEFAULT_SUPERUSER
-
 from pydantic import SecretStr
 
 
