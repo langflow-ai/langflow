@@ -41,20 +41,24 @@ export default function MainSidebar(): JSX.Element {
         {sidebarItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
+          const disabled = item.id === 'integration' || item.id === 'monitor';
 
           const buttonElement = (
             <button
               key={item.id}
-              onClick={() => navigate(item.path)}
+              onClick={disabled ? undefined : () => navigate(item.path)}
+              disabled={disabled}
               className={`
                 flex items-center rounded-md transition-all duration-200
                 ${isCollapsed
                   ? 'h-11 w-11 justify-center'
                   : 'h-12 w-full justify-start gap-3 px-3'
                 }
-                ${active
-                  ? 'bg-[#E6E0F5] dark:bg-primary/10 text-[#350E84] dark:text-primary'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-accent hover:text-[#350E84] dark:hover:text-primary'
+                ${disabled
+                  ? 'opacity-50 cursor-not-allowed'
+                  : active
+                    ? 'bg-[#E6E0F5] dark:bg-primary/10 text-[#350E84] dark:text-primary'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-accent hover:text-[#350E84] dark:hover:text-primary'
                 }
               `}
             >
