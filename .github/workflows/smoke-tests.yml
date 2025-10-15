@@ -63,8 +63,9 @@ jobs:
           LANGFLOW_SUPERUSER_PASSWORD: 123456
 
   lfx-smoke-tests:
+    # created a separate label for this since it's a different test suite for LFX components
     if: contains(github.event.pull_request.labels.*.name, 'smoke-test') || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
-    name: "LFX Smoke Tests (Isolated)"
+    name: "LFX Smoke Tests"
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

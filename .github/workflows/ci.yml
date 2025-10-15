@@ -61,7 +61,7 @@ on:
           - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
         default: ubuntu-latest
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, labeled]
   merge_group:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
