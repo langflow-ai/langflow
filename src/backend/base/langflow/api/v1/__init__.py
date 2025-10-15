@@ -12,7 +12,6 @@ from langflow.api.v1.mcp_projects import router as mcp_projects_router
 from langflow.api.v1.monitor import router as monitor_router
 from langflow.api.v1.openai_responses import router as openai_responses_router
 from langflow.api.v1.projects import router as projects_router
-from langflow.api.v1.published_agent import router as published_agent_router
 from langflow.api.v1.agent_marketplace import router as agent_marketplace_router
 from langflow.api.v1.spec import router as spec_router
 from langflow.api.v1.starter_projects import router as starter_projects_router
@@ -37,7 +36,6 @@ __all__ = [
     "monitor_router",
     "openai_responses_router",
     "projects_router",
-    "published_agent_router",
     "agent_marketplace_router",
     "spec_router",
     "starter_projects_router",

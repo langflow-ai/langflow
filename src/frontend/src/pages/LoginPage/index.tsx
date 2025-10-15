@@ -80,11 +80,6 @@ export default function LoginPage(): JSX.Element | null {
     });
   }
 
-  // // Render nothing when Keycloak is enabled; the effect above will redirect
-  // if (envConfig.keycloakEnabled) {
-  //   return null;
-  // }
-
   // Fallback: traditional login UI when Keycloak is disabled
   return (
     <Form.Root

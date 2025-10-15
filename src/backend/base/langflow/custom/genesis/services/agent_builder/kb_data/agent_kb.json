@@ -4068,7 +4068,7 @@
   },
   "17ea38930cbd4adc": {
     "agent_id": "17ea38930cbd4adc",
-    "name": "Benefit Check Agent",
+    "name": "Eligibility Verification Agent",
     "description": "Orchestrates comprehensive healthcare authorization analysis using specialized agents",
     "agent_goal": "Orchestrate comprehensive healthcare authorization analysis by evaluating service code eligibility, coverage benefits, and utilization limits",
     "version": "1.0.0",

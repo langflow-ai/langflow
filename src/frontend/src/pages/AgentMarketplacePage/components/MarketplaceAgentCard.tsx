@@ -11,13 +11,16 @@ import { MoreHorizontal, Pencil, Upload, Archive, DollarSign, Trash2 } from "luc
 import { cn } from "@/utils/utils";
 import type { AgentSpecItem } from "@/controllers/API/queries/agent-marketplace/use-get-agent-marketplace";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { useMemo } from "react";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 
 interface MarketplaceAgentCardProps {
   item: AgentSpecItem;
   viewMode?: "grid" | "list";
+  interactive?: boolean; // when false, disables navigation on click
 }
 
-export default function MarketplaceAgentCard({ item, viewMode = "grid" }: MarketplaceAgentCardProps) {
+export default function MarketplaceAgentCard({ item, viewMode = "grid", interactive = true }: MarketplaceAgentCardProps) {
   const name = item.spec?.name ?? item.file_name.replace(/\.ya?ml$/i, "");
   const description = item.spec?.description ?? "No description provided";
   const tags: string[] = Array.isArray(item.spec?.tags) ? item.spec?.tags : [];
@@ -25,12 +28,95 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid" }: Market
   const domain = item.spec?.subDomain ?? item.spec?.domain ?? "";
   const version = item.spec?.version ?? "";
 
+  const navigate = useCustomNavigate();
+
+  // Lightweight JSON → YAML conversion implemented locally
+  const jsonToYaml = (value: any, indent = 0): string => {
+    const spacer = " ".repeat(indent);
+    const nextIndent = indent + 2;
+
+    const formatScalar = (v: any): string => {
+      if (v === null || v === undefined) return "null";
+      const t = typeof v;
+      if (t === "string") return JSON.stringify(v); // safe quoting
+      if (t === "number") return Number.isFinite(v) ? String(v) : JSON.stringify(v);
+      if (t === "boolean") return v ? "true" : "false";
+      return JSON.stringify(v);
+    };
+
+    if (Array.isArray(value)) {
+      if (value.length === 0) return "[]";
+      return value
+        .map((item) => {
+          if (item && typeof item === "object") {
+            const nested = jsonToYaml(item, nextIndent);
+            return `${spacer}- ${nested.startsWith("\n") ? nested.substring(1) : `\n${nested}`}`;
+          }
+          return `${spacer}- ${formatScalar(item)}`;
+        })
+        .join("\n");
+    }
+
+    if (value && typeof value === "object") {
+      const keys = Object.keys(value);
+      if (keys.length === 0) return "{}";
+      return keys
+        .map((key) => {
+          const val = (value as any)[key];
+          if (val && typeof val === "object") {
+            const nested = jsonToYaml(val, nextIndent);
+            if (Array.isArray(val)) {
+              // arrays inline if empty, otherwise block
+              return `${spacer}${key}: ${nested.includes("\n") ? `\n${nested}` : nested}`;
+            }
+            return `${spacer}${key}:\n${nested}`;
+          }
+          return `${spacer}${key}: ${formatScalar(val)}`;
+        })
+        .join("\n");
+    }
+
+    // scalars
+    return `${spacer}${formatScalar(value)}`;
+  };
+
+  const specYaml = useMemo(() => jsonToYaml(item.spec ?? {}), [item.spec]);
+
+  const handleCardClick = () => {
+    navigate("/agent-marketplace/detail", {
+      state: {
+        name,
+        description,
+        domain,
+        version,
+        specYaml,
+        spec: item.spec ?? {},
+        fileName: item.file_name,
+        folderName: item.folder_name,
+        status,
+      },
+    });
+  };
+
   return (
     <div
       className={cn(
-        "group relative flex h-full flex-col rounded-lg border border-[#EBE8FF] bg-white dark:bg-card px-4 py-3",
-        viewMode === "list" ? "cursor-default" : "cursor-default",
+        "group relative flex h-full flex-col rounded-lg border border-[#EBE8FF] bg-white dark:bg-card px-4 py-3 transition-shadow hover:shadow-md",
+        interactive ? "cursor-pointer" : "cursor-default",
       )}
+      onClick={interactive ? handleCardClick : undefined}
+      role={interactive ? "button" : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onKeyDown={
+        interactive
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleCardClick();
+              }
+            }
+          : undefined
+      }
     >
       {/* Header */}
       <div className="mb-3 flex items-start justify-between">
@@ -45,11 +131,8 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid" }: Market
 
         <div className="flex items-center gap-2">
           {version && (
-            <span className="text-xs text-muted-foreground">ver {version}</span>
+            <span className="text-xs text-muted-foreground">Ver. {version}</span>
           )}
-          <Badge variant="successStatic" size="xq" className="px-2 opacity-80">
-            Published
-          </Badge>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -57,29 +140,30 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid" }: Market
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
+                onClick={(e) => e.stopPropagation()}
               >
                 <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[12rem]">
-              <DropdownMenuItem onClick={() => { /* TODO: wire Edit */ }} className="gap-2">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); /* TODO: wire Edit */ }} className="gap-2">
                 <Pencil className="h-4 w-4" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { /* TODO: wire Publish */ }} className="gap-2">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); /* TODO: wire Publish */ }} className="gap-2">
                 <Upload className="h-4 w-4" />
                 Publish
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { /* TODO: wire Archive */ }} className="gap-2">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); /* TODO: wire Archive */ }} className="gap-2">
                 <Archive className="h-4 w-4" />
                 Archive
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { /* TODO: wire Pricing */ }} className="gap-2">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); /* TODO: wire Pricing */ }} className="gap-2">
                 <DollarSign className="h-4 w-4" />
                 View Pricing
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => { /* TODO: wire Delete */ }} className="gap-2 text-destructive">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); /* TODO: wire Delete */ }} className="gap-2 text-destructive" disabled={true}>
                 <Trash2 className="h-4 w-4" />
                 Delete
               </DropdownMenuItem>

@@ -16,6 +16,8 @@ import MarketplaceAgentCard from "./components/MarketplaceAgentCard";
 import AgentPagination from "./components/AgentPagination";
 import ListSkeleton from "../MainPage/components/listSkeleton";
 import { useGetAgentMarketplaceQuery } from "@/controllers/API/queries/agent-marketplace/use-get-agent-marketplace";
+import { STATIC_MARKETPLACE_AGENTS } from "./data/agentsList";
+import type { AgentSpecItem } from "@/controllers/API/queries/agent-marketplace/use-get-agent-marketplace";
 
 export default function AgentMarketplacePage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -55,15 +57,96 @@ export default function AgentMarketplacePage() {
     }
   );
 
-  const items = marketplaceData?.items ?? [];
+  // Build a set of normalized names from the static agents list
+  const staticNameSet = useMemo(() => {
+    const set = new Set<string>();
+    STATIC_MARKETPLACE_AGENTS.forEach((item) => {
+      const name = (item.spec?.name ?? item.file_name)?.trim().toLowerCase();
+      if (name) set.add(name);
+    });
+    return set;
+  }, []);
+
+  // Use only API agents whose names exist in the static list
+  const apiItems = useMemo(() => {
+    const list = marketplaceData?.items ?? [];
+    return list.filter((item) => {
+      const name = (item.spec?.name ?? item.file_name)?.trim().toLowerCase();
+      return !!name && staticNameSet.has(name);
+    });
+  }, [marketplaceData, staticNameSet]);
+  const apiNameSet = useMemo(() => {
+    const set = new Set<string>();
+    apiItems.forEach((item) => {
+      const name = (item.spec?.name ?? item.file_name)?.trim().toLowerCase();
+      if (name) set.add(name);
+    });
+    return set;
+  }, [apiItems]);
+
+  const staticFiltered = useMemo(() => {
+    return STATIC_MARKETPLACE_AGENTS.filter((item) => {
+      const name = (item.spec?.name ?? item.file_name)?.trim().toLowerCase();
+      return !!name && !apiNameSet.has(name);
+    });
+  }, [apiNameSet]);
+
+  // Build a lookup from normalized name -> static tags from agentsList
+  const staticTagsByName = useMemo(() => {
+    const map = new Map<string, string[]>();
+    STATIC_MARKETPLACE_AGENTS.forEach((sa) => {
+      const name = (sa.spec?.name ?? sa.file_name)?.trim().toLowerCase();
+      const tags = Array.isArray(sa.spec?.tags) ? sa.spec?.tags ?? [] : [];
+      if (name && tags.length > 0) {
+        map.set(name, tags);
+      }
+    });
+    return map;
+  }, []);
+
+  // Normalize tags and override API tags with static tags when available
+  const normalizeItemTags = useCallback(
+    (item: AgentSpecItem): AgentSpecItem => {
+      const normalizedName = (item.spec?.name ?? item.file_name)
+        ?.trim()
+        .toLowerCase();
+
+      const staticTags = normalizedName
+        ? staticTagsByName.get(normalizedName)
+        : undefined;
+
+      const currentTags = Array.isArray(item.spec?.tags)
+        ? item.spec?.tags ?? []
+        : typeof (item as any).spec?.tag === "string"
+        ? [String((item as any).spec?.tag)]
+        : [];
+
+      const tagsToUse = staticTags && staticTags.length > 0 ? staticTags : currentTags;
+
+      if (item.spec) {
+        return { ...item, spec: { ...item.spec, tags: tagsToUse } };
+      }
+      return { ...item, spec: { tags: tagsToUse } } as AgentSpecItem;
+    },
+    [staticTagsByName]
+  );
+
+  const items = useMemo(() => {
+    const combined = [...apiItems, ...staticFiltered];
+    return combined.map(normalizeItemTags);
+  }, [apiItems, staticFiltered, normalizeItemTags]);
 
   const allTags = useMemo(() => {
-    const set = new Set<string>();
+    // Deduplicate case-insensitively while preserving display casing
+    const byLower = new Map<string, string>();
     items.forEach((item) => {
       const tags = Array.isArray(item.spec?.tags) ? item.spec?.tags : [];
-      tags.forEach((t) => set.add(t));
+      tags.forEach((t) => {
+        const key = t.toLowerCase();
+        if (!byLower.has(key)) byLower.set(key, t);
+      });
     });
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
+    return Array.from(byLower.values()).sort((a, b) => a.localeCompare(b));
   }, [items]);
 
   useEffect(() => {
@@ -78,6 +161,8 @@ export default function AgentMarketplacePage() {
         const name = (item.spec?.name ?? item.file_name)?.toLowerCase();
         const tags = Array.isArray(item.spec?.tags)
           ? item.spec?.tags.map((t) => t.toLowerCase())
+          : typeof (item as any).spec?.tag === "string"
+          ? [String((item as any).spec?.tag).toLowerCase()]
           : [];
         return (
           (name && name.includes(normalizedSearch)) ||
@@ -89,7 +174,11 @@ export default function AgentMarketplacePage() {
   const filteredItems =
     tagFilter !== "all" && tagFilter.trim() !== ""
       ? filteredItemsBySearch.filter((item) => {
-          const tags = Array.isArray(item.spec?.tags) ? item.spec?.tags : [];
+          const tags = Array.isArray(item.spec?.tags)
+            ? item.spec?.tags
+            : typeof (item as any).spec?.tag === "string"
+            ? [String((item as any).spec?.tag)]
+            : [];
           return tags.some((t) => t.toLowerCase() === tagFilter.toLowerCase());
         })
       : filteredItemsBySearch;
@@ -134,6 +223,7 @@ export default function AgentMarketplacePage() {
               >
                 Agent Marketplace
               </h1>
+              <span className="text-[#350E84] text-[21px] font-medium leading-normal not-italic">({total} Agents)</span>
             </div>
 
             {/* Right: Sort + Filter + View Toggle */}
@@ -282,6 +372,7 @@ export default function AgentMarketplacePage() {
                     key={`${item.folder_name}/${item.file_name}`}
                     item={item}
                     viewMode={viewMode}
+                    interactive={item.folder_name !== "static_agents"}
                   />
                 ))}
               </div>

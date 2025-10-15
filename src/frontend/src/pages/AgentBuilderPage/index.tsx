@@ -407,7 +407,8 @@ export default function AgentBuilderPage() {
             <button
               onClick={handlePromptSubmit}
               className="absolute right-3 bottom-4 p-2 rounded-md bg-primary-blue text-primary-foreground disabled:opacity-50 disabled:pointer-events-none"
-              disabled={!promptValue.trim()}
+              // disabled={!promptValue.trim()}
+              disabled={true} //disabling temporarily
               aria-label="Submit prompt"
             >
               <VscSend name="Send" className="h-4 w-4" />

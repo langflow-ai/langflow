@@ -348,7 +348,7 @@
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",
-            "display_name": "Benefit Check Agent",
+            "display_name": "Eligibility Verification Agent",
             "documentation": "",
             "edited": false,
             "field_order": [
@@ -4043,11 +4043,11 @@
       "zoom": 0.589443120134206
     }
   },
-  "description": "Benefit Check Agent V2",
+  "description": "Eligibility Verification Agent V2",
   "endpoint_name": null,
   "is_component": false,
   "last_tested_version": "1.4.3",
-  "name": "Benefit Check Agent",
+  "name": "Eligibility Verification Agent",
   "tags": [
     "prior-auth"
   ]

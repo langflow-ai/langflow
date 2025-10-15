@@ -32,6 +32,7 @@ import CollectionPage from "./pages/MainPage/pages/main-page";
 import SettingsPage from "./pages/SettingsPage";
 import AgentBuilderPage from "./pages/AgentBuilderPage";
 import AgentMarketplacePage from "./pages/AgentMarketplacePage";
+import AgentMarketplaceDetailPage from "./pages/AgentMarketplacePage/DetailPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
@@ -141,6 +142,7 @@ const router = createBrowserRouter(
                     />
                   </Route>
                 </Route>
+                <Route path="agent-marketplace/detail" element={<AgentMarketplaceDetailPage />} />
                 <Route path="settings" element={<SettingsPage />}>
                   <Route
                     index
