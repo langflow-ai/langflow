@@ -108,17 +108,12 @@ Outputs either a [`Data`](/data-types#data) or [`DataFrame`](/data-types#datafra
 
 ## Mock Data
 
-The **Mock Data** component generates [Message (text)](/data-types#message), [Data (JSON)](/data-types#data), or [DataFrame (tabular)](/data-types#dataframe) sample data for testing and development.
+The **Mock Data** component generates sample data for testing and development.
+You can select these output types:
 
-### Mock Data parameters
-
-<PartialParams />
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| dataframe_output | Result | Output parameter. A [DataFrame](/data-types#dataframe) with 50 mock records, including columns such as `customer_id`, `first_name`, and `last_name`. |
-| data_output | Result | Output parameter. A [Data](/data-types#data) object containing a JSON structure with one sample record under `records` and a `summary` section. |
-| message_output | Result | Output parameter. A [Message](/data-types#message) object with Lorem Ipsum sample text. |
+* `message_output`: A [Message (text)](/data-types#message) output with Lorem Ipsum sample text.
+* `data_output`: A [Data (JSON)](/data-types#data) object containing a JSON structure with one sample record under `records` and a `summary` section.
+* `dataframe_output`: A [DataFrame (tabular)](/data-types#dataframe) with 50 mock records, including columns such as `customer_id`, `first_name`, and `last_name`. 
 
 ## Read File {#file}
 
