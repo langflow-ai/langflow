@@ -49,7 +49,7 @@ export default function AddMcpServerModal({
       : useState(false);
 
   const [type, setType] = useState(
-    initialData ? (initialData.command ? "STDIO" : "SSE") : "JSON",
+    initialData ? (initialData.command ? "STDIO" : "HTTP") : "JSON",
   );
   const [jsonValue, setJsonValue] = useState("");
   const [error, setError] = useState<string | null>(
@@ -73,10 +73,10 @@ export default function AddMcpServerModal({
     setStdioCommand("");
     setStdioArgs([""]);
     setStdioEnv([]);
-    setSseName("");
-    setSseUrl("");
-    setSseEnv([]);
-    setSseHeaders([]);
+    setHttpName("");
+    setHttpUrl("");
+    setHttpEnv([]);
+    setHttpHeaders([]);
   };
 
   // STDIO state
@@ -87,25 +87,27 @@ export default function AddMcpServerModal({
   );
   const [stdioEnv, setStdioEnv] = useState<any>(initialData?.env || []);
 
-  // SSE state
-  const [sseName, setSseName] = useState(initialData?.name || "");
-  const [sseUrl, setSseUrl] = useState(initialData?.url || "");
-  const [sseEnv, setSseEnv] = useState<any>(initialData?.env || []);
-  const [sseHeaders, setSseHeaders] = useState<any>(initialData?.headers || []);
+  // HTTP state
+  const [httpName, setHttpName] = useState(initialData?.name || "");
+  const [httpUrl, setHttpUrl] = useState(initialData?.url || "");
+  const [httpEnv, setHttpEnv] = useState<any>(initialData?.env || []);
+  const [httpHeaders, setHttpHeaders] = useState<any>(
+    initialData?.headers || [],
+  );
 
   useEffect(() => {
     if (open) {
-      setType(initialData ? (initialData.command ? "STDIO" : "SSE") : "JSON");
+      setType(initialData ? (initialData.command ? "STDIO" : "HTTP") : "JSON");
       setError(null);
       setJsonValue("");
       setStdioName(initialData?.name || "");
       setStdioCommand(initialData?.command || "");
       setStdioArgs(initialData?.args || [""]);
       setStdioEnv(initialData?.env || []);
-      setSseName(initialData?.name || "");
-      setSseUrl(initialData?.url || "");
-      setSseEnv(initialData?.env || []);
-      setSseHeaders(initialData?.headers || []);
+      setHttpName(initialData?.name || "");
+      setHttpUrl(initialData?.url || "");
+      setHttpEnv(initialData?.env || []);
+      setHttpHeaders(initialData?.headers || []);
     }
   }, [open]);
 
@@ -131,7 +133,7 @@ export default function AddMcpServerModal({
         return;
       }
       const name = parseString(stdioName, [
-        "snake_case",
+        "mcp_name_case",
         "no_blank",
         "lowercase",
       ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
@@ -159,22 +161,22 @@ export default function AddMcpServerModal({
       }
       return;
     }
-    if (type === "SSE") {
-      if (!sseName.trim() || !sseUrl.trim()) {
+    if (type === "HTTP") {
+      if (!httpName.trim() || !httpUrl.trim()) {
         setError("Name and URL are required.");
         return;
       }
-      const name = parseString(sseName, [
-        "snake_case",
+      const name = parseString(httpName, [
+        "mcp_name_case",
         "no_blank",
         "lowercase",
       ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
       try {
         await modifyMCPServer({
           name,
-          env: parseEnvList(sseEnv),
-          url: sseUrl,
-          headers: parseEnvList(sseHeaders),
+          env: parseEnvList(httpEnv),
+          url: httpUrl,
+          headers: parseEnvList(httpHeaders),
         });
         if (!initialData) {
           await queryClient.setQueryData(["useGetMCPServers"], (old: any) => {
@@ -183,10 +185,10 @@ export default function AddMcpServerModal({
         }
         onSuccess?.(name);
         setOpen(false);
-        setSseName("");
-        setSseUrl("");
-        setSseEnv([]);
-        setSseHeaders([]);
+        setHttpName("");
+        setHttpUrl("");
+        setHttpEnv([]);
+        setHttpHeaders([]);
         setError(null);
       } catch (err: any) {
         setError(err?.message || "Failed to add MCP server.");
@@ -199,7 +201,7 @@ export default function AddMcpServerModal({
       servers = extractMcpServersFromJson(jsonValue).map((server) => ({
         ...server,
         name: parseString(server.name, [
-          "snake_case",
+          "mcp_name_case",
           "no_blank",
           "lowercase",
         ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH),
@@ -285,11 +287,11 @@ export default function AddMcpServerModal({
                     STDIO
                   </TabsTrigger>
                   <TabsTrigger
-                    data-testid="sse-tab"
-                    disabled={!!initialData && type !== "SSE"}
-                    value="SSE"
+                    data-testid="http-tab"
+                    disabled={!!initialData && type !== "HTTP"}
+                    value="HTTP"
                   >
-                    SSE
+                    Streamable HTTP/SSE
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -374,52 +376,53 @@ export default function AddMcpServerModal({
                     </div>
                   </div>
                 </TabsContent>
-                <TabsContent value="SSE">
+                <TabsContent value="HTTP">
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
                       <Label className="flex items-start gap-1 !text-mmd">
                         Name<span className="text-red-500">*</span>
                       </Label>
                       <Input
-                        value={sseName}
-                        onChange={(e) => setSseName(e.target.value)}
+                        value={httpName}
+                        onChange={(e) => setHttpName(e.target.value)}
                         placeholder="Name"
-                        data-testid="sse-name-input"
+                        data-testid="http-name-input"
                         disabled={isPending}
                       />
                     </div>
                     <div className="flex flex-col gap-2">
                       <Label className="flex items-start gap-1 !text-mmd">
-                        SSE URL<span className="text-red-500">*</span>
+                        Streamable HTTP/SSE URL
+                        <span className="text-red-500">*</span>
                       </Label>
                       <Input
-                        value={sseUrl}
-                        onChange={(e) => setSseUrl(e.target.value)}
-                        placeholder="SSE URL"
-                        data-testid="sse-url-input"
+                        value={httpUrl}
+                        onChange={(e) => setHttpUrl(e.target.value)}
+                        placeholder="Streamable HTTP/SSE URL"
+                        data-testid="http-url-input"
                         disabled={isPending}
                       />
                     </div>
                     <div className="flex flex-col gap-2">
                       <Label className="!text-mmd">Headers</Label>
                       <IOKeyPairInput
-                        value={sseHeaders}
-                        onChange={setSseHeaders}
+                        value={httpHeaders}
+                        onChange={setHttpHeaders}
                         duplicateKey={false}
                         isList={true}
                         isInputField={true}
-                        testId="sse-headers"
+                        testId="http-headers"
                       />
                     </div>
                     <div className="flex flex-col gap-2">
                       <Label className="!text-mmd">Environment Variables</Label>
                       <IOKeyPairInput
-                        value={sseEnv}
-                        onChange={setSseEnv}
+                        value={httpEnv}
+                        onChange={setHttpEnv}
                         duplicateKey={false}
                         isList={true}
                         isInputField={true}
-                        testId="sse-env"
+                        testId="http-env"
                       />
                     </div>
                   </div>

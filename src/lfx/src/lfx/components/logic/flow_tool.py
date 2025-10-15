@@ -6,7 +6,7 @@ from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.base.tools.flow_tool import FlowTool
 from lfx.field_typing import Tool
 from lfx.graph.graph.base import Graph
-from lfx.helpers.flow import get_flow_inputs
+from lfx.helpers import get_flow_inputs
 from lfx.io import BoolInput, DropdownInput, Output, StrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
@@ -14,12 +14,13 @@ from lfx.schema.dotdict import dotdict
 
 
 class FlowToolComponent(LCToolComponent):
-    display_name = "Flow as Tool [Deprecated]"
+    display_name = "Flow as Tool"
     description = "Construct a Tool from a function that runs the loaded Flow."
     field_order = ["flow_name", "name", "description", "return_direct"]
     trace_type = "tool"
     name = "FlowTool"
     legacy: bool = True
+    replacement = ["logic.RunFlow"]
     icon = "hammer"
 
     async def get_flow_names(self) -> list[str]:

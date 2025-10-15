@@ -2,6 +2,7 @@ from collections.abc import Generator
 from enum import Enum
 from typing import TYPE_CHECKING, Literal
 
+from pandas import Series
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import TypedDict
 
@@ -83,6 +84,9 @@ def get_message(payload):
 
     if message is None and isinstance(payload, dict | str | Data):
         message = payload.data if isinstance(payload, Data) else payload
+
+    if isinstance(message, Series):
+        return message if not message.empty else payload
 
     return message or payload
 

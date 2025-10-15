@@ -85,8 +85,11 @@ echo Step 4: Running Langflow...
 echo.
 echo Attention: Wait until uvicorn is running before opening the browser
 echo.
+REM Change to project root directory for uv
+cd "%PROJECT_ROOT%"
 if defined USE_ENV_FILE (
-    uv run --env-file "%ENV_PATH%" langflow run
+    echo Using env file: .env
+    uv run --env-file ".env" langflow run
 ) else (
     uv run langflow run
 )

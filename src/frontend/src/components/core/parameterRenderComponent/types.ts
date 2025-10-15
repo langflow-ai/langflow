@@ -112,6 +112,7 @@ export type DropDownComponentType = {
   options: string[];
   name: string;
   dialogInputs?: any;
+  externalOptions?: any;
   optionsMetaData?: any[];
   nodeId: string;
   nodeClass: APIClassType;
@@ -134,6 +135,7 @@ export type QueryComponentType = {
 
 export type InputGlobalComponentType = {
   load_from_db: boolean | undefined;
+  allowCustomValue: boolean | undefined;
   password: boolean | undefined;
   display_name: string;
 };

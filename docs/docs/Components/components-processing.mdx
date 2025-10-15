@@ -7,13 +7,14 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialCurlyBraces from '@site/docs/_partial-escape-curly-braces.mdx';
 
-Langflow's **Processing** components process and transform data within a flow.
+Processing components process and transform data within a flow.
 They have many uses, including:
 
 * Feed instructions and context to your LLMs and agents with the [**Prompt Template** component](#prompt-template).
 * Extract content from larger chunks of data with a [**Parser** component](#parser).
-* Filter data with natural language with the [**Smart Function** component](#smart-function).
+* Filter data with natural language with the [**Smart Function** component](#smart-transform).
 * Save data to your local machine with the [**Save File** component](#save-file).
 * Transform data into a different data type with the [**Type Convert** component](#type-convert) to pass it between incompatible components.
 
@@ -38,7 +39,7 @@ This is demonstrated in the following example.
 
 ![A batch run component connected to OpenAI and a Parser](/img/component-batch-run.png)
 
-1. Connect a **Language Model** component to a **Batch Run** component's **Language model** port.
+1. Connect any language model component to a **Batch Run** component's **Language model** port.
 
 2. Connect `DataFrame` output from another component to the **Batch Run** component's **DataFrame** input.
 For example, you could connect a **File** component with a CSV file.
@@ -69,12 +70,12 @@ For example, `Create a business card for each name.`
 
 | Name | Type | Description |
 |------|------|-------------|
-| model | HandleInput | Input parameter. Connect the 'Language Model' output from a **Language Model** component. Required. |
+| model | HandleInput | Input parameter. Connect the 'Language Model' output from a language model component. Required. |
 | system_message | MultilineInput | Input parameter. A multi-line system instruction for all rows in the DataFrame. |
 | df | DataFrameInput | Input parameter. The DataFrame whose column is treated as text messages, as specified by 'column_name'. Required. |
 | column_name | MessageTextInput | Input parameter. The name of the DataFrame column to treat as text messages. If empty, all columns are formatted in TOML. |
 | output_column_name | MessageTextInput | Input parameter. Name of the column where the model's response is stored. Default=`model_response`. |
-| enable_metadata | BoolInput | Input parameter. If True, add metadata to the output DataFrame. |
+| enable_metadata | BoolInput | Input parameter. If `True`, add metadata to the output DataFrame. |
 | batch_results | DataFrame | Output parameter. A DataFrame with all original columns plus the model's response column. |
 
 ## Data Operations
@@ -213,7 +214,7 @@ The only requirement is that the preceding component must create `DataFrame` out
         * **Smart Function**
         * **Type Convert**
 
-    2. Configure the [**Smart Function** component](#smart-function) and its dependencies:
+    2. Configure the [**Smart Function** component](#smart-transform) and its dependencies:
 
         * **API Request**: Configure the [**API Request** component](/components-data#api-request) to get JSON data from an endpoint of your choice, and then connect the **API Response** output to the **Smart Function** component's **Data** input.
         * **Language Model**: Select your preferred provider and model, and then enter a valid API key.
@@ -341,7 +342,7 @@ The **Sort** operation allows you to sort the `DataFrame` on a specific column i
 Provide the following parameters:
 
 * **Column Name** (`column_name`): The name of the column to sort on.
-* **Sort Ascending** (`ascending`): Whether to sort in ascending or descending order. If enabled (true), sorts in ascending order; if disabled (false), sorts in descending order. Default: Enabled (true)
+* **Sort Ascending** (`ascending`): Whether to sort in ascending or descending order. If enabled (`true`), sorts in ascending order; if disabled (`false`), sorts in descending order. Default: Enabled (`true`)
 
 </TabItem>
 <TabItem value="tail" label="Tail">
@@ -368,13 +369,13 @@ The output is a `DataFrame` containing all columns from the original `DataFrame`
 
 The **LLM Router** component routes requests to the most appropriate LLM based on [OpenRouter](https://openrouter.ai/docs/quickstart) model specifications.
 
-To use the component in a flow, you connect multiple **Language Model** components to the **LLM Router** components.
+To use the component in a flow, you connect multiple language model components to the **LLM Router** components.
 One model is the judge LLM that analyzes input messages to understand the evaluation context, selects the most appropriate model from the other attached LLMs, and then routes the input to the selected model.
 The selected model processes the input, and then returns the generated response.
 
-The following example flow has three **Language Model** components.
+The following example flow has three language model components.
 One is the judge LLM, and the other two are in the LLM pool for request routing.
-The **Chat Input** and **Chat Output** components create a seamless chat interaction where you send a message and receive a response without any user awareness of the underlying routing.
+The input and output components create a seamless chat interaction where you send a message and receive a response without any user awareness of the underlying routing.
 
 ![LLM Router component](/img/component-llm-router.png)
 
@@ -384,14 +385,14 @@ The **Chat Input** and **Chat Output** components create a seamless chat interac
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| `models` | **Language Models** | Input parameter. Connect [`LanguageModel`](/data-types#languagemodel) output from multiple [**Language Model** components](/components-models) to create a pool of models. The `judge_llm` selects models from this pool when routing requests. The first model you connect is the default model if there is a problem with model selection or routing. |
+| `models` | **Language Models** | Input parameter. Connect [`LanguageModel`](/data-types#languagemodel) output from multiple [language model components](/components-models) to create a pool of models. The `judge_llm` selects models from this pool when routing requests. The first model you connect is the default model if there is a problem with model selection or routing. |
 | `input_value` | **Input** | Input parameter. The incoming query to be routed to the model selected by the judge LLM. |
 | `judge_llm` | **Judge LLM** | Input parameter. Connect `LanguageModel` output from _one_ **Language Model** component to serve as the judge LLM for request routing. |
 | `optimization` | **Optimization** | Input parameter. Set a preferred characteristic for model selection by the judge LLM. The options are `quality` (highest response quality), `speed` (fastest response time), `cost` (most cost-effective model), or `balanced` (equal weight for quality, speed, and cost). Default: `balanced` |
 | `use_openrouter_specs` | **Use OpenRouter Specs** | Input parameter. Whether to fetch model specifications from the OpenRouter API.
-If false, only the model name is provided to the judge LLM. Default: Enabled (true) |
+If `false`, only the model name is provided to the judge LLM. Default: Enabled (`true`) |
 | `timeout` | **API Timeout** | Input parameter. Set a timeout duration in seconds for API requests made by the router. Default: `10` |
-| `fallback_to_first` | **Fallback to First Model** | Input parameter. Whether to use the first LLM in `models` as a backup if routing fails to reach the selected model. Default: Enabled (true) |
+| `fallback_to_first` | **Fallback to First Model** | Input parameter. Whether to use the first LLM in `models` as a backup if routing fails to reach the selected model. Default: Enabled (`true`) |
 
 ### LLM Router outputs
 
@@ -449,6 +450,8 @@ Variables must match keys in the `DataFrame` or `Data` input, such as column nam
 For example, `{name}` extracts the value of a `name` key.
 For more information about the content and structure of `DataFrame` and `Data` objects, see [Langflow data types](/data-types).
 
+<PartialCurlyBraces />
+
 When the flow runs, the **Parser** component iterates over the input, producing a `Message` for each parsed item.
 For example, parsing a `DataFrame` creates a `Message` for each row, populated with the unique values from that row.
 
@@ -498,7 +501,7 @@ The following parameters are available in **Parser** mode.
 | input_data | Data or DataFrame | Input parameter. The `Data` or `DataFrame` input to parse. |
 | pattern | Template | Input parameter. The formatting template using plaintext and variables for keys (`{KEY_NAME}`). See the preceding examples for more information. |
 | sep | Separator | Input parameter. A string defining the separator for rows or lines. Default: `\n` (new line). |
-| clean_data | Clean Data | Whether to remove empty rows and lines in each cell or key of the `DataFrame` or `Data` input. Default: Enabled (true) |
+| clean_data | Clean Data | Whether to remove empty rows and lines in each cell or key of the `DataFrame` or `Data` input. Default: Enabled (`true`) |
 
 </TabItem>
 <TabItem value="stringify" label="Stringify mode">
@@ -513,7 +516,7 @@ The following parameters are available in **Stringify** mode.
 |------|--------------|------|
 | input_data | Data or DataFrame | Input parameter. The `Data` or `DataFrame` input to parse. |
 | sep | Separator | Input parameter. A string defining the separator for rows or lines. Default: `\n` (new line). |
-| clean_data | Clean Data | Whether to remove empty rows and lines in each cell or key of the `DataFrame` or `Data` input. Default: Enabled (true) |
+| clean_data | Clean Data | Whether to remove empty rows and lines in each cell or key of the `DataFrame` or `Data` input. Default: Enabled (`true`) |
 
 </TabItem>
 </Tabs>
@@ -668,7 +671,7 @@ To configure the **Save File** component and use it in a flow, do the following:
 
     * `Message` can be saved to TXT, JSON (default), or Markdown.
 
-    :::important Overwrites allowed
+    :::warning Overwrites allowed
     If you have multiple **Save File** components, in one or more flows, with the same file name, path, and extension, the file contains the data from the most recent run only.
     Langflow doesn't block overwrites if a matching file already exists.
     To avoid unintended overwrites, use unique file names and paths.
@@ -693,12 +696,12 @@ To configure the **Save File** component and use it in a flow, do the following:
 
 5. Optional: If you want to use the saved file in a flow, you must use an API call or another component to retrieve the file from the given filepath.
 
-## Smart Function
+## Smart Function {#smart-transform}
 
 In Langflow version 1.5, this component was renamed from **Lambda Filter** to **Smart Function**.
 
 The **Smart Function** component uses an LLM to generate a Lambda function to filter or transform structured data based on natural language instructions.
-You must connect this component to a [**Language Model** component](/components-models), which is used to generate a function based on the natural language instructions you provide in the **Instructions** parameter.
+You must connect this component to a [language model component](/components-models), which is used to generate a function based on the natural language instructions you provide in the **Instructions** parameter.
 The LLM runs the function against the data input, and then outputs the results as [`Data`](/data-types#data).
 
 :::tip
@@ -730,7 +733,7 @@ From there, the LLM generates a filter function that extracts email addresses fr
 
 The **Split Text** component splits data into chunks based on parameters like chunk size and separator.
 It is often used to chunk data to be tokenized and embedded into vector databases.
-For examples, see [Use Vector Store components in a flow](/components-vector-stores#use-vector-store-components-in-a-flow), [Use Embedding Model components in a flow](/components-embedding-models#use-embedding-model-components-in-a-flow), and [Create a Vector RAG chatbot](/chat-with-rag).
+For examples, see [Use embedding model components in a flow](/components-embedding-models#use-embedding-model-components-in-a-flow) and [Create a Vector RAG chatbot](/chat-with-rag).
 
 ![An embedding generation flow that uses a Split Text component to chunk data.](/img/component-split-text.png)
 
@@ -754,7 +757,7 @@ If the chunks aren't split as you expect, adjust the parameters, rerun the compo
 | chunk_size | Chunk Size | Input parameter. The target length for each chunk after splitting. The data is first split by separator, and then chunks smaller than the `chunk_size` are merged up to this limit. However, if the initial separator split produces any chunks larger than the `chunk_size`, those chunks are neither further subdivided nor combined with any smaller chunks; these chunks will be output as-is even though they exceed the `chunk_size`. Default: `1000`. See [Tokenization errors due to chunk size](#chunk-size) for important considerations. |
 | separator | Separator | Input parameter. A string defining a character to split on, such as `\n` to split on new line characters, `\n\n` to split at paragraph breaks, or `},` to split at the end of JSON objects. You can directly provide the separator string, or pass a separator string from another component as `Message` input. |
 | text_key | Text Key | Input parameter. The key to use for the text column that is extracted from the input and then split. Default: `text`. |
-| keep_separator | Keep Separator | Input parameter. Select how to handle separators in output chunks. If False, separators are omitted from output chunks. Options include `False` (remove separators), `True` (keep separators in chunks without preference for placement), `Start` (place separators at the beginning of chunks), or `End` (place separators at the end of chunks). Default: `False`. |
+| keep_separator | Keep Separator | Input parameter. Select how to handle separators in output chunks. If `False`, separators are omitted from output chunks. Options include `False` (remove separators), `True` (keep separators in chunks without preference for placement), `Start` (place separators at the beginning of chunks), or `End` (place separators at the end of chunks). Default: `False`. |
 
 ### Tokenization errors due to chunk size {#chunk-size}
 
@@ -793,7 +796,7 @@ This can come from practically any component, but it is typically a **Chat Input
     The schema is a table that defines the fields (keys) and data types to organize the data extracted by the LLM into a structured `Data` or `DataFrame` object.
     For more information, see [Output Schema options](#output-schema-options)
 
-3. Attach a [**Language Model** component](/components-models) that is set to emit [`LanguageModel`](/data-types#languagemodel) output.
+3. Attach a [language model component](/components-models) that is set to emit [`LanguageModel`](/data-types#languagemodel) output.
 
     The LLM uses the **Input Message** and **Format Instructions** from the **Structured Output** component to extract specific pieces of data from the input text.
     The output schema is applied to the model's response to produce the final `Data` or `DataFrame` structured object.
@@ -1009,10 +1012,11 @@ The following example uses the **Type Convert** component to convert the `DataFr
 
 ## Legacy Processing components
 
-The following **Processing** components are legacy components.
-You can still use them in your flows, but they are no longer supported and can be removed in a future release.
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
 
-Replace these components with suggested alternatives as soon as possible.
+<PartialLegacy />
+
+The following Processing components are in legacy status:
 
 <details>
 <summary>Alter Metadata</summary>
@@ -1034,7 +1038,7 @@ It accepts the following parameters:
 </details>
 
 <details>
-<summary>Combine Data/Merge Data</summary>
+<summary>Combine Data</summary>
 
 Replace this legacy component with the [**Data Operations** component](#data-operations) or the [**Loop** component](/components-logic#loop).
 
@@ -1086,7 +1090,7 @@ This component extracts a specific key from a `Data` object and returns the valu
 <details>
 <summary>Data to DataFrame/Data to Message</summary>
 
-Replace these legacy components with newer **Processing** components, such as the [**Data Operations** component](#data-operations) and [**Type Convert** component](#type-convert).
+Replace these legacy components with newer Processing components, such as the [**Data Operations** component](#data-operations) and [**Type Convert** component](#type-convert).
 
 These components converted one or more `Data` objects into a `DataFrame` or `Message` object.
 
@@ -1135,9 +1139,9 @@ It accepts the following parameters:
 | Name | Display Name | Info |
 |------|--------------|------|
 | json_str | JSON String | Input parameter. The JSON string to be cleaned. This can be a raw, potentially malformed JSON string produced by language models or other sources that may not fully comply with JSON specifications. |
-| remove_control_chars | Remove Control Characters | Input parameter. If set to True, this option removes control characters (ASCII characters 0-31 and 127) from the JSON string. This can help eliminate invisible characters that might cause parsing issues or make the JSON invalid. |
+| remove_control_chars | Remove Control Characters | Input parameter. If set to `True`, this option removes control characters (ASCII characters 0-31 and 127) from the JSON string. This can help eliminate invisible characters that might cause parsing issues or make the JSON invalid. |
 | normalize_unicode | Normalize Unicode | Input parameter. When enabled, this option normalizes Unicode characters in the JSON string to their canonical composition form (NFC). This ensures consistent representation of Unicode characters across different systems and prevents potential issues with character encoding. |
-| validate_json | Validate JSON | Input parameter. If set to True, this option attempts to parse the JSON string to ensure it is well-formed before applying the final repair operation. It raises a ValueError if the JSON is invalid, allowing for early detection of major structural issues in the JSON. |
+| validate_json | Validate JSON | Input parameter. If set to `True`, this option attempts to parse the JSON string to ensure it is well-formed before applying the final repair operation. It raises a ValueError if the JSON is invalid, allowing for early detection of major structural issues in the JSON. |
 | output | Cleaned JSON String | Output parameter. The resulting cleaned, repaired, and validated JSON string that fully complies with the JSON specification. |
 
 </details>
@@ -1175,47 +1179,6 @@ It accepts the following parameters:
 Replace this legacy component with the [**Parser** component](#parser).
 
 This component converts and extracts JSON fields in `Message` and `Data` objects using JQ queries, then returns `filtered_data`, which is a list of `Data` objects.
-
-</details>
-
-<details>
-<summary>Python REPL</summary>
-
-Replace this legacy component with the [**Python Interpreter** component](#python-interpreter) or another processing or logic component.
-
-This component creates a Python REPL (Read-Eval-Print Loop) tool for executing Python code.
-
-It accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| name | String | Input parameter. The name of the tool. Default: `python_repl`. |
-| description | String | Input parameter. A description of the tool's functionality. |
-| global_imports | List[String] | Input parameter. A list of modules to import globally. Default: `math`. |
-| tool | Tool | Output parameter. A Python REPL tool for use in LangChain. |
-
-</details>
-
-<details>
-<summary>Python Code Structured</summary>
-
-Replace this legacy component with the [**Python Interpreter** component](#python-interpreter) or another processing or logic component.
-
-This component creates a structured tool from Python code using a dataclass.
-
-The component dynamically updates its configuration based on the provided Python code, allowing for custom function arguments and descriptions.
-
-It accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| tool_code | String | Input parameter. The Python code for the tool's dataclass. |
-| tool_name | String | Input parameter. The name of the tool. |
-| tool_description | String | Input parameter. The description of the tool. |
-| return_direct | Boolean | Input parameter. Whether to return the function output directly. |
-| tool_function | String | Input parameter. The selected function for the tool. |
-| global_variables | Dict | Input parameter. Global variables or data for the tool. |
-| result_tool | Tool | Output parameter. A structured tool created from the Python code. |
 
 </details>
 
