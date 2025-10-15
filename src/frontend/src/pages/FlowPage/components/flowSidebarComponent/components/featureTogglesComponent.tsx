@@ -40,6 +40,7 @@ const FeatureToggles = ({
             checked={toggle.checked}
             onCheckedChange={toggle.onChange}
             data-testid={toggle.testId}
+            className="scale-90"
           />
         </div>
       ))}
