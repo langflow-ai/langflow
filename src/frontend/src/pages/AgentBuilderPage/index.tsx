@@ -1,31 +1,114 @@
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { useContext, useEffect, useMemo, useState } from "react";
+import { RiChatAiLine } from "react-icons/ri";
+import { VscSend } from "react-icons/vsc";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import TemplatesModal from "@/modals/templatesModal";
-import { useFolderStore } from "@/stores/foldersStore";
-import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
-import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
-import { usePostFolders } from "@/controllers/API/queries/folders/use-post-folders";
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { swatchColors } from "@/utils/styleUtils";
-import { cn, getNumberFromString } from "@/utils/utils";
-import { useGetTemplateStyle } from "@/pages/MainPage/utils/get-template-style";
-import { timeElapsed } from "@/pages/MainPage/utils/time-elapse";
-import type { FlowType } from "@/types/flow";
-import { RiChatAiLine } from "react-icons/ri";
-import { useContext, useMemo } from "react";
-import { AuthContext } from "@/contexts/authContext";
-import { envConfig } from "@/config/env";
-import KeycloakService from "@/services/keycloak";
-import { VscSend } from "react-icons/vsc";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { envConfig } from "@/config/env";
+import { AuthContext } from "@/contexts/authContext";
+import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
+import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
+import { usePostFolders } from "@/controllers/API/queries/folders/use-post-folders";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import TemplatesModal from "@/modals/templatesModal";
+import { useGetTemplateStyle } from "@/pages/MainPage/utils/get-template-style";
+import { timeElapsed } from "@/pages/MainPage/utils/time-elapse";
+import KeycloakService from "@/services/keycloak";
+import { useFolderStore } from "@/stores/foldersStore";
+import type { FlowType } from "@/types/flow";
+import { swatchColors } from "@/utils/styleUtils";
+import { cn, getNumberFromString } from "@/utils/utils";
+
+// Delete Confirmation Modal Component
+const DeleteConfirmationModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  agentName,
+  isDeleting,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  agentName: string;
+  isDeleting: boolean;
+}) => {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+              <ForwardedIconComponent 
+                name="AlertTriangle" 
+                className="h-5 w-5 text-destructive" 
+              />
+            </div>
+            Delete Agent
+          </DialogTitle>
+        </DialogHeader>
+        <div className="py-4">
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete "{agentName}"? This action cannot be undone.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={isDeleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <>
+                <ForwardedIconComponent name="Loader2" className="mr-2 h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              'Delete'
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 // Agent Card Component
 const AgentCard = ({
@@ -48,11 +131,10 @@ const AgentCard = ({
   const swatchIndex =
     (flow.gradient && !isNaN(parseInt(flow.gradient))
       ? parseInt(flow.gradient)
-      : getNumberFromString(flow.gradient ?? flow.id)) %
-    swatchColors.length;
+      : getNumberFromString(flow.gradient ?? flow.id)) % swatchColors.length;
 
   return (
-    <Card 
+    <Card
       className="group cursor-pointer hover:shadow-md transition-all duration-200 h-full"
       onClick={() => navigate(`/flow/${flow.id}/folder/${folderId}/`)}
     >
@@ -62,7 +144,7 @@ const AgentCard = ({
             <div
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-lg shrink-0",
-                swatchColors[swatchIndex]
+                swatchColors[swatchIndex],
               )}
             >
               <ForwardedIconComponent
@@ -104,8 +186,11 @@ const AgentCard = ({
               ? `Edited ${timeElapsed(flow.updated_at)} ago`
               : "Never edited"}
           </span>
-          <Badge variant="secondary" className="text-xs bg-success-bg text-success-text px-2 py-[6px] hover:bg-success-bg hover:text-success-text">
-            Published
+          <Badge
+            variant="secondary"
+            className="text-xs bg-success-bg text-success-text px-2 py-[6px] hover:bg-success-bg hover:text-success-text"
+          >
+            Draft
           </Badge>
         </div>
       </CardContent>
@@ -134,8 +219,7 @@ const AgentListItem = ({
   const swatchIndex =
     (flow.gradient && !isNaN(parseInt(flow.gradient))
       ? parseInt(flow.gradient)
-      : getNumberFromString(flow.gradient ?? flow.id)) %
-    swatchColors.length;
+      : getNumberFromString(flow.gradient ?? flow.id)) % swatchColors.length;
 
   return (
     <Card
@@ -148,7 +232,7 @@ const AgentListItem = ({
         <div
           className={cn(
             "item-center flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5",
-            swatchColors[swatchIndex]
+            swatchColors[swatchIndex],
           )}
         >
           <ForwardedIconComponent
@@ -161,11 +245,15 @@ const AgentListItem = ({
         <div className="flex min-w-0 flex-col">
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
             <div className="flex min-w-0 flex-shrink truncate text-sm font-semibold">
-              <span className="truncate" title={flow.name}>{flow.name}</span>
+              <span className="truncate" title={flow.name}>
+                {flow.name}
+              </span>
             </div>
             <div className="flex min-w-0 flex-shrink text-xs text-muted-foreground">
               <span className="truncate">
-                {flow.updated_at ? `Edited ${timeElapsed(flow.updated_at)} ago` : "Never edited"}
+                {flow.updated_at
+                  ? `Edited ${timeElapsed(flow.updated_at)} ago`
+                  : "Never edited"}
               </span>
             </div>
           </div>
@@ -225,6 +313,7 @@ export default function AgentBuilderPage() {
     }
     return "there";
   }, [userData]);
+
   const navigate = useCustomNavigate();
   const [promptValue, setPromptValue] = useState("");
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
@@ -234,9 +323,15 @@ export default function AgentBuilderPage() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [isSavingProject, setIsSavingProject] = useState(false);
   const [showAllAgents, setShowAllAgents] = useState(false);
-  const [view, setView] = useState<"list" | "grid">("grid");
+  const [view, setView] = useState<"list" | "grid">("list");
   const [sortOpen, setSortOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<"most_recent" | "recently_created">("most_recent");
+  const [sortBy, setSortBy] = useState<"most_recent" | "recently_created">(
+    "most_recent",
+  );
+
+  // Delete confirmation modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [agentToDelete, setAgentToDelete] = useState<FlowType | null>(null);
 
   // Fetch folders and agents (same logic as StudioHomePage)
   const myCollectionId = useFolderStore((s) => s.myCollectionId);
@@ -258,10 +353,34 @@ export default function AgentBuilderPage() {
 
   // Delete mutation
   const deleteMutation = useDeleteDeleteFlows();
-  const { mutate: mutateAddFolder, isPending: isCreatingFolder } = usePostFolders();
+  const { mutate: mutateAddFolder, isPending: isCreatingFolder } =
+    usePostFolders();
 
-  const handleDeleteAgent = (flowId: string) => {
-    deleteMutation.mutate({ flow_ids: [flowId] });
+  const handleDeleteAgent = (flow: FlowType) => {
+    setAgentToDelete(flow);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (agentToDelete) {
+      deleteMutation.mutate(
+        { flow_ids: [agentToDelete.id] },
+        {
+          onSuccess: () => {
+            setShowDeleteModal(false);
+            setAgentToDelete(null);
+          },
+          onError: () => {
+            // Handle error if needed
+          },
+        }
+      );
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setAgentToDelete(null);
   };
 
   // Sort agents based on selected option
@@ -290,7 +409,9 @@ export default function AgentBuilderPage() {
       // Generate new session ID
       const sessionId = crypto.randomUUID();
       // Navigate to conversation page with session ID and prompt
-      navigate(`/agent-builder/conversation/${sessionId}`, { state: { prompt: promptValue } });
+      navigate(`/agent-builder/conversation/${sessionId}`, {
+        state: { prompt: promptValue },
+      });
     }
   };
 
@@ -356,11 +477,13 @@ export default function AgentBuilderPage() {
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
                 <SelectContent align="end">
-                  {folders.filter((f) => f.name !== "Builder Agent").map((f) => (
-                    <SelectItem key={f.id} value={f.id!} className="text-sm">
-                      {f.name}
-                    </SelectItem>
-                  ))}
+                  {folders
+                    .filter((f) => f.name !== "Builder Agent")
+                    .map((f) => (
+                      <SelectItem key={f.id} value={f.id!} className="text-sm">
+                        {f.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               <Button
@@ -381,10 +504,12 @@ export default function AgentBuilderPage() {
         <div className="flex flex-col items-center justify-center mt-8 mb-8 max-w-[876px] mx-auto">
           <RiChatAiLine size={36} opacity={0.5} className="mb-2" />
           <p className="text-xl mb-2">
-            Hi <span className="font-medium">{displayName}</span>, What can I help you today?
+            Hi <span className="font-medium">{displayName}</span>, What can I
+            help you today?
           </p>
           <p className="text-sm text-muted-foreground text-center max-w-2xl">
-            Build workflows from the library of AI Agents, or author your own custom AI Agent
+            Build workflows from the library of AI Agents, or author your own
+            custom AI Agent
           </p>
         </div>
 
@@ -444,9 +569,15 @@ export default function AgentBuilderPage() {
                     aria-haspopup="menu"
                     aria-expanded={sortOpen}
                   >
-                    <ForwardedIconComponent name="ArrowUpDown" className="h-4 w-4" />
+                    <ForwardedIconComponent
+                      name="ArrowUpDown"
+                      className="h-4 w-4"
+                    />
                     <span>Sort By</span>
-                    <ForwardedIconComponent name="ChevronDown" className="h-4 w-4" />
+                    <ForwardedIconComponent
+                      name="ChevronDown"
+                      className="h-4 w-4"
+                    />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="p-1">
@@ -460,8 +591,14 @@ export default function AgentBuilderPage() {
                   >
                     <span>Most Recent</span>
                     <div className="flex items-center gap-1">
-                      <ForwardedIconComponent name="ArrowUp" className="h-3 w-3" />
-                      <ForwardedIconComponent name="ArrowDown" className="h-3 w-3" />
+                      <ForwardedIconComponent
+                        name="ArrowUp"
+                        className="h-3 w-3"
+                      />
+                      <ForwardedIconComponent
+                        name="ArrowDown"
+                        className="h-3 w-3"
+                      />
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem
@@ -474,8 +611,14 @@ export default function AgentBuilderPage() {
                   >
                     <span>Recently Created</span>
                     <div className="flex items-center gap-1">
-                      <ForwardedIconComponent name="ArrowUp" className="h-3 w-3" />
-                      <ForwardedIconComponent name="ArrowDown" className="h-3 w-3" />
+                      <ForwardedIconComponent
+                        name="ArrowUp"
+                        className="h-3 w-3"
+                      />
+                      <ForwardedIconComponent
+                        name="ArrowDown"
+                        className="h-3 w-3"
+                      />
                     </div>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -519,30 +662,30 @@ export default function AgentBuilderPage() {
                   {"View All >"}
                 </Button>
               )}
-
             </div>
           </div>
-          
+
           {agentsLoading && (
             <div className="text-center text-sm text-muted-foreground py-8">
               Loading agents...
             </div>
           )}
-          
+
           {!agentsLoading && (folderData?.flows?.items ?? []).length === 0 && (
             <div className="text-center text-sm text-muted-foreground py-8">
               No agents found.
             </div>
           )}
-          
-          {!agentsLoading && agentsToShow.length > 0 && (
-            view === "grid" ? (
+
+          {!agentsLoading &&
+            agentsToShow.length > 0 &&
+            (view === "grid" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {agentsToShow.map((flow) => (
                   <AgentCard
                     key={flow.id}
                     flow={flow}
-                    onDelete={() => handleDeleteAgent(flow.id)}
+                    onDelete={() => handleDeleteAgent(flow)}
                     folderId={folderId}
                   />
                 ))}
@@ -553,13 +696,12 @@ export default function AgentBuilderPage() {
                   <AgentListItem
                     key={flow.id}
                     flow={flow}
-                    onDelete={() => handleDeleteAgent(flow.id)}
+                    onDelete={() => handleDeleteAgent(flow)}
                     folderId={folderId}
                   />
                 ))}
               </div>
-            )
-          )}
+            ))}
         </div>
       </div>
 
@@ -570,7 +712,10 @@ export default function AgentBuilderPage() {
       />
 
       {/* Create Project Modal */}
-      <Dialog open={showCreateProjectModal} onOpenChange={setShowCreateProjectModal}>
+      <Dialog
+        open={showCreateProjectModal}
+        onOpenChange={setShowCreateProjectModal}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Create New Project</DialogTitle>
@@ -622,6 +767,15 @@ export default function AgentBuilderPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        agentName={agentToDelete?.name || ""}
+        isDeleting={deleteMutation.isPending}
+      />
     </div>
   );
 }
