@@ -38,6 +38,7 @@ async def post_validate_prompt(prompt_request: ValidatePromptRequest) -> PromptV
             name=prompt_request.name,
             custom_fields=prompt_request.frontend_node.custom_fields,
             frontend_node_template=prompt_request.frontend_node.template,
+            is_mustache=prompt_request.mustache,
         )
 
         return PromptValidationResponse(
