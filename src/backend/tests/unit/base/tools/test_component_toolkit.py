@@ -1,4 +1,3 @@
-import os
 import sqlite3
 from pathlib import Path
 
@@ -11,6 +10,8 @@ from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.tools.calculator import CalculatorToolComponent
 from lfx.graph.graph.base import Graph
 from pydantic import BaseModel
+
+from tests.api_keys import get_openai_api_key
 
 
 @pytest.fixture
@@ -126,7 +127,7 @@ def test_component_tool():
 async def test_component_tool_with_api_key():
     chat_output = ChatOutput()
     openai_llm = OpenAIModelComponent()
-    openai_llm.set(api_key=os.environ["OPENAI_API_KEY"])
+    openai_llm.set(api_key=get_openai_api_key())
     tool_calling_agent = ToolCallingAgentComponent()
     tools = await chat_output.to_toolkit()
     tool_calling_agent.set(
@@ -150,7 +151,7 @@ async def test_sql_component_to_toolkit(test_db):
     sql_component.set(database_url=f"sqlite:///{test_db}")
     tool = await sql_component.to_toolkit()
     openai_llm = OpenAIModelComponent()
-    openai_llm.set(api_key=os.environ["OPENAI_API_KEY"])
+    openai_llm.set(api_key=get_openai_api_key())
     tool_calling_agent = ToolCallingAgentComponent()
 
     tool_calling_agent.set(

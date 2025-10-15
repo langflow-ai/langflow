@@ -378,7 +378,9 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
     @pytest.mark.no_blockbuster
     async def test_agent_component_with_calculator(self):
         # Now you can access the environment variables
-        api_key = os.getenv("OPENAI_API_KEY")
+        from tests.api_keys import get_openai_api_key
+
+        api_key = get_openai_api_key()
         tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
         input_value = "What is 2 + 2?"
 
@@ -402,7 +404,9 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
     @pytest.mark.no_blockbuster
     async def test_agent_component_with_all_openai_models(self):
         # Mock inputs
-        api_key = os.getenv("OPENAI_API_KEY")
+        from tests.api_keys import get_openai_api_key
+
+        api_key = get_openai_api_key()
         input_value = "What is 2 + 2?"
 
         # Iterate over all OpenAI models

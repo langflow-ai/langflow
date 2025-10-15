@@ -11,6 +11,8 @@ import os
 import pytest
 from langflow.utils.image import create_image_content_dict
 
+from tests.api_keys import has_api_key
+
 
 @pytest.fixture
 def sample_image(tmp_path):
@@ -37,9 +39,7 @@ def sample_jpeg_image(tmp_path):
     return image_path
 
 
-def has_api_key(env_var):
-    """Check if an API key is available in environment variables."""
-    return bool(os.getenv(env_var))
+# use shared has_api_key from tests.api_keys
 
 
 @pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY not available in CI")
@@ -50,7 +50,9 @@ def test_openai_vision_api_real_call(sample_image):
     except ImportError:
         pytest.skip("OpenAI package not installed")
 
-    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    from tests.api_keys import get_openai_api_key
+
+    client = openai.OpenAI(api_key=get_openai_api_key())
     content_dict = create_image_content_dict(sample_image)
 
     # Test the message structure with OpenAI
@@ -79,7 +81,9 @@ def test_openai_vision_api_with_jpeg(sample_jpeg_image):
     except ImportError:
         pytest.skip("OpenAI package not installed")
 
-    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    from tests.api_keys import get_openai_api_key
+
+    client = openai.OpenAI(api_key=get_openai_api_key())
     content_dict = create_image_content_dict(sample_jpeg_image)
 
     # Verify JPEG format is correctly detected from file extension
@@ -280,7 +284,9 @@ def test_cross_provider_consistency(sample_image):
     try:
         import openai
 
-        openai_client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        from tests.api_keys import get_openai_api_key
+
+        openai_client = openai.OpenAI(api_key=get_openai_api_key())
 
         openai_response = openai_client.chat.completions.create(
             model="gpt-4o-mini",
