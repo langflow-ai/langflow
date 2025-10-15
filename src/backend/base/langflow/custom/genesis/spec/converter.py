@@ -853,12 +853,17 @@ class FlowConverter:
                 logger.debug(f"   ✓ Data-to-input_value compatibility")
             return True
 
-        # Compatible conversions
+        # Compatible conversions - Enhanced for better coverage
         compatible = {
-            "Message": ["str", "text", "Text", "Data"],
-            "str": ["Message", "text", "Text"],
-            "Data": ["dict", "object", "any", "Message"],
-            "DataFrame": ["Data", "object", "any"]
+            "Message": ["str", "text", "Text", "Data", "Document"],
+            "str": ["Message", "text", "Text", "Data"],
+            "Data": ["dict", "object", "any", "Message", "str", "Document"],
+            "DataFrame": ["Data", "object", "any", "Tool"],
+            "Document": ["Data", "Message", "str", "text"],
+            "Tool": ["DataFrame", "Data", "any", "object"],
+            "Text": ["Message", "str", "Data"],
+            "object": ["any", "Data", "DataFrame", "Tool"],
+            "any": ["Message", "str", "Data", "DataFrame", "Document", "Tool", "object", "text", "Text"]
         }
 
         for otype in output_types:
