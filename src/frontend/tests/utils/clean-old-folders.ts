@@ -1,4 +1,4 @@
-import { expect, type Page } from "playwright/test";
+import type { Page } from "@playwright/test";
 import { convertTestName } from "./convert-test-name";
 
 export const cleanOldFolders = async (page: Page) => {
