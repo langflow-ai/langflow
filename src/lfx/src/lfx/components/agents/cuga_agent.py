@@ -247,7 +247,14 @@ class CugaComponent(ToolCallingAgentComponent):
         }
         logger.debug(f"LLM MODEL TYPE: {type(llm)}")
         if current_input:
-            os.environ["DYNA_ADVANCED_FEATURES__REGISTRY"] = "false"
+            os.environ["DYNACONF_ADVANCED_FEATURES__REGISTRY"] = "false"
+            if self.browser_enabled:
+                logger.info("browser_enabled is true, setting env to hybrid")
+                os.environ["DYNACONF_ADVANCED_FEATURES__MODE"] = "hybrid"
+                os.environ["DYNACONF_ADVANCED_FEATURES__USE_VISION"] = "false"
+            else:
+                logger.info("browser_enabled is false, setting env to api")
+                os.environ["DYNACONF_ADVANCED_FEATURES__MODE"] = "api"
             from cuga.backend.activity_tracker.tracker import ActivityTracker
             from cuga.backend.cuga_graph.utils.agent_loop import StreamEvent
             from cuga.backend.cuga_graph.utils.controller import (
@@ -475,52 +482,6 @@ class CugaComponent(ToolCallingAgentComponent):
         # --- ADDED LOGGING END ---
 
         return llm_model, self.chat_history, self.tools
-
-    # async def message_response(self) -> Message:
-    #     # --- ADDED LOGGING START ---
-    #     print("[CUGA] Starting Cuga agent run for message_response.")
-    #     print(f"[CUGA] Agent input value: {self.input_value}")
-    #     # --- ADDED LOGGING END ---
-    #
-    #     try:
-    #         llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
-    #
-    #         # Use the stub call_agent function
-    #         input_text = self.input_value.text if hasattr(self.input_value, 'text') else str(self.input_value)
-    #         result_text = await self.call_agent(
-    #             current_input=input_text,
-    #             tools=self.tools or [],
-    #             history_messages=self.chat_history,
-    #             llm=llm_model
-    #         )
-    #
-    #         # Create message from result
-    #         result = Message(
-    #             text=result_text,
-    #             sender="CugaAgent",
-    #             sender_name="Cuga",
-    #             session_id=self.graph.session_id,
-    #         )
-    #
-    #         # --- ADDED LOGGING START ---
-    #         print("[CUGA] Agent run finished successfully.")
-    #         print(f"[CUGA] Agent output: {result}")
-    #         # --- ADDED LOGGING END ---
-    #
-    #         # Store result for potential JSON output
-    #         self._agent_result = result
-    #
-    #     except (ValueError, TypeError, KeyError) as e:
-    #         await logger.aerror(f"[CUGA] {type(e).__name__}: {e!s}")
-    #         raise
-    #     except ExceptionWithMessageError as e:
-    #         await logger.aerror(f"[CUGA] ExceptionWithMessageError occurred: {e}")
-    #         raise
-    #     except Exception as e:
-    #         await logger.aerror(f"[CUGA] Unexpected error: {e!s}")
-    #         raise
-    #     else:
-    #         return result
 
     def _preprocess_schema(self, schema):
         """Preprocess schema to ensure correct data types for build_model_from_schema.
