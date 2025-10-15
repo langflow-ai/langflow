@@ -16,6 +16,7 @@ import MarketplaceAgentCard from "./components/MarketplaceAgentCard";
 import AgentPagination from "./components/AgentPagination";
 import ListSkeleton from "../MainPage/components/listSkeleton";
 import { useGetAgentMarketplaceQuery } from "@/controllers/API/queries/agent-marketplace/use-get-agent-marketplace";
+import { STATIC_MARKETPLACE_AGENTS } from "./data/agentsList";
 
 export default function AgentMarketplacePage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -55,7 +56,27 @@ export default function AgentMarketplacePage() {
     }
   );
 
-  const items = marketplaceData?.items ?? [];
+  // Combine API agents with static agents, removing duplicates by normalized name
+  const apiItems = marketplaceData?.items ?? [];
+  const apiNameSet = useMemo(() => {
+    const set = new Set<string>();
+    apiItems.forEach((item) => {
+      const name = (item.spec?.name ?? item.file_name)?.trim().toLowerCase();
+      if (name) set.add(name);
+    });
+    return set;
+  }, [apiItems]);
+
+  const staticFiltered = useMemo(() => {
+    return STATIC_MARKETPLACE_AGENTS.filter((item) => {
+      const name = (item.spec?.name ?? item.file_name)?.trim().toLowerCase();
+      return !!name && !apiNameSet.has(name);
+    });
+  }, [apiNameSet]);
+
+  const items = useMemo(() => {
+    return [...apiItems, ...staticFiltered];
+  }, [apiItems, staticFiltered]);
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
@@ -282,6 +303,7 @@ export default function AgentMarketplacePage() {
                     key={`${item.folder_name}/${item.file_name}`}
                     item={item}
                     viewMode={viewMode}
+                    interactive={item.folder_name !== "static_agents"}
                   />
                 ))}
               </div>
