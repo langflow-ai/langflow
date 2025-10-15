@@ -12,39 +12,36 @@ email: utilization-management@autonomize.ai
 status: ACTIVE
 
 variables:
-- name: summarization_length
-  type: string
-  required: false
-  default: "medium"
-  description: Length of appeal summary (short, medium, comprehensive)
-- name: linking_confidence_threshold
-  type: float
-  required: false
-  default: 0.80
-  description: Minimum confidence score for automatic linking to denial reasons and policies
-- name: evidence_extraction_depth
-  type: string
-  required: false
-  default: "detailed"
-  description: Depth of evidence extraction (basic, detailed, comprehensive)
-- name: policy_matching_scope
-  type: string
-  required: false
-  default: "comprehensive"
-  description: Scope of policy matching (specific, related, comprehensive)
+  - name: summarization_length
+    type: string
+    required: false
+    default: "medium"
+    description: Length of appeal summary (short, medium, comprehensive)
+  - name: linking_confidence_threshold
+    type: string
+    required: false
+    default: "0.80"
+    description: Minimum confidence score for automatic linking to denial reasons and policies
+  - name: evidence_extraction_depth
+    type: string
+    required: false
+    default: "detailed"
+    description: Depth of evidence extraction (basic, detailed, comprehensive)
+  - name: policy_matching_scope
+    type: string
+    required: false
+    default: "comprehensive"
+    description: Scope of policy matching (specific, related, comprehensive)
 
 tags:
-- utilization-management
-- appeals-processing
-- nlp-summarization
-- denial-linkage
-- policy-matching
-- evidence-extraction
-- medical-appeals
-- pharmacy-appeals
-
-reusability:
-  asTools: false
+  - utilization-management
+  - appeals-processing
+  - nlp-summarization
+  - denial-linkage
+  - policy-matching
+  - evidence-extraction
+  - medical-appeals
+  - pharmacy-appeals
 
 sampleInput:
   appeal_id: "APP_20241011_001"
@@ -59,11 +56,22 @@ sampleOutput:
   summary_id: "SUMM_20241011_001"
   appeal_id: "APP_20241011_001"
   executive_summary: "Member appeals denial of lumbar MRI citing persistent pain and failed conservative treatment"
-  key_arguments: ["Failed conservative treatment", "Persistent symptoms", "Physician recommendation"]
+  key_arguments:
+    - "Failed conservative treatment"
+    - "Persistent symptoms"
+    - "Physician recommendation"
   linked_denial_reason: "Insufficient medical necessity documentation"
-  relevant_policies: ["Policy_MRI_001", "Policy_Conservative_Treatment_002"]
-  referenced_evidence: ["Physician notes", "Treatment history", "Symptom documentation"]
-  confidence_scores: {"denial_linking": 0.92, "policy_matching": 0.88, "evidence_extraction": 0.94}
+  relevant_policies:
+    - "Policy_MRI_001"
+    - "Policy_Conservative_Treatment_002"
+  referenced_evidence:
+    - "Physician notes"
+    - "Treatment history"
+    - "Symptom documentation"
+  confidence_scores:
+    denial_linking: "0.92"
+    policy_matching: "0.88"
+    evidence_extraction: "0.94"
 
 kind: Single Agent
 agentGoal: Accurately summarize appeal letters using NLP and intelligently link summaries to original denial reasons, relevant policies, and referenced evidence to streamline appeals processing and improve decision-making
@@ -73,222 +81,177 @@ interactionMode: RequestResponse
 runMode: RealTime
 agencyLevel: KnowledgeDrivenWorkflow
 toolsUse: true
-learningCapability: Supervised
 
 components:
-- id: appeals-input
-  name: Appeals Processing Request Input
-  kind: Input
-  type: genesis:chat_input
-  description: Receive appeals summarization requests with appeal documents and context
-  provides:
-  - useAs: input_value
-    in: appeals-agent
-    description: Provide appeal context and processing parameters
+  - id: appeals-input
+    name: Appeals Processing Request Input
+    kind: Input
+    type: genesis:chat_input
+    description: Receive appeals summarization requests with appeal documents and context
+    provides:
+      - useAs: input_value
+        in: appeals-agent
+        description: Provide appeal context and processing parameters
 
-- id: appeal-letters-api
-  name: Appeal Letters API Access
-  kind: Tool
-  type: genesis:mcp_tool
-  description: Access member and provider appeal letters from appeals management systems
-  asTools: true
-  config:
-    tool_name: appeal_letters_api
-    description: |
-      Access comprehensive appeal letters and documents.
-      Provides:
-      - Member appeal letters and documentation
-      - Provider appeal submissions
-      - Supporting clinical documentation
-      - Appeal submission metadata
-      - Document attachments and evidence
-  provides:
-  - useAs: tools
-    in: appeals-agent
-    description: Enable access to appeal letters and supporting documents
+  - id: appeal-letters-api
+    name: Appeal Letters API Access
+    kind: Tool
+    type: genesis:mcp_tool
+    description: Access member and provider appeal letters from appeals management systems
+    asTools: true
+    config:
+      tool_name: appeal_letters_api
+    provides:
+      - useAs: tools
+        in: appeals-agent
+        description: Enable access to appeal letters and supporting documents
 
-- id: denial-reasons-database
-  name: Denial Reasons Database Access
-  kind: Tool
-  type: genesis:mcp_tool
-  description: Access original denial reasons and decision documentation for linkage analysis
-  asTools: true
-  config:
-    tool_name: denial_reasons_database
-    description: |
-      Access original denial reasons and decision data.
-      Provides:
-      - Original denial decisions and reasoning
-      - Clinical criteria not met
-      - Medical necessity assessments
-      - Prior authorization decision history
-      - Denial coding and categorization
-  provides:
-  - useAs: tools
-    in: appeals-agent
-    description: Enable access to denial reasons for intelligent linking
+  - id: denial-reasons-database
+    name: Denial Reasons Database Access
+    kind: Tool
+    type: genesis:mcp_tool
+    description: Access original denial reasons and decision documentation for linkage analysis
+    asTools: true
+    config:
+      tool_name: denial_reasons_database
+    provides:
+      - useAs: tools
+        in: appeals-agent
+        description: Enable access to denial reasons for intelligent linking
 
-- id: policies-database
-  name: Policies Database Access
-  kind: Tool
-  type: genesis:mcp_tool
-  description: Access comprehensive policy database for relevant policy identification and matching
-  asTools: true
-  config:
-    tool_name: policies_database
-    description: |
-      Access comprehensive healthcare policies and guidelines.
-      Provides:
-      - Medical necessity policies and criteria
-      - Coverage determination guidelines
-      - Clinical policy bulletins
-      - Pharmacy formulary policies
-      - Prior authorization requirements
-  provides:
-  - useAs: tools
-    in: appeals-agent
-    description: Enable policy matching and identification
+  - id: policies-database
+    name: Policies Database Access
+    kind: Tool
+    type: genesis:mcp_tool
+    description: Access comprehensive policy database for relevant policy identification and matching
+    asTools: true
+    config:
+      tool_name: policies_database
+    provides:
+      - useAs: tools
+        in: appeals-agent
+        description: Enable policy matching and identification
 
-- id: evidence-database
-  name: Referenced Evidence Database
-  kind: Tool
-  type: genesis:mcp_tool
-  description: Access referenced clinical evidence and supporting documentation for comprehensive analysis
-  asTools: true
-  config:
-    tool_name: evidence_database
-    description: |
-      Access clinical evidence and supporting documentation.
-      Provides:
-      - Clinical studies and research references
-      - Evidence-based medicine guidelines
-      - Treatment protocols and standards
-      - Medical literature and publications
-      - Clinical decision support evidence
-  provides:
-  - useAs: tools
-    in: appeals-agent
-    description: Enable evidence identification and linking
+  - id: evidence-database
+    name: Referenced Evidence Database
+    kind: Tool
+    type: genesis:mcp_tool
+    description: Access referenced clinical evidence and supporting documentation for comprehensive analysis
+    asTools: true
+    config:
+      tool_name: evidence_database
+    provides:
+      - useAs: tools
+        in: appeals-agent
+        description: Enable evidence identification and linking
 
-- id: healthcare-nlp-engine
-  name: Healthcare NLP Processing Engine
-  kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced NLP engine specialized for healthcare appeals processing and medical terminology analysis
-  asTools: true
-  config:
-    tool_name: healthcare_appeals_nlp
-    description: |
-      Advanced NLP processing for healthcare appeals summarization.
-      Provides:
-      - Medical terminology extraction and analysis
-      - Appeal argument identification and categorization
-      - Clinical context understanding
-      - Key point extraction and summarization
-      - Sentiment analysis for appeal urgency
-  provides:
-  - useAs: tools
-    in: appeals-agent
-    description: Enable advanced NLP processing for appeals analysis
+  - id: healthcare-nlp-engine
+    name: Healthcare NLP Processing Engine
+    kind: Tool
+    type: genesis:mcp_tool
+    description: Advanced NLP engine specialized for healthcare appeals processing and medical terminology analysis
+    asTools: true
+    config:
+      tool_name: healthcare_appeals_nlp
+    provides:
+      - useAs: tools
+        in: appeals-agent
+        description: Enable advanced NLP processing for appeals analysis
 
-- id: intelligent-linking-engine
-  name: Intelligent Linking Engine
-  kind: Tool
-  type: genesis:mcp_tool
-  description: Machine learning engine for intelligent linking between appeals, denials, policies, and evidence
-  asTools: true
-  config:
-    tool_name: intelligent_linking_engine
-    description: |
-      ML-powered intelligent linking for appeals processing.
-      Provides:
-      - Denial reason correlation and matching
-      - Policy relevance scoring and identification
-      - Evidence relationship mapping
-      - Confidence scoring for linkages
-      - Semantic similarity analysis
-  provides:
-  - useAs: tools
-    in: appeals-agent
-    description: Enable intelligent linking capabilities
+  - id: intelligent-linking-engine
+    name: Intelligent Linking Engine
+    kind: Tool
+    type: genesis:mcp_tool
+    description: Machine learning engine for intelligent linking between appeals, denials, policies, and evidence
+    asTools: true
+    config:
+      tool_name: intelligent_linking_engine
+    provides:
+      - useAs: tools
+        in: appeals-agent
+        description: Enable intelligent linking capabilities
 
-- id: appeals-agent
-  name: Appeals Summarization Agent
-  kind: Agent
-  type: genesis:agent
-  description: Intelligent agent that processes appeal letters using NLP and creates comprehensive summaries with intelligent linking to denials, policies, and evidence
-  config:
-    system_message: |
-      You are a healthcare appeals processing specialist with expertise in medical and pharmacy appeals.
-      Your role is to:
-      1. Analyze and summarize member or provider appeal letters using advanced NLP
-      2. Extract key arguments and supporting points from appeal documents
-      3. Link appeal summaries to original denial reasons with high accuracy
-      4. Identify and link relevant policies and coverage guidelines
-      5. Extract and reference supporting clinical evidence
+  - id: appeals-agent
+    name: Appeals Summarization Agent
+    kind: Agent
+    type: genesis:agent
+    description: Intelligent agent that processes appeal letters using NLP and creates comprehensive summaries with intelligent linking to denials, policies, and evidence
+    config:
+      system_message: |
+        You are a healthcare appeals processing specialist with expertise in medical and pharmacy appeals.
+        Your role is to:
+        1. Analyze and summarize member or provider appeal letters using advanced NLP
+        2. Extract key arguments and supporting points from appeal documents
+        3. Link appeal summaries to original denial reasons with high accuracy
+        4. Identify and link relevant policies and coverage guidelines
+        5. Extract and reference supporting clinical evidence
 
-      Focus on creating clear, comprehensive summaries that capture:
-      - Main appeal arguments and rationale
-      - Clinical justification provided
-      - Policy references and citations
-      - Supporting evidence and documentation
-      - Member/provider concerns and requests
+        Focus on creating clear, comprehensive summaries that capture:
+        - Main appeal arguments and rationale
+        - Clinical justification provided
+        - Policy references and citations
+        - Supporting evidence and documentation
+        - Member/provider concerns and requests
 
-      Ensure all linkages have high confidence scores and provide actionable insights for appeals reviewers.
-  provides:
-  - useAs: agent
-    in: appeals-output
-    description: Process appeals and generate comprehensive summaries with intelligent linking
+        Ensure all linkages have high confidence scores and provide actionable insights for appeals reviewers.
+    provides:
+      - useAs: agent
+        in: appeals-output
+        description: Process appeals and generate comprehensive summaries with intelligent linking
 
-- id: appeals-output
-  name: Appeals Summary Output
-  kind: Output
-  type: genesis:chat_output
-  description: Present comprehensive appeals summaries with intelligent linking results and confidence scoring
-  provides: []
+  - id: appeals-output
+    name: Appeals Summary Output
+    kind: Output
+    type: genesis:chat_output
+    description: Present comprehensive appeals summaries with intelligent linking results and confidence scoring
+    provides: []
 
 outputs:
-- name: appeal_summary
-  type: object
-  description: Comprehensive appeal summary with key arguments and supporting points
-- name: denial_linkage
-  type: object
-  description: Intelligent linking results connecting appeal to original denial reasons
-- name: policy_matches
-  type: array
-  description: Relevant policies identified and linked to the appeal
-- name: evidence_references
-  type: array
-  description: Clinical evidence and supporting documentation extracted and referenced
+  - appeal_summary
+  - denial_linkage
+  - policy_matches
+  - evidence_references
+
 
 kpis:
-- name: Summarization Accuracy Rate
-  description: Accuracy of appeal summaries validated by clinical reviewers
-  target: "> 92%"
-  measurement: percentage
-- name: Denial Reason Linking Accuracy
-  description: Percentage of correctly linked denial reasons
-  target: "> 90%"
-  measurement: percentage
-- name: Policy Matching Accuracy
-  description: Percentage of correctly identified and linked relevant policies
-  target: "> 88%"
-  measurement: percentage
-- name: Evidence Extraction Completeness
-  description: Percentage of referenced evidence successfully identified and linked
-  target: "> 85%"
-  measurement: percentage
-- name: Processing Time Efficiency
-  description: Average time to complete appeal summarization and linking
-  target: "< 10 minutes"
-  measurement: minutes
-- name: Appeals Processing Quality Score
-  description: Overall quality score for summarization and linking accuracy
-  target: "> 87%"
-  measurement: percentage
+  - name: Summarization Accuracy Rate
+    description: Accuracy of appeal summaries validated by clinical reviewers
+    target: "> 92%"
+    measurement: percentage
+    category: performance
+    valueType: percentage
 
-securityInfo:
-  visibility: internal
-  confidentialityLevel: high
-  gdprSensitive: true
-  complianceRequirements: ["HIPAA", "SOC2", "HITECH"]
+  - name: Denial Reason Linking Accuracy
+    description: Percentage of correctly linked denial reasons
+    target: "> 90%"
+    measurement: percentage
+    category: performance
+    valueType: percentage
+
+  - name: Policy Matching Accuracy
+    description: Percentage of correctly identified and linked relevant policies
+    target: "> 88%"
+    measurement: percentage
+    category: performance
+    valueType: percentage
+
+  - name: Evidence Extraction Completeness
+    description: Percentage of referenced evidence successfully identified and linked
+    target: "> 85%"
+    measurement: percentage
+    category: performance
+    valueType: percentage
+
+  - name: Processing Time Efficiency
+    description: Average time to complete appeal summarization and linking
+    target: "< 10 minutes"
+    measurement: minutes
+    category: efficiency
+    valueType: number
+
+  - name: Appeals Processing Quality Score
+    description: Overall quality score for summarization and linking accuracy
+    target: "> 87%"
+    measurement: percentage
+    category: quality
+    valueType: percentage
