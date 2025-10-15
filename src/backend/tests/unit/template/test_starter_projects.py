@@ -88,6 +88,7 @@ class TestStarterProjects:
             pytest.fail(f"Flow build errors in {template_file.name}:\n{error_msg}")
 
     @pytest.mark.asyncio
+    @pytest.mark.timeout(300)  # 5 minutes for tests that may call external APIs
     @pytest.mark.parametrize("template_file", get_template_files(), ids=lambda x: x.name)
     async def test_template_validate_endpoint(self, template_file, client, logged_in_headers):
         """Test template using the validate endpoint."""
@@ -100,6 +101,7 @@ class TestStarterProjects:
             pytest.fail(f"Endpoint validation errors in {template_file.name}:\n{error_msg}")
 
     @pytest.mark.asyncio
+    @pytest.mark.timeout(300)  # 5 minutes for tests that may call external APIs
     @pytest.mark.parametrize("template_file", get_template_files(), ids=lambda x: x.name)
     async def test_template_flow_execution(self, template_file, client, logged_in_headers):
         """Test template can execute successfully."""
