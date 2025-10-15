@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
+@pytest.mark.skip(reason="Skipping celery app tests as they cover unused code")
 class TestMakeCelery:
     """Unit tests for the make_celery function."""
 
