@@ -5,9 +5,9 @@ from langchain_openai import ChatOpenAI
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
 from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
+from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
-from lfx.components.google.google_generative_ai import ChatGoogleGenerativeAIFixed
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput
