@@ -71,24 +71,35 @@ export const test = base.extend({
     await fs.promises.mkdir(istanbulCLIOutput, { recursive: true });
     await context.exposeFunction(
       "collectIstanbulCoverage",
-      (coverageJSON: string) => {
-        if (coverageJSON)
-          fs.writeFileSync(
-            path.join(
-              istanbulCLIOutput,
-              `playwright_coverage_${testInfo.titlePath[1]}.json`,
-            ),
-            coverageJSON,
-          );
+      async (coverageJSON: string) => {
+        if (coverageJSON) {
+          try {
+            await fs.promises.writeFile(
+              path.join(
+                istanbulCLIOutput,
+                `playwright_coverage_${testInfo.titlePath[1]}.json`,
+              ),
+              coverageJSON,
+            );
+          } catch (error) {
+            console.warn(
+              `Failed to write coverage for ${testInfo.titlePath.join("/")}: ${error}`,
+            );
+          }
+        }
       },
     );
     await use(context);
     for (const page of context.pages()) {
-      await page.evaluate(() =>
-        (window as any).collectIstanbulCoverage(
-          JSON.stringify((window as any).__coverage__),
-        ),
-      );
+      try {
+        await page.evaluate(() =>
+          (window as any).collectIstanbulCoverage(
+            JSON.stringify((window as any).__coverage__),
+          ),
+        );
+      } catch (error) {
+        console.warn(`Failed to collect coverage: ${error}`);
+      }
     }
   },
 });

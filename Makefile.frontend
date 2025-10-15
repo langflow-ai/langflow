@@ -71,7 +71,7 @@ format_frontend: ## frontend code formatters
 ######################
 
 test_frontend_playwright: ## run playwright frontend tests
-	@echo "Running playright frontend tests..."
+	@echo "Running playwright frontend tests..."
 	ifeq ($(UI), true)
 		@cd $(FRONTEND_DIR) && npx playwright test --ui --project=chromium
 	else
@@ -79,7 +79,7 @@ test_frontend_playwright: ## run playwright frontend tests
 	endif
 
 test_frontend_playwright_coverage: ## run playwright frontend tests with coverage
-	@echo "Running playright frontend tests with coverage report..."
+	@echo "Running playwright frontend tests with coverage report..."
 	@cd $(FRONTEND_DIR) && PLAYWRIGHT_COVERAGE_TEST=true npx playwright test --project=chromium || true && npx nyc report --reporter=html --report-dir=coverage/playwright
 
 
@@ -217,30 +217,30 @@ help_frontend: ## show frontend help
 	@echo "  $(GREEN)make format_frontend_check$(NC) - Check frontend formatting (biome)"
 	@echo ''
 	@echo "$(GREEN)E2E Testing (Playwright):$(NC)"
-	@echo "  $(GREEN)make test_frontend_playwright$(NC)       - Run Playwright e2e tests"
-	@echo "  $(GREEN)make test_frontend_playwright_coverage        - Run frontend Playwright e2e tests"
+	@echo "  $(GREEN)make test_frontend_playwright$(NC) - Run Playwright e2e tests"
+	@echo "  $(GREEN)make test_frontend_playwright_coverage$(NC) - Run frontend Playwright e2e tests with coverage"
 	@echo "  $(GREEN)make tests_frontend UI=true$(NC) - Run Playwright e2e tests with UI"
 	@echo ''
 	@echo "$(GREEN)Unit Testing (Jest):$(NC)"
-	@echo "  $(GREEN)make test_frontend_jest        - Run frontend Jest unit tests"
-	@echo "  $(GREEN)make test_frontend_jest_watch  - Run unit tests in watch mode"
-	@echo "  $(GREEN)make test_frontend_jest_coverage - Run unit tests with coverage"
-	@echo "  $(GREEN)make test_frontend_jest_coverage_open - Run coverage and open report"
-	@echo "  $(GREEN)make test_frontend_jest_verbose - Run unit tests with verbose output"
-	@echo "  $(GREEN)make test_frontend_jest_ci     - Run unit tests in CI mode"
-	@echo "  $(GREEN)make test_frontend_jest_clean  - Clean cache and run unit tests"
-	@echo "  $(GREEN)make test_frontend_jest_bail   - Run unit tests with bail"
-	@echo "  $(GREEN)make test_frontend_jest_silent - Run unit tests silently"
-	@echo ''
-	@echo "$(GREEN)Unit Testing (Combined):$(NC)"
-	@echo "  $(GREEN)make test_frontend_combined_coverage - Run both jest and playwright coverage report"
-	@echo "  $(GREEN)make test_frontend_combined_coverage_open - Run both jest and playwright coverage and open report"
+	@echo "  $(GREEN)make test_frontend_jest$(NC)        - Run Jest unit tests"
+	@echo "  $(GREEN)make test_frontend_jest_watch$(NC)  - Run Jest tests in watch mode"
+	@echo "  $(GREEN)make test_frontend_jest_coverage$(NC) - Run Jest with coverage"
+	@echo "  $(GREEN)make test_frontend_jest_coverage_open$(NC) - Run Jest coverage and open report"
+	@echo "  $(GREEN)make test_frontend_jest_verbose$(NC) - Run Jest tests with verbose output"
+	@echo "  $(GREEN)make test_frontend_jest_ci$(NC)     - Run Jest tests in CI mode"
+	@echo "  $(GREEN)make test_frontend_jest_clean$(NC)  - Clean cache and run Jest tests"
+	@echo "  $(GREEN)make test_frontend_jest_bail$(NC)   - Run Jest tests with bail"
+	@echo "  $(GREEN)make test_frontend_jest_silent$(NC) - Run Jest tests silently"
 	@echo ''
 	@echo "$(GREEN)Targeted Testing:$(NC)"
-	@echo "  $(GREEN)make test_frontend_jest_file path$(NC) - Run tests for specific file"
-	@echo "  $(GREEN)make test_frontend_jest_pattern pattern$(NC) - Run tests matching pattern"
+	@echo "  $(GREEN)make test_frontend_jest_file path$(NC) - Run Jest tests for specific file"
+	@echo "  $(GREEN)make test_frontend_jest_pattern pattern$(NC) - Run Jest tests matching pattern"
 	@echo "  $(GREEN)make test_frontend_jest_snapshots$(NC) - Update Jest snapshots"
 	@echo "  $(GREEN)make test_frontend_jest_config$(NC) - Show Jest configuration"
+	@echo ''
+	@echo "$(GREEN)Unit Testing (Combined):$(NC)"
+	@echo "  $(GREEN)make test_frontend_combined_coverage$(NC) - Run both Jest and Playwright coverage report"
+	@echo "  $(GREEN)make test_frontend_combined_coverage_open$(NC) - Run both Jest and Playwright coverage and open report"
 	@echo ''
 	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
 	@echo ''

@@ -121,7 +121,11 @@
     "exclude": [
       "node_modules",
       "tests",
+      "/tests/",
+      "/mocks/",
       "**/*.{spec,test}.{ts,tsx,js,jsx}",
+      "/*.mock.{ts,tsx,js,jsx}",
+      "/*fixture.{ts,tsx,js,jsx}",
       "**/*.d.ts"
     ],
     "reporter": [
