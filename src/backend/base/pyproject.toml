@@ -2,7 +2,7 @@
 name = "langflow-base"
 version = "0.6.3"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 license = {text = "Proprietary"}
 keywords = ["ai", "agents", "healthcare", "clinical", "conversational-ui", "yaml", "genesis", "autonomize", "medical-ai", "hipaa", "nlp", "langchain"]
 readme = "README.md"
@@ -26,7 +26,7 @@ dependencies = [
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental>=0.3.4,<1.0.0",
     "sqlmodel==0.0.22",
-    "pydantic~=2.10.1",
+    "pydantic==2.10.6",
     "pydantic-settings>=2.2.0,<3.0.0",
     "typer>=0.13.0,<1.0.0",
     "cachetools>=5.5.0,<6.0.0",
@@ -77,7 +77,7 @@ dependencies = [
     "aiosqlite>=0.20.0",
     "greenlet>=3.1.1",
     "jsonquerylang>=1.1.1",
-    "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
+    "sqlalchemy[aiosqlite]==2.0.43",
     'elevenlabs==1.58.1; python_version == "3.12"',
     'elevenlabs>=1.52.0; python_version != "3.12"',
     "scipy>=1.15.2",
