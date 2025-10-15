@@ -94,18 +94,26 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
 
     return (
       <div className="space-y-4">
-        {tools.map((tool, index) => (
+        {tools?.map((tool, index) => (
           <div key={index} className="border rounded-lg p-4 bg-muted/20">
-            <div className="font-medium text-lg mb-2">
+            <div
+              data-testid="tool_name"
+              className={
+                "font-medium text-lg" + (tool?.description ? " mb-2" : "")
+              }
+            >
               {tool.name || `Tool ${index + 1}`}
             </div>
-            {tool.description && (
-              <div className="text-sm text-muted-foreground mb-3">
+            {tool?.description && (
+              <div
+                data-testid="tool_description"
+                className="text-sm text-muted-foreground mb-3"
+              >
                 {tool.description}
               </div>
             )}
-            {tool.tags && Array.isArray(tool.tags) && tool.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
+            {tool?.tags && tool?.tags?.length > 0 && (
+              <div data-testid="tool_tags" className="flex flex-wrap gap-2">
                 {tool.tags.map((tag, tagIndex) => (
                   <span
                     key={tagIndex}
