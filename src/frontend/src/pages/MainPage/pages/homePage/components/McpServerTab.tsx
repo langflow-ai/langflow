@@ -157,6 +157,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const [isGeneratingApiKey, setIsGeneratingApiKey] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [isWaitingForComposer, setIsWaitingForComposer] = useState(false);
+  const [showSlowWarning, setShowSlowWarning] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const queryClient = useQueryClient();
@@ -414,6 +415,27 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     isWaitingForComposer ||
     (isOAuthProject && isLoadingComposerUrl);
 
+  // Monitor loading time and show warning after 30s
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+
+    if (isLoadingMCPProjectAuth) {
+      // Start timer when loading begins
+      timer = setTimeout(() => {
+        setShowSlowWarning(true);
+      }, 30000); // 30 seconds
+    } else {
+      // Reset warning when loading completes
+      setShowSlowWarning(false);
+    }
+
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [isLoadingMCPProjectAuth]);
+
   return (
     <div>
       <div className="flex justify-between gap-4 items-start">
@@ -483,21 +505,31 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                 ) : (
                   <ShadTooltip
                     content={
-                      !composerUrlData?.error_message
-                        ? undefined
-                        : `MCP Server is not running: ${composerUrlData?.error_message}`
+                      composerUrlData?.error_message
+                        ? `MCP Server is not running: ${composerUrlData?.error_message}`
+                        : showSlowWarning
+                          ? "MCP Server is taking longer than usual. Please check your credentials and network connection."
+                          : undefined
                     }
                   >
                     <span
                       className={cn(
                         "flex gap-2 text-mmd items-center",
                         isLoadingMCPProjectAuth
-                          ? "text-muted-foreground"
+                          ? showSlowWarning
+                            ? "text-accent-amber-foreground"
+                            : "text-muted-foreground"
                           : !composerUrlData?.error_message
                             ? "text-accent-emerald-foreground"
                             : "text-accent-amber-foreground",
                       )}
                     >
+                      {isLoadingMCPProjectAuth && showSlowWarning && (
+                        <ForwardedIconComponent
+                          name="AlertTriangle"
+                          className="h-4 w-4 shrink-0"
+                        />
+                      )}
                       <ForwardedIconComponent
                         name={
                           isLoadingMCPProjectAuth
