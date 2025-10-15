@@ -2,7 +2,7 @@ import { Cookies } from "react-cookie";
 import { IS_AUTO_LOGIN, AI_STUDIO_REFRESH_TOKEN } from "@/constants/constants";
 import useAuthStore from "@/stores/authStore";
 import type { useMutationFunctionType } from "@/types/api";
-import { setAuthCookie } from "@/utils/utils";
+import { setAuthCookie, getAuthCookie } from "@/utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -22,8 +22,21 @@ export const useRefreshAccessToken: useMutationFunctionType<
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
   async function refreshAccess(): Promise<IRefreshAccessToken> {
-    const res = await api.post<IRefreshAccessToken>(`${getURL("REFRESH")}`);
     const cookies = new Cookies();
+
+    // Get the current refresh token from cookies - this is critical for backend authentication
+    const currentRefreshToken = getAuthCookie(cookies, AI_STUDIO_REFRESH_TOKEN);
+
+    if (!currentRefreshToken) {
+      throw new Error("No refresh token available");
+    }
+
+    // Send refresh token in request body like genesis-frontend does
+    const res = await api.post<IRefreshAccessToken>(`${getURL("REFRESH")}`, {
+      refresh_token: currentRefreshToken,
+    });
+
+    // Store the new refresh token
     setAuthCookie(cookies, AI_STUDIO_REFRESH_TOKEN, res.data.refresh_token);
 
     return res.data;
