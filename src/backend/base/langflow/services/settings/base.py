@@ -89,6 +89,10 @@ class Settings(BaseSettings):
     db_connect_timeout: int = 30
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
     database."""
+    migration_lock_namespace: str | None = None
+    """Optional namespace identifier for PostgreSQL advisory lock during migrations.
+    If not provided, a hash of the database URL will be used. Useful when multiple Langflow
+    instances share the same database and need coordinated migration locking."""
 
     mcp_server_timeout: int = 20
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the

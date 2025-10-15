@@ -1,6 +1,8 @@
 # noqa: INP001
 import asyncio
 import hashlib
+import logging
+import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -9,6 +11,8 @@ from sqlalchemy.event import listen
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from langflow.services.database.service import SQLModel
+
+logger = logging.getLogger(__name__)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -86,14 +90,16 @@ def _do_run_migrations(connection):
 
     with context.begin_transaction():
         if connection.dialect.name == "postgresql":
-            # Hash the database URL to create a unique lock key per database
-            # TODO: Temporarily use a static key to test whether long startup behavior
-            # during migration could be caused by the lock timeout
-            db_url = str(connection.engine.url)
-            _lock_key = int(hashlib.sha256(db_url.encode()).hexdigest()[:16], 16) % (2**63 - 1)
-            connection.execute(text("SET LOCAL lock_timeout = '60s';"))
-            static_lock_key = 11223344
-            connection.execute(text(f"SELECT pg_advisory_xact_lock({static_lock_key});"))
+            # Use namespace from environment variable if provided, otherwise use default static key
+            namespace = os.getenv("LANGFLOW_MIGRATION_LOCK_NAMESPACE")
+            if namespace:
+                lock_key = int(hashlib.sha256(namespace.encode()).hexdigest()[:16], 16) % (2**63 - 1)
+                logger.info(f"Using migration lock namespace: {namespace}, lock_key: {lock_key}")
+            else:
+                lock_key = 11223344
+                logger.info(f"Using default migration lock_key: {lock_key}")
+            connection.execute(text("SET LOCAL lock_timeout = '180s';"))
+            connection.execute(text(f"SELECT pg_advisory_xact_lock({lock_key});"))
         context.run_migrations()
 
 

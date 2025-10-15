@@ -61,6 +61,7 @@ The following settings allow you to fine-tune your database connection pool and 
 ```
 LANGFLOW_DB_CONNECTION_SETTINGS='{"pool_size": 20, "max_overflow": 30, "pool_timeout": 30, "pool_pre_ping": true, "pool_recycle": 1800, "echo": false}'
 LANGFLOW_DB_CONNECT_TIMEOUT=20
+LANGFLOW_MIGRATION_LOCK_NAMESPACE=my-namespace
 ```
 
 - `pool_size`: Maximum number of database connections to keep in the pool (default: 20)
@@ -70,6 +71,7 @@ LANGFLOW_DB_CONNECT_TIMEOUT=20
 - `pool_recycle`: Number of seconds after which a connection is automatically recycled (default: 1800, or 30 minutes)
 - `echo`: If true, SQL queries are logged for debugging purposes (default: false)
 - `LANGFLOW_DB_CONNECT_TIMEOUT`: Maximum number of seconds to wait when establishing a new database connection (default: 20)
+- `LANGFLOW_MIGRATION_LOCK_NAMESPACE`: Optional namespace identifier for PostgreSQL advisory lock during migrations. If not provided, a hash of the database URL will be used. Useful when multiple Langflow instances share the same database and need coordinated migration locking
 
 ## Configure cache memory
 
