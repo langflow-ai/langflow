@@ -185,6 +185,7 @@ jobs:
       workspace: ${{ steps.filter.outputs.workspace }}
       api: ${{ steps.filter.outputs.api }}
       database: ${{ steps.filter.outputs.database }}
+      docker: ${{ steps.filter.outputs.docker }}
       docs-only: ${{
         steps.filter.outputs.docs == 'true' &&
         steps.filter.outputs.python != 'true' &&
@@ -196,7 +197,8 @@ jobs:
         steps.filter.outputs.components != 'true' &&
         steps.filter.outputs.workspace != 'true' &&
         steps.filter.outputs.api != 'true' &&
-        steps.filter.outputs.database != 'true'
+        steps.filter.outputs.database != 'true' &&
+        steps.filter.outputs.docker != 'true'
         }}
 
     steps:
@@ -331,6 +333,15 @@ jobs:
         run: |
           uv run pytest src/backend/tests/unit/template/test_starter_projects.py -v -n auto
 
+  test-docker:
+    needs: [path-filter, set-ci-condition]
+    name: Test Docker Images
+    if: ${{ needs.path-filter.outputs.docker == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    uses: ./.github/workflows/docker_test.yml
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:
     name: "CI Success"
@@ -342,6 +353,7 @@ jobs:
         lint-backend,
         test-docs-build,
         test-templates,
+        test-docker,
         set-ci-condition,
         path-filter,
         check-nightly-status,
@@ -395,6 +407,8 @@ jobs:
                   "  - Documentation Build: Check documentation syntax and build process"
                 elif $job == "test-templates" then
                   "  - Template Tests: Check starter project templates"
+                elif $job == "test-docker" then
+                  "  - Docker Tests: Check Docker image builds and version verification"
                 elif $job == "path-filter" then
                   "  - Path Filter: File path filtering failed"
                 elif $job == "set-ci-condition" then

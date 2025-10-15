@@ -9,6 +9,7 @@ class AstraDBChatMemory(LCChatMemoryComponent):
     display_name = "Astra DB Chat Memory"
     description = "Retrieves and store chat messages from Astra DB."
     name = "AstraDBChatMemory"
+    documentation: str = "https://docs.langflow.org/bundles-datastax#astra-db-chat-memory"
     icon: str = "AstraDB"
 
     inputs = [

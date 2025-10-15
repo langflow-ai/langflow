@@ -133,8 +133,7 @@ dependencies = [
     "aiosqlite==0.21.0",
     "fastparquet>=2024.11.0,<2025.0.0",
     "traceloop-sdk>=0.43.1,<1.0.0",
-    # TODO: Remove when 4.1.x is released
-    "pytest-codspeed==4.0.0",
+    "vlmrun[all]>=0.2.0",
 ]
 
 [dependency-groups]
@@ -217,6 +216,7 @@ docling = [
 audio = [
     "webrtcvad>=2.0.10",
 ]
+
 
 couchbase = [
     "couchbase>=4.2.1"
