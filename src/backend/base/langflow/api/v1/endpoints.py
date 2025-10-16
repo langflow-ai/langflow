@@ -329,6 +329,23 @@ async def run_flow_generator(
         await event_manager.queue.put((None, None, time.time))
 
 
+async def check_flow_user_permission(
+    flow: FlowRead | None,
+    api_key_user: UserRead,
+) -> None:
+    """Check if the user associated with the API key has permission to run the flow.
+
+    Args:
+        flow (FlowRead | None): The flow to check permissions for
+        api_key_user (UserRead): The user associated with the API key
+
+    Raises:
+        HTTPException: If the user does not have permission to run the flow
+    """
+    if flow and flow.user_id != api_key_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to run this flow")
+
+
 @router.post("/run/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
 async def simplified_run_flow(
     *,
@@ -374,6 +391,8 @@ async def simplified_run_flow(
             - "token": Individual tokens during streaming
             - "end": Final execution result
     """
+    await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
+
     telemetry_service = get_telemetry_service()
 
     # If input_request is None, manually parse the request body
@@ -552,14 +571,14 @@ async def webhook_run_flow(
 
 
 @router.post(
-    "/run/advanced/{flow_id}",
+    "/run/advanced/{flow_id_or_name}",
     response_model=RunResponse,
     response_model_exclude_none=True,
 )
 async def experimental_run_flow(
     *,
     session: DbSession,
-    flow_id: UUID,
+    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
     tweaks: Annotated[Tweaks | None, Body(embed=True)] = None,
@@ -572,7 +591,7 @@ async def experimental_run_flow(
     This endpoint supports running flows with caching to enhance performance and efficiency.
 
     ### Parameters:
-    - `flow_id` (str): The unique identifier of the flow to be executed.
+    - `flow` (Flow): The flow object to be executed, resolved via dependency injection.
     - `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components
       for the flow. Each input can target specific components and provide custom values.
     - `outputs` (List[str], optional): A list of output names to retrieve from the executed flow.
@@ -613,8 +632,11 @@ async def experimental_run_flow(
     This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,
     catering to diverse application requirements.
     """  # noqa: E501
+    # Get the flow from the id or name
+    await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
+
     session_service = get_session_service()
-    flow_id_str = str(flow_id)
+    flow_id_str = str(flow.id)
     if outputs is None:
         outputs = []
     if inputs is None:
@@ -633,7 +655,7 @@ async def experimental_run_flow(
         try:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)
+            stmt = select(Flow).where(Flow.id == flow.id).where(Flow.user_id == api_key_user.id)
             flow = (await session.exec(stmt)).first()
         except sa.exc.StatementError as exc:
             # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
