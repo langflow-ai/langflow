@@ -585,7 +585,6 @@ async def experimental_run_flow(
     stream: Annotated[bool, Body(embed=True)] = False,
     session_id: Annotated[None | str, Body(embed=True)] = None,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
-    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
 ) -> RunResponse:
     """Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.
 
