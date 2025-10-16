@@ -1096,12 +1096,14 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
                 mock_chain.invoke.side_effect = Exception("Langchain parsing error")
                 mock_prompt.return_value.__or__.return_value = mock_chain
 
-                with patch("lfx.components.processing.structured_output.logger"):
-                    with pytest.raises(
+                with (
+                    patch("lfx.components.processing.structured_output.logger"),
+                    pytest.raises(
                         ValueError,
                         match="Model does not support tool calling.*fallback with_structured_output also failed",
-                    ):
-                        component.build_structured_output_base()
+                    ),
+                ):
+                    component.build_structured_output_base()
 
     def test_not_implemented_error_raises_type_error_without_fallback(self):
         """Test that NotImplementedError in trustcall raises TypeError without attempting fallback."""
