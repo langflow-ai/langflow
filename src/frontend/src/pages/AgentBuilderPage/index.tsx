@@ -529,7 +529,8 @@ export default function AgentBuilderPage() {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  handlePromptSubmit();
+                  // Disabled until conversation page is ready
+                  // handlePromptSubmit();
                 }
               }}
             />
