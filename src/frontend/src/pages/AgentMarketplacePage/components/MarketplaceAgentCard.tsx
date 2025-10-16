@@ -70,10 +70,15 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid" }: Market
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[12rem]">
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); /* TODO: wire Edit */ }} className="gap-2">
-                <Pencil className="h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
+              {item.flow_id && (
+                <DropdownMenuItem onClick={(e) => { 
+                  e.stopPropagation(); 
+                  navigate(`/flow/${item.flow_id}/`);
+                }} className="gap-2">
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); /* TODO: wire Publish */ }} className="gap-2">
                 <Upload className="h-4 w-4" />
                 Publish
