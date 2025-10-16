@@ -7,21 +7,23 @@ from typing import TYPE_CHECKING, Any
 from langflow.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.healthcare.base import HealthcareConnectorBase
+    from langflow.base.healthcare_connector_base import HealthcareConnectorBase
+    from langflow.components.healthcare.appeals_data_connector import AppealsDataConnector
     from langflow.components.healthcare.claims_connector import ClaimsConnector
     from langflow.components.healthcare.ehr_connector import EHRConnector
     from langflow.components.healthcare.eligibility_connector import EligibilityConnector
     from langflow.components.healthcare.pharmacy_connector import PharmacyConnector
 
 _dynamic_imports = {
-    "HealthcareConnectorBase": "base",
+    "HealthcareConnectorBase": "langflow.base.healthcare_connector_base",
+    "AppealsDataConnector": "appeals_data_connector",
     "ClaimsConnector": "claims_connector",
     "EHRConnector": "ehr_connector",
     "EligibilityConnector": "eligibility_connector",
     "PharmacyConnector": "pharmacy_connector",
 }
 
-__all__ = ["HealthcareConnectorBase", "ClaimsConnector", "EHRConnector", "EligibilityConnector", "PharmacyConnector"]
+__all__ = ["HealthcareConnectorBase", "AppealsDataConnector", "ClaimsConnector", "EHRConnector", "EligibilityConnector", "PharmacyConnector"]
 
 
 def __getattr__(attr_name: str) -> Any:
@@ -30,7 +32,13 @@ def __getattr__(attr_name: str) -> Any:
         msg = f"module '{__name__}' has no attribute '{attr_name}'"
         raise AttributeError(msg)
     try:
-        result = import_mod(attr_name, _dynamic_imports[attr_name], __spec__.parent)
+        import_path = _dynamic_imports[attr_name]
+        if attr_name == "HealthcareConnectorBase":
+            # Special handling for base class in different package
+            from langflow.base.healthcare_connector_base import HealthcareConnectorBase
+            result = HealthcareConnectorBase
+        else:
+            result = import_mod(attr_name, import_path, __spec__.parent)
     except (ModuleNotFoundError, ImportError, AttributeError) as e:
         msg = f"Could not import '{attr_name}' from '{__name__}': {e}"
         raise AttributeError(msg) from e

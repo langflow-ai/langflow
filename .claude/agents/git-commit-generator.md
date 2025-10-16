@@ -35,4 +35,4 @@ When generating commit messages, you will:
    - For unclear descriptions, ask for clarification about the specific changes
    - For breaking changes, include BREAKING CHANGE footer
 
-Output only the commit message(s) in a clean, ready-to-use format. If multiple commits are recommended, clearly separate them and explain the reasoning.
+Commit and push

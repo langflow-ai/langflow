@@ -1,0 +1,155 @@
+id: urn:agent:genesis:autonomize.ai:attach-document:1.0.0
+name: Attach Document Agent
+fullyQualifiedName: genesis.autonomize.ai.attach_document
+description: Attach original fax documents to case records for audit compliance
+domain: autonomize.ai
+subDomain: document-management
+version: 1.0.0
+environment: production
+agentOwner: document-management@autonomize.ai
+agentOwnerDisplayName: Attach Document Agent Team
+email: document-management@autonomize.ai
+status: ACTIVE
+variables:
+- name: llm_provider
+  type: string
+  required: false
+  default: Azure OpenAI
+  description: LLM provider (AzureOpenAI, OpenAI, Anthropic, etc.)
+- name: model_name
+  type: string
+  required: false
+  default: gpt-4
+  description: Model name to use
+- name: temperature
+  type: float
+  required: false
+  default: 0.1
+  description: Temperature for model generation
+tags:
+- UM
+- document-management
+- healthcare
+- prior-authorization
+kind: Single Agent
+agentGoal: Attach the original pharmacy fax document to the case file for audit and downstream compliance workflows
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: ModelDrivenWorkflow
+toolsUse: true
+learningCapability: None
+sampleInput:
+  case_id: PA-2024-12345
+  document_path: /tmp/fax_12345.pdf
+  document_type: authorization_request
+  document_metadata:
+    received_date: '2024-03-14'
+    page_count: 5
+    source: fax
+components:
+- id: input
+  name: Request Input
+  kind: Data
+  type: genesis:chat_input
+  description: Input for attach document agent
+  provides:
+  - useAs: input
+    in: main-agent
+    description: Input data
+- id: main-agent-prompt
+  name: Agent Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Prompt template for agent instructions
+  config:
+    saved_prompt: attach_document_prompt_v1
+    template: 'You are a specialist agent. Attach original fax documents to case records for audit compliance
+
+
+      Goal: Attach the original pharmacy fax document to the case file for audit and downstream compliance workflows
+
+
+      Provide accurate and efficient results.'
+  provides:
+  - useAs: system_prompt
+    in: main-agent
+    description: System prompt for the agent
+- id: main-agent
+  name: Attach Document Agent
+  kind: Agent
+  type: genesis:agent
+  description: Attach original fax documents to case records for audit compliance
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 2000
+  provides:
+  - useAs: input
+    in: output
+    description: Results
+- id: tool-1
+  name: Api Component
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Tool for attach document agent via MCP
+  asTools: true
+  config:
+    tool_name: api_component
+    description: Generic API integration tool
+  provides:
+  - useAs: tools
+    in: main-agent
+    description: Api Component tool
+- id: tool-2
+  name: File Reader
+  kind: Tool
+  type: genesis:file
+  description: Tool for attach document agent
+  asTools: true
+  provides:
+  - useAs: tools
+    in: main-agent
+    description: File Reader tool
+- id: output
+  name: Results Output
+  kind: Data
+  type: genesis:chat_output
+  description: Display results
+  config:
+    should_store_message: true
+outputs:
+- results
+- status
+- details
+kpis:
+- name: Audit Readiness
+  category: Compliance
+  valueType: percentage
+  target: 100
+  unit: '%'
+  description: Percentage of cases with attached documents
+- name: Document Attachment Success
+  category: Quality
+  valueType: percentage
+  target: 99
+  unit: '%'
+  description: Success rate of document attachments
+- name: Upload Time
+  category: Performance
+  valueType: numeric
+  target: 3000
+  unit: ms
+  description: Average time to upload documents
+- name: Retry Rate
+  category: Performance
+  valueType: percentage
+  target: 5
+  unit: '%'
+  description: Percentage of uploads requiring retry
+securityInfo:
+  visibility: Private
+  confidentiality: High
+  gdprSensitive: false

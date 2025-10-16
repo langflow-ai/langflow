@@ -278,6 +278,62 @@ HEALTHCARE_CONNECTOR_MAPPINGS = {
         "description": "HIPAA-compliant clinical decision support tool with evidence-based recommendations",
         "version": "1.0.0",
     },
+
+    "genesis:appeals_data_connector": {
+        "component": "AppealsDataConnector",
+        "config": {
+            "appeals_system": "change_healthcare",
+            "data_source": "comprehensive",
+            "search_scope": "relevant",
+            "max_results": 50,
+            "include_historical": True,
+            "hipaa_compliance": True,
+            "audit_logging": True,
+        },
+        "category": ComponentCategoryEnum.HEALTHCARE.value,  # Use enum value for database compatibility
+        "healthcare_metadata": {
+            "hipaa_compliant": True,
+            "phi_handling": True,
+            "encryption_required": True,
+            "audit_trail": True,
+            "medical_standards": ["HL7 FHIR", "X12 EDI"],
+            "data_classification": "PHI",
+            "compliance_frameworks": ["HIPAA", "HITECH"],
+            "security_requirements": {
+                "encryption_at_rest": True,
+                "encryption_in_transit": True,
+                "access_logging": True,
+                "role_based_access": True,
+                "minimum_permissions": True,
+                "appeals_audit_trail": True,
+            },
+            "appeals_features": {
+                "denial_reasons_access": True,
+                "policy_database_search": True,
+                "evidence_retrieval": True,
+                "appeals_processing": True,
+                "utilization_management": True,
+                "appeals_linking": True,
+            },
+            "utilization_management": {
+                "prior_authorization": True,
+                "medical_necessity": True,
+                "coverage_determination": True,
+                "appeals_workflow": True,
+                "policy_compliance": True,
+            },
+        },
+        "io_mapping": {
+            "component": "AppealsDataConnector",
+            "dataType": "Data",
+            "input_field": "appeals_request",
+            "output_field": "appeals_data",
+            "input_types": ["str", "Data"],
+            "output_types": ["Data"],
+        },
+        "description": "HIPAA-compliant appeals data connector for denial reasons, policies, and evidence access",
+        "version": "1.0.0",
+    },
 }
 
 

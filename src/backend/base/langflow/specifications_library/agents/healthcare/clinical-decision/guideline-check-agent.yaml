@@ -1,0 +1,182 @@
+id: urn:agent:genesis:autonomize.ai:guideline-check:1.0.0
+name: Guideline Check Agent
+fullyQualifiedName: genesis.autonomize.ai.guideline_check
+description: Perform rule-based checks for Medicare coverage, policy compliance, and medical necessity
+domain: autonomize.ai
+subDomain: clinical-guidelines
+version: 1.0.0
+environment: production
+agentOwner: clinical-guidelines@autonomize.ai
+agentOwnerDisplayName: Clinical Guidelines Team
+email: clinical-guidelines@autonomize.ai
+status: ACTIVE
+variables:
+- name: llm_provider
+  type: string
+  required: false
+  default: Azure OpenAI
+  description: LLM provider (AzureOpenAI, OpenAI, Anthropic, etc.)
+- name: model_name
+  type: string
+  required: false
+  default: gpt-4
+  description: Model name to use for guideline checking
+- name: temperature
+  type: float
+  required: false
+  default: 0.1
+  description: Temperature for model generation
+- name: strict_mode
+  type: boolean
+  required: false
+  default: true
+  description: Apply strict guideline interpretation
+- name: include_alternatives
+  type: boolean
+  required: false
+  default: true
+  description: Suggest alternative treatments if guidelines not met
+tags:
+- UM
+- guideline-validation
+- policy-check
+- medical-necessity
+- healthcare
+- prior-authorization
+- compliance
+kind: Single Agent
+agentGoal: Run pre-adjudication validations such as Medicare coverage, setting accuracy, and predefined policy checks to ensure
+  rule compliance
+targetUser: internal
+valueGeneration: InsightGeneration
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: ModelDrivenWorkflow
+toolsUse: true
+learningCapability: None
+sampleInput:
+  case_context:
+    service_code: '70553'
+    diagnosis_codes:
+    - R51.9
+    - G43.909
+    member_age: 65
+    line_of_business: Medicare
+    setting: outpatient
+    previous_treatments:
+    - medication therapy
+    - physical therapy
+components:
+- id: guideline-input
+  name: Case Information
+  kind: Data
+  type: genesis:chat_input
+  description: Case context and procedure information for guideline checking
+  provides:
+  - useAs: input
+    in: guideline-check-agent
+    description: Case details for validation
+- id: guideline-check-agent-prompt
+  name: Agent Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Prompt template for agent instructions
+  config:
+    saved_prompt: guideline_check_prompt_v1
+    template: "You are a clinical guideline validation specialist. Your role is to ensure prior authorization requests comply\
+      \ with established policies and medical necessity criteria.\n\nVALIDATION CHECKS TO PERFORM:\n\n1. MEDICARE COVERAGE:\n\
+      \   - Check if service is covered under Medicare\n   - Verify appropriate Medicare setting (Part A/B/D)\n   - Validate\
+      \ Medicare-specific requirements\n   - Check for National Coverage Determinations (NCDs)\n   - Review Local Coverage\
+      \ Determinations (LCDs)\n\n2. INPATIENT/OUTPATIENT STATUS:\n   - Verify appropriate care setting for procedure\n   -\
+      \ Check Two-Midnight Rule compliance (if applicable)\n   - Validate observation vs. inpatient status\n   - Review setting-specific\
+      \ requirements\n\n3. MEDICAL NECESSITY:\n   - Verify diagnosis supports requested service\n   - Check if conservative\
+      \ treatments tried first\n   - Validate clinical documentation adequacy\n   - Review symptom duration and severity\n\
+      \n4. POLICY COMPLIANCE:\n   - Check frequency limitations\n   - Verify age/gender appropriateness\n   - Review pre-authorization\
+      \ requirements\n   - Validate modifier usage\n\n5. STEP THERAPY/PREREQUISITES:\n   - Check if required treatments attempted\n\
+      \   - Verify documentation of failures/contraindications\n   - Review treatment timeline\n\nUse the PA Lookup tool for\
+      \ specific policy details.\n\nOutput format:\n{\n  \"validation_results\": {\n    \"medicare_coverage\": \"pass/fail/na\"\
+      ,\n    \"setting_appropriate\": \"pass/fail\",\n    \"medical_necessity\": \"pass/fail\",\n    \"policy_compliance\"\
+      : \"pass/fail\",\n    \"prerequisites_met\": \"pass/fail/na\"\n  },\n  \"failed_checks\": [\"list of failed validations\"\
+      ],\n  \"auto_approval_eligible\": true/false,\n  \"requires_clinical_review\": true/false,\n  \"missing_documentation\"\
+      : [\"list of missing items\"],\n  \"policy_citations\": [\"relevant policy references\"],\n  \"recommendations\": \"\
+      next steps or alternatives\"\n}"
+  provides:
+  - useAs: system_prompt
+    in: guideline-check-agent
+    description: System prompt for the agent
+- id: guideline-check-agent
+  name: Clinical Guideline Validation Agent
+  kind: Agent
+  type: genesis:agent
+  description: Validates requests against clinical guidelines and policies
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 2000
+    handle_parsing_errors: true
+    max_iterations: 10
+    verbose: true
+  provides:
+  - useAs: input
+    in: guideline-output
+    description: Validation results
+- id: pa-lookup-tool
+  name: PA Guidelines Lookup
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Look up specific prior authorization guidelines via MCP
+  asTools: true
+  config:
+    tool_name: pa_lookup
+    description: Prior authorization lookup tool
+    include_medicare_policies: true
+    include_commercial_policies: true
+    include_alternatives: true
+    search_depth: comprehensive
+  provides:
+  - useAs: tools
+    in: guideline-check-agent
+    description: PA policy lookup tool
+- id: guideline-output
+  name: Guideline Validation Results
+  kind: Data
+  type: genesis:chat_output
+  description: Display guideline check results and recommendations
+  config:
+    should_store_message: true
+outputs:
+- validation_summary
+- policy_compliance_flags
+- auto_approval_eligibility
+- missing_documentation_list
+- policy_citations
+kpis:
+- name: Auto-approval Rate
+  category: Efficiency
+  valueType: percentage
+  target: 30
+  unit: '%'
+  description: Percentage of requests eligible for auto-approval
+- name: Validation Accuracy
+  category: Quality
+  valueType: percentage
+  target: 98
+  unit: '%'
+  description: Accuracy of guideline compliance checks
+- name: Rule Pass/Fail Logs
+  category: Compliance
+  valueType: percentage
+  target: 100
+  unit: '%'
+  description: Percentage of validations with complete audit logs
+- name: Processing Time
+  category: Performance
+  valueType: numeric
+  target: 3000
+  unit: ms
+  description: Average time to complete all validation checks
+securityInfo:
+  visibility: Private
+  confidentiality: High
+  gdprSensitive: false

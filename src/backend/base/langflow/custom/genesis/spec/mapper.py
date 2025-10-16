@@ -2,12 +2,21 @@
 
 from typing import Dict, Any, Optional, Tuple
 import logging
+import copy
 
 logger = logging.getLogger(__name__)
 
 # Lazy import to avoid circular dependencies
 _component_schema_inspector = None
 _component_mapping_service = None
+
+# Import healthcare mappings
+try:
+    from langflow.services.component_mapping.healthcare_mappings import get_healthcare_component_mappings
+    _healthcare_mappings_available = True
+except ImportError as e:
+    logger.warning(f"Healthcare mappings not available: {e}")
+    _healthcare_mappings_available = False
 
 
 class ComponentMapper:
@@ -22,6 +31,9 @@ class ComponentMapper:
 
     def _init_mappings(self):
         """Initialize all component mappings."""
+        # Healthcare connectors - HIPAA-compliant medical system integrations
+        self.HEALTHCARE_MAPPINGS = self._load_healthcare_mappings()
+
         # AutonomizeModel variants - all clinical models unified
         self.AUTONOMIZE_MODELS = {
             "genesis:autonomize_model": {
@@ -243,6 +255,20 @@ class ComponentMapper:
             "genesis:composio": {"component": "ComposioComponent", "config": {}}
         }
 
+    def _load_healthcare_mappings(self) -> Dict[str, Any]:
+        """Load healthcare connector mappings."""
+        if not _healthcare_mappings_available:
+            logger.warning("Healthcare mappings not available, returning empty dict")
+            return {}
+
+        try:
+            healthcare_mappings = get_healthcare_component_mappings()
+            logger.info(f"Loaded {len(healthcare_mappings)} healthcare connector mappings")
+            return healthcare_mappings
+        except Exception as e:
+            logger.error(f"Error loading healthcare mappings: {e}")
+            return {}
+
     def map_component(self, spec_type: str) -> Dict[str, Any]:
         """
         Map a Genesis specification type to Langflow component.
@@ -253,17 +279,21 @@ class ComponentMapper:
         Returns:
             Dictionary with component name and configuration
         """
-        # Check AutonomizeModel mappings first
+        # Check Healthcare mappings first (highest priority for medical workflows)
+        if spec_type in self.HEALTHCARE_MAPPINGS:
+            return copy.deepcopy(self.HEALTHCARE_MAPPINGS[spec_type])
+
+        # Check AutonomizeModel mappings
         if spec_type in self.AUTONOMIZE_MODELS:
-            return self.AUTONOMIZE_MODELS[spec_type].copy()
+            return copy.deepcopy(self.AUTONOMIZE_MODELS[spec_type])
 
         # Check MCP mappings
         if spec_type in self.MCP_MAPPINGS:
-            return self.MCP_MAPPINGS[spec_type].copy()
+            return copy.deepcopy(self.MCP_MAPPINGS[spec_type])
 
         # Check standard mappings
         if spec_type in self.STANDARD_MAPPINGS:
-            return self.STANDARD_MAPPINGS[spec_type].copy()
+            return copy.deepcopy(self.STANDARD_MAPPINGS[spec_type])
 
         # Try database fallback if enabled
         if self._use_database_fallback:
@@ -344,12 +374,24 @@ class ComponentMapper:
 
     def is_tool_component(self, spec_type: str) -> bool:
         """Check if a component type should be used as a tool."""
+        # Healthcare connectors are tools when used in tool mode
+        if spec_type in self.HEALTHCARE_MAPPINGS:
+            return True
+
         # MCP components are always tools
         if spec_type in self.MCP_MAPPINGS:
             return True
 
         # Check if it's a known tool type
         tool_types = [
+            # Healthcare tools
+            "genesis:ehr_connector",
+            "genesis:claims_connector",
+            "genesis:eligibility_connector",
+            "genesis:pharmacy_connector",
+            "genesis:prior_authorization",
+            "genesis:clinical_decision_support",
+
             # Core tools
             "genesis:knowledge_hub_search",
             "genesis:pa_lookup",
@@ -447,6 +489,43 @@ class ComponentMapper:
     def _get_hardcoded_io_mappings(self) -> Dict[str, Dict[str, Any]]:
         """Get the original hardcoded I/O mappings as fallback."""
         io_mappings = {
+            # Healthcare Connector I/O Mappings
+            "EHRConnector": {
+                "input_field": "patient_query",
+                "output_field": "ehr_data",
+                "output_types": ["Data"],
+                "input_types": ["str", "Message", "Data"]
+            },
+            "ClaimsConnector": {
+                "input_field": "claim_data",
+                "output_field": "claim_response",
+                "output_types": ["Data"],
+                "input_types": ["str", "Data"]
+            },
+            "EligibilityConnector": {
+                "input_field": "eligibility_request",
+                "output_field": "eligibility_response",
+                "output_types": ["Data"],
+                "input_types": ["str", "Data"]
+            },
+            "PharmacyConnector": {
+                "input_field": "prescription_data",
+                "output_field": "pharmacy_response",
+                "output_types": ["Data"],
+                "input_types": ["str", "Data"]
+            },
+            "PriorAuthorizationTool": {
+                "input_field": "pa_request",
+                "output_field": "pa_response",
+                "output_types": ["Data"],
+                "input_types": ["str", "Data"]
+            },
+            "ClinicalDecisionSupportTool": {
+                "input_field": "clinical_data",
+                "output_field": "cds_recommendations",
+                "output_types": ["Data"],
+                "input_types": ["str", "Data"]
+            },
             "AutonomizeModel": {
                 "input_field": "search_query",
                 "output_field": "prediction",
@@ -628,7 +707,12 @@ class ComponentMapper:
         }
 
         # Add all genesis mappings
-        all_mappings = {**self.AUTONOMIZE_MODELS, **self.MCP_MAPPINGS, **self.STANDARD_MAPPINGS}
+        all_mappings = {
+            **self.HEALTHCARE_MAPPINGS,
+            **self.AUTONOMIZE_MODELS,
+            **self.MCP_MAPPINGS,
+            **self.STANDARD_MAPPINGS
+        }
         for genesis_type, mapping in all_mappings.items():
             result["genesis_mapped"][genesis_type] = mapping
 
@@ -851,6 +935,7 @@ class ComponentMapper:
 
             # Combine all hardcoded mappings
             all_mappings = {
+                **self.HEALTHCARE_MAPPINGS,
                 **self.AUTONOMIZE_MODELS,
                 **self.MCP_MAPPINGS,
                 **self.STANDARD_MAPPINGS,
@@ -949,7 +1034,9 @@ class ComponentMapper:
             Source of the mapping (hardcoded, database, unknown)
         """
         # Check hardcoded mappings first
-        if spec_type in self.AUTONOMIZE_MODELS:
+        if spec_type in self.HEALTHCARE_MAPPINGS:
+            return "hardcoded_healthcare"
+        elif spec_type in self.AUTONOMIZE_MODELS:
             return "hardcoded_autonomize"
         elif spec_type in self.MCP_MAPPINGS:
             return "hardcoded_mcp"

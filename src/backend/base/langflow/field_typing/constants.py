@@ -133,6 +133,4 @@ from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
-# Healthcare connector support
-from langflow.components.healthcare.base import HealthcareConnectorBase
 """

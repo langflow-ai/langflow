@@ -107,6 +107,7 @@ export const nodeColors: { [char: string]: string } = {
   textsplitters: "#B47CB5",
   toolkits: "#DB2C2C",
   wrappers: "#E6277A",
+  healthcare: "#0066CC",
   notion: "#000000",
   Notion: "#000000",
   AssemblyAI: "#213ED7",
@@ -159,6 +160,7 @@ export const nodeColorsName: { [char: string]: string } = {
   textsplitters: "fuchsia",
   toolkits: "red",
   wrappers: "rose",
+  healthcare: "blue",
   notion: "slate",
   Notion: "slate",
   AssemblyAI: "blue",
@@ -223,6 +225,7 @@ export const SIDEBAR_CATEGORIES = [
         },
       ]
     : []),
+  { display_name: "Healthcare", name: "healthcare", icon: "Heart" },
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
   { display_name: "Processing", name: "processing", icon: "ListFilter" },
   { display_name: "Logic", name: "logic", icon: "ArrowRightLeft" },
@@ -366,6 +369,7 @@ export const categoryIcons: Record<string, string> = {
   tools: "Hammer",
   custom: "Edit",
   custom_components: "GradientInfinity",
+  healthcare: "Heart",
 };
 
 export const nodeIconToDisplayIconMap: Record<string, string> = {
@@ -393,6 +397,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   toolkits: "Package2",
   tools: "Hammer",
   custom_components: "GradientInfinity",
+  healthcare: "Heart",
   ChatInput: "MessagesSquare",
   ChatOutput: "MessagesSquare",
   //Integration Icons

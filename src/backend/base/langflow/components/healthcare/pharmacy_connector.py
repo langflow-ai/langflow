@@ -7,10 +7,10 @@ from typing import Any, Dict, List, Optional
 from langflow.io import BoolInput, DropdownInput, MessageTextInput, Output
 from langflow.schema.data import Data
 
-from langflow.custom.custom_component.component import Component
+from langflow.base.healthcare_connector_base import HealthcareConnectorBase
 
 
-class PharmacyConnector(Component):
+class PharmacyConnector(HealthcareConnectorBase):
     """
     Pharmacy Healthcare Connector for comprehensive medication management.
 
@@ -24,90 +24,80 @@ class PharmacyConnector(Component):
     name = "PharmacyConnector"
     category = "connectors"
 
-    inputs = [
-        DropdownInput(
-            name="pharmacy_network",
-            display_name="Pharmacy Network",
-            options=["surescripts", "ncpdp", "relay_health"],
-            value="surescripts",
-            info="Pharmacy network for e-prescribing integration",
-            tool_mode=True,
-        ),
-        MessageTextInput(
-            name="prescriber_npi",
-            display_name="Prescriber NPI",
-            info="National Provider Identifier for prescriber",
-            placeholder="1234567890",
-            tool_mode=True,
-        ),
-        MessageTextInput(
-            name="dea_number",
-            display_name="DEA Number",
-            info="DEA number for controlled substance prescribing",
-            placeholder="AB1234567",
-            tool_mode=True,
-        ),
-        DropdownInput(
-            name="drug_database",
-            display_name="Drug Database",
-            options=["first_databank", "medi_span", "lexicomp"],
-            value="first_databank",
-            info="Drug database for interaction checking and drug information",
-            tool_mode=True,
-        ),
-        BoolInput(
-            name="interaction_checking",
-            display_name="Drug Interaction Checking",
-            value=True,
-            info="Enable real-time drug interaction screening",
-            tool_mode=True,
-        ),
-        BoolInput(
-            name="formulary_checking",
-            display_name="Formulary Checking",
-            value=True,
-            info="Enable formulary verification and alternative suggestions",
-            tool_mode=True,
-        ),
-        BoolInput(
-            name="prior_auth_checking",
-            display_name="Prior Authorization Checking",
-            value=True,
-            info="Check for prior authorization requirements",
-            tool_mode=True,
-        ),
-        MessageTextInput(
-            name="test_mode",
-            display_name="Test Mode",
-            info="Enable test/mock mode for development",
-            value="true",
-            tool_mode=True,
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="mock_mode",
-            display_name="Mock Mode",
-            info="Enable mock responses for testing",
-            value="true",
-            tool_mode=True,
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="prescription_data",
-            display_name="Prescription Data",
-            info="Prescription information in JSON format",
-            placeholder='{"patient_id": "PAT123", "medication": "Lisinopril 10mg", "quantity": 30}',
-            tool_mode=True,
-        ),
-    ]
-
     outputs = [
         Output(display_name="Pharmacy Response", name="pharmacy_response", method="execute_pharmacy_workflow"),
     ]
 
     def __init__(self, **kwargs):
-        """Initialize PharmacyConnector with HIPAA compliance settings."""
+        """Initialize PharmacyConnector with healthcare base inputs and pharmacy-specific inputs."""
         super().__init__(**kwargs)
+
+        # Add pharmacy-specific inputs to the base class inputs
+        pharmacy_inputs = [
+            DropdownInput(
+                name="pharmacy_network",
+                display_name="Pharmacy Network",
+                options=["surescripts", "ncpdp", "relay_health"],
+                value="surescripts",
+                info="Pharmacy network for e-prescribing integration",
+                tool_mode=True,
+            ),
+            MessageTextInput(
+                name="prescriber_npi",
+                display_name="Prescriber NPI",
+                info="National Provider Identifier for prescriber",
+                placeholder="1234567890",
+                tool_mode=True,
+            ),
+            MessageTextInput(
+                name="dea_number",
+                display_name="DEA Number",
+                info="DEA number for controlled substance prescribing",
+                placeholder="AB1234567",
+                tool_mode=True,
+            ),
+            DropdownInput(
+                name="drug_database",
+                display_name="Drug Database",
+                options=["first_databank", "medi_span", "lexicomp"],
+                value="first_databank",
+                info="Drug database for interaction checking and drug information",
+                tool_mode=True,
+            ),
+            BoolInput(
+                name="interaction_checking",
+                display_name="Drug Interaction Checking",
+                value=True,
+                info="Enable real-time drug interaction screening",
+                tool_mode=True,
+            ),
+            BoolInput(
+                name="formulary_checking",
+                display_name="Formulary Checking",
+                value=True,
+                info="Enable formulary verification and alternative suggestions",
+                tool_mode=True,
+            ),
+            BoolInput(
+                name="prior_auth_checking",
+                display_name="Prior Authorization Checking",
+                value=True,
+                info="Check for prior authorization requirements",
+                tool_mode=True,
+            ),
+            MessageTextInput(
+                name="prescription_data",
+                display_name="Prescription Data",
+                info="Prescription information in JSON format",
+                placeholder='{"patient_id": "PAT123", "medication": "Lisinopril 10mg", "quantity": 30}',
+                tool_mode=True,
+            ),
+        ]
+
+        # Combine base class inputs with pharmacy-specific inputs
+        self.inputs = self.inputs + pharmacy_inputs
+
+        # Set pharmacy-specific defaults
         self._request_id = None
         self.test_mode = True
         self.mock_mode = True

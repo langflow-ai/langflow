@@ -10,10 +10,10 @@ from langflow.io import DropdownInput, MessageTextInput, Output
 from langflow.logging.logger import logger
 from langflow.schema.data import Data
 
-from langflow.custom.custom_component.component import Component
+from langflow.base.healthcare_connector_base import HealthcareConnectorBase
 
 
-class ClaimsConnector(Component):
+class ClaimsConnector(HealthcareConnectorBase):
     """
     Claims Healthcare Connector for comprehensive claims processing.
 
@@ -31,72 +31,54 @@ class ClaimsConnector(Component):
     name = "ClaimsConnector"
     category = "connectors"
 
-    inputs = [
-        DropdownInput(
-            name="clearinghouse",
-            display_name="Clearinghouse",
-            options=["change_healthcare", "availity", "relay_health", "navinet"],
-            value="change_healthcare",
-            info="Healthcare clearinghouse for claims processing",
-            tool_mode=True,
-        ),
-        MessageTextInput(
-            name="payer_id",
-            display_name="Payer ID",
-            info="Insurance payer identifier",
-            tool_mode=True,
-        ),
-        MessageTextInput(
-            name="provider_npi",
-            display_name="Provider NPI",
-            info="National Provider Identifier for healthcare provider",
-            tool_mode=True,
-        ),
-        MessageTextInput(
-            name="submitter_id",
-            display_name="Submitter ID",
-            info="Submitter identification for clearinghouse",
-            tool_mode=True,
-        ),
-        DropdownInput(
-            name="authentication_type",
-            display_name="Authentication Type",
-            options=["x12", "api_key", "oauth2"],
-            value="api_key",
-            info="Authentication method for clearinghouse integration",
-            tool_mode=True,
-        ),
-        MessageTextInput(
-            name="test_mode",
-            display_name="Test Mode",
-            info="Enable test/mock mode for development",
-            value="true",
-            tool_mode=True,
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="mock_mode",
-            display_name="Mock Mode",
-            info="Enable mock responses for testing",
-            value="true",
-            tool_mode=True,
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="claim_data",
-            display_name="Claim Data",
-            info="Claims data in JSON format for processing",
-            tool_mode=True,
-        ),
-    ]
-
     outputs = [
         Output(display_name="Claims Response", name="claims_response", method="process_claims"),
     ]
 
     def __init__(self, **kwargs):
-        """Initialize ClaimsConnector with HIPAA compliance settings."""
+        """Initialize ClaimsConnector with healthcare base inputs and claims-specific inputs."""
         super().__init__(**kwargs)
+
+        # Add claims-specific inputs to the base class inputs
+        claims_inputs = [
+            DropdownInput(
+                name="clearinghouse",
+                display_name="Clearinghouse",
+                options=["change_healthcare", "availity", "relay_health", "navinet"],
+                value="change_healthcare",
+                info="Healthcare clearinghouse for claims processing",
+                tool_mode=True,
+            ),
+            MessageTextInput(
+                name="payer_id",
+                display_name="Payer ID",
+                info="Insurance payer identifier",
+                tool_mode=True,
+            ),
+            MessageTextInput(
+                name="provider_npi",
+                display_name="Provider NPI",
+                info="National Provider Identifier for healthcare provider",
+                tool_mode=True,
+            ),
+            MessageTextInput(
+                name="submitter_id",
+                display_name="Submitter ID",
+                info="Submitter identification for clearinghouse",
+                tool_mode=True,
+            ),
+            MessageTextInput(
+                name="claim_data",
+                display_name="Claim Data",
+                info="Claims data in JSON format for processing",
+                tool_mode=True,
+            ),
+        ]
+
+        # Combine base class inputs with claims-specific inputs
+        self.inputs = self.inputs + claims_inputs
+
+        # Set claims-specific defaults
         self._request_id = None
         self.test_mode = True
         self.mock_mode = True

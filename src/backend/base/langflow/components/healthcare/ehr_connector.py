@@ -4,12 +4,12 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from langflow.custom.custom_component.component import Component
+from langflow.base.healthcare_connector_base import HealthcareConnectorBase
 from langflow.io import DropdownInput, MessageTextInput, Output, StrInput
 from langflow.schema.data import Data
 
 
-class EHRConnector(Component):
+class EHRConnector(HealthcareConnectorBase):
     """
     Electronic Health Record (EHR) Connector.
 
@@ -31,68 +31,77 @@ class EHRConnector(Component):
     name = "EHRConnector"
     category = "connectors"
 
-    inputs = [
-        MessageTextInput(
-            name="patient_query",
-            display_name="Patient Query",
-            info="Patient search criteria or request data (JSON format)",
-            value='{"patient_id": "PAT123456", "operation": "get_patient_data"}',
-            tool_mode=True,
-        ),
-        DropdownInput(
-            name="ehr_system",
-            display_name="EHR System",
-            options=["epic", "cerner", "allscripts", "athenahealth"],
-            value="epic",
-            info="EHR system type for integration",
-            tool_mode=True,
-        ),
-        DropdownInput(
-            name="fhir_version",
-            display_name="FHIR Version",
-            options=["R4", "STU3", "DSTU2"],
-            value="R4",
-            info="FHIR version for resource compatibility",
-            tool_mode=True,
-        ),
-        DropdownInput(
-            name="authentication_type",
-            display_name="Authentication Type",
-            options=["oauth2", "basic", "api_key"],
-            value="oauth2",
-            info="Authentication method for EHR system",
-            tool_mode=True,
-        ),
-        StrInput(
-            name="base_url",
-            display_name="Base URL",
-            info="EHR system base URL (use environment variables for production)",
-            value="${EHR_BASE_URL}",
-            tool_mode=True,
-        ),
-        DropdownInput(
-            name="operation",
-            display_name="Operation",
-            options=[
-                "search_patients",
-                "get_patient_data",
-                "get_observations",
-                "get_medications",
-                "get_conditions",
-                "get_providers",
-                "update_patient_data",
-                "get_care_team",
-                "get_care_plan"
-            ],
-            value="get_patient_data",
-            info="EHR operation to perform",
-            tool_mode=True,
-        ),
-    ]
 
     outputs = [
         Output(display_name="EHR Data", name="ehr_data", method="build_ehr_response"),
     ]
+
+    def __init__(self, **kwargs):
+        """Initialize EHRConnector with healthcare base inputs and EHR-specific inputs."""
+        super().__init__(**kwargs)
+
+        # Add EHR-specific inputs to the base class inputs
+        ehr_inputs = [
+            MessageTextInput(
+                name="patient_query",
+                display_name="Patient Query",
+                info="Patient search criteria or request data (JSON format)",
+                value='{"patient_id": "PAT123456", "operation": "get_patient_data"}',
+                tool_mode=True,
+            ),
+            DropdownInput(
+                name="ehr_system",
+                display_name="EHR System",
+                options=["epic", "cerner", "allscripts", "athenahealth"],
+                value="epic",
+                info="EHR system type for integration",
+                tool_mode=True,
+            ),
+            DropdownInput(
+                name="fhir_version",
+                display_name="FHIR Version",
+                options=["R4", "STU3", "DSTU2"],
+                value="R4",
+                info="FHIR version for resource compatibility",
+                tool_mode=True,
+            ),
+            DropdownInput(
+                name="authentication_type",
+                display_name="Authentication Type",
+                options=["oauth2", "basic", "api_key"],
+                value="oauth2",
+                info="Authentication method for EHR system",
+                tool_mode=True,
+            ),
+            StrInput(
+                name="base_url",
+                display_name="Base URL",
+                info="EHR system base URL (use environment variables for production)",
+                value="${EHR_BASE_URL}",
+                tool_mode=True,
+            ),
+            DropdownInput(
+                name="operation",
+                display_name="Operation",
+                options=[
+                    "search_patients",
+                    "get_patient_data",
+                    "get_observations",
+                    "get_medications",
+                    "get_conditions",
+                    "get_providers",
+                    "update_patient_data",
+                    "get_care_team",
+                    "get_care_plan"
+                ],
+                value="get_patient_data",
+                info="EHR operation to perform",
+                tool_mode=True,
+            ),
+        ]
+
+        # Combine base class inputs with EHR-specific inputs
+        self.inputs = self.inputs + ehr_inputs
 
     def get_required_fields(self) -> List[str]:
         """Get required fields for EHR operations."""

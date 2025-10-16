@@ -15,8 +15,10 @@ from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Ou
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 
+from langflow.base.healthcare_connector_base import HealthcareConnectorBase
 
-class EligibilityConnector(Component):
+
+class EligibilityConnector(HealthcareConnectorBase):
     """HIPAA-compliant Eligibility Healthcare Connector component.
 
     Implements comprehensive insurance eligibility verification and benefit determination
@@ -40,68 +42,64 @@ class EligibilityConnector(Component):
     name: str = "EligibilityConnector"
     category: str = "connectors"
 
-    # Eligibility-specific inputs
-    inputs = [
-        MessageTextInput(
-            name="eligibility_request",
-            display_name="Eligibility Request",
-            info=(
-                "Eligibility verification request data. Can be JSON string with patient "
-                "and service information, or structured query for eligibility checking."
+    def __init__(self, **kwargs):
+        """Initialize EligibilityConnector with healthcare base inputs and eligibility-specific inputs."""
+        super().__init__(**kwargs)
+
+        # Add eligibility-specific inputs to the base class inputs
+        eligibility_inputs = [
+            MessageTextInput(
+                name="eligibility_request",
+                display_name="Eligibility Request",
+                info=(
+                    "Eligibility verification request data. Can be JSON string with patient "
+                    "and service information, or structured query for eligibility checking."
+                ),
+                value='{"member_id": "INS456789", "provider_npi": "1234567890", "service_type": "office_visit"}',
             ),
-            value='{"member_id": "INS456789", "provider_npi": "1234567890", "service_type": "office_visit"}',
-        ),
-        DropdownInput(
-            name="eligibility_service",
-            display_name="Eligibility Service",
-            options=["availity", "change_healthcare", "navinet", "mock"],
-            value="mock",
-            info="Eligibility service provider to use for verification",
-        ),
-        MessageTextInput(
-            name="test_mode",
-            display_name="Test Mode",
-            info="Enable test/mock mode for development",
-            value="true",
-            tool_mode=True,
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="mock_mode",
-            display_name="Mock Mode",
-            info="Enable mock responses for testing",
-            value="true",
-            tool_mode=True,
-            advanced=True,
-        ),
-        DropdownInput(
-            name="verification_type",
-            display_name="Verification Type",
-            options=["basic", "benefits", "network", "comprehensive"],
-            value="comprehensive",
-            info="Type of eligibility verification to perform",
-        ),
-        BoolInput(
-            name="real_time_mode",
-            display_name="Real-time Mode",
-            value=True,
-            info="Enable real-time eligibility verification (vs cached responses)",
-        ),
-        IntInput(
-            name="cache_duration_minutes",
-            display_name="Cache Duration (Minutes)",
-            value=15,
-            info="Duration to cache eligibility responses for performance",
-            advanced=True,
-        ),
-        StrInput(
-            name="provider_npi",
-            display_name="Provider NPI",
-            value="${PROVIDER_NPI}",
-            info="Provider National Provider Identifier for network validation",
-            advanced=True,
-        ),
-    ]
+            DropdownInput(
+                name="eligibility_service",
+                display_name="Eligibility Service",
+                options=["availity", "change_healthcare", "navinet", "mock"],
+                value="mock",
+                info="Eligibility service provider to use for verification",
+            ),
+            DropdownInput(
+                name="verification_type",
+                display_name="Verification Type",
+                options=["basic", "benefits", "network", "comprehensive"],
+                value="comprehensive",
+                info="Type of eligibility verification to perform",
+            ),
+            BoolInput(
+                name="real_time_mode",
+                display_name="Real-time Mode",
+                value=True,
+                info="Enable real-time eligibility verification (vs cached responses)",
+            ),
+            IntInput(
+                name="cache_duration_minutes",
+                display_name="Cache Duration (Minutes)",
+                value=15,
+                info="Duration to cache eligibility responses for performance",
+                advanced=True,
+            ),
+            StrInput(
+                name="provider_npi",
+                display_name="Provider NPI",
+                value="${PROVIDER_NPI}",
+                info="Provider National Provider Identifier for network validation",
+                advanced=True,
+            ),
+        ]
+
+        # Combine base class inputs with eligibility-specific inputs
+        self.inputs = self.inputs + eligibility_inputs
+
+        # Set eligibility-specific defaults
+        self._request_id = None
+        self.test_mode = True
+        self.mock_mode = True
 
     outputs = [
         Output(
@@ -129,13 +127,6 @@ class EligibilityConnector(Component):
             method="calculate_cost_estimate",
         ),
     ]
-
-    def __init__(self, **kwargs):
-        """Initialize EligibilityConnector with HIPAA compliance settings."""
-        super().__init__(**kwargs)
-        self._request_id = None
-        self.test_mode = True
-        self.mock_mode = True
 
     def execute_healthcare_workflow(self, request_data: dict) -> Data:
         """Execute healthcare workflow with proper error handling and audit logging."""
@@ -589,3 +580,218 @@ class EligibilityConnector(Component):
 
         except Exception as e:
             return self._handle_healthcare_error(e, "cost_estimate")
+
+    def search_network_providers(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Search network providers based on criteria.
+
+        Args:
+            criteria: Search criteria (specialty, location, name, etc.)
+
+        Returns:
+            List of matching providers with network information
+        """
+        try:
+            # Mock provider search results
+            specialty = criteria.get("specialty", "Family Medicine")
+            location = criteria.get("location", "Any")
+
+            providers = [
+                {
+                    "provider_npi": "1234567890",
+                    "name": "Dr. Sarah Johnson, MD",
+                    "specialty": specialty,
+                    "practice_name": "Central Family Medical Center",
+                    "address": "123 Health Way, Medical City, ST 12345",
+                    "phone": "555-HEALTH1",
+                    "network_status": "in_network",
+                    "network_tier": "Preferred",
+                    "accepting_new_patients": True,
+                    "distance_miles": 2.3,
+                    "quality_rating": 4.8,
+                    "board_certifications": ["American Board of Family Medicine"]
+                },
+                {
+                    "provider_npi": "2345678901",
+                    "name": "Dr. Michael Chen, MD",
+                    "specialty": specialty,
+                    "practice_name": "Metro Medical Associates",
+                    "address": "456 Care Blvd, Health City, ST 12346",
+                    "phone": "555-HEALTH2",
+                    "network_status": "in_network",
+                    "network_tier": "Standard",
+                    "accepting_new_patients": True,
+                    "distance_miles": 5.7,
+                    "quality_rating": 4.6,
+                    "board_certifications": ["American Board of Internal Medicine"]
+                }
+            ]
+
+            return providers
+
+        except Exception as e:
+            self._handle_healthcare_error(e, "provider_search")
+            return []
+
+    def check_pre_auth_requirements(self, service_codes: List[str]) -> Dict[str, Any]:
+        """
+        Check pre-authorization requirements for service codes.
+
+        Args:
+            service_codes: List of CPT/HCPCS service codes
+
+        Returns:
+            Pre-authorization requirements and status
+        """
+        try:
+            # Mock pre-auth requirements based on service codes
+            requirements = {
+                "services_checked": service_codes,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "requirements": []
+            }
+
+            # Define services that typically require pre-auth
+            pre_auth_services = {
+                "99213": {"required": False, "reason": "Standard office visit"},
+                "73721": {"required": True, "reason": "MRI imaging requires prior authorization"},
+                "27447": {"required": True, "reason": "Surgical procedure requires prior authorization"},
+                "90834": {"required": True, "reason": "Mental health services require prior authorization"},
+                "96116": {"required": True, "reason": "Psychological testing requires prior authorization"}
+            }
+
+            for code in service_codes:
+                requirement = pre_auth_services.get(code, {
+                    "required": False,
+                    "reason": f"No specific pre-authorization requirement for {code}"
+                })
+
+                requirements["requirements"].append({
+                    "service_code": code,
+                    "pre_auth_required": requirement["required"],
+                    "reason": requirement["reason"],
+                    "estimated_approval_time": "2-3 business days" if requirement["required"] else "N/A",
+                    "documentation_required": requirement["required"]
+                })
+
+            return requirements
+
+        except Exception as e:
+            return {
+                "error": True,
+                "message": "Error checking pre-authorization requirements",
+                "services_checked": service_codes
+            }
+
+    def calculate_patient_cost(self, service_info: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Calculate patient cost estimate for specific services.
+
+        Args:
+            service_info: Service information (codes, quantities, provider, etc.)
+
+        Returns:
+            Detailed cost estimate with patient responsibility
+        """
+        try:
+            service_codes = service_info.get("service_codes", [])
+            provider_npi = service_info.get("provider_npi", self.provider_npi)
+            service_date = service_info.get("service_date", datetime.now().strftime("%Y-%m-%d"))
+
+            # Mock cost calculation
+            total_provider_charge = 0
+            service_details = []
+
+            # Sample service costs
+            service_costs = {
+                "99213": {"charge": 180, "description": "Office visit, established patient"},
+                "73721": {"charge": 1200, "description": "MRI lower extremity"},
+                "27447": {"charge": 25000, "description": "Total knee replacement"},
+                "90834": {"charge": 150, "description": "Psychotherapy session"},
+                "96116": {"charge": 300, "description": "Psychological testing"}
+            }
+
+            for code in service_codes:
+                cost_info = service_costs.get(code, {"charge": 200, "description": f"Service {code}"})
+                service_details.append({
+                    "service_code": code,
+                    "description": cost_info["description"],
+                    "provider_charge": cost_info["charge"],
+                    "allowed_amount": int(cost_info["charge"] * 0.85),
+                    "patient_copay": 25 if code == "99213" else 50,
+                    "patient_coinsurance": int(cost_info["charge"] * 0.85 * 0.20),
+                    "deductible_applied": min(cost_info["charge"] * 0.1, 150)
+                })
+                total_provider_charge += cost_info["charge"]
+
+            # Calculate totals
+            total_allowed = int(total_provider_charge * 0.85)
+            total_copay = sum(service["patient_copay"] for service in service_details)
+            total_coinsurance = sum(service["patient_coinsurance"] for service in service_details)
+            total_deductible = sum(service["deductible_applied"] for service in service_details)
+            total_patient_cost = total_copay + total_coinsurance + total_deductible
+            insurance_payment = total_allowed - total_patient_cost
+
+            return {
+                "service_date": service_date,
+                "provider_npi": provider_npi,
+                "calculation_timestamp": datetime.now(timezone.utc).isoformat(),
+                "service_details": service_details,
+                "cost_summary": {
+                    "total_provider_charge": total_provider_charge,
+                    "total_allowed_amount": total_allowed,
+                    "total_patient_responsibility": total_patient_cost,
+                    "insurance_payment": insurance_payment,
+                    "breakdown": {
+                        "copays": total_copay,
+                        "coinsurance": total_coinsurance,
+                        "deductible": total_deductible
+                    }
+                },
+                "benefit_status": {
+                    "deductible_remaining": "$600",
+                    "out_of_pocket_remaining": "$3050",
+                    "annual_maximum_met": "32%"
+                },
+                "disclaimers": [
+                    "This is an estimate based on your current benefits",
+                    "Actual costs may vary based on services provided",
+                    "Provider may bill additional fees not covered by insurance",
+                    "Pre-authorization may be required for some services"
+                ]
+            }
+
+        except Exception as e:
+            return {
+                "error": True,
+                "message": "Error calculating patient cost",
+                "service_info": service_info
+            }
+
+    def verify_provider_participation(self, provider_npi: str, plan_id: str = None) -> bool:
+        """
+        Verify provider network participation status.
+
+        Args:
+            provider_npi: Provider National Provider Identifier
+            plan_id: Optional specific plan ID to check
+
+        Returns:
+            Boolean indicating if provider is in network
+        """
+        try:
+            # Mock provider verification
+            # In real implementation, this would call eligibility service API
+
+            # Known in-network providers (mock data)
+            in_network_providers = [
+                "1234567890", "2345678901", "3456789012",
+                "4567890123", "5678901234"
+            ]
+
+            return provider_npi in in_network_providers
+
+        except Exception as e:
+            # Log error but don't expose details
+            self._handle_healthcare_error(e, "provider_verification")
+            return False

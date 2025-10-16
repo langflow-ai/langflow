@@ -1,0 +1,224 @@
+id: urn:agent:genesis:autonomize.ai:eoc-check:1.0.0
+name: EOC Check Agent
+fullyQualifiedName: genesis.autonomize.ai.eoc_check
+description: Validates if services are covered under the member's Evidence of Coverage
+domain: autonomize.ai
+subDomain: benefit-validation
+version: 1.0.0
+environment: production
+agentOwner: benefit-validation@autonomize.ai
+agentOwnerDisplayName: Benefit Validation Team
+email: benefit-validation@autonomize.ai
+status: ACTIVE
+
+kind: Single Agent
+agentGoal: Validate service coverage against member's Evidence of Coverage documents
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: None
+
+variables:
+- name: llm_provider
+  type: string
+  required: false
+  default: Azure OpenAI
+  description: LLM provider (AzureOpenAI, OpenAI, Anthropic, etc.)
+- name: model_name
+  type: string
+  required: false
+  default: gpt-4
+  description: Model name to use for EOC validation
+- name: temperature
+  type: float
+  required: false
+  default: 0.1
+  description: Temperature for model generation
+- name: eoc_collections
+  type: string
+  required: false
+  default: eoc_documents,coverage_exclusions,benefit_summaries
+  description: Comma-separated list of EOC collections to search
+- name: search_top_k
+  type: integer
+  required: false
+  default: 10
+  description: Number of top results to retrieve from EOC search
+tags:
+- UM
+- eoc-validation
+- coverage-check
+- benefit-validation
+- reusable
+- healthcare
+
+reusability:
+  asTools: true
+  standalone: true
+  provides:
+    toolName: EOCChecker
+    toolDescription: Validates services against Evidence of Coverage
+    inputSchema:
+      type: object
+      properties:
+        member_id:
+          type: string
+          description: Member ID
+        service_codes:
+          type: array
+          items:
+            type: string
+          description: Service codes to validate
+        plan_type:
+          type: string
+          description: Insurance plan type
+      required:
+      - member_id
+      - service_codes
+    outputSchema:
+      type: object
+      properties:
+        coverage_status:
+          type: object
+          properties:
+            covered_services:
+              type: array
+            excluded_services:
+              type: array
+            conditional_services:
+              type: array
+        eoc_references:
+          type: array
+          items:
+            type: object
+  dependencies: []
+
+sampleInput:
+  member_id: M123456789
+  service_codes:
+  - '70553'
+  - '72148'
+  service_types:
+  - diagnostic_imaging
+  member_plan: Medicare Advantage
+  service_date: '2024-03-15'
+
+components:
+- id: eoc-prompt
+  name: Agent Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Prompt template for agent instructions
+  config:
+    saved_prompt: benefit-check-eoc
+  provides:
+  - useAs: system_prompt
+    in: eoc-agent
+    description: System prompt for the agent
+
+- id: eoc-request
+  name: EOC Check Request
+  kind: Data
+  type: genesis:chat_input
+  description: Member and service information for EOC validation
+  provides:
+  - useAs: input
+    in: eoc-agent
+    description: EOC validation request
+
+
+- id: eoc-agent
+  name: EOC Validation Agent
+  kind: Agent
+  type: genesis:agent
+  description: Validates coverage against EOC
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 2000
+    handle_parsing_errors: true
+    max_iterations: 10
+    verbose: true
+  provides:
+  - useAs: input
+    in: eoc-formatter
+    description: EOC validation results
+
+- id: eoc-search
+  name: EOC Document Search
+  kind: Tool
+  type: genesis:knowledge_hub_search
+  description: Search EOC documents
+  asTools: true
+  config:
+    collections:
+    - Sample EOC Guidelines
+    search_type: similarity
+    top_k: 10
+  provides:
+  - useAs: tools
+    in: eoc-agent
+    description: EOC document search tool
+
+- id: service-validator
+  name: Service Code Validator
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Validate and enrich service codes via MCP
+  asTools: true
+  config:
+    tool_name: encoder_pro
+    description: Medical coding and validation tool
+  provides:
+  - useAs: tools
+    in: eoc-agent
+    description: Service code validation tool
+
+- id: eoc-formatter
+  name: EOC Validation Results
+  kind: Data
+  type: genesis:chat_output
+  description: Display EOC validation results
+  config:
+    should_store_message: true
+
+outputs:
+- coverage_determination
+- eoc_references
+- exclusion_details
+- limitation_details
+- confidence_score
+
+kpis:
+- name: Coverage Determination Accuracy
+  category: Quality
+  valueType: percentage
+  target: 98
+  unit: '%'
+  description: Accuracy of EOC coverage determinations
+- name: EOC Search Response Time
+  category: Performance
+  valueType: numeric
+  target: 3000
+  unit: ms
+  description: Time to search and retrieve EOC information
+- name: Citation Coverage
+  category: Quality
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Percentage of determinations with EOC citations
+- name: Service Code Validation Rate
+  category: Quality
+  valueType: percentage
+  target: 99
+  unit: '%'
+  description: Success rate of service code validation
+securityInfo:
+  visibility: Private
+  confidentiality: High
+  gdprSensitive: true

@@ -1,0 +1,182 @@
+id: urn:agent:genesis:autonomize.ai:summary-generation:1.0.0
+name: Summary Generation Agent
+fullyQualifiedName: genesis.autonomize.ai.summary_generation
+description: Generate human-readable summaries of prior authorization requests and extracted data
+domain: autonomize.ai
+subDomain: content-generation
+version: 1.0.0
+environment: production
+agentOwner: content-generation@autonomize.ai
+agentOwnerDisplayName: Content Generation Team
+email: content-generation@autonomize.ai
+status: ACTIVE
+variables:
+- name: llm_provider
+  type: string
+  required: false
+  default: Azure OpenAI
+  description: LLM provider (AzureOpenAI, OpenAI, Anthropic, etc.)
+- name: model_name
+  type: string
+  required: false
+  default: gpt-4
+  description: Model name to use for summary generation
+- name: temperature
+  type: float
+  required: false
+  default: 0.3
+  description: Temperature for model generation
+- name: summary_length
+  type: string
+  required: false
+  default: medium
+  description: Summary length (brief, medium, detailed)
+- name: include_recommendations
+  type: boolean
+  required: false
+  default: true
+  description: Include reviewer recommendations in summary
+tags:
+- UM
+- summary-generation
+- content-creation
+- documentation
+- healthcare
+- prior-authorization
+kind: Single Agent
+agentGoal: Generate a human-readable summary of the fax contents, including extracted clinical and administrative data, for
+  quick reviewer reference
+targetUser: internal
+valueGeneration: InsightGeneration
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: ModelDrivenWorkflow
+toolsUse: true
+learningCapability: None
+sampleInput:
+  case_data:
+    member:
+      id: M123456789
+      name: John Doe
+      age: 65
+      plan: Medicare Advantage
+    service:
+      code: '70553'
+      description: MRI Brain with contrast
+    provider:
+      name: Dr. Jane Smith
+      npi: '1234567890'
+      network: in-network
+    clinical:
+      diagnosis: R51.9 - Headache
+      history: 3 months chronic headaches
+    validation_results:
+      eligibility: active
+      coverage: covered
+      pa_required: true
+components:
+- id: summary-input
+  name: Case Data Input
+  kind: Data
+  type: genesis:chat_input
+  description: Structured case data for summary generation
+  provides:
+  - useAs: input
+    in: summary-agent
+    description: Case information to summarize
+- id: summary-agent
+  name: Clinical Summary Generator
+  kind: Agent
+  type: genesis:agent
+  description: Generates comprehensive case summaries
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.3
+    max_tokens: 2500
+    system_prompt: "You are a clinical documentation specialist creating summaries for prior authorization reviewers. Generate\
+      \ clear, concise summaries that enable quick decision-making.\n\nSUMMARY STRUCTURE:\n\n1. CASE OVERVIEW (2-3 sentences)\n\
+      \   - PA type and urgency\n   - Primary service requested\n   - Key clinical indication\n\n2. PATIENT INFORMATION\n\
+      \   - Demographics (age, gender)\n   - Insurance details (member ID, LOB)\n   - Relevant medical history\n\n3. CLINICAL\
+      \ SUMMARY\n   - Primary diagnosis with ICD-10\n   - Supporting diagnoses\n   - Current symptoms/clinical presentation\n\
+      \   - Previous treatments attempted\n   - Clinical rationale for request\n\n4. SERVICE DETAILS\n   - Procedure/service\
+      \ requested with codes\n   - Provider information (name, specialty, NPI)\n   - Facility/location\n   - Requested date/urgency\n\
+      \n5. VALIDATION RESULTS\n   - Eligibility status\n   - Network status (providers)\n   - Guideline compliance\n   - Missing\
+      \ documentation\n\n6. REVIEWER CONSIDERATIONS\n   - Key decision factors\n   - Policy considerations\n   - Potential\
+      \ concerns or red flags\n   - Alternative options (if applicable)\n\n7. RECOMMENDED ACTION\n   - Suggested disposition\n\
+      \   - Additional information needed\n   - Priority level\n\nUse the Prompt Template tool to ensure consistent formatting.\n\
+      \nWriting guidelines:\n- Use clear, medical terminology\n- Highlight critical information\n- Be objective and factual\n\
+      - Include all relevant codes\n- Flag any urgent issues prominently\n"
+    handle_parsing_errors: true
+    max_iterations: 5
+    verbose: true
+  provides:
+  - useAs: input
+    in: summary-output
+    description: Generated summary
+- id: prompt-template
+  name: Summary Template
+  kind: Tool
+  type: genesis:prompt_template
+  description: Structured template for consistent summaries
+  asTools: true
+  config:
+    template_name: pa_summary_template
+    variables:
+    - case_type
+    - patient_info
+    - clinical_data
+    - service_details
+    - validation_results
+    format: structured
+  provides:
+  - useAs: tools
+    in: summary-agent
+    description: Summary formatting tool
+- id: summary-output
+  name: Case Summary
+  kind: Data
+  type: genesis:chat_output
+  description: Display generated case summary
+  config:
+    should_store_message: true
+outputs:
+- case_summary
+- key_highlights
+- reviewer_recommendations
+- priority_level
+kpis:
+- name: Reviewer Time Saved
+  category: Efficiency
+  valueType: numeric
+  target: 180
+  unit: seconds
+  description: Average time saved per review with summary
+- name: Summary Readability Score
+  category: Quality
+  valueType: numeric
+  target: 80
+  unit: score
+  description: Flesch reading ease score for summaries
+- name: Summary Completeness
+  category: Quality
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Percentage of required elements included
+- name: Token Count
+  category: Efficiency
+  valueType: numeric
+  target: 800
+  unit: tokens
+  description: Average tokens per summary
+- name: Generation Latency
+  category: Performance
+  valueType: numeric
+  target: 2500
+  unit: ms
+  description: Time to generate complete summary
+securityInfo:
+  visibility: Private
+  confidentiality: High
+  gdprSensitive: true
