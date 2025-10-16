@@ -6,6 +6,7 @@ slug: /components-custom-components
 import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import PartialBasicComponentStructure from '../_partial-basic-component-structure.mdx';
 
 Custom components extend Langflow's functionality through Python classes that inherit from `Component`. This enables integration of new features, data manipulation, external services, and specialized tools.
 
@@ -24,11 +25,10 @@ Custom components in Langflow are built upon:
 * The Python class that inherits from `Component`.
 * Class-level attributes that identify and describe the component.
 * Input and output lists that determine data flow.
-* Internal variables for logging and advanced logic.
+* Methods that define the component's behavior and logic.
+* Internal variables for logging, such as `self.log()`, `self.status`, and `self.stop()`.
 
 ## Basic component structure
-
-import PartialBasicComponentStructure from '../_partial-basic-component-structure.mdx';
 
 <PartialBasicComponentStructure />
 

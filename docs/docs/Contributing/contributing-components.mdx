@@ -16,11 +16,11 @@ import PartialBasicComponentStructure from '../_partial-basic-component-structur
 
 <PartialBasicComponentStructure />
 
-5. Save the `dataframe_processor.py` to the `src > backend > base > langflow > components` directory.
+5. Save the `dataframe_processor.py` to the `src/lfx/src/lfx/components` directory.
 This example adds a data component, so add it to the `/data` directory.
 
-6. Add the component dependency to `src > backend > base > langflow > components > data > __init__.py` as `from .DataFrameProcessor import DataFrameProcessor`.
-You can view the [/data/__init__.py](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/components/data/__init__.py) in the Langflow repository.
+6. Add the component dependency to `src/lfx/src/lfx/components/data/__init__.py` as `from .DataFrameProcessor import DataFrameProcessor`.
+You can view the [/data/__init__.py](https://github.com/langflow-ai/langflow/blob/dev/src/lfx/src/lfx/components/data/__init__.py) in the Langflow repository.
 
 7. Add any new dependencies to the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml#L20) file.
 
