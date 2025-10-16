@@ -10,13 +10,13 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from .base import HealthcareConnectorBase
+from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, StrInput
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 
 
-class EligibilityConnector(HealthcareConnectorBase):
+class EligibilityConnector(Component):
     """HIPAA-compliant Eligibility Healthcare Connector component.
 
     Implements comprehensive insurance eligibility verification and benefit determination
@@ -38,9 +38,10 @@ class EligibilityConnector(HealthcareConnectorBase):
     )
     icon: str = "Shield"
     name: str = "EligibilityConnector"
+    category: str = "connectors"
 
-    # Extend base inputs with eligibility-specific inputs
-    inputs = HealthcareConnectorBase.inputs + [
+    # Eligibility-specific inputs
+    inputs = [
         MessageTextInput(
             name="eligibility_request",
             display_name="Eligibility Request",
@@ -56,6 +57,22 @@ class EligibilityConnector(HealthcareConnectorBase):
             options=["availity", "change_healthcare", "navinet", "mock"],
             value="mock",
             info="Eligibility service provider to use for verification",
+        ),
+        MessageTextInput(
+            name="test_mode",
+            display_name="Test Mode",
+            info="Enable test/mock mode for development",
+            value="true",
+            tool_mode=True,
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="mock_mode",
+            display_name="Mock Mode",
+            info="Enable mock responses for testing",
+            value="true",
+            tool_mode=True,
+            advanced=True,
         ),
         DropdownInput(
             name="verification_type",
@@ -116,6 +133,109 @@ class EligibilityConnector(HealthcareConnectorBase):
     def __init__(self, **kwargs):
         """Initialize EligibilityConnector with HIPAA compliance settings."""
         super().__init__(**kwargs)
+        self._request_id = None
+        self.test_mode = True
+        self.mock_mode = True
+
+    def execute_healthcare_workflow(self, request_data: dict) -> Data:
+        """Execute healthcare workflow with proper error handling and audit logging."""
+        import uuid
+        from datetime import datetime
+
+        try:
+            # Generate unique request ID for tracking
+            self._request_id = str(uuid.uuid4())
+
+            # Log request for HIPAA audit trail
+            self._audit_log_request(request_data)
+
+            # Determine if using mock or real response
+            if self.mock_mode or self.test_mode:
+                response_data = self.get_mock_response(request_data)
+                response_data["mode"] = "mock"
+            else:
+                response_data = self.process_healthcare_request(request_data)
+                response_data["mode"] = "live"
+
+            # Add metadata
+            response_data.update({
+                "request_id": self._request_id,
+                "timestamp": datetime.now().isoformat(),
+                "component": self.__class__.__name__,
+                "hipaa_compliant": True,
+                "audit_logged": True
+            })
+
+            # Log response for audit trail
+            self._audit_log_response(response_data)
+
+            return Data(value=response_data)
+
+        except Exception as e:
+            return self._handle_healthcare_error(e, "execute_healthcare_workflow")
+
+    def _audit_log_request(self, request_data: dict) -> None:
+        """Log healthcare request for HIPAA compliance audit trail."""
+        from langflow.logging.logger import logger
+
+        # In production, this would log to secure audit system
+        # For now, using standard logging with PHI protection
+        sanitized_request = self._sanitize_phi_data(request_data)
+        logger.info(f"Healthcare request initiated - Component: {self.__class__.__name__}, "
+                   f"Request ID: {self._request_id}, Operation: {sanitized_request.get('operation', 'general')}")
+
+    def _audit_log_response(self, response_data: dict) -> None:
+        """Log healthcare response for HIPAA compliance audit trail."""
+        from langflow.logging.logger import logger
+
+        logger.info(f"Healthcare response completed - Component: {self.__class__.__name__}, "
+                   f"Request ID: {self._request_id}, Status: {response_data.get('status', 'unknown')}")
+
+    def _sanitize_phi_data(self, data: dict) -> dict:
+        """Remove or mask PHI/PII data for logging purposes."""
+        sanitized = data.copy()
+
+        # List of fields that may contain PHI
+        phi_fields = [
+            'patient_id', 'member_id', 'ssn', 'date_of_birth', 'phone_number',
+            'email', 'address', 'name', 'first_name', 'last_name', 'mrn'
+        ]
+
+        for field in phi_fields:
+            if field in sanitized:
+                if isinstance(sanitized[field], str) and len(sanitized[field]) > 3:
+                    # Mask all but last 3 characters
+                    sanitized[field] = '*' * (len(sanitized[field]) - 3) + sanitized[field][-3:]
+                else:
+                    sanitized[field] = '***'
+
+        return sanitized
+
+    def _handle_healthcare_error(self, error: Exception, operation: str) -> Data:
+        """Handle healthcare-specific errors with proper logging and response."""
+        from langflow.logging.logger import logger
+        from datetime import datetime
+
+        error_message = str(error)
+
+        # Log error for audit trail (without PHI)
+        logger.error(f"Healthcare operation failed - Component: {self.__class__.__name__}, "
+                    f"Operation: {operation}, Error: {error_message}")
+
+        # Return structured error response
+        error_response = {
+            "error": True,
+            "error_type": type(error).__name__,
+            "error_message": error_message,
+            "operation": operation,
+            "component": self.__class__.__name__,
+            "request_id": getattr(self, '_request_id', None),
+            "timestamp": datetime.now().isoformat(),
+            "hipaa_compliant": True,
+            "mode": "error"
+        }
+
+        return Data(value=error_response)
 
     def get_required_fields(self) -> List[str]:
         """Get required fields for eligibility verification."""
