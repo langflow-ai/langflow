@@ -336,8 +336,8 @@ async def check_flow_user_permission(
     """Check if the user associated with the API key has permission to run the flow.
 
     Args:
-        flow_id (str): The ID of the flow to check permissions for
-        api_key_user (UserRead): The user associated with the API key
+        flow (FlowRead | None): The flow to check permissions for.
+        api_key_user (UserRead): The user associated with the API key.
 
     Raises:
         HTTPException: If the user does not have permission to run the flow
@@ -578,7 +578,7 @@ async def webhook_run_flow(
 async def experimental_run_flow(
     *,
     session: DbSession,
-    flow_id_or_name: str,
+    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
     tweaks: Annotated[Tweaks | None, Body(embed=True)] = None,
@@ -592,7 +592,7 @@ async def experimental_run_flow(
     This endpoint supports running flows with caching to enhance performance and efficiency.
 
     ### Parameters:
-    - `flow_id` (str): The unique identifier of the flow to be executed.
+    - `flow` (Flow): The flow object to be executed, resolved via dependency injection.
     - `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components
       for the flow. Each input can target specific components and provide custom values.
     - `outputs` (List[str], optional): A list of output names to retrieve from the executed flow.
@@ -633,6 +633,7 @@ async def experimental_run_flow(
     This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,
     catering to diverse application requirements.
     """  # noqa: E501
+    # Get the flow from the id or name
     await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
 
     session_service = get_session_service()
