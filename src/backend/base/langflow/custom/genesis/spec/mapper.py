@@ -645,50 +645,6 @@ class ComponentMapper:
 
         return result
 
-    def validate_component_connection_enhanced(self, source_type: str, target_type: str,
-                                             source_output: str, target_input: str) -> Dict[str, Any]:
-        """
-        Validate connection between components using real component introspection.
-
-        Args:
-            source_type: Genesis type of source component
-            target_type: Genesis type of target component
-            source_output: Output field name
-            target_input: Input field name
-
-        Returns:
-            Validation result with compatibility information
-        """
-        inspector = self._get_component_schema_inspector()
-
-        # Map genesis types to component names
-        source_mapping = self.map_component(source_type)
-        target_mapping = self.map_component(target_type)
-
-        source_component = source_mapping.get("component")
-        target_component = target_mapping.get("component")
-
-        if not source_component or not target_component:
-            return {
-                "valid": False,
-                "error": f"Could not map component types: {source_type} -> {target_type}"
-            }
-
-        # Try real component validation first
-        if inspector and self._use_real_introspection:
-            try:
-                result = inspector.validate_component_connection(
-                    source_component, target_component, source_output, target_input
-                )
-                if result.get("valid") is not None:  # Got a real validation result
-                    return result
-            except Exception as e:
-                logger.warning(f"Real component validation failed: {e}")
-
-        # Fallback to hardcoded I/O validation
-        return self._validate_connection_hardcoded(
-            source_component, target_component, source_output, target_input
-        )
 
     def _validate_connection_hardcoded(self, source_component: str, target_component: str,
                                      source_output: str, target_input: str) -> Dict[str, Any]:
