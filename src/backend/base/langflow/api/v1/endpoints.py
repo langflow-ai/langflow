@@ -571,20 +571,21 @@ async def webhook_run_flow(
 
 
 @router.post(
-    "/run/advanced/{flow_id}",
+    "/run/advanced/{flow_id_or_name}",
     response_model=RunResponse,
     response_model_exclude_none=True,
 )
 async def experimental_run_flow(
     *,
     session: DbSession,
-    flow_id: UUID,
+    flow_id_or_name: str,
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
     tweaks: Annotated[Tweaks | None, Body(embed=True)] = None,
     stream: Annotated[bool, Body(embed=True)] = False,
     session_id: Annotated[None | str, Body(embed=True)] = None,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
+    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
 ) -> RunResponse:
     """Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.
 
@@ -635,7 +636,7 @@ async def experimental_run_flow(
     await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
 
     session_service = get_session_service()
-    flow_id_str = str(flow_id)
+    flow_id_str = str(flow.id)
     if outputs is None:
         outputs = []
     if inputs is None:
@@ -654,7 +655,7 @@ async def experimental_run_flow(
         try:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)
+            stmt = select(Flow).where(Flow.id == flow.id).where(Flow.user_id == api_key_user.id)
             flow = (await session.exec(stmt)).first()
         except sa.exc.StatementError as exc:
             # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
