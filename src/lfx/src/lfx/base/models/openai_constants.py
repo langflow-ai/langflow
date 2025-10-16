@@ -46,6 +46,10 @@ OPENAI_MODELS_DETAILED = [
     ),
     create_model_metadata(provider="OpenAI", name="gpt-4", icon="OpenAI", tool_calling=True),
     create_model_metadata(provider="OpenAI", name="gpt-3.5-turbo", icon="OpenAI", tool_calling=True),
+    # Custom Gemini Model
+    create_model_metadata(
+        provider="Custom Gemini", name="gemini-2.5-pro", icon="GoogleGenerativeAI", tool_calling=True
+    ),
     # Reasoning Models
     create_model_metadata(provider="OpenAI", name="o1", icon="OpenAI", reasoning=True),
     create_model_metadata(provider="OpenAI", name="o1-mini", icon="OpenAI", reasoning=True, not_supported=True),

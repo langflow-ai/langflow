@@ -11,7 +11,7 @@ from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REA
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput
-from lfx.io import DropdownInput, MessageInput, MultilineInput, SecretStrInput, SliderInput
+from lfx.io import DropdownInput, MessageInput, MessageTextInput, MultilineInput, SecretStrInput, SliderInput
 from lfx.schema.dotdict import dotdict
 
 
@@ -41,6 +41,7 @@ class LanguageModelComponent(LCModelComponent):
             info="Select the model to use",
             real_time_refresh=True,
         ),
+        MessageTextInput(name="base_url", display_name="Base URL", advanced=True),
         SecretStrInput(
             name="api_key",
             display_name="OpenAI API Key",
@@ -97,6 +98,7 @@ class LanguageModelComponent(LCModelComponent):
                 temperature=temperature,
                 streaming=stream,
                 openai_api_key=self.api_key,
+                base_url=self.base_url,
             )
         if provider == "Anthropic":
             if not self.api_key:
