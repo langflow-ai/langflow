@@ -5,7 +5,7 @@ import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import orjson
 import sqlalchemy as sa
@@ -140,6 +140,7 @@ async def simple_run_flow(
     api_key_user: User | None = None,
     event_manager: EventManager | None = None,
     context: dict | None = None,
+    run_id: str | None = None,
 ):
     validate_input_and_tweaks(input_request)
     try:
@@ -154,6 +155,9 @@ async def simple_run_flow(
         graph = Graph.from_payload(
             graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
         )
+        if run_id is None:
+            run_id = str(uuid4())
+        graph.set_run_id(run_id)
         inputs = None
         if input_request.input_value is not None:
             inputs = [
@@ -198,19 +202,45 @@ async def simple_run_flow_task(
     stream: bool = False,
     api_key_user: User | None = None,
     event_manager: EventManager | None = None,
+    telemetry_service=None,
+    start_time: float | None = None,
+    run_id: str | None = None,
 ):
     """Run a flow task as a BackgroundTask, therefore it should not throw exceptions."""
     try:
-        return await simple_run_flow(
+        result = await simple_run_flow(
             flow=flow,
             input_request=input_request,
             stream=stream,
             api_key_user=api_key_user,
             event_manager=event_manager,
+            run_id=run_id,
         )
+        if telemetry_service and start_time is not None:
+            await telemetry_service.log_package_run(
+                RunPayload(
+                    run_is_webhook=True,
+                    run_seconds=int(time.perf_counter() - start_time),
+                    run_success=True,
+                    run_error_message="",
+                    run_id=run_id,
+                )
+            )
+        return result  # noqa: TRY300
 
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
         await logger.aexception(f"Error running flow {flow.id} task")
+        if telemetry_service and start_time is not None:
+            await telemetry_service.log_package_run(
+                RunPayload(
+                    run_is_webhook=True,
+                    run_seconds=int(time.perf_counter() - start_time),
+                    run_success=False,
+                    run_error_message=str(exc),
+                    run_id=run_id,
+                )
+            )
+        return None
 
 
 async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> AsyncGenerator:
@@ -392,9 +422,15 @@ async def simplified_run_flow(
             media_type="text/event-stream",
         )
 
+    run_id = str(uuid4())
     try:
         result = await simple_run_flow(
-            flow=flow, input_request=input_request, stream=stream, api_key_user=api_key_user, context=context
+            flow=flow,
+            input_request=input_request,
+            stream=stream,
+            api_key_user=api_key_user,
+            context=context,
+            run_id=run_id,
         )
         end_time = time.perf_counter()
         background_tasks.add_task(
@@ -404,6 +440,7 @@ async def simplified_run_flow(
                 run_seconds=int(end_time - start_time),
                 run_success=True,
                 run_error_message="",
+                run_id=run_id,
             ),
         )
 
@@ -415,6 +452,7 @@ async def simplified_run_flow(
                 run_seconds=int(time.perf_counter() - start_time),
                 run_success=False,
                 run_error_message=str(exc),
+                run_id=run_id,
             ),
         )
         if "badly formed hexadecimal UUID string" in str(exc):
@@ -433,6 +471,7 @@ async def simplified_run_flow(
                 run_seconds=int(time.perf_counter() - start_time),
                 run_success=False,
                 run_error_message=str(exc),
+                run_id=run_id,
             ),
         )
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
@@ -470,51 +509,44 @@ async def webhook_run_flow(
     webhook_user = await get_webhook_user(flow_id_or_name, request)
 
     try:
-        try:
-            data = await request.body()
-        except Exception as exc:
-            error_msg = str(exc)
-            raise HTTPException(status_code=500, detail=error_msg) from exc
+        data = await request.body()
+    except Exception as exc:
+        error_msg = str(exc)
+        raise HTTPException(status_code=500, detail=error_msg) from exc
 
-        if not data:
-            error_msg = "Request body is empty. You should provide a JSON payload containing the flow ID."
-            raise HTTPException(status_code=400, detail=error_msg)
+    if not data:
+        error_msg = "Request body is empty. You should provide a JSON payload containing the flow ID."
+        raise HTTPException(status_code=400, detail=error_msg)
 
-        try:
-            # get all webhook components in the flow
-            webhook_components = get_all_webhook_components_in_flow(flow.data)
-            tweaks = {}
+    try:
+        # get all webhook components in the flow
+        webhook_components = get_all_webhook_components_in_flow(flow.data)
+        tweaks = {}
 
-            for component in webhook_components:
-                tweaks[component["id"]] = {"data": data.decode() if isinstance(data, bytes) else data}
-            input_request = SimplifiedAPIRequest(
-                input_value="",
-                input_type="chat",
-                output_type="chat",
-                tweaks=tweaks,
-                session_id=None,
-            )
-
-            await logger.adebug("Starting background task")
-            background_tasks.add_task(
-                simple_run_flow_task,
-                flow=flow,
-                input_request=input_request,
-                api_key_user=webhook_user,
-            )
-        except Exception as exc:
-            error_msg = str(exc)
-            raise HTTPException(status_code=500, detail=error_msg) from exc
-    finally:
-        background_tasks.add_task(
-            telemetry_service.log_package_run,
-            RunPayload(
-                run_is_webhook=True,
-                run_seconds=int(time.perf_counter() - start_time),
-                run_success=not error_msg,
-                run_error_message=error_msg,
-            ),
+        for component in webhook_components:
+            tweaks[component["id"]] = {"data": data.decode() if isinstance(data, bytes) else data}
+        input_request = SimplifiedAPIRequest(
+            input_value="",
+            input_type="chat",
+            output_type="chat",
+            tweaks=tweaks,
+            session_id=None,
         )
+
+        await logger.adebug("Starting background task")
+        run_id = str(uuid4())
+        background_tasks.add_task(
+            simple_run_flow_task,
+            flow=flow,
+            input_request=input_request,
+            api_key_user=webhook_user,
+            telemetry_service=telemetry_service,
+            start_time=start_time,
+            run_id=run_id,
+        )
+    except Exception as exc:
+        error_msg = str(exc)
+        raise HTTPException(status_code=500, detail=error_msg) from exc
 
     return {"message": "Task started in the background", "status": "in progress"}
 

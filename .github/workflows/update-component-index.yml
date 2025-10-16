@@ -1,7 +1,11 @@
+# SECURITY WARNING: This workflow uses pull_request_target to enable commenting on fork PRs.
+# DO NOT checkout or execute code from fork PRs - this could allow malicious code execution with write permissions.
+# Fork PRs are detected and handled safely by skipping checkout/build steps.
+
 name: Update Component Index
 
 on:
-  pull_request:
+  pull_request_target:
     paths:
       - "src/lfx/src/lfx/components/**"
       - "scripts/build_component_index.py"
@@ -15,8 +19,8 @@ jobs:
   update-index:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository (PR)
-        if: github.event_name == 'pull_request'
+      - name: Checkout repository (PR from same repo only)
+        if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/checkout@v4
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
@@ -30,14 +34,17 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install uv
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository)
         uses: astral-sh/setup-uv@v6
         with:
           version: "latest"
 
       - name: Install dependencies
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository)
         run: uv sync --dev --project .
 
       - name: Check if script exists
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository)
         id: check_script
         run: |
           echo "Current directory: $(pwd)"
@@ -123,19 +130,43 @@ jobs:
           exit 1
 
       - name: Comment on PR (community fork - cannot auto-update)
-        if: steps.check_changes.outputs.changed == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository
         uses: actions/github-script@v7
         with:
           script: |
-            github.rest.issues.createComment({
+            const marker = '<!-- component-index-update-needed -->';
+            const commentBody = `${marker}\n⚠️ **Component index needs to be updated**\n\nPlease run the following command locally and commit the changes:\n\n\`\`\`bash\nmake build_component_index\n\`\`\`\n\nOr alternatively:\n\n\`\`\`bash\nLFX_DEV=1 uv run python scripts/build_component_index.py\n\`\`\`\n\nThen commit and push the updated \`src/lfx/src/lfx/_assets/component_index.json\` file.`;
+
+            // Find existing comments from github-actions bot with the marker
+            const { data: comments } = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '⚠️ **Component index needs to be updated**\n\nPlease run the following command locally and commit the changes:\n\n```bash\nmake build_component_index\n```\n\nOr alternatively:\n\n```bash\nLFX_DEV=1 uv run python scripts/build_component_index.py\n```\n\nThen commit and push the updated `src/lfx/src/lfx/_assets/component_index.json` file.'
+            });
+
+            const botComments = comments.filter(
+              comment => comment.user.login === 'github-actions[bot]' && comment.body.includes(marker)
+            );
+
+            // Delete old comments to avoid duplicates
+            for (const comment of botComments) {
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: comment.id,
+              });
+            }
+
+            // Post new comment
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
             })
 
       - name: Comment on PR (same repo - auto-updated)
-        if: steps.check_changes.outputs.changed == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        if: steps.check_changes.outputs.changed == 'true' && github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v7
         with:
           script: |
@@ -251,9 +282,33 @@ jobs:
               changeDetails = '\n\n*Could not analyze specific changes.*';
             }
 
-            github.rest.issues.createComment({
+            const marker = '<!-- component-index-auto-updated -->';
+            const commentBody = `${marker}\n✅ **Component index has been automatically updated** due to changes in \`src/lfx/src/lfx/components/\`${changeDetails}`;
+
+            // Find existing comments from github-actions bot with the marker
+            const { data: comments } = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `✅ **Component index has been automatically updated** due to changes in \`src/lfx/src/lfx/components/\`${changeDetails}`
+            });
+
+            const botComments = comments.filter(
+              comment => comment.user.login === 'github-actions[bot]' && comment.body.includes(marker)
+            );
+
+            // Delete old comments to avoid duplicates
+            for (const comment of botComments) {
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: comment.id,
+              });
+            }
+
+            // Post new comment
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
             })
