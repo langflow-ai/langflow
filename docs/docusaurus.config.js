@@ -15,7 +15,7 @@ const config = {
   favicon: "img/favicon.ico",
   url: "https://docs.langflow.org",
   baseUrl: process.env.BASE_URL ? process.env.BASE_URL : "/",
-  onBrokenLinks: "warn",
+  onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
   onBrokenAnchors: "warn",
   organizationName: "langflow-ai",
