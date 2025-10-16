@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import re
 import traceback
 import uuid
@@ -19,7 +20,6 @@ from langflow.schema.message import Message
 from langflow.schema.table import EditMode
 from pydantic import ValidationError
 
-from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.events import ExceptionWithMessageError
 from lfx.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
@@ -29,9 +29,10 @@ from lfx.base.models.model_input_constants import (
     MODELS_METADATA,
 )
 from lfx.base.models.model_utils import get_model_name
-from lfx.components.helpers import CurrentDateComponent
+from lfx.components.agents.agent import LCToolsAgentComponent
+from lfx.components.helpers.current_date import CurrentDateComponent
+from lfx.components.helpers.memory import MemoryComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
-from lfx.components.models_and_agents.memory import MemoryComponent
 from lfx.custom.custom_component.component import _get_component_toolkit
 from lfx.custom.utils import update_component_build_config
 from lfx.helpers.base_model import build_model_from_schema
@@ -107,9 +108,9 @@ class CugaComponent(ToolCallingAgentComponent):
             info=(
                 "Custom instructions or policies for the agent to adhere to during its operation.\n"
                 "Example:\n"
-                "## Plan\n"
+                "# Plan\n"
                 "< planning instructions e.g. which tools and when to use>\n"
-                "## Answer\n"
+                "# Answer\n"
                 "< final answer instructions how to answer>"
             ),
             value="",
@@ -184,27 +185,13 @@ class CugaComponent(ToolCallingAgentComponent):
                 },
             ],
         ),
-        *LCToolsAgentComponent.get_base_inputs(),
+        *LCToolsAgentComponent._base_inputs,
         BoolInput(
             name="add_current_date_tool",
             display_name="Current Date",
             advanced=True,
             info="If true, will add a tool to the agent that returns the current date.",
             value=True,
-        ),
-        BoolInput(
-            name="lite_mode",
-            display_name="Enable CugaLite",
-            info="Enable CugaLite for simple API tasks (faster execution).",
-            value=True,
-            advanced=False,
-        ),
-        IntInput(
-            name="lite_mode_tool_threshold",
-            display_name="CugaLite Tool Threshold",
-            info="Route to CugaLite if app has fewer than this many tools.",
-            value=25,
-            advanced=False,
         ),
         BoolInput(
             name="browser_enabled",
@@ -267,27 +254,33 @@ class CugaComponent(ToolCallingAgentComponent):
         }
         logger.debug(f"LLM MODEL TYPE: {type(llm)}")
         if current_input:
-            # Import settings first
-            from cuga.config import settings
+            try:
+                from cuga.config import settings as cuga_settings
 
-            # Use Dynaconf's set() method to update settings dynamically
-            # This properly updates the settings object without corruption
-            logger.debug("Updating CUGA settings via Dynaconf set() method")
+                logger.info("Updating cuga settings programmatically")
+                cuga_settings.set("advanced_features.registry", False)  # noqa: FBT003
 
-            settings.advanced_features.registry = False
-            settings.advanced_features.lite_mode = self.lite_mode
-            settings.advanced_features.lite_mode_tool_threshold = self.lite_mode_tool_threshold
+                if self.browser_enabled:
+                    logger.info("browser_enabled is true, setting mode to hybrid")
+                    cuga_settings.set("advanced_features.mode", "hybrid")
+                    cuga_settings.set("advanced_features.use_vision", False)  # noqa: FBT003
+                else:
+                    logger.info("browser_enabled is false, setting mode to api")
+                    cuga_settings.set("advanced_features.mode", "api")
 
-            if self.browser_enabled:
-                logger.info("browser_enabled is true, setting mode to hybrid")
-                settings.advanced_features.mode = "hybrid"
-                settings.advanced_features.use_vision = False
-            else:
-                logger.info("browser_enabled is false, setting mode to api")
-                settings.advanced_features.mode = "api"
+                logger.info(f"Cuga settings updated - MODE: {cuga_settings.get('advanced_features.mode')}")
+            except (ImportError, AttributeError) as e:
+                logger.warning(f"Could not update cuga settings: {e}")
+                os.environ["DYNACONF_ADVANCED_FEATURES__REGISTRY"] = "false"
+                if self.browser_enabled:
+                    logger.info("browser_enabled is true, setting env to hybrid")
+                    os.environ["DYNACONF_ADVANCED_FEATURES__MODE"] = "hybrid"
+                    os.environ["DYNACONF_ADVANCED_FEATURES__USE_VISION"] = "false"
+                else:
+                    logger.info("browser_enabled is false, setting env to api")
+                    os.environ["DYNACONF_ADVANCED_FEATURES__MODE"] = "api"
 
             from cuga.backend.activity_tracker.tracker import ActivityTracker
-            from cuga.backend.cuga_graph.nodes.api.variables_manager.manager import VariablesManager
             from cuga.backend.cuga_graph.utils.agent_loop import StreamEvent
             from cuga.backend.cuga_graph.utils.controller import (
                 AgentRunner as CugaAgent,
@@ -297,16 +290,6 @@ class CugaComponent(ToolCallingAgentComponent):
             )
             from cuga.backend.llm.models import LLMManager
             from cuga.configurations.instructions_manager import InstructionsManager
-
-            var_manager = VariablesManager()
-
-            # Reset var_manager if this is the first message in history
-            logger.info(f"[CUGA] Checking history_messages: count={len(history_messages) if history_messages else 0}")
-            if not history_messages or len(history_messages) == 0:
-                logger.info("[CUGA] First message in history detected, resetting var_manager")
-                var_manager.reset()
-            else:
-                logger.info(f"[CUGA] Continuing conversation with {len(history_messages)} previous messages")
 
             llm_manager = LLMManager()
             llm_manager.set_llm(llm)
@@ -777,13 +760,11 @@ class CugaComponent(ToolCallingAgentComponent):
             list: List of Message objects representing the chat history
         """
         logger.info("[CUGA] Retrieving chat history messages.")
-        logger.info(f"[CUGA] Session ID: {self.graph.session_id}")
         messages = (
             await MemoryComponent(**self.get_base_args())
             .set(session_id=self.graph.session_id, order="Ascending", n_messages=self.n_messages)
             .retrieve_messages()
         )
-        logger.info(f"[CUGA] Retrieved {len(messages)} messages from memory")
         return [
             message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
         ]
