@@ -578,20 +578,20 @@ async def webhook_run_flow(
 async def experimental_run_flow(
     *,
     session: DbSession,
+    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
     tweaks: Annotated[Tweaks | None, Body(embed=True)] = None,
     stream: Annotated[bool, Body(embed=True)] = False,
     session_id: Annotated[None | str, Body(embed=True)] = None,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
-    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
 ) -> RunResponse:
     """Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.
 
     This endpoint supports running flows with caching to enhance performance and efficiency.
 
     ### Parameters:
-    - `flow_id` (str): The unique identifier of the flow to be executed.
+    - `flow` (Flow): The flow object to be executed, resolved via dependency injection.
     - `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components
       for the flow. Each input can target specific components and provide custom values.
     - `outputs` (List[str], optional): A list of output names to retrieve from the executed flow.
@@ -632,6 +632,7 @@ async def experimental_run_flow(
     This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,
     catering to diverse application requirements.
     """  # noqa: E501
+    # Get the flow from the id or name
     await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
 
     session_service = get_session_service()
