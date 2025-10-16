@@ -1,1926 +1,314 @@
-name: Prior Auth Form Extraction Agent
 id: urn:agent:prior-auth-form-extraction-agent:1
-description: Prior Auth Form Extraction Agent
-endpoint_name: null
-is_component: false
-last_tested_version: 1.4.3
+name: Prior Auth Form Extraction Agent
+fullyQualifiedName: genesis.autonomize.ai.prior_auth_form_extraction
+description: Extracts structured data from prior authorization forms using vision and document processing capabilities
+domain: autonomize.ai
+subDomain: document-processing
+version: 1.0.0
+environment: production
+agentOwner: document-processing@autonomize.ai
+agentOwnerDisplayName: Document Processing Team
+email: document-processing@autonomize.ai
+status: ACTIVE
+variables:
+- name: llm_provider
+  type: string
+  required: false
+  default: Azure OpenAI
+  description: LLM provider (AzureOpenAI, OpenAI, Anthropic, etc.)
+- name: model_name
+  type: string
+  required: false
+  default: gpt-4-vision
+  description: Model name to use for vision and extraction
+- name: temperature
+  type: float
+  required: false
+  default: 0.1
+  description: Temperature for model generation
+- name: extraction_confidence_threshold
+  type: float
+  required: false
+  default: 0.85
+  description: Minimum confidence threshold for extracted fields
+- name: enable_srf_identification
+  type: boolean
+  required: false
+  default: true
+  description: Enable service request form identification
 tags:
 - prior-auth
+- document-extraction
+- form-processing
+- reusable
+- healthcare
+- vision
+kind: Single Agent
+agentGoal: Extract and structure data from prior authorization forms including member information, service details, diagnosis codes, and authorization requests
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: None
+reusability:
+  asTools: true
+  standalone: true
+  provides:
+    toolName: PriorAuthFormExtractor
+    toolDescription: Extracts structured data from prior authorization PDF forms
+    inputSchema:
+      type: object
+      properties:
+        file_path:
+          type: string
+          description: Path to prior auth form (PDF or image)
+        form_type:
+          type: string
+          description: Type of form (SRF, CMS-1500, UB-04, etc.)
+          enum:
+          - SRF
+          - CMS-1500
+          - UB-04
+          - Custom
+        extract_fields:
+          type: array
+          items:
+            type: string
+          description: Specific fields to extract (optional)
+      required:
+      - file_path
+    outputSchema:
+      type: object
+      properties:
+        member_info:
+          type: object
+          properties:
+            member_id:
+              type: string
+            member_name:
+              type: string
+            date_of_birth:
+              type: string
+            insurance_id:
+              type: string
+        service_info:
+          type: object
+          properties:
+            service_codes:
+              type: array
+              items:
+                type: string
+            diagnosis_codes:
+              type: array
+              items:
+                type: string
+            service_dates:
+              type: object
+            units_requested:
+              type: number
+        provider_info:
+          type: object
+          properties:
+            provider_name:
+              type: string
+            provider_npi:
+              type: string
+            provider_taxonomy:
+              type: string
+        extraction_metadata:
+          type: object
+          properties:
+            confidence_scores:
+              type: object
+            form_type_detected:
+              type: string
+            processing_time_ms:
+              type: number
+  dependencies:
+  - BlobStorage
+  - ImageProcessing
+sampleInput:
+  file_path: /blob/prior-auth-forms/PA_20240315_001.pdf
+  form_type: SRF
+  extract_fields:
+  - member_id
+  - service_code
+  - diagnosis_codes
+  - provider_npi
+  - units_requested
+promptConfiguration:
+  basePromptId: prior_auth_form_extraction_v1
+  customPrompt: |
+    You are a medical document extraction specialist. Your role is to:
+    1. Identify the type of prior authorization form
+    2. Extract member demographic information
+    3. Identify requested services and CPT/HCPCS codes
+    4. Extract diagnosis codes (ICD-10)
+    5. Capture provider information and NPI
+    6. Extract authorization details (units, dates, etc.)
 
-data:
-  edges:
-  - animated: false
-    className: ''
-    data:
-      sourceHandle:
-        dataType: BlobStorage
-        id: BlobStorage-OZSTh
-        name: file_path
-        output_types:
-        - Data
-      targetHandle:
-        fieldName: file_path
-        id: split_into_images-mWZ3Q
-        inputTypes:
-        - Data
-        - Message
-        type: other
-    id: xy-edge__BlobStorage-OZSTh{"dataType":"BlobStorage","id":"BlobStorage-OZSTh","name":"file_path","output_types":["Data"]}-split_into_images-mWZ3Q{"fieldName":"file_path","id":"split_into_images-mWZ3Q","inputTypes":["Data","Message"],"type":"other"}
-    source: BlobStorage-OZSTh
-    sourceHandle: '{"dataType": "BlobStorage", "id": "BlobStorage-OZSTh", "name":
-      "file_path", "output_types": ["Data"]}'
-    target: split_into_images-mWZ3Q
-    targetHandle: '{"fieldName": "file_path", "id": "split_into_images-mWZ3Q", "inputTypes":
-      ["Data", "Message"], "type": "other"}'
-  - animated: false
-    className: ''
-    data:
-      sourceHandle:
-        dataType: split_into_images
-        id: split_into_images-mWZ3Q
-        name: image_urls
-        output_types:
-        - Data
-      targetHandle:
-        fieldName: file_path
-        id: srf-identification-ZaSBG
-        inputTypes:
-        - Data
-        - Message
-        type: other
-    id: xy-edge__split_into_images-mWZ3Q{"dataType":"split_into_images","id":"split_into_images-mWZ3Q","name":"image_urls","output_types":["Data"]}-srf-identification-ZaSBG{"fieldName":"file_path","id":"srf-identification-ZaSBG","inputTypes":["Data","Message"],"type":"other"}
-    source: split_into_images-mWZ3Q
-    sourceHandle: '{"dataType": "split_into_images", "id": "split_into_images-mWZ3Q",
-      "name": "image_urls", "output_types": ["Data"]}'
-    target: srf-identification-ZaSBG
-    targetHandle: '{"fieldName": "file_path", "id": "srf-identification-ZaSBG", "inputTypes":
-      ["Data", "Message"], "type": "other"}'
-  - animated: false
-    className: ''
-    data:
-      sourceHandle:
-        dataType: srf-identification
-        id: srf-identification-ZaSBG
-        name: srfIdentification
-        output_types:
-        - Data
-      targetHandle:
-        fieldName: input_array
-        id: json_array_filter-8satn
-        inputTypes:
-        - Data
-        type: other
-    id: xy-edge__srf-identification-ZaSBG{"dataType":"srf-identification","id":"srf-identification-ZaSBG","name":"srfIdentification","output_types":["Data"]}-json_array_filter-8satn{"fieldName":"input_array","id":"json_array_filter-8satn","inputTypes":["Data"],"type":"other"}
-    source: srf-identification-ZaSBG
-    sourceHandle: '{"dataType": "srf-identification", "id": "srf-identification-ZaSBG",
-      "name": "srfIdentification", "output_types": ["Data"]}'
-    target: json_array_filter-8satn
-    targetHandle: '{"fieldName": "input_array", "id": "json_array_filter-8satn", "inputTypes":
-      ["Data"], "type": "other"}'
-  - animated: false
-    className: ''
-    data:
-      sourceHandle:
-        dataType: srf-extraction
-        id: srf-extraction-S3eHF
-        name: srfExtraction
-        output_types:
-        - Data
-      targetHandle:
-        fieldName: data
-        id: JSONOutput-Kpx5X
-        inputTypes:
-        - Data
-        type: other
-    id: xy-edge__srf-extraction-S3eHF{"dataType":"srf-extraction","id":"srf-extraction-S3eHF","name":"srfExtraction","output_types":["Data"]}-JSONOutput-Kpx5X{"fieldName":"data","id":"JSONOutput-Kpx5X","inputTypes":["Data"],"type":"other"}
-    source: srf-extraction-S3eHF
-    sourceHandle: '{"dataType": "srf-extraction", "id": "srf-extraction-S3eHF", "name":
-      "srfExtraction", "output_types": ["Data"]}'
-    target: JSONOutput-Kpx5X
-    targetHandle: '{"fieldName": "data", "id": "JSONOutput-Kpx5X", "inputTypes": ["Data"],
-      "type": "other"}'
-  - animated: false
-    className: ''
-    data:
-      sourceHandle:
-        dataType: json_array_filter
-        id: json_array_filter-8satn
-        name: filtered_array
-        output_types:
-        - Data
-      targetHandle:
-        fieldName: file_path
-        id: srf-extraction-S3eHF
-        inputTypes:
-        - Data
-        - Message
-        type: other
-    id: xy-edge__json_array_filter-8satn{"dataType":"json_array_filter","id":"json_array_filter-8satn","name":"filtered_array","output_types":["Data"]}-srf-extraction-S3eHF{"fieldName":"file_path","id":"srf-extraction-S3eHF","inputTypes":["Data","Message"],"type":"other"}
-    source: json_array_filter-8satn
-    sourceHandle: '{"dataType": "json_array_filter", "id": "json_array_filter-8satn",
-      "name": "filtered_array", "output_types": ["Data"]}'
-    target: srf-extraction-S3eHF
-    targetHandle: '{"fieldName": "file_path", "id": "srf-extraction-S3eHF", "inputTypes":
-      ["Data", "Message"], "type": "other"}'
-  nodes:
-  - data:
-      id: BlobStorage-OZSTh
-      node:
-        base_classes:
-        - Data
-        beta: false
-        conditional_paths: []
-        custom_fields: {}
-        description: Load files from Azure Blob Storage
-        display_name: Blob Storage
-        documentation: http://docs.langflow.org/components/storage
-        edited: false
-        field_order:
-        - storage_account
-        - container_name
-        - file_name
-        - return_all_files
-        frozen: false
-        icon: Autonomize
-        legacy: false
-        lf_version: 1.4.3
-        metadata: {}
-        minimized: false
-        output_types: []
-        outputs:
-        - allows_loop: false
-          cache: true
-          display_name: File Path
-          group_outputs: false
-          method: get_file_paths
-          name: file_path
-          selected: Data
-          tool_mode: true
-          types:
-          - Data
-          value: __UNDEFINED__
-        pinned: false
-        template:
-          _type: Component
-          code:
-            advanced: true
-            dynamic: true
-            fileTypes: []
-            file_path: ''
-            info: ''
-            list: false
-            load_from_db: false
-            multiline: true
-            name: code
-            password: false
-            placeholder: ''
-            required: true
-            show: true
-            title_case: false
-            type: code
-            value: "\"\"\"Blob Storage Component for loading files from Azure Blob\
-              \ Storage.\"\"\"\n\nfrom __future__ import annotations\n\nfrom typing\
-              \ import Any\n\nfrom langflow.custom import Component\nfrom langflow.io\
-              \ import BoolInput, DropdownInput, Output, StrInput\nfrom langflow.schema.data\
-              \ import Data\nfrom langflow.custom.genesis.services.deps import get_external_integration_service,\
-              \ get_flexstore_service\nfrom loguru import logger\n\n\nclass BlobStorageComponent(Component):\n\
-              \    display_name = \"Blob Storage\"\n    category: str = \"input_output\"\
-              \n    description = \"Load files from Azure Blob Storage\"\n    documentation\
-              \ = \"http://docs.langflow.org/components/storage\"\n    icon = \"Autonomize\"\
-              \n    name = \"BlobStorage\"\n\n    # Match the property name expected\
-              \ by FileComponent\n    FILE_PATH_FIELD = \"file_path\"\n\n    def __init__(self,\
-              \ **kwargs):\n        super().__init__(**kwargs)\n        self._container_list:\
-              \ list[str] = []\n        self._file_list: list[str] = []\n\n    inputs\
-              \ = [\n        StrInput(\n            name=\"storage_account\",\n  \
-              \          display_name=\"Storage Account\",\n            required=False,\n\
-              \            info=\"Storage Account name\",\n            advanced=True,\n\
-              \        ),\n        DropdownInput(\n            name=\"container_name\"\
-              ,\n            display_name=\"Container\",\n            info=\"Select\
-              \ a container from the storage account\",\n            required=True,\n\
-              \            refresh_button=True,\n        ),\n        DropdownInput(\n\
-              \            name=\"file_name\",\n            display_name=\"File\"\
-              ,\n            info=\"Select a file from the container\",\n        \
-              \    required=True,\n            refresh_button=True,\n        ),\n\
-              \        BoolInput(\n            name=\"return_all_files\",\n      \
-              \      display_name=\"Return All Files\",\n            info=\"If true\
-              \ and no specific file is selected, returns all files in the container\"\
-              ,\n            value=True,\n        ),\n    ]\n\n    outputs = [\n \
-              \       Output(\n            name=\"file_path\",  # Match the property\
-              \ name expected by FileComponent\n            display_name=\"File Path\"\
-              ,\n            method=\"get_file_paths\",\n        ),\n    ]\n\n   \
-              \ async def update_build_config(\n        self, build_config: dict,\
-              \ field_value: Any, field_name: str | None = None\n    ):\n        \"\
-              \"\"Update the build configuration based on field changes.\"\"\"\n \
-              \       logger.info(f\"update_build_config called with field_name: {field_name}\"\
-              )\n\n        storage_account = getattr(self, \"storage_account\", None)\n\
-              \        container_name = getattr(self, \"container_name\", None)\n\n\
-              \        if field_name == \"container_name\":\n            try:\n  \
-              \              # Load the container options when the field is refreshed\n\
-              \                service = get_flexstore_service()\n               \
-              \ self._container_list = await service.get_containers(storage_account)\n\
-              \n                build_config[\"container_name\"][\"options\"] = self._container_list\n\
-              \                return build_config\n\n            except Exception\
-              \ as e:\n                logger.exception(f\"Error updating container\
-              \ list: {e!s}\")\n                raise\n\n        elif field_name ==\
-              \ \"file_name\" and container_name:\n            try:\n            \
-              \    # Load the file options when the field is refreshed\n         \
-              \       service = get_flexstore_service()\n                self._file_list\
-              \ = await service.get_files(\n                    storage_account, container_name\n\
-              \                )\n\n                build_config[\"file_name\"][\"\
-              options\"] = self._file_list\n                return build_config\n\n\
-              \            except Exception as e:\n                logger.exception(f\"\
-              Error updating file list: {e!s}\")\n                raise\n\n      \
-              \  return build_config\n\n    async def get_file_paths(self) -> list[Data]:\n\
-              \        \"\"\"Get file paths for the FileComponent to process.\"\"\"\
-              \n        try:\n            if not self.container_name:\n          \
-              \      logger.warning(\"Container name is required.\")\n           \
-              \     return []\n\n            service = get_flexstore_service()\n \
-              \           file_paths = []\n\n            # If a specific file is selected\n\
-              \            if self.file_name:\n                signed_url = await\
-              \ service.get_signed_url(\n                    self.storage_account,\
-              \ self.container_name, self.file_name\n                )\n         \
-              \       if signed_url:\n                    file_paths = [Data(data={self.FILE_PATH_FIELD:\
-              \ signed_url})]\n            # If no specific file is selected and return_all_files\
-              \ is True\n            elif self.return_all_files:\n               \
-              \ files = await service.get_files(\n                    self.storage_account,\
-              \ self.container_name\n                )\n                for file in\
-              \ files:\n                    signed_url = await service.get_signed_url(\n\
-              \                        self.storage_account, self.container_name,\
-              \ file\n                    )\n                    if signed_url:\n\
-              \                        file_paths.append(Data(data={self.FILE_PATH_FIELD:\
-              \ signed_url}))\n\n            if file_paths:\n                self.status\
-              \ = file_paths\n                logger.info(f\"Generated {len(file_paths)}\
-              \ file paths\")\n                for path in file_paths:\n         \
-              \           logger.debug(f\"File path: {path.data.get(self.FILE_PATH_FIELD)}\"\
-              )\n            else:\n                logger.warning(\"No file paths\
-              \ generated\")\n\n            return file_paths\n\n        except Exception\
-              \ as e:\n            logger.error(f\"Error in get_file_paths: {e!s}\"\
-              )\n            return []\n"
-          container_name:
-            _input_type: DropdownInput
-            advanced: false
-            combobox: false
-            dialog_inputs: {}
-            display_name: Container
-            dynamic: false
-            info: Select a container from the storage account
-            name: container_name
-            options: []
-            options_metadata: []
-            placeholder: ''
-            refresh_button: true
-            required: true
-            show: true
-            title_case: false
-            toggle: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: str
-            value: genesis-container
-          file_name:
-            _input_type: DropdownInput
-            advanced: false
-            combobox: false
-            dialog_inputs: {}
-            display_name: File
-            dynamic: false
-            info: Select a file from the container
-            name: file_name
-            options: []
-            options_metadata: []
-            placeholder: ''
-            refresh_button: true
-            required: true
-            show: true
-            title_case: false
-            toggle: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: str
-            value: PriorAuthSample1 (1).pdf
-          return_all_files:
-            _input_type: BoolInput
-            advanced: false
-            display_name: Return All Files
-            dynamic: false
-            info: If true and no specific file is selected, returns all files in the
-              container
-            list: false
-            list_add_label: Add More
-            name: return_all_files
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: true
-          storage_account:
-            _input_type: StrInput
-            advanced: true
-            display_name: Storage Account
-            dynamic: false
-            info: Storage Account name
-            list: false
-            list_add_label: Add More
-            load_from_db: false
-            name: storage_account
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: str
-            value: ''
-        tool_mode: false
-      showNode: true
-      type: BlobStorage
-    dragging: false
-    id: BlobStorage-OZSTh
-    measured:
-      height: 367
-      width: 320
-    position:
-      x: 168
-      y: 158
-    selected: false
-    type: genericNode
-  - data:
-      id: split_into_images-mWZ3Q
-      node:
-        base_classes:
-        - Data
-        beta: false
-        conditional_paths: []
-        custom_fields: {}
-        description: Split PDFs and TIFFs into individual images
-        display_name: Split Into Images
-        documentation: http://docs.langflow.org/components/custom
-        edited: false
-        field_order:
-        - file_path
-        - silent_errors
-        - delete_server_file_after_processing
-        - ignore_unsupported_extensions
-        - ignore_unspecified_files
-        - storage_account
-        - temp_container
-        - keep_original_size
-        frozen: false
-        icon: Autonomize
-        legacy: false
-        lf_version: 1.4.3
-        metadata: {}
-        minimized: false
-        output_types: []
-        outputs:
-        - allows_loop: false
-          cache: true
-          display_name: Image URLs
-          method: get_image_urls
-          name: image_urls
-          selected: Data
-          tool_mode: true
-          types:
-          - Data
-          value: __UNDEFINED__
-        pinned: false
-        template:
-          _type: Component
-          code:
-            advanced: true
-            dynamic: true
-            fileTypes: []
-            file_path: ''
-            info: ''
-            list: false
-            load_from_db: false
-            multiline: true
-            name: code
-            password: false
-            placeholder: ''
-            required: true
-            show: true
-            title_case: false
-            type: code
-            value: "import io\nimport os\nimport tempfile\nfrom pathlib import Path\n\
-              from urllib.parse import urlparse\n\nimport aiohttp\nimport fitz\nfrom\
-              \ loguru import logger\nfrom PIL import Image\n\nfrom langflow.base.data\
-              \ import BaseFileComponent\nfrom langflow.io import BoolInput, Output,\
-              \ StrInput\nfrom langflow.schema import Data\nfrom app.services.deps\
-              \ import get_flexstore_service\nfrom app.services.flexstore.settings\
-              \ import FlexStoreSettings\n\nflexstore_settings = FlexStoreSettings()\n\
-              \n\nclass SplitIntoImagesComponent(BaseFileComponent):\n    \"\"\"Component\
-              \ for splitting PDFs/TIFFs into individual images and uploading to blob\
-              \ storage.\"\"\"\n\n    display_name = \"Split Into Images\"\n    description\
-              \ = \"Split PDFs and TIFFs into individual images\"\n    documentation\
-              \ = \"http://docs.langflow.org/components/custom\"\n    icon = \"Autonomize\"\
-              \  # You can change this\n    name = \"split_into_images\"\n\n    VALID_EXTENSIONS\
-              \ = [\"pdf\", \"tiff\", \"tif\"]\n\n    inputs = [\n        next(\n\
-              \            input\n            for input in BaseFileComponent._base_inputs\n\
-              \            if input.name == \"file_path\"\n        ),\n        next(\n\
-              \            input\n            for input in BaseFileComponent._base_inputs\n\
-              \            if input.name == \"silent_errors\"\n        ),\n      \
-              \  next(\n            input\n            for input in BaseFileComponent._base_inputs\n\
-              \            if input.name == \"delete_server_file_after_processing\"\
-              \n        ),\n        next(\n            input\n            for input\
-              \ in BaseFileComponent._base_inputs\n            if input.name == \"\
-              ignore_unsupported_extensions\"\n        ),\n        next(\n       \
-              \     input\n            for input in BaseFileComponent._base_inputs\n\
-              \            if input.name == \"ignore_unspecified_files\"\n       \
-              \ ),\n        StrInput(\n            name=\"storage_account\",\n   \
-              \         display_name=\"Storage Account\",\n            required=False,\n\
-              \            info=\"Storage Account name\",\n            advanced=True,\n\
-              \        ),\n        StrInput(\n            name=\"temp_container\"\
-              ,\n            display_name=\"Temporary Container\",\n            required=False,\n\
-              \            info=\"Temporary container name for storing split images\"\
-              ,\n            advanced=True,\n        ),\n        BoolInput(\n    \
-              \        name=\"keep_original_size\",\n            display_name=\"Keep\
-              \ Original Size\",\n            value=True,\n            info=\"Keep\
-              \ the original image size when splitting\",\n        ),\n    ]\n\n \
-              \   outputs = [\n        Output(name=\"image_urls\", display_name=\"\
-              Image URLs\", method=\"get_image_urls\")\n    ]\n\n    def __init__(self,\
-              \ **kwargs):\n        super().__init__(**kwargs)\n        self.temp_dir\
-              \ = tempfile.mkdtemp()\n        self._downloaded_files = {}\n\n    async\
-              \ def _validate_and_resolve_paths_async(\n        self,\n    ) -> list[BaseFileComponent.BaseFile]:\n\
-              \        \"\"\"Handle URLs and local paths asynchronously.\"\"\"\n \
-              \       resolved_files = []\n        file_path = self._file_path_as_list()\n\
-              \n        for obj in file_path:\n            server_file_path = obj.data.get(self.SERVER_FILE_PATH_FIELDNAME)\n\
-              \n            if not server_file_path:\n                if not self.ignore_unspecified_files:\n\
-              \                    msg = f\"Data object missing '{self.SERVER_FILE_PATH_FIELDNAME}'\
-              \ property.\"\n                    if not self.silent_errors:\n    \
-              \                    raise ValueError(msg)\n                continue\n\
-              \n            try:\n                # Check if it's a URL\n        \
-              \        if isinstance(server_file_path, str) and server_file_path.startswith(\n\
-              \                    (\"http://\", \"https://\")\n                ):\n\
-              \                    local_path = await self._download_file_from_url(server_file_path)\n\
-              \                    if not local_path:\n                        continue\n\
-              \n                    # Create a new Data object with both the original\
-              \ URL and local path\n                    new_data = Data(\n       \
-              \                 data={\n                            self.SERVER_FILE_PATH_FIELDNAME:\
-              \ local_path,\n                            \"original_url\": server_file_path,\n\
-              \                        }\n                    )\n\n              \
-              \      resolved_files.append(\n                        BaseFileComponent.BaseFile(\n\
-              \                            new_data,\n                           \
-              \ Path(local_path),\n                            delete_after_processing=True,\n\
-              \                        )\n                    )\n                else:\n\
-              \                    # Handle local files\n                    resolved_path\
-              \ = Path(self.resolve_path(str(server_file_path)))\n               \
-              \     if not resolved_path.exists():\n                        msg =\
-              \ f\"File not found: {server_file_path}\"\n                        if\
-              \ not self.silent_errors:\n                            raise ValueError(msg)\n\
-              \                        continue\n\n                    resolved_files.append(\n\
-              \                        BaseFileComponent.BaseFile(\n             \
-              \               obj,\n                            resolved_path,\n \
-              \                           delete_after_processing=self.delete_server_file_after_processing,\n\
-              \                        )\n                    )\n\n            except\
-              \ Exception as e:\n                logger.error(f\"Error processing\
-              \ path {server_file_path}: {e!s}\")\n                if not self.silent_errors:\n\
-              \                    raise\n                continue\n\n        return\
-              \ resolved_files\n\n    async def _download_file_from_url(self, url:\
-              \ str) -> str | None:\n        \"\"\"Download a file from a URL.\"\"\
-              \"\n        try:\n            filename = os.path.basename(urlparse(url).path)\n\
-              \            if not filename:\n                filename = \"downloaded_file.pdf\"\
-              \n\n            local_path = os.path.join(self.temp_dir, filename)\n\
-              \n            async with aiohttp.ClientSession() as session:\n     \
-              \           async with session.get(url) as response:\n             \
-              \       response.raise_for_status()\n                    with open(local_path,\
-              \ \"wb\") as f:\n                        while True:\n             \
-              \               chunk = await response.content.read(8192)\n        \
-              \                    if not chunk:\n                               \
-              \ break\n                            f.write(chunk)\n\n            self._downloaded_files[url]\
-              \ = local_path\n            logger.info(f\"Successfully downloaded file\
-              \ to {local_path}\")\n            return local_path\n\n        except\
-              \ Exception as e:\n            logger.error(f\"Error downloading file\
-              \ from URL: {e!s}\")\n            if not self.silent_errors:\n     \
-              \           raise\n            return None\n\n    async def _split_pdf_to_images(self,\
-              \ file_path: str) -> list[bytes]:\n        \"\"\"Split PDF into individual\
-              \ page images.\"\"\"\n        try:\n            image_bytes_list = []\n\
-              \n            # Open PDF\n            pdf_document = fitz.open(file_path)\n\
-              \n            for page_num in range(pdf_document.page_count):\n    \
-              \            page = pdf_document[page_num]\n\n                # Get\
-              \ page as an image\n                pix = page.get_pixmap()\n      \
-              \          img_data = pix.tobytes(\"png\")\n\n                if not\
-              \ self.keep_original_size:\n                    # Resize if needed using\
-              \ PIL\n                    img = Image.open(io.BytesIO(img_data))\n\
-              \                    max_size = (800, 800)\n                    img.thumbnail(max_size,\
-              \ Image.Resampling.LANCZOS)\n\n                    # Convert back to\
-              \ bytes\n                    img_byte_arr = io.BytesIO()\n         \
-              \           img.save(img_byte_arr, format=\"PNG\")\n               \
-              \     img_data = img_byte_arr.getvalue()\n\n                image_bytes_list.append(img_data)\n\
-              \n            pdf_document.close()\n            return image_bytes_list\n\
-              \n        except Exception as e:\n            logger.error(f\"Error\
-              \ splitting PDF: {e!s}\")\n            if not self.silent_errors:\n\
-              \                raise\n            return []\n\n    async def _split_tiff_to_images(self,\
-              \ file_path: str) -> list[bytes]:\n        \"\"\"Split TIFF into individual\
-              \ images.\"\"\"\n        try:\n            with Image.open(file_path)\
-              \ as img:\n                image_bytes_list = []\n\n               \
-              \ for i in range(img.n_frames):\n                    img.seek(i)\n \
-              \                   frame = img.copy()\n\n                    if not\
-              \ self.keep_original_size:\n                        # Resize if needed\n\
-              \                        max_size = (800, 800)  # Example max size\n\
-              \                        frame.thumbnail(max_size, Image.Resampling.LANCZOS)\n\
-              \n                    img_byte_arr = io.BytesIO()\n                \
-              \    frame.save(img_byte_arr, format=\"PNG\")\n                    image_bytes_list.append(img_byte_arr.getvalue())\n\
-              \n                return image_bytes_list\n\n        except Exception\
-              \ as e:\n            logger.error(f\"Error splitting TIFF: {e!s}\")\n\
-              \            if not self.silent_errors:\n                raise\n   \
-              \         return []\n\n    async def _upload_image_to_blob(\n      \
-              \  self, image_bytes: bytes, filename: str\n    ) -> str | None:\n \
-              \       \"\"\"Upload an image to blob storage and get its signed URL.\"\
-              \"\"\n        try:\n            service = get_flexstore_service()\n\n\
-              \            # Get upload URL\n            upload_url = await service.get_signed_url_upload(\n\
-              \                storage_account=self.storage_account\n            \
-              \    or flexstore_settings.DEFAULT_TEMPORARY_STORAGE_ACCOUNT,  # This\
-              \ should be configured\n                container_name=self.temp_container\n\
-              \                or flexstore_settings.DEFAULT_TEMPORARY_STORAGE_CONTAINER,\n\
-              \                file_name=filename,\n            )\n\n            if\
-              \ not upload_url:\n                raise ValueError(\"Failed to get\
-              \ upload URL\")\n\n            headers = {\n                \"x-ms-blob-type\"\
-              : \"BlockBlob\",  # Required header for Azure Blob Storage\n       \
-              \         \"Content-Type\": \"image/png\",  # Since we're saving as\
-              \ PNG\n            }\n\n            # Upload the image\n           \
-              \ async with aiohttp.ClientSession() as session:\n                async\
-              \ with session.put(\n                    upload_url,\n             \
-              \       data=image_bytes,\n                    headers=headers,\n  \
-              \              ) as response:\n                    response.raise_for_status()\n\
-              \n            # Get read URL\n            read_url = await service.get_signed_url(\n\
-              \                storage_account=self.storage_account\n            \
-              \    or flexstore_settings.DEFAULT_TEMPORARY_STORAGE_ACCOUNT,  # This\
-              \ should be configured\n                container_name=self.temp_container\n\
-              \                or flexstore_settings.DEFAULT_TEMPORARY_STORAGE_CONTAINER,\n\
-              \                file_name=filename,\n            )\n\n            return\
-              \ read_url\n\n        except Exception as e:\n            logger.error(f\"\
-              Error uploading image: {e!s}\")\n            if not self.silent_errors:\n\
-              \                raise\n            return None\n\n    def process_files(\n\
-              \        self, file_list: list[BaseFileComponent.BaseFile]\n    ) ->\
-              \ list[BaseFileComponent.BaseFile]:\n        \"\"\"Process the files\
-              \ as required by BaseFileComponent\"\"\"\n        if not file_list:\n\
-              \            msg = \"No files to process.\"\n            if not self.silent_errors:\n\
-              \                raise ValueError(msg)\n            logger.warning(msg)\n\
-              \        return file_list\n\n    async def _process_files_for_images(\n\
-              \        self, file_list: list[BaseFileComponent.BaseFile]\n    ) ->\
-              \ list[Data]:\n        \"\"\"Internal method to process files and generate\
-              \ image URLs.\"\"\"\n        processed_files = []\n\n        for file\
-              \ in file_list:\n            try:\n                # Split file into\
-              \ images based on type\n                ext = file.path.suffix.lower()\n\
-              \                if ext == \".pdf\":\n                    images = await\
-              \ self._split_pdf_to_images(str(file.path))\n                elif ext\
-              \ in [\".tiff\", \".tif\"]:\n                    images = await self._split_tiff_to_images(str(file.path))\n\
-              \                else:\n                    continue\n\n           \
-              \     # Upload each image and get URLs\n                image_urls =\
-              \ []\n                for i, image_bytes in enumerate(images):\n   \
-              \                 filename = f\"{file.path.stem}_page_{i + 1}.png\"\n\
-              \                    url = await self._upload_image_to_blob(image_bytes,\
-              \ filename)\n                    if url:\n                        image_urls.append(url)\n\
-              \n                # Create Data object with image URLs\n           \
-              \     if image_urls:\n                    data = Data(data={\"file_path\"\
-              : image_urls})\n                    processed_files.append(data)\n\n\
-              \            except Exception as e:\n                logger.error(f\"\
-              Error processing file {file.path}: {e!s}\")\n                if not\
-              \ self.silent_errors:\n                    raise\n                continue\n\
-              \n        return processed_files\n\n    async def get_image_urls(self)\
-              \ -> list[Data]:\n        \"\"\"Output method that processes files and\
-              \ returns image URLs.\"\"\"\n        try:\n            # Use async validation\
-              \ that handles URLs\n            files = await self._validate_and_resolve_paths_async()\n\
-              \            if not files:\n                msg = \"No valid files provided\"\
-              \n                if not self.silent_errors:\n                    raise\
-              \ ValueError(msg)\n                return []\n\n            # Process\
-              \ files and get image URLs\n            return await self._process_files_for_images(files)\n\
-              \n        except Exception as e:\n            logger.error(f\"Error\
-              \ processing images: {e!s}\")\n            if not self.silent_errors:\n\
-              \                return []\n            raise\n\n    def __del__(self):\n\
-              \        \"\"\"Clean up temporary files.\"\"\"\n        try:\n     \
-              \       if hasattr(self, \"temp_dir\") and os.path.exists(self.temp_dir):\n\
-              \                for file_path in self._downloaded_files.values():\n\
-              \                    if os.path.exists(file_path):\n               \
-              \         os.remove(file_path)\n                os.rmdir(self.temp_dir)\n\
-              \        except Exception as e:\n            logger.error(f\"Error cleaning\
-              \ up temporary files: {e!s}\")\n"
-          delete_server_file_after_processing:
-            _input_type: BoolInput
-            advanced: true
-            display_name: Delete Server File After Processing
-            dynamic: false
-            info: If true, the Server File Path will be deleted after processing.
-            list: false
-            list_add_label: Add More
-            name: delete_server_file_after_processing
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: true
-          file_path:
-            _input_type: HandleInput
-            advanced: false
-            display_name: Server File Path
-            dynamic: false
-            info: Data object with a 'file_path' property pointing to server file
-              or a Message object with a path to the file. Supercedes 'Path' but supports
-              same file types.
-            input_types:
-            - Data
-            - Message
-            list: true
-            list_add_label: Add More
-            name: file_path
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            trace_as_metadata: true
-            type: other
-            value: ''
-          ignore_unspecified_files:
-            _input_type: BoolInput
-            advanced: true
-            display_name: Ignore Unspecified Files
-            dynamic: false
-            info: If true, Data with no 'file_path' property will be ignored.
-            list: false
-            list_add_label: Add More
-            name: ignore_unspecified_files
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: false
-          ignore_unsupported_extensions:
-            _input_type: BoolInput
-            advanced: true
-            display_name: Ignore Unsupported Extensions
-            dynamic: false
-            info: If true, files with unsupported extensions will not be processed.
-            list: false
-            list_add_label: Add More
-            name: ignore_unsupported_extensions
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: true
-          keep_original_size:
-            _input_type: BoolInput
-            advanced: false
-            display_name: Keep Original Size
-            dynamic: false
-            info: Keep the original image size when splitting
-            list: false
-            list_add_label: Add More
-            name: keep_original_size
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: true
-          silent_errors:
-            _input_type: BoolInput
-            advanced: true
-            display_name: Silent Errors
-            dynamic: false
-            info: If true, errors will not raise an exception.
-            list: false
-            list_add_label: Add More
-            name: silent_errors
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: false
-          storage_account:
-            _input_type: StrInput
-            advanced: true
-            display_name: Storage Account
-            dynamic: false
-            info: Storage Account name
-            list: false
-            list_add_label: Add More
-            load_from_db: false
-            name: storage_account
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: str
-            value: ''
-          temp_container:
-            _input_type: StrInput
-            advanced: true
-            display_name: Temporary Container
-            dynamic: false
-            info: Temporary container name for storing split images
-            list: false
-            list_add_label: Add More
-            load_from_db: false
-            name: temp_container
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: str
-            value: ''
-        tool_mode: false
-      showNode: true
-      type: split_into_images
-    dragging: false
-    id: split_into_images-mWZ3Q
-    measured:
-      height: 242
-      width: 320
-    position:
-      x: 596
-      y: 197
-    selected: false
-    type: genericNode
-  - data:
-      id: srf-identification-ZaSBG
-      node:
-        base_classes:
-        - Data
-        beta: false
-        conditional_paths: []
-        custom_fields: {}
-        description: Model for SRF Identification
-        display_name: SRF Identification
-        documentation: http://docs.langflow.org/components/custom
-        edited: false
-        field_order:
-        - file_path
-        - silent_errors
-        - delete_server_file_after_processing
-        - ignore_unsupported_extensions
-        - ignore_unspecified_files
-        frozen: false
-        icon: Autonomize
-        legacy: false
-        lf_version: 1.4.3
-        metadata: {}
-        minimized: false
-        output_types: []
-        outputs:
-        - allows_loop: false
-          cache: true
-          display_name: SRF Identification
-          method: process_srf
-          name: srfIdentification
-          required_inputs: []
-          selected: Data
-          tool_mode: true
-          types:
-          - Data
-          value: __UNDEFINED__
-        pinned: false
-        template:
-          _type: Component
-          code:
-            advanced: true
-            dynamic: true
-            fileTypes: []
-            file_path: ''
-            info: ''
-            list: false
-            load_from_db: false
-            multiline: true
-            name: code
-            password: false
-            placeholder: ''
-            required: true
-            show: true
-            title_case: false
-            type: code
-            value: "import os\nimport tempfile\nfrom pathlib import Path\nfrom typing\
-              \ import Any\nfrom urllib.parse import urlparse\n\nimport aiohttp\n\
-              from loguru import logger\n\nfrom langflow.base.data import BaseFileComponent\n\
-              from langflow.base.data.utils import IMG_FILE_TYPES\nfrom app.base.modelhub\
-              \ import ATModelComponent\nfrom langflow.io import Output\nfrom langflow.schema\
-              \ import Data\nfrom app.services.modelhub.model_endpoint import ModelEndpoint\n\
-              \n\nclass SRFIdentificationComponent(\n    ATModelComponent, BaseFileComponent\n\
-              ):  # Changed inheritance order\n    display_name = \"SRF Identification\"\
-              \n    description = \"Model for SRF Identification\"\n    documentation:\
-              \ str = \"http://docs.langflow.org/components/custom\"\n    icon = \"\
-              Autonomize\"\n    name = \"srf-identification\"\n    _model_name = ModelEndpoint.SRF_IDENTIFICATION\n\
-              \n    VALID_EXTENSIONS = IMG_FILE_TYPES\n\n    inputs = [\n        next(\n\
-              \            input\n            for input in BaseFileComponent._base_inputs\n\
-              \            if input.name == \"file_path\"\n        ),\n        next(\n\
-              \            input\n            for input in BaseFileComponent._base_inputs\n\
-              \            if input.name == \"silent_errors\"\n        ),\n      \
-              \  next(\n            input\n            for input in BaseFileComponent._base_inputs\n\
-              \            if input.name == \"delete_server_file_after_processing\"\
-              \n        ),\n        next(\n            input\n            for input\
-              \ in BaseFileComponent._base_inputs\n            if input.name == \"\
-              ignore_unsupported_extensions\"\n        ),\n        next(\n       \
-              \     input\n            for input in BaseFileComponent._base_inputs\n\
-              \            if input.name == \"ignore_unspecified_files\"\n       \
-              \ ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"\
-              srfIdentification\",\n            display_name=\"SRF Identification\"\
-              ,\n            method=\"process_srf\",\n        ),\n    ]\n\n    # Explicitly\
-              \ define the endpoint\n    def __init__(self, **kwargs):\n        ATModelComponent.__init__(self,\
-              \ **kwargs)  # Initialize ATModelComponent first\n        BaseFileComponent.__init__(self,\
-              \ **kwargs)  # Then initialize BaseFileComponent\n        self._modelhub_service\
-              \ = None\n        self.temp_dir = tempfile.mkdtemp()\n        self._downloaded_files\
-              \ = {}\n        self._endpoint = \"https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/identification:predict\"\
-              \n\n    async def _download_file_from_url(self, url: str) -> str | None:\n\
-              \        \"\"\"Download a file from a URL.\"\"\"\n        try:\n   \
-              \         filename = os.path.basename(urlparse(url).path)\n        \
-              \    if not filename:\n                filename = \"downloaded_image.png\"\
-              \n\n            local_path = os.path.join(self.temp_dir, filename)\n\
-              \n            async with aiohttp.ClientSession() as session:\n     \
-              \           async with session.get(url) as response:\n             \
-              \       response.raise_for_status()\n                    with open(local_path,\
-              \ \"wb\") as f:\n                        while True:\n             \
-              \               chunk = await response.content.read(8192)\n        \
-              \                    if not chunk:\n                               \
-              \ break\n                            f.write(chunk)\n\n            self._downloaded_files[url]\
-              \ = local_path\n            logger.info(f\"Successfully downloaded file\
-              \ to {local_path}\")\n            return local_path\n\n        except\
-              \ Exception as e:\n            logger.error(f\"Error downloading file\
-              \ from URL: {e!s}\")\n            if not self.silent_errors:\n     \
-              \           raise\n            return None\n\n    async def _validate_and_resolve_paths_async(\n\
-              \        self,\n    ) -> list[BaseFileComponent.BaseFile]:\n       \
-              \ \"\"\"Handle URLs and local paths asynchronously.\"\"\"\n        resolved_files\
-              \ = []\n        file_paths = self._file_path_as_list()\n\n        for\
-              \ obj in file_paths:\n            server_file_path = obj.data.get(self.SERVER_FILE_PATH_FIELDNAME)\n\
-              \n            if not server_file_path:\n                if not self.ignore_unspecified_files:\n\
-              \                    msg = f\"Data object missing '{self.SERVER_FILE_PATH_FIELDNAME}'\
-              \ property.\"\n                    if not self.silent_errors:\n    \
-              \                    raise ValueError(msg)\n                continue\n\
-              \n            try:\n                # Handle if server_file_path is\
-              \ a list\n                paths_to_process = (\n                   \
-              \ server_file_path\n                    if isinstance(server_file_path,\
-              \ list)\n                    else [server_file_path]\n             \
-              \   )\n\n                for path in paths_to_process:\n           \
-              \         try:\n                        # Check if it's a URL\n    \
-              \                    if isinstance(path, str) and path.startswith(\n\
-              \                            (\"http://\", \"https://\")\n         \
-              \               ):\n                            local_path = await self._download_file_from_url(path)\n\
-              \                            if not local_path:\n                  \
-              \              continue\n\n                            # Create a new\
-              \ Data object with both the original URL and local path\n          \
-              \                  new_data = Data(\n                              \
-              \  data={\n                                    self.SERVER_FILE_PATH_FIELDNAME:\
-              \ local_path,\n                                    \"original_url\"\
-              : path,\n                                }\n                       \
-              \     )\n\n                            resolved_files.append(\n    \
-              \                            BaseFileComponent.BaseFile(\n         \
-              \                           new_data,\n                            \
-              \        Path(local_path),\n                                    delete_after_processing=True,\n\
-              \                                )\n                            )\n\
-              \                        else:\n                            # Handle\
-              \ local files\n                            resolved_path = Path(self.resolve_path(str(path)))\n\
-              \                            if not resolved_path.exists():\n      \
-              \                          msg = f\"File not found: {path}\"\n     \
-              \                           if not self.silent_errors:\n           \
-              \                         raise ValueError(msg)\n                  \
-              \              continue\n\n                            resolved_files.append(\n\
-              \                                BaseFileComponent.BaseFile(\n     \
-              \                               obj,\n                             \
-              \       resolved_path,\n                                    delete_after_processing=self.delete_server_file_after_processing,\n\
-              \                                )\n                            )\n\n\
-              \                    except Exception as e:\n                      \
-              \  logger.error(f\"Error processing path {path}: {e!s}\")\n        \
-              \                if not self.silent_errors:\n                      \
-              \      raise\n                        continue\n\n            except\
-              \ Exception as e:\n                logger.error(f\"Error processing\
-              \ file paths: {e!s}\")\n                if not self.silent_errors:\n\
-              \                    raise\n                continue\n\n        return\
-              \ resolved_files\n\n    # async def _read_file(self, file_path: Path)\
-              \ -> bytes:\n    #     \"\"\"Read file content from a file path\"\"\"\
-              \n    #     try:\n    #         with open(file_path, \"rb\") as f:\n\
-              \    #             return f.read()\n    #     except Exception as e:\n\
-              \    #         logger.error(f\"Error reading file {file_path}: {e!s}\"\
-              )\n    #         if not self.silent_errors:\n    #             raise\
-              \ ValueError(f\"Error reading file: {e!s}\") from e\n    #         return\
-              \ None\n\n    async def extract_srf(self, file_path: Path) -> Any:\n\
-              \        \"\"\"Extract SRF from the image\"\"\"\n        try:\n    \
-              \        logger.debug(\"Sending request to model endpoint\")\n     \
-              \       # response = await self.predict(\n            #     endpoint=self._endpoint,\n\
-              \            #     binary_data=image_data,\n            #     content_type=\"\
-              image/png\"\n            # )\n            response = await self.predict(\n\
-              \                endpoint=self._endpoint, file_path=file_path, content_type=\"\
-              image/png\"\n            )\n            logger.debug(f\"Model response:\
-              \ {response}\")\n            return response\n        except Exception\
-              \ as e:\n            logger.error(f\"Error in SRF extraction: {e!s}\"\
-              )\n            if not self.silent_errors:\n                raise ValueError(f\"\
-              Error in SRF extraction: {e!s}\") from e\n            return None\n\n\
-              \    def process_files(\n        self, file_list: list[BaseFileComponent.BaseFile]\n\
-              \    ) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Process the\
-              \ files as required by BaseFileComponent\"\"\"\n        if not file_list:\n\
-              \            msg = \"No files to process.\"\n            if not self.silent_errors:\n\
-              \                raise ValueError(msg)\n            logger.warning(msg)\n\
-              \        return file_list\n\n    async def process_srf(self) -> Data:\n\
-              \        \"\"\"Process multiple images and generate SRF identification\
-              \ results\"\"\"\n        try:\n            # Use async validation that\
-              \ handles URLs\n            files = await self._validate_and_resolve_paths_async()\n\
-              \            if not files:\n                msg = \"No valid files provided\"\
-              \n                logger.warning(msg)\n                if not self.silent_errors:\n\
-              \                    raise ValueError(msg)\n                return Data(value=[])\
-              \  # Return empty list instead of error\n\n            results = []\n\
-              \            for file in files:\n                try:\n            \
-              \        # Read the file\n                    # image_data = await self._read_file(file.path)\n\
-              \                    # if not image_data:\n                    #   \
-              \  msg = f\"Could not read file: {file.path}\"\n                   \
-              \ #     logger.warning(msg)\n                    #     continue\n\n\
-              \                    # Extract SRF identification from the image\n \
-              \                   result = await self.extract_srf(file.path)\n   \
-              \                 logger.debug(\n                        f\"Model result:\
-              \ {result}\"\n                    )  # Debug log to see the result\n\
-              \n                    if result and isinstance(result, dict):\n    \
-              \                    # Add file information to result with the new format\n\
-              \                        original_url = file.data[0].data.get(\n   \
-              \                         \"original_url\", str(file.path)\n       \
-              \                 )\n\n                        # Extract the prediction\
-              \ value from the nested data structure\n                        # Handle\
-              \ both possible response formats\n                        if \"data\"\
-              \ in result:\n                            if (\n                   \
-              \             isinstance(result[\"data\"], dict)\n                 \
-              \               and \"data\" in result[\"data\"]\n                 \
-              \           ):\n                                prediction = result[\"\
-              data\"][\"data\"]\n                            else:\n             \
-              \                   prediction = result[\"data\"]\n                \
-              \        else:\n                            prediction = \"unknown\"\
-              \n\n                        results.append(\n                      \
-              \      {\"file_path\": original_url, \"prediction\": prediction}\n \
-              \                       )\n                        logger.debug(\n \
-              \                           f\"Processed result: {results[-1]}\"\n \
-              \                       )  # Debug log the processed result\n\n    \
-              \                # Handle cleanup\n                    if file.delete_after_processing\
-              \ and file.path.exists():\n                        try:\n          \
-              \                  os.remove(file.path)\n                        except\
-              \ Exception as e:\n                            logger.warning(f\"Failed\
-              \ to delete file {file.path}: {e!s}\")\n\n                except Exception\
-              \ as e:\n                    logger.error(f\"Error processing file {file.path}:\
-              \ {e!s}\")\n                    if not self.silent_errors:\n       \
-              \                 continue\n                    logger.warning(\"Continuing\
-              \ to next file due to silent_errors=True\")\n\n            if not results:\n\
-              \                msg = \"No successful identifications\"\n         \
-              \       logger.warning(msg)\n                return Data(value=[]) \
-              \ # Return empty list instead of raising error\n\n            # Return\
-              \ array of results directly\n            logger.info(f\"Successfully\
-              \ processed {len(results)} files\")\n            return Data(value=results)\n\
-              \n        except Exception as e:\n            logger.error(f\"Error\
-              \ processing images: {e!s}\")\n            if not self.silent_errors:\n\
-              \                raise ValueError(f\"Error processing images: {e!s}\"\
-              )\n            return Data(value=[])  # Return empty list instead of\
-              \ error\n\n    def __del__(self):\n        \"\"\"Clean up temporary\
-              \ files.\"\"\"\n        if (\n            hasattr(self, \"temp_dir\"\
-              )\n            and self.temp_dir\n            and os.path.exists(self.temp_dir)\n\
-              \        ):\n            try:\n                for file_path in self._downloaded_files.values():\n\
-              \                    if os.path.exists(file_path):\n               \
-              \         os.remove(file_path)\n                os.rmdir(self.temp_dir)\n\
-              \            except Exception as e:\n                logger.error(f\"\
-              Error cleaning up temporary files: {e!s}\")\n"
-          delete_server_file_after_processing:
-            _input_type: BoolInput
-            advanced: true
-            display_name: Delete Server File After Processing
-            dynamic: false
-            info: If true, the Server File Path will be deleted after processing.
-            list: false
-            list_add_label: Add More
-            name: delete_server_file_after_processing
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: true
-          file_path:
-            _input_type: HandleInput
-            advanced: false
-            display_name: Server File Path
-            dynamic: false
-            info: Data object with a 'file_path' property pointing to server file
-              or a Message object with a path to the file. Supercedes 'Path' but supports
-              same file types.
-            input_types:
-            - Data
-            - Message
-            list: true
-            list_add_label: Add More
-            name: file_path
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            trace_as_metadata: true
-            type: other
-            value: ''
-          ignore_unspecified_files:
-            _input_type: BoolInput
-            advanced: true
-            display_name: Ignore Unspecified Files
-            dynamic: false
-            info: If true, Data with no 'file_path' property will be ignored.
-            list: false
-            list_add_label: Add More
-            name: ignore_unspecified_files
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: false
-          ignore_unsupported_extensions:
-            _input_type: BoolInput
-            advanced: true
-            display_name: Ignore Unsupported Extensions
-            dynamic: false
-            info: If true, files with unsupported extensions will not be processed.
-            list: false
-            list_add_label: Add More
-            name: ignore_unsupported_extensions
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: true
-          silent_errors:
-            _input_type: BoolInput
-            advanced: true
-            display_name: Silent Errors
-            dynamic: false
-            info: If true, errors will not raise an exception.
-            list: false
-            list_add_label: Add More
-            name: silent_errors
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: false
-        tool_mode: false
-      showNode: true
-      type: srf-identification
-    dragging: false
-    id: srf-identification-ZaSBG
-    measured:
-      height: 196
-      width: 320
-    position:
-      x: 1022.0233976555
-      y: 226.81239901066226
-    selected: false
-    type: genericNode
-  - data:
-      id: json_array_filter-8satn
-      node:
-        base_classes:
-        - Data
-        beta: false
-        conditional_paths: []
-        custom_fields: {}
-        description: Filter JSON array based on field conditions
-        display_name: JSON Array Filter
-        documentation: http://docs.langflow.org/components/custom
-        edited: false
-        field_order:
-        - input_array
-        - field_name
-        - operator
-        - value
-        - case_sensitive
-        - return_only_files
-        - file_field
-        frozen: false
-        icon: Filter
-        legacy: false
-        lf_version: 1.4.3
-        metadata: {}
-        minimized: false
-        output_types: []
-        outputs:
-        - allows_loop: false
-          cache: true
-          display_name: Filtered Array
-          method: filter_array
-          name: filtered_array
-          selected: Data
-          tool_mode: true
-          types:
-          - Data
-          value: __UNDEFINED__
-        pinned: false
-        template:
-          _type: Component
-          case_sensitive:
-            _input_type: BoolInput
-            advanced: false
-            display_name: Case Sensitive
-            dynamic: false
-            info: Whether string comparisons should be case-sensitive
-            list: false
-            list_add_label: Add More
-            name: case_sensitive
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: false
-          code:
-            advanced: true
-            dynamic: true
-            fileTypes: []
-            file_path: ''
-            info: ''
-            list: false
-            load_from_db: false
-            multiline: true
-            name: code
-            password: false
-            placeholder: ''
-            required: true
-            show: true
-            title_case: false
-            type: code
-            value: "from typing import Any\n\nfrom langflow.custom import Component\n\
-              from langflow.io import BoolInput, DropdownInput, HandleInput, Output,\
-              \ StrInput\nfrom langflow.schema import Data\nfrom loguru import logger\n\
-              \n\nclass JSONArrayFilterComponent(Component):\n    \"\"\"Component\
-              \ for filtering JSON arrays based on field conditions.\"\"\"\n\n   \
-              \ display_name = \"JSON Array Filter\"\n    description = \"Filter JSON\
-              \ array based on field conditions\"\n    documentation = \"http://docs.langflow.org/components/custom\"\
-              \n    icon = \"Filter\"\n    name = \"json_array_filter\"\n\n    inputs\
-              \ = [\n        HandleInput(\n            name=\"input_array\",\n   \
-              \         display_name=\"Input Array\",\n            info=\"Input array\
-              \ of JSON objects to filter\",\n            required=True,\n       \
-              \     input_types=[\"Data\"],\n            is_list=True,\n        ),\n\
-              \        StrInput(\n            name=\"field_name\",\n            display_name=\"\
-              Field Name\",\n            info=\"Name of the field to filter on (supports\
-              \ dot notation for nested fields)\",\n            required=True,\n \
-              \       ),\n        DropdownInput(\n            name=\"operator\",\n\
-              \            display_name=\"Operator\",\n            info=\"Operator\
-              \ to use for filtering\",\n            options=[\n                \"\
-              equals\",\n                \"not_equals\",\n                \"contains\"\
-              ,\n                \"not_contains\",\n                \"greater_than\"\
-              ,\n                \"less_than\",\n                \"in\",\n       \
-              \         \"not_in\",\n            ],\n            value=\"equals\"\
-              ,\n        ),\n        StrInput(\n            name=\"value\",\n    \
-              \        display_name=\"Filter Value\",\n            info=\"Value to\
-              \ filter against\",\n            required=True,\n        ),\n      \
-              \  BoolInput(\n            name=\"case_sensitive\",\n            display_name=\"\
-              Case Sensitive\",\n            info=\"Whether string comparisons should\
-              \ be case-sensitive\",\n            value=False,\n        ),\n     \
-              \   BoolInput(\n            name=\"return_only_files\",\n          \
-              \  display_name=\"Return Only Files\",\n            info=\"If true,\
-              \ returns only array of file URLs\",\n            value=False,\n   \
-              \     ),\n        StrInput(\n            name=\"file_field\",\n    \
-              \        display_name=\"File Field Name\",\n            info=\"Name\
-              \ of the field containing file URL (only used if return_only_files is\
-              \ true)\",\n            required=False,\n            value=\"file_path\"\
-              ,\n        ),\n    ]\n\n    outputs = [\n        Output(\n         \
-              \   name=\"filtered_array\",\n            display_name=\"Filtered Array\"\
-              ,\n            method=\"filter_array\",\n        )\n    ]\n\n    def\
-              \ _compare_values(\n        self,\n        field_value: Any,\n     \
-              \   filter_value: Any,\n        operator: str,\n        case_sensitive:\
-              \ bool = False,\n    ) -> bool:\n        \"\"\"Compare two values based\
-              \ on the specified operator.\"\"\"\n        try:\n            # Handle\
-              \ None values\n            if field_value is None:\n               \
-              \ logger.debug(\"Field value is None\")\n                return False\n\
-              \n            # Log the types and values for debugging\n           \
-              \ logger.debug(\n                f\"Comparing - Field value: {field_value}\
-              \ ({type(field_value)}) | Filter value: {filter_value} ({type(filter_value)})\"\
-              \n            )\n\n            # Handle string comparisons with case\
-              \ sensitivity\n            if (\n                isinstance(field_value,\
-              \ str)\n                and isinstance(filter_value, str)\n        \
-              \        and not case_sensitive\n            ):\n                field_value\
-              \ = field_value.lower()\n                filter_value = filter_value.lower()\n\
-              \                logger.debug(\n                    f\"Case-insensitive\
-              \ comparison: {field_value} vs {filter_value}\"\n                )\n\
-              \n            if operator == \"equals\":\n                result = field_value\
-              \ == filter_value\n                logger.debug(f\"Equals comparison\
-              \ result: {result}\")\n                return result\n            if\
-              \ operator == \"not_equals\":\n                return field_value !=\
-              \ filter_value\n            if operator == \"contains\":\n         \
-              \       return str(filter_value) in str(field_value)\n            if\
-              \ operator == \"not_contains\":\n                return str(filter_value)\
-              \ not in str(field_value)\n            if operator == \"greater_than\"\
-              :\n                return float(field_value) > float(filter_value)\n\
-              \            if operator == \"less_than\":\n                return float(field_value)\
-              \ < float(filter_value)\n            if operator == \"in\":\n      \
-              \          if not isinstance(filter_value, (list, tuple)):\n       \
-              \             filter_value = [filter_value]\n                return\
-              \ field_value in filter_value\n            if operator == \"not_in\"\
-              :\n                if not isinstance(filter_value, (list, tuple)):\n\
-              \                    filter_value = [filter_value]\n               \
-              \ return field_value not in filter_value\n            logger.warning(f\"\
-              Unsupported operator: {operator}\")\n            return False\n\n  \
-              \      except (ValueError, TypeError) as e:\n            logger.warning(f\"\
-              Error comparing values: {e!s}\")\n            return False\n\n    def\
-              \ _get_nested_field_value(self, obj: dict[str, Any], field_path: str)\
-              \ -> Any:\n        \"\"\"Get value from nested dictionary using dot\
-              \ notation.\"\"\"\n        try:\n            current = obj\n       \
-              \     for part in field_path.split(\".\"):\n                current\
-              \ = current[part]\n            return current\n        except (KeyError,\
-              \ TypeError):\n            return None\n\n    def filter_array(self)\
-              \ -> Data:\n        \"\"\"Filter the input array based on the specified\
-              \ conditions.\"\"\"\n        try:\n            # Extract array from\
-              \ input\n            if not self.input_array:\n                raise\
-              \ ValueError(\"Input must not be empty\")\n\n            input_array\
-              \ = None\n            if isinstance(self.input_array, list) and len(self.input_array)\
-              \ > 0:\n                if isinstance(self.input_array[0], Data):\n\
-              \                    data_obj = self.input_array[0]\n              \
-              \      if isinstance(data_obj.data, dict) and \"value\" in data_obj.data:\n\
-              \                        input_array = data_obj.data[\"value\"]\n  \
-              \              else:\n                    input_array = self.input_array\n\
-              \            elif isinstance(self.input_array, Data):\n            \
-              \    if (\n                    isinstance(self.input_array.data, dict)\n\
-              \                    and \"value\" in self.input_array.data\n      \
-              \          ):\n                    input_array = self.input_array.data[\"\
-              value\"]\n                else:\n                    input_array = self.input_array.value\n\
-              \n            if input_array is None:\n                logger.error(\"\
-              Could not extract array from input\")\n                return Data(value=[])\n\
-              \n            logger.debug(f\"Processing array with {len(input_array)}\
-              \ items\")\n\n            filtered_array = []\n            for item\
-              \ in input_array:\n                if not isinstance(item, dict):\n\
-              \                    logger.debug(f\"Skipping non-dict item: {item}\"\
-              )\n                    continue\n\n                field_value = self._get_nested_field_value(item,\
-              \ self.field_name)\n                if self._compare_values(\n     \
-              \               field_value, self.value, self.operator, self.case_sensitive\n\
-              \                ):\n                    filtered_array.append(item)\n\
-              \n            logger.info(\n                f\"Filtered array from {len(input_array)}\
-              \ to {len(filtered_array)} items\"\n            )\n\n            # If\
-              \ return_only_files is true, extract just the file URLs\n          \
-              \  if self.return_only_files and filtered_array:\n                file_field\
-              \ = self.file_field or \"file\"\n                files_array = []\n\
-              \                for item in filtered_array:\n                    file_url\
-              \ = self._get_nested_field_value(item, file_field)\n               \
-              \     if file_url:\n                        files_array.append(file_url)\n\
-              \                logger.info(f\"Extracted {len(files_array)} file URLs\"\
-              )\n                return Data(data={\"file_path\": files_array})\n\n\
-              \            return Data(data={\"file_path\": filtered_array})\n\n \
-              \       except Exception as e:\n            logger.error(f\"Error filtering\
-              \ array: {e!s}\")\n            raise ValueError(f\"Error filtering array:\
-              \ {e!s}\")\n"
-          field_name:
-            _input_type: StrInput
-            advanced: false
-            display_name: Field Name
-            dynamic: false
-            info: Name of the field to filter on (supports dot notation for nested
-              fields)
-            list: false
-            list_add_label: Add More
-            load_from_db: false
-            name: field_name
-            placeholder: ''
-            required: true
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: str
-            value: prediction
-          file_field:
-            _input_type: StrInput
-            advanced: false
-            display_name: File Field Name
-            dynamic: false
-            info: Name of the field containing file URL (only used if return_only_files
-              is true)
-            list: false
-            list_add_label: Add More
-            load_from_db: false
-            name: file_field
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: str
-            value: file_path
-          input_array:
-            _input_type: HandleInput
-            advanced: false
-            display_name: Input Array
-            dynamic: false
-            info: Input array of JSON objects to filter
-            input_types:
-            - Data
-            list: true
-            list_add_label: Add More
-            name: input_array
-            placeholder: ''
-            required: true
-            show: true
-            title_case: false
-            trace_as_metadata: true
-            type: other
-            value: ''
-          operator:
-            _input_type: DropdownInput
-            advanced: false
-            combobox: false
-            dialog_inputs: {}
-            display_name: Operator
-            dynamic: false
-            info: Operator to use for filtering
-            name: operator
-            options:
-            - equals
-            - not_equals
-            - contains
-            - not_contains
-            - greater_than
-            - less_than
-            - in
-            - not_in
-            options_metadata: []
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            toggle: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: str
-            value: equals
-          return_only_files:
-            _input_type: BoolInput
-            advanced: false
-            display_name: Return Only Files
-            dynamic: false
-            info: If true, returns only array of file URLs
-            list: false
-            list_add_label: Add More
-            name: return_only_files
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: true
-          value:
-            _input_type: StrInput
-            advanced: false
-            display_name: Filter Value
-            dynamic: false
-            info: Value to filter against
-            list: false
-            list_add_label: Add More
-            load_from_db: false
-            name: value
-            placeholder: ''
-            required: true
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: str
-            value: srf
-        tool_mode: false
-      showNode: true
-      type: json_array_filter
-    dragging: false
-    id: json_array_filter-8satn
-    measured:
-      height: 635
-      width: 320
-    position:
-      x: 1448.7862802792056
-      y: 136.060018687435
-    selected: false
-    type: genericNode
-  - data:
-      id: srf-extraction-S3eHF
-      node:
-        base_classes:
-        - Data
-        beta: false
-        conditional_paths: []
-        custom_fields: {}
-        description: Model for extracting SRF from medical images
-        display_name: SRF Extraction
-        documentation: http://docs.langflow.org/components/custom
-        edited: false
-        field_order:
-        - file_path
-        - silent_errors
-        - delete_server_file_after_processing
-        - ignore_unsupported_extensions
-        - ignore_unspecified_files
-        - file_path
-        frozen: false
-        icon: Autonomize
-        legacy: false
-        metadata: {}
-        minimized: false
-        output_types: []
-        outputs:
-        - allows_loop: false
-          cache: true
-          display_name: SRF Extraction
-          hidden: null
-          method: process_srf
-          name: srfExtraction
-          options: null
-          required_inputs: []
-          selected: Data
-          tool_mode: true
-          types:
-          - Data
-          value: __UNDEFINED__
-        pinned: false
-        template:
-          _type: Component
-          code:
-            advanced: true
-            dynamic: true
-            fileTypes: []
-            file_path: ''
-            info: ''
-            list: false
-            load_from_db: false
-            multiline: true
-            name: code
-            password: false
-            placeholder: ''
-            required: true
-            show: true
-            title_case: false
-            type: code
-            value: "import os\nimport tempfile\nfrom pathlib import Path\nfrom typing\
-              \ import Any\nfrom urllib.parse import urlparse\n\nimport aiohttp\n\
-              from loguru import logger\n\nfrom langflow.base.data import BaseFileComponent\n\
-              from langflow.base.data.utils import IMG_FILE_TYPES\nfrom app.base.modelhub\
-              \ import ATModelComponent\nfrom langflow.io import Output, HandleInput\n\
-              from langflow.schema import Data\nfrom app.services.modelhub.model_endpoint\
-              \ import ModelEndpoint\n\n\nclass SRFExtractionComponent(\n    ATModelComponent,\
-              \ BaseFileComponent\n):  # Changed inheritance order\n    display_name\
-              \ = \"SRF Extraction\"\n    description = \"Model for extracting SRF\
-              \ from medical images\"\n    documentation: str = \"http://docs.langflow.org/components/custom\"\
-              \n    icon = \"Autonomize\"\n    name = \"srf-extraction\"\n    _model_name\
-              \ = ModelEndpoint.SRF_EXTRACTION\n\n    VALID_EXTENSIONS = IMG_FILE_TYPES\n\
-              \n    inputs = [\n        next(\n            input\n            for\
-              \ input in BaseFileComponent._base_inputs\n            if input.name\
-              \ == \"file_path\"\n        ),\n        next(\n            input\n \
-              \           for input in BaseFileComponent._base_inputs\n          \
-              \  if input.name == \"silent_errors\"\n        ),\n        next(\n \
-              \           input\n            for input in BaseFileComponent._base_inputs\n\
-              \            if input.name == \"delete_server_file_after_processing\"\
-              \n        ),\n        next(\n            input\n            for input\
-              \ in BaseFileComponent._base_inputs\n            if input.name == \"\
-              ignore_unsupported_extensions\"\n        ),\n        next(\n       \
-              \     input\n            for input in BaseFileComponent._base_inputs\n\
-              \            if input.name == \"ignore_unspecified_files\"\n       \
-              \ ),\n        HandleInput(\n            name=\"file_path\",\n      \
-              \      display_name=\"URL\",\n            info=(\n                \"\
-              Upload file via URL or local server path. Supports: \\n\"\n        \
-              \        \"1. Direct HTTP/HTTPS URLs for remote files\\n\"\n       \
-              \         \"2. Local server file paths\\n\"\n                \"3. Data\
-              \ objects with file path property\\n\"\n                \"4. Message\
-              \ objects containing file paths\\n\"\n                \"\\nSupports\
-              \ the same file types as the Path input. \"\n                \"Takes\
-              \ precedence over Path input when both are provided.\"\n           \
-              \ ),\n            required=False,\n            input_types=[\"Data\"\
-              , \"Message\"],\n            is_list=True,\n        ),\n    ]\n\n  \
-              \  outputs = [\n        Output(\n            name=\"srfExtraction\"\
-              , display_name=\"SRF Extraction\", method=\"process_srf\"\n        ),\n\
-              \    ]\n\n    # Explicitly define the endpoint\n    def __init__(self,\
-              \ **kwargs):\n        ATModelComponent.__init__(self, **kwargs)  # Initialize\
-              \ ATModelComponent first\n        BaseFileComponent.__init__(self, **kwargs)\
-              \  # Then initialize BaseFileComponent\n        self._modelhub_service\
-              \ = None\n        self.temp_dir = tempfile.mkdtemp()\n        self._downloaded_files\
-              \ = {}\n        self._endpoint = \"https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/extraction:predict\"\
-              \n\n    async def _download_file_from_url(self, url: str) -> str | None:\n\
-              \        \"\"\"Download a file from a URL.\"\"\"\n        try:\n   \
-              \         filename = os.path.basename(urlparse(url).path)\n        \
-              \    if not filename:\n                filename = \"downloaded_image.png\"\
-              \n\n            local_path = os.path.join(self.temp_dir, filename)\n\
-              \n            async with aiohttp.ClientSession() as session:\n     \
-              \           async with session.get(url) as response:\n             \
-              \       response.raise_for_status()\n                    with open(local_path,\
-              \ \"wb\") as f:\n                        while True:\n             \
-              \               chunk = await response.content.read(8192)\n        \
-              \                    if not chunk:\n                               \
-              \ break\n                            f.write(chunk)\n\n            self._downloaded_files[url]\
-              \ = local_path\n            logger.info(f\"Successfully downloaded file\
-              \ to {local_path}\")\n            return local_path\n\n        except\
-              \ Exception as e:\n            logger.error(f\"Error downloading file\
-              \ from URL: {e!s}\")\n            if not self.silent_errors:\n     \
-              \           raise\n            return None\n\n    async def _validate_and_resolve_paths_async(\n\
-              \        self,\n    ) -> list[BaseFileComponent.BaseFile]:\n       \
-              \ \"\"\"Handle URLs and local paths asynchronously.\"\"\"\n        resolved_files\
-              \ = []\n        file_paths = self._file_path_as_list()\n\n        for\
-              \ obj in file_paths:\n            server_file_path = obj.data.get(self.SERVER_FILE_PATH_FIELDNAME)\n\
-              \n            if not server_file_path:\n                if not self.ignore_unspecified_files:\n\
-              \                    msg = f\"Data object missing '{self.SERVER_FILE_PATH_FIELDNAME}'\
-              \ property.\"\n                    if not self.silent_errors:\n    \
-              \                    raise ValueError(msg)\n                continue\n\
-              \n            try:\n                # Handle if server_file_path is\
-              \ a list\n                paths_to_process = (\n                   \
-              \ server_file_path\n                    if isinstance(server_file_path,\
-              \ list)\n                    else [server_file_path]\n             \
-              \   )\n\n                for path in paths_to_process:\n           \
-              \         try:\n                        # Check if it's a URL\n    \
-              \                    if isinstance(path, str) and path.startswith(\n\
-              \                            (\"http://\", \"https://\")\n         \
-              \               ):\n                            local_path = await self._download_file_from_url(path)\n\
-              \                            if not local_path:\n                  \
-              \              continue\n\n                            # Create a new\
-              \ Data object with both the original URL and local path\n          \
-              \                  new_data = Data(\n                              \
-              \  data={\n                                    self.SERVER_FILE_PATH_FIELDNAME:\
-              \ local_path,\n                                    \"original_url\"\
-              : path,\n                                }\n                       \
-              \     )\n\n                            resolved_files.append(\n    \
-              \                            BaseFileComponent.BaseFile(\n         \
-              \                           new_data,\n                            \
-              \        Path(local_path),\n                                    delete_after_processing=True,\n\
-              \                                )\n                            )\n\
-              \                        else:\n                            # Handle\
-              \ local files\n                            resolved_path = Path(self.resolve_path(str(path)))\n\
-              \                            if not resolved_path.exists():\n      \
-              \                          msg = f\"File not found: {path}\"\n     \
-              \                           if not self.silent_errors:\n           \
-              \                         raise ValueError(msg)\n                  \
-              \              continue\n\n                            resolved_files.append(\n\
-              \                                BaseFileComponent.BaseFile(\n     \
-              \                               obj,\n                             \
-              \       resolved_path,\n                                    delete_after_processing=self.delete_server_file_after_processing,\n\
-              \                                )\n                            )\n\n\
-              \                    except Exception as e:\n                      \
-              \  logger.error(f\"Error processing path {path}: {e!s}\")\n        \
-              \                if not self.silent_errors:\n                      \
-              \      raise\n                        continue\n\n            except\
-              \ Exception as e:\n                logger.error(f\"Error processing\
-              \ file paths: {e!s}\")\n                if not self.silent_errors:\n\
-              \                    raise\n                continue\n\n        return\
-              \ resolved_files\n\n    # async def _read_file(self, file_path: Path)\
-              \ -> bytes:\n    #     \"\"\"Read file content from a file path\"\"\"\
-              \n    #     try:\n    #         with open(file_path, \"rb\") as f:\n\
-              \    #             return f.read()\n    #     except Exception as e:\n\
-              \    #         logger.error(f\"Error reading file {file_path}: {e!s}\"\
-              )\n    #         if not self.silent_errors:\n    #             raise\
-              \ ValueError(f\"Error reading file: {e!s}\") from e\n    #         return\
-              \ None\n\n    async def extract_srf(self, file_path: Path) -> Any:\n\
-              \        \"\"\"Extract SRF from the image\"\"\"\n        try:\n    \
-              \        logger.debug(\"Sending request to model endpoint\")\n     \
-              \       # response = await self.predict(\n            #     endpoint=self._endpoint,\n\
-              \            #     binary_data=image_data,\n            #     content_type=\"\
-              image/png\"\n            # )\n            response = await self.predict(\n\
-              \                endpoint=self._endpoint, file_path=file_path, content_type=\"\
-              image/png\"\n            )\n            logger.debug(f\"Model response:\
-              \ {response}\")\n            return response\n        except Exception\
-              \ as e:\n            logger.error(f\"Error in SRF extraction: {e!s}\"\
-              )\n            if not self.silent_errors:\n                raise ValueError(f\"\
-              Error in SRF extraction: {e!s}\") from e\n            return None\n\n\
-              \    def process_files(\n        self, file_list: list[BaseFileComponent.BaseFile]\n\
-              \    ) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Process the\
-              \ files as required by BaseFileComponent\"\"\"\n        if not file_list:\n\
-              \            msg = \"No files to process.\"\n            if not self.silent_errors:\n\
-              \                raise ValueError(msg)\n            logger.warning(msg)\n\
-              \        return file_list\n\n    async def process_srf(self) -> Data:\n\
-              \        \"\"\"Process multiple images and generate merged SRF extraction\
-              \ results\"\"\"\n        try:\n            # Use async validation that\
-              \ handles URLs\n            files = await self._validate_and_resolve_paths_async()\n\
-              \            if not files:\n                msg = \"No valid files provided\"\
-              \n                logger.warning(msg)\n                if not self.silent_errors:\n\
-              \                    raise ValueError(msg)\n                return Data(value={})\n\
-              \n            combined_results = {}  # For storing merged results\n\
-              \            results = []\n\n            for file in files:\n      \
-              \          try:\n                    # Read the file\n             \
-              \       # image_data = await self._read_file(file.path)\n          \
-              \          # if not image_data:\n                    #     msg = f\"\
-              Could not read file: {file.path}\"\n                    #     logger.warning(msg)\n\
-              \                    #     continue\n\n                    # Extract\
-              \ SRF from the image\n                    result = await self.extract_srf(file.path)\n\
-              \                    logger.debug(f\"Model result: {result}\")\n\n \
-              \                   if result and isinstance(result, dict):\n      \
-              \                  original_url = file.data[0].data.get(\n         \
-              \                   \"original_url\", str(file.path)\n             \
-              \           )\n\n                        # Extract Doc_Info, handling\
-              \ different response structures\n                        doc_info =\
-              \ {}\n                        if \"data\" in result:\n             \
-              \               if isinstance(result[\"data\"], dict):\n           \
-              \                     if (\n                                    \"data\"\
-              \ in result[\"data\"]\n                                    and \"Doc_Info\"\
-              \ in result[\"data\"][\"data\"]\n                                ):\n\
-              \                                    doc_info = result[\"data\"][\"\
-              data\"][\"Doc_Info\"]\n                                elif \"Doc_Info\"\
-              \ in result[\"data\"]:\n                                    doc_info\
-              \ = result[\"data\"][\"Doc_Info\"]\n                            else:\n\
-              \                                doc_info = {\"extraction\": result[\"\
-              data\"]}\n\n                        logger.debug(f\"Extracted doc_info:\
-              \ {doc_info}\")\n\n                        # Merge Doc_Info with combined\
-              \ results\n                        for key, value in doc_info.items():\n\
-              \                            # If key doesn't exist or current value\
-              \ is empty/null, use new value\n                            if key not\
-              \ in combined_results or combined_results[key] in (\n              \
-              \                  None,\n                                \"\",\n  \
-              \                              \"null\",\n                         \
-              \       \"Information not found\",\n                               \
-              \ \"Information not\",\n                            ):\n           \
-              \                     combined_results[key] = value\n              \
-              \                  logger.debug(\n                                 \
-              \   f\"Added/Updated key {key} with value {value}\"\n              \
-              \                  )\n\n                        # Store individual result\n\
-              \                        results.append(\n                         \
-              \   {\n                                \"file_path\": original_url,\n\
-              \                                \"prediction\": {\"Doc_Info\": doc_info},\n\
-              \                            }\n                        )\n\n      \
-              \              # Handle cleanup\n                    if file.delete_after_processing\
-              \ and file.path.exists():\n                        try:\n          \
-              \                  os.remove(file.path)\n                        except\
-              \ Exception as e:\n                            logger.warning(f\"Failed\
-              \ to delete file {file.path}: {e!s}\")\n\n                except Exception\
-              \ as e:\n                    logger.error(f\"Error processing file {file.path}:\
-              \ {e!s}\")\n                    if not self.silent_errors:\n       \
-              \                 continue\n                    logger.warning(\"Continuing\
-              \ to next file due to silent_errors=True\")\n\n            if not results:\n\
-              \                msg = \"No successful extractions\"\n             \
-              \   logger.warning(msg)\n                return Data(value={})\n\n \
-              \           # Return both combined results and individual results\n\
-              \            logger.info(f\"Successfully processed {len(results)} files\"\
-              )\n            # final_result = {\n            #     \"combined_results\"\
-              : combined_results,\n            #     \"results\": results\n      \
-              \      # }\n            logger.debug(f\"Final result: {combined_results}\"\
-              )\n            return Data(value=combined_results)\n\n        except\
-              \ Exception as e:\n            logger.error(f\"Error processing images:\
-              \ {e!s}\")\n            if not self.silent_errors:\n               \
-              \ raise ValueError(f\"Error processing images: {e!s}\")\n          \
-              \  return Data(value={})\n\n    def __del__(self):\n        \"\"\"Clean\
-              \ up temporary files.\"\"\"\n        if (\n            hasattr(self,\
-              \ \"temp_dir\")\n            and self.temp_dir\n            and os.path.exists(self.temp_dir)\n\
-              \        ):\n            try:\n                for file_path in self._downloaded_files.values():\n\
-              \                    if os.path.exists(file_path):\n               \
-              \         os.remove(file_path)\n                os.rmdir(self.temp_dir)\n\
-              \            except Exception as e:\n                logger.error(f\"\
-              Error cleaning up temporary files: {e!s}\")\n"
-          delete_server_file_after_processing:
-            _input_type: BoolInput
-            advanced: true
-            display_name: Delete Server File After Processing
-            dynamic: false
-            info: If true, the Server File Path will be deleted after processing.
-            list: false
-            list_add_label: Add More
-            name: delete_server_file_after_processing
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: true
-          file_path:
-            _input_type: HandleInput
-            advanced: false
-            display_name: URL
-            dynamic: false
-            info: "Upload file via URL or local server path. Supports: \n1. Direct\
-              \ HTTP/HTTPS URLs for remote files\n2. Local server file paths\n3. Data\
-              \ objects with file path property\n4. Message objects containing file\
-              \ paths\n\nSupports the same file types as the Path input. Takes precedence\
-              \ over Path input when both are provided."
-            input_types:
-            - Data
-            - Message
-            list: true
-            list_add_label: Add More
-            name: file_path
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            trace_as_metadata: true
-            type: other
-            value: ''
-          ignore_unspecified_files:
-            _input_type: BoolInput
-            advanced: true
-            display_name: Ignore Unspecified Files
-            dynamic: false
-            info: If true, Data with no 'file_path' property will be ignored.
-            list: false
-            list_add_label: Add More
-            name: ignore_unspecified_files
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: false
-          ignore_unsupported_extensions:
-            _input_type: BoolInput
-            advanced: true
-            display_name: Ignore Unsupported Extensions
-            dynamic: false
-            info: If true, files with unsupported extensions will not be processed.
-            list: false
-            list_add_label: Add More
-            name: ignore_unsupported_extensions
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: true
-          silent_errors:
-            _input_type: BoolInput
-            advanced: true
-            display_name: Silent Errors
-            dynamic: false
-            info: If true, errors will not raise an exception.
-            list: false
-            list_add_label: Add More
-            name: silent_errors
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: false
-        tool_mode: false
-      showNode: true
-      type: srf-extraction
-    dragging: false
-    id: srf-extraction-S3eHF
-    measured:
-      height: 196
-      width: 320
-    position:
-      x: 1882.085721576359
-      y: 366.5036233101823
-    selected: false
-    type: genericNode
-  - data:
-      id: JSONOutput-Kpx5X
-      node:
-        base_classes:
-        - Message
-        beta: false
-        conditional_paths: []
-        custom_fields: {}
-        description: Display input data as JSON in the Playground.
-        display_name: JSON Output
-        documentation: ''
-        edited: false
-        field_order:
-        - data
-        - pretty_print
-        frozen: false
-        icon: Braces
-        legacy: false
-        metadata: {}
-        minimized: false
-        output_types: []
-        outputs:
-        - allows_loop: false
-          cache: true
-          display_name: JSON
-          group_outputs: false
-          method: json_response
-          name: json
-          selected: Message
-          tool_mode: true
-          types:
-          - Message
-          value: __UNDEFINED__
-        pinned: false
-        template:
-          _type: Component
-          code:
-            advanced: true
-            dynamic: true
-            fileTypes: []
-            file_path: ''
-            info: ''
-            list: false
-            load_from_db: false
-            multiline: true
-            name: code
-            password: false
-            placeholder: ''
-            required: true
-            show: true
-            title_case: false
-            type: code
-            value: "import json\n\nfrom langflow.base.io.text import TextComponent\n\
-              from langflow.inputs import DataInput\nfrom langflow.io import BoolInput,\
-              \ Output\nfrom langflow.schema import Data\nfrom langflow.schema.message\
-              \ import Message\n\n\nclass JSONOutputComponent(TextComponent):\n  \
-              \  display_name = \"JSON Output\"\n    description = \"Display input\
-              \ data as JSON in the Playground.\"\n    icon = \"Braces\"\n    name\
-              \ = \"JSONOutput\"\n\n    inputs = [\n        DataInput(\n         \
-              \   name=\"data\",\n            display_name=\"Data\",\n           \
-              \ info=\"The data to convert to JSON.\",\n            is_list=True,\n\
-              \        ),\n        BoolInput(\n            name=\"pretty_print\",\n\
-              \            display_name=\"Pretty Print\",\n            info=\"Format\
-              \ JSON with proper indentation\",\n            value=True,\n       \
-              \     advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"\
-              JSON\", name=\"json\", method=\"json_response\"),\n    ]\n\n    def\
-              \ _process_data(self, data: Data | list[Data]) -> dict | list:\n   \
-              \     \"\"\"Convert Data object(s) to dictionary/list format.\"\"\"\n\
-              \        if isinstance(data, list):\n            return [item.dict()\
-              \ for item in data]\n        return data.dict()\n\n    def json_response(self)\
-              \ -> Message:\n        try:\n            # Process the Data input\n\
-              \            processed_data = self._process_data(self.data)\n\n    \
-              \        # Convert to JSON string with optional pretty printing\n  \
-              \          if self.pretty_print:\n                formatted_json = json.dumps(\n\
-              \                    processed_data, indent=2, ensure_ascii=False\n\
-              \                )\n            else:\n                formatted_json\
-              \ = json.dumps(processed_data, ensure_ascii=False)\n\n            message\
-              \ = Message(text=formatted_json)\n            self.status = formatted_json\n\
-              \            return message\n\n        except Exception as e:\n    \
-              \        error_message = f\"Error processing data to JSON: {e!s}\"\n\
-              \            message = Message(text=error_message)\n            self.status\
-              \ = error_message\n            return message\n"
-          data:
-            _input_type: DataInput
-            advanced: false
-            display_name: Data
-            dynamic: false
-            info: The data to convert to JSON.
-            input_types:
-            - Data
-            list: true
-            list_add_label: Add More
-            name: data
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_input: true
-            trace_as_metadata: true
-            type: other
-            value: ''
-          pretty_print:
-            _input_type: BoolInput
-            advanced: true
-            display_name: Pretty Print
-            dynamic: false
-            info: Format JSON with proper indentation
-            list: false
-            list_add_label: Add More
-            name: pretty_print
-            placeholder: ''
-            required: false
-            show: true
-            title_case: false
-            tool_mode: false
-            trace_as_metadata: true
-            type: bool
-            value: true
-        tool_mode: false
-      showNode: true
-      type: JSONOutput
-    dragging: false
-    id: JSONOutput-Kpx5X
-    measured:
-      height: 196
-      width: 320
-    position:
-      x: 2406.014845365142
-      y: 338.50655048672877
-    selected: true
-    type: genericNode
-  viewport:
-    x: -582.7254771769976
-    y: 146.34836116613457
-    zoom: 0.596265873903947
+    Provide high-confidence extractions with field-level confidence scores.
+    Flag any unclear or ambiguous fields for human review.
+components:
+- id: input
+  name: Form Input
+  kind: Data
+  type: genesis:blob_storage
+  description: Prior authorization form file (PDF or image)
+  provides:
+  - useAs: input
+    in: form-splitter
+    description: Form file path
+- id: form-splitter
+  name: Split Into Images
+  kind: Tool
+  type: genesis:split_into_images
+  description: Convert PDF pages to individual images
+  config:
+    output_format: png
+    dpi: 300
+    preserve_aspect_ratio: true
+  provides:
+  - useAs: input
+    in: srf-identifier
+    description: Page images
+- id: srf-identifier
+  name: SRF Identification
+  kind: Agent
+  type: genesis:srf_identification
+  description: Identify service request form pages
+  config:
+    model_name: gpt-4-vision
+    confidence_threshold: 0.85
+  provides:
+  - useAs: input
+    in: form-filter
+    description: Identified SRF pages
+- id: form-filter
+  name: Filter SRF Pages
+  kind: Tool
+  type: genesis:json_array_filter
+  description: Filter to keep only identified SRF pages
+  config:
+    filter_field: is_srf
+    filter_value: true
+  provides:
+  - useAs: input
+    in: srf-extractor
+    description: Filtered SRF pages
+- id: extraction-prompt
+  name: Extraction Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Prompt template for form extraction
+  config:
+    saved_prompt: srf_extraction_prompt_v1
+    template: |
+      You are extracting data from a prior authorization service request form.
+
+      Extract the following information with high accuracy:
+
+      **Member Information:**
+      - Member ID / Subscriber ID
+      - Member Name (Last, First, MI)
+      - Date of Birth
+      - Insurance/Group ID
+
+      **Service Request:**
+      - CPT/HCPCS Codes
+      - ICD-10 Diagnosis Codes
+      - Service Description
+      - Units Requested
+      - Service Start/End Dates
+      - Place of Service
+
+      **Provider Information:**
+      - Requesting Provider Name
+      - Provider NPI
+      - Provider Taxonomy
+      - Contact Information
+
+      **Authorization Details:**
+      - Authorization Type (Initial/Extension/Retro)
+      - Clinical Justification
+      - Supporting Documentation References
+
+      For each field, provide:
+      1. Extracted value
+      2. Confidence score (0-1)
+      3. Location on form (if applicable)
+
+      Flag any missing or unclear fields for review.
+  provides:
+  - useAs: system_prompt
+    in: srf-extractor
+    description: Extraction instructions
+- id: srf-extractor
+  name: SRF Data Extraction
+  kind: Agent
+  type: genesis:srf_extraction
+  description: Extract structured data from SRF forms
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4-vision
+    temperature: 0.1
+    max_tokens: 3000
+    structured_output: true
+    confidence_scoring: true
+  provides:
+  - useAs: input
+    in: output
+    description: Extracted form data
+- id: output
+  name: Extraction Results
+  kind: Data
+  type: genesis:json_output
+  description: Structured extraction results with confidence scores
+  config:
+    should_store_message: true
+    include_metadata: true
+outputs:
+- extracted_member_info
+- extracted_service_codes
+- extracted_diagnosis_codes
+- extracted_provider_info
+- extraction_confidence_scores
+- fields_requiring_review
+kpis:
+- name: Extraction Accuracy
+  category: Quality
+  valueType: percentage
+  target: 98
+  unit: '%'
+  description: Accuracy of extracted fields vs. manual review
+- name: Processing Time Per Form
+  category: Performance
+  valueType: numeric
+  target: 5000
+  unit: ms
+  description: Average time to process a complete form
+- name: Field Coverage
+  category: Quality
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Percentage of required fields successfully extracted
+- name: Confidence Score Average
+  category: Quality
+  valueType: numeric
+  target: 0.9
+  unit: score
+  description: Average confidence score across all extractions
+- name: Forms Requiring Manual Review
+  category: Efficiency
+  valueType: percentage
+  target: 10
+  unit: '%'
+  description: Percentage of forms flagged for human review
+securityInfo:
+  visibility: Private
+  confidentiality: High
+  gdprSensitive: true
+  phiData: true
