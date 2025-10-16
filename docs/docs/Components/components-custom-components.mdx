@@ -28,15 +28,122 @@ Custom components in Langflow are built upon:
 * Methods that define the component's behavior and logic.
 * Internal variables for logging, such as `self.log()`, `self.status`, and `self.stop()`.
 
-## Basic component structure
+
+## Custom component quickstart
+
+Create a basic custom component, save it in the right place, and load it into Langflow.
+
+### Create a Python file
 
 <PartialBasicComponentStructure />
 
-### Additional class attributes
+### Save the custom component
 
-Langflow uses [Lucide](https://lucide.dev/icons) for icons. To assign an icon to your component, set the icon attribute to the name of a Lucide icon as a string, such as `icon = "file-text"`. Langflow renders icons from the Lucide library automatically.
+Save the custom component in the Langflow directory where the UI will discover it.
 
-### Structure of a custom component
+By default, Langflow looks for custom components in the `src/lfx/src/lfx/components` directory.
+
+When saving components in the default directory, components must be organized in a specific directory structure to be properly loaded and displayed in the visual editor.
+
+Components must be placed inside category folders, not directly in the base directory.
+
+The category folder name determines where the component appears in the Langflow <Icon name="Component" aria-hidden="true" /> **Core components** menu.
+For example, to add the example `DataFrameProcessor` component to the **Data** category, place it in the `data` subfolder:
+
+```
+src/lfx/src/lfx/components/
+    └── data/                      # Category folder (determines menu location)
+        ├── __init__.py            # Required - makes it a Python package
+        └── dataframe_processor.py # Your custom component file
+```
+
+If you're creating custom components in a different location using the `LANGFLOW_COMPONENTS_PATH` [environment variable](/environment-variables), components must be similarly organized in a specific directory structure to be displayed in the visual editor.
+
+```
+/your/custom/components/path/    # Base directory set by LANGFLOW_COMPONENTS_PATH
+    └── category_name/
+        ├── __init__.py
+        └── custom_component.py
+```
+
+You can have multiple category folders to organize components into different categories:
+```
+/app/custom_components/
+    ├── data/
+    │   ├── __init__.py
+    │   └── dataframe_processor.py
+    └── tools/
+        ├── __init__.py
+        └── custom_tool.py
+```
+
+### Create the `__init__.py` file
+
+Each category directory **must** contain an `__init__.py` file for Langflow to properly recognize and load the components.
+This is a Python package requirement that ensures the directory is treated as a module.
+
+To include the `DataFrameProcessor` component, create a file named `__init__.py` in your component's directory with the following content.
+
+```python
+from .dataframe_processor import DataFrameProcessor
+
+__all__ = ["DataFrameProcessor"]
+```
+
+<details closed>
+<summary>Lazy load the DataFrameProcessor component</summary>
+
+Alternatively, you can load your component **lazily**, which is better for performance but a little more complex.
+
+```python
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from lfx.components._importing import import_mod
+
+if TYPE_CHECKING:
+    from lfx.components.data.dataframe_processor import DataFrameProcessor
+
+_dynamic_imports = {
+    "DataFrameProcessor": "dataframe_processor",
+}
+
+__all__ = [
+    "DataFrameProcessor",
+]
+
+def __getattr__(attr_name: str) -> Any:
+    """Lazily import data components on attribute access."""
+    if attr_name not in _dynamic_imports:
+        msg = f"module '{__name__}' has no attribute '{attr_name}'"
+        raise AttributeError(msg)
+    try:
+        result = import_mod(attr_name, _dynamic_imports[attr_name], __spec__.parent)
+    except (ModuleNotFoundError, ImportError, AttributeError) as e:
+        msg = f"Could not import '{attr_name}' from '{__name__}': {e}"
+        raise AttributeError(msg) from e
+    globals()[attr_name] = result
+    return result
+
+def __dir__() -> list[str]:
+    return list(__all__)
+```
+
+For an additional example of lazy loading, see the [FAISS component](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/components/FAISS/__init__.py).
+
+</details>
+
+### Load your component
+
+Ensure the application builds your component.
+
+1. To rebuild the backend and frontend, run `make install_frontend && make build_frontend && make install_backend && uv run langflow run --port 7860`.
+
+2. Refresh the frontend application.
+Your new `DataFrameProcessor` component is available in the <Icon name="Component" aria-hidden="true" /> **Core components** menu under the **Data** category in the visual editor.
+
+## Structure of a custom component
 
 A Langflow custom component is more than a class with inputs and outputs. It includes an internal structure with optional lifecycle steps, output generation, front-end interaction, and logic organization.
 
@@ -46,6 +153,7 @@ A basic component:
 * Declares metadata like `display_name`, `description`, `icon`, and more.
 * Defines `inputs` and `outputs` lists.
 * Implements methods matching output specifications.
+
 ### Internal Lifecycle and Execution Flow
 
 Langflow's engine manages:
@@ -204,52 +312,6 @@ Use `self.ctx` as a shared storage for data or counters across the component's e
 def some_method(self):
     count = self.ctx.get("my_count", 0)
     self.ctx["my_count"] = count + 1
-```
-
-## Directory structure requirements
-
-By default, Langflow looks for custom components in the `/components` directory.
-
-If you're creating custom components in a different location using the `LANGFLOW_COMPONENTS_PATH` [environment variable](/environment-variables), components must be organized in a specific directory structure to be properly loaded and displayed in the visual editor:
-
-Each category directory **must** contain an `__init__.py` file for Langflow to properly recognize and load the components.
-This is a Python package requirement that ensures the directory is treated as a module.
-
-```
-/your/custom/components/path/    # Base directory set by LANGFLOW_COMPONENTS_PATH
-    └── category_name/          # Required category subfolder that determines menu name
-        ├── __init__.py         # Required
-        └── custom_component.py # Component file
-```
-
-Components must be placed inside category folders, not directly in the base directory.
-
-The category folder name determines where the component appears in the Langflow <Icon name="Component" aria-hidden="true" /> **Core components** menu.
-For example, to add a component to the **Helpers** category, place it in the `helpers` subfolder:
-
-```
-/app/custom_components/          # LANGFLOW_COMPONENTS_PATH
-    └── helpers/                 # Displayed within the "Helpers" category
-        ├── __init__.py          # Required
-        └── custom_component.py  # Your component
-```
-
-You can have multiple category folders to organize components into different categories:
-```
-/app/custom_components/
-    ├── helpers/
-    │   ├── __init__.py
-    │   └── helper_component.py
-    └── tools/
-        ├── __init__.py
-        └── tool_component.py
-```
-
-This folder structure is required for Langflow to properly discover and load your custom components. Components placed directly in the base directory aren't loaded.
-
-```
-/app/custom_components/          # LANGFLOW_COMPONENTS_PATH
-    └── custom_component.py      # Won't be loaded - missing category folder!
 ```
 
 ## Custom component inputs and outputs
