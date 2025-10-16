@@ -50,6 +50,8 @@ import type { FlowType } from "@/types/flow";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
 import { useQueryClient } from "@tanstack/react-query";
+import useTheme from "@/customization/hooks/use-custom-theme";
+import { Moon, Sun } from "lucide-react";
 
 // Delete Confirmation Modal Component
 const DeleteConfirmationModal = ({
@@ -137,7 +139,7 @@ const AgentCard = ({
 
   return (
     <Card
-      className="group cursor-pointer hover:shadow-md transition-all duration-200 h-full"
+      className="group cursor-pointer hover:shadow-md transition-all duration-200 h-full bg-background dark:bg-black dark:text-white border border-[#efefef] dark:border-white/20"
       onClick={() => navigate(`/flow/${flow.id}/folder/${folderId}/`)}
     >
       <CardHeader className="pb-3 pr-2">
@@ -157,7 +159,7 @@ const AgentCard = ({
             </div>
             <div className="min-w-0 flex-1 overflow-hidden">
               <CardTitle
-                className="text-sm md:text-base font-semibold leading-snug whitespace-normal"
+                className="text-sm md:text-base font-semibold leading-snug whitespace-normal dark:text-white"
                 title={flow.name}
               >
                 {flow.name}
@@ -179,7 +181,7 @@ const AgentCard = ({
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <CardDescription className="text-sm text-muted-foreground mb-3 line-clamp-2">
+        <CardDescription className="text-sm text-muted-foreground mb-3 line-clamp-2 dark:text-white/70">
           {flow.description || "No description available"}
         </CardDescription>
         <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -227,7 +229,7 @@ const AgentListItem = ({
     <Card
       key={flow.id}
       onClick={() => navigate(`/flow/${flow.id}/folder/${folderId}/`)}
-      className="flex flex-row bg-background cursor-pointer justify-between rounded-lg border-none px-4 py-3 shadow-none hover:bg-muted"
+      className="flex flex-row bg-background dark:bg-black dark:text-white cursor-pointer justify-between rounded-lg border-none px-4 py-3 shadow-none hover:bg-muted"
       data-testid="list-card"
     >
       <div className="flex min-w-0 items-start gap-4">
@@ -251,7 +253,7 @@ const AgentListItem = ({
                 {flow.name}
               </span>
             </div>
-            <div className="flex min-w-0 flex-shrink text-xs text-muted-foreground">
+            <div className="flex min-w-0 flex-shrink text-xs text-muted-foreground dark:text-white/70">
               <span className="truncate">
                 {flow.updated_at
                   ? `Edited ${timeElapsed(flow.updated_at)} ago`
@@ -259,7 +261,7 @@ const AgentListItem = ({
               </span>
             </div>
           </div>
-          <div className="mt-1 text-xs text-muted-foreground line-clamp-2">
+          <div className="mt-1 text-xs text-muted-foreground dark:text-white/70 line-clamp-2">
             {flow.description || "No description available"}
           </div>
         </div>
@@ -465,26 +467,26 @@ export default function AgentBuilderPage() {
   };
 
   return (
-    <div className="flex h-full w-full overflow-y-auto">
+    <div className="flex h-full w-full overflow-y-auto dark:bg-black dark:text-white">
       <div className="w-full p-4">
         {/* AI Agent Builder Title */}
         <div className="mb-6">
           <div className="flex items-center justify-between gap-2">
-            <h1 className="text-[#350E84] text-[21px] font-medium leading-normal not-italic">
+            <h1 className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic">
               AI Studio
             </h1>
             {/* Project Selector */}
             <div className="flex items-center gap-2">
               <div className="text-sm text-muted-foreground">Project</div>
               <Select onValueChange={handleSelectProject} value={folderId}>
-                <SelectTrigger className="w-[220px] h-9">
+                <SelectTrigger className="w-[220px] h-9 dark:border-white/20 dark:text-white">
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
-                <SelectContent align="end">
+                <SelectContent align="end" className="dark:bg-black dark:text-white">
                   {folders
                     .filter((f) => f.name !== "Builder Agent")
                     .map((f) => (
-                      <SelectItem key={f.id} value={f.id!} className="text-sm">
+                      <SelectItem key={f.id} value={f.id!} className="text-sm dark:text-white">
                         {f.name}
                       </SelectItem>
                     ))}
@@ -525,7 +527,7 @@ export default function AgentBuilderPage() {
               rows={1}
               onChange={(e) => setPromptValue(e.target.value)}
               placeholder="Describe your agent... e.g., 'Create an agent that can create a clinical summary from a patient chart'"
-              className="w-full p-4 pr-12 rounded-lg border border-input bg-background text-sm focus:outline-none"
+              className="w-full p-4 pr-12 rounded-lg border border-input dark:border-white/20 bg-background dark:bg-black text-sm dark:text-white placeholder:text-muted-foreground dark:placeholder:text-white/60 focus:outline-none"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -546,7 +548,7 @@ export default function AgentBuilderPage() {
           <div className="mt-3 text-center">
             <button
               onClick={() => setShowTemplatesModal(true)}
-              className="text-sm text-primary-blue font-medium"
+              className="text-sm text-primary-blue dark:text-white font-medium"
             >
               Or Get Started Step-by-Step
             </button>
@@ -554,7 +556,7 @@ export default function AgentBuilderPage() {
         </div>
 
         {/* Recent Agents Section */}
-        <div className="mt-4 pt-4 max-w-[876px] mx-auto border-t border-[#efefef]">
+        <div className="mt-4 pt-4 max-w-[876px] mx-auto border-t border-[#efefef] dark:border-white/20">
           <div className="flex items-center justify-between mb-6">
             <div className="text-base font-semibold">
               Top {folderData?.flows?.items.length || 0} Agents
@@ -567,7 +569,7 @@ export default function AgentBuilderPage() {
                     variant="ghost"
                     size="sm"
                     className={cn(
-                      "h-8 px-2 text-sm gap-1 border border-solid border-[#efefef] rounded-lg",
+                      "h-8 px-2 text-sm gap-1 border border-solid border-[#efefef] dark:border-white/20 rounded-lg",
                       sortOpen && "bg-muted text-foreground",
                     )}
                     aria-haspopup="menu"
@@ -584,44 +586,44 @@ export default function AgentBuilderPage() {
                     />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="p-1">
+                <DropdownMenuContent align="end" className="p-1 dark:bg-black dark:text-white">
                   <DropdownMenuItem
                     className={cn(
-                      "flex items-center justify-between gap-4 text-sm",
+                      "flex items-center justify-between gap-4 text-sm dark:text-white dark:hover:text-white",
                       sortBy === "most_recent" && "bg-accent",
                     )}
                     onClick={() => setSortBy("most_recent")}
                     aria-selected={sortBy === "most_recent"}
                   >
-                    <span>Most Recent</span>
+                    <span className="dark:text-white">Most Recent</span>
                     <div className="flex items-center gap-1">
                       <ForwardedIconComponent
                         name="ArrowUp"
-                        className="h-3 w-3"
+                        className="h-3 w-3 dark:text-white"
                       />
                       <ForwardedIconComponent
                         name="ArrowDown"
-                        className="h-3 w-3"
+                        className="h-3 w-3 dark:text-white"
                       />
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className={cn(
-                      "flex items-center justify-between gap-4 text-sm",
+                      "flex items-center justify-between gap-4 text-sm dark:text-white dark:hover:text-white",
                       sortBy === "recently_created" && "bg-accent",
                     )}
                     onClick={() => setSortBy("recently_created")}
                     aria-selected={sortBy === "recently_created"}
                   >
-                    <span>Recently Created</span>
+                    <span className="dark:text-white">Recently Created</span>
                     <div className="flex items-center gap-1">
                       <ForwardedIconComponent
                         name="ArrowUp"
-                        className="h-3 w-3"
+                        className="h-3 w-3 dark:text-white"
                       />
                       <ForwardedIconComponent
                         name="ArrowDown"
-                        className="h-3 w-3"
+                        className="h-3 w-3 dark:text-white"
                       />
                     </div>
                   </DropdownMenuItem>

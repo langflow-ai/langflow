@@ -62,7 +62,11 @@ export default function MainSidebar(): JSX.Element {
                 }
               `}
             >
-              <Icon className={`${isCollapsed ? 'h-5 w-5' : 'h-5 w-5'} flex-shrink-0`} />
+              <Icon
+                className={`${
+                  isCollapsed ? 'h-5 w-5' : 'h-5 w-5'
+                } flex-shrink-0 ${active ? 'text-[#350E84] dark:text-white' : ''}`}
+              />
               {!isCollapsed && (
                 <span className="text-sm font-medium truncate">
                   {item.label}

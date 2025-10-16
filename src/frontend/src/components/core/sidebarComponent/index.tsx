@@ -43,7 +43,9 @@ const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
                       data-testid={`sidebar-nav-${item.title}`}
                       tooltip={item.title}
                     >
-                      {item.icon}
+                      <span className="text-muted-foreground dark:text-white/80 peer-hover/menu-button:text-accent-foreground peer-data-[active=true]/menu-button:text-accent-foreground dark:peer-data-[active=true]/menu-button:text-white">
+                        {item.icon}
+                      </span>
                       <span className="block max-w-full truncate">
                         {item.title}
                       </span>
