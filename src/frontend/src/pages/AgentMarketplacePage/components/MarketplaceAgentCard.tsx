@@ -39,8 +39,8 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid" }: Market
 
   return (
     <div
-      className="group relative flex h-full flex-col rounded-lg border border-[#EBE8FF] bg-white dark:bg-card px-4 py-3 transition-shadow hover:shadow-md cursor-pointer"
-      onClick={handleCardClick}
+      className={`group relative flex h-full flex-col rounded-lg border border-[#EBE8FF] bg-white dark:bg-card px-4 py-3 transition-shadow hover:shadow-md ${item.flow_id ? "cursor-pointer" : "cursor-default"}`}
+      onClick={item.flow_id ? handleCardClick : undefined}
     >
       {/* Header */}
       <div className="mb-3 flex items-start justify-between">

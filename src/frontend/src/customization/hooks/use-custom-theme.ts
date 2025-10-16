@@ -32,10 +32,18 @@ const useTheme = () => {
       setSystemTheme(true);
       handleSystemTheme();
     } else {
-      // Default to light theme when no preference is stored
-      setDark(false);
+      // No explicit preference set:
+      // Respect persisted "isDark" value if available, otherwise keep current state
+      const persistedDark = localStorage.getItem("isDark");
+      if (persistedDark !== null) {
+        try {
+          setDark(JSON.parse(persistedDark));
+        } catch {
+          // Fallback if parsing fails
+          setDark(persistedDark === "true");
+        }
+      }
       setSystemTheme(false);
-      localStorage.setItem("themePreference", "light");
     }
   }, []);
 

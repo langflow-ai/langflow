@@ -351,8 +351,8 @@ export default function AgentMarketplacePage() {
             <div
               className={
                 viewMode === "grid"
-                  ? "grid auto-rows-fr grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
-                  : "flex flex-col gap-4"
+                  ? "grid auto-rows-fr grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 min-h-[calc(100vh-280px)]"
+                  : "flex flex-col gap-4 flex-1 min-h-[calc(100vh-280px)]"
               }
             >
               <ListSkeleton />
@@ -365,8 +365,8 @@ export default function AgentMarketplacePage() {
               <div
                 className={
                   viewMode === "grid"
-                    ? "grid auto-rows-fr grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
-                    : "flex flex-col gap-4"
+                    ? "grid auto-rows-fr grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 min-h-[calc(100vh-280px)]"
+                    : "flex flex-col gap-4 flex-1 min-h-[calc(100vh-280px)]"
                 }
               >
                 {visibleItems.map((item) => (
