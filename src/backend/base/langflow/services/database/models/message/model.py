@@ -22,6 +22,7 @@ class MessageBase(SQLModel):
     sender: str
     sender_name: str
     session_id: str
+    context_id: str | None = Field(default=None)
     text: str = Field(sa_column=Column(Text))
     files: list[str] = Field(default_factory=list)
     error: bool = Field(default=False)
@@ -112,6 +113,7 @@ class MessageBase(SQLModel):
             sender_name=message.sender_name,
             text=message_text,
             session_id=message.session_id,
+            context_id=message.context_id,
             files=message.files or [],
             timestamp=timestamp,
             flow_id=flow_id,
@@ -183,6 +185,7 @@ class MessageUpdate(SQLModel):
     sender: str | None = None
     sender_name: str | None = None
     session_id: str | None = None
+    context_id: str | None = None
     files: list[str] | None = None
     edit: bool | None = None
     error: bool | None = None
