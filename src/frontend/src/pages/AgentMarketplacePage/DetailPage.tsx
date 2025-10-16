@@ -14,21 +14,14 @@ import FlowPage from "../FlowPage";
 type MarketplaceDetailState = {
   name?: string;
   description?: string;
-  domain?: string;
-  version?: string;
-  specYaml?: string;
   spec?: Record<string, any>;
-  fileName?: string;
-  folderName?: string;
-  status?: string;
-  noFlow?: boolean;
 };
 
 export default function AgentMarketplaceDetailPage() {
   const location = useLocation();
   const { flowId } = useParams<{ flowId: string }>();
-  const dark = useDarkStore((state) => state.dark);
   const state = (location.state || {}) as MarketplaceDetailState;
+  const dark = useDarkStore((state) => state.dark);
 
   const { mutateAsync: getFlow } = useGetFlow();
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
@@ -37,9 +30,59 @@ export default function AgentMarketplaceDetailPage() {
   const [isLoadingFlow, setIsLoadingFlow] = useState(false);
   const [flowError, setFlowError] = useState<string | null>(null);
 
-  const title = state.name || state.fileName || "Agent Details";
+  const title = state.name || "Agent Details";
   const description = state.description || "Explore details and specification.";
-  const hasNoFlow = flowId === "no-flow" || state.noFlow;
+  const hasNoFlow = flowId === "no-flow";
+
+  // Convert spec object to YAML format
+  const jsonToYaml = (value: any, indent = 0): string => {
+    const spacer = " ".repeat(indent);
+    const nextIndent = indent + 2;
+
+    const formatScalar = (v: any): string => {
+      if (v === null || v === undefined) return "null";
+      const t = typeof v;
+      if (t === "string") return JSON.stringify(v);
+      if (t === "number") return Number.isFinite(v) ? String(v) : JSON.stringify(v);
+      if (t === "boolean") return v ? "true" : "false";
+      return JSON.stringify(v);
+    };
+
+    if (Array.isArray(value)) {
+      if (value.length === 0) return "[]";
+      return value
+        .map((item) => {
+          if (item && typeof item === "object") {
+            const nested = jsonToYaml(item, nextIndent);
+            return `${spacer}- ${nested.startsWith("\n") ? nested.substring(1) : `\n${nested}`}`;
+          }
+          return `${spacer}- ${formatScalar(item)}`;
+        })
+        .join("\n");
+    }
+
+    if (value && typeof value === "object") {
+      const keys = Object.keys(value);
+      if (keys.length === 0) return "{}";
+      return keys
+        .map((key) => {
+          const val = (value as any)[key];
+          if (val && typeof val === "object") {
+            const nested = jsonToYaml(val, nextIndent);
+            if (Array.isArray(val)) {
+              return `${spacer}${key}: ${nested.includes("\n") ? `\n${nested}` : nested}`;
+            }
+            return `${spacer}${key}:\n${nested}`;
+          }
+          return `${spacer}${key}: ${formatScalar(val)}`;
+        })
+        .join("\n");
+    }
+
+    return `${spacer}${formatScalar(value)}`;
+  };
+
+  const specYaml = state.spec ? jsonToYaml(state.spec) : "# No specification available";
 
   useEffect(() => {
     if (flowId && !hasNoFlow) {
@@ -122,7 +165,7 @@ export default function AgentMarketplaceDetailPage() {
                       Flow visualization will appear here when available.
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Name: {state.name || "Unknown"} • Version: {state.version || "—"}
+                      Name: {state.name || "Unknown"}
                     </p>
                   </div>
                 </div>
@@ -137,8 +180,8 @@ export default function AgentMarketplaceDetailPage() {
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        if (state.specYaml) {
-                          navigator.clipboard?.writeText(state.specYaml);
+                        if (specYaml) {
+                          navigator.clipboard?.writeText(specYaml);
                         }
                       }}
                     >
@@ -153,7 +196,7 @@ export default function AgentMarketplaceDetailPage() {
                     customStyle={{ margin: 0, background: "transparent" }}
                     wrapLongLines
                   >
-                    {state.specYaml || "# No specification found"}
+                    {specYaml}
                   </SyntaxHighlighter>
                 </div>
               </div>
