@@ -11,6 +11,7 @@ import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import FlowPage from "../FlowPage";
 import { useGetAgentByFlowId } from "@/controllers/API/queries/agent-marketplace/use-get-agent-by-flow-id";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 
 type MarketplaceDetailState = {
   name?: string;
@@ -23,6 +24,7 @@ export default function AgentMarketplaceDetailPage() {
   const { flowId } = useParams<{ flowId: string }>();
   const state = (location.state || {}) as MarketplaceDetailState;
   const dark = useDarkStore((state) => state.dark);
+  const navigate = useCustomNavigate();
 
   const { mutateAsync: getFlow } = useGetFlow();
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
@@ -46,6 +48,13 @@ export default function AgentMarketplaceDetailPage() {
   const spec = agentData?.spec || state.spec || {};
   const title = spec.name || state.name || "Agent Details";
   const description = spec.description || state.description || "Explore details and specification.";
+
+  // Handle Edit button click
+  const handleEditClick = () => {
+    if (flowId && !hasNoFlow) {
+      navigate(`/flow/${flowId}/`);
+    }
+  };
 
   // Convert spec object to YAML format
   const jsonToYaml = (value: any, indent = 0): string => {
@@ -126,14 +135,29 @@ export default function AgentMarketplaceDetailPage() {
       <div className="flex w-full flex-col gap-4">
         <div className="flex flex-col">
           <Tabs defaultValue="flow" className="w-full">
-            <TabsList className="w-full justify-start gap-2 border-b border-border p-0">
-              <TabsTrigger value="flow" className="px-3 py-2 text-sm">
-                Flow Visualization
-              </TabsTrigger>
-              <TabsTrigger value="spec" className="px-3 py-2 text-sm">
-                Specification
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex items-center justify-between">
+              <TabsList className="justify-start gap-2 border-b border-border p-0">
+                <TabsTrigger value="flow" className="px-3 py-2 text-sm">
+                  Flow Visualization
+                </TabsTrigger>
+                <TabsTrigger value="spec" className="px-3 py-2 text-sm">
+                  Specification
+                </TabsTrigger>
+              </TabsList>
+              
+              {/* Edit Button - only show if flow exists */}
+              {flowId && !hasNoFlow && (
+                <Button
+                  onClick={handleEditClick}
+                  size="sm"
+                  className="shrink-0"
+                >
+                  <ForwardedIconComponent name="Pencil" className="h-4 w-4 shrink-0" />
+                  Edit
+                </Button>
+              )}
+            </div>
+
             <TabsContent value="flow" className="mt-4 w-full">
               {hasNoFlow ? (
                 <div className="flex h-[520px] w-full items-center justify-center rounded-lg border border-border bg-card">

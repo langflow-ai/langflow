@@ -630,7 +630,7 @@ const RAW_AGENTS_LIST: StaticAgentInput[] = [
     description: "Identifies and extracts relevant lab results from medical records, organising them into structured data for quick reference and analysis.",
     tag: "Clinical Document Processing",
     version: "1.0",
-    flow_id: ""
+    flow_id: "e1a1625a-17cd-43a6-92dd-964e4a42074a"
   },
   {
     name: "Form Data Extraction Agent",
