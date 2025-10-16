@@ -310,7 +310,7 @@ async def _build_chroma_store(
 def _build_opensearch_store(
     _kb_path: Path,
     collection_name: str,
-    _embedding_function: Any | None,
+    embedding_function: Any | None,
     config: OpenSearchKBConfig,
 ) -> tuple[OpenSearch, Any]:
     """Build an OpenSearch vector store instance using the real OpenSearch component."""
@@ -331,6 +331,7 @@ def _build_opensearch_store(
     component.verify_certs = verify_certs
     component.use_ssl = use_ssl
     component.auth_mode = "basic"
+    component.embedding = embedding_function
 
     client = OpenSearchVectorStoreComponent.build_client(
         opensearch_url=opensearch_url,
