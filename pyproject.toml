@@ -134,7 +134,10 @@ dependencies = [
     "fastparquet>=2024.11.0,<2025.0.0",
     "traceloop-sdk>=0.43.1,<1.0.0",
     "vlmrun[all]>=0.2.0",
+    "cuga==0.1.2.dev3",
+
 ]
+
 
 [dependency-groups]
 dev = [
@@ -307,7 +310,7 @@ directory = "coverage"
 
 
 [tool.ruff]
-exclude = ["src/backend/base/langflow/alembic/*", "src/frontend/tests/assets/*"]
+exclude = ["src/backend/base/langflow/alembic/*", "src/frontend/tests/assets/*", "src/lfx/src/lfx/_assets/component_index.json"]
 line-length = 120
 
 [tool.ruff.lint]
