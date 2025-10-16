@@ -209,6 +209,7 @@ from lfx.io import (
     TableInput,
 )
 from lfx.schema.data import Data
+from lfx.schema.dataframe import DataFrame
 """
 
 if importlib.util.find_spec("langchain") is not None:
