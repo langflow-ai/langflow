@@ -574,7 +574,7 @@ const RAW_AGENTS_LIST: StaticAgentInput[] = [
     description: "Checks real-time insurance eligibility using payer APIs and returns coverage status, copay, and deductible for scheduled services.",
     tag: "Revenue Cycle Management",
     version: "1.0.0",
-    flow_id: ""
+    flow_id: "fd0e7c07-6161-4ea8-8791-0bc214bb4ba5"
   },
   {
     name: "Pre-Authorization Assistant Agent",
@@ -630,7 +630,7 @@ const RAW_AGENTS_LIST: StaticAgentInput[] = [
     description: "Identifies and extracts relevant lab results from medical records, organising them into structured data for quick reference and analysis.",
     tag: "Clinical Document Processing",
     version: "1.0.0",
-    flow_id: ""
+    flow_id: "7190def6-7a7f-49c2-9dd5-c781ee71beec"
   },
   {
     name: "Form Data Extraction Agent",
@@ -644,7 +644,7 @@ const RAW_AGENTS_LIST: StaticAgentInput[] = [
     description: "Extracts key details from PA records, such as service request forms, clinical attachments for efficient clinical decision-making and streamlining approval process.",
     tag: "Utilization Management",
     version: "1.0.0",
-    flow_id: ""
+    flow_id: "ff53e3bf-3476-43ca-9955-33de4eeacd6b"
   },
   {
     name: "Guideline Retrieval Agent",
@@ -658,7 +658,7 @@ const RAW_AGENTS_LIST: StaticAgentInput[] = [
     description: "Identifies key clinical concepts like symptoms, diagnoses, medications, PHI and procedures from medical documents, structuring them for efficient clinical decision making.",
     tag: "HEDIS Care Gap",
     version: "1.0.0",
-    flow_id: ""
+    flow_id: "d771b35a-e94a-487e-adcd-3f5d856f3fc4"
   },
   {
     name: "Precall Summarization Agent",
@@ -700,7 +700,7 @@ const RAW_AGENTS_LIST: StaticAgentInput[] = [
     description: "The IE Criteria Simplification Agent extracts and simplifies the eligibility criteria from clinical trial protocols, presenting clear and concise summaries to facilitate quicker participant screening and recruitment.",
     tag: "Clinical Research",
     version: "1.0.0",
-    flow_id: "fe966081-326f-4306-9f44-b418198d8e67"
+    flow_id: "1e2607f0-22c0-4e84-95d6-1500f196dde8"
   },
   {
     name: "IE Criteria Structuring Agent",
@@ -714,7 +714,7 @@ const RAW_AGENTS_LIST: StaticAgentInput[] = [
     description: "The Clinical Document Summarization Agent extracts and condenses essential information from lengthy clinical documents, such as progress notes or discharge summaries, to provide concise, easy-to-understand overviews for quick clinical review.",
     tag: "Clinical Document Processing",
     version: "1.0.0",
-    flow_id: ""
+    flow_id: "eae2d7bb-a11a-4ddd-85cd-3b471aabda56"
   },
   {
     name: "Content Simplification Agent",
@@ -763,21 +763,21 @@ const RAW_AGENTS_LIST: StaticAgentInput[] = [
     description: "Performs QA on individual documents by analyzing content and providing precise, context-based responses to user queries for accurate and efficient information retrieval.",
     tag: "Data Integration",
     version: "1.0.0",
-    flow_id: ""
+    flow_id: "552f9aa9-773d-48a5-ab98-7e3bd95efa7c"
   },
   {
     name: "Relation Extraction Agent",
     description: "Identifies and extracts relationships between clinical entities, such as treatments, and their dates, from medical documents to support deeper data analysis and knowledge discovery.",
     tag: "Clinical NLP",
     version: "1.0.0",
-    flow_id: ""
+    flow_id: "f5bd7e89-3d4f-42e8-9975-a426cfa99066"
   },
   {
     name: "Entity Normalization Agent",
     description: "Standardizes extracted clinical terms, mapping them to unified medical terminologies or codes (e.g., SNOMED CT, ICD-10) to ensure consistency and improve data interoperability across systems.",
     tag: "Clinical NLP",
     version: "1.0.0",
-    flow_id: ""
+    flow_id: "4bbe22b2-2d46-4e50-b972-98a2ce77b645"
   },
   {
     name: "Negation Detection Agent",
@@ -798,14 +798,14 @@ const RAW_AGENTS_LIST: StaticAgentInput[] = [
     description: "Provide recommendations on prior authorization approvals based on the adjudication, streamlining decision-making and ensuring compliance with payer requirements.",
     tag: "Utilization Management",
     version: "1.0.0",
-    flow_id: ""
+    flow_id: "ca5d05c3-6b02-44d4-98d2-48ffcd3524fc"
   },
   {
     name: "Auth Guideline Adjudication Agent",
     description: "Evaluates prior authorization requests against clinical guidelines and payer policies to determine compliance, supporting accurate adjudication.",
     tag: "Utilization Management",
     version: "1.0.0",
-    flow_id: ""
+    flow_id: "33c6e8d6-3af9-4fe0-9ebb-95d6f2ad6a7b"
   },
   {
     name: "PHI/PII Identification Agent",
