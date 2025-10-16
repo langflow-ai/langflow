@@ -324,9 +324,9 @@ class MCPComposerService(Service):
         project_id: str,
         sse_url: str,
         auth_config: dict[str, Any] | None,
-        max_retries: int = 10,
-        max_startup_checks: int = 10,
-        startup_delay: float = 1.0,
+        max_retries: int = 3,
+        max_startup_checks: int = 60,
+        startup_delay: float = 3.0,
     ) -> None:
         """Start an MCP Composer instance for a specific project.
 
@@ -334,9 +334,9 @@ class MCPComposerService(Service):
             project_id: The project ID
             sse_url: The SSE URL to connect to
             auth_config: Authentication configuration
-            max_retries: Maximum number of retry attempts (default: 10)
-            max_startup_checks: Number of checks per retry attempt (default: 10)
-            startup_delay: Delay between checks in seconds (default: 1.0)
+            max_retries: Maximum number of retry attempts (default: 3)
+            max_startup_checks: Number of checks per retry attempt (default: 60)
+            startup_delay: Delay between checks in seconds (default: 3.0)
 
         Raises:
             MCPComposerError: Various specific errors if startup fails
@@ -371,9 +371,9 @@ class MCPComposerService(Service):
         project_id: str,
         sse_url: str,
         auth_config: dict[str, Any] | None,
-        max_retries: int = 10,
-        max_startup_checks: int = 10,
-        startup_delay: float = 1.0,
+        max_retries: int = 3,
+        max_startup_checks: int = 60,
+        startup_delay: float = 3.0,
     ) -> None:
         """Internal method to start an MCP Composer instance.
 
@@ -381,9 +381,9 @@ class MCPComposerService(Service):
             project_id: The project ID
             sse_url: The SSE URL to connect to
             auth_config: Authentication configuration
-            max_retries: Maximum number of retry attempts (default: 10)
-            max_startup_checks: Number of checks per retry attempt (default: 10)
-            startup_delay: Delay between checks in seconds (default: 1.0)
+            max_retries: Maximum number of retry attempts (default: 3)
+            max_startup_checks: Number of checks per retry attempt (default: 60)
+            startup_delay: Delay between checks in seconds (default: 3.0)
 
         Raises:
             MCPComposerError: Various specific errors if startup fails
@@ -521,8 +521,8 @@ class MCPComposerService(Service):
         port: int,
         sse_url: str,
         auth_config: dict[str, Any] | None = None,
-        max_startup_checks: int = 10,
-        startup_delay: float = 1.0,
+        max_startup_checks: int = 60,
+        startup_delay: float = 3.0,
     ) -> subprocess.Popen:
         """Start the MCP Composer subprocess for a specific project.
 
@@ -532,8 +532,8 @@ class MCPComposerService(Service):
             port: Port to bind to
             sse_url: SSE URL to connect to
             auth_config: Authentication configuration
-            max_startup_checks: Number of port binding checks (default: 10)
-            startup_delay: Delay between checks in seconds (default: 1.0)
+            max_startup_checks: Number of port binding checks (default: 60)
+            startup_delay: Delay between checks in seconds (default: 3.0)
 
         Returns:
             The started subprocess
