@@ -185,7 +185,7 @@ export default function AgentMarketplaceDetailPage() {
               )}
             </TabsContent>
             <TabsContent value="spec" className="mt-4 w-full">
-              <div className="flex h-[520px] w-full flex-col overflow-hidden rounded-lg border border-border dark:border-white/20">
+              <div className="flex h-[calc(100vh-200px)] w-full flex-col overflow-hidden rounded-lg border border-border dark:border-white/20">
                 <div className="flex items-center justify-between border-b border-border dark:border-white/20 px-3 py-2">
                   <div className="text-sm font-medium dark:text-white">YAML Specification</div>
                   <div className="flex items-center gap-2">
