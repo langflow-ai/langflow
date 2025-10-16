@@ -640,38 +640,15 @@ async def download_multiple_file(
 all_starter_folder_flows_response: Response | None = None
 
 
-@router.get("/basic_examples/", response_model=list[FlowRead], status_code=200)
-async def read_basic_examples(
-    *,
-    session: DbSession,
-):
-    """Retrieve a list of basic example flows.
-
-    Args:
-        session (Session): The database session.
+@router.get("/basic_examples/", response_model=list[dict], status_code=200)
+async def read_basic_examples():
+    """Retrieve JSON content from all starter project JSON files.
 
     Returns:
-        list[FlowRead]: A list of basic example flows.
+        list[dict]: A list of JSON objects from the starter projects directory.
     """
     try:
-        global all_starter_folder_flows_response  # noqa: PLW0603
-
-        if all_starter_folder_flows_response:
-            return all_starter_folder_flows_response
-        # Get the starter folder
-        starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
-
-        if not starter_folder:
-            return []
-
-        # Get all flows in the starter folder
-        all_starter_folder_flows = (await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))).all()
-
-        flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in all_starter_folder_flows]
-        all_starter_folder_flows_response = compress_response(flow_reads)
-
-        # Return compressed response using our utility function
-        return all_starter_folder_flows_response  # noqa: TRY300
-
+        from langflow.utils.starter_projects_utils import get_starter_projects_json_content
+        return get_starter_projects_json_content()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
