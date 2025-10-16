@@ -355,7 +355,7 @@ async def simplified_run_flow(
     stream: bool = False,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
     context: dict | None = None,
-    http_request: Request,  
+    http_request: Request,
 ):
     """Executes a specified flow by ID with support for streaming and telemetry.
 
@@ -391,7 +391,6 @@ async def simplified_run_flow(
             - "token": Individual tokens during streaming
             - "end": Final execution result
     """
-
     await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
 
     telemetry_service = get_telemetry_service()
@@ -634,7 +633,6 @@ async def experimental_run_flow(
     catering to diverse application requirements.
     """  # noqa: E501
     await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
-
 
     session_service = get_session_service()
     flow_id_str = str(flow_id)

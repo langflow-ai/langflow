@@ -697,11 +697,7 @@ async def test_user_can_run_own_flow(client: AsyncClient, simple_api_test, creat
 
 
 @pytest.mark.benchmark
-async def test_user_cannot_run_other_users_flow(
-    client: AsyncClient,
-    simple_api_test,
-    user_two_api_key
-):
+async def test_user_cannot_run_other_users_flow(client: AsyncClient, simple_api_test, user_two_api_key):
     """Test that a user cannot run another user's flow - should return 403 Forbidden."""
     # simple_api_test belongs to active_user, but we're using user_two's API key
     headers = {"x-api-key": user_two_api_key}
@@ -714,11 +710,7 @@ async def test_user_cannot_run_other_users_flow(
 
 
 @pytest.mark.benchmark
-async def test_user_cannot_run_other_users_flow_with_payload(
-    client: AsyncClient,
-    simple_api_test,
-    user_two_api_key
-):
+async def test_user_cannot_run_other_users_flow_with_payload(client: AsyncClient, simple_api_test, user_two_api_key):
     """Test that a user cannot run another user's flow even with valid payload."""
     headers = {"x-api-key": user_two_api_key}
     flow_id = simple_api_test["id"]
@@ -735,11 +727,7 @@ async def test_user_cannot_run_other_users_flow_with_payload(
 
 
 @pytest.mark.benchmark
-async def test_user_can_run_own_flow_with_streaming(
-    client: AsyncClient,
-    simple_api_test,
-    created_api_key
-):
+async def test_user_can_run_own_flow_with_streaming(client: AsyncClient, simple_api_test, created_api_key):
     """Test that a user can run their own flow with streaming enabled."""
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -749,22 +737,13 @@ async def test_user_can_run_own_flow_with_streaming(
         "input_value": "test",
     }
 
-    async with client.stream(
-        "POST",
-        f"/api/v1/run/{flow_id}?stream=true",
-        headers=headers,
-        json=payload
-    ) as response:
+    async with client.stream("POST", f"/api/v1/run/{flow_id}?stream=true", headers=headers, json=payload) as response:
         assert response.status_code == status.HTTP_200_OK, response.text
         assert response.headers["content-type"].startswith("text/event-stream")
 
 
 @pytest.mark.benchmark
-async def test_user_cannot_run_other_users_flow_with_streaming(
-    client: AsyncClient,
-    simple_api_test,
-    user_two_api_key
-):
+async def test_user_cannot_run_other_users_flow_with_streaming(client: AsyncClient, simple_api_test, user_two_api_key):
     """Test that a user cannot run another user's flow with streaming."""
     headers = {"x-api-key": user_two_api_key}
     flow_id = simple_api_test["id"]
@@ -774,22 +753,14 @@ async def test_user_cannot_run_other_users_flow_with_streaming(
         "input_value": "test",
     }
 
-    response = await client.post(
-        f"/api/v1/run/{flow_id}?stream=true",
-        headers=headers,
-        json=payload
-    )
+    response = await client.post(f"/api/v1/run/{flow_id}?stream=true", headers=headers, json=payload)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
     assert "User does not have permission to run this flow" in response.text
 
 
 @pytest.mark.benchmark
-async def test_user_can_run_own_flow_advanced_endpoint(
-    client: AsyncClient,
-    simple_api_test,
-    created_api_key
-):
+async def test_user_can_run_own_flow_advanced_endpoint(client: AsyncClient, simple_api_test, created_api_key):
     """Test that a user can run their own flow using the advanced endpoint."""
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -800,11 +771,7 @@ async def test_user_can_run_own_flow_advanced_endpoint(
         "stream": False,
     }
 
-    response = await client.post(
-        f"/api/v1/run/advanced/{flow_id}",
-        headers=headers,
-        json=payload
-    )
+    response = await client.post(f"/api/v1/run/advanced/{flow_id}", headers=headers, json=payload)
 
     assert response.status_code == status.HTTP_200_OK, response.text
     json_response = response.json()
@@ -814,9 +781,7 @@ async def test_user_can_run_own_flow_advanced_endpoint(
 
 @pytest.mark.benchmark
 async def test_user_cannot_run_other_users_flow_advanced_endpoint(
-    client: AsyncClient,
-    simple_api_test,
-    user_two_api_key
+    client: AsyncClient, simple_api_test, user_two_api_key
 ):
     """Test that a user cannot run another user's flow using the advanced endpoint."""
     headers = {"x-api-key": user_two_api_key}
@@ -828,56 +793,36 @@ async def test_user_cannot_run_other_users_flow_advanced_endpoint(
         "stream": False,
     }
 
-    response = await client.post(
-        f"/api/v1/run/advanced/{flow_id}",
-        headers=headers,
-        json=payload
-    )
+    response = await client.post(f"/api/v1/run/advanced/{flow_id}", headers=headers, json=payload)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
     assert "User does not have permission to run this flow" in response.text
 
 
 @pytest.mark.benchmark
-async def test_permission_check_with_nonexistent_flow(
-    client: AsyncClient,
-    created_api_key
-):
+async def test_permission_check_with_nonexistent_flow(client: AsyncClient, created_api_key):
     """Test permission check with a non-existent flow ID."""
     headers = {"x-api-key": created_api_key.api_key}
     nonexistent_flow_id = uuid4()
 
-    response = await client.post(
-        f"/api/v1/run/{nonexistent_flow_id}",
-        headers=headers
-    )
+    response = await client.post(f"/api/v1/run/{nonexistent_flow_id}", headers=headers)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
 
 
 @pytest.mark.benchmark
-async def test_permission_check_with_invalid_flow_id(
-    client: AsyncClient,
-    created_api_key
-):
+async def test_permission_check_with_invalid_flow_id(client: AsyncClient, created_api_key):
     """Test permission check with an invalid flow ID format."""
     headers = {"x-api-key": created_api_key.api_key}
     invalid_flow_id = "not-a-valid-uuid"
 
-    response = await client.post(
-        f"/api/v1/run/{invalid_flow_id}",
-        headers=headers
-    )
+    response = await client.post(f"/api/v1/run/{invalid_flow_id}", headers=headers)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
 
 
 @pytest.mark.benchmark
-async def test_permission_check_blocks_before_execution(
-    client: AsyncClient,
-    simple_api_test,
-    user_two_api_key
-):
+async def test_permission_check_blocks_before_execution(client: AsyncClient, simple_api_test, user_two_api_key):
     """Test that permission check happens before flow execution to prevent resource usage."""
     headers = {"x-api-key": user_two_api_key}
     flow_id = simple_api_test["id"]
@@ -889,11 +834,7 @@ async def test_permission_check_blocks_before_execution(
     }
 
     # This should fail immediately at permission check, not during execution
-    response = await client.post(
-        f"/api/v1/run/{flow_id}",
-        headers=headers,
-        json=payload
-    )
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
     assert "User does not have permission to run this flow" in response.text
@@ -901,10 +842,7 @@ async def test_permission_check_blocks_before_execution(
 
 @pytest.mark.benchmark
 async def test_user_can_access_multiple_own_flows(
-    client: AsyncClient,
-    logged_in_headers,
-    json_simple_api_test,
-    created_api_key
+    client: AsyncClient, logged_in_headers, json_simple_api_test, created_api_key
 ):
     """Test that a user can access multiple flows they own."""
     # Create two flows for the same user
