@@ -706,7 +706,7 @@ async def test_user_cannot_run_other_users_flow(client: AsyncClient, simple_api_
     response = await client.post(f"/api/v1/run/{flow_id}", headers=headers)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
-    assert "User does not have permission to run this flow" in response.text
+    assert "You do not have permission to run this flow" in response.text
 
 
 @pytest.mark.benchmark
@@ -723,7 +723,7 @@ async def test_user_cannot_run_other_users_flow_with_payload(client: AsyncClient
     response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
-    assert "User does not have permission to run this flow" in response.text
+    assert "You do not have permission to run this flow" in response.text
 
 
 @pytest.mark.benchmark
@@ -756,7 +756,7 @@ async def test_user_cannot_run_other_users_flow_with_streaming(client: AsyncClie
     response = await client.post(f"/api/v1/run/{flow_id}?stream=true", headers=headers, json=payload)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
-    assert "User does not have permission to run this flow" in response.text
+    assert "You do not have permission to run this flow" in response.text
 
 
 @pytest.mark.benchmark
@@ -796,7 +796,7 @@ async def test_user_cannot_run_other_users_flow_advanced_endpoint(
     response = await client.post(f"/api/v1/run/advanced/{flow_id}", headers=headers, json=payload)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
-    assert "User does not have permission to run this flow" in response.text
+    assert "You do not have permission to run this flow" in response.text
 
 
 @pytest.mark.benchmark
@@ -837,7 +837,7 @@ async def test_permission_check_blocks_before_execution(client: AsyncClient, sim
     response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
-    assert "User does not have permission to run this flow" in response.text
+    assert "You do not have permission to run this flow" in response.text
 
 
 @pytest.mark.benchmark
