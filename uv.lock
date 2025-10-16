@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -1725,7 +1725,7 @@ wheels = [
 
 [[package]]
 name = "cuga"
-version = "0.1.2.dev3"
+version = "0.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1750,9 +1750,9 @@ dependencies = [
     { name = "typer" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5e/eb/37abf11af2242cdf81b7cad5ba7ed0b9c11c97e5c96f492e3a496afd2aa7/cuga-0.1.2.dev3.tar.gz", hash = "sha256:0ef39a2e5ba727aacfdd99463d1fa6d14d0a267ac7e942ed4b04a0d8e628f314", size = 13093206, upload-time = "2025-10-15T18:00:30.947Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/50/44/fe12f258facf510f75fd5ff67e1afc01d753a976e9a76fd50ca677ed9167/cuga-0.1.2.tar.gz", hash = "sha256:cdc2d8f4651d6b97e4b3bff8e65e70d03f4668ddfe1e7bb5a6269a0fbbbdd660", size = 13102228, upload-time = "2025-10-16T15:48:09.486Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/40/c084bb6175d5ec8d0f949e208a2c8116efecda99bd249b39ce5adc4ff7bd/cuga-0.1.2.dev3-py3-none-any.whl", hash = "sha256:5ad4e9ec73d0934825e0faa63f8a2b31c47e4e998b436a291bc48fff6b0b4455", size = 13639581, upload-time = "2025-10-15T18:00:26.029Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/fb/92812a8bc40e2f2dc3d91732965373ada50d9dc32045e1b9ff1117a1532f/cuga-0.1.2-py3-none-any.whl", hash = "sha256:1976b47d60648d8e12a0b3a1109febe556f15be2116502c05a638d3c651399cd", size = 13648611, upload-time = "2025-10-16T15:48:04.705Z" },
 ]
 
 [[package]]
@@ -5466,7 +5466,7 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "cryptography", specifier = ">=43.0.1,<44.0.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "cuga", specifier = "==0.1.2.dev3" },
+    { name = "cuga", specifier = "==0.1.2" },
     { name = "datasets", specifier = ">2.14.7,<4.0.0" },
     { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'", specifier = ">=2.36.1,<3.0.0" },
     { name = "docling-core", specifier = ">=2.36.1,<3.0.0" },
