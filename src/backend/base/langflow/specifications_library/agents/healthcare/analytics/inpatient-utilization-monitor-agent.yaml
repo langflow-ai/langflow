@@ -1,7 +1,9 @@
 id: urn:agent:genesis:utilization-management:inpatient-utilization-monitor:1.0.0
 name: Inpatient Utilization Monitor Agent
 fullyQualifiedName: genesis.autonomize.ai.inpatient-utilization-monitor
-description: Analyzes inpatient records, vitals, and lab results to identify cases no longer meeting medical necessity criteria. Supports level of care reviews and optimizes resource utilization through data-driven clinical decision support.
+description: Analyzes inpatient records, vitals, and lab results to identify cases
+  no longer meeting medical necessity criteria. Supports level of care reviews and
+  optimizes resource utilization through data-driven clinical decision support.
 domain: autonomize.ai
 subDomain: utilization-management
 version: 1.0.0
@@ -10,29 +12,27 @@ agentOwner: utilization-management@autonomize.ai
 agentOwnerDisplayName: Utilization Management Team
 email: utilization-management@autonomize.ai
 status: ACTIVE
-
 variables:
 - name: medical_necessity_threshold
-  type: float
+  type: number
   required: false
   default: 0.75
   description: Minimum threshold score for medical necessity determination
 - name: review_interval_hours
-  type: integer
+  type: number
   required: false
   default: 24
   description: Hours between automated utilization reviews
 - name: length_of_stay_threshold_days
-  type: integer
+  type: number
   required: false
   default: 3
   description: Minimum length of stay before utilization review triggers
 - name: clinical_severity_weight
-  type: float
+  type: number
   required: false
   default: 0.6
   description: Weight factor for clinical severity in necessity calculation
-
 tags:
 - utilization-management
 - medical-necessity
@@ -41,30 +41,12 @@ tags:
 - clinical-decision-support
 - resource-optimization
 - healthcare-analytics
-
 reusability:
   asTools: false
-
-sampleInput:
-  patient_id: "PAT789012"
-  admission_date: "2024-10-05"
-  current_los: 6
-  primary_diagnosis: "Pneumonia"
-  review_type: "continued_stay_review"
-  clinical_indicators: ["stable_vitals", "improving_labs", "ambulating"]
-
-sampleOutput:
-  review_id: "UR_20241011_001"
-  patient_id: "PAT789012"
-  medical_necessity_score: 0.68
-  recommendation: "discharge_planning"
-  level_of_care_appropriate: false
-  estimated_discharge_date: "2024-10-12"
-  alternative_care_settings: ["skilled_nursing", "home_health"]
-  cost_savings_potential: 2340.50
-
 kind: Single Agent
-agentGoal: Identify inpatient cases no longer meeting medical necessity criteria and support level of care reviews to optimize resource utilization while ensuring appropriate patient care
+agentGoal: Identify inpatient cases no longer meeting medical necessity criteria and
+  support level of care reviews to optimize resource utilization while ensuring appropriate
+  patient care
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -72,221 +54,187 @@ runMode: RealTime
 agencyLevel: KnowledgeDrivenWorkflow
 toolsUse: true
 learningCapability: Supervised
-
 components:
 - id: utilization-input
   name: Utilization Review Request Input
-  kind: Input
+  kind: Data
   type: genesis:chat_input
   description: Receive utilization review requests with patient and clinical parameters
   provides:
-  - useAs: input_value
+  - useAs: input
     in: utilization-agent
     description: Provide review context and clinical data requirements
-
 - id: his-integration
   name: Hospital Information System Integration
   kind: Tool
   type: genesis:mcp_tool
-  description: Access comprehensive hospital information system data for patient records and clinical information
+  description: Access comprehensive hospital information system data for patient records
+    and clinical information
   asTools: true
   config:
     tool_name: his_integration
-    description: |
-      Access Hospital Information System for comprehensive patient data.
-      Provides:
-      - Patient admission and discharge records
-      - Bed management and census data
-      - Clinical documentation and notes
-      - Physician orders and care plans
-      - Length of stay tracking and metrics
   provides:
   - useAs: tools
     in: utilization-agent
     description: Enable HIS data access for utilization analysis
-
 - id: ehr-clinical-data
   name: EHR Clinical Data Access
   kind: Tool
   type: genesis:mcp_tool
-  description: Access electronic health record systems for detailed clinical information and patient history
+  description: Access electronic health record systems for detailed clinical information
+    and patient history
   asTools: true
   config:
     tool_name: ehr_clinical_data
-    description: |
-      Access EHR systems for detailed clinical information.
-      Provides:
-      - Patient medical history and diagnoses
-      - Medication administration records
-      - Clinical assessments and progress notes
-      - Treatment plans and protocols
-      - Discharge planning documentation
   provides:
   - useAs: tools
     in: utilization-agent
     description: Enable comprehensive clinical data access
-
 - id: lis-integration
   name: Laboratory Information System Integration
   kind: Tool
   type: genesis:mcp_tool
-  description: Access laboratory information systems for lab results and diagnostic data analysis
+  description: Access laboratory information systems for lab results and diagnostic
+    data analysis
   asTools: true
   config:
     tool_name: lis_integration
-    description: |
-      Access Laboratory Information System for diagnostic data.
-      Provides:
-      - Laboratory test results and trends
-      - Diagnostic imaging reports
-      - Pathology results and interpretations
-      - Critical values and alerts
-      - Test ordering and scheduling data
   provides:
   - useAs: tools
     in: utilization-agent
     description: Enable lab data access for clinical assessment
-
 - id: vitals-monitoring-system
   name: Vitals Monitoring System Access
   kind: Tool
   type: genesis:mcp_tool
-  description: Access patient monitoring systems for real-time and historical vital signs data
+  description: Access patient monitoring systems for real-time and historical vital
+    signs data
   asTools: true
   config:
     tool_name: vitals_monitoring_system
-    description: |
-      Access patient monitoring systems for vital signs data.
-      Provides:
-      - Real-time vital signs monitoring
-      - Historical vital signs trends
-      - Clinical alerts and threshold breaches
-      - Hemodynamic monitoring data
-      - Respiratory and cardiac monitoring
   provides:
   - useAs: tools
     in: utilization-agent
     description: Enable vital signs monitoring for clinical assessment
-
 - id: medical-necessity-engine
   name: Medical Necessity Assessment Engine
   kind: Tool
   type: genesis:mcp_tool
-  description: Advanced clinical decision support engine for medical necessity determination and level of care assessment
+  description: Advanced clinical decision support engine for medical necessity determination
+    and level of care assessment
   asTools: true
   config:
     tool_name: medical_necessity_engine
-    description: |
-      Clinical decision support for medical necessity assessment.
-      Provides:
-      - Medical necessity scoring algorithms
-      - Level of care appropriateness assessment
-      - Clinical criteria evaluation
-      - Discharge readiness indicators
-      - Alternative care setting recommendations
   provides:
   - useAs: tools
     in: utilization-agent
     description: Enable medical necessity assessment capabilities
-
 - id: healthcare-data-exchange
   name: Healthcare Data Exchange Platform
   kind: Tool
   type: genesis:mcp_tool
-  description: Healthcare interoperability platform for accessing multi-source clinical data and care coordination
+  description: Healthcare interoperability platform for accessing multi-source clinical
+    data and care coordination
   asTools: true
   config:
     tool_name: healthcare_data_exchange
-    description: |
-      Healthcare data exchange for interoperability access.
-      Provides:
-      - Multi-provider clinical data aggregation
-      - Care coordination information
-      - Health information exchange data
-      - Provider network communication
-      - Patient care transition planning
   provides:
   - useAs: tools
     in: utilization-agent
     description: Enable healthcare data exchange capabilities
-
 - id: utilization-agent
   name: Inpatient Utilization Monitor Agent
   kind: Agent
   type: genesis:agent
-  description: Intelligent agent that analyzes inpatient data to identify cases no longer meeting medical necessity and supports level of care optimization
+  description: Intelligent agent that analyzes inpatient data to identify cases no
+    longer meeting medical necessity and supports level of care optimization
   config:
-    system_message: |
-      You are a healthcare utilization management specialist with expertise in medical necessity determination.
+    system_message: 'You are a healthcare utilization management specialist with expertise
+      in medical necessity determination.
+
       Your role is to:
+
       1. Analyze inpatient records, vitals, and lab results for medical necessity
+
       2. Identify cases no longer meeting criteria for continued inpatient care
+
       3. Support level of care reviews and discharge planning
+
       4. Recommend appropriate alternative care settings
+
       5. Calculate potential cost savings from optimized utilization
 
+
       Use clinical decision support tools to evaluate:
+
       - Patient stability and clinical indicators
+
       - Medical necessity criteria adherence
+
       - Appropriate level of care requirements
+
       - Discharge readiness assessments
+
       - Alternative care setting suitability
 
+
       Ensure recommendations prioritize patient safety while optimizing resource utilization.
+
+      '
   provides:
-  - useAs: agent
+  - useAs: output
     in: utilization-output
     description: Process utilization analysis and generate recommendations
-
 - id: utilization-output
   name: Utilization Review Output
-  kind: Output
+  kind: Data
   type: genesis:chat_output
-  description: Present comprehensive utilization review results with medical necessity assessment and care recommendations
+  description: Present comprehensive utilization review results with medical necessity
+    assessment and care recommendations
   provides: []
-
 outputs:
-- name: medical_necessity_assessment
-  type: object
-  description: Comprehensive medical necessity evaluation with scoring and recommendations
-- name: level_of_care_recommendation
-  type: string
-  description: Recommended level of care based on clinical assessment
-- name: discharge_planning_data
-  type: object
-  description: Discharge planning information and timeline recommendations
-- name: cost_impact_analysis
-  type: object
-  description: Financial impact analysis of utilization optimization
-
+- medical_necessity_assessment
+- level_of_care_recommendation
+- discharge_planning_data
+- cost_impact_analysis
 kpis:
 - name: Medical Necessity Accuracy Rate
-  description: Accuracy of medical necessity determinations validated by clinical review
-  target: "> 88%"
-  measurement: percentage
+  category: quality
+  valueType: percentage
+  target: 88
+  unit: '%'
+  description: Accuracy of medical necessity determinations validated by clinical
+    review
 - name: Length of Stay Reduction
+  category: efficiency
+  valueType: percentage
+  target: 15
+  unit: '%'
   description: Percentage reduction in inappropriate length of stay days
-  target: "> 15%"
-  measurement: percentage
 - name: Discharge Planning Timeliness
+  category: performance
+  valueType: percentage
+  target: 85
+  unit: '%'
   description: Percentage of discharge plans initiated within 24 hours of recommendation
-  target: "> 85%"
-  measurement: percentage
 - name: Cost Savings Achievement
+  category: efficiency
+  valueType: percentage
+  target: 70
+  unit: '%'
   description: Percentage of projected cost savings realized through utilization optimization
-  target: "> 70%"
-  measurement: percentage
 - name: Review Processing Time
+  category: performance
+  valueType: number
+  target: 20
+  unit: minutes
   description: Average time to complete utilization review analysis
-  target: "< 20 minutes"
-  measurement: minutes
 - name: Clinical Outcome Maintenance
+  category: quality
+  valueType: percentage
+  target: 95
+  unit: '%'
   description: Percentage of patients maintaining positive clinical outcomes post-discharge
-  target: "> 95%"
-  measurement: percentage
-
 securityInfo:
-  visibility: internal
-  confidentialityLevel: high
+  visibility: Internal
   gdprSensitive: true
-  complianceRequirements: ["HIPAA", "SOC2", "HITECH"]

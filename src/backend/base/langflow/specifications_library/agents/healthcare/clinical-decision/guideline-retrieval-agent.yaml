@@ -22,7 +22,7 @@ variables:
   default: gpt-4
   description: Model name to use
 - name: temperature
-  type: float
+  type: number
   required: false
   default: 0.1
   description: Temperature for model generation
@@ -32,8 +32,8 @@ tags:
 - healthcare
 - prior-authorization
 kind: Single Agent
-agentGoal: Retrieve applicable clinical guidelines, such as LCDs and NCDs, based on the requested service codes to support
-  medical necessity evaluation
+agentGoal: Retrieve applicable clinical guidelines, such as LCDs and NCDs, based on
+  the requested service codes to support medical necessity evaluation
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -41,15 +41,6 @@ runMode: RealTime
 agencyLevel: ModelDrivenWorkflow
 toolsUse: true
 learningCapability: None
-sampleInput:
-  service_codes:
-  - '70553'
-  - '70551'
-  diagnosis_codes:
-  - R51.9
-  - G43.909
-  line_of_business: Medicare
-  search_scope: LCD
 components:
 - id: input
   name: Request Input
@@ -67,11 +58,12 @@ components:
   description: Prompt template for agent instructions
   config:
     saved_prompt: guideline_retrieval_prompt_v1
-    template: 'You are a specialist agent. Retrieve applicable clinical guidelines based on procedure codes
+    template: 'You are a specialist agent. Retrieve applicable clinical guidelines
+      based on procedure codes
 
 
-      Goal: Retrieve applicable clinical guidelines, such as LCDs and NCDs, based on the requested service codes to support
-      medical necessity evaluation
+      Goal: Retrieve applicable clinical guidelines, such as LCDs and NCDs, based
+      on the requested service codes to support medical necessity evaluation
 
 
       Provide accurate and efficient results.'
@@ -116,26 +108,26 @@ outputs:
 - details
 kpis:
 - name: Guideline Match Accuracy
-  category: Quality
+  category: quality
   valueType: percentage
   target: 95
   unit: '%'
   description: Accuracy of guideline retrieval based on codes
 - name: Retrieval Success Rate
-  category: Quality
+  category: quality
   valueType: percentage
   target: 98
   unit: '%'
   description: Percentage of successful guideline retrievals
 - name: Retrieval Precision/Recall
-  category: Quality
-  valueType: numeric
+  category: quality
+  valueType: number
   target: 0.9
   unit: score
   description: Precision and recall of retrieved guidelines
 - name: Retrieval Latency
-  category: Performance
-  valueType: numeric
+  category: performance
+  valueType: number
   target: 2000
   unit: ms
   description: Time to retrieve relevant guidelines

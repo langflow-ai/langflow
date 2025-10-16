@@ -10,7 +10,6 @@ agentOwner: benefit-validation@autonomize.ai
 agentOwnerDisplayName: Benefit Validation Team
 email: benefit-validation@autonomize.ai
 status: ACTIVE
-
 kind: Single Agent
 agentGoal: Validate service coverage against member's Evidence of Coverage documents
 targetUser: internal
@@ -20,7 +19,6 @@ runMode: RealTime
 agencyLevel: KnowledgeDrivenWorkflow
 toolsUse: true
 learningCapability: None
-
 variables:
 - name: llm_provider
   type: string
@@ -33,7 +31,7 @@ variables:
   default: gpt-4
   description: Model name to use for EOC validation
 - name: temperature
-  type: float
+  type: number
   required: false
   default: 0.1
   description: Temperature for model generation
@@ -43,7 +41,7 @@ variables:
   default: eoc_documents,coverage_exclusions,benefit_summaries
   description: Comma-separated list of EOC collections to search
 - name: search_top_k
-  type: integer
+  type: number
   required: false
   default: 10
   description: Number of top results to retrieve from EOC search
@@ -54,7 +52,6 @@ tags:
 - benefit-validation
 - reusable
 - healthcare
-
 reusability:
   asTools: true
   standalone: true
@@ -95,7 +92,6 @@ reusability:
           items:
             type: object
   dependencies: []
-
 sampleInput:
   member_id: M123456789
   service_codes:
@@ -105,7 +101,6 @@ sampleInput:
   - diagnostic_imaging
   member_plan: Medicare Advantage
   service_date: '2024-03-15'
-
 components:
 - id: eoc-prompt
   name: Agent Instructions
@@ -113,12 +108,13 @@ components:
   type: genesis:prompt_template
   description: Prompt template for agent instructions
   config:
+    template: You are an EOC validation specialist. Analyze the member's Evidence
+      of Coverage to determine if requested services are covered.
     saved_prompt: benefit-check-eoc
   provides:
   - useAs: system_prompt
     in: eoc-agent
     description: System prompt for the agent
-
 - id: eoc-request
   name: EOC Check Request
   kind: Data
@@ -128,8 +124,6 @@ components:
   - useAs: input
     in: eoc-agent
     description: EOC validation request
-
-
 - id: eoc-agent
   name: EOC Validation Agent
   kind: Agent
@@ -147,7 +141,6 @@ components:
   - useAs: input
     in: eoc-formatter
     description: EOC validation results
-
 - id: eoc-search
   name: EOC Document Search
   kind: Tool
@@ -157,13 +150,10 @@ components:
   config:
     collections:
     - Sample EOC Guidelines
-    search_type: similarity
-    top_k: 10
   provides:
   - useAs: tools
     in: eoc-agent
     description: EOC document search tool
-
 - id: service-validator
   name: Service Code Validator
   kind: Tool
@@ -172,12 +162,10 @@ components:
   asTools: true
   config:
     tool_name: encoder_pro
-    description: Medical coding and validation tool
   provides:
   - useAs: tools
     in: eoc-agent
     description: Service code validation tool
-
 - id: eoc-formatter
   name: EOC Validation Results
   kind: Data
@@ -185,35 +173,33 @@ components:
   description: Display EOC validation results
   config:
     should_store_message: true
-
 outputs:
 - coverage_determination
 - eoc_references
 - exclusion_details
 - limitation_details
 - confidence_score
-
 kpis:
 - name: Coverage Determination Accuracy
-  category: Quality
+  category: quality
   valueType: percentage
   target: 98
   unit: '%'
   description: Accuracy of EOC coverage determinations
 - name: EOC Search Response Time
-  category: Performance
-  valueType: numeric
+  category: performance
+  valueType: number
   target: 3000
   unit: ms
   description: Time to search and retrieve EOC information
 - name: Citation Coverage
-  category: Quality
+  category: quality
   valueType: percentage
   target: 95
   unit: '%'
   description: Percentage of determinations with EOC citations
 - name: Service Code Validation Rate
-  category: Quality
+  category: quality
   valueType: percentage
   target: 99
   unit: '%'

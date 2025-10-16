@@ -16,6 +16,10 @@ Genesis components are the building blocks of agent specifications. Each compone
 | [`genesis:prompt_template`](#genesisprompt_template) | Prompt management | Prompt | → Agents |
 | [`genesis:mcp_tool`](#genesismcp_tool) | External API/tool access | Tool | → Agents |
 | [`genesis:knowledge_hub_search`](#genesisknowledge_hub_search) | Internal knowledge search | Tool | → Agents |
+| [`genesis:ehr_connector`](#genesisehr_connector) | Electronic Health Record integration | Healthcare | → Agents |
+| [`genesis:claims_connector`](#genesisclaims_connector) | Healthcare claims processing | Healthcare | → Agents |
+| [`genesis:eligibility_connector`](#genesiseligibility_connector) | Insurance eligibility verification | Healthcare | → Agents |
+| [`genesis:pharmacy_connector`](#genesispharmacy_connector) | Pharmacy and medication management | Healthcare | → Agents |
 
 ---
 
@@ -999,8 +1003,526 @@ chat_input → agent → chat_output
 3. **Tools**: Must have `asTools: true` and connect via `useAs: "tools"`
 4. **Prompts**: Must connect via `useAs: "system_prompt"`
 
+---
+
+## Healthcare Connectors
+
+Healthcare connectors provide specialized integration capabilities for healthcare systems and workflows, ensuring HIPAA compliance and industry-standard connectivity. All healthcare connectors inherit from a base class that provides standardized audit logging, PHI data protection, and compliance features.
+
+### Common Healthcare Features
+
+All healthcare connectors include:
+- **HIPAA Compliance**: Built-in PHI data protection and audit logging
+- **Mock Mode**: Comprehensive mock data for development and testing
+- **Error Handling**: Healthcare-specific error handling with compliance requirements
+- **Industry Standards**: Support for FHIR, HL7, EDI, and other healthcare standards
+- **Tool Mode**: Can be used as tools by agents with proper configuration
+
+---
+
+## `genesis:ehr_connector`
+
+**Purpose**: Electronic Health Record (EHR) integration with FHIR R4 and HL7 support
+**Category**: Healthcare
+**Use Cases**: Patient data retrieval, clinical documentation, care coordination, EHR system integration
+
+### Configuration Schema
+
+```yaml
+id: string                            # Required: Unique identifier
+name: string                          # Required: Display name
+type: "genesis:ehr_connector"        # Required: Component type
+description: string                  # Required: Purpose description
+kind: "Healthcare"                   # Optional: Component category
+asTools: boolean                     # Optional: Expose as tool (default: true)
+config:                              # Required: EHR configuration
+  ehr_system: string                   # Required: EHR system type
+  fhir_version: string                 # Required: FHIR version
+  authentication_type: string         # Required: Authentication method
+  base_url: string                     # Required: EHR system URL
+  operation: string                    # Required: Operation to perform
+provides: array                      # Required: Output connections
+```
+
+### Configuration Options
+
+#### `ehr_system`
+- **Type**: string (dropdown)
+- **Options**: "epic", "cerner", "allscripts", "athenahealth"
+- **Default**: "epic"
+- **Purpose**: Specify the EHR system vendor for integration
+
+#### `fhir_version`
+- **Type**: string (dropdown)
+- **Options**: "R4", "STU3", "DSTU2"
+- **Default**: "R4"
+- **Purpose**: FHIR version for resource compatibility and standards compliance
+
+#### `authentication_type`
+- **Type**: string (dropdown)
+- **Options**: "oauth2", "basic", "api_key"
+- **Default**: "oauth2"
+- **Purpose**: Authentication method for secure EHR system access
+
+#### `base_url`
+- **Type**: string
+- **Default**: "${EHR_BASE_URL}"
+- **Purpose**: EHR system base URL (use environment variables for production)
+
+#### `operation`
+- **Type**: string (dropdown)
+- **Options**:
+  - "search_patients": Search for patients based on criteria
+  - "get_patient_data": Retrieve comprehensive patient information
+  - "get_observations": Get patient observations (vital signs, lab results)
+  - "get_medications": Retrieve patient medication list
+  - "get_conditions": Get patient conditions and diagnoses
+  - "get_providers": Retrieve provider information
+  - "update_patient_data": Update patient information (requires permissions)
+  - "get_care_team": Get patient care team information
+  - "get_care_plan": Retrieve patient care plan details
+- **Default**: "get_patient_data"
+- **Purpose**: EHR operation to perform
+
+### Connection Patterns
+
+**Connects TO**: Nothing (data provider)
+**Connects FROM**: Agents only
+**Connection Type**: `useAs: "tools"`
+
+### Example Usage
+
+#### Basic EHR Integration
+```yaml
+- id: ehr-connector
+  type: genesis:ehr_connector
+  name: Epic EHR Integration
+  description: Retrieve patient data from Epic EHR system
+  asTools: true
+  config:
+    ehr_system: epic
+    fhir_version: R4
+    authentication_type: oauth2
+    base_url: "${EPIC_BASE_URL}"
+    operation: get_patient_data
+  provides:
+    - useAs: tools
+      in: clinical-agent
+      description: Provide EHR data access capability
+```
+
+#### Multi-Operation EHR Workflow
+```yaml
+- id: comprehensive-ehr
+  type: genesis:ehr_connector
+  name: Comprehensive EHR Data
+  description: Access multiple EHR data types for patient
+  asTools: true
+  config:
+    ehr_system: cerner
+    fhir_version: R4
+    authentication_type: oauth2
+    base_url: "${CERNER_BASE_URL}"
+    operation: search_patients
+  provides:
+    - useAs: tools
+      in: patient-workflow-agent
+      description: EHR search and retrieval tools
+```
+
+### Supported Data Formats
+
+- **FHIR R4 Resources**: Patient, Observation, Condition, Medication, Practitioner, CareTeam
+- **HL7 Messages**: ADT, ORM, ORU, SIU message types
+- **Clinical Terminologies**: LOINC codes, SNOMED CT, ICD-10, CPT codes
+
+---
+
+## `genesis:claims_connector`
+
+**Purpose**: Healthcare claims processing integration supporting EDI transactions and prior authorization
+**Category**: Healthcare
+**Use Cases**: Claims submission, prior authorization, payment posting, claims status inquiry
+
+### Configuration Schema
+
+```yaml
+id: string                              # Required: Unique identifier
+name: string                            # Required: Display name
+type: "genesis:claims_connector"       # Required: Component type
+description: string                    # Required: Purpose description
+kind: "Healthcare"                     # Optional: Component category
+asTools: boolean                       # Optional: Expose as tool (default: true)
+config:                                # Required: Claims configuration
+  clearinghouse: string                  # Required: Claims clearinghouse
+  payer_id: string                      # Optional: Insurance payer identifier
+  provider_npi: string                  # Optional: Provider NPI number
+  test_mode: boolean                    # Optional: Development vs production
+  operation: string                     # Required: Claims operation
+provides: array                        # Required: Output connections
+```
+
+### Configuration Options
+
+#### `clearinghouse`
+- **Type**: string (dropdown)
+- **Options**: "change_healthcare", "availity", "relay_health", "navinet"
+- **Default**: "change_healthcare"
+- **Purpose**: Healthcare clearinghouse for claims processing
+
+#### `operation`
+- **Type**: string (dropdown)
+- **Options**:
+  - "submit_claim": Submit new healthcare claim (837 transaction)
+  - "check_claim_status": Inquire about claim status (276/277 transactions)
+  - "get_remittance": Retrieve remittance advice (835 transaction)
+  - "prior_authorization": Submit prior authorization request
+  - "check_pa_status": Check prior authorization status
+  - "validate_claim": Validate claim data before submission
+- **Default**: "submit_claim"
+- **Purpose**: Claims processing operation to perform
+
+#### `test_mode`
+- **Type**: boolean
+- **Default**: true
+- **Purpose**: Enable test mode for development (prevents real claim submission)
+
+### Example Usage
+
+#### Claims Submission Workflow
+```yaml
+- id: claims-processor
+  type: genesis:claims_connector
+  name: Claims Processing System
+  description: Submit and track healthcare claims
+  asTools: true
+  config:
+    clearinghouse: change_healthcare
+    provider_npi: "${PROVIDER_NPI}"
+    test_mode: false
+    operation: submit_claim
+  provides:
+    - useAs: tools
+      in: billing-agent
+      description: Claims submission and tracking tools
+```
+
+#### Prior Authorization Integration
+```yaml
+- id: pa-connector
+  type: genesis:claims_connector
+  name: Prior Authorization System
+  description: Handle prior authorization requests and status
+  asTools: true
+  config:
+    clearinghouse: availity
+    payer_id: "${PAYER_ID}"
+    test_mode: true
+    operation: prior_authorization
+  provides:
+    - useAs: tools
+      in: authorization-agent
+      description: Prior authorization processing tools
+```
+
+### Supported Transactions
+
+- **837 Professional**: Physician and outpatient claims
+- **837 Institutional**: Hospital and facility claims
+- **837 Dental**: Dental service claims
+- **835 Remittance**: Payment and adjustment information
+- **276/277**: Claim status inquiry and response
+
+---
+
+## `genesis:eligibility_connector`
+
+**Purpose**: Insurance eligibility verification and benefit determination
+**Category**: Healthcare
+**Use Cases**: Real-time benefit verification, coverage determination, network provider validation
+
+### Configuration Schema
+
+```yaml
+id: string                                # Required: Unique identifier
+name: string                              # Required: Display name
+type: "genesis:eligibility_connector"    # Required: Component type
+description: string                      # Required: Purpose description
+kind: "Healthcare"                       # Optional: Component category
+asTools: boolean                         # Optional: Expose as tool (default: true)
+config:                                  # Required: Eligibility configuration
+  eligibility_service: string             # Required: Eligibility service provider
+  payer_list: array                      # Optional: Supported insurance payers
+  provider_npi: string                   # Optional: Provider NPI
+  real_time_mode: boolean                # Optional: Real-time vs cached
+  cache_duration_minutes: integer        # Optional: Cache duration
+  operation: string                      # Required: Eligibility operation
+provides: array                          # Required: Output connections
+```
+
+### Configuration Options
+
+#### `eligibility_service`
+- **Type**: string (dropdown)
+- **Options**: "availity", "change_healthcare", "navinet"
+- **Default**: "availity"
+- **Purpose**: Eligibility verification service provider
+
+#### `operation`
+- **Type**: string (dropdown)
+- **Options**:
+  - "verify_eligibility": Real-time benefit verification (270/271 EDI)
+  - "get_benefit_summary": Comprehensive benefit information
+  - "check_coverage": Specific service coverage determination
+  - "validate_provider": Network provider validation
+  - "calculate_costs": Copay and deductible calculations
+- **Default**: "verify_eligibility"
+- **Purpose**: Eligibility verification operation
+
+#### `real_time_mode`
+- **Type**: boolean
+- **Default**: true
+- **Purpose**: Enable real-time verification vs cached responses
+
+#### `cache_duration_minutes`
+- **Type**: integer
+- **Default**: 15
+- **Purpose**: Duration to cache eligibility responses (in minutes)
+
+### Example Usage
+
+#### Real-Time Eligibility Verification
+```yaml
+- id: eligibility-checker
+  type: genesis:eligibility_connector
+  name: Real-Time Eligibility Verification
+  description: Verify patient insurance eligibility and benefits
+  asTools: true
+  config:
+    eligibility_service: availity
+    provider_npi: "${PROVIDER_NPI}"
+    real_time_mode: true
+    cache_duration_minutes: 15
+    operation: verify_eligibility
+  provides:
+    - useAs: tools
+      in: eligibility-agent
+      description: Real-time eligibility verification tools
+```
+
+#### Benefit Analysis Workflow
+```yaml
+- id: benefit-analyzer
+  type: genesis:eligibility_connector
+  name: Comprehensive Benefit Analysis
+  description: Analyze patient benefits and coverage details
+  asTools: true
+  config:
+    eligibility_service: change_healthcare
+    payer_list: ["aetna", "anthem", "cigna", "humana"]
+    real_time_mode: false
+    operation: get_benefit_summary
+  provides:
+    - useAs: tools
+      in: benefit-analysis-agent
+      description: Benefit analysis and comparison tools
+```
+
+### Supported Transactions
+
+- **270/271 EDI**: Real-time eligibility verification
+- **Provider Directory**: Network provider search and validation
+- **Benefit Summaries**: Coverage details and limitations
+- **Cost Calculations**: Copay, deductible, and out-of-pocket estimates
+
+---
+
+## `genesis:pharmacy_connector`
+
+**Purpose**: Pharmacy and medication management with e-prescribing integration
+**Category**: Healthcare
+**Use Cases**: E-prescribing, drug interaction checking, formulary verification, medication therapy management
+
+### Configuration Schema
+
+```yaml
+id: string                              # Required: Unique identifier
+name: string                            # Required: Display name
+type: "genesis:pharmacy_connector"     # Required: Component type
+description: string                    # Required: Purpose description
+kind: "Healthcare"                     # Optional: Component category
+asTools: boolean                       # Optional: Expose as tool (default: true)
+config:                                # Required: Pharmacy configuration
+  pharmacy_network: string              # Required: Pharmacy network
+  prescriber_npi: string               # Optional: Prescriber NPI
+  dea_number: string                   # Optional: DEA registration number
+  drug_database: string                # Optional: Drug database system
+  interaction_checking: boolean         # Optional: Enable drug interactions
+  formulary_checking: boolean          # Optional: Enable formulary verification
+  operation: string                    # Required: Pharmacy operation
+provides: array                        # Required: Output connections
+```
+
+### Configuration Options
+
+#### `pharmacy_network`
+- **Type**: string (dropdown)
+- **Options**: "surescripts", "ncpdp", "relay_health"
+- **Default**: "surescripts"
+- **Purpose**: Pharmacy network for e-prescribing integration
+
+#### `operation`
+- **Type**: string (dropdown)
+- **Options**:
+  - "send_prescription": Send electronic prescription (eRx)
+  - "check_interactions": Drug interaction screening
+  - "verify_formulary": Check drug formulary status
+  - "medication_history": Get patient medication history
+  - "prior_auth_medication": Medication prior authorization
+  - "pharmacy_search": Find nearby pharmacies
+- **Default**: "send_prescription"
+- **Purpose**: Pharmacy operation to perform
+
+#### `interaction_checking`
+- **Type**: boolean
+- **Default**: true
+- **Purpose**: Enable automated drug interaction checking
+
+#### `formulary_checking`
+- **Type**: boolean
+- **Default**: true
+- **Purpose**: Enable formulary verification for medications
+
+#### `drug_database`
+- **Type**: string (dropdown)
+- **Options**: "first_databank", "medi_span", "lexicomp"
+- **Default**: "first_databank"
+- **Purpose**: Drug database for interaction and formulary checking
+
+### Example Usage
+
+#### E-Prescribing Integration
+```yaml
+- id: eprescribing-system
+  type: genesis:pharmacy_connector
+  name: E-Prescribing System
+  description: Electronic prescription management with interaction checking
+  asTools: true
+  config:
+    pharmacy_network: surescripts
+    prescriber_npi: "${PRESCRIBER_NPI}"
+    dea_number: "${DEA_NUMBER}"
+    interaction_checking: true
+    formulary_checking: true
+    operation: send_prescription
+  provides:
+    - useAs: tools
+      in: prescribing-agent
+      description: E-prescribing and medication management tools
+```
+
+#### Medication Therapy Management
+```yaml
+- id: mtm-connector
+  type: genesis:pharmacy_connector
+  name: Medication Therapy Management
+  description: Comprehensive medication management and optimization
+  asTools: true
+  config:
+    pharmacy_network: ncpdp
+    drug_database: first_databank
+    interaction_checking: true
+    formulary_checking: true
+    operation: medication_history
+  provides:
+    - useAs: tools
+      in: pharmacist-agent
+      description: Medication therapy management tools
+```
+
+### Supported Standards
+
+- **NCPDP SCRIPT**: E-prescribing standard for electronic prescriptions
+- **RxNorm**: Standardized nomenclature for clinical drugs
+- **NDC**: National Drug Code directory
+- **Formulary Data**: Insurance plan formulary information
+
+---
+
+## Healthcare Connector Best Practices
+
+### Security and Compliance
+
+1. **Environment Variables**: Always use environment variables for sensitive data
+```yaml
+config:
+  base_url: "${EHR_BASE_URL}"
+  api_key: "${EHR_API_KEY}"
+  provider_npi: "${PROVIDER_NPI}"
+```
+
+2. **HIPAA Compliance**: All healthcare connectors include built-in HIPAA compliance features
+- Automatic PHI data sanitization
+- Comprehensive audit logging
+- Secure error handling without PHI exposure
+
+3. **Mock Mode**: Use mock mode for development and testing
+```yaml
+config:
+  test_mode: true  # Enables mock data responses
+```
+
+### Integration Patterns
+
+#### Healthcare Multi-Tool Agent
+```yaml
+- id: comprehensive-healthcare-agent
+  type: genesis:agent
+  name: Healthcare Integration Agent
+  description: Agent with access to multiple healthcare systems
+  config:
+    system_prompt: |
+      You are a healthcare integration specialist with access to:
+      - EHR systems for patient data
+      - Claims processing for billing
+      - Eligibility verification for coverage
+      - Pharmacy systems for medications
+
+      Use these tools to provide comprehensive healthcare workflow automation.
+    max_iterations: 10
+    handle_parsing_errors: true
+  provides:
+    - in: healthcare-output
+      useAs: input
+      description: Send comprehensive healthcare results
+```
+
+#### Sequential Healthcare Workflow
+Use multiple healthcare connectors in sequence for complex workflows:
+1. **EHR Connector**: Retrieve patient data
+2. **Eligibility Connector**: Verify insurance coverage
+3. **Claims Connector**: Process billing information
+4. **Pharmacy Connector**: Handle medication management
+
+### Error Handling
+
+Healthcare connectors provide specialized error handling:
+- **Timeout Management**: Configurable timeouts for healthcare APIs
+- **Retry Logic**: Automatic retry for transient failures
+- **Compliance Logging**: HIPAA-compliant error logging
+- **Fallback Modes**: Graceful degradation to mock data when services unavailable
+
+### Performance Optimization
+
+1. **Caching**: Use appropriate cache durations for eligibility data
+2. **Batch Operations**: Combine multiple operations when possible
+3. **Connection Pooling**: Efficient connection management for high-volume usage
+4. **Rate Limiting**: Respect healthcare API rate limits
+
 ## Next Steps
 
 - **Pattern Selection**: See [Pattern Catalog](../patterns/pattern-catalog.md)
 - **Specification Creation**: See [Creating Specifications Guide](../guides/creating-specifications.md)
 - **Schema Reference**: See [Specification Schema](../schema/specification-schema.md)
+- **Healthcare Integration**: See [Healthcare Connector Integration Guide](../guides/healthcare-integration.md)
+- **HIPAA Compliance**: See [HIPAA Compliance Best Practices Guide](../guides/hipaa-compliance.md)

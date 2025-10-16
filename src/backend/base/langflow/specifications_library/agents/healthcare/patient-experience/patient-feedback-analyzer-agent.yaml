@@ -1,7 +1,8 @@
-id: urn:agent:genesis:patient_experience:feedback_analyzer:1
+id: urn:agent:genesis:patient-experience:feedback-analyzer:1.0.0
 name: Patient Feedback Analyzer Agent
 fullyQualifiedName: genesis.autonomize.ai.feedback_analyzer
-description: Analyzes call center logs, survey responses, and complaints to extract themes and sentiment. Helps improve member experience metrics.
+description: Analyzes call center logs, survey responses, and complaints to extract
+  themes and sentiment. Helps improve member experience metrics.
 domain: autonomize.ai
 subDomain: patient-experience
 version: 1.0.0
@@ -10,7 +11,6 @@ agentOwner: patient-experience@autonomize.ai
 agentOwnerDisplayName: Patient Experience Team
 email: patient-experience@autonomize.ai
 status: ACTIVE
-
 variables:
 - name: llm_provider
   type: string
@@ -23,26 +23,25 @@ variables:
   default: gpt-4
   description: Model name for complex sentiment and theme analysis
 - name: temperature
-  type: float
+  type: number
   required: false
   default: 0.1
   description: Low temperature for consistent analytical results
 - name: analysis_period_days
-  type: integer
+  type: number
   required: false
   default: 30
   description: Default analysis period in days
 - name: sentiment_threshold
-  type: float
+  type: number
   required: false
   default: 0.7
   description: Confidence threshold for sentiment classification
 - name: theme_extraction_depth
-  type: integer
+  type: number
   required: false
   default: 10
   description: Number of top themes to extract
-
 tags:
 - patient-experience
 - feedback-analysis
@@ -51,17 +50,16 @@ tags:
 - analytics
 - nlp
 - healthcare
-
 kind: Single Agent
-agentGoal: Analyze patient feedback from multiple sources to extract actionable insights for improving member experience metrics and patient satisfaction
+agentGoal: Analyze patient feedback from multiple sources to extract actionable insights
+  for improving member experience metrics and patient satisfaction
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: RequestResponse
 runMode: RealTime
-agencyLevel: AnalyticalWorkflow
+agencyLevel: KnowledgeDrivenWorkflow
 toolsUse: true
 learningCapability: Supervised
-
 reusability:
   asTools: true
   standalone: true
@@ -73,7 +71,11 @@ reusability:
       properties:
         analysis_type:
           type: string
-          enum: ["sentiment", "themes", "comprehensive", "trends"]
+          enum:
+          - sentiment
+          - themes
+          - comprehensive
+          - trends
           description: Type of analysis to perform
         date_range:
           type: object
@@ -88,7 +90,11 @@ reusability:
           type: array
           items:
             type: string
-            enum: ["call_center", "surveys", "complaints", "reviews"]
+            enum:
+            - call_center
+            - surveys
+            - complaints
+            - reviews
           description: Feedback sources to analyze
         filters:
           type: object
@@ -104,7 +110,10 @@ reusability:
           properties:
             overall_sentiment:
               type: string
-              enum: ["positive", "negative", "neutral"]
+              enum:
+              - positive
+              - negative
+              - neutral
             sentiment_distribution:
               type: object
             confidence_score:
@@ -144,59 +153,37 @@ reusability:
               type: array
             improvement_areas:
               type: array
-
-sampleInput:
-  analysis_type: "comprehensive"
-  date_range:
-    start_date: "2024-02-01"
-    end_date: "2024-02-29"
-  data_sources: ["call_center", "surveys", "complaints"]
-  filters:
-    department: "customer_service"
-    service_type: "billing_inquiry"
-
 promptConfiguration:
   basePromptId: feedback_analyzer_v1
-  customPrompt: 'You are an expert patient experience analyst specializing in healthcare feedback analysis.
+  customPrompt: 'You are an expert patient experience analyst specializing in healthcare
+    feedback analysis.
 
-    Your role is to:
-    1. Analyze patient feedback from multiple sources comprehensively
-    2. Extract sentiment patterns and emotional indicators
-    3. Identify recurring themes and pain points
-    4. Generate actionable insights for experience improvement
-    5. Track sentiment trends and changes over time
-    6. Provide data-driven recommendations
+    Your role is to: 1. Analyze patient feedback from multiple sources comprehensively
+    2. Extract sentiment patterns and emotional indicators 3. Identify recurring themes
+    and pain points 4. Generate actionable insights for experience improvement 5.
+    Track sentiment trends and changes over time 6. Provide data-driven recommendations
 
-    Analysis methodology:
-    - Use advanced NLP techniques for accurate sentiment classification
-    - Apply healthcare-specific context understanding
-    - Identify both explicit and implicit feedback themes
-    - Correlate feedback patterns across different touchpoints
+    Analysis methodology: - Use advanced NLP techniques for accurate sentiment classification
+    - Apply healthcare-specific context understanding - Identify both explicit and
+    implicit feedback themes - Correlate feedback patterns across different touchpoints
     - Prioritize insights based on frequency and impact potential
 
-    Healthcare-specific considerations:
-    - Understand medical terminology and healthcare processes
-    - Recognize patient anxiety and emotional states
-    - Consider HIPAA compliance in analysis
-    - Focus on patient safety and care quality indicators
-    - Identify access and communication barriers
+    Healthcare-specific considerations: - Understand medical terminology and healthcare
+    processes - Recognize patient anxiety and emotional states - Consider HIPAA compliance
+    in analysis - Focus on patient safety and care quality indicators - Identify access
+    and communication barriers
 
-    Output requirements:
-    - Provide quantitative metrics and qualitative insights
-    - Include confidence levels for all analyses
-    - Suggest specific, actionable improvements
-    - Highlight urgent issues requiring immediate attention
-    - Format results for both technical and business audiences
+    Output requirements: - Provide quantitative metrics and qualitative insights -
+    Include confidence levels for all analyses - Suggest specific, actionable improvements
+    - Highlight urgent issues requiring immediate attention - Format results for both
+    technical and business audiences
 
-    Quality standards:
-    - Ensure statistical significance in trend analysis
-    - Validate sentiment accuracy against human judgment
-    - Cross-reference themes across multiple data sources
-    - Maintain patient privacy throughout analysis
+    Quality standards: - Ensure statistical significance in trend analysis - Validate
+    sentiment accuracy against human judgment - Cross-reference themes across multiple
+    data sources - Maintain patient privacy throughout analysis
 
-    Always base recommendations on evidence from the feedback data and provide clear rationale for insights.
-    '
-
+    Always base recommendations on evidence from the feedback data and provide clear
+    rationale for insights. '
 components:
 - id: input
   name: Analysis Request
@@ -207,7 +194,6 @@ components:
   - useAs: input
     in: feedback-agent
     description: Analysis request parameters
-
 - id: analytics-prompt
   name: Feedback Analysis Methodology
   kind: Prompt
@@ -215,74 +201,59 @@ components:
   description: Specialized prompt for comprehensive feedback analysis
   config:
     saved_prompt: feedback_analysis_prompt_v1
-    template: 'You are an expert patient experience analyst specializing in healthcare feedback analysis and member satisfaction metrics.
+    template: 'You are an expert patient experience analyst specializing in healthcare
+      feedback analysis and member satisfaction metrics.
 
-      Core responsibilities:
-      1. Comprehensive sentiment analysis across multiple feedback channels
-      2. Advanced theme extraction using NLP and ML techniques
-      3. Pattern recognition for recurring patient concerns
-      4. Actionable insight generation for experience improvement
-      5. Trend analysis and predictive insights
-      6. Cross-channel feedback correlation analysis
+      Core responsibilities: 1. Comprehensive sentiment analysis across multiple feedback
+      channels 2. Advanced theme extraction using NLP and ML techniques 3. Pattern
+      recognition for recurring patient concerns 4. Actionable insight generation
+      for experience improvement 5. Trend analysis and predictive insights 6. Cross-channel
+      feedback correlation analysis
 
       Analysis framework:
 
-      SENTIMENT ANALYSIS:
-      - Multi-dimensional sentiment classification (positive/negative/neutral/mixed)
-      - Emotion detection (frustration, satisfaction, anxiety, confidence)
-      - Urgency assessment for critical issues
-      - Confidence scoring for all sentiment determinations
+      SENTIMENT ANALYSIS: - Multi-dimensional sentiment classification (positive/negative/neutral/mixed)
+      - Emotion detection (frustration, satisfaction, anxiety, confidence) - Urgency
+      assessment for critical issues - Confidence scoring for all sentiment determinations
 
-      THEME EXTRACTION:
-      - Automated topic modeling for recurring themes
-      - Healthcare-specific categorization (clinical care, billing, access, communication)
-      - Pain point identification and severity assessment
-      - Opportunity area recognition for improvement initiatives
+      THEME EXTRACTION: - Automated topic modeling for recurring themes - Healthcare-specific
+      categorization (clinical care, billing, access, communication) - Pain point
+      identification and severity assessment - Opportunity area recognition for improvement
+      initiatives
 
-      INSIGHT GENERATION:
-      - Prioritized recommendations based on impact and feasibility
-      - Root cause analysis for negative feedback patterns
-      - Best practice identification from positive feedback
-      - Competitive benchmarking insights where applicable
+      INSIGHT GENERATION: - Prioritized recommendations based on impact and feasibility
+      - Root cause analysis for negative feedback patterns - Best practice identification
+      from positive feedback - Competitive benchmarking insights where applicable
 
-      TREND ANALYSIS:
-      - Time-series analysis of sentiment changes
-      - Seasonal pattern identification
-      - Impact assessment of improvement initiatives
-      - Predictive modeling for future sentiment trends
+      TREND ANALYSIS: - Time-series analysis of sentiment changes - Seasonal pattern
+      identification - Impact assessment of improvement initiatives - Predictive modeling
+      for future sentiment trends
 
-      Healthcare context awareness:
-      - Patient journey mapping across touchpoints
-      - Clinical vs operational feedback differentiation
-      - Regulatory compliance considerations (HIPAA, patient rights)
-      - Healthcare-specific terminology and process understanding
+      Healthcare context awareness: - Patient journey mapping across touchpoints -
+      Clinical vs operational feedback differentiation - Regulatory compliance considerations
+      (HIPAA, patient rights) - Healthcare-specific terminology and process understanding
       - Cultural sensitivity in feedback interpretation
 
-      Data integration approach:
-      - Cross-reference themes across call logs, surveys, and complaints
-      - Identify data quality issues and gaps
-      - Ensure representative sampling across patient demographics
-      - Validate insights through multiple data source confirmation
+      Data integration approach: - Cross-reference themes across call logs, surveys,
+      and complaints - Identify data quality issues and gaps - Ensure representative
+      sampling across patient demographics - Validate insights through multiple data
+      source confirmation
 
-      Output formatting:
-      - Executive summary with key findings and priorities
-      - Detailed analysis with supporting evidence
-      - Visual data representations and trend charts
-      - Specific action recommendations with timelines
-      - Risk assessment for unaddressed issues
+      Output formatting: - Executive summary with key findings and priorities - Detailed
+      analysis with supporting evidence - Visual data representations and trend charts
+      - Specific action recommendations with timelines - Risk assessment for unaddressed
+      issues
 
-      Quality assurance:
-      - Statistical significance testing for trends
-      - Inter-rater reliability for theme classification
-      - Bias detection and mitigation strategies
+      Quality assurance: - Statistical significance testing for trends - Inter-rater
+      reliability for theme classification - Bias detection and mitigation strategies
       - Confidence intervals for all quantitative metrics
 
-      Always provide evidence-based insights with clear methodology and actionable recommendations.'
+      Always provide evidence-based insights with clear methodology and actionable
+      recommendations.'
   provides:
   - useAs: system_prompt
     in: feedback-agent
     description: Provide analysis methodology and guidelines
-
 - id: call-center-api
   name: Call Center Data Access
   kind: Tool
@@ -291,32 +262,10 @@ components:
   asTools: true
   config:
     tool_name: call_center_logs
-    description: |
-      Access call center logs, transcripts, and metadata for patient feedback analysis.
-
-      Provides:
-      - Call transcripts and conversation logs
-      - Call duration, resolution status, and escalation data
-      - Agent notes and call categorization
-      - Customer satisfaction scores from post-call surveys
-      - Call volume and pattern analysis data
-
-      Use for:
-      - Analyzing conversation content for sentiment and themes
-      - Identifying common call drivers and resolution patterns
-      - Extracting emotional indicators from transcripts
-      - Correlating call outcomes with satisfaction scores
-
-      Returns: Structured call data with metadata for comprehensive analysis
-    include_transcripts: true
-    include_metadata: true
-    include_satisfaction_scores: true
-    privacy_compliant: true
   provides:
   - useAs: tools
     in: feedback-agent
     description: Provide call center data access
-
 - id: survey-platform-api
   name: Survey Response Access
   kind: Tool
@@ -325,32 +274,10 @@ components:
   asTools: true
   config:
     tool_name: survey_responses
-    description: |
-      Access patient survey responses across multiple survey types and platforms.
-
-      Provides:
-      - Post-visit satisfaction surveys
-      - Experience surveys (HCAHPS, CG-CAHPS)
-      - Net Promoter Score (NPS) responses
-      - Free-text comments and feedback
-      - Demographic and visit context data
-
-      Use for:
-      - Structured satisfaction metric analysis
-      - Open-ended response theme extraction
-      - Demographic-based sentiment analysis
-      - Trend analysis across survey types
-
-      Returns: Survey data with response text and structured ratings
-    include_structured_ratings: true
-    include_free_text: true
-    include_demographics: true
-    include_survey_metadata: true
   provides:
   - useAs: tools
     in: feedback-agent
     description: Provide survey response data
-
 - id: crm-complaints-api
   name: Complaint Management System
   kind: Tool
@@ -359,32 +286,10 @@ components:
   asTools: true
   config:
     tool_name: complaint_management
-    description: |
-      Access formal complaints, grievances, and resolution data from CRM systems.
-
-      Provides:
-      - Formal complaint descriptions and categories
-      - Grievance escalation and resolution timelines
-      - Complaint severity and priority classifications
-      - Resolution actions and outcomes
-      - Follow-up satisfaction data
-
-      Use for:
-      - High-severity issue identification and analysis
-      - Complaint trend analysis and pattern recognition
-      - Resolution effectiveness assessment
-      - Regulatory compliance monitoring
-
-      Returns: Complaint data with categorization and resolution tracking
-    include_complaint_text: true
-    include_resolution_data: true
-    include_follow_up_scores: true
-    include_regulatory_flags: true
   provides:
   - useAs: tools
     in: feedback-agent
     description: Provide complaint and grievance data
-
 - id: nlp-sentiment-engine
   name: Advanced Sentiment Analysis Engine
   kind: Tool
@@ -393,32 +298,10 @@ components:
   asTools: true
   config:
     tool_name: healthcare_nlp_sentiment
-    description: |
-      Advanced NLP engine optimized for healthcare feedback sentiment analysis.
-
-      Capabilities:
-      - Multi-dimensional sentiment classification
-      - Emotion detection (anxiety, frustration, satisfaction, trust)
-      - Healthcare-specific sentiment lexicons
-      - Context-aware sentiment scoring
-      - Confidence level assessment
-
-      Use for:
-      - Accurate sentiment classification of patient feedback
-      - Emotion detection in healthcare contexts
-      - Urgency and severity assessment
-      - Cross-channel sentiment comparison
-
-      Returns: Detailed sentiment analysis with confidence scores and emotional indicators
-    sentiment_dimensions: ["satisfaction", "trust", "anxiety", "frustration", "confidence"]
-    healthcare_optimized: true
-    confidence_scoring: true
-    emotion_detection: true
   provides:
   - useAs: tools
     in: feedback-agent
     description: Provide advanced sentiment analysis capabilities
-
 - id: ml-theme-extractor
   name: Machine Learning Theme Extraction
   kind: Tool
@@ -427,32 +310,10 @@ components:
   asTools: true
   config:
     tool_name: ml_theme_extraction
-    description: |
-      Machine learning tools for automated theme and topic extraction from patient feedback.
-
-      Capabilities:
-      - Unsupervised topic modeling (LDA, NMF)
-      - Healthcare-specific theme categorization
-      - Keyword and phrase extraction
-      - Theme frequency and significance scoring
-      - Cross-source theme correlation
-
-      Use for:
-      - Identifying recurring themes across feedback sources
-      - Discovering emerging issues and trends
-      - Categorizing feedback by healthcare service areas
-      - Quantifying theme prevalence and impact
-
-      Returns: Extracted themes with frequency, examples, and significance scores
-    topic_modeling_algorithms: ["LDA", "NMF", "BERTopic"]
-    healthcare_categories: true
-    theme_correlation: true
-    significance_scoring: true
   provides:
   - useAs: tools
     in: feedback-agent
     description: Provide ML-powered theme extraction
-
 - id: feedback-agent
   name: Patient Feedback Analyzer
   kind: Agent
@@ -470,7 +331,6 @@ components:
   - useAs: input
     in: analysis-output
     description: Provide comprehensive feedback analysis results
-
 - id: analysis-output
   name: Feedback Analysis Report
   kind: Data
@@ -478,9 +338,6 @@ components:
   description: Comprehensive feedback analysis with insights and recommendations
   config:
     should_store_message: true
-    include_visualizations: true
-    export_formats: ["json", "pdf", "dashboard"]
-
 outputs:
 - sentiment_analysis
 - theme_extraction
@@ -488,55 +345,51 @@ outputs:
 - trend_analysis
 - improvement_recommendations
 - priority_issues
-
 kpis:
 - name: Feedback Analysis Accuracy
-  category: Quality
+  category: quality
   valueType: percentage
   target: 95
   unit: '%'
   description: Accuracy of sentiment and theme analysis
 - name: Insight Actionability Score
-  category: Quality
-  valueType: numeric
+  category: quality
+  valueType: number
   target: 4.5
   unit: score
   description: Usefulness rating of generated insights (1-5 scale)
 - name: Analysis Processing Time
-  category: Performance
-  valueType: numeric
+  category: performance
+  valueType: number
   target: 5000
   unit: ms
   description: Time to process and analyze feedback data
 - name: Theme Extraction Precision
-  category: Quality
+  category: quality
   valueType: percentage
   target: 90
   unit: '%'
   description: Precision of automated theme identification
 - name: Sentiment Classification Accuracy
-  category: Quality
+  category: quality
   valueType: percentage
   target: 92
   unit: '%'
   description: Accuracy of sentiment classification vs human judgment
 - name: Cross-Source Correlation Success
-  category: Quality
+  category: quality
   valueType: percentage
   target: 85
   unit: '%'
   description: Success rate in correlating themes across data sources
 - name: Member Experience Metric Improvement
-  category: Outcome
+  category: performance
   valueType: percentage
   target: 15
   unit: '%'
   description: Improvement in member experience scores following insights implementation
-
 securityInfo:
   visibility: Private
   confidentiality: High
   gdprSensitive: true
   hipaaCompliant: true
-  patientDataAccess: true
-  analyticsCompliant: true

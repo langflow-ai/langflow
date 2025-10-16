@@ -67,6 +67,48 @@ class ComponentMapper:
             "genesis:combined_entity_linking": {
                 "component": "AutonomizeModel",
                 "config": {"selected_model": "Combined Entity Linking"}
+            },
+            # Enhanced decision framework - new autonomize component types
+            "autonomize:icd10_code_model": {
+                "component": "AutonomizeModel",
+                "config": {"selected_model": "ICD-10 Code"},
+                "dataType": "AutonomizeModel"
+            },
+            "autonomize:cpt_code_model": {
+                "component": "AutonomizeModel",
+                "config": {"selected_model": "CPT Code"},
+                "dataType": "AutonomizeModel"
+            },
+            "autonomize:clinical_llm": {
+                "component": "AutonomizeModel",
+                "config": {"selected_model": "Clinical LLM"},
+                "dataType": "AutonomizeModel"
+            },
+            "autonomize:ehr_connector": {
+                "component": "EHRConnector",
+                "config": {
+                    "ehr_system": "epic",
+                    "fhir_version": "R4",
+                    "authentication_type": "oauth2",
+                    "hipaa_compliant": True,
+                    "audit_logging": True
+                },
+                "dataType": "Data"
+            }
+        }
+
+        # Healthcare validation and connector extensions
+        self.HEALTHCARE_VALIDATION_MAPPINGS = {
+            "genesis:healthcare_validation_connector": {
+                "component": "HealthcareValidationConnector",
+                "config": {
+                    "validation_type": "comprehensive",
+                    "compliance_standards": ["CMS", "NCCI", "AMA"],
+                    "code_combination_checking": True,
+                    "audit_logging": True,
+                    "hipaa_compliant": True
+                },
+                "dataType": "Data"
             }
         }
 
@@ -282,6 +324,10 @@ class ComponentMapper:
         # Check Healthcare mappings first (highest priority for medical workflows)
         if spec_type in self.HEALTHCARE_MAPPINGS:
             return copy.deepcopy(self.HEALTHCARE_MAPPINGS[spec_type])
+
+        # Check Healthcare validation mappings
+        if spec_type in self.HEALTHCARE_VALIDATION_MAPPINGS:
+            return copy.deepcopy(self.HEALTHCARE_VALIDATION_MAPPINGS[spec_type])
 
         # Check AutonomizeModel mappings
         if spec_type in self.AUTONOMIZE_MODELS:
@@ -709,6 +755,7 @@ class ComponentMapper:
         # Add all genesis mappings
         all_mappings = {
             **self.HEALTHCARE_MAPPINGS,
+            **self.HEALTHCARE_VALIDATION_MAPPINGS,
             **self.AUTONOMIZE_MODELS,
             **self.MCP_MAPPINGS,
             **self.STANDARD_MAPPINGS

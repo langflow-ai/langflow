@@ -1,7 +1,8 @@
 id: urn:agent:genesis:autonomize.ai:benefit-check-agent:1.0.0
 name: Eligibility Verification Agent
 fullyQualifiedName: genesis.autonomize.ai.benefit_check_agent
-description: Orchestrates comprehensive healthcare authorization analysis using specialized agents
+description: Orchestrates comprehensive healthcare authorization analysis using specialized
+  agents
 domain: autonomize.ai
 subDomain: benefit-verification
 version: 1.0.0
@@ -10,9 +11,9 @@ agentOwner: benefit-verification@autonomize.ai
 agentOwnerDisplayName: Benefit Verification Team
 email: benefit-verification@autonomize.ai
 status: ACTIVE
-
 kind: Single Agent
-agentGoal: Orchestrate comprehensive healthcare authorization analysis by evaluating service code eligibility, coverage benefits, and utilization limits
+agentGoal: Orchestrate comprehensive healthcare authorization analysis by evaluating
+  service code eligibility, coverage benefits, and utilization limits
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -20,74 +21,88 @@ runMode: RealTime
 agencyLevel: ReflexiveAgent
 toolsUse: true
 learningCapability: None
-
 components:
-  - id: authorization-input
-    type: genesis:chat_input
-    name: Authorization Request
-    description: Input for authorization request with member and service details
-    provides:
-      - in: orchestrator-agent
-        useAs: input
-        description: Authorization request to orchestrator
+- id: authorization-input
+  type: genesis:chat_input
+  name: Authorization Request
+  description: Input for authorization request with member and service details
+  provides:
+  - in: orchestrator-agent
+    useAs: input
+    description: Authorization request to orchestrator
+- id: eoc-checker
+  type: genesis:agent
+  name: EOC Check Agent
+  description: Evidence of Coverage validation agent
+  config:
+    system_prompt: 'You are an Evidence of Coverage (EOC) specialist. Validate if
+      requested services are covered under the member''s plan.
 
-  - id: eoc-checker
-    type: genesis:agent
-    name: EOC Check Agent
-    description: Evidence of Coverage validation agent
-    config:
-      system_prompt: |
-        You are an Evidence of Coverage (EOC) specialist. Validate if requested services are covered under the member's plan.
-        Check coverage details, limitations, and exclusions.
-      temperature: 0.1
-    provides:
-      - in: orchestrator-agent
-        useAs: tool
-        description: EOC validation tool
+      Check coverage details, limitations, and exclusions.
 
-  - id: eligibility-checker
-    type: genesis:agent
-    name: Eligibility Check Agent
-    description: Member eligibility validation agent
-    config:
-      system_prompt: |
-        You are an eligibility specialist. Verify member eligibility status, active coverage, and benefit limits.
-      temperature: 0.1
-    provides:
-      - in: orchestrator-agent
-        useAs: tool
-        description: Eligibility validation tool
+      '
+    temperature: 0.1
+  provides:
+  - in: orchestrator-agent
+    useAs: tool
+    description: EOC validation tool
+- id: eligibility-checker
+  type: genesis:agent
+  name: Eligibility Check Agent
+  description: Member eligibility validation agent
+  config:
+    system_prompt: 'You are an eligibility specialist. Verify member eligibility status,
+      active coverage, and benefit limits.
 
-  - id: orchestrator-agent
-    type: genesis:agent
-    name: Benefit Orchestrator
-    description: Main orchestrator for comprehensive benefit analysis
-    config:
-      system_prompt: |
-        You are a benefit orchestration specialist. Coordinate comprehensive healthcare authorization analysis using your available tools:
+      '
+    temperature: 0.1
+  provides:
+  - in: orchestrator-agent
+    useAs: tool
+    description: Eligibility validation tool
+- id: orchestrator-agent
+  type: genesis:agent
+  name: Benefit Orchestrator
+  description: Main orchestrator for comprehensive benefit analysis
+  config:
+    system_prompt: 'You are a benefit orchestration specialist. Coordinate comprehensive
+      healthcare authorization analysis using your available tools:
 
-        1. EOC Check Agent - Validates service coverage under member's plan
-        2. Eligibility Check Agent - Verifies member eligibility and benefit limits
 
-        For each authorization request:
-        1. First check member eligibility and active coverage
-        2. Then validate service coverage under EOC
-        3. Analyze any limitations or requirements
-        4. Provide comprehensive authorization decision
+      1. EOC Check Agent - Validates service coverage under member''s plan
 
-        Format your response with:
-        - Authorization Decision (Approved/Denied/Prior Auth Required)
-        - Coverage Details
-        - Member Cost Responsibility
-        - Recommendations or Next Steps
-      temperature: 0.2
-      max_tokens: 2000
-    provides:
-      - in: authorization-output
-        useAs: input
-        description: Send orchestrated results to output
+      2. Eligibility Check Agent - Verifies member eligibility and benefit limits
 
-  - id: authorization-output
-    type: genesis:chat_output
-    name: Authorization Decision
-    description: Display comprehensive authorization analysis and decision
+
+      For each authorization request:
+
+      1. First check member eligibility and active coverage
+
+      2. Then validate service coverage under EOC
+
+      3. Analyze any limitations or requirements
+
+      4. Provide comprehensive authorization decision
+
+
+      Format your response with:
+
+      - Authorization Decision (Approved/Denied/Prior Auth Required)
+
+      - Coverage Details
+
+      - Member Cost Responsibility
+
+      - Recommendations or Next Steps
+
+      '
+    temperature: 0.2
+    max_tokens: 2000
+  provides:
+  - in: authorization-output
+    useAs: input
+    description: Send orchestrated results to output
+- id: authorization-output
+  type: genesis:chat_output
+  name: Authorization Decision
+  description: Display comprehensive authorization analysis and decision

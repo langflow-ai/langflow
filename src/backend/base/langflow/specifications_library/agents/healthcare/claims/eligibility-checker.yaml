@@ -22,12 +22,12 @@ variables:
   default: gpt-4
   description: Model name to use for verification
 - name: temperature
-  type: float
+  type: number
   required: false
   default: 0.1
   description: Temperature for model generation
 - name: verification_timeout
-  type: integer
+  type: number
   required: false
   default: 30
   description: Timeout for eligibility verification in seconds
@@ -61,7 +61,8 @@ sampleInput:
   line_of_business: Medicare
 promptConfiguration:
   basePromptId: eligibility_check_v1
-  customPrompt: 'You are an insurance eligibility verification specialist. Your task is to:
+  customPrompt: 'You are an insurance eligibility verification specialist. Your task
+    is to:
 
     1. Verify member eligibility status
 
@@ -95,7 +96,8 @@ components:
   description: Prompt template for agent instructions
   config:
     saved_prompt: eligibility_checker_prompt_v1
-    template: 'You are an insurance eligibility verification specialist. Your task is to:
+    template: 'You are an insurance eligibility verification specialist. Your task
+      is to:
 
       1. Verify member eligibility status
 
@@ -130,9 +132,6 @@ components:
   description: Real-time eligibility verification service via MCP
   config:
     tool_name: eligibility_check
-    description: Member eligibility validation tool
-    timeout: 30
-    retry_count: 3
   provides:
   - useAs: tools
     in: eligibility-agent
@@ -151,25 +150,25 @@ outputs:
 - member_cost_share
 kpis:
 - name: Verification Success Rate
-  category: Quality
+  category: quality
   valueType: percentage
   target: 99
   unit: '%'
   description: Percentage of successful eligibility verifications
 - name: Response Time
-  category: Performance
-  valueType: numeric
+  category: performance
+  valueType: number
   target: 3000
   unit: ms
   description: Average time to complete eligibility check
 - name: Authorization Detection
-  category: Quality
+  category: quality
   valueType: percentage
   target: 95
   unit: '%'
   description: Accuracy in identifying authorization requirements
 - name: Cost Calculation Accuracy
-  category: Quality
+  category: quality
   valueType: percentage
   target: 98
   unit: '%'

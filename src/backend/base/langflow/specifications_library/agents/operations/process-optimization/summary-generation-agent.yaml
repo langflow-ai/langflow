@@ -1,7 +1,8 @@
 id: urn:agent:genesis:autonomize.ai:summary-generation:1.0.0
 name: Summary Generation Agent
 fullyQualifiedName: genesis.autonomize.ai.summary_generation
-description: Generate human-readable summaries of prior authorization requests and extracted data
+description: Generate human-readable summaries of prior authorization requests and
+  extracted data
 domain: autonomize.ai
 subDomain: content-generation
 version: 1.0.0
@@ -22,7 +23,7 @@ variables:
   default: gpt-4
   description: Model name to use for summary generation
 - name: temperature
-  type: float
+  type: number
   required: false
   default: 0.3
   description: Temperature for model generation
@@ -44,8 +45,8 @@ tags:
 - healthcare
 - prior-authorization
 kind: Single Agent
-agentGoal: Generate a human-readable summary of the fax contents, including extracted clinical and administrative data, for
-  quick reviewer reference
+agentGoal: Generate a human-readable summary of the fax contents, including extracted
+  clinical and administrative data, for quick reviewer reference
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: RequestResponse
@@ -94,19 +95,25 @@ components:
     model_name: gpt-4
     temperature: 0.3
     max_tokens: 2500
-    system_prompt: "You are a clinical documentation specialist creating summaries for prior authorization reviewers. Generate\
-      \ clear, concise summaries that enable quick decision-making.\n\nSUMMARY STRUCTURE:\n\n1. CASE OVERVIEW (2-3 sentences)\n\
-      \   - PA type and urgency\n   - Primary service requested\n   - Key clinical indication\n\n2. PATIENT INFORMATION\n\
-      \   - Demographics (age, gender)\n   - Insurance details (member ID, LOB)\n   - Relevant medical history\n\n3. CLINICAL\
-      \ SUMMARY\n   - Primary diagnosis with ICD-10\n   - Supporting diagnoses\n   - Current symptoms/clinical presentation\n\
-      \   - Previous treatments attempted\n   - Clinical rationale for request\n\n4. SERVICE DETAILS\n   - Procedure/service\
-      \ requested with codes\n   - Provider information (name, specialty, NPI)\n   - Facility/location\n   - Requested date/urgency\n\
-      \n5. VALIDATION RESULTS\n   - Eligibility status\n   - Network status (providers)\n   - Guideline compliance\n   - Missing\
-      \ documentation\n\n6. REVIEWER CONSIDERATIONS\n   - Key decision factors\n   - Policy considerations\n   - Potential\
-      \ concerns or red flags\n   - Alternative options (if applicable)\n\n7. RECOMMENDED ACTION\n   - Suggested disposition\n\
-      \   - Additional information needed\n   - Priority level\n\nUse the Prompt Template tool to ensure consistent formatting.\n\
-      \nWriting guidelines:\n- Use clear, medical terminology\n- Highlight critical information\n- Be objective and factual\n\
-      - Include all relevant codes\n- Flag any urgent issues prominently\n"
+    system_prompt: "You are a clinical documentation specialist creating summaries\
+      \ for prior authorization reviewers. Generate clear, concise summaries that\
+      \ enable quick decision-making.\n\nSUMMARY STRUCTURE:\n\n1. CASE OVERVIEW (2-3\
+      \ sentences)\n   - PA type and urgency\n   - Primary service requested\n   -\
+      \ Key clinical indication\n\n2. PATIENT INFORMATION\n   - Demographics (age,\
+      \ gender)\n   - Insurance details (member ID, LOB)\n   - Relevant medical history\n\
+      \n3. CLINICAL SUMMARY\n   - Primary diagnosis with ICD-10\n   - Supporting diagnoses\n\
+      \   - Current symptoms/clinical presentation\n   - Previous treatments attempted\n\
+      \   - Clinical rationale for request\n\n4. SERVICE DETAILS\n   - Procedure/service\
+      \ requested with codes\n   - Provider information (name, specialty, NPI)\n \
+      \  - Facility/location\n   - Requested date/urgency\n\n5. VALIDATION RESULTS\n\
+      \   - Eligibility status\n   - Network status (providers)\n   - Guideline compliance\n\
+      \   - Missing documentation\n\n6. REVIEWER CONSIDERATIONS\n   - Key decision\
+      \ factors\n   - Policy considerations\n   - Potential concerns or red flags\n\
+      \   - Alternative options (if applicable)\n\n7. RECOMMENDED ACTION\n   - Suggested\
+      \ disposition\n   - Additional information needed\n   - Priority level\n\nUse\
+      \ the Prompt Template tool to ensure consistent formatting.\n\nWriting guidelines:\n\
+      - Use clear, medical terminology\n- Highlight critical information\n- Be objective\
+      \ and factual\n- Include all relevant codes\n- Flag any urgent issues prominently\n"
     handle_parsing_errors: true
     max_iterations: 5
     verbose: true
@@ -121,14 +128,52 @@ components:
   description: Structured template for consistent summaries
   asTools: true
   config:
-    template_name: pa_summary_template
-    variables:
-    - case_type
-    - patient_info
-    - clinical_data
-    - service_details
-    - validation_results
-    format: structured
+    saved_prompt: pa_summary_template_v1
+    template: 'You are a clinical documentation specialist creating structured summaries for prior authorization reviewers.
+
+Use this template for consistent summary generation:
+
+CASE OVERVIEW
+- PA type and urgency: {case_type}
+- Primary service requested
+- Key clinical indication
+
+PATIENT INFORMATION
+- Demographics: {patient_info}
+- Insurance details
+- Relevant medical history
+
+CLINICAL SUMMARY
+- Primary diagnosis with ICD-10: {clinical_data}
+- Supporting diagnoses
+- Current symptoms/clinical presentation
+- Previous treatments attempted
+- Clinical rationale for request
+
+SERVICE DETAILS
+- Procedure/service requested: {service_details}
+- Provider information
+- Facility/location
+- Requested date/urgency
+
+VALIDATION RESULTS
+- Eligibility status: {validation_results}
+- Network status
+- Guideline compliance
+- Missing documentation
+
+REVIEWER CONSIDERATIONS
+- Key decision factors
+- Policy considerations
+- Potential concerns or red flags
+- Alternative options
+
+RECOMMENDED ACTION
+- Suggested disposition
+- Additional information needed
+- Priority level
+
+Format the summary clearly with proper medical terminology and highlight critical information.'
   provides:
   - useAs: tools
     in: summary-agent
@@ -147,32 +192,32 @@ outputs:
 - priority_level
 kpis:
 - name: Reviewer Time Saved
-  category: Efficiency
-  valueType: numeric
+  category: efficiency
+  valueType: number
   target: 180
   unit: seconds
   description: Average time saved per review with summary
 - name: Summary Readability Score
-  category: Quality
-  valueType: numeric
+  category: quality
+  valueType: number
   target: 80
   unit: score
   description: Flesch reading ease score for summaries
 - name: Summary Completeness
-  category: Quality
+  category: quality
   valueType: percentage
   target: 95
   unit: '%'
   description: Percentage of required elements included
 - name: Token Count
-  category: Efficiency
-  valueType: numeric
+  category: efficiency
+  valueType: number
   target: 800
   unit: tokens
   description: Average tokens per summary
 - name: Generation Latency
-  category: Performance
-  valueType: numeric
+  category: performance
+  valueType: number
   target: 2500
   unit: ms
   description: Time to generate complete summary

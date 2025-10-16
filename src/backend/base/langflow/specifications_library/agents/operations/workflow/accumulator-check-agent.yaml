@@ -22,12 +22,12 @@ variables:
   default: gpt-4
   description: Model name to use for analysis
 - name: temperature
-  type: float
+  type: number
   required: false
   default: 0.1
   description: Temperature for model generation
 - name: lookback_months
-  type: integer
+  type: number
   required: false
   default: 12
   description: Number of months to look back for claims history
@@ -44,7 +44,8 @@ tags:
 - healthcare
 - benefits
 kind: Single Agent
-agentGoal: Analyze member's benefit accumulators including deductibles, out-of-pocket maximums, and utilization limits
+agentGoal: Analyze member's benefit accumulators including deductibles, out-of-pocket
+  maximums, and utilization limits
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -203,10 +204,6 @@ components:
   asTools: true
   config:
     tool_name: qnext_auth_history
-    description: QNext authorization history tool
-    lookback_months: 12
-    include_claims: true
-    include_authorizations: true
   provides:
   - useAs: tools
     in: accumulator-agent
@@ -219,7 +216,6 @@ components:
   asTools: true
   config:
     tool_name: claims_history
-    description: Retrieve detailed claims history with accumulator impacts
   provides:
   - useAs: tools
     in: accumulator-agent
@@ -232,7 +228,6 @@ components:
   asTools: true
   config:
     tool_name: benefit_calculator
-    description: Calculate member costs considering deductibles and OOP limits
   provides:
   - useAs: tools
     in: accumulator-agent
@@ -252,25 +247,25 @@ outputs:
 - utilization_status
 kpis:
 - name: Accumulator Accuracy
-  category: Quality
+  category: quality
   valueType: percentage
   target: 99
   unit: '%'
   description: Accuracy of accumulator calculations
 - name: Query Response Time
-  category: Performance
-  valueType: numeric
+  category: performance
+  valueType: number
   target: 2000
   unit: ms
   description: Time to retrieve and analyze accumulator data
 - name: Cost Estimate Accuracy
-  category: Quality
+  category: quality
   valueType: percentage
   target: 95
   unit: '%'
   description: Accuracy of member responsibility estimates
 - name: Claims Data Coverage
-  category: Quality
+  category: quality
   valueType: percentage
   target: 98
   unit: '%'

@@ -902,6 +902,49 @@ def version_option(
     pass
 
 
+# Genesis commands integration
+def add_genesis_commands():
+    """Add Genesis CLI commands to the main app."""
+    try:
+        from langflow.cli.genesis.main import genesis as genesis_group
+
+        # Convert click group to typer command
+        @app.command("genesis", context_settings={"allow_extra_args": True, "allow_interspersed_args": False})
+        def genesis_wrapper(
+            ctx: typer.Context,
+        ) -> None:
+            """Genesis Agent specification management commands.
+
+            Manage AI agent specifications, templates, and workflows using the Genesis
+            specification system integrated with AI Studio.
+
+            Examples:
+                ai-studio genesis create -t template.yaml
+                ai-studio genesis validate spec.yaml
+                ai-studio genesis list flows
+                ai-studio genesis config show
+            """
+            import sys
+            from click.testing import CliRunner
+
+            # Get the remaining arguments
+            args = ctx.args if ctx.args else []
+
+            # Execute genesis command
+            runner = CliRunner()
+            result = runner.invoke(genesis_group, args, catch_exceptions=False)
+
+            # Print output and exit with the same code
+            if result.output:
+                typer.echo(result.output, nl=False)
+
+            if result.exit_code != 0:
+                raise typer.Exit(result.exit_code)
+
+    except ImportError:
+        logger.warning("Genesis CLI not available. Genesis commands will not be registered.")
+
+
 def api_key_banner(unmasked_api_key) -> None:
     is_mac = platform.system() == "Darwin"
     import pyperclip
@@ -930,6 +973,10 @@ def api_key_banner(unmasked_api_key) -> None:
         logger.info("Make sure to store it in a secure location.")
         ctrl_cmd = "Ctrl" if not is_mac else "Cmd"
         logger.info(f"The API key has been copied to your clipboard. {ctrl_cmd} + V to paste it.")
+
+
+# Register Genesis commands
+add_genesis_commands()
 
 
 def main() -> None:

@@ -16,6 +16,10 @@ This catalog documents common patterns found in agent specifications. Each patte
 | [Multi-Tool Agent](#4-multi-tool-agent) | Complex | 6+ | Complex workflows, multiple APIs | Advanced automation |
 | [Enterprise Agent](#5-enterprise-agent) | Enterprise | Variable | Production deployments | Governance, monitoring |
 | [Multi-Agent Workflow](#6-multi-agent-workflow) | Advanced | 8+ | Specialized agent collaboration | Complex problem-solving |
+| [Healthcare Integration](#7-healthcare-integration) | Healthcare | 4-8 | Healthcare system integration | Medical workflows, HIPAA compliance |
+| [Multi-Connector Healthcare](#8-multi-connector-healthcare) | Healthcare | 8+ | Complex healthcare orchestration | End-to-end healthcare automation |
+| [HIPAA Compliance](#9-hipaa-compliance) | Healthcare | Variable | Secure healthcare data handling | PHI protection, audit requirements |
+| [Clinical Workflow](#10-clinical-workflow) | Healthcare | 6+ | Clinical decision support | Evidence-based healthcare |
 
 ---
 
@@ -896,6 +900,670 @@ Location: /Users/jagveersingh/Developer/studio/ai-studio/src/backend/base/langfl
 - [ ] Memory and verbose settings are consistent
 - [ ] Rate limiting and performance settings are configured
 - [ ] Agent collaboration pattern is clearly documented
+
+---
+
+## 7. Healthcare Integration
+
+**Pattern**: Input → Healthcare Connector → Agent → Output
+**Complexity**: Healthcare (4-8 components)
+**Best For**: Healthcare system integration, medical workflows, HIPAA-compliant data processing
+
+### When to Use
+- Integration with EHR, claims, eligibility, or pharmacy systems
+- HIPAA-compliant healthcare data processing
+- Clinical workflow automation
+- Healthcare decision support systems
+- Medical record processing and analysis
+- Patient journey automation
+
+### Structure
+```
+[Chat Input] → [Agent] → [Chat Output]
+                 ↑
+     [Healthcare Connector]
+```
+
+### Components Required
+1. `genesis:chat_input` - Healthcare data input
+2. `genesis:healthcare_connector` - EHR, Claims, Eligibility, or Pharmacy connector
+3. `genesis:agent` - Healthcare processing logic
+4. `genesis:chat_output` - Clinical results display
+5. Optional: `genesis:prompt_template` - Clinical prompt management
+
+### Template
+
+```yaml
+name: Healthcare Integration Agent
+description: Agent with healthcare system integration
+version: "1.0.0"
+agentGoal: Process healthcare data using integrated healthcare systems
+
+# Healthcare-specific metadata
+domain: autonomize.ai
+subDomain: healthcare-integration
+targetUser: internal
+valueGeneration: ProcessAutomation
+securityInfo:
+  visibility: Private
+  confidentiality: High
+  gdprSensitive: true
+
+components:
+  - id: patient-input
+    type: genesis:chat_input
+    name: Patient Data Input
+    description: Accept patient information for processing
+    provides:
+      - in: healthcare-agent
+        useAs: input
+        description: Send patient data to healthcare agent
+
+  - id: ehr-connector
+    type: genesis:ehr_connector
+    name: EHR System Integration
+    description: Retrieve patient data from EHR system
+    asTools: true
+    config:
+      ehr_system: epic
+      fhir_version: R4
+      authentication_type: oauth2
+      base_url: "${EHR_BASE_URL}"
+      operation: get_patient_data
+    provides:
+      - useAs: tools
+        in: healthcare-agent
+        description: Provide EHR data access
+
+  - id: healthcare-agent
+    type: genesis:agent
+    name: Clinical Processing Agent
+    description: Process patient data with EHR integration
+    config:
+      system_prompt: |
+        You are a healthcare integration specialist with access to EHR systems.
+
+        Your responsibilities:
+        1. Retrieve patient data from EHR systems
+        2. Process clinical information following HIPAA guidelines
+        3. Provide comprehensive healthcare analysis
+        4. Maintain data security and patient privacy
+
+        Always:
+        - Protect patient PHI (Protected Health Information)
+        - Follow clinical best practices
+        - Provide evidence-based recommendations
+        - Log all data access for audit compliance
+      temperature: 0.1
+      max_tokens: 2000
+      handle_parsing_errors: true
+    provides:
+      - in: clinical-output
+        useAs: input
+        description: Send processed clinical results
+
+  - id: clinical-output
+    type: genesis:chat_output
+    name: Clinical Results
+    description: Display processed healthcare information
+    config:
+      should_store_message: true
+```
+
+### Healthcare Connector Variations
+
+#### EHR Integration
+```yaml
+- id: ehr-connector
+  type: genesis:ehr_connector
+  config:
+    ehr_system: epic
+    operation: get_patient_data
+```
+
+#### Claims Processing
+```yaml
+- id: claims-connector
+  type: genesis:claims_connector
+  config:
+    clearinghouse: change_healthcare
+    operation: submit_claim
+```
+
+#### Eligibility Verification
+```yaml
+- id: eligibility-connector
+  type: genesis:eligibility_connector
+  config:
+    eligibility_service: availity
+    operation: verify_eligibility
+```
+
+#### Pharmacy Integration
+```yaml
+- id: pharmacy-connector
+  type: genesis:pharmacy_connector
+  config:
+    pharmacy_network: surescripts
+    operation: send_prescription
+```
+
+---
+
+## 8. Multi-Connector Healthcare
+
+**Pattern**: Input → Multiple Healthcare Connectors → Agent → Output
+**Complexity**: Healthcare (8+ components)
+**Best For**: Complex healthcare orchestration, end-to-end healthcare automation, comprehensive patient workflows
+
+### When to Use
+- End-to-end patient journey automation
+- Complex healthcare workflows requiring multiple system integrations
+- Revenue cycle management
+- Comprehensive clinical decision support
+- Multi-system healthcare data aggregation
+- Complete patient care coordination
+
+### Structure
+```
+[Chat Input] → [Healthcare Agent] → [Chat Output]
+                        ↑
+    [EHR] + [Claims] + [Eligibility] + [Pharmacy]
+```
+
+### Components Required
+1. `genesis:chat_input` - Patient data input
+2. `genesis:prompt_template` - Healthcare workflow prompt
+3. `genesis:ehr_connector` - Electronic health records
+4. `genesis:claims_connector` - Claims processing
+5. `genesis:eligibility_connector` - Insurance verification
+6. `genesis:pharmacy_connector` - Medication management
+7. `genesis:agent` - Healthcare orchestration agent
+8. `genesis:chat_output` - Comprehensive results
+
+### Template
+
+```yaml
+name: Multi-Connector Healthcare Orchestration
+description: Comprehensive healthcare workflow with multiple system integrations
+version: "1.0.0"
+agentGoal: Orchestrate complete healthcare workflow from patient data to billing
+
+# Enterprise healthcare metadata
+domain: autonomize.ai
+subDomain: healthcare-orchestration
+kind: Single Agent
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+
+# HIPAA compliance
+securityInfo:
+  visibility: Private
+  confidentiality: High
+  gdprSensitive: true
+
+components:
+  - id: patient-input
+    type: genesis:chat_input
+    name: Patient Workflow Input
+    description: Accept patient information for comprehensive processing
+    provides:
+      - in: orchestration-agent
+        useAs: input
+        description: Send patient data to orchestration agent
+
+  - id: healthcare-prompt
+    type: genesis:prompt_template
+    name: Healthcare Orchestration Instructions
+    description: Comprehensive healthcare workflow prompt
+    config:
+      template: |
+        You are a healthcare workflow orchestrator with access to multiple healthcare systems:
+
+        1. EHR System: Patient clinical data and medical history
+        2. Claims System: Billing and prior authorization processing
+        3. Eligibility System: Insurance verification and benefits
+        4. Pharmacy System: Medication management and e-prescribing
+
+        Healthcare Workflow Process:
+        1. Patient Data Retrieval: Use EHR connector to get comprehensive patient information
+        2. Insurance Verification: Use eligibility connector to verify coverage and benefits
+        3. Clinical Assessment: Analyze patient data for clinical decision support
+        4. Medication Management: Use pharmacy connector for drug interactions and prescriptions
+        5. Billing Coordination: Use claims connector for billing and prior authorization
+
+        HIPAA Compliance Requirements:
+        - Protect all PHI (Protected Health Information)
+        - Log all system access for audit trails
+        - Use secure data handling practices
+        - Provide clear clinical rationale for all decisions
+
+        Quality Standards:
+        - Follow evidence-based clinical guidelines
+        - Ensure data accuracy across all systems
+        - Provide comprehensive patient care coordination
+        - Maintain detailed workflow documentation
+    provides:
+      - useAs: system_prompt
+        in: orchestration-agent
+        description: Provide healthcare orchestration instructions
+
+  - id: ehr-system
+    type: genesis:ehr_connector
+    name: EHR Integration
+    description: Electronic health record system access
+    asTools: true
+    config:
+      ehr_system: epic
+      fhir_version: R4
+      authentication_type: oauth2
+      base_url: "${EHR_BASE_URL}"
+      operation: get_patient_data
+    provides:
+      - useAs: tools
+        in: orchestration-agent
+        description: EHR data access capability
+
+  - id: claims-system
+    type: genesis:claims_connector
+    name: Claims Processing
+    description: Healthcare claims and prior authorization system
+    asTools: true
+    config:
+      clearinghouse: change_healthcare
+      provider_npi: "${PROVIDER_NPI}"
+      test_mode: false
+      operation: submit_claim
+    provides:
+      - useAs: tools
+        in: orchestration-agent
+        description: Claims processing capability
+
+  - id: eligibility-system
+    type: genesis:eligibility_connector
+    name: Insurance Eligibility
+    description: Real-time insurance eligibility verification
+    asTools: true
+    config:
+      eligibility_service: availity
+      provider_npi: "${PROVIDER_NPI}"
+      real_time_mode: true
+      cache_duration_minutes: 15
+      operation: verify_eligibility
+    provides:
+      - useAs: tools
+        in: orchestration-agent
+        description: Eligibility verification capability
+
+  - id: pharmacy-system
+    type: genesis:pharmacy_connector
+    name: Pharmacy Integration
+    description: E-prescribing and medication management
+    asTools: true
+    config:
+      pharmacy_network: surescripts
+      prescriber_npi: "${PRESCRIBER_NPI}"
+      interaction_checking: true
+      formulary_checking: true
+      operation: send_prescription
+    provides:
+      - useAs: tools
+        in: orchestration-agent
+        description: Pharmacy and medication tools
+
+  - id: orchestration-agent
+    type: genesis:agent
+    name: Healthcare Orchestration Agent
+    description: Orchestrates comprehensive healthcare workflow
+    config:
+      agent_llm: Azure OpenAI
+      model_name: gpt-4
+      temperature: 0.1
+      max_tokens: 4000
+      handle_parsing_errors: true
+      max_iterations: 12
+      verbose: false
+    provides:
+      - in: healthcare-output
+        useAs: input
+        description: Send comprehensive healthcare results
+
+  - id: healthcare-output
+    type: genesis:chat_output
+    name: Healthcare Workflow Results
+    description: Comprehensive healthcare workflow results
+    config:
+      should_store_message: true
+
+# Key Performance Indicators
+kpis:
+  - name: Workflow Completion Rate
+    category: Quality
+    valueType: percentage
+    target: 95
+    unit: '%'
+    description: Percentage of healthcare workflows completed successfully
+
+  - name: HIPAA Compliance Score
+    category: Quality
+    valueType: percentage
+    target: 100
+    unit: '%'
+    description: HIPAA compliance rating for data handling
+
+  - name: Clinical Accuracy
+    category: Quality
+    valueType: percentage
+    target: 98
+    unit: '%'
+    description: Accuracy of clinical recommendations and data processing
+```
+
+---
+
+## 9. HIPAA Compliance
+
+**Pattern**: Any Healthcare Pattern + Comprehensive Security Metadata
+**Complexity**: Healthcare (Variable components)
+**Best For**: Secure healthcare data handling, PHI protection, audit requirements
+
+### When to Use
+- Any healthcare workflow handling PHI data
+- Regulated healthcare environments
+- Clinical systems requiring audit trails
+- Patient data processing workflows
+- Healthcare compliance requirements
+- Medical record handling systems
+
+### Additional Metadata Required
+
+```yaml
+# HIPAA Compliance Metadata
+securityInfo:
+  visibility: Private              # Required for PHI data
+  confidentiality: High           # High security classification
+  gdprSensitive: true            # GDPR compliance flag
+
+# Healthcare Domain Classification
+domain: autonomize.ai
+subDomain: healthcare-{specific_area}  # e.g., clinical-workflow, patient-care
+targetUser: internal             # Restrict to internal users
+valueGeneration: ProcessAutomation
+
+# Audit and Monitoring
+kpis:
+  - name: HIPAA Compliance Score
+    category: Quality
+    valueType: percentage
+    target: 100
+    unit: '%'
+    description: HIPAA compliance rating
+
+  - name: Data Access Audit
+    category: Security
+    valueType: numeric
+    target: 100
+    unit: 'logs'
+    description: Complete audit logging of PHI access
+
+# Configuration Variables for Security
+variables:
+  - name: encryption_key
+    type: string
+    required: true
+    description: Encryption key for PHI data
+
+  - name: audit_endpoint
+    type: string
+    required: true
+    description: Audit logging endpoint URL
+```
+
+### HIPAA Compliance Features
+
+All healthcare patterns include:
+- **PHI Data Protection**: Automatic sanitization and encryption
+- **Audit Logging**: Comprehensive access logging for compliance
+- **Secure Error Handling**: Error messages that don't expose PHI
+- **Access Controls**: Role-based access to healthcare data
+- **Data Minimization**: Only process necessary healthcare data elements
+
+---
+
+## 10. Clinical Workflow
+
+**Pattern**: Input → Knowledge Search + Healthcare Connector → Agent → Output
+**Complexity**: Healthcare (6+ components)
+**Best For**: Clinical decision support, evidence-based healthcare, guideline-driven workflows
+
+### When to Use
+- Clinical decision support systems
+- Evidence-based treatment recommendations
+- Medical guideline compliance
+- Clinical protocol automation
+- Treatment plan generation
+- Medical research and analysis
+
+### Structure
+```
+[Chat Input] → [Clinical Agent] → [Chat Output]
+                      ↑
+    [Knowledge Hub] + [Healthcare Connector]
+```
+
+### Components Required
+1. `genesis:chat_input` - Clinical query input
+2. `genesis:knowledge_hub_search` - Clinical guideline search
+3. `genesis:healthcare_connector` - Patient data access
+4. `genesis:prompt_template` - Clinical reasoning prompt
+5. `genesis:agent` - Clinical decision agent
+6. `genesis:chat_output` - Clinical recommendations
+
+### Template
+
+```yaml
+name: Clinical Decision Support Agent
+description: Evidence-based clinical decision support with guideline integration
+version: "1.0.0"
+agentGoal: Provide evidence-based clinical recommendations using current guidelines and patient data
+
+# Clinical workflow metadata
+domain: autonomize.ai
+subDomain: clinical-decision-support
+kind: Single Agent
+targetUser: internal
+valueGeneration: InsightGeneration
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+
+components:
+  - id: clinical-query
+    type: genesis:chat_input
+    name: Clinical Query Input
+    description: Accept clinical questions and patient scenarios
+    provides:
+      - in: clinical-agent
+        useAs: input
+        description: Send clinical query to decision agent
+
+  - id: clinical-prompt
+    type: genesis:prompt_template
+    name: Clinical Decision Support Instructions
+    description: Evidence-based clinical reasoning prompt
+    config:
+      template: |
+        You are a clinical decision support specialist with access to:
+        1. Current clinical guidelines and protocols
+        2. Patient electronic health records
+        3. Evidence-based medical literature
+
+        Clinical Decision Process:
+        1. Patient Assessment: Review available patient data and clinical history
+        2. Guideline Review: Search for relevant clinical guidelines and protocols
+        3. Evidence Analysis: Analyze current medical evidence for the condition
+        4. Risk Assessment: Evaluate potential risks and contraindications
+        5. Recommendation Generation: Provide evidence-based treatment recommendations
+
+        Quality Standards:
+        - Base all recommendations on current clinical guidelines
+        - Consider patient-specific factors and contraindications
+        - Provide clear rationale for each recommendation
+        - Include relevant clinical references and evidence levels
+        - Highlight any clinical red flags or urgent considerations
+
+        Output Format:
+        - Clinical Assessment: Summary of patient condition
+        - Evidence Review: Relevant guidelines and literature
+        - Recommendations: Evidence-based treatment options
+        - Rationale: Clear reasoning for recommendations
+        - Follow-up: Monitoring and next steps
+    provides:
+      - useAs: system_prompt
+        in: clinical-agent
+        description: Provide clinical decision support instructions
+
+  - id: guideline-search
+    type: genesis:knowledge_hub_search
+    name: Clinical Guidelines Search
+    description: Search clinical guidelines and protocols
+    asTools: true
+    config:
+      search_scope: clinical_guidelines
+      max_results: 10
+      document_types: ["LCD", "NCD", "clinical_protocols", "treatment_guidelines"]
+    provides:
+      - useAs: tools
+        in: clinical-agent
+        description: Clinical guideline search capability
+
+  - id: patient-data
+    type: genesis:ehr_connector
+    name: Patient Data Access
+    description: Access patient clinical data from EHR
+    asTools: true
+    config:
+      ehr_system: epic
+      fhir_version: R4
+      authentication_type: oauth2
+      operation: get_patient_data
+    provides:
+      - useAs: tools
+        in: clinical-agent
+        description: Patient data access for clinical context
+
+  - id: clinical-agent
+    type: genesis:agent
+    name: Clinical Decision Agent
+    description: Evidence-based clinical decision support agent
+    config:
+      agent_llm: Azure OpenAI
+      model_name: gpt-4
+      temperature: 0.1
+      max_tokens: 3000
+      handle_parsing_errors: true
+      max_iterations: 8
+    provides:
+      - in: clinical-output
+        useAs: input
+        description: Send clinical recommendations
+
+  - id: clinical-output
+    type: genesis:chat_output
+    name: Clinical Recommendations
+    description: Evidence-based clinical recommendations and rationale
+    config:
+      should_store_message: true
+
+# Clinical Quality Metrics
+kpis:
+  - name: Clinical Accuracy
+    category: Quality
+    valueType: percentage
+    target: 98
+    unit: '%'
+    description: Accuracy of clinical recommendations
+
+  - name: Guideline Compliance
+    category: Quality
+    valueType: percentage
+    target: 95
+    unit: '%'
+    description: Adherence to current clinical guidelines
+
+  - name: Evidence Quality
+    category: Quality
+    valueType: percentage
+    target: 90
+    unit: '%'
+    description: Quality of supporting clinical evidence
+```
+
+---
+
+## Healthcare Pattern Selection Guide
+
+### Decision Matrix for Healthcare Patterns
+
+```
+What type of healthcare integration do you need?
+
+Single System Integration
+├─ EHR only → Healthcare Integration (EHR Connector)
+├─ Claims only → Healthcare Integration (Claims Connector)
+├─ Eligibility only → Healthcare Integration (Eligibility Connector)
+└─ Pharmacy only → Healthcare Integration (Pharmacy Connector)
+
+Multiple System Integration
+├─ 2-3 systems → Multi-Tool Agent (with healthcare connectors)
+└─ 4+ systems → Multi-Connector Healthcare
+
+Clinical Decision Making
+├─ Guideline-based → Clinical Workflow
+├─ Evidence-based → Clinical Workflow + Knowledge Hub
+└─ Patient-specific → Clinical Workflow + EHR Connector
+
+Compliance Requirements
+├─ HIPAA required → Add HIPAA Compliance metadata
+├─ Audit trails → Enterprise + HIPAA patterns
+└─ PHI handling → All healthcare patterns include compliance
+```
+
+### Healthcare Complexity Progression
+1. **Start with Single Connector**: Begin with Healthcare Integration pattern
+2. **Add Clinical Guidelines**: Progress to Clinical Workflow pattern
+3. **Multiple Systems**: Move to Multi-Connector Healthcare
+4. **Enterprise Deployment**: Add HIPAA Compliance and Enterprise metadata
+
+### Common Healthcare Combinations
+- **Clinical Assessment**: Clinical Workflow + EHR Connector
+- **Patient Journey**: Multi-Connector Healthcare + all four connectors
+- **Revenue Cycle**: Healthcare Integration (Claims + Eligibility)
+- **Medication Management**: Healthcare Integration (Pharmacy + EHR)
+- **Prior Authorization**: Multi-Tool Agent (Claims + Eligibility + EHR)
+
+### Healthcare Best Practices
+
+#### Security and Compliance
+- Always include HIPAA compliance metadata for PHI data
+- Use environment variables for all healthcare credentials
+- Enable audit logging for all healthcare data access
+- Implement proper error handling that doesn't expose PHI
+
+#### Performance Optimization
+- Cache eligibility data appropriately (typically 15 minutes)
+- Use batch operations for multiple claims or prescriptions
+- Implement proper timeout handling for healthcare APIs
+- Consider rate limiting for high-volume healthcare workflows
+
+#### Clinical Quality
+- Base all recommendations on current clinical guidelines
+- Include evidence levels and quality ratings
+- Provide clear clinical rationale for all decisions
+- Implement clinical decision support safeguards
 
 ---
 

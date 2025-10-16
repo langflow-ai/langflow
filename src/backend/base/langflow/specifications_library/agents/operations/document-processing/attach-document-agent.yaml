@@ -22,7 +22,7 @@ variables:
   default: gpt-4
   description: Model name to use
 - name: temperature
-  type: float
+  type: number
   required: false
   default: 0.1
   description: Temperature for model generation
@@ -32,7 +32,8 @@ tags:
 - healthcare
 - prior-authorization
 kind: Single Agent
-agentGoal: Attach the original pharmacy fax document to the case file for audit and downstream compliance workflows
+agentGoal: Attach the original pharmacy fax document to the case file for audit and
+  downstream compliance workflows
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -65,10 +66,12 @@ components:
   description: Prompt template for agent instructions
   config:
     saved_prompt: attach_document_prompt_v1
-    template: 'You are a specialist agent. Attach original fax documents to case records for audit compliance
+    template: 'You are a specialist agent. Attach original fax documents to case records
+      for audit compliance
 
 
-      Goal: Attach the original pharmacy fax document to the case file for audit and downstream compliance workflows
+      Goal: Attach the original pharmacy fax document to the case file for audit and
+      downstream compliance workflows
 
 
       Provide accurate and efficient results.'
@@ -98,7 +101,6 @@ components:
   asTools: true
   config:
     tool_name: api_component
-    description: Generic API integration tool
   provides:
   - useAs: tools
     in: main-agent
@@ -126,25 +128,25 @@ outputs:
 - details
 kpis:
 - name: Audit Readiness
-  category: Compliance
+  category: compliance
   valueType: percentage
   target: 100
   unit: '%'
   description: Percentage of cases with attached documents
 - name: Document Attachment Success
-  category: Quality
+  category: quality
   valueType: percentage
   target: 99
   unit: '%'
   description: Success rate of document attachments
 - name: Upload Time
-  category: Performance
-  valueType: numeric
+  category: performance
+  valueType: number
   target: 3000
   unit: ms
   description: Average time to upload documents
 - name: Retry Rate
-  category: Performance
+  category: performance
   valueType: percentage
   target: 5
   unit: '%'
