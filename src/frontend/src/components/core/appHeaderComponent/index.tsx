@@ -34,7 +34,13 @@ export default function AppHeader(): JSX.Element {
   const location = useLocation();
 
   const toggleTheme = () => {
-    setDark(!dark);
+    const newDark = !dark;
+    setDark(newDark);
+    try {
+      localStorage.setItem("themePreference", newDark ? "dark" : "light");
+    } catch {
+      // ignore storage errors
+    }
   };
 
   // useEffect(() => {

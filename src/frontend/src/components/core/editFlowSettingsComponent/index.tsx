@@ -184,7 +184,7 @@ export const EditFlowSettings: React.FC<
             <div>
               <div className="flex items-center gap-2">
                 <Form.Label className="text-mmd font-medium">
-                  Lock Flow
+                  Lock Workflow
                 </Form.Label>
 
                 <ForwardedIconComponent
