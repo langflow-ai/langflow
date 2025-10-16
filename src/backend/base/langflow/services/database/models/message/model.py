@@ -51,6 +51,13 @@ class MessageBase(SQLModel):
             value = []
         return value
 
+    @field_validator("session_id", mode="before")
+    @classmethod
+    def validate_session_id(cls, value):
+        if isinstance(value, UUID):
+            value = str(value)
+        return value
+
     @classmethod
     def from_message(cls, message: "Message", flow_id: str | UUID | None = None):
         # first check if the record has all the required fields
