@@ -10,6 +10,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import FlowPage from "../FlowPage";
+import { useGetAgentByFlowId } from "@/controllers/API/queries/agent-marketplace/use-get-agent-by-flow-id";
 
 type MarketplaceDetailState = {
   name?: string;
@@ -30,9 +31,21 @@ export default function AgentMarketplaceDetailPage() {
   const [isLoadingFlow, setIsLoadingFlow] = useState(false);
   const [flowError, setFlowError] = useState<string | null>(null);
 
-  const title = state.name || "Agent Details";
-  const description = state.description || "Explore details and specification.";
   const hasNoFlow = flowId === "no-flow";
+
+  // Fetch agent specification by flow_id
+  const { data: agentData, isLoading: isLoadingAgent } = useGetAgentByFlowId(
+    { flow_id: flowId || "" },
+    {
+      enabled: !!flowId && !hasNoFlow,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  // Use fetched data if available, otherwise fall back to navigation state
+  const spec = agentData?.spec || state.spec || {};
+  const title = spec.name || state.name || "Agent Details";
+  const description = spec.description || state.description || "Explore details and specification.";
 
   // Convert spec object to YAML format
   const jsonToYaml = (value: any, indent = 0): string => {
@@ -82,7 +95,7 @@ export default function AgentMarketplaceDetailPage() {
     return `${spacer}${formatScalar(value)}`;
   };
 
-  const specYaml = state.spec ? jsonToYaml(state.spec) : "# No specification available";
+  const specYaml = spec && Object.keys(spec).length > 0 ? jsonToYaml(spec) : "# No specification available";
 
   useEffect(() => {
     if (flowId && !hasNoFlow) {
@@ -184,20 +197,30 @@ export default function AgentMarketplaceDetailPage() {
                           navigator.clipboard?.writeText(specYaml);
                         }
                       }}
+                      disabled={isLoadingAgent}
                     >
                       Copy YAML
                     </Button>
                   </div>
                 </div>
                 <div className="flex-1 overflow-auto">
-                  <SyntaxHighlighter
-                    language="yaml"
-                    style={dark ? oneDark : oneLight}
-                    customStyle={{ margin: 0, background: "transparent" }}
-                    wrapLongLines
-                  >
-                    {specYaml}
-                  </SyntaxHighlighter>
+                  {isLoadingAgent ? (
+                    <div className="flex h-full items-center justify-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                        <p className="text-sm text-muted-foreground">Loading specification...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <SyntaxHighlighter
+                      language="yaml"
+                      style={dark ? oneDark : oneLight}
+                      customStyle={{ margin: 0, background: "transparent" }}
+                      wrapLongLines
+                    >
+                      {specYaml}
+                    </SyntaxHighlighter>
+                  )}
                 </div>
               </div>
             </TabsContent>
