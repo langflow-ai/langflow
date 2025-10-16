@@ -1,6 +1,6 @@
 import os
 import re
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import openai
 import pytest
@@ -1038,3 +1038,213 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             pytest.raises(ValueError, match="No structured output returned"),
         ):
             component.build_structured_dataframe()
+
+    def test_fallback_to_langchain_on_trustcall_generic_exception(self):
+        """Test that when trustcall fails with a generic exception, it falls back to langchain."""
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        class MockResult(BaseModel):
+            objects: list = [{"field": "langchain_value"}]
+
+        # Mock create_extractor to raise a generic exception (will be caught by trustcall)
+        with patch("lfx.components.processing.structured_output.create_extractor") as mock_create:
+            mock_create.side_effect = RuntimeError("Trustcall API error")
+
+            # Mock the prompt chain to return our expected result
+            with patch("lfx.components.processing.structured_output.ChatPromptTemplate.from_messages") as mock_prompt:
+                mock_chain = MagicMock()
+                mock_chain.invoke.return_value = MockResult()
+                # The __or__ method creates the chain, so we mock that
+                mock_prompt.return_value.__or__.return_value = mock_chain
+
+                with patch("lfx.components.processing.structured_output.logger") as mock_logger:
+                    result = component.build_structured_output_base()
+
+                    # Verify fallback was successful
+                    assert isinstance(result, list)
+                    assert result == [{"field": "langchain_value"}]
+
+                    # Verify warning was logged
+                    mock_logger.warning.assert_called_once()
+                    assert "Trustcall extraction failed, falling back to Langchain" in str(
+                        mock_logger.warning.call_args
+                    )
+
+    def test_fallback_both_methods_fail_raises_value_error(self):
+        """Test that when both trustcall and langchain fail, a ValueError is raised."""
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        # Mock create_extractor to fail (trustcall will catch and return None)
+        with patch("lfx.components.processing.structured_output.create_extractor") as mock_create:
+            mock_create.side_effect = RuntimeError("Trustcall API error")
+
+            # Mock the prompt chain to raise an exception
+            with patch("lfx.components.processing.structured_output.ChatPromptTemplate.from_messages") as mock_prompt:
+                mock_chain = MagicMock()
+                mock_chain.invoke.side_effect = Exception("Langchain parsing error")
+                mock_prompt.return_value.__or__.return_value = mock_chain
+
+                with (
+                    patch("lfx.components.processing.structured_output.logger"),
+                    pytest.raises(
+                        ValueError,
+                        match="Model does not support tool calling.*fallback with_structured_output also failed",
+                    ),
+                ):
+                    component.build_structured_output_base()
+
+    def test_not_implemented_error_raises_type_error_without_fallback(self):
+        """Test that NotImplementedError in trustcall raises TypeError without attempting fallback."""
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        # Mock get_chat_result to raise NotImplementedError
+        with patch("lfx.components.processing.structured_output.get_chat_result") as mock_get_chat_result:
+            mock_get_chat_result.side_effect = NotImplementedError("Model doesn't support tool calling")
+
+            # Mock langchain - should NOT be called
+            with patch("lfx.components.processing.structured_output.ChatPromptTemplate.from_messages") as mock_prompt:
+                with pytest.raises(TypeError, match="MockLanguageModel does not support structured output"):
+                    component.build_structured_output_base()
+
+                # Verify langchain was NOT called (no fallback for NotImplementedError)
+                mock_prompt.assert_not_called()
+
+    def test_langchain_fallback_processes_basemodel_response(self):
+        """Test that langchain fallback correctly processes BaseModel responses."""
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        class MockResponse(BaseModel):
+            objects: list = [{"field": "test_value"}]
+
+        # Mock trustcall to fail
+        with patch("lfx.components.processing.structured_output.create_extractor") as mock_create:
+            mock_create.side_effect = RuntimeError("Trustcall failed")
+
+            # Mock the prompt chain to return BaseModel
+            with patch("lfx.components.processing.structured_output.ChatPromptTemplate.from_messages") as mock_prompt:
+                mock_chain = MagicMock()
+                mock_chain.invoke.return_value = MockResponse()
+                mock_prompt.return_value.__or__.return_value = mock_chain
+
+                with patch("lfx.components.processing.structured_output.logger"):
+                    result = component.build_structured_output_base()
+
+                    # Verify it extracted "objects" from the BaseModel
+                    assert isinstance(result, list)
+                    assert result == [{"field": "test_value"}]
+
+    def test_langchain_fallback_processes_dict_response(self):
+        """Test that langchain fallback correctly processes dict responses without BaseModel conversion."""
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        # Mock trustcall to fail
+        with patch("lfx.components.processing.structured_output.create_extractor") as mock_create:
+            mock_create.side_effect = RuntimeError("Trustcall failed")
+
+            # Mock the prompt chain to return dict directly (no BaseModel)
+            with patch("lfx.components.processing.structured_output.ChatPromptTemplate.from_messages") as mock_prompt:
+                mock_chain = MagicMock()
+                mock_chain.invoke.return_value = {"field": "dict_value"}
+                mock_prompt.return_value.__or__.return_value = mock_chain
+
+                with patch("lfx.components.processing.structured_output.logger"):
+                    result = component.build_structured_output_base()
+
+                    # When langchain returns dict, it's returned as-is (no "objects" extraction)
+                    assert result == {"field": "dict_value"}
+
+    def test_trustcall_success_no_fallback_attempted(self):
+        """Test that when trustcall succeeds, langchain fallback is not attempted."""
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {"objects": [{"field": "trustcall_value"}]}
+
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
+            # Mock langchain - should NOT be called
+            with patch("lfx.components.processing.structured_output.ChatPromptTemplate.from_messages") as mock_prompt:
+                result = component.build_structured_output_base()
+
+                # Verify trustcall succeeded
+                assert isinstance(result, list)
+                assert result == [{"field": "trustcall_value"}]
+
+                # Verify langchain was NOT called
+                mock_prompt.assert_not_called()
+
+    def test_fallback_error_message_includes_both_errors(self):
+        """Test that the error message when both methods fail includes context about both failures."""
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        # Mock trustcall to fail with generic exception
+        with patch("lfx.components.processing.structured_output.create_extractor") as mock_create:
+            mock_create.side_effect = RuntimeError("Trustcall network error")
+
+            # Mock the prompt chain to raise an exception
+            with patch("lfx.components.processing.structured_output.ChatPromptTemplate.from_messages") as mock_prompt:
+                mock_chain = MagicMock()
+                mock_chain.invoke.side_effect = Exception("Langchain parsing error")
+                mock_prompt.return_value.__or__.return_value = mock_chain
+
+                with patch("lfx.components.processing.structured_output.logger"):
+                    with pytest.raises(ValueError) as exc_info:
+                        component.build_structured_output_base()
+
+                    error_msg = str(exc_info.value)
+                    # Verify error message mentions both failures
+                    assert "Model does not support tool calling" in error_msg
+                    assert "trustcall failed" in error_msg
+                    assert "fallback with_structured_output also failed" in error_msg
+                    assert "Langchain parsing error" in error_msg
