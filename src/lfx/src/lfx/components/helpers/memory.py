@@ -19,10 +19,10 @@ class MemoryComponent(Component):
     documentation: str = "https://docs.langflow.org/components-helpers#message-history"
     icon = "message-square-more"
     name = "Memory"
-    default_keys = ["mode", "memory", "session_id"]
+    default_keys = ["mode", "memory", "session_id", "context_id"]
     mode_config = {
-        "Store": ["message", "memory", "sender", "sender_name", "session_id"],
-        "Retrieve": ["n_messages", "order", "template", "memory", "session_id"],
+        "Store": ["message", "memory", "sender", "sender_name", "session_id", "context_id"],
+        "Retrieve": ["n_messages", "order", "template", "memory", "session_id", "context_id"],
     }
 
     inputs = [
@@ -86,6 +86,13 @@ class MemoryComponent(Component):
             value="",
             advanced=True,
         ),
+        MessageTextInput(
+            name="context_id",
+            display_name="Context ID",
+            info="The context ID of the chat. Adds an extra layer to the local memory.",
+            value="",
+            advanced=True,
+        ),
         DropdownInput(
             name="order",
             display_name="Order",
@@ -141,6 +148,7 @@ class MemoryComponent(Component):
     async def store_message(self) -> Message:
         message = Message(text=self.message) if isinstance(self.message, str) else self.message
 
+        message.context_id = self.context_id or message.context_id
         message.session_id = self.session_id or message.session_id
         message.sender = self.sender or message.sender or MESSAGE_SENDER_AI
         message.sender_name = self.sender_name or message.sender_name or MESSAGE_SENDER_NAME_AI
@@ -148,6 +156,7 @@ class MemoryComponent(Component):
         stored_messages: list[Message] = []
 
         if self.memory:
+            self.memory.context_id = message.context_id
             self.memory.session_id = message.session_id
             lc_message = message.to_lc_message()
             await self.memory.aadd_messages([lc_message])
@@ -162,7 +171,10 @@ class MemoryComponent(Component):
             await astore_message(message, flow_id=self.graph.flow_id)
             stored_messages = (
                 await aget_messages(
-                    session_id=message.session_id, sender_name=message.sender_name, sender=message.sender
+                    session_id=message.session_id,
+                    context_id=message.context_id,
+                    sender_name=message.sender_name,
+                    sender=message.sender,
                 )
                 or []
             )
@@ -179,6 +191,7 @@ class MemoryComponent(Component):
         sender_type = self.sender_type
         sender_name = self.sender_name
         session_id = self.session_id
+        context_id = self.context_id
         n_messages = self.n_messages
         order = "DESC" if self.order == "Descending" else "ASC"
 
@@ -195,6 +208,7 @@ class MemoryComponent(Component):
         elif self.memory:
             # override session_id
             self.memory.session_id = session_id
+            self.memory.context_id = context_id
 
             stored = await self.memory.aget_messages()
             # langchain memories are supposed to return messages in ascending order
@@ -215,6 +229,7 @@ class MemoryComponent(Component):
                 sender=sender_type,
                 sender_name=sender_name,
                 session_id=session_id,
+                context_id=context_id,
                 limit=10000,
                 order=order,
             )
