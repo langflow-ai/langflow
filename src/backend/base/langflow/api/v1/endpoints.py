@@ -41,6 +41,7 @@ from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
+from langflow.helpers.user import user_api_key_match_flow_user
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
@@ -329,6 +330,31 @@ async def run_flow_generator(
         await event_manager.queue.put((None, None, time.time))
 
 
+async def check_flow_user_permission(
+    flow_id: str,
+    api_key_user: UserRead,
+) -> None:
+    """Check if the user associated with the API key has permission to run the flow.
+
+    Args:
+        flow_id (str): The ID of the flow to check permissions for
+        api_key_user (UserRead): The user associated with the API key
+
+    Raises:
+        HTTPException: If the user does not have permission to run the flow
+    """
+    if api_key_user:
+        user_can_run_flow = await user_api_key_match_flow_user(
+            user_id=api_key_user.id,
+            flow_id=flow_id,
+        )
+
+        if not user_can_run_flow:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="User does not have permission to run this flow"
+            )
+
+
 @router.post("/run/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
 async def simplified_run_flow(
     *,
@@ -374,6 +400,8 @@ async def simplified_run_flow(
             - "token": Individual tokens during streaming
             - "end": Final execution result
     """
+    await check_flow_user_permission(flow_id=str(flow.id), api_key_user=api_key_user)
+
     telemetry_service = get_telemetry_service()
 
     # If input_request is None, manually parse the request body
@@ -613,6 +641,8 @@ async def experimental_run_flow(
     This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,
     catering to diverse application requirements.
     """  # noqa: E501
+    await check_flow_user_permission(flow_id=str(flow_id), api_key_user=api_key_user)
+
     session_service = get_session_service()
     flow_id_str = str(flow_id)
     if outputs is None:

@@ -38,7 +38,7 @@ export default function APITabsComponent() {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [copiedStep, setCopiedStep] = useState<string | null>(null);
   const endpointName = useFlowStore(
-    useShallow((state) => state.currentFlow?.endpoint_name),
+    useShallow((state) => state.currentFlow?.endpoint_name)
   );
   const dark = useDarkStore((state) => state.dark);
   const nodes = useFlowStore((state) => state.nodes);
@@ -58,7 +58,7 @@ export default function APITabsComponent() {
   const streaming = hasStreaming(nodes);
   const tweaks = useTweaksStore((state) => state.tweaks);
   const activeTweaks = Object.values(tweaks).some(
-    (tweak) => Object.keys(tweak).length > 0,
+    (tweak) => Object.keys(tweak).length > 0
   );
 
   const includeTopLevelInputValue = formatPayloadTweaks(tweaks);
@@ -85,13 +85,12 @@ export default function APITabsComponent() {
   // Platform selection for cURL
   const [selectedPlatform, setSelectedPlatform] = useState(
     operatingSystemTabs.find((tab) =>
-      tab.name.includes(getOS() === "windows" ? "windows" : "macoslinux"),
-    )?.name || "macoslinux",
+      tab.name.includes(getOS() === "windows" ? "windows" : "macoslinux")
+    )?.name || "macoslinux"
   );
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const isAutoLogin = useIsAutoLogin();
-  const shouldDisplayApiKey = isAuthenticated && !isAutoLogin;
+  const shouldDisplayApiKey = isAuthenticated;
 
   const tabsList = [
     {
