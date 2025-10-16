@@ -120,7 +120,6 @@ export default function KBSettingsPage() {
           },
         );
       } else if (provider === "opensearch") {
-      } else if (provider === "opensearch") {
         variablesToUpdate.push(
           { name: "kb_opensearch_url", value: opensearchUrl },
           { name: "kb_opensearch_index_prefix", value: opensearchIndexPrefix },
@@ -155,6 +154,7 @@ export default function KBSettingsPage() {
             type: variable.name === "kb_opensearch_password" ? "credential" : "str",
             category: "KB",
           });
+        }
       }
 
       setSuccessData({
