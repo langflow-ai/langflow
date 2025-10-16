@@ -15,9 +15,10 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 interface MarketplaceAgentCardProps {
   item: AgentSpecItem;
   viewMode?: "grid" | "list";
+  expand?: boolean; // when true, card fills available space
 }
 
-export default function MarketplaceAgentCard({ item, viewMode = "grid" }: MarketplaceAgentCardProps) {
+export default function MarketplaceAgentCard({ item, viewMode = "grid", expand = false }: MarketplaceAgentCardProps) {
   const name = item.spec?.name ?? item.file_name.replace(/\.ya?ml$/i, "");
   const description = item.spec?.description ?? "No description provided";
   const tags: string[] = Array.isArray(item.spec?.tags) ? item.spec?.tags : [];
@@ -39,7 +40,7 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid" }: Market
 
   return (
     <div
-      className={`group relative flex h-full flex-col rounded-lg border border-[#EBE8FF] bg-white dark:bg-card px-4 py-3 transition-shadow hover:shadow-md ${item.flow_id ? "cursor-pointer" : "cursor-default"}`}
+      className={`group relative flex ${expand ? "h-full" : ""} flex-col rounded-lg border border-[#EBE8FF] bg-white dark:bg-card px-4 py-3 transition-shadow hover:shadow-md ${item.flow_id ? "cursor-pointer" : "cursor-default"} ${!expand ? "max-h-[260px] md:max-h-[280px] xl:max-h-[300px] overflow-hidden" : ""}`}
       onClick={item.flow_id ? handleCardClick : undefined}
     >
       {/* Header */}
