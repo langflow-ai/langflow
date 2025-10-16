@@ -1,15 +1,13 @@
 {
-  "urn:agent:genesis:accumulator_check:1": "26bb04f0-22eb-4ac5-8230-18eb0e0ffcc1",
-  "urn:agent:genesis:attach_document:1": "e8d30a30-ea84-4b5e-9a8d-ae2aa86da43d",
-  "urn:agent:genesis:eligibility_checker:1": "060f1ea5-7c7a-48a1-8de3-3052a459b80c",
-  "urn:agent:genesis:eoc_check:1":"2f648763-824f-4a10-9d9b-05f1f105fde5",
-  "urn:agent:genesis:guideline_check:1": "e0354ed0-7274-4964-9935-a9fe878c515b",
-  "urn:agent:genesis:auth_guideline:1": "172f742c-823d-44e0-a998-c9dd8e634095",
-  "urn:agent:genesis:clinical_entity_extractor_agent:1": "a5822426-c9ab-44e7-849c-afb4d64a7c3f",
-  "urn:agent:genesis:guideline_retrieval:1": "53bdfe8f-5e22-4ae2-8516-d12a0f9ccdbc",
-  "urn:agent:genesis:icd_extractor_agent:1": "3e48763a-1f01-4be5-929c-52e21a2990e0",
-  "urn:agent:genesis:ie_criteria_simplification:1": "d86928f5-e518-4c0a-adc5-8ad63cb325cf",
-  "urn:agent:genesis:lab_value_extraction:1": "1943ff8b-3898-431a-91a7-2e95ccd06724",
-  "urn:agent:genesis:sumarization_agent:1": "dc792ee2-b698-41c2-8bda-509edb8c9cd3",
-  "urn:agent:genesis:ask_auto_agent:1": "b64a50ed-3b0d-4a4c-a9d6-e7e7949cedf0"
+  "urn:agent:genesis:lab_value_extraction:1": "7190def6-7a7f-49c2-9dd5-c781ee71beec",
+  "urn:agent:genesis:eligibility_checker:1": "fd0e7c07-6161-4ea8-8791-0bc214bb4ba5",
+  "urn:agent:genesis:ie_criteria_simplification:1": "1e2607f0-22c0-4e84-95d6-1500f196dde8",
+  "urn:agent:genesis:auth_guideline:1": "33c6e8d6-3af9-4fe0-9ebb-95d6f2ad6a7b",
+  "urn:agent:genesis:clinical_entity_extractor_agent:1": "d771b35a-e94a-487e-adcd-3f5d856f3fc4",
+  "urn:agent:clinical_summarization_agent:1": "eae2d7bb-a11a-4ddd-85cd-3b471aabda56",
+  "urn:agent:document_question_answer_agent:1": "552f9aa9-773d-48a5-ab98-7e3bd95efa7c",
+  "urn:agent:entity_normalization_agent:1": "4bbe22b2-2d46-4e50-b972-98a2ce77b645",
+  "urn:agent:prior-auth-form-extraction-agent:1": "ff53e3bf-3476-43ca-9955-33de4eeacd6b",
+  "urn:agent:prior-auth-recommendation-agent:1": "ca5d05c3-6b02-44d4-98d2-48ffcd3524fc",
+  "urn:agent:relation-extraction-agent:1": "f5bd7e89-3d4f-42e8-9975-a426cfa99066"
 }
