@@ -372,7 +372,6 @@ export default function AgentMarketplacePage() {
                     key={`${item.folder_name}/${item.file_name}`}
                     item={item}
                     viewMode={viewMode}
-                    interactive={item.folder_name !== "static_agents"}
                   />
                 ))}
               </div>

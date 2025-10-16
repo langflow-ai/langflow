@@ -8,118 +8,39 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Pencil, Upload, Archive, DollarSign, Trash2 } from "lucide-react";
-import { cn } from "@/utils/utils";
 import type { AgentSpecItem } from "@/controllers/API/queries/agent-marketplace/use-get-agent-marketplace";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { useMemo } from "react";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 
 interface MarketplaceAgentCardProps {
   item: AgentSpecItem;
   viewMode?: "grid" | "list";
-  interactive?: boolean; // when false, disables navigation on click
 }
 
-export default function MarketplaceAgentCard({ item, viewMode = "grid", interactive = true }: MarketplaceAgentCardProps) {
+export default function MarketplaceAgentCard({ item, viewMode = "grid" }: MarketplaceAgentCardProps) {
   const name = item.spec?.name ?? item.file_name.replace(/\.ya?ml$/i, "");
   const description = item.spec?.description ?? "No description provided";
   const tags: string[] = Array.isArray(item.spec?.tags) ? item.spec?.tags : [];
-  const status = (item.spec?.status ?? "").toString();
   const domain = item.spec?.subDomain ?? item.spec?.domain ?? "";
   const version = item.spec?.version ?? "";
 
   const navigate = useCustomNavigate();
 
-  // Lightweight JSON → YAML conversion implemented locally
-  const jsonToYaml = (value: any, indent = 0): string => {
-    const spacer = " ".repeat(indent);
-    const nextIndent = indent + 2;
-
-    const formatScalar = (v: any): string => {
-      if (v === null || v === undefined) return "null";
-      const t = typeof v;
-      if (t === "string") return JSON.stringify(v); // safe quoting
-      if (t === "number") return Number.isFinite(v) ? String(v) : JSON.stringify(v);
-      if (t === "boolean") return v ? "true" : "false";
-      return JSON.stringify(v);
-    };
-
-    if (Array.isArray(value)) {
-      if (value.length === 0) return "[]";
-      return value
-        .map((item) => {
-          if (item && typeof item === "object") {
-            const nested = jsonToYaml(item, nextIndent);
-            return `${spacer}- ${nested.startsWith("\n") ? nested.substring(1) : `\n${nested}`}`;
-          }
-          return `${spacer}- ${formatScalar(item)}`;
-        })
-        .join("\n");
-    }
-
-    if (value && typeof value === "object") {
-      const keys = Object.keys(value);
-      if (keys.length === 0) return "{}";
-      return keys
-        .map((key) => {
-          const val = (value as any)[key];
-          if (val && typeof val === "object") {
-            const nested = jsonToYaml(val, nextIndent);
-            if (Array.isArray(val)) {
-              // arrays inline if empty, otherwise block
-              return `${spacer}${key}: ${nested.includes("\n") ? `\n${nested}` : nested}`;
-            }
-            return `${spacer}${key}:\n${nested}`;
-          }
-          return `${spacer}${key}: ${formatScalar(val)}`;
-        })
-        .join("\n");
-    }
-
-    // scalars
-    return `${spacer}${formatScalar(value)}`;
-  };
-
-  const specYaml = useMemo(() => jsonToYaml(item.spec ?? {}), [item.spec]);
-
   const handleCardClick = () => {
-    // If flow_id exists, navigate with it in the URL
-    const flowId = item.flow_id || "no-flow";
-    navigate(`/agent-marketplace/detail/${flowId}`, {
+    if (!item.flow_id) return;
+    navigate(`/agent-marketplace/detail/${item.flow_id}`, {
       state: {
         name,
         description,
-        domain,
-        version,
-        specYaml,
         spec: item.spec ?? {},
-        fileName: item.file_name,
-        folderName: item.folder_name,
-        status,
-        noFlow: !item.flow_id,
       },
     });
   };
 
   return (
     <div
-      className={cn(
-        "group relative flex h-full flex-col rounded-lg border border-[#EBE8FF] bg-white dark:bg-card px-4 py-3 transition-shadow hover:shadow-md",
-        interactive ? "cursor-pointer" : "cursor-default",
-      )}
-      onClick={interactive ? handleCardClick : undefined}
-      role={interactive ? "button" : undefined}
-      tabIndex={interactive ? 0 : undefined}
-      onKeyDown={
-        interactive
-          ? (e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                handleCardClick();
-              }
-            }
-          : undefined
-      }
+      className="group relative flex h-full flex-col rounded-lg border border-[#EBE8FF] bg-white dark:bg-card px-4 py-3 transition-shadow hover:shadow-md cursor-pointer"
+      onClick={handleCardClick}
     >
       {/* Header */}
       <div className="mb-3 flex items-start justify-between">
