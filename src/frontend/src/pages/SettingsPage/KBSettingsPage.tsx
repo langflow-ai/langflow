@@ -151,7 +151,8 @@ export default function KBSettingsPage() {
           await createVariable({
             name: variable.name,
             value: variable.value,
-            type: variable.name === "kb_opensearch_password" ? "credential" : "str",
+            type:
+              variable.name === "kb_opensearch_password" ? "credential" : "str",
             category: "KB",
           });
         }
