@@ -136,7 +136,7 @@ export const MenuBar = memo((): JSX.Element => {
             >
               <span
                 ref={measureRef}
-                className="w-fit max-w-[35vw] truncate whitespace-pre text-mmd font-semibold sm:max-w-full sm:text-sm"
+                className="w-fit max-w-[35vw] truncate whitespace-pre text-mmd font-semibold sm:max-w-full sm:text-sm text-white"
                 aria-hidden="true"
                 data-testid="flow_name"
               >

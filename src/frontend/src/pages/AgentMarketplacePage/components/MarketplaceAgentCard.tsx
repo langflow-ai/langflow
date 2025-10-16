@@ -119,10 +119,9 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid" }: Market
                 key={tag}
                 variant="secondary"
                 size="xq"
-                className="gap-1"
-                style={{ backgroundColor: "#F5F2FF" }}
+                className="gap-1 bg-[#F5F2FF] dark:bg-white/10 dark:text-white"
               >
-                {label && <span className="text-muted-foreground">{label}:</span>}
+                {label && <span className="text-muted-foreground dark:text-white/70">{label}:</span>}
                 <span>{value}</span>
               </Badge>
             );
@@ -136,31 +135,29 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid" }: Market
               content={
                 <div className="flex max-w-[240px] flex-wrap gap-1">
                   {tags.slice(2).map((tag) => (
-                    <Badge
-                      key={`hidden-${tag}`}
-                      variant="secondary"
-                      className="text-[11px]"
-                      style={{ backgroundColor: "#F5F2FF" }}
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              }
-            >
-              <span className="inline-flex">
-                <Badge
-                  variant="secondary"
-                  size="xq"
-                  className="cursor-pointer"
-                  style={{ backgroundColor: "#F5F2FF" }}
-                >
-                  +{tags.length - 2}
-                </Badge>
-              </span>
-            </ShadTooltip>
-          )}
-        </div>
+                  <Badge
+                    key={`hidden-${tag}`}
+                    variant="secondary"
+                    className="text-[11px] bg-[#F5F2FF] dark:bg-white/10 dark:text-white"
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            }
+          >
+            <span className="inline-flex">
+              <Badge
+                variant="secondary"
+                size="xq"
+                className="cursor-pointer bg-[#F5F2FF] dark:bg-white/10 dark:text-white"
+              >
+                +{tags.length - 2}
+              </Badge>
+            </span>
+          </ShadTooltip>
+        )}
+      </div>
       )}
     </div>
   );
