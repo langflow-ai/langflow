@@ -79,13 +79,9 @@ const config = {
 
   presets: [
     [
-      "docusaurus-preset-openapi",
+      "@docusaurus/preset-classic",
       /** @type {import('@docusaurus/preset-classic').Options} */
       ({
-        api: {
-          path: "openapi.json", // Path to your OpenAPI file
-          routeBasePath: "/api", // The base URL for your API docs
-        },
         docs: {
           routeBasePath: "/", // Serve the docs at the site's root
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
@@ -125,6 +121,25 @@ const config = {
           ],
         },
       }),
+    ],
+    [
+      "redocusaurus",
+      {
+        openapi: {
+          path: "openapi",
+          routeBasePath: "/api",
+        },
+        specs: [
+          {
+            id: "api",
+            spec: "openapi/openapi.json",
+            route: "/api",
+          },
+        ],
+        theme: {
+          primaryColor: "#7528FC",
+        },
+      },
     ],
   ],
   plugins: [
