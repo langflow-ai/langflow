@@ -116,8 +116,7 @@ def is_settings_service_initialized() -> bool:
     """
     from lfx.services.manager import get_service_manager
     
-    service_manager = get_service_manager()
-    return ServiceType.SETTINGS_SERVICE in service_manager.services
+    return ServiceType.SETTINGS_SERVICE in  get_service_manager().services
 
 
 def get_settings_service() -> SettingsService:
