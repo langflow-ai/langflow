@@ -21,7 +21,7 @@ from lfx.log.logger import logger
 class DoclingRemoteVLMComponent(BaseFileComponent):
     display_name = "Docling Remote VLM"
     description = (
-        "Uses Docling to process input documents running a VLM pipline with a remote model"
+        "Uses Docling to process input documents running a VLM pipeline with a remote model"
         "(OpenAI-compatible API or IBM Cloud)."
     )
     documentation = "https://docling-project.github.io/docling/examples/vlm_pipeline_api_model/"
