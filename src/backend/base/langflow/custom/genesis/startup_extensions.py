@@ -303,6 +303,53 @@ def is_genesis_starter_projects_already_installed() -> bool:
         return False
 
 
+async def initialize_component_mapping_population(session=None) -> bool:
+    """Initialize component mapping population on startup."""
+    try:
+        from langflow.services.component_mapping.startup_population import StartupPopulationService
+
+        logger.info("🚀 Initializing component mapping population...")
+
+        # Create startup population service
+        startup_service = StartupPopulationService()
+
+        # Check if population should run
+        if not startup_service.should_run_startup_population():
+            logger.info("ℹ️ Component mapping population disabled via environment")
+            return True
+
+        # Get database session if not provided
+        if session is None:
+            try:
+                from langflow.services.database.utils import session_getter
+                from langflow.services.deps import get_db_service
+
+                db_service = get_db_service()
+                async with session_getter(db_service) as db_session:
+                    result = await startup_service.populate_on_startup(db_session)
+            except ImportError:
+                logger.warning("⚠️ Could not get database session, skipping population")
+                return True
+        else:
+            result = await startup_service.populate_on_startup(session)
+
+        if result.get("status") == "completed":
+            logger.info("✅ Component mapping population completed successfully")
+            return True
+        elif result.get("status") == "skipped":
+            logger.info("ℹ️ Component mapping population skipped (already populated)")
+            return True
+        else:
+            logger.warning(f"⚠️ Component mapping population failed: {result.get('error', 'Unknown error')}")
+            return False
+
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize component mapping population: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return False
+
+
 def initialize_genesis_studio_extensions() -> bool:
     """Initialize Genesis Studio extensions by replacing all starter projects with custom ones."""
     try:
@@ -358,4 +405,71 @@ def initialize_genesis_studio_extensions() -> bool:
         import traceback
 
         logger.error(f"Traceback: {traceback.format_exc()}")
+        return False
+
+
+async def initialize_complete_genesis_extensions(session=None) -> bool:
+    """
+    Initialize complete Genesis Studio extensions including startup population.
+
+    This is the main entry point for AUTPE-6180 integration.
+    """
+    try:
+        logger.info("🚀 Starting complete Genesis Studio extensions initialization...")
+
+        # Phase 1: Initialize starter projects
+        logger.info("📦 Phase 1: Initializing starter projects...")
+        starter_success = initialize_genesis_studio_extensions()
+        if not starter_success:
+            logger.warning("⚠️ Starter projects initialization failed, but continuing...")
+
+        # Phase 2: Initialize component mapping population
+        logger.info("🗄️ Phase 2: Initializing component mapping population...")
+        population_success = await initialize_component_mapping_population(session)
+        if not population_success:
+            logger.warning("⚠️ Component mapping population failed, but continuing...")
+
+        # Phase 3: Initialize schema integration
+        logger.info("🔧 Phase 3: Initializing schema integration...")
+        schema_success = initialize_complete_schema_integration()
+        if not schema_success:
+            logger.warning("⚠️ Schema integration failed, but continuing...")
+
+        overall_success = starter_success and population_success and schema_success
+
+        if overall_success:
+            logger.info("✅ Complete Genesis Studio extensions initialized successfully")
+        else:
+            logger.warning("⚠️ Some Genesis Studio extensions failed, but core functionality available")
+
+        return overall_success
+
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize complete Genesis Studio extensions: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return False
+
+
+def initialize_complete_schema_integration() -> bool:
+    """Initialize complete schema integration for all component types."""
+    try:
+        from langflow.services.spec.complete_component_schemas import integrate_schemas_with_validation
+
+        logger.info("🔧 Integrating complete component schema coverage...")
+
+        result = integrate_schemas_with_validation()
+
+        if result.get("success"):
+            added_count = result.get("added_count", 0)
+            total_count = result.get("final_count", 0)
+            logger.info(f"✅ Schema integration successful: {added_count} new schemas added, {total_count} total")
+            return True
+        else:
+            error = result.get("error", "Unknown error")
+            logger.error(f"❌ Schema integration failed: {error}")
+            return False
+
+    except Exception as e:
+        logger.error(f"❌ Error in schema integration: {e}")
         return False

@@ -16,7 +16,7 @@ HEALTHCARE_CONNECTOR_MAPPINGS = {
             "audit_logging": True,
             "encryption_enabled": True,
         },
-        "category": ComponentCategoryEnum.HEALTHCARE,
+        "category": ComponentCategoryEnum.HEALTHCARE.value,  # Use enum value for database compatibility
         "healthcare_metadata": {
             "hipaa_compliant": True,
             "phi_handling": True,
@@ -63,7 +63,7 @@ HEALTHCARE_CONNECTOR_MAPPINGS = {
             "audit_logging": True,
             "encryption_enabled": True,
         },
-        "category": ComponentCategoryEnum.HEALTHCARE,
+        "category": ComponentCategoryEnum.HEALTHCARE.value,  # Use enum value for database compatibility
         "healthcare_metadata": {
             "hipaa_compliant": True,
             "phi_handling": True,
@@ -109,7 +109,7 @@ HEALTHCARE_CONNECTOR_MAPPINGS = {
             "hipaa_compliance": True,
             "audit_logging": True,
         },
-        "category": ComponentCategoryEnum.HEALTHCARE,
+        "category": ComponentCategoryEnum.HEALTHCARE.value,  # Use enum value for database compatibility
         "healthcare_metadata": {
             "hipaa_compliant": True,
             "phi_handling": True,
@@ -154,7 +154,7 @@ HEALTHCARE_CONNECTOR_MAPPINGS = {
             "hipaa_compliance": True,
             "audit_logging": True,
         },
-        "category": ComponentCategoryEnum.HEALTHCARE,
+        "category": ComponentCategoryEnum.HEALTHCARE.value,  # Use enum value for database compatibility
         "healthcare_metadata": {
             "hipaa_compliant": True,
             "phi_handling": True,
@@ -199,7 +199,7 @@ HEALTHCARE_CONNECTOR_MAPPINGS = {
             "hipaa_compliance": True,
             "audit_logging": True,
         },
-        "category": ComponentCategoryEnum.HEALTHCARE,
+        "category": ComponentCategoryEnum.HEALTHCARE.value,  # Use enum value for database compatibility
         "healthcare_metadata": {
             "hipaa_compliant": True,
             "phi_handling": True,
@@ -242,7 +242,7 @@ HEALTHCARE_CONNECTOR_MAPPINGS = {
             "hipaa_compliance": True,
             "audit_logging": True,
         },
-        "category": ComponentCategoryEnum.HEALTHCARE,
+        "category": ComponentCategoryEnum.HEALTHCARE.value,  # Use enum value for database compatibility
         "healthcare_metadata": {
             "hipaa_compliant": True,
             "phi_handling": True,

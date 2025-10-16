@@ -43,8 +43,8 @@ class ComponentMappingBase(SQLModel):
         default=None,
         description="Input/output field mappings and type information"
     )
-    component_category: ComponentCategoryEnum = Field(
-        default=ComponentCategoryEnum.TOOL,
+    component_category: str = Field(
+        default=ComponentCategoryEnum.TOOL.value,
         description="Category for organizing components"
     )
     healthcare_metadata: Optional[dict] = Field(
@@ -98,6 +98,14 @@ class ComponentMappingBase(SQLModel):
         """Validate JSON fields are properly formatted."""
         if v is not None and not isinstance(v, dict):
             raise ValueError("Field must be a valid dictionary")
+        return v
+
+    @field_validator("component_category", mode="before")
+    @classmethod
+    def validate_component_category(cls, v):
+        """Ensure component category is stored as string value."""
+        if isinstance(v, ComponentCategoryEnum):
+            return v.value
         return v
 
 
@@ -162,7 +170,7 @@ class ComponentMappingUpdate(SQLModel):
 
     base_config: Optional[dict] = None
     io_mapping: Optional[dict] = None
-    component_category: Optional[ComponentCategoryEnum] = None
+    component_category: Optional[str] = None
     healthcare_metadata: Optional[dict] = None
     description: Optional[str] = None
     version: Optional[str] = None
@@ -170,6 +178,14 @@ class ComponentMappingUpdate(SQLModel):
     updated_at: Optional[datetime] = Field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
+
+    @field_validator("component_category", mode="before")
+    @classmethod
+    def validate_component_category(cls, v):
+        """Ensure component category is stored as string value."""
+        if v is not None and isinstance(v, ComponentCategoryEnum):
+            return v.value
+        return v
 
     @field_validator("version")
     @classmethod

@@ -1,5 +1,6 @@
 # noqa: INP001
 import asyncio
+import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -15,6 +16,16 @@ from langflow.services.database import models  # noqa: F401
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# Override the sqlalchemy.url with the environment variable if set
+if os.getenv("LANGFLOW_DATABASE_URL"):
+    db_url = os.getenv("LANGFLOW_DATABASE_URL")
+    # Convert postgresql:// to postgresql+asyncpg:// for async support
+    if db_url.startswith("postgresql://"):
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    elif db_url.startswith("sqlite://"):
+        db_url = db_url.replace("sqlite://", "sqlite+aiosqlite://", 1)
+    config.set_main_option("sqlalchemy.url", db_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

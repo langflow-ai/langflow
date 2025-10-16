@@ -90,6 +90,50 @@ class TestComponentMappingModel:
                 base_config="not a dict",
             )
 
+    def test_component_category_enum_serialization(self):
+        """Test that ComponentCategoryEnum is properly serialized to string values."""
+        # Test ComponentMappingCreate with enum object
+        data_create = ComponentMappingCreate(
+            genesis_type="genesis:test_component",
+            component_category=ComponentCategoryEnum.LLM,  # Pass enum object
+        )
+        # Should be converted to string value
+        assert data_create.component_category == "llm"
+        assert isinstance(data_create.component_category, str)
+
+        # Test ComponentMappingUpdate with enum object
+        data_update = ComponentMappingUpdate(
+            component_category=ComponentCategoryEnum.HEALTHCARE,  # Pass enum object
+        )
+        # Should be converted to string value
+        assert data_update.component_category == "healthcare"
+        assert isinstance(data_update.component_category, str)
+
+        # Test with string value directly (should pass through)
+        data_string = ComponentMappingCreate(
+            genesis_type="genesis:test_component",
+            component_category="agent",  # Pass string directly
+        )
+        assert data_string.component_category == "agent"
+        assert isinstance(data_string.component_category, str)
+
+    def test_component_category_validation_edge_cases(self):
+        """Test edge cases for component category validation."""
+        # Test None value in update (should remain None)
+        data_update_none = ComponentMappingUpdate(
+            component_category=None,
+        )
+        assert data_update_none.component_category is None
+
+        # Test all enum values convert properly
+        for enum_val in ComponentCategoryEnum:
+            data = ComponentMappingCreate(
+                genesis_type="genesis:test_component",
+                component_category=enum_val,  # Pass each enum value
+            )
+            assert data.component_category == enum_val.value
+            assert isinstance(data.component_category, str)
+
     def test_healthcare_metadata_structure(self):
         """Test healthcare metadata field structure."""
         healthcare_metadata = {

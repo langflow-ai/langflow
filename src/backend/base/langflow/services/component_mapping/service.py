@@ -311,21 +311,28 @@ class ComponentMappingService(Service):
 
                 # Determine category based on genesis type
                 category = self._determine_category_from_genesis_type(genesis_type)
+                logger.debug(f"Genesis type: {genesis_type}, Category: {category}, Category value: {category.value}")
 
-                mapping_data = ComponentMappingCreate(
-                    genesis_type=genesis_type,
-                    base_config=mapping_info.get("config", {}),
-                    io_mapping=self._extract_io_mapping(mapping_info),
-                    component_category=category,
-                    description=f"Migrated from hardcoded mapping for {genesis_type}",
-                    version="1.0.0",
-                    active=True,
-                )
+                # Create mapping data with proper enum handling
+                mapping_dict = {
+                    "genesis_type": genesis_type,
+                    "base_config": mapping_info.get("config", {}),
+                    "io_mapping": self._extract_io_mapping(mapping_info),
+                    "component_category": category.value,  # Explicitly use string value
+                    "description": f"Migrated from hardcoded mapping for {genesis_type}",
+                    "version": "1.0.0",
+                    "active": True,
+                }
+
+                logger.debug(f"Creating mapping with category value: {mapping_dict['component_category']}")
+                mapping_data = ComponentMappingCreate(**mapping_dict)
 
                 if existing:
-                    await self.update_component_mapping(
-                        session, existing.id, ComponentMappingUpdate(**mapping_data.model_dump())
-                    )
+                    # Create update data with proper enum value handling
+                    update_dict = mapping_dict.copy()
+                    del update_dict["genesis_type"]  # Remove immutable field for update
+                    update_data = ComponentMappingUpdate(**update_dict)
+                    await self.update_component_mapping(session, existing.id, update_data)
                     results["updated"] += 1
                 else:
                     await self.create_component_mapping(session, mapping_data)
