@@ -21,6 +21,7 @@ from langflow.schema.schema import InputType, OutputType, OutputValue
 from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
+from langflow.services.database.models.component_mapping.model import ComponentMappingRead
 from langflow.services.database.models.flow.model import FlowCreate, FlowRead
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.settings.base import Settings
@@ -500,3 +501,10 @@ class AgentBuilderResponse(BaseModel):
 
     workflow: dict[str, Any] | None = Field(default=None, description="Generated workflow structure")
     message: str | None = Field(default=None, description="Response message from the agent")
+
+
+class ComponentMappingResponse(BaseModel):
+    """Response model for component mapping operations."""
+
+    mapping: ComponentMappingRead
+    message: str | None = Field(default=None, description="Additional response message")

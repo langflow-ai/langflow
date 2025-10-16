@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 # Lazy import to avoid circular dependencies
 _component_schema_inspector = None
+_component_mapping_service = None
 
 
 class ComponentMapper:
@@ -16,6 +17,7 @@ class ComponentMapper:
         """Initialize component mapper with mappings."""
         self._init_mappings()
         self._use_real_introspection = True  # Flag to enable real component inspection
+        self._use_database_fallback = True  # Flag to enable database fallback
 
     def _init_mappings(self):
         """Initialize all component mappings."""
@@ -261,6 +263,12 @@ class ComponentMapper:
         # Check standard mappings
         if spec_type in self.STANDARD_MAPPINGS:
             return self.STANDARD_MAPPINGS[spec_type].copy()
+
+        # Try database fallback if enabled
+        if self._use_database_fallback:
+            db_mapping = self._get_mapping_from_database(spec_type)
+            if db_mapping:
+                return db_mapping
 
         # Try to handle unknown types intelligently
         return self._handle_unknown_type(spec_type)
@@ -690,3 +698,166 @@ class ComponentMapper:
         """Enable or disable real component introspection."""
         self._use_real_introspection = enabled
         logger.info(f"Real component introspection {'enabled' if enabled else 'disabled'}")
+
+    def enable_database_fallback(self, enabled: bool = True):
+        """Enable or disable database fallback for component mappings."""
+        self._use_database_fallback = enabled
+        logger.info(f"Database fallback {'enabled' if enabled else 'disabled'}")
+
+    def _get_component_mapping_service(self):
+        """Get ComponentMappingService instance with lazy loading."""
+        global _component_mapping_service
+
+        if _component_mapping_service is None:
+            try:
+                from langflow.services.component_mapping.service import ComponentMappingService
+                _component_mapping_service = ComponentMappingService()
+            except ImportError as e:
+                logger.warning(f"Could not import ComponentMappingService: {e}")
+                _component_mapping_service = None
+
+        return _component_mapping_service
+
+    def _get_mapping_from_database(self, spec_type: str) -> Optional[Dict[str, Any]]:
+        """
+        Get component mapping from database.
+
+        Args:
+            spec_type: Genesis component type
+
+        Returns:
+            Component mapping dictionary or None if not found
+        """
+        try:
+            service = self._get_component_mapping_service()
+            if not service:
+                return None
+
+            # Note: This is a synchronous method, but the service methods are async
+            # In a real implementation, we would need to handle this properly
+            # For now, we'll return None and log that database integration needs async context
+            logger.debug(f"Database lookup for {spec_type} requires async context")
+            return None
+
+        except Exception as e:
+            logger.error(f"Error getting mapping from database for {spec_type}: {e}")
+            return None
+
+    async def get_mapping_from_database_async(self, session, spec_type: str) -> Optional[Dict[str, Any]]:
+        """
+        Get component mapping from database asynchronously.
+
+        Args:
+            session: Database session
+            spec_type: Genesis component type
+
+        Returns:
+            Component mapping dictionary or None if not found
+        """
+        try:
+            service = self._get_component_mapping_service()
+            if not service:
+                return None
+
+            mapping = await service.get_component_mapping_by_genesis_type(session, spec_type)
+            if not mapping:
+                return None
+
+            # Convert database mapping to the expected format
+            result = {
+                "component": None,  # Will be determined from runtime adapter
+                "config": mapping.base_config or {},
+                "dataType": None,   # Will be determined from io_mapping
+            }
+
+            # Extract component and dataType from io_mapping if available
+            if mapping.io_mapping:
+                result["component"] = mapping.io_mapping.get("component")
+                result["dataType"] = mapping.io_mapping.get("dataType")
+
+            logger.info(f"Found database mapping for {spec_type}: {result}")
+            return result
+
+        except Exception as e:
+            logger.error(f"Error getting mapping from database for {spec_type}: {e}")
+            return None
+
+    async def get_runtime_adapter_async(self, session, spec_type: str, runtime_type: str = "langflow") -> Optional[Dict[str, Any]]:
+        """
+        Get runtime adapter from database asynchronously.
+
+        Args:
+            session: Database session
+            spec_type: Genesis component type
+            runtime_type: Target runtime type
+
+        Returns:
+            Runtime adapter configuration or None if not found
+        """
+        try:
+            service = self._get_component_mapping_service()
+            if not service:
+                return None
+
+            from langflow.services.database.models.component_mapping.runtime_adapter import RuntimeTypeEnum
+
+            # Convert string to enum
+            try:
+                runtime_enum = RuntimeTypeEnum(runtime_type.lower())
+            except ValueError:
+                logger.warning(f"Unsupported runtime type: {runtime_type}")
+                return None
+
+            adapter = await service.get_runtime_adapter_for_genesis_type(
+                session, spec_type, runtime_enum
+            )
+
+            if not adapter:
+                return None
+
+            result = {
+                "target_component": adapter.target_component,
+                "adapter_config": adapter.adapter_config or {},
+                "version": adapter.version,
+                "priority": adapter.priority,
+            }
+
+            logger.info(f"Found runtime adapter for {spec_type} on {runtime_type}: {result}")
+            return result
+
+        except Exception as e:
+            logger.error(f"Error getting runtime adapter for {spec_type}: {e}")
+            return None
+
+    async def migrate_hardcoded_mappings_to_database(self, session) -> Dict:
+        """
+        Migrate all hardcoded mappings to database.
+
+        Args:
+            session: Database session
+
+        Returns:
+            Migration results dictionary
+        """
+        try:
+            service = self._get_component_mapping_service()
+            if not service:
+                return {"error": "ComponentMappingService not available"}
+
+            # Combine all hardcoded mappings
+            all_mappings = {
+                **self.AUTONOMIZE_MODELS,
+                **self.MCP_MAPPINGS,
+                **self.STANDARD_MAPPINGS,
+            }
+
+            results = await service.migrate_hardcoded_mappings(
+                session, all_mappings, overwrite_existing=False
+            )
+
+            logger.info(f"Migration completed: {results}")
+            return results
+
+        except Exception as e:
+            logger.error(f"Error migrating hardcoded mappings: {e}")
+            return {"error": str(e)}
