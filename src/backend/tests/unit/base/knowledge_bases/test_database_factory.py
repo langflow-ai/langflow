@@ -212,7 +212,7 @@ class TestVectorStoreFactory:
         mock_get_service.return_value = mock_variable_service
         mock_variable_service.get_by_category.return_value = []
 
-        with patch("langchain_chroma.Chroma"):
+        with patch("langflow.base.knowledge_bases.vector_store_factory.Chroma"):
             await build_kb_vector_store(
                 kb_path=kb_path,
                 collection_name="test_collection",
