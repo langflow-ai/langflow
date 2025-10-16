@@ -35,6 +35,7 @@ from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 from langflow.schema.table import EditMode
+from langflow.custom.default_providers import apply_provider_defaults
 
 
 def set_advanced_true(component_input):
@@ -486,10 +487,10 @@ class AgentComponent(ToolCallingAgentComponent):
                 value.input_types = []
         return build_config
 
+
     async def update_build_config(
         self, build_config: dotdict, field_value: str, field_name: str | None = None
     ) -> dotdict:
-        # Iterate over all providers in the MODEL_PROVIDERS_DICT
         # Existing logic for updating build_config
         if field_name in ("agent_llm",):
             build_config["agent_llm"]["value"] = field_value
@@ -513,6 +514,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 )
                 for provider in MODEL_PROVIDERS_DICT
             }
+            
             if field_value in provider_configs:
                 fields_to_add, fields_to_delete = provider_configs[field_value]
 
@@ -522,13 +524,19 @@ class AgentComponent(ToolCallingAgentComponent):
 
                 # Add provider-specific fields
                 build_config.update(fields_to_add)
+                
+                # Apply provider-specific defaults (only for Azure OpenAI currently)
+                if field_value == "Azure OpenAI":
+                    build_config = apply_provider_defaults(field_value, build_config)
+                
                 # Reset input types for agent_llm
                 build_config["agent_llm"]["input_types"] = []
                 build_config["agent_llm"]["display_name"] = "Model Provider"
+                
             elif field_value == "connect_other_models":
                 # Delete all provider fields
                 self.delete_fields(build_config, ALL_PROVIDER_FIELDS)
-                # # Update with custom component
+                # Update with custom component
                 custom_component = DropdownInput(
                     name="agent_llm",
                     display_name="Language Model",
@@ -552,6 +560,7 @@ class AgentComponent(ToolCallingAgentComponent):
                     },
                 )
                 build_config.update({"agent_llm": custom_component.to_dict()})
+                
             # Update input types for all fields
             build_config = self.update_input_types(build_config)
 
@@ -573,6 +582,8 @@ class AgentComponent(ToolCallingAgentComponent):
             if missing_keys:
                 msg = f"Missing required keys in build_config: {missing_keys}"
                 raise ValueError(msg)
+                
+        # Rest of your existing method remains unchanged...
         if (
             isinstance(self.agent_llm, str)
             and self.agent_llm in MODEL_PROVIDERS_DICT
