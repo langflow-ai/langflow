@@ -143,8 +143,8 @@ class TestVectorStoreFactory:
         mock_variable_service.get_by_category.return_value = mock_variables
 
         with (
-            patch("langchain_chroma.Chroma") as mock_chroma,
-            patch("chromadb.HttpClient") as mock_http_client,
+            patch("langflow.base.knowledge_bases.vector_store_factory.Chroma") as mock_chroma,
+            patch("langflow.base.knowledge_bases.vector_store_factory.chromadb.HttpClient") as mock_http_client,
         ):
             mock_chroma_instance = Mock()
             mock_chroma.return_value = mock_chroma_instance
