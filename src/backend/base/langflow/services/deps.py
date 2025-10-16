@@ -115,8 +115,8 @@ def is_settings_service_initialized() -> bool:
         bool: True if the SettingsService is already initialized, False otherwise.
     """
     from lfx.services.manager import get_service_manager
-    
-    return ServiceType.SETTINGS_SERVICE in  get_service_manager().services
+
+    return ServiceType.SETTINGS_SERVICE in get_service_manager().services
 
 
 def get_settings_service() -> SettingsService:
