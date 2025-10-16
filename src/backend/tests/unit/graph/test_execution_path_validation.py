@@ -25,7 +25,7 @@ from .test_execution_path_equivalence import (
     assert_execution_equivalence,
 )
 
-TEST_DATA_DIR = Path("/Users/ogabrielluiz/Projects/langflow/src/backend/tests/data")
+TEST_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 
 # Test flows that should work without external dependencies
 TEST_FLOWS = [
