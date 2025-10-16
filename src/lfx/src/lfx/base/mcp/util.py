@@ -69,6 +69,7 @@ def create_mcp_http_client_with_ssl_option(
     headers: dict[str, str] | None = None,
     timeout: httpx.Timeout | None = None,
     auth: httpx.Auth | None = None,
+    *,
     verify_ssl: bool = True,
 ) -> httpx.AsyncClient:
     """Create an httpx AsyncClient with configurable SSL verification.
@@ -1250,6 +1251,7 @@ class MCPStreamableHttpClient:
         headers: dict[str, str] | None = None,
         timeout_seconds: int = 30,
         sse_read_timeout_seconds: int = 30,
+        *,
         verify_ssl: bool = True,
     ) -> list[StructuredTool]:
         """Connect to MCP server using Streamable HTTP transport with SSE fallback (SDK style)."""
@@ -1298,6 +1300,7 @@ class MCPStreamableHttpClient:
         url: str,
         headers: dict[str, str] | None = None,
         sse_read_timeout_seconds: int = 30,
+        *,
         verify_ssl: bool = True,
     ) -> list[StructuredTool]:
         """Connect to MCP server using Streamable HTTP with SSE fallback transport (SDK style)."""
