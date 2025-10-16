@@ -30,6 +30,14 @@ paths:
             type: string
             format: uuid
             title: Flow Id
+        - name: data
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - $ref: '#/components/schemas/FlowDataRequest'
+              - type: 'null'
+            title: Data
         - name: stop_component_id
           in: query
           required: false
@@ -46,14 +54,6 @@ paths:
               - type: string
               - type: 'null'
             title: Start Component Id
-      requestBody:
-        content:
-          application/json:
-            schema:
-              anyOf:
-                - $ref: '#/components/schemas/FlowDataRequest'
-                - type: 'null'
-              title: Data
       responses:
         '200':
           description: Successful Response
@@ -447,23 +447,19 @@ paths:
         execute, loaded via dependency<br>    input_request
         (SimplifiedAPIRequest | None): Input parameters for the flow<br>   
         stream (bool): Whether to stream the response<br>    api_key_user
-        (UserRead): Authenticated user from API key<br>    context (dict |
-        None): Optional context to pass to the flow<br>    http_request
-        (Request): The incoming HTTP request for extracting global
-        variables<br><br>Returns:<br>    Union[StreamingResponse, RunResponse]:
-        Either a streaming response for real-time results<br>    or a
-        RunResponse with the complete execution results<br><br>Raises:<br>   
-        HTTPException: For flow not found (404) or invalid input (400)<br>   
-        APIException: For internal execution errors (500)<br><br>Notes:<br>    -
-        Supports both streaming and non-streaming execution modes<br>    -
-        Tracks execution time and success/failure via telemetry<br>    - Handles
-        graceful client disconnection in streaming mode<br>    - Provides
-        detailed error handling with appropriate HTTP status codes<br>    -
-        Extracts global variables from HTTP headers with prefix
-        X-LANGFLOW-GLOBAL-VAR-*<br>    - Merges extracted variables with the
-        context parameter as "request_variables"<br>    - In streaming mode,
-        uses EventManager to handle events:<br>        - "add_message": New
-        messages during execution<br>        - "token": Individual tokens during
+        (UserRead): Authenticated user from API key<br>    request (Request):
+        The incoming HTTP request<br><br>Returns:<br>   
+        Union[StreamingResponse, RunResponse]: Either a streaming response for
+        real-time results<br>    or a RunResponse with the complete execution
+        results<br><br>Raises:<br>    HTTPException: For flow not found (404) or
+        invalid input (400)<br>    APIException: For internal execution errors
+        (500)<br><br>Notes:<br>    - Supports both streaming and non-streaming
+        execution modes<br>    - Tracks execution time and success/failure via
+        telemetry<br>    - Handles graceful client disconnection in streaming
+        mode<br>    - Provides detailed error handling with appropriate HTTP
+        status codes<br>    - In streaming mode, uses EventManager to handle
+        events:<br>        - "add_message": New messages during
+        execution<br>        - "token": Individual tokens during
         streaming<br>        - "end": Final execution result
       operationId: simplified_run_flow_api_v1_run__flow_id_or_name__post
       security:
@@ -497,8 +493,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: >-
-                #/components/schemas/Body_simplified_run_flow_api_v1_run__flow_id_or_name__post
+              anyOf:
+                - $ref: '#/components/schemas/SimplifiedAPIRequest'
+                - type: 'null'
+              title: Input Request
       responses:
         '200':
           description: Successful Response
@@ -517,13 +515,14 @@ paths:
         - Base
       summary: Webhook Run Flow
       description: >-
-        Run a flow using a webhook request.<br><br>Args:<br>    flow_id_or_name
-        (str): The flow ID or endpoint name.<br>    flow (Flow): The flow to be
-        executed.<br>    request (Request): The incoming HTTP request.<br>   
-        background_tasks (BackgroundTasks): The background tasks
-        manager.<br><br>Returns:<br>    dict: A dictionary containing the status
-        of the task.<br><br>Raises:<br>    HTTPException: If the flow is not
-        found or if there is an error processing the request.
+        Run a flow using a webhook request.<br><br>Args:<br>    flow (Flow,
+        optional): The flow to be executed. Defaults to
+        Depends(get_flow_by_id).<br>    user (User): The flow user.<br>   
+        request (Request): The incoming HTTP request.<br>    background_tasks
+        (BackgroundTasks): The background tasks manager.<br><br>Returns:<br>   
+        dict: A dictionary containing the status of the
+        task.<br><br>Raises:<br>    HTTPException: If the flow is not found or
+        if there is an error processing the request.
       operationId: webhook_run_flow_api_v1_webhook__flow_id_or_name__post
       parameters:
         - name: flow_id_or_name
@@ -1330,7 +1329,7 @@ paths:
                   - type: array
                     items:
                       $ref: '#/components/schemas/FlowRead'
-                  - $ref: '#/components/schemas/Page_FlowRead_-Output'
+                  - $ref: '#/components/schemas/Page_FlowRead_'
                   - type: array
                     items:
                       $ref: '#/components/schemas/FlowHeader'
@@ -2462,7 +2461,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/MessageResponse-Output'
+                  $ref: '#/components/schemas/MessageResponse'
                 title: Response Get Messages Api V1 Monitor Messages Get
         '422':
           description: Validation Error
@@ -2568,7 +2567,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/MessageResponse-Output'
+                  $ref: '#/components/schemas/MessageResponse'
                 title: >-
                   Response Update Session Id Api V1 Monitor Messages Session 
                   Old Session Id  Patch
@@ -2738,8 +2737,8 @@ paths:
             application/json:
               schema:
                 anyOf:
-                  - $ref: '#/components/schemas/FolderWithPaginatedFlows-Output'
-                  - $ref: '#/components/schemas/FolderReadWithFlows-Output'
+                  - $ref: '#/components/schemas/FolderWithPaginatedFlows'
+                  - $ref: '#/components/schemas/FolderReadWithFlows'
                 title: Response Read Folder Redirect Api V1 Folders  Folder Id  Get
         '422':
           description: Validation Error
@@ -2951,8 +2950,8 @@ paths:
             application/json:
               schema:
                 anyOf:
-                  - $ref: '#/components/schemas/FolderWithPaginatedFlows-Output'
-                  - $ref: '#/components/schemas/FolderReadWithFlows-Output'
+                  - $ref: '#/components/schemas/FolderWithPaginatedFlows'
+                  - $ref: '#/components/schemas/FolderReadWithFlows'
                 title: Response Read Project Api V1 Projects  Project Id  Get
         '422':
           description: Validation Error
@@ -3101,7 +3100,7 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/GraphDumpResponse-Output'
+                  $ref: '#/components/schemas/GraphDump'
                 type: array
                 title: Response Get Starter Projects Api V1 Starter Projects  Get
       security:
@@ -3647,7 +3646,8 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/File'
+                  $ref: >-
+                    #/components/schemas/langflow__services__database__models__file__model__File
                 type: array
                 title: Response List Files Api V2 Files  Get
       security:
@@ -3714,7 +3714,8 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/File'
+                  $ref: >-
+                    #/components/schemas/langflow__services__database__models__file__model__File
                 type: array
                 title: Response List Files Api V2 Files Get
       security:
@@ -4536,19 +4537,6 @@ components:
         - username
         - password
       title: Body_login_to_get_access_token_api_v1_login_post
-    Body_simplified_run_flow_api_v1_run__flow_id_or_name__post:
-      properties:
-        input_request:
-          anyOf:
-            - $ref: '#/components/schemas/SimplifiedAPIRequest'
-            - type: 'null'
-        context:
-          anyOf:
-            - type: object
-            - type: 'null'
-          title: Context
-      type: object
-      title: Body_simplified_run_flow_api_v1_run__flow_id_or_name__post
     Body_upload_file_api_v1_files_upload__flow_id__post:
       properties:
         file:
@@ -4664,7 +4652,7 @@ components:
           title: Component Id
         files:
           items:
-            $ref: '#/components/schemas/lfx__utils__schemas__File'
+            $ref: '#/components/schemas/langflow__utils__schemas__File'
           type: array
           title: Files
           default: []
@@ -4686,7 +4674,7 @@ components:
       required:
         - code
       title: Code
-    CodeContent-Output:
+    CodeContent:
       type: object
     CodeValidationResponse:
       properties:
@@ -4742,18 +4730,9 @@ components:
             - streaming
             - direct
           title: Event Delivery
-        webhook_auth_enable:
-          type: boolean
-          title: Webhook Auth Enable
         voice_mode_available:
           type: boolean
           title: Voice Mode Available
-        default_folder_name:
-          type: string
-          title: Default Folder Name
-        hide_getting_started_progress:
-          type: boolean
-          title: Hide Getting Started Progress
       type: object
       required:
         - feature_flags
@@ -4768,12 +4747,9 @@ components:
         - public_flow_cleanup_interval
         - public_flow_expiration
         - event_delivery
-        - webhook_auth_enable
         - voice_mode_available
-        - default_folder_name
-        - hide_getting_started_progress
       title: ConfigResponse
-    ContentBlock-Output:
+    ContentBlock:
       properties:
         title:
           type: string
@@ -4877,7 +4853,33 @@ components:
         - data
         - is_component
       title: DownloadComponentResponse
-    ErrorContent-Output:
+    EdgeData:
+      properties:
+        source:
+          type: string
+          title: Source
+        target:
+          type: string
+          title: Target
+        data:
+          $ref: '#/components/schemas/EdgeDataDetails'
+      type: object
+      title: EdgeData
+    EdgeDataDetails:
+      properties:
+        sourceHandle:
+          $ref: '#/components/schemas/SourceHandleDict'
+        targetHandle:
+          anyOf:
+            - $ref: '#/components/schemas/TargetHandleDict'
+            - $ref: '#/components/schemas/LoopTargetHandleDict'
+          title: Targethandle
+      type: object
+      required:
+        - sourceHandle
+        - targetHandle
+      title: EdgeDataDetails
+    ErrorContent:
       type: object
     ErrorLog:
       properties:
@@ -4908,45 +4910,6 @@ components:
       additionalProperties: false
       type: object
       title: FeatureFlags
-    File:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        user_id:
-          type: string
-          format: uuid
-          title: User Id
-        name:
-          type: string
-          title: Name
-        path:
-          type: string
-          title: Path
-        size:
-          type: integer
-          title: Size
-        provider:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Provider
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-        updated_at:
-          type: string
-          format: date-time
-          title: Updated At
-      type: object
-      required:
-        - user_id
-        - name
-        - path
-        - size
-      title: File
     Flow:
       properties:
         name:
@@ -5527,45 +5490,7 @@ components:
         - id
         - parent_id
       title: FolderRead
-    FolderReadWithFlows-Input:
-      properties:
-        name:
-          type: string
-          title: Name
-        description:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Description
-        auth_settings:
-          anyOf:
-            - type: object
-            - type: 'null'
-          title: Auth Settings
-          description: Authentication settings for the folder/project
-        id:
-          type: string
-          format: uuid
-          title: Id
-        parent_id:
-          anyOf:
-            - type: string
-              format: uuid
-            - type: 'null'
-          title: Parent Id
-        flows:
-          items:
-            $ref: '#/components/schemas/FlowRead'
-          type: array
-          title: Flows
-          default: []
-      type: object
-      required:
-        - name
-        - id
-        - parent_id
-      title: FolderReadWithFlows
-    FolderReadWithFlows-Output:
+    FolderReadWithFlows:
       properties:
         name:
           type: string
@@ -5640,23 +5565,12 @@ components:
           title: Auth Settings
       type: object
       title: FolderUpdate
-    FolderWithPaginatedFlows-Input:
+    FolderWithPaginatedFlows:
       properties:
         folder:
           $ref: '#/components/schemas/FolderRead'
         flows:
-          $ref: '#/components/schemas/Page_Flow_-Input'
-      type: object
-      required:
-        - folder
-        - flows
-      title: FolderWithPaginatedFlows
-    FolderWithPaginatedFlows-Output:
-      properties:
-        folder:
-          $ref: '#/components/schemas/FolderRead'
-        flows:
-          $ref: '#/components/schemas/Page_Flow_-Output'
+          $ref: '#/components/schemas/Page_Flow_'
       type: object
       required:
         - folder
@@ -5937,79 +5851,39 @@ components:
       properties:
         nodes:
           items:
-            type: object
+            $ref: '#/components/schemas/NodeData'
           type: array
           title: Nodes
         edges:
           items:
-            type: object
+            $ref: '#/components/schemas/EdgeData'
           type: array
           title: Edges
         viewport:
-          anyOf:
-            - $ref: '#/components/schemas/ViewPort'
-            - type: 'null'
+          $ref: '#/components/schemas/ViewPort'
       type: object
       required:
         - nodes
         - edges
       title: GraphData
-    GraphDumpResponse-Input:
+    GraphDump:
       properties:
         data:
           $ref: '#/components/schemas/GraphData'
         is_component:
-          anyOf:
-            - type: boolean
-            - type: 'null'
+          type: boolean
           title: Is Component
         name:
-          anyOf:
-            - type: string
-            - type: 'null'
+          type: string
           title: Name
         description:
-          anyOf:
-            - type: string
-            - type: 'null'
+          type: string
           title: Description
         endpoint_name:
-          anyOf:
-            - type: string
-            - type: 'null'
+          type: string
           title: Endpoint Name
       type: object
-      required:
-        - data
-      title: GraphDumpResponse
-    GraphDumpResponse-Output:
-      properties:
-        data:
-          $ref: '#/components/schemas/GraphData'
-        is_component:
-          anyOf:
-            - type: boolean
-            - type: 'null'
-          title: Is Component
-        name:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Name
-        description:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Description
-        endpoint_name:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Endpoint Name
-      type: object
-      required:
-        - data
-      title: GraphDumpResponse
+      title: GraphDump
     HTTPValidationError:
       properties:
         detail:
@@ -6105,7 +5979,7 @@ components:
           type: chat
         - input_value: '{"key": "value"}'
           type: json
-    JSONContent-Output:
+    JSONContent:
       type: object
     KnowledgeBaseInfo:
       properties:
@@ -6244,7 +6118,7 @@ components:
         - authorized
         - results
       title: ListComponentResponseModel
-    Log-Input:
+    Log:
       properties:
         name:
           type: string
@@ -6259,7 +6133,7 @@ components:
             - type: number
             - type: boolean
             - $ref: '#/components/schemas/BaseModel'
-            - $ref: '#/components/schemas/PlaygroundEvent-Input'
+            - $ref: '#/components/schemas/PlaygroundEvent'
             - type: 'null'
           title: Message
         type:
@@ -6271,33 +6145,29 @@ components:
         - message
         - type
       title: Log
-    Log-Output:
+    LoopTargetHandleDict:
       properties:
+        dataType:
+          type: string
+          title: Datatype
+        id:
+          type: string
+          title: Id
         name:
           type: string
           title: Name
-        message:
-          anyOf:
-            - type: string
-            - type: object
-            - items: {}
-              type: array
-            - type: integer
-            - type: number
-            - type: boolean
-            - $ref: '#/components/schemas/BaseModel'
-            - $ref: '#/components/schemas/PlaygroundEvent-Output'
-            - type: 'null'
-          title: Message
-        type:
-          type: string
-          title: Type
+        output_types:
+          items:
+            type: string
+          type: array
+          title: Output Types
       type: object
       required:
+        - dataType
+        - id
         - name
-        - message
-        - type
-      title: Log
+        - output_types
+      title: LoopTargetHandleDict
     MCPInstallRequest:
       properties:
         client:
@@ -6375,7 +6245,7 @@ components:
         - id
       title: MCPSettings
       description: Model representing MCP settings for a flow.
-    MediaContent-Output:
+    MediaContent:
       type: object
     MessageRead:
       properties:
@@ -6409,14 +6279,14 @@ components:
           title: Edit
           default: false
         properties:
-          $ref: '#/components/schemas/langflow__schema__properties__Properties'
+          $ref: '#/components/schemas/Properties'
         category:
           type: string
           title: Category
           default: message
         content_blocks:
           items:
-            $ref: '#/components/schemas/ContentBlock-Output'
+            $ref: '#/components/schemas/ContentBlock'
           type: array
           title: Content Blocks
         id:
@@ -6438,7 +6308,7 @@ components:
         - id
         - flow_id
       title: MessageRead
-    MessageResponse-Input:
+    MessageResponse:
       properties:
         id:
           anyOf:
@@ -6485,7 +6355,7 @@ components:
           title: Duration
         properties:
           anyOf:
-            - $ref: '#/components/schemas/langflow__schema__properties__Properties'
+            - $ref: '#/components/schemas/Properties'
             - type: 'null'
         category:
           anyOf:
@@ -6495,77 +6365,7 @@ components:
         content_blocks:
           anyOf:
             - items:
-                $ref: >-
-                  #/components/schemas/lfx__schema__content_block__ContentBlock-Input
-              type: array
-            - type: 'null'
-          title: Content Blocks
-      type: object
-      required:
-        - sender
-        - sender_name
-        - session_id
-        - text
-        - edit
-      title: MessageResponse
-    MessageResponse-Output:
-      properties:
-        id:
-          anyOf:
-            - type: string
-            - type: string
-              format: uuid
-            - type: 'null'
-          title: Id
-        flow_id:
-          anyOf:
-            - type: string
-              format: uuid
-            - type: 'null'
-          title: Flow Id
-        timestamp:
-          type: string
-          format: date-time
-          title: Timestamp
-        sender:
-          type: string
-          title: Sender
-        sender_name:
-          type: string
-          title: Sender Name
-        session_id:
-          type: string
-          title: Session Id
-        text:
-          type: string
-          title: Text
-        files:
-          items:
-            type: string
-          type: array
-          title: Files
-          default: []
-        edit:
-          type: boolean
-          title: Edit
-        duration:
-          anyOf:
-            - type: number
-            - type: 'null'
-          title: Duration
-        properties:
-          anyOf:
-            - $ref: '#/components/schemas/langflow__schema__properties__Properties'
-            - type: 'null'
-        category:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Category
-        content_blocks:
-          anyOf:
-            - items:
-                $ref: '#/components/schemas/ContentBlock-Output'
+                $ref: '#/components/schemas/ContentBlock'
               type: array
             - type: 'null'
           title: Content Blocks
@@ -6618,10 +6418,50 @@ components:
           title: Error
         properties:
           anyOf:
-            - $ref: '#/components/schemas/langflow__schema__properties__Properties'
+            - $ref: '#/components/schemas/Properties'
             - type: 'null'
       type: object
       title: MessageUpdate
+    NodeData:
+      properties:
+        id:
+          type: string
+          title: Id
+        data:
+          type: object
+          title: Data
+        dragging:
+          type: boolean
+          title: Dragging
+        height:
+          type: integer
+          title: Height
+        width:
+          type: integer
+          title: Width
+        position:
+          $ref: '#/components/schemas/Position'
+        positionAbsolute:
+          $ref: '#/components/schemas/Position'
+        selected:
+          type: boolean
+          title: Selected
+        parent_node_id:
+          type: string
+          title: Parent Node Id
+        type:
+          $ref: '#/components/schemas/NodeTypeEnum'
+      type: object
+      required:
+        - id
+        - data
+      title: NodeData
+    NodeTypeEnum:
+      type: string
+      enum:
+        - noteNode
+        - genericNode
+      title: NodeTypeEnum
     OpenAIResponsesRequest:
       properties:
         model:
@@ -6766,7 +6606,7 @@ components:
         - message
         - type
       title: OutputValue
-    Page_FlowRead_-Input:
+    Page_FlowRead_:
       properties:
         items:
           items:
@@ -6797,69 +6637,7 @@ components:
         - size
         - pages
       title: Page[FlowRead]
-    Page_FlowRead_-Output:
-      properties:
-        items:
-          items:
-            $ref: '#/components/schemas/FlowRead'
-          type: array
-          title: Items
-        total:
-          type: integer
-          minimum: 0
-          title: Total
-        page:
-          type: integer
-          minimum: 1
-          title: Page
-        size:
-          type: integer
-          minimum: 1
-          title: Size
-        pages:
-          type: integer
-          minimum: 0
-          title: Pages
-      type: object
-      required:
-        - items
-        - total
-        - page
-        - size
-        - pages
-      title: Page[FlowRead]
-    Page_Flow_-Input:
-      properties:
-        items:
-          items:
-            $ref: '#/components/schemas/Flow'
-          type: array
-          title: Items
-        total:
-          type: integer
-          minimum: 0
-          title: Total
-        page:
-          type: integer
-          minimum: 1
-          title: Page
-        size:
-          type: integer
-          minimum: 1
-          title: Size
-        pages:
-          type: integer
-          minimum: 0
-          title: Pages
-      type: object
-      required:
-        - items
-        - total
-        - page
-        - size
-        - pages
-      title: Page[Flow]
-    Page_Flow_-Output:
+    Page_Flow_:
       properties:
         items:
           items:
@@ -6894,7 +6672,7 @@ components:
       properties:
         items:
           items:
-            $ref: '#/components/schemas/TransactionTable-Output'
+            $ref: '#/components/schemas/TransactionTable'
           type: array
           title: Items
         total:
@@ -6921,11 +6699,11 @@ components:
         - size
         - pages
       title: Page[TransactionTable]
-    PlaygroundEvent-Input:
+    PlaygroundEvent:
       properties:
         properties:
           anyOf:
-            - $ref: '#/components/schemas/langflow__schema__properties__Properties'
+            - $ref: '#/components/schemas/Properties'
             - type: 'null'
         sender_name:
           anyOf:
@@ -6935,8 +6713,7 @@ components:
         content_blocks:
           anyOf:
             - items:
-                $ref: >-
-                  #/components/schemas/lfx__schema__content_block__ContentBlock-Input
+                $ref: '#/components/schemas/ContentBlock'
               type: array
             - type: 'null'
           title: Content Blocks
@@ -6974,58 +6751,19 @@ components:
       additionalProperties: true
       type: object
       title: PlaygroundEvent
-    PlaygroundEvent-Output:
+    Position:
       properties:
-        properties:
-          anyOf:
-            - $ref: '#/components/schemas/langflow__schema__properties__Properties'
-            - type: 'null'
-        sender_name:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Sender Name
-        content_blocks:
-          anyOf:
-            - items:
-                $ref: '#/components/schemas/ContentBlock-Output'
-              type: array
-            - type: 'null'
-          title: Content Blocks
-        format_type:
-          type: string
-          enum:
-            - default
-            - error
-            - warning
-            - info
-          title: Format Type
-          default: default
-        files:
-          anyOf:
-            - items:
-                type: string
-              type: array
-            - type: 'null'
-          title: Files
-        text:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Text
-        timestamp:
-          type: string
-          title: Timestamp
-        id:
-          anyOf:
-            - type: string
-              format: uuid
-            - type: string
-            - type: 'null'
-          title: Id
-      additionalProperties: true
+        x:
+          type: number
+          title: X
+        'y':
+          type: number
+          title: 'Y'
       type: object
-      title: PlaygroundEvent
+      required:
+        - x
+        - 'y'
+      title: Position
     PromptValidationResponse:
       properties:
         input_variables:
@@ -7040,184 +6778,112 @@ components:
       required:
         - input_variables
       title: PromptValidationResponse
-    ResultData-Input:
+    Properties:
       properties:
-        results:
-          anyOf:
-            - {}
-            - type: 'null'
-          title: Results
-        artifacts:
-          anyOf:
-            - {}
-            - type: 'null'
-          title: Artifacts
-        outputs:
-          anyOf:
-            - type: object
-            - type: 'null'
-          title: Outputs
-        logs:
-          anyOf:
-            - type: object
-            - type: 'null'
-          title: Logs
-        messages:
-          anyOf:
-            - items:
-                $ref: '#/components/schemas/ChatOutputResponse'
-              type: array
-            - type: 'null'
-          title: Messages
-        timedelta:
-          anyOf:
-            - type: number
-            - type: 'null'
-          title: Timedelta
-        duration:
+        text_color:
           anyOf:
             - type: string
             - type: 'null'
-          title: Duration
-        component_display_name:
+          title: Text Color
+        background_color:
           anyOf:
             - type: string
             - type: 'null'
-          title: Component Display Name
-        component_id:
+          title: Background Color
+        edited:
+          type: boolean
+          title: Edited
+          default: false
+        source:
+          $ref: '#/components/schemas/Source'
+        icon:
           anyOf:
             - type: string
             - type: 'null'
-          title: Component Id
-        used_frozen_result:
+          title: Icon
+        allow_markdown:
+          type: boolean
+          title: Allow Markdown
+          default: false
+        positive_feedback:
           anyOf:
             - type: boolean
             - type: 'null'
-          title: Used Frozen Result
-          default: false
-      type: object
-      title: ResultData
-    ResultData-Output:
-      properties:
-        results:
-          anyOf:
-            - {}
-            - type: 'null'
-          title: Results
-        artifacts:
-          anyOf:
-            - {}
-            - type: 'null'
-          title: Artifacts
-        outputs:
-          anyOf:
-            - type: object
-            - type: 'null'
-          title: Outputs
-        logs:
-          anyOf:
-            - type: object
-            - type: 'null'
-          title: Logs
-        messages:
-          anyOf:
-            - items:
-                $ref: '#/components/schemas/ChatOutputResponse'
-              type: array
-            - type: 'null'
-          title: Messages
-        timedelta:
-          anyOf:
-            - type: number
-            - type: 'null'
-          title: Timedelta
-        duration:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Duration
-        component_display_name:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Component Display Name
-        component_id:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Component Id
-        used_frozen_result:
-          anyOf:
-            - type: boolean
-            - type: 'null'
-          title: Used Frozen Result
-          default: false
-      type: object
-      title: ResultData
-    ResultDataResponse-Input:
-      properties:
-        results:
-          anyOf:
-            - {}
-            - type: 'null'
-          title: Results
-        outputs:
-          additionalProperties:
-            $ref: '#/components/schemas/OutputValue'
-          type: object
-          title: Outputs
-        logs:
-          additionalProperties:
-            items:
-              $ref: '#/components/schemas/Log-Input'
-            type: array
-          type: object
-          title: Logs
-        message:
-          anyOf:
-            - {}
-            - type: 'null'
-          title: Message
-        artifacts:
-          anyOf:
-            - {}
-            - type: 'null'
-          title: Artifacts
-        timedelta:
-          anyOf:
-            - type: number
-            - type: 'null'
-          title: Timedelta
-        duration:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Duration
-        used_frozen_result:
-          anyOf:
-            - type: boolean
-            - type: 'null'
-          title: Used Frozen Result
-          default: false
-      type: object
-      title: ResultDataResponse
-    ResultDataResponse-Output:
-      type: object
-    RunOutputs-Input:
-      properties:
-        inputs:
-          type: object
-          title: Inputs
-        outputs:
-          items:
-            anyOf:
-              - $ref: '#/components/schemas/ResultData-Input'
-              - type: 'null'
+          title: Positive Feedback
+        state:
+          type: string
+          enum:
+            - partial
+            - complete
+          title: State
+          default: complete
+        targets:
+          items: {}
           type: array
-          title: Outputs
+          title: Targets
+          default: []
       type: object
-      title: RunOutputs
-    RunOutputs-Output:
+      title: Properties
+    ResultData:
+      properties:
+        results:
+          anyOf:
+            - {}
+            - type: 'null'
+          title: Results
+        artifacts:
+          anyOf:
+            - {}
+            - type: 'null'
+          title: Artifacts
+        outputs:
+          anyOf:
+            - type: object
+            - type: 'null'
+          title: Outputs
+        logs:
+          anyOf:
+            - type: object
+            - type: 'null'
+          title: Logs
+        messages:
+          anyOf:
+            - items:
+                $ref: '#/components/schemas/ChatOutputResponse'
+              type: array
+            - type: 'null'
+          title: Messages
+        timedelta:
+          anyOf:
+            - type: number
+            - type: 'null'
+          title: Timedelta
+        duration:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Duration
+        component_display_name:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Component Display Name
+        component_id:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Component Id
+        used_frozen_result:
+          anyOf:
+            - type: boolean
+            - type: 'null'
+          title: Used Frozen Result
+          default: false
+      type: object
+      title: ResultData
+    ResultDataResponse:
+      type: object
+    RunOutputs:
       properties:
         inputs:
           type: object
@@ -7225,7 +6891,7 @@ components:
         outputs:
           items:
             anyOf:
-              - $ref: '#/components/schemas/ResultData-Output'
+              - $ref: '#/components/schemas/ResultData'
               - type: 'null'
           type: array
           title: Outputs
@@ -7236,7 +6902,7 @@ components:
         outputs:
           anyOf:
             - items:
-                $ref: '#/components/schemas/RunOutputs-Output'
+                $ref: '#/components/schemas/RunOutputs'
               type: array
             - type: 'null'
           title: Outputs
@@ -7302,6 +6968,55 @@ components:
           description: The session id
       type: object
       title: SimplifiedAPIRequest
+    Source:
+      properties:
+        id:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Id
+          description: The id of the source component.
+        display_name:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Display Name
+          description: The display name of the source component.
+        source:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Source
+          description: >-
+            The source of the message. Normally used to display the model name
+            (e.g. 'gpt-4o')
+      type: object
+      title: Source
+    SourceHandleDict:
+      properties:
+        baseClasses:
+          items:
+            type: string
+          type: array
+          title: Baseclasses
+        dataType:
+          type: string
+          title: Datatype
+        id:
+          type: string
+          title: Id
+        name:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Name
+        output_types:
+          items:
+            type: string
+          type: array
+          title: Output Types
+      type: object
+      title: SourceHandleDict
     StoreComponentCreate:
       properties:
         name:
@@ -7377,6 +7092,31 @@ components:
         - id
         - name
       title: TagResponse
+    TargetHandleDict:
+      properties:
+        fieldName:
+          type: string
+          title: Fieldname
+        id:
+          type: string
+          title: Id
+        inputTypes:
+          anyOf:
+            - items:
+                type: string
+              type: array
+            - type: 'null'
+          title: Inputtypes
+        type:
+          type: string
+          title: Type
+      type: object
+      required:
+        - fieldName
+        - id
+        - inputTypes
+        - type
+      title: TargetHandleDict
     TaskStatusResponse:
       properties:
         status:
@@ -7392,7 +7132,7 @@ components:
         - status
       title: TaskStatusResponse
       description: Task status response schema.
-    TextContent-Output:
+    TextContent:
       type: object
     Token:
       properties:
@@ -7411,57 +7151,9 @@ components:
         - refresh_token
         - token_type
       title: Token
-    ToolContent-Output:
+    ToolContent:
       type: object
-    TransactionTable-Input:
-      properties:
-        timestamp:
-          type: string
-          format: date-time
-          title: Timestamp
-        vertex_id:
-          type: string
-          title: Vertex Id
-        target_id:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Target Id
-        inputs:
-          anyOf:
-            - type: object
-            - type: 'null'
-          title: Inputs
-        outputs:
-          anyOf:
-            - type: object
-            - type: 'null'
-          title: Outputs
-        status:
-          type: string
-          title: Status
-        error:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Error
-        flow_id:
-          type: string
-          format: uuid
-          title: Flow Id
-        id:
-          anyOf:
-            - type: string
-              format: uuid
-            - type: 'null'
-          title: Id
-      type: object
-      required:
-        - vertex_id
-        - status
-        - flow_id
-      title: TransactionTable
-    TransactionTable-Output:
+    TransactionTable:
       properties:
         timestamp:
           type: string
@@ -7903,7 +7595,7 @@ components:
         vertex_builds:
           additionalProperties:
             items:
-              $ref: '#/components/schemas/VertexBuildTable-Output'
+              $ref: '#/components/schemas/VertexBuildTable'
             type: array
           type: object
           title: Vertex Builds
@@ -7960,50 +7652,7 @@ components:
         - valid
         - data
       title: VertexBuildResponse
-    VertexBuildTable-Input:
-      properties:
-        timestamp:
-          type: string
-          format: date-time
-          title: Timestamp
-        id:
-          type: string
-          title: Id
-        data:
-          anyOf:
-            - type: object
-            - type: 'null'
-          title: Data
-        artifacts:
-          anyOf:
-            - type: object
-            - type: 'null'
-          title: Artifacts
-        params:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Params
-        valid:
-          type: boolean
-          title: Valid
-        flow_id:
-          type: string
-          format: uuid
-          title: Flow Id
-        build_id:
-          anyOf:
-            - type: string
-              format: uuid
-            - type: 'null'
-          title: Build Id
-      type: object
-      required:
-        - id
-        - valid
-        - flow_id
-      title: VertexBuildTable
-    VertexBuildTable-Output:
+    VertexBuildTable:
       properties:
         timestamp:
           type: string
@@ -8123,342 +7772,46 @@ components:
         - file_path
       title: UploadFileResponse
       description: Upload file response schema.
-    langflow__schema__content_block__ContentBlock-Input:
-      properties:
-        title:
-          type: string
-          title: Title
-        contents:
-          items:
-            oneOf:
-              - $ref: >-
-                  #/components/schemas/langflow__schema__content_types__ToolContent
-              - $ref: '#/components/schemas/lfx__schema__content_types__ErrorContent'
-              - $ref: >-
-                  #/components/schemas/langflow__schema__content_types__TextContent
-              - $ref: '#/components/schemas/lfx__schema__content_types__MediaContent'
-              - $ref: '#/components/schemas/lfx__schema__content_types__CodeContent'
-              - $ref: >-
-                  #/components/schemas/langflow__schema__content_types__JSONContent
-          type: array
-          title: Contents
-        allow_markdown:
-          type: boolean
-          title: Allow Markdown
-          default: true
-        media_url:
-          anyOf:
-            - items:
-                type: string
-              type: array
-            - type: 'null'
-          title: Media Url
-      type: object
-      required:
-        - title
-        - contents
-      title: ContentBlock
-      description: A block of content that can contain different types of content.
-    langflow__schema__content_types__JSONContent:
-      properties:
-        type:
-          type: string
-          const: json
-          title: Type
-          default: json
-        duration:
-          anyOf:
-            - type: integer
-            - type: 'null'
-          title: Duration
-        header:
-          anyOf:
-            - $ref: '#/components/schemas/HeaderDict'
-            - type: 'null'
-        data:
-          type: object
-          title: Data
-      type: object
-      required:
-        - data
-      title: JSONContent
-      description: Content type for JSON content.
-    langflow__schema__content_types__TextContent:
-      properties:
-        type:
-          type: string
-          const: text
-          title: Type
-          default: text
-        duration:
-          anyOf:
-            - type: integer
-            - type: 'null'
-          title: Duration
-        header:
-          anyOf:
-            - $ref: '#/components/schemas/HeaderDict'
-            - type: 'null'
-        text:
-          type: string
-          title: Text
-      type: object
-      required:
-        - text
-      title: TextContent
-      description: Content type for simple text content.
-    langflow__schema__content_types__ToolContent:
-      properties:
-        type:
-          type: string
-          const: tool_use
-          title: Type
-          default: tool_use
-        duration:
-          anyOf:
-            - type: integer
-            - type: 'null'
-          title: Duration
-        header:
-          anyOf:
-            - $ref: '#/components/schemas/HeaderDict'
-            - type: 'null'
-        name:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Name
-        input:
-          type: object
-          title: Input
-        output:
-          anyOf:
-            - {}
-            - type: 'null'
-          title: Output
-        error:
-          anyOf:
-            - {}
-            - type: 'null'
-          title: Error
-      type: object
-      title: ToolContent
-      description: Content type for tool start content.
-    langflow__schema__properties__Properties:
-      properties:
-        text_color:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Text Color
-        background_color:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Background Color
-        edited:
-          type: boolean
-          title: Edited
-          default: false
-        source:
-          $ref: '#/components/schemas/langflow__schema__properties__Source'
-        icon:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Icon
-        allow_markdown:
-          type: boolean
-          title: Allow Markdown
-          default: false
-        positive_feedback:
-          anyOf:
-            - type: boolean
-            - type: 'null'
-          title: Positive Feedback
-        state:
-          type: string
-          enum:
-            - partial
-            - complete
-          title: State
-          default: complete
-        targets:
-          items: {}
-          type: array
-          title: Targets
-          default: []
-      type: object
-      title: Properties
-    langflow__schema__properties__Source:
+    langflow__services__database__models__file__model__File:
       properties:
         id:
-          anyOf:
-            - type: string
-            - type: 'null'
+          type: string
+          format: uuid
           title: Id
-          description: The id of the source component.
-        display_name:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Display Name
-          description: The display name of the source component.
-        source:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Source
-          description: >-
-            The source of the message. Normally used to display the model name
-            (e.g. 'gpt-4o')
-      type: object
-      title: Source
-    lfx__schema__content_block__ContentBlock-Input:
-      properties:
-        title:
+        user_id:
           type: string
-          title: Title
-        contents:
-          items:
-            oneOf:
-              - $ref: >-
-                  #/components/schemas/langflow__schema__content_types__ToolContent
-              - $ref: '#/components/schemas/lfx__schema__content_types__ErrorContent'
-              - $ref: >-
-                  #/components/schemas/langflow__schema__content_types__TextContent
-              - $ref: '#/components/schemas/lfx__schema__content_types__MediaContent'
-              - $ref: '#/components/schemas/lfx__schema__content_types__CodeContent'
-              - $ref: >-
-                  #/components/schemas/langflow__schema__content_types__JSONContent
-          type: array
-          title: Contents
-        allow_markdown:
-          type: boolean
-          title: Allow Markdown
-          default: true
-        media_url:
+          format: uuid
+          title: User Id
+        name:
+          type: string
+          title: Name
+        path:
+          type: string
+          title: Path
+        size:
+          type: integer
+          title: Size
+        provider:
           anyOf:
-            - items:
-                type: string
-              type: array
+            - type: string
             - type: 'null'
-          title: Media Url
+          title: Provider
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
       type: object
       required:
-        - title
-        - contents
-      title: ContentBlock
-      description: A block of content that can contain different types of content.
-    lfx__schema__content_types__CodeContent:
-      properties:
-        type:
-          type: string
-          const: code
-          title: Type
-          default: code
-        duration:
-          anyOf:
-            - type: integer
-            - type: 'null'
-          title: Duration
-        header:
-          anyOf:
-            - $ref: '#/components/schemas/HeaderDict'
-            - type: 'null'
-        code:
-          type: string
-          title: Code
-        language:
-          type: string
-          title: Language
-        title:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Title
-      type: object
-      required:
-        - code
-        - language
-      title: CodeContent
-      description: Content type for code snippets.
-    lfx__schema__content_types__ErrorContent:
-      properties:
-        type:
-          type: string
-          const: error
-          title: Type
-          default: error
-        duration:
-          anyOf:
-            - type: integer
-            - type: 'null'
-          title: Duration
-        header:
-          anyOf:
-            - $ref: '#/components/schemas/HeaderDict'
-            - type: 'null'
-        component:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Component
-        field:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Field
-        reason:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Reason
-        solution:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Solution
-        traceback:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Traceback
-      type: object
-      title: ErrorContent
-      description: Content type for error messages.
-    lfx__schema__content_types__MediaContent:
-      properties:
-        type:
-          type: string
-          const: media
-          title: Type
-          default: media
-        duration:
-          anyOf:
-            - type: integer
-            - type: 'null'
-          title: Duration
-        header:
-          anyOf:
-            - $ref: '#/components/schemas/HeaderDict'
-            - type: 'null'
-        urls:
-          items:
-            type: string
-          type: array
-          title: Urls
-        caption:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Caption
-      type: object
-      required:
-        - urls
-      title: MediaContent
-      description: Content type for media content.
-    lfx__utils__schemas__File:
+        - user_id
+        - name
+        - path
+        - size
+      title: File
+    langflow__utils__schemas__File:
       properties:
         path:
           type: string
