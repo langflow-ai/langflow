@@ -1,35 +1,52 @@
 """
-Langflow Runtime Converter with Bidirectional Support.
+Enhanced Langflow Converter implementation.
 
-This module provides bidirectional conversion between Genesis specifications
-and Langflow flow JSON format, implementing the RuntimeConverter interface.
+This module implements the Langflow-specific converter with Phase 3 enhancements:
+- Enhanced type compatibility validation
+- Comprehensive edge validation and connection rules
+- Performance optimization capabilities
+- Integration with existing FlowConverter
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Set
 import logging
 import json
+import asyncio
 from datetime import datetime, timezone
 
-from .base_converter import RuntimeConverter, RuntimeType, ConversionError, ConverterValidationError
-from langflow.custom.genesis.spec import FlowConverter, ComponentMapper, VariableResolver, AgentSpec
+from .base_converter import (
+    RuntimeConverter,
+    RuntimeType,
+    ConversionResult,
+    ComponentCompatibility,
+    EdgeValidationResult,
+    ValidationOptions,
+    ConversionError,
+    ConverterValidationError
+)
+from langflow.custom.genesis.spec import FlowConverter, ComponentMapper, VariableResolver
 
 logger = logging.getLogger(__name__)
 
 
 class LangflowConverter(RuntimeConverter):
     """
-    Bidirectional converter for Langflow runtime.
+    Enhanced Langflow converter with Phase 3 improvements.
 
-    Provides conversion from Genesis specifications to Langflow JSON format
-    and reverse conversion from Langflow flows back to Genesis specifications.
+    Integrates with the existing FlowConverter while adding:
+    - Enhanced validation with type compatibility checking
+    - Comprehensive edge validation and connection rules
+    - Performance optimization capabilities
+    - Better error handling and metadata collection
     """
 
-    def __init__(self):
+    def __init__(self, runtime_type: RuntimeType = RuntimeType.LANGFLOW):
         """Initialize the Langflow converter."""
-        super().__init__(RuntimeType.LANGFLOW)
+        super().__init__(runtime_type)
         self.mapper = ComponentMapper()
         self.flow_converter = FlowConverter(self.mapper)
         self.resolver = VariableResolver()
+        self._supported_components_cache = None
 
     def get_runtime_info(self) -> Dict[str, Any]:
         """Return Langflow runtime capabilities and metadata."""
@@ -38,22 +55,32 @@ class LangflowConverter(RuntimeConverter):
             "version": "1.0.0",
             "runtime_type": self.runtime_type.value,
             "capabilities": [
-                "visual_workflow_builder",
-                "component_based_architecture",
+                "visual_flow_design",
+                "component_library",
                 "real_time_execution",
-                "tool_integration",
-                "agent_workflows",
-                "multi_llm_support"
+                "streaming_support",
+                "api_integration",
+                "custom_components"
             ],
-            "supported_components": self._get_supported_components(),
-            "bidirectional_support": True,
+            "supported_components": list(self.get_supported_components()),
+            "bidirectional_support": True,  # Both spec -> flow and flow -> spec
             "streaming_support": True,
+            "performance_modes": ["fast", "balanced", "thorough"],
+            "validation_features": [
+                "type_compatibility",
+                "edge_validation",
+                "component_existence",
+                "tool_connections",
+                "configuration_validation"
+            ],
             "export_formats": ["json"],
             "import_formats": ["json", "yaml"],
             "metadata": {
-                "description": "Visual workflow builder for AI agents and applications",
-                "documentation_url": "https://docs.langflow.org",
-                "component_count": len(self._get_supported_components())
+                "description": "Enhanced Langflow converter with comprehensive validation",
+                "integration": "FlowConverter",
+                "performance_optimizations": True,
+                "edge_validation": True,
+                "component_count": len(self.get_supported_components())
             }
         }
 
@@ -95,44 +122,73 @@ class LangflowConverter(RuntimeConverter):
 
         return errors
 
-    async def convert_to_runtime(self, spec: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Convert Genesis specification to Langflow JSON.
+    async def convert_to_runtime(self,
+                               spec: Dict[str, Any],
+                               variables: Optional[Dict[str, Any]] = None,
+                               validation_options: Optional[ValidationOptions] = None) -> ConversionResult:
+        """Convert Genesis specification to Langflow format with enhanced validation."""
+        conversion_start = datetime.utcnow()
+        options = validation_options or ValidationOptions()
 
-        Args:
-            spec: Genesis specification dictionary
-
-        Returns:
-            Langflow flow JSON structure
-
-        Raises:
-            ConversionError: If conversion fails
-        """
         try:
-            # Validate before conversion
-            validation_errors = self.validate_specification(spec)
-            if validation_errors:
-                raise ConverterValidationError(validation_errors, self.runtime_type.value)
+            # Pre-conversion validation
+            if self.validation_enabled and options.enable_type_checking:
+                validation_result = await self.pre_conversion_validation(spec, options)
+                if not validation_result["valid"]:
+                    return ConversionResult(
+                        success=False,
+                        runtime_type=self.runtime_type,
+                        errors=validation_result["errors"],
+                        warnings=validation_result["warnings"],
+                        metadata={
+                            "validation_failed": True,
+                            "validation_result": validation_result
+                        }
+                    )
 
-            # Use existing FlowConverter
-            flow_json = await self.flow_converter.convert(spec)
+            # Convert using existing FlowConverter
+            flow_data = await self.flow_converter.convert(spec, variables)
 
             # Add Langflow-specific metadata
-            flow_json["converted_by"] = "LangflowConverter"
-            flow_json["conversion_timestamp"] = datetime.now(timezone.utc).isoformat()
-            flow_json["genesis_spec_version"] = spec.get("version", "1.0.0")
+            flow_data["converted_by"] = "LangflowConverter"
+            flow_data["conversion_timestamp"] = datetime.now(timezone.utc).isoformat()
+            flow_data["genesis_spec_version"] = spec.get("version", "1.0.0")
 
-            return flow_json
+            # Calculate performance metrics
+            conversion_duration = (datetime.utcnow() - conversion_start).total_seconds()
+            components_count = len(self._get_components_list(spec))
 
-        except ConverterValidationError:
-            raise
+            return ConversionResult(
+                success=True,
+                runtime_type=self.runtime_type,
+                flow_data=flow_data,
+                metadata={
+                    "conversion_method": "FlowConverter.convert",
+                    "components_processed": components_count,
+                    "variables_applied": len(variables) if variables else 0,
+                    "langflow_metadata": {
+                        "flow_id": flow_data.get("id"),
+                        "node_count": len(flow_data.get("data", {}).get("nodes", [])),
+                        "edge_count": len(flow_data.get("data", {}).get("edges", []))
+                    }
+                },
+                performance_metrics={
+                    "conversion_duration_seconds": conversion_duration,
+                    "components_per_second": components_count / max(conversion_duration, 0.001),
+                    "memory_estimate_mb": self._estimate_memory_usage(spec)
+                }
+            )
+
         except Exception as e:
-            logger.error(f"Failed to convert Genesis spec to Langflow: {e}")
-            raise ConversionError(
-                f"Genesis to Langflow conversion failed: {str(e)}",
-                self.runtime_type.value,
-                "spec_to_runtime",
-                {"original_error": str(e)}
+            logger.error(f"Langflow conversion failed: {e}")
+            return ConversionResult(
+                success=False,
+                runtime_type=self.runtime_type,
+                errors=[f"Conversion failed: {e}"],
+                metadata={
+                    "conversion_duration_seconds": (datetime.utcnow() - conversion_start).total_seconds(),
+                    "error_type": type(e).__name__
+                }
             )
 
     async def convert_from_runtime(self, runtime_spec: Dict[str, Any]) -> Dict[str, Any]:
@@ -177,13 +233,174 @@ class LangflowConverter(RuntimeConverter):
             )
 
     def supports_component_type(self, component_type: str) -> bool:
-        """Check if Langflow supports given Genesis component type."""
-        # Use ComponentMapper to check if type is supported
+        """Check if component type is supported by Langflow."""
+        return component_type in self.get_supported_components()
+
+    def get_supported_components(self) -> Set[str]:
+        """Get set of Genesis component types supported by Langflow."""
+        if self._supported_components_cache is None:
+            # Get all mapped components from ComponentMapper
+            supported = set()
+
+            # Standard mappings
+            supported.update(self.mapper.STANDARD_MAPPINGS.keys())
+            supported.update(self.mapper.MCP_MAPPINGS.keys())
+            supported.update(self.mapper.AUTONOMIZE_MODELS.keys())
+
+            # Add any database-mapped components
+            try:
+                available_components = self.mapper.get_available_components()
+                if "genesis_mapped" in available_components:
+                    supported.update(available_components["genesis_mapped"].keys())
+            except Exception as e:
+                logger.warning(f"Could not get database-mapped components: {e}")
+
+            self._supported_components_cache = supported
+
+        return self._supported_components_cache
+
+    def validate_component_compatibility(self, component: Dict[str, Any]) -> ComponentCompatibility:
+        """Validate component compatibility with Langflow."""
+        comp_type = component.get("type", "")
+        comp_id = component.get("id", "unknown")
+
+        # Get mapping information
+        mapping = self.mapper.map_component(comp_type)
+        langflow_component = mapping.get("component", "CustomComponent")
+
+        # Get I/O mapping
+        io_mapping = self.mapper.get_component_io_mapping(langflow_component)
+
+        # Determine constraints
+        constraints = []
+        performance_hints = {}
+
+        # Component-specific constraints
+        if comp_type.startswith("genesis:crewai"):
+            constraints.append("Requires CrewAI library for execution")
+            performance_hints["memory"] = "CrewAI components use additional memory"
+
+        if comp_type == "genesis:mcp_tool":
+            constraints.append("Requires MCP server configuration")
+            performance_hints["startup"] = "MCP tools may have initialization delay"
+
+        if comp_type.startswith("genesis:autonomize"):
+            constraints.append("Requires Autonomize model access")
+            performance_hints["api"] = "External API calls may affect performance"
+
+        # Tool capability validation
+        if component.get("asTools", False):
+            if comp_type not in ["genesis:mcp_tool", "genesis:knowledge_hub_search", "genesis:api_request"]:
+                constraints.append("Component may not be optimized for tool usage")
+
+        return ComponentCompatibility(
+            genesis_type=comp_type,
+            runtime_component=langflow_component,
+            supported_inputs=io_mapping.get("input_fields", []),
+            supported_outputs=io_mapping.get("output_fields", []),
+            configuration_schema=mapping.get("config", {}),
+            constraints=constraints,
+            performance_hints=performance_hints
+        )
+
+    def get_runtime_constraints(self) -> Dict[str, Any]:
+        """Get Langflow-specific constraints and limitations."""
+        return {
+            "max_components": 50,  # Reasonable limit for UI performance
+            "max_memory_mb": 4096,  # 4GB memory limit
+            "max_concurrent_tasks": 10,  # Concurrent execution limit
+            "supported_file_types": ["json", "yaml"],
+            "max_flow_size_mb": 100,  # Maximum flow file size
+            "component_limits": {
+                "max_agents": 10,
+                "max_tools_per_agent": 5,
+                "max_nested_depth": 3
+            },
+            "performance_constraints": {
+                "max_edges_per_component": 5,
+                "max_total_edges": 100,
+                "recommended_components": 20
+            }
+        }
+
+    async def validate_edge_connection(self,
+                                     source_comp: Dict[str, Any],
+                                     target_comp: Dict[str, Any],
+                                     connection: Dict[str, Any]) -> EdgeValidationResult:
+        """Enhanced edge validation with Langflow-specific rules."""
+        errors = []
+        warnings = []
+        suggestions = []
+
+        source_id = source_comp.get("id", "unknown")
+        target_id = target_comp.get("id", "unknown")
+        source_type = source_comp.get("type", "")
+        target_type = target_comp.get("type", "")
+        use_as = connection.get("useAs", "")
+
         try:
-            mapping = self.mapper.map_component(component_type)
-            return mapping.get("component") is not None
-        except Exception:
-            return False
+            # Basic connection validation
+            if not use_as:
+                errors.append("Missing 'useAs' field in connection")
+
+            if not connection.get("in"):
+                errors.append("Missing 'in' field in connection")
+
+            # Type compatibility validation using FlowConverter logic
+            compatibility_score = await self._calculate_langflow_compatibility(
+                source_comp, target_comp, connection
+            )
+
+            # Tool connection validation
+            if use_as == "tools":
+                tool_validation = self._validate_tool_connection(source_comp, target_comp)
+                errors.extend(tool_validation["errors"])
+                warnings.extend(tool_validation["warnings"])
+                suggestions.extend(tool_validation["suggestions"])
+
+            # Agent input validation
+            elif use_as == "input":
+                input_validation = self._validate_input_connection(source_comp, target_comp)
+                errors.extend(input_validation["errors"])
+                warnings.extend(input_validation["warnings"])
+
+            # System prompt validation
+            elif use_as == "system_prompt":
+                prompt_validation = self._validate_prompt_connection(source_comp, target_comp)
+                errors.extend(prompt_validation["errors"])
+                warnings.extend(prompt_validation["warnings"])
+
+            # Performance suggestions
+            if compatibility_score < 0.7:
+                suggestions.append(f"Consider optimizing connection {source_id} -> {target_id}")
+
+            # Langflow-specific validations
+            if len(source_comp.get("provides", [])) > 5:
+                warnings.append(f"Component {source_id} has many outgoing connections, may impact UI performance")
+
+            return EdgeValidationResult(
+                valid=len(errors) == 0,
+                source_component=source_id,
+                target_component=target_id,
+                connection_type=use_as,
+                errors=errors,
+                warnings=warnings,
+                suggestions=suggestions,
+                compatibility_score=compatibility_score
+            )
+
+        except Exception as e:
+            logger.error(f"Edge validation failed: {e}")
+            return EdgeValidationResult(
+                valid=False,
+                source_component=source_id,
+                target_component=target_id,
+                connection_type=use_as,
+                errors=[f"Edge validation error: {e}"],
+                warnings=[],
+                suggestions=[],
+                compatibility_score=0.0
+            )
 
     def _get_supported_components(self) -> List[str]:
         """Get list of supported Genesis component types."""
@@ -441,3 +658,143 @@ class LangflowConverter(RuntimeConverter):
         }
 
         return field_mapping.get(field_name, "input")
+
+    # Phase 3 Langflow-specific validation methods
+
+    def _validate_tool_connection(self,
+                                source_comp: Dict[str, Any],
+                                target_comp: Dict[str, Any]) -> Dict[str, List[str]]:
+        """Validate tool connection using FlowConverter logic."""
+        errors = []
+        warnings = []
+        suggestions = []
+
+        source_type = source_comp.get("type", "")
+        target_type = target_comp.get("type", "")
+
+        # Check if source is marked as tool-capable
+        if not source_comp.get("asTools", False):
+            if source_type not in ["genesis:mcp_tool", "genesis:knowledge_hub_search", "genesis:api_request"]:
+                errors.append(f"Component {source_comp.get('id')} not marked as tool (asTools: true)")
+
+        # Check if target can accept tools
+        if "agent" not in target_type.lower():
+            warnings.append(f"Component {target_comp.get('id')} may not support tool connections")
+
+        # Use FlowConverter's tool validation logic
+        try:
+            is_valid = self.flow_converter._validate_tool_connection_capability(
+                source_type, target_type, source_comp
+            )
+            if not is_valid:
+                errors.append(f"Tool connection not supported: {source_type} -> {target_type}")
+
+        except Exception as e:
+            warnings.append(f"Could not validate tool connection capability: {e}")
+
+        return {"errors": errors, "warnings": warnings, "suggestions": suggestions}
+
+    def _validate_input_connection(self,
+                                 source_comp: Dict[str, Any],
+                                 target_comp: Dict[str, Any]) -> Dict[str, List[str]]:
+        """Validate input connection."""
+        errors = []
+        warnings = []
+
+        source_type = source_comp.get("type", "")
+        target_type = target_comp.get("type", "")
+
+        # Check valid input sources
+        valid_input_types = ["genesis:chat_input", "genesis:prompt_template"]
+        if source_type not in valid_input_types:
+            warnings.append(f"Unusual input source type: {source_type}")
+
+        # Check valid input targets
+        valid_target_types = ["genesis:agent", "genesis:crewai_agent"]
+        if not any(target in target_type for target in valid_target_types):
+            warnings.append(f"Component {target_comp.get('id')} may not accept input connections")
+
+        return {"errors": errors, "warnings": warnings}
+
+    def _validate_prompt_connection(self,
+                                  source_comp: Dict[str, Any],
+                                  target_comp: Dict[str, Any]) -> Dict[str, List[str]]:
+        """Validate system prompt connection."""
+        errors = []
+        warnings = []
+
+        source_type = source_comp.get("type", "")
+        target_type = target_comp.get("type", "")
+
+        # Check valid prompt sources
+        if source_type != "genesis:prompt_template":
+            errors.append(f"System prompt must come from genesis:prompt_template, not {source_type}")
+
+        # Check valid prompt targets
+        valid_target_types = ["genesis:agent", "genesis:crewai_agent"]
+        if not any(target in target_type for target in valid_target_types):
+            errors.append(f"System prompt can only connect to agents, not {target_type}")
+
+        return {"errors": errors, "warnings": warnings}
+
+    async def _calculate_langflow_compatibility(self,
+                                              source_comp: Dict[str, Any],
+                                              target_comp: Dict[str, Any],
+                                              connection: Dict[str, Any]) -> float:
+        """Calculate compatibility score using Langflow-specific logic."""
+        try:
+            score = 1.0
+
+            source_type = source_comp.get("type", "")
+            target_type = target_comp.get("type", "")
+            use_as = connection.get("useAs", "")
+
+            # Get component mappings
+            source_mapping = self.mapper.map_component(source_type)
+            target_mapping = self.mapper.map_component(target_type)
+
+            # Check if components exist in Langflow
+            if source_mapping["component"] == "CustomComponent":
+                score -= 0.2
+            if target_mapping["component"] == "CustomComponent":
+                score -= 0.2
+
+            # Use FlowConverter's type compatibility logic
+            try:
+                source_io = self.mapper.get_component_io_mapping(source_mapping["component"])
+                target_io = self.mapper.get_component_io_mapping(target_mapping["component"])
+
+                output_types = source_io.get("output_types", ["Message", "Data"])
+                input_types = target_io.get("input_types", ["Message", "Data", "str"])
+
+                is_compatible = self.flow_converter._validate_type_compatibility_fixed(
+                    output_types, input_types,
+                    source_mapping["component"], target_mapping["component"]
+                )
+
+                if is_compatible:
+                    score += 0.2
+                else:
+                    score -= 0.3
+
+            except Exception as e:
+                logger.debug(f"Type compatibility check failed: {e}")
+                # Fallback to basic compatibility
+                pass
+
+            # Tool-specific scoring
+            if use_as == "tools":
+                if source_comp.get("asTools", False):
+                    score += 0.1
+                else:
+                    score -= 0.2
+
+            return max(0.0, min(1.0, score))
+
+        except Exception as e:
+            logger.warning(f"Error calculating Langflow compatibility: {e}")
+            return 0.5
+
+    def clear_cache(self):
+        """Clear cached data."""
+        self._supported_components_cache = None

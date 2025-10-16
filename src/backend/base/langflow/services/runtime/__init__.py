@@ -1,89 +1,123 @@
 """
-Genesis Multi-Runtime Converter System.
+Runtime Services Module for Phase 3: Conversion Architecture Enhancement.
 
-This package provides a comprehensive, extensible architecture for converting
-Genesis specifications to multiple runtime environments with bidirectional support.
+This module provides the foundation for converting Genesis specifications to different
+runtime targets with enhanced validation, type compatibility checking, and performance
+optimization.
 
-Key Features:
-- Multi-runtime support (Langflow, Temporal, Kafka)
-- Bidirectional conversion capabilities
-- Plugin architecture for extensibility
-- Component gap analysis and mapping
-- Runtime registry and factory patterns
+The module includes:
+- Base converter interface (base_converter.py)
+- Converter factory for managing multiple runtimes (converter_factory.py)
+- Langflow-specific converter implementation (langflow_converter.py)
+- Future runtime adapters (temporal, kafka, etc.)
 
 Usage:
-    from langflow.services.runtime import converter_factory, runtime_registry
+    from langflow.services.runtime import converter_factory, LangflowConverter
+    from langflow.services.runtime.base_converter import RuntimeType, ValidationOptions
 
-    # Create a converter
-    converter = converter_factory.create_converter("langflow")
+    # Get a converter for Langflow
+    converter = converter_factory.registry.get_converter(RuntimeType.LANGFLOW)
 
-    # Convert specification
-    result = converter.convert_to_runtime(genesis_spec)
-
-    # Get available runtimes
-    runtimes = runtime_registry.list_available_runtimes()
+    # Convert a specification
+    result = await converter.convert_to_runtime(spec_dict, variables, validation_options)
 """
 
 from .base_converter import (
     RuntimeConverter,
     RuntimeType,
     ConversionMode,
+    ConversionResult,
+    ComponentCompatibility,
+    EdgeValidationResult,
+    ValidationOptions,
     ConversionError,
     ConverterValidationError,
     ComponentNotSupportedError
 )
 
-from .registry import runtime_registry
-from .factory import converter_factory
+from .converter_factory import (
+    ConverterFactory,
+    ConverterRegistry,
+    converter_factory,
+    converter_registry,
+    register_converter,
+    get_converter_factory
+)
 
 from .langflow_converter import LangflowConverter
 from .temporal_converter import TemporalConverter
-from .kafka_converter import KafkaConverter
-from .gap_analyzer import ConverterGapAnalyzer
 
 __all__ = [
-    # Core interfaces and types
+    # Base converter classes
     "RuntimeConverter",
     "RuntimeType",
     "ConversionMode",
+    "ConversionResult",
+    "ComponentCompatibility",
+    "EdgeValidationResult",
+    "ValidationOptions",
 
     # Exceptions
     "ConversionError",
     "ConverterValidationError",
     "ComponentNotSupportedError",
 
-    # Core instances
-    "runtime_registry",
+    # Factory and registry
+    "ConverterFactory",
+    "ConverterRegistry",
     "converter_factory",
+    "converter_registry",
+    "register_converter",
+    "get_converter_factory",
 
-    # Converter implementations
+    # Specific converters
     "LangflowConverter",
-    "TemporalConverter",
-    "KafkaConverter",
-
-    # Tools
-    "ConverterGapAnalyzer"
+    "TemporalConverter"
 ]
 
 # Version info
 __version__ = "1.0.0"
 
-# Initialize the runtime system
-def initialize_runtime_system():
-    """Initialize the multi-runtime converter system."""
-    # Register built-in converters
-    langflow_converter = LangflowConverter()
-    runtime_registry.register_converter(langflow_converter)
+# Register the Langflow converter
+register_converter(
+    RuntimeType.LANGFLOW,
+    LangflowConverter,
+    {
+        "description": "Enhanced Langflow converter with Phase 3 improvements",
+        "features": [
+            "visual_flow_design",
+            "enhanced_validation",
+            "performance_optimization",
+            "edge_validation"
+        ],
+        "supported_features": [
+            "type_compatibility_validation",
+            "comprehensive_edge_validation",
+            "performance_optimization",
+            "bidirectional_conversion"
+        ]
+    }
+)
 
-    # Register skeleton converters
-    temporal_converter = TemporalConverter()
-    runtime_registry.register_converter(temporal_converter)
-
-    kafka_converter = KafkaConverter()
-    runtime_registry.register_converter(kafka_converter)
-
-    # Auto-discover plugins
-    converter_factory.auto_discover_plugins()
-
-# Initialize on import
-initialize_runtime_system()
+# Register the Temporal converter (skeleton for future implementation)
+register_converter(
+    RuntimeType.TEMPORAL,
+    TemporalConverter,
+    {
+        "description": "Temporal workflow converter (skeleton implementation)",
+        "features": [
+            "durable_execution",
+            "state_persistence",
+            "fault_tolerance",
+            "long_running_workflows"
+        ],
+        "supported_features": [
+            "workflow_orchestration",
+            "retry_policies",
+            "state_management",
+            "distributed_execution"
+        ],
+        "implementation_status": "skeleton",
+        "estimated_completion": "2-3 weeks"
+    }
+)

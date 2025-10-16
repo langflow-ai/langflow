@@ -43,13 +43,46 @@ class SpecConvertResponse(BaseModel):
 class SpecValidationRequest(BaseModel):
     """Request model for spec validation."""
     spec_yaml: str = Field(..., description="YAML specification string")
+    detailed: bool = Field(True, description="Whether to perform detailed semantic validation")
+    format_report: bool = Field(False, description="Whether to return a formatted validation report")
+
+
+class ValidationIssue(BaseModel):
+    """Individual validation issue with context."""
+    code: str = Field(..., description="Error/warning code")
+    message: str = Field(..., description="Human-readable message")
+    severity: str = Field(..., description="Issue severity: error, warning, or suggestion")
+    component_id: Optional[str] = Field(None, description="ID of the component with the issue")
+    field: Optional[str] = Field(None, description="Specific field with the issue")
+    suggestion: Optional[str] = Field(None, description="Actionable suggestion to fix the issue")
+
+
+class ValidationSummary(BaseModel):
+    """Validation summary statistics."""
+    error_count: int = Field(..., description="Number of errors found")
+    warning_count: int = Field(..., description="Number of warnings found")
+    suggestion_count: int = Field(..., description="Number of suggestions provided")
+
+
+class ValidationPhases(BaseModel):
+    """Validation phases status."""
+    schema_validation: bool = Field(..., description="JSON Schema validation passed")
+    structure_validation: bool = Field(..., description="Basic structure validation passed")
+    component_validation: bool = Field(..., description="Component existence validation passed")
+    type_validation: bool = Field(..., description="Type compatibility validation passed")
+    semantic_validation: Optional[bool] = Field(None, description="Semantic validation passed (if performed)")
 
 
 class SpecValidationResponse(BaseModel):
-    """Response model for spec validation."""
-    valid: bool = Field(..., description="Validation result")
-    errors: list[str] = Field(default_factory=list, description="Validation errors")
-    warnings: list[str] = Field(default_factory=list, description="Validation warnings")
+    """Enhanced response model for spec validation."""
+    valid: bool = Field(..., description="Overall validation result")
+    errors: List[ValidationIssue] = Field(default_factory=list, description="Validation errors with context")
+    warnings: List[ValidationIssue] = Field(default_factory=list, description="Validation warnings with context")
+    suggestions: List[ValidationIssue] = Field(default_factory=list, description="Improvement suggestions")
+    summary: ValidationSummary = Field(..., description="Validation summary statistics")
+    validation_phases: ValidationPhases = Field(..., description="Status of each validation phase")
+    formatted_report: Optional[str] = Field(None, description="Human-readable validation report (if requested)")
+    actionable_suggestions: List[str] = Field(default_factory=list, description="List of actionable suggestions")
 
 
 class ComponentsResponse(BaseModel):
@@ -111,24 +144,176 @@ async def validate_spec(
     request: SpecValidationRequest
 ) -> SpecValidationResponse:
     """
-    Validate specification without converting.
+    Enhanced specification validation with comprehensive error reporting.
 
-    Performs enhanced validation on the YAML specification to check for structure,
-    component existence, connections, and healthcare-specific compliance.
+    Performs multi-phase validation including JSON Schema validation, semantic analysis,
+    component relationship validation, and provides actionable suggestions for improvement.
     """
     try:
         service = SpecService()
-        result = await service.validate_spec(request.spec_yaml)
+        result = await service.validate_spec(
+            spec_yaml=request.spec_yaml,
+            detailed=request.detailed
+        )
+
+        # Convert validation issues to proper format
+        def convert_issues(issues):
+            converted = []
+            for issue in issues:
+                if isinstance(issue, dict):
+                    converted.append(ValidationIssue(**issue))
+                else:
+                    # Handle legacy string format
+                    converted.append(ValidationIssue(
+                        code="LEGACY_ISSUE",
+                        message=str(issue),
+                        severity="error"
+                    ))
+            return converted
+
+        errors = convert_issues(result.get("errors", []))
+        warnings = convert_issues(result.get("warnings", []))
+        suggestions = convert_issues(result.get("suggestions", []))
+
+        # Extract summary
+        summary_data = result.get("summary", {})
+        summary = ValidationSummary(
+            error_count=summary_data.get("error_count", len(errors)),
+            warning_count=summary_data.get("warning_count", len(warnings)),
+            suggestion_count=summary_data.get("suggestion_count", len(suggestions))
+        )
+
+        # Extract validation phases
+        phases_data = result.get("validation_phases", {})
+        phases = ValidationPhases(
+            schema_validation=phases_data.get("schema_validation", True),
+            structure_validation=phases_data.get("structure_validation", True),
+            component_validation=phases_data.get("component_validation", True),
+            type_validation=phases_data.get("type_validation", True),
+            semantic_validation=phases_data.get("semantic_validation")
+        )
+
+        # Get formatted report if requested
+        formatted_report = None
+        if request.format_report:
+            formatted_report = service.format_validation_report(result)
+
+        # Get actionable suggestions
+        actionable_suggestions = service.get_validation_suggestions(result)
 
         return SpecValidationResponse(
             valid=result["valid"],
-            errors=result["errors"],
-            warnings=result["warnings"]
+            errors=errors,
+            warnings=warnings,
+            suggestions=suggestions,
+            summary=summary,
+            validation_phases=phases,
+            formatted_report=formatted_report,
+            actionable_suggestions=actionable_suggestions
         )
 
     except Exception as e:
         logger.error(f"Spec validation error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during validation") from e
+
+
+@router.post("/validate-quick", response_model=SpecValidationResponse)
+async def validate_spec_quick(
+    request: SpecValidationRequest
+) -> SpecValidationResponse:
+    """
+    Quick specification validation for real-time feedback.
+
+    Performs lightweight validation that's optimized for speed, suitable for
+    real-time validation in editors and CLI tools. Skips expensive semantic
+    analysis but covers essential validation rules.
+    """
+    try:
+        service = SpecService()
+        result = await service.validate_spec_quick(request.spec_yaml)
+
+        # Convert validation issues to proper format
+        def convert_issues(issues):
+            converted = []
+            for issue in issues:
+                if isinstance(issue, dict):
+                    converted.append(ValidationIssue(**issue))
+                else:
+                    # Handle legacy string format
+                    converted.append(ValidationIssue(
+                        code="LEGACY_ISSUE",
+                        message=str(issue),
+                        severity="error"
+                    ))
+            return converted
+
+        errors = convert_issues(result.get("errors", []))
+        warnings = convert_issues(result.get("warnings", []))
+        suggestions = convert_issues(result.get("suggestions", []))
+
+        # Extract summary
+        summary_data = result.get("summary", {})
+        summary = ValidationSummary(
+            error_count=summary_data.get("error_count", len(errors)),
+            warning_count=summary_data.get("warning_count", len(warnings)),
+            suggestion_count=summary_data.get("suggestion_count", len(suggestions))
+        )
+
+        # Extract validation phases
+        phases_data = result.get("validation_phases", {})
+        phases = ValidationPhases(
+            schema_validation=phases_data.get("schema_validation"),
+            structure_validation=phases_data.get("structure_validation"),
+            component_validation=phases_data.get("component_validation"),
+            type_validation=phases_data.get("type_validation"),
+            semantic_validation=phases_data.get("semantic_validation")  # Will be None for quick validation
+        )
+
+        # Get formatted report if requested
+        formatted_report = None
+        if request.format_report:
+            formatted_report = service.format_validation_report(result)
+
+        # Get actionable suggestions
+        actionable_suggestions = service.get_validation_suggestions(result)
+
+        return SpecValidationResponse(
+            valid=result["valid"],
+            errors=errors,
+            warnings=warnings,
+            suggestions=suggestions,
+            summary=summary,
+            validation_phases=phases,
+            formatted_report=formatted_report,
+            actionable_suggestions=actionable_suggestions
+        )
+
+    except Exception as e:
+        logger.error(f"Quick spec validation error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during quick validation") from e
+
+
+@router.get("/error-context/{error_code}")
+async def get_error_context(error_code: str):
+    """
+    Get detailed context and help for a specific error code.
+
+    Provides comprehensive information about validation errors including
+    descriptions, examples, documentation links, and resolution steps.
+    """
+    try:
+        service = SpecService()
+        context = service.get_error_context(error_code)
+
+        return {
+            "error_code": error_code,
+            "context": context,
+            "timestamp": "2025-01-16T10:30:00Z"
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting error context: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error getting error context") from e
 
 
 @router.get("/components", response_model=ComponentsResponse)

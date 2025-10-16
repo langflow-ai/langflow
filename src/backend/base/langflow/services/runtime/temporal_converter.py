@@ -1,14 +1,30 @@
 """
-Temporal Runtime Converter Skeleton.
+Temporal Runtime Converter (Future Implementation).
 
-This module provides a skeleton implementation for Temporal workflow conversion.
-Temporal is used for long-running, reliable workflow execution with state management.
+This module provides a skeleton implementation for Temporal workflow conversion,
+demonstrating the adapter pattern for future runtime targets in Phase 3.
+
+Temporal is a workflow orchestration platform that excels at:
+- Reliable, durable workflow execution
+- Complex state management
+- Fault tolerance and retry logic
+- Long-running processes
+- Distributed system coordination
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Set
 import logging
+from datetime import datetime
 
-from .base_converter import RuntimeConverter, RuntimeType, ConversionError, ComponentNotSupportedError
+from .base_converter import (
+    RuntimeConverter,
+    RuntimeType,
+    ConversionResult,
+    ComponentCompatibility,
+    EdgeValidationResult,
+    ValidationOptions,
+    ConversionError
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +40,10 @@ class TemporalConverter(RuntimeConverter):
     - Workflows requiring temporal scheduling and delays
     """
 
-    def __init__(self):
+    def __init__(self, runtime_type: RuntimeType = RuntimeType.TEMPORAL):
         """Initialize the Temporal converter."""
-        super().__init__(RuntimeType.TEMPORAL)
+        super().__init__(runtime_type)
+        self._supported_components_cache = None
 
     def get_runtime_info(self) -> Dict[str, Any]:
         """Return Temporal runtime capabilities and metadata."""
@@ -102,35 +119,67 @@ class TemporalConverter(RuntimeConverter):
 
         return errors
 
-    async def convert_to_runtime(self, spec: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Convert Genesis specification to Temporal workflow definition.
+    async def convert_to_runtime(self,
+                               spec: Dict[str, Any],
+                               variables: Optional[Dict[str, Any]] = None,
+                               validation_options: Optional[ValidationOptions] = None) -> ConversionResult:
+        """Convert Genesis specification to Temporal workflow format (skeleton implementation)."""
+        conversion_start = datetime.utcnow()
 
-        Args:
-            spec: Genesis specification dictionary
+        try:
+            # This is a skeleton implementation demonstrating the interface
+            # Full implementation would require Temporal SDK integration
 
-        Returns:
-            Temporal workflow definition
-
-        Raises:
-            ConversionError: If conversion fails (currently not implemented)
-        """
-        # TODO: Implement Temporal workflow conversion
-        raise ConversionError(
-            "Temporal conversion not yet implemented",
-            self.runtime_type.value,
-            "spec_to_runtime",
-            {
-                "implementation_status": "skeleton",
+            workflow_data = {
+                "workflow_name": spec.get("name", "genesis_workflow").replace(" ", "_").lower(),
+                "description": spec.get("description", ""),
+                "status": "skeleton_implementation",
                 "planned_features": [
                     "Workflow definition generation",
                     "Activity mapping",
                     "State management",
                     "Error handling and retries",
                     "Temporal scheduling"
-                ]
+                ],
+                "components_analyzed": len(self._get_components_list(spec)),
+                "estimated_implementation_effort": "2-3 weeks"
             }
-        )
+
+            conversion_duration = (datetime.utcnow() - conversion_start).total_seconds()
+
+            return ConversionResult(
+                success=False,  # Skeleton implementation
+                runtime_type=self.runtime_type,
+                flow_data=workflow_data,
+                errors=["Temporal conversion is not yet implemented - this is a skeleton for future development"],
+                warnings=["This converter demonstrates the adapter pattern for future runtime targets"],
+                metadata={
+                    "implementation_status": "skeleton",
+                    "conversion_method": "temporal_workflow_skeleton",
+                    "future_capabilities": [
+                        "durable_execution",
+                        "state_persistence",
+                        "automatic_retries",
+                        "workflow_versioning"
+                    ]
+                },
+                performance_metrics={
+                    "conversion_duration_seconds": conversion_duration,
+                    "skeleton_analysis_complete": True
+                }
+            )
+
+        except Exception as e:
+            logger.error(f"Temporal conversion skeleton failed: {e}")
+            return ConversionResult(
+                success=False,
+                runtime_type=self.runtime_type,
+                errors=[f"Temporal conversion skeleton error: {e}"],
+                metadata={
+                    "conversion_duration_seconds": (datetime.utcnow() - conversion_start).total_seconds(),
+                    "error_type": type(e).__name__
+                }
+            )
 
         # Future implementation outline:
         """
@@ -169,10 +218,9 @@ class TemporalConverter(RuntimeConverter):
 
     def supports_component_type(self, component_type: str) -> bool:
         """Check if Temporal supports given Genesis component type."""
-        supported_types = self._get_supported_components()
-        return component_type in supported_types
+        return component_type in self.get_supported_components()
 
-    def _get_supported_components(self) -> List[str]:
+    def get_supported_components(self) -> Set[str]:
         """
         Get list of Genesis component types supported by Temporal.
 
@@ -182,38 +230,41 @@ class TemporalConverter(RuntimeConverter):
         - Data components for state management
         - Healthcare-specific components for medical workflows
         """
-        return [
-            # Core workflow components
-            "genesis:agent",
-            "genesis:autonomize_agent",
+        if self._supported_components_cache is None:
+            self._supported_components_cache = {
+                # Core workflow components
+                "genesis:agent",
+                "genesis:autonomize_agent",
 
-            # Data and state management
-            "genesis:json_input",
-            "genesis:json_output",
-            "genesis:chat_input",
-            "genesis:chat_output",
+                # Data and state management
+                "genesis:json_input",
+                "genesis:json_output",
+                "genesis:chat_input",
+                "genesis:chat_output",
 
-            # Healthcare-specific components (ideal for Temporal)
-            "genesis:eligibility_component",
-            "genesis:pa_lookup",
-            "genesis:encoder_pro",
-            "genesis:clinical_llm",
-            "genesis:rxnorm",
-            "genesis:icd10",
-            "genesis:cpt_code",
+                # Healthcare-specific components (ideal for Temporal)
+                "genesis:eligibility_component",
+                "genesis:pa_lookup",
+                "genesis:encoder_pro",
+                "genesis:clinical_llm",
+                "genesis:rxnorm",
+                "genesis:icd10",
+                "genesis:cpt_code",
 
-            # External integrations
-            "genesis:api_request",
-            "genesis:mcp_tool",
+                # External integrations
+                "genesis:api_request",
+                "genesis:mcp_tool",
 
-            # Healthcare data processing
-            "genesis:form_recognizer",
-            "genesis:document_intelligence",
+                # Healthcare data processing
+                "genesis:form_recognizer",
+                "genesis:document_intelligence",
 
-            # Memory and persistence
-            "genesis:memory",
-            "genesis:conversation_memory"
-        ]
+                # Memory and persistence
+                "genesis:memory",
+                "genesis:conversation_memory"
+            }
+
+        return self._supported_components_cache
 
     def _validate_temporal_workflow_structure(self, spec: Dict[str, Any]) -> List[str]:
         """Validate specification structure for Temporal workflow requirements."""
@@ -265,6 +316,60 @@ class TemporalConverter(RuntimeConverter):
                         return True
 
         return False
+
+    # Phase 3 Interface Methods
+
+    def validate_component_compatibility(self, component: Dict[str, Any]) -> ComponentCompatibility:
+        """Validate component compatibility with Temporal (skeleton implementation)."""
+        comp_type = component.get("type", "")
+        comp_id = component.get("id", "unknown")
+
+        return ComponentCompatibility(
+            genesis_type=comp_type,
+            runtime_component="TemporalActivity",  # Skeleton mapping
+            supported_inputs=["workflow_input"],
+            supported_outputs=["workflow_output"],
+            configuration_schema={
+                "timeout": {"type": "string", "default": "5m"},
+                "retry_policy": {"type": "object"}
+            },
+            constraints=["Temporal implementation not yet available"],
+            performance_hints={
+                "note": "Temporal excels at long-running, stateful workflows",
+                "recommendation": "Consider for multi-step healthcare processes"
+            }
+        )
+
+    def get_runtime_constraints(self) -> Dict[str, Any]:
+        """Get Temporal-specific constraints and limitations (skeleton)."""
+        return {
+            "max_components": 100,
+            "max_memory_mb": 8192,
+            "max_concurrent_tasks": 100,
+            "max_workflow_duration_hours": 24 * 30,  # 30 days
+            "implementation_status": "skeleton",
+            "estimated_implementation": "2-3 weeks"
+        }
+
+    async def validate_edge_connection(self,
+                                     source_comp: Dict[str, Any],
+                                     target_comp: Dict[str, Any],
+                                     connection: Dict[str, Any]) -> EdgeValidationResult:
+        """Enhanced edge validation with Temporal-specific rules (skeleton)."""
+        return EdgeValidationResult(
+            valid=True,  # Skeleton always validates
+            source_component=source_comp.get("id", "unknown"),
+            target_component=target_comp.get("id", "unknown"),
+            connection_type=connection.get("useAs", "workflow"),
+            errors=[],
+            warnings=["Temporal converter is not yet implemented"],
+            suggestions=["Consider using Langflow converter for immediate needs"],
+            compatibility_score=0.5  # Neutral score for skeleton
+        )
+
+    def clear_cache(self):
+        """Clear cached data."""
+        self._supported_components_cache = None
 
     # Future implementation methods (skeleton)
 

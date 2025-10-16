@@ -15,8 +15,9 @@ from dataclasses import dataclass
 import sys
 import time
 
-from langflow.io import Input, Output
-from langflow.custom.custom_component import Component
+from langflow.template.field.base import Input
+from langflow.template import Output
+from langflow.custom.custom_component.component import Component
 
 logger = logging.getLogger(__name__)
 

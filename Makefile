@@ -394,32 +394,32 @@ publish_testpypi: ## build the frontend static files and package the project and
 # example make alembic-revision message="Add user table"
 alembic-revision: ## generate a new migration
 	@echo 'Generating a new Alembic revision'
-	cd src/backend/base/langflow/ && uv run alembic revision --autogenerate -m "$(message)"
+	cd src/backend/base && uv run --directory langflow alembic revision --autogenerate -m "$(message)"
 
 
 alembic-upgrade: ## upgrade database to the latest version
 	@echo 'Upgrading database to the latest version'
-	cd src/backend/base/langflow/ && uv run alembic upgrade head
+	cd src/backend/base && uv run --directory langflow alembic upgrade head
 
 alembic-downgrade: ## downgrade database by one version
 	@echo 'Downgrading database by one version'
-	cd src/backend/base/langflow/ && uv run alembic downgrade -1
+	cd src/backend/base && uv run --directory langflow alembic downgrade -1
 
 alembic-current: ## show current revision
 	@echo 'Showing current Alembic revision'
-	cd src/backend/base/langflow/ && uv run alembic current
+	cd src/backend/base && uv run --directory langflow alembic current
 
 alembic-history: ## show migration history
 	@echo 'Showing Alembic migration history'
-	cd src/backend/base/langflow/ && uv run alembic history --verbose
+	cd src/backend/base && uv run --directory langflow alembic history --verbose
 
 alembic-check: ## check migration status
 	@echo 'Running alembic check'
-	cd src/backend/base/langflow/ && uv run alembic check
+	cd src/backend/base && uv run --directory langflow alembic check
 
 alembic-stamp: ## stamp the database with a specific revision
 	@echo 'Stamping the database with revision $(revision)'
-	cd src/backend/base/langflow/ && uv run alembic stamp $(revision)
+	cd src/backend/base && uv run --directory langflow alembic stamp $(revision)
 
 ######################
 # VERSION MANAGEMENT

@@ -8,6 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.v1.schemas import ComponentMappingResponse
 from langflow.services.component_mapping.service import ComponentMappingService
+from langflow.services.component_mapping.discovery_service import ComponentDiscoveryService
 from langflow.services.database.models.component_mapping import (
     ComponentMapping,
     ComponentMappingCreate,
@@ -27,6 +28,7 @@ from langflow.services.deps import get_db_service
 
 router = APIRouter(prefix="/component-mappings", tags=["Component Mappings"])
 component_mapping_service = ComponentMappingService()
+discovery_service = ComponentDiscoveryService()
 
 
 # Component Mapping Endpoints
@@ -314,5 +316,58 @@ async def migrate_hardcoded_mappings(
     from langflow.custom.genesis.spec.mapper import ComponentMapper
 
     mapper = ComponentMapper()
-    results = await mapper.migrate_hardcoded_mappings_to_database(session)
+    all_mappings = {
+        **mapper.AUTONOMIZE_MODELS,
+        **mapper.MCP_MAPPINGS,
+        **mapper.STANDARD_MAPPINGS,
+    }
+
+    results = await component_mapping_service.migrate_hardcoded_mappings(
+        session, all_mappings, overwrite_existing=overwrite_existing
+    )
     return results
+
+
+# Discovery Endpoints
+
+@router.post("/discovery/discover")
+async def discover_components(
+    session: AsyncSession = Depends(session_getter),
+):
+    """Discover all available Langflow components and analyze mapping gaps."""
+    try:
+        results = await discovery_service.discover_components(session)
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/discovery/auto-create")
+async def auto_create_mappings(
+    component_names: List[str],
+    session: AsyncSession = Depends(session_getter),
+    genesis_type_prefix: str = Query("genesis:", description="Prefix for generated genesis types"),
+):
+    """Automatically create mappings for discovered components."""
+    try:
+        results = await discovery_service.auto_create_mappings(
+            session, component_names, genesis_type_prefix
+        )
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/discovery/update-schemas")
+async def update_schemas_from_discovery(
+    session: AsyncSession = Depends(session_getter),
+    force_update: bool = Query(False, description="Force update even if no changes detected"),
+):
+    """Update existing component mappings with latest schema information."""
+    try:
+        results = await discovery_service.update_schemas_from_discovery(
+            session, force_update=force_update
+        )
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

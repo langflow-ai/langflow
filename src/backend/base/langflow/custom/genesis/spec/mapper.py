@@ -18,6 +18,7 @@ class ComponentMapper:
         self._init_mappings()
         self._use_real_introspection = True  # Flag to enable real component inspection
         self._use_database_fallback = True  # Flag to enable database fallback
+        self._mapping_cache = {}  # Cache for database mappings
 
     def _init_mappings(self):
         """Initialize all component mappings."""
@@ -720,7 +721,7 @@ class ComponentMapper:
 
     def _get_mapping_from_database(self, spec_type: str) -> Optional[Dict[str, Any]]:
         """
-        Get component mapping from database.
+        Get component mapping from database (sync fallback).
 
         Args:
             spec_type: Genesis component type
@@ -729,14 +730,18 @@ class ComponentMapper:
             Component mapping dictionary or None if not found
         """
         try:
-            service = self._get_component_mapping_service()
-            if not service:
-                return None
+            # For synchronous access, we'll implement a cache-based approach
+            # The cache will be populated by async operations
+            cache_key = f"mapping_cache_{spec_type}"
 
-            # Note: This is a synchronous method, but the service methods are async
-            # In a real implementation, we would need to handle this properly
-            # For now, we'll return None and log that database integration needs async context
-            logger.debug(f"Database lookup for {spec_type} requires async context")
+            # Check if we have a cached mapping
+            if hasattr(self, '_mapping_cache') and cache_key in self._mapping_cache:
+                cached_mapping = self._mapping_cache[cache_key]
+                logger.debug(f"Found cached database mapping for {spec_type}")
+                return cached_mapping
+
+            # If no cache available, return None and suggest async lookup
+            logger.debug(f"No cached database mapping for {spec_type}, use async methods for database access")
             return None
 
         except Exception as e:
@@ -861,3 +866,99 @@ class ComponentMapper:
         except Exception as e:
             logger.error(f"Error migrating hardcoded mappings: {e}")
             return {"error": str(e)}
+
+    def populate_mapping_cache(self, mappings: Dict[str, Dict[str, Any]]):
+        """
+        Populate the mapping cache with database mappings.
+
+        Args:
+            mappings: Dictionary of genesis_type -> mapping_data
+        """
+        for genesis_type, mapping_data in mappings.items():
+            cache_key = f"mapping_cache_{genesis_type}"
+            self._mapping_cache[cache_key] = mapping_data
+            logger.debug(f"Cached mapping for {genesis_type}")
+
+    def clear_mapping_cache(self):
+        """Clear the mapping cache."""
+        self._mapping_cache.clear()
+        logger.info("Mapping cache cleared")
+
+    def get_cache_status(self) -> Dict[str, Any]:
+        """Get status of the mapping cache."""
+        return {
+            "cache_enabled": self._use_database_fallback,
+            "cached_mappings": len(self._mapping_cache),
+            "cached_types": list(self._mapping_cache.keys()),
+        }
+
+    async def refresh_cache_from_database(self, session) -> Dict[str, Any]:
+        """
+        Refresh the mapping cache from database.
+
+        Args:
+            session: Database session
+
+        Returns:
+            Refresh results
+        """
+        try:
+            service = self._get_component_mapping_service()
+            if not service:
+                return {"error": "ComponentMappingService not available"}
+
+            # Get all active mappings from database
+            mappings = await service.get_all_component_mappings(session, active_only=True)
+
+            # Clear existing cache
+            self.clear_mapping_cache()
+
+            # Populate cache with database mappings
+            database_mappings = {}
+            for mapping in mappings:
+                if mapping.io_mapping:
+                    genesis_type = mapping.genesis_type
+                    mapping_data = {
+                        "component": mapping.io_mapping.get("component"),
+                        "config": mapping.base_config or {},
+                        "dataType": mapping.io_mapping.get("dataType"),
+                    }
+                    database_mappings[genesis_type] = mapping_data
+
+            self.populate_mapping_cache(database_mappings)
+
+            logger.info(f"Refreshed mapping cache with {len(database_mappings)} mappings from database")
+            return {
+                "refreshed": len(database_mappings),
+                "cached_types": list(database_mappings.keys()),
+                "status": "success",
+            }
+
+        except Exception as e:
+            logger.error(f"Error refreshing mapping cache: {e}")
+            return {"error": str(e)}
+
+    def get_mapping_source(self, spec_type: str) -> str:
+        """
+        Determine the source of a mapping for debugging.
+
+        Args:
+            spec_type: Genesis component type
+
+        Returns:
+            Source of the mapping (hardcoded, database, unknown)
+        """
+        # Check hardcoded mappings first
+        if spec_type in self.AUTONOMIZE_MODELS:
+            return "hardcoded_autonomize"
+        elif spec_type in self.MCP_MAPPINGS:
+            return "hardcoded_mcp"
+        elif spec_type in self.STANDARD_MAPPINGS:
+            return "hardcoded_standard"
+
+        # Check cache (database)
+        cache_key = f"mapping_cache_{spec_type}"
+        if hasattr(self, '_mapping_cache') and cache_key in self._mapping_cache:
+            return "database_cached"
+
+        return "unknown"
