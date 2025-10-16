@@ -185,7 +185,9 @@ class LCAgentComponent(Component):
         # Final safety check: ensure input_text is never empty (prevents Anthropic API errors)
         if not input_text or (isinstance(input_text, (list, str)) and not str(input_text).strip()):
             input_text = "Continue the conversation."
-
+        # Ensure the agent input is a string
+        if not isinstance(input_text, str):
+            input_text = " ".join(map(str, input_text)) if isinstance(input_text, list) else str(input_text)
         input_dict["input"] = input_text
         if hasattr(self, "graph"):
             session_id = self.graph.session_id
