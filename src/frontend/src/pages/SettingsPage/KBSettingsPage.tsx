@@ -120,11 +120,15 @@ export default function KBSettingsPage() {
           },
         );
       } else if (provider === "opensearch") {
+      } else if (provider === "opensearch") {
         variablesToUpdate.push(
           { name: "kb_opensearch_url", value: opensearchUrl },
           { name: "kb_opensearch_index_prefix", value: opensearchIndexPrefix },
           { name: "kb_opensearch_username", value: opensearchUsername },
-          { name: "kb_opensearch_password", value: opensearchPassword },
+          // Only include password if provided to avoid clearing existing secrets
+          ...(opensearchPassword.trim()
+            ? [{ name: "kb_opensearch_password", value: opensearchPassword }]
+            : []),
           {
             name: "kb_opensearch_verify_certs",
             value: opensearchVerifyCerts.toString(),
