@@ -37,9 +37,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
-from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
+from langflow.services.database.models.folder.constants import (
+    DEFAULT_FOLDER_DESCRIPTION,
+    DEFAULT_FOLDER_NAME,
+    LEGACY_FOLDER_NAMES,
+)
 from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderRead
-from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import get_settings_service, get_storage_service, get_variable_service, session_scope
 
 # In the folder ./starter_projects we have a few JSON files that represent
@@ -727,20 +730,21 @@ async def load_flows_from_directory() -> None:
     """On langflow startup, this loads all flows from the directory specified in the settings.
 
     All flows are uploaded into the default folder for the superuser.
-    Note that this feature currently only works if AUTO_LOGIN is enabled in the settings.
     """
     settings_service = get_settings_service()
     flows_path = settings_service.settings.load_flows_path
     if not flows_path:
         return
-    if not settings_service.auth_settings.AUTO_LOGIN:
-        await logger.awarning("AUTO_LOGIN is disabled, not loading flows from directory")
-        return
 
     async with session_scope() as session:
-        user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
+        # Find superuser by role instead of username to avoid issues with credential reset
+        from langflow.services.database.models.user.model import User
+
+        stmt = select(User).where(User.is_superuser == True)  # noqa: E712
+        result = await session.exec(stmt)
+        user = result.first()
         if user is None:
-            msg = "Superuser not found in the database"
+            msg = "No superuser found in the database"
             raise NoResultFound(msg)
 
         # Ensure that the default folder exists for this user
@@ -793,13 +797,16 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
     bundle_urls = settings_service.settings.bundle_urls
     if not bundle_urls:
         return [], []
-    if not settings_service.auth_settings.AUTO_LOGIN:
-        await logger.awarning("AUTO_LOGIN is disabled, not loading flows from URLs")
 
     async with session_scope() as session:
-        user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
+        # Find superuser by role instead of username to avoid issues with credential reset
+        from langflow.services.database.models.user.model import User
+
+        stmt = select(User).where(User.is_superuser == True)  # noqa: E712
+        result = await session.exec(stmt)
+        user = result.first()
         if user is None:
-            msg = "Superuser not found in the database"
+            msg = "No superuser found in the database"
             raise NoResultFound(msg)
         user_id = user.id
 
@@ -816,11 +823,7 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
                 for filename in zfile.namelist():
                     path = Path(filename)
                     for dir_name in dir_names:
-                        if (
-                            settings_service.auth_settings.AUTO_LOGIN
-                            and path.is_relative_to(f"{dir_name}flows/")
-                            and path.suffix == ".json"
-                        ):
+                        if path.is_relative_to(f"{dir_name}flows/") and path.suffix == ".json":
                             file_content = zfile.read(filename)
                             await upsert_flow_from_file(file_content, path.stem, session, user_id)
                         elif path.is_relative_to(f"{dir_name}components/"):
@@ -1002,12 +1005,16 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
                 await logger.adebug(f"Successfully created {successfully_created_projects} starter projects")
 
 
-async def initialize_super_user_if_needed() -> None:
+async def initialize_auto_login_default_superuser() -> None:
     settings_service = get_settings_service()
     if not settings_service.auth_settings.AUTO_LOGIN:
         return
-    username = settings_service.auth_settings.SUPERUSER
-    password = settings_service.auth_settings.SUPERUSER_PASSWORD
+    # In AUTO_LOGIN mode, always use the default credentials for initial bootstrapping
+    # without persisting the password in memory after setup.
+    from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+
+    username = DEFAULT_SUPERUSER
+    password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
     if not username or not password:
         msg = "SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true."
         raise ValueError(msg)
@@ -1024,6 +1031,9 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
 
     Uses an idempotent insertion approach to handle concurrent creation gracefully.
 
+    If the DEFAULT_FOLDER_NAME env var is set to a custom value (e.g., "OpenRAG"), this function
+    will check for legacy folder names and migrate them to avoid duplicates.
+
     This implementation avoids an external distributed lock and works with both SQLite and PostgreSQL.
 
     Args:
@@ -1031,16 +1041,45 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
         user_id (UUID): The ID of the user who owns the folder.
 
     Returns:
-        UUID: The ID of the default folder.
+        FolderRead: The default folder for the user.
     """
+    # First, check if the current default folder exists
     stmt = select(Folder).where(Folder.user_id == user_id, Folder.name == DEFAULT_FOLDER_NAME)
     result = await session.exec(stmt)
     folder = result.first()
     if folder:
         return FolderRead.model_validate(folder, from_attributes=True)
 
+    # Check if a legacy folder exists and migrate it if the name is different from default
+    if DEFAULT_FOLDER_NAME not in LEGACY_FOLDER_NAMES:
+        for legacy_name in LEGACY_FOLDER_NAMES:
+            if legacy_name == DEFAULT_FOLDER_NAME:
+                continue  # Skip if legacy name is the same as current default
+
+            legacy_stmt = select(Folder).where(Folder.user_id == user_id, Folder.name == legacy_name)
+            legacy_result = await session.exec(legacy_stmt)
+            legacy_folder = legacy_result.first()
+
+            if legacy_folder:
+                # Migrate the legacy folder by renaming it
+                await logger.ainfo(
+                    f"Migrating legacy folder '{legacy_name}' to '{DEFAULT_FOLDER_NAME}' for user {user_id}"
+                )
+                legacy_folder.name = DEFAULT_FOLDER_NAME
+                legacy_folder.description = DEFAULT_FOLDER_DESCRIPTION
+                session.add(legacy_folder)
+                try:
+                    await session.commit()
+                    await session.refresh(legacy_folder)
+                    return FolderRead.model_validate(legacy_folder, from_attributes=True)
+                except sa.exc.IntegrityError:
+                    # If there's a conflict, rollback and proceed to create new folder
+                    await session.rollback()
+                    break
+
+    # If no existing folder found, create a new one
     try:
-        folder_obj = Folder(user_id=user_id, name=DEFAULT_FOLDER_NAME)
+        folder_obj = Folder(user_id=user_id, name=DEFAULT_FOLDER_NAME, description=DEFAULT_FOLDER_DESCRIPTION)
         session.add(folder_obj)
         await session.commit()
         await session.refresh(folder_obj)

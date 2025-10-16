@@ -1,8 +1,7 @@
-"""Enhanced file component with clearer structure and Docling isolation.
+"""Enhanced file component with Docling support and process isolation.
 
 Notes:
 -----
-- Functionality is preserved with minimal behavioral changes.
 - ALL Docling parsing/export runs in a separate OS process to prevent memory
   growth and native library state from impacting the main Langflow process.
 - Standard text/structured parsing continues to use existing BaseFileComponent
@@ -22,37 +21,32 @@ from lfx.base.data.base_file import BaseFileComponent
 from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
 from lfx.io import BoolInput, FileInput, IntInput, Output
-from lfx.schema import DataFrame  # noqa: TC001
 from lfx.schema.data import Data
+from lfx.schema.dataframe import DataFrame  # noqa: TC001
 from lfx.schema.message import Message
 
 
 class FileComponent(BaseFileComponent):
     """File component with optional Docling processing (isolated in a subprocess)."""
 
-    display_name = "File"
-    description = "Loads content from files with optional advanced document processing and export using Docling."
+    display_name = "Read File"
+    description = "Loads content from one or more files."
     documentation: str = "https://docs.langflow.org/components-data#file"
     icon = "file-text"
     name = "File"
 
     # Docling-supported/compatible extensions; TEXT_FILE_TYPES are supported by the base loader.
     VALID_EXTENSIONS = [
+        *TEXT_FILE_TYPES,
         "adoc",
         "asciidoc",
         "asc",
         "bmp",
-        "csv",
         "dotx",
         "dotm",
         "docm",
-        "docx",
-        "htm",
-        "html",
+        "jpg",
         "jpeg",
-        "json",
-        "md",
-        "pdf",
         "png",
         "potx",
         "ppsx",
@@ -61,13 +55,10 @@ class FileComponent(BaseFileComponent):
         "ppsm",
         "pptx",
         "tiff",
-        "txt",
         "xls",
         "xlsx",
         "xhtml",
-        "xml",
         "webp",
-        *TEXT_FILE_TYPES,
     ]
 
     # Fixed export settings used when markdown export is requested.
@@ -90,9 +81,9 @@ class FileComponent(BaseFileComponent):
             real_time_refresh=True,
             info=(
                 "Enable advanced document processing and export with Docling for PDFs, images, and office documents. "
-                "Available only for single file processing."
+                "Note that advanced document processing can consume significant resources."
             ),
-            show=False,
+            show=True,
         ),
         DropdownInput(
             name="pipeline",
@@ -101,13 +92,14 @@ class FileComponent(BaseFileComponent):
             options=["standard", "vlm"],
             value="standard",
             advanced=True,
+            real_time_refresh=True,
         ),
         DropdownInput(
             name="ocr_engine",
             display_name="OCR Engine",
             info="OCR engine to use. Only available when pipeline is set to 'standard'.",
-            options=["", "easyocr"],
-            value="",
+            options=["None", "easyocr"],
+            value="easyocr",
             show=False,
             advanced=True,
         ),
@@ -178,11 +170,9 @@ class FileComponent(BaseFileComponent):
         """Show/hide Advanced Parser and related fields based on selection context."""
         if field_name == "path":
             paths = self._path_value(build_config)
-            file_path = paths[0] if paths else ""
-            file_count = len(field_value) if field_value else 0
 
-            # Advanced mode only for single (non-tabular) file
-            allow_advanced = file_count == 1 and not file_path.endswith((".csv", ".xlsx", ".parquet"))
+            # If all files can be processed by docling, do so
+            allow_advanced = all(not file_path.endswith((".csv", ".xlsx", ".parquet")) for file_path in paths)
             build_config["advanced_mode"]["show"] = allow_advanced
             if not allow_advanced:
                 build_config["advanced_mode"]["value"] = False
@@ -190,16 +180,27 @@ class FileComponent(BaseFileComponent):
                     if f in build_config:
                         build_config[f]["show"] = False
 
+        # Docling Processing
         elif field_name == "advanced_mode":
             for f in ("pipeline", "ocr_engine", "doc_key", "md_image_placeholder", "md_page_break_placeholder"):
                 if f in build_config:
                     build_config[f]["show"] = bool(field_value)
+                    if f == "pipeline":
+                        build_config[f]["advanced"] = not bool(field_value)
+
+        elif field_name == "pipeline":
+            if field_value == "standard":
+                build_config["ocr_engine"]["show"] = True
+                build_config["ocr_engine"]["value"] = "easyocr"
+            else:
+                build_config["ocr_engine"]["show"] = False
+                build_config["ocr_engine"]["value"] = "None"
 
         return build_config
 
     def update_outputs(self, frontend_node: dict[str, Any], field_name: str, field_value: Any) -> dict[str, Any]:  # noqa: ARG002
         """Dynamically show outputs based on file count/type and advanced mode."""
-        if field_name not in ["path", "advanced_mode"]:
+        if field_name not in ["path", "advanced_mode", "pipeline"]:
             return frontend_node
 
         template = frontend_node.get("template", {})
@@ -222,10 +223,10 @@ class FileComponent(BaseFileComponent):
             advanced_mode = frontend_node.get("template", {}).get("advanced_mode", {}).get("value", False)
             if advanced_mode:
                 frontend_node["outputs"].append(
-                    Output(display_name="Structured Output", name="advanced", method="load_files_advanced"),
+                    Output(display_name="Structured Output", name="advanced_dataframe", method="load_files_dataframe"),
                 )
                 frontend_node["outputs"].append(
-                    Output(display_name="Markdown", name="markdown", method="load_files_markdown"),
+                    Output(display_name="Markdown", name="advanced_markdown", method="load_files_markdown"),
                 )
                 frontend_node["outputs"].append(
                     Output(display_name="File Path", name="path", method="load_files_path"),
@@ -259,6 +260,7 @@ class FileComponent(BaseFileComponent):
             ".docx",
             ".htm",
             ".html",
+            ".jpg",
             ".jpeg",
             ".json",
             ".md",
@@ -296,61 +298,38 @@ class FileComponent(BaseFileComponent):
             "md_image_placeholder": str(self.md_image_placeholder),
             "md_page_break_placeholder": str(self.md_page_break_placeholder),
             "pipeline": str(self.pipeline),
-            "ocr_engine": str(self.ocr_engine) if getattr(self, "ocr_engine", "") else None,
+            "ocr_engine": (
+                self.ocr_engine if self.ocr_engine and self.ocr_engine != "None" and self.pipeline != "vlm" else None
+            ),
         }
 
-        # The child is a tiny, self-contained script to keep memory/state isolated.
+        self.log(f"Starting Docling subprocess for file: {file_path}")
+        self.log(args)
+
+        # Child script for isolating the docling processing
         child_script = textwrap.dedent(
             r"""
             import json, sys
 
             def try_imports():
-                # Strategy 1: latest layout
                 try:
                     from docling.datamodel.base_models import ConversionStatus, InputFormat  # type: ignore
                     from docling.document_converter import DocumentConverter  # type: ignore
                     from docling_core.types.doc import ImageRefMode  # type: ignore
                     return ConversionStatus, InputFormat, DocumentConverter, ImageRefMode, "latest"
-                except Exception:
-                    pass
-                # Strategy 2: alternative layout
-                try:
-                    from docling.document_converter import DocumentConverter  # type: ignore
-                    try:
-                        from docling_core.types import ConversionStatus, InputFormat  # type: ignore
-                    except Exception:
-                        try:
-                            from docling.datamodel import ConversionStatus, InputFormat  # type: ignore
-                        except Exception:
-                            class ConversionStatus: SUCCESS = "success"
-                            class InputFormat:
-                                PDF="pdf"; IMAGE="image"
-                    try:
-                        from docling_core.types.doc import ImageRefMode  # type: ignore
-                    except Exception:
-                        class ImageRefMode:
-                            PLACEHOLDER="placeholder"; EMBEDDED="embedded"
-                    return ConversionStatus, InputFormat, DocumentConverter, ImageRefMode, "alternative"
-                except Exception:
-                    pass
-                # Strategy 3: basic converter only
-                try:
-                    from docling.document_converter import DocumentConverter  # type: ignore
-                    class ConversionStatus: SUCCESS = "success"
-                    class InputFormat:
-                        PDF="pdf"; IMAGE="image"
-                    class ImageRefMode:
-                        PLACEHOLDER="placeholder"; EMBEDDED="embedded"
-                    return ConversionStatus, InputFormat, DocumentConverter, ImageRefMode, "basic"
                 except Exception as e:
-                    raise ImportError(f"Docling imports failed: {e}") from e
+                    raise e
 
             def create_converter(strategy, input_format, DocumentConverter, pipeline, ocr_engine):
-                if strategy == "latest" and pipeline == "standard":
+                # --- Standard PDF/IMAGE pipeline (your existing behavior), with optional OCR ---
+                if pipeline == "standard":
                     try:
                         from docling.datamodel.pipeline_options import PdfPipelineOptions  # type: ignore
                         from docling.document_converter import PdfFormatOption  # type: ignore
+
                         pipe = PdfPipelineOptions()
+                        pipe.do_ocr = False
+
                         if ocr_engine:
                             try:
                                 from docling.models.factories import get_ocr_factory  # type: ignore
@@ -358,15 +337,56 @@ class FileComponent(BaseFileComponent):
                                 fac = get_ocr_factory(allow_external_plugins=False)
                                 pipe.ocr_options = fac.create_options(kind=ocr_engine)
                             except Exception:
+                                # If OCR setup fails, disable it
                                 pipe.do_ocr = False
+
                         fmt = {}
                         if hasattr(input_format, "PDF"):
                             fmt[getattr(input_format, "PDF")] = PdfFormatOption(pipeline_options=pipe)
                         if hasattr(input_format, "IMAGE"):
                             fmt[getattr(input_format, "IMAGE")] = PdfFormatOption(pipeline_options=pipe)
+
                         return DocumentConverter(format_options=fmt)
                     except Exception:
                         return DocumentConverter()
+
+                # --- Vision-Language Model (VLM) pipeline ---
+                if pipeline == "vlm":
+                    try:
+                        from docling.datamodel.pipeline_options import VlmPipelineOptions
+                        from docling.datamodel.vlm_model_specs import GRANITEDOCLING_MLX, GRANITEDOCLING_TRANSFORMERS
+                        from docling.document_converter import PdfFormatOption
+                        from docling.pipeline.vlm_pipeline import VlmPipeline
+
+                        vl_pipe = VlmPipelineOptions(
+                            vlm_options=GRANITEDOCLING_TRANSFORMERS,
+                        )
+
+                        if sys.platform == "darwin":
+                            try:
+                                import mlx_vlm
+                                vl_pipe.vlm_options = GRANITEDOCLING_MLX
+                            except ImportError as e:
+                                raise e
+
+                        # VLM paths generally don't need OCR; keep OCR off by default here.
+                        fmt = {}
+                        if hasattr(input_format, "PDF"):
+                            fmt[getattr(input_format, "PDF")] = PdfFormatOption(
+                            pipeline_cls=VlmPipeline,
+                            pipeline_options=vl_pipe
+                        )
+                        if hasattr(input_format, "IMAGE"):
+                            fmt[getattr(input_format, "IMAGE")] = PdfFormatOption(
+                            pipeline_cls=VlmPipeline,
+                            pipeline_options=vl_pipe
+                        )
+
+                        return DocumentConverter(format_options=fmt)
+                    except Exception as e:
+                        raise e
+
+                # --- Fallback: default converter with no special options ---
                 return DocumentConverter()
 
             def export_markdown(document, ImageRefMode, image_mode, img_ph, pg_ph):
@@ -506,7 +526,7 @@ class FileComponent(BaseFileComponent):
     ) -> list[BaseFileComponent.BaseFile]:
         """Process input files.
 
-        - Single file + advanced_mode => Docling in a separate process.
+        - advanced_mode => Docling in a separate process.
         - Otherwise => standard parsing in current process (optionally threaded).
         """
         if not file_list:
@@ -527,10 +547,13 @@ class FileComponent(BaseFileComponent):
                     raise
                 return None
 
-        # Advanced path: only for a single Docling-compatible file
-        if len(file_list) == 1:
-            file_path = str(file_list[0].path)
-            if self.advanced_mode and self._is_docling_compatible(file_path):
+        docling_compatible = all(self._is_docling_compatible(str(f.path)) for f in file_list)
+
+        # Advanced path: Check if ALL files are compatible with Docling
+        if self.advanced_mode and docling_compatible:
+            final_return: list[BaseFileComponent.BaseFile] = []
+            for file in file_list:
+                file_path = str(file.path)
                 advanced_data: Data | None = self._process_docling_in_subprocess(file_path)
 
                 # --- UNNEST: expand each element in `doc` to its own Data row
@@ -546,10 +569,11 @@ class FileComponent(BaseFileComponent):
                         )
                         for item in doc_rows
                     ]
-                    return self.rollup_data(file_list, rows)
-
-                # If not structured, keep as-is (e.g., markdown export or error dict)
-                return self.rollup_data(file_list, [advanced_data])
+                    final_return.extend(self.rollup_data(file_list, rows))
+                else:
+                    # If not structured, keep as-is (e.g., markdown export or error dict)
+                    final_return.extend(self.rollup_data(file_list, [advanced_data]))
+            return final_return
 
         # Standard multi-file (or single non-advanced) path
         concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)
@@ -565,13 +589,25 @@ class FileComponent(BaseFileComponent):
 
     # ------------------------------ Output helpers -----------------------------------
 
-    def load_files_advanced(self) -> DataFrame:
-        """Load files using advanced Docling processing and export to an advanced format."""
+    def load_files_helper(self) -> DataFrame:
+        result = self.load_files()
+
+        # Error condition - raise error if no text and an error is present
+        if not hasattr(result, "text"):
+            if hasattr(result, "error"):
+                raise ValueError(result.error[0])
+            msg = "Could not extract content from the provided file(s)."
+            raise ValueError(msg)
+
+        return result
+
+    def load_files_dataframe(self) -> DataFrame:
+        """Load files using advanced Docling processing and export to DataFrame format."""
         self.markdown = False
-        return self.load_files()
+        return self.load_files_helper()
 
     def load_files_markdown(self) -> Message:
         """Load files using advanced Docling processing and export to Markdown format."""
         self.markdown = True
-        result = self.load_files()
+        result = self.load_files_helper()
         return Message(text=str(result.text[0]))

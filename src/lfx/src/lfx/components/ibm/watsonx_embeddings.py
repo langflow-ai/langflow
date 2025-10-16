@@ -51,7 +51,7 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
         ),
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
+            display_name="Watsonx API Key",
             info="The API Key to use for the model.",
             required=True,
         ),
