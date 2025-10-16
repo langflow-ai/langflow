@@ -2,7 +2,7 @@
 name = "langflow"
 version = "1.7.0"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.11,<3.14"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -135,7 +135,7 @@ dependencies = [
     "traceloop-sdk>=0.43.1,<1.0.0",
     "vlmrun[all]>=0.2.0",
     "cuga==0.1.4",
-    "agent-lifecycle-toolkit",
+    "agent-lifecycle-toolkit==0.2.1.10062025",
     "astrapy>=2.1.0,<3.0.0",
 ]
 
