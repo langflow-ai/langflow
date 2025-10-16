@@ -30,7 +30,6 @@ def upgrade() -> None:
         if "category" not in column_names:
             # Add new column as non-nullable with default
             batch_op.add_column(
-            batch_op.add_column(
                 sa.Column("category", sqlmodel.sql.sqltypes.AutoString(), nullable=False, server_default="global")
             )
         else:
