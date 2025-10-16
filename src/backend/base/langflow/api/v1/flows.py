@@ -26,6 +26,7 @@ from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import (
     AccessTypeEnum,
+    DeploymentStateEnum,
     Flow,
     FlowCreate,
     FlowHeader,
@@ -35,7 +36,8 @@ from langflow.services.database.models.flow.model import (
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_flow_cache_service, get_settings_service
+from langflow.services.flow_cache.service import FlowCacheService
 from langflow.utils.compression import compress_response
 
 # build router
@@ -157,13 +159,23 @@ async def create_flow(
     session: DbSession,
     flow: FlowCreate,
     current_user: CurrentActiveUser,
+    flow_cache_service: Annotated[FlowCacheService, Depends(get_flow_cache_service)],
 ):
     try:
         db_flow = await _new_flow(session=session, flow=flow, user_id=current_user.id)
+
+        # If flow is created as DEPLOYED, lock it before committing
+        if db_flow.status == DeploymentStateEnum.DEPLOYED:
+            db_flow.locked = True
+
         await session.commit()
         await session.refresh(db_flow)
 
         await _save_flow_to_fs(db_flow)
+
+        # Add deployed flows to cache
+        if db_flow.status == DeploymentStateEnum.DEPLOYED:
+            await flow_cache_service.add_flow_to_cache(db_flow)
 
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
@@ -321,6 +333,7 @@ async def update_flow(
     flow_id: UUID,
     flow: FlowUpdate,
     current_user: CurrentActiveUser,
+    flow_cache_service: Annotated[FlowCacheService, Depends(get_flow_cache_service)],
 ):
     """Update a flow."""
     settings_service = get_settings_service()
@@ -333,6 +346,9 @@ async def update_flow(
 
         if not db_flow:
             raise HTTPException(status_code=404, detail="Flow not found")
+
+        # Store old endpoint name for cache cleanup if it changes
+        old_endpoint_name = db_flow.endpoint_name
 
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
@@ -356,6 +372,17 @@ async def update_flow(
             default_folder = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
             if default_folder:
                 db_flow.folder_id = default_folder.id
+        if db_flow.status == DeploymentStateEnum.DEPLOYED:
+            # Refresh the flow in the in-memory cache to ensure we have the latest version
+            # Pass old_endpoint_name in case it changed, to clean up stale aliases
+            old_name = old_endpoint_name if old_endpoint_name != db_flow.endpoint_name else None
+            await flow_cache_service.refresh_flow_in_cache(db_flow, old_endpoint_name=old_name)
+            db_flow.locked = True
+        elif db_flow.status == DeploymentStateEnum.DRAFT and update_data.get("status") == DeploymentStateEnum.DRAFT:
+            # Only unlock if status was explicitly changed to DRAFT (not just omitted from request)
+            # Pass old_endpoint_name to clean up all cache aliases
+            await flow_cache_service.remove_flow_from_cache(db_flow, old_endpoint_name=old_endpoint_name)
+            db_flow.locked = False
 
         session.add(db_flow)
         await session.commit()
@@ -537,6 +564,33 @@ async def download_multiple_file(
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     return flows_without_api_keys[0]
+
+
+@router.get("/cache/stats", response_model=dict, status_code=200)
+async def get_flow_cache_stats(
+    *,
+    _current_user: CurrentActiveUser,
+    flow_cache_service: Annotated[FlowCacheService, Depends(get_flow_cache_service)],
+):
+    """Get statistics about the flow cache.
+
+    Returns information about the current state of the flow cache, including:
+    - Number of flows currently cached
+    - Maximum cache size (if configured)
+    - List of cached flow identifiers (IDs and endpoint names)
+
+    This is useful for monitoring cache performance and debugging deployment issues.
+
+    Requires authentication (user must be logged in).
+
+    Args:
+        _current_user (User): The current authenticated user (required for auth)
+        flow_cache_service (FlowCacheService): The flow cache service
+
+    Returns:
+        dict: Cache statistics including size, max_size, and cached keys
+    """
+    return await flow_cache_service.get_cache_stats()
 
 
 all_starter_folder_flows_response: Response | None = None

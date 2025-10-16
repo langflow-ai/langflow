@@ -219,7 +219,12 @@ async def list_project_tools(
                 raise HTTPException(status_code=404, detail="Project not found")
 
             # Query flows in the project
-            flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.is_component == False)  # noqa: E712
+            # Note: All flows are available via MCP regardless of deployment status
+            # Deployed flows will use cache for better performance
+            flows_query = select(Flow).where(
+                Flow.folder_id == project_id,
+                Flow.is_component == False,  # noqa: E712
+            )
 
             # Optionally filter for MCP-enabled flows only
             if mcp_enabled:
@@ -248,6 +253,7 @@ async def list_project_tools(
                         # inputSchema=json_schema_from_flow(flow),
                         name=flow.name,
                         description=flow.description,
+                        status=flow.status,
                     )
                     tools.append(tool)
                 except Exception as e:  # noqa: BLE001

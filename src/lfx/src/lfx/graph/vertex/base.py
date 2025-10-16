@@ -69,6 +69,7 @@ class Vertex:
         self._is_loop = None
         self.has_session_id = None
         self.custom_component = None
+        self._custom_component_class = None
         self.has_external_input = False
         self.has_external_output = False
         self.graph = graph
@@ -376,10 +377,13 @@ class Vertex:
 
     def instantiate_component(self, user_id=None) -> None:
         if not self.custom_component:
-            self.custom_component, _ = initialize.loading.instantiate_class(
+            self.custom_component, _, self._custom_component_class = initialize.loading.instantiate_class(
                 user_id=user_id,
                 vertex=self,
             )
+
+    def reset_component(self) -> None:
+        self.custom_component = None
 
     async def _build(
         self,
@@ -394,11 +398,15 @@ class Vertex:
         if self.base_type is None:
             msg = f"Base type for vertex {self.display_name} not found"
             raise ValueError(msg)
+        custom_params = None
 
         if not self.custom_component:
-            custom_component, custom_params = initialize.loading.instantiate_class(
-                user_id=user_id, vertex=self, event_manager=event_manager
+            custom_component, custom_params, class_object = initialize.loading.instantiate_class(
+                vertex=self,
+                user_id=user_id,
+                event_manager=event_manager,
             )
+            self._custom_component_class = class_object
         else:
             custom_component = self.custom_component
             if hasattr(self.custom_component, "set_event_manager"):

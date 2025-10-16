@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { DEPLOYMENT_STATUS } from "@/constants/flows";
 import { CustomAPIGenerator } from "@/customization/components/custom-api-generator";
 import { CustomLink } from "@/customization/components/custom-link";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
@@ -51,6 +52,12 @@ export default function ApiModal({
   const currentFlowId = useFlowStore(
     useShallow((state) => state.currentFlow?.id),
   );
+
+  const currentFlowStatus = useFlowStore(
+    useShallow((state) => state.currentFlow?.status),
+  );
+
+  const isDeployed = currentFlowStatus === DEPLOYMENT_STATUS.DEPLOYED;
 
   const [endpointName, setEndpointName] = useState(flowEndpointName ?? "");
   const [validEndpointName, setValidEndpointName] = useState(true);
@@ -152,6 +159,25 @@ export default function ApiModal({
         <BaseModal.Content overflowHidden>
           {open && (
             <>
+              {!isDeployed && (
+                <div className="mb-4 rounded-md border border-warning bg-warning/10 p-3">
+                  <div className="flex items-start gap-2">
+                    <IconComponent
+                      name="AlertTriangle"
+                      className="h-5 w-5 text-warning"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-warning">
+                        Flow Not Deployed
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Deploy this flow from the Share menu to make it
+                        available via API.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               <CustomAPIGenerator isOpen={open} />
               <APITabsComponent />
             </>

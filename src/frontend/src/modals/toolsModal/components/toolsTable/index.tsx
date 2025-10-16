@@ -17,8 +17,13 @@ import {
   SidebarGroupContent,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { DEPLOYMENT_STATUS } from "@/constants/flows";
+import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
+import useAlertStore from "@/stores/alertStore";
 import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
+import { cn } from "@/utils/utils";
 
 export default function ToolsTable({
   rows,
@@ -48,6 +53,36 @@ export default function ToolsTable({
   const editedSelection = useRef<boolean>(false);
 
   const { setOpen: setSidebarOpen } = useSidebar();
+  const { mutateAsync } = usePatchUpdateFlow();
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  const handleDeployToggle = async (flowId: string, currentStatus: string) => {
+    const newStatus =
+      currentStatus === DEPLOYMENT_STATUS.DEPLOYED
+        ? DEPLOYMENT_STATUS.DRAFT
+        : DEPLOYMENT_STATUS.DEPLOYED;
+    try {
+      await mutateAsync({
+        id: flowId,
+        status: newStatus,
+      });
+      // Update the focused row to reflect the change
+      if (focusedRow && focusedRow.id === flowId) {
+        setFocusedRow({ ...focusedRow, status: newStatus });
+      }
+      // Also update the data array
+      setData(
+        data.map((row) =>
+          row.id === flowId ? { ...row, status: newStatus } : row,
+        ),
+      );
+    } catch (error: any) {
+      setErrorData({
+        title: "Failed to update deployment status",
+        list: [error.message],
+      });
+    }
+  };
 
   const getRowId = useMemo(() => {
     return (params: any) => params.data.display_name ?? params.data.name;
@@ -359,6 +394,45 @@ export default function ToolsTable({
                       : "This is the description for the tool exposed to the agents."}
                   </div>
                 </div>
+                {isAction && focusedRow?.status !== undefined && (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ForwardedIconComponent
+                          name="Rocket"
+                          className={cn(
+                            "h-4 w-4",
+                            focusedRow.status === DEPLOYMENT_STATUS.DEPLOYED
+                              ? "text-success"
+                              : "text-muted-foreground opacity-50",
+                          )}
+                        />
+                        <span className="text-mmd font-medium">
+                          Deploy Flow
+                        </span>
+                      </div>
+                      <Switch
+                        checked={
+                          focusedRow.status === DEPLOYMENT_STATUS.DEPLOYED
+                        }
+                        aria-label="Deploy Flow"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDeployToggle(
+                            focusedRow.id,
+                            focusedRow.status || DEPLOYMENT_STATUS.DRAFT,
+                          );
+                        }}
+                      />
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {focusedRow.status === DEPLOYMENT_STATUS.DEPLOYED
+                        ? "Deployed and cached for optimal performance"
+                        : "Deploy to cache this flow for faster execution"}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div

@@ -23,6 +23,7 @@ from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
+from lfx.services.cache.utils import CACHE_MISS
 from lfx.services.settings.service import SettingsService
 from sqlmodel import select
 
@@ -40,24 +41,30 @@ from langflow.api.v1.schemas import (
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
-from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
+from langflow.helpers.flow import get_flow_by_id_or_endpoint_name, get_flow_by_id_or_endpoint_name_from_cache
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user, get_webhook_user
 from langflow.services.cache.utils import save_uploaded_file
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import (
+    get_session_service,
+    get_settings_service,
+    get_telemetry_service,
+)
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
-
 router = APIRouter(tags=["Base"])
+
+# Constants for byte size conversion
+BYTES_PER_KB = 1024.0
 
 
 async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIRequest:
@@ -133,7 +140,7 @@ def validate_input_and_tweaks(input_request: SimplifiedAPIRequest) -> None:
 
 
 async def simple_run_flow(
-    flow: Flow,
+    flow: Flow | Graph,
     input_request: SimplifiedAPIRequest,
     *,
     stream: bool = False,
@@ -333,7 +340,7 @@ async def run_flow_generator(
 async def simplified_run_flow(
     *,
     background_tasks: BackgroundTasks,
-    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
+    flow: Annotated[Graph | None, Depends(get_flow_by_id_or_endpoint_name_from_cache)],
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
@@ -381,7 +388,7 @@ async def simplified_run_flow(
     if input_request is None:
         input_request = await parse_input_request_from_body(http_request)
 
-    if flow is None:
+    if flow is None or flow is CACHE_MISS:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
     # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*

@@ -20,6 +20,7 @@ export type MCPSettingsType = {
   name?: string;
   description?: string;
   input_schema?: Record<string, any>;
+  status?: "DRAFT" | "DEPLOYED";
 };
 
 export type MCPProjectResponseType = {

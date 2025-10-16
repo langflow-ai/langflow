@@ -69,6 +69,7 @@ const useSaveFlow = () => {
             folder_id,
             endpoint_name,
             locked,
+            status,
           } = flow;
           if (!currentSavedFlow?.data?.nodes.length || data!.nodes.length > 0) {
             mutate(
@@ -80,6 +81,7 @@ const useSaveFlow = () => {
                 folder_id,
                 endpoint_name,
                 locked,
+                status,
               },
               {
                 onSuccess: (updatedFlow) => {

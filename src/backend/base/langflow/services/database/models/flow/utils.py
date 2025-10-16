@@ -21,9 +21,17 @@ def get_all_webhook_components_in_flow(flow_data: dict | None):
 
 def get_components_versions(flow: Flow):
     versions: dict[str, str] = {}
-    if flow.data is None:
+
+    # Safely get graph_data or data, preferring graph_data
+    data = getattr(flow, "graph_data", None)
+    if data is None or not isinstance(data, dict):
+        data = getattr(flow, "data", None)
+
+    # If data is still None or not a dict, return empty versions
+    if data is None or not isinstance(data, dict):
         return versions
-    nodes = flow.data.get("nodes", [])
+
+    nodes = data.get("nodes", [])
     for node in nodes:
         data = node.get("data", {})
         data_node = data.get("node", {})

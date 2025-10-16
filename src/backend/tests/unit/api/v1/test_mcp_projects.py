@@ -515,7 +515,7 @@ async def test_update_project_auth_settings_encryption(
             "oauth_server_url": "http://localhost:3000",
             "oauth_callback_path": "/callback",
             "oauth_client_id": "test-client-id",
-            "oauth_client_secret": "test-oauth-secret-value-456",
+            "oauth_client_secret": "test-oauth-secret-value-456",  # pragma: allowlist secret
             "oauth_auth_url": "https://oauth.example.com/auth",
             "oauth_token_url": "https://oauth.example.com/token",
             "oauth_mcp_scope": "read write",
@@ -564,7 +564,7 @@ async def test_update_project_auth_settings_encryption(
     async with session_scope() as session:
         project = await session.get(Folder, user_test_project.id)
         decrypted_settings = decrypt_auth_settings(project.auth_settings)
-        assert decrypted_settings["oauth_client_secret"] == "test-oauth-secret-value-456"  # noqa: S105
+        assert decrypted_settings["oauth_client_secret"] == "test-oauth-secret-value-456"  # noqa: S105 # pragma: allowlist secret
 
 
 async def test_project_sse_creation(user_test_project):
@@ -680,3 +680,156 @@ async def test_mcp_longterm_token_fails_without_superuser():
     async with get_db_service().with_session() as session:
         with pytest.raises(HTTPException, match="Auto login required to create a long-term token"):
             await create_user_longterm_token(session)
+
+
+async def test_list_project_tools_includes_status_field():
+    """Test that list_project_tools endpoint includes deployment status in response."""
+    async with session_scope() as session:
+        # Create user, project, and deployed flow
+        user = User(
+            username="test_mcp_user",
+            password=get_password_hash("test123"),
+            is_active=True,
+            is_superuser=False,
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+
+        project = Folder(name="Test MCP Project", user_id=user.id)
+        session.add(project)
+        await session.commit()
+        await session.refresh(project)
+
+        flow = Flow(
+            name="Test MCP Flow",
+            data={},
+            folder_id=project.id,
+            user_id=user.id,
+            mcp_enabled=True,
+            status="DEPLOYED",
+        )
+        session.add(flow)
+        await session.commit()
+        await session.refresh(flow)
+
+        # Import here to avoid circular dependency
+        from langflow.api.v1.mcp_projects import list_project_tools
+
+        # Call the endpoint
+        result = await list_project_tools(project_id=project.id, current_user=user, mcp_enabled=False)
+
+        # Verify status field is included
+        assert result is not None
+        assert len(result.tools) > 0
+        tool = next((t for t in result.tools if t.id == flow.id), None)
+        assert tool is not None
+        assert tool.status == "DEPLOYED"
+
+
+async def test_list_project_tools_includes_all_flows_regardless_of_status():
+    """Test that both DRAFT and DEPLOYED flows are included in MCP (no breaking changes)."""
+    async with session_scope() as session:
+        # Create user and project
+        user = User(
+            username="test_mcp_all_flows_user",
+            password=get_password_hash("test123"),
+            is_active=True,
+            is_superuser=False,
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+
+        project = Folder(name="Test MCP All Flows Project", user_id=user.id)
+        session.add(project)
+        await session.commit()
+        await session.refresh(project)
+
+        # Create a DRAFT flow
+        draft_flow = Flow(
+            name="Draft MCP Flow",
+            data={},
+            folder_id=project.id,
+            user_id=user.id,
+            mcp_enabled=True,
+            status="DRAFT",
+        )
+        session.add(draft_flow)
+
+        # Create a DEPLOYED flow
+        deployed_flow = Flow(
+            name="Deployed MCP Flow",
+            data={},
+            folder_id=project.id,
+            user_id=user.id,
+            mcp_enabled=True,
+            status="DEPLOYED",
+        )
+        session.add(deployed_flow)
+        await session.commit()
+        await session.refresh(draft_flow)
+        await session.refresh(deployed_flow)
+
+        from langflow.api.v1.mcp_projects import list_project_tools
+
+        result = await list_project_tools(project_id=project.id, current_user=user, mcp_enabled=False)
+
+        tool_ids = [t.id for t in result.tools]
+
+        # Verify BOTH flows are included (deployment is just for caching, not access control)
+        assert deployed_flow.id in tool_ids
+        assert draft_flow.id in tool_ids
+
+
+async def test_mcp_status_field_reflects_deployment_state():
+    """Test that status field in MCP tools reflects the flow's deployment state."""
+    async with session_scope() as session:
+        # Create user and project
+        user = User(
+            username="test_mcp_status_user",
+            password=get_password_hash("test123"),
+            is_active=True,
+            is_superuser=False,
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+
+        project = Folder(name="Test Status Project", user_id=user.id)
+        session.add(project)
+        await session.commit()
+        await session.refresh(project)
+
+        # Create a DRAFT flow
+        flow = Flow(
+            name="Status Test Flow",
+            data={},
+            folder_id=project.id,
+            user_id=user.id,
+            mcp_enabled=True,
+            status="DRAFT",
+        )
+        session.add(flow)
+        await session.commit()
+        await session.refresh(flow)
+
+        from langflow.api.v1.mcp_projects import list_project_tools
+
+        # Verify status is DRAFT
+        result = await list_project_tools(project_id=project.id, current_user=user, mcp_enabled=False)
+        tool = next((t for t in result.tools if t.id == flow.id), None)
+        assert tool is not None
+        assert tool.status == "DRAFT"
+
+        # Deploy the flow
+        flow.status = "DEPLOYED"
+        session.add(flow)
+        await session.commit()
+        await session.refresh(flow)
+
+        # Verify status is now DEPLOYED
+        result = await list_project_tools(project_id=project.id, current_user=user, mcp_enabled=False)
+        tool = next((t for t in result.tools if t.id == flow.id), None)
+        assert tool is not None
+        assert tool.status == "DEPLOYED"

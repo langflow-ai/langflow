@@ -33,6 +33,7 @@ export type FlowType = {
   locked?: boolean | null;
   public?: boolean;
   access_type?: "PUBLIC" | "PRIVATE" | "PROTECTED";
+  status?: "DRAFT" | "DEPLOYED";
   mcp_enabled?: boolean;
 };
 

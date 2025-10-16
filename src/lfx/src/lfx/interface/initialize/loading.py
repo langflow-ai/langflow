@@ -51,7 +51,7 @@ def instantiate_class(
     )
     if hasattr(custom_component, "set_event_manager"):
         custom_component.set_event_manager(event_manager)
-    return custom_component, custom_params
+    return custom_component, custom_params, class_object
 
 
 async def get_instance_results(

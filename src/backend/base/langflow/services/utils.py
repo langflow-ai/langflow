@@ -4,6 +4,7 @@ import asyncio
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from lfx.services.deps import session_scope
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from sqlalchemy import delete
 from sqlalchemy import exc as sqlalchemy_exc
@@ -12,16 +13,19 @@ from sqlmodel import col, select
 from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.cache.base import ExternalAsyncBaseCacheService
 from langflow.services.cache.factory import CacheServiceFactory
+from langflow.services.database.models.flow.model import DeploymentStateEnum, Flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.database.utils import initialize_database
 from langflow.services.schema import ServiceType
 
-from .deps import get_db_service, get_service, get_settings_service, session_scope
+from .deps import get_db_service, get_flow_cache_service, get_service, get_settings_service
 
 if TYPE_CHECKING:
-    from lfx.services.settings.manager import SettingsService
+    from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+    from langflow.services.flow_cache.service import FlowCacheService
 
 
 async def get_or_create_super_user(session: AsyncSession, username, password, is_default):
@@ -223,6 +227,15 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
         # Don't re-raise since this is a cleanup task
 
 
+async def load_flow_cache(session: AsyncSession) -> None:
+    """Load the flow cache from the database."""
+    flow_cache_service: FlowCacheService = get_flow_cache_service()
+
+    flows = (await session.exec(select(Flow).where(Flow.status == DeploymentStateEnum.DEPLOYED))).all()
+    for flow in flows:
+        await flow_cache_service.add_flow_to_cache(flow)
+
+
 def register_all_service_factories() -> None:
     """Register all available service factories with the service manager."""
     # Import all service factories
@@ -285,9 +298,10 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     async with session_scope() as session:
         settings_service = get_service(ServiceType.SETTINGS_SERVICE)
         await setup_superuser(settings_service, session)
-    try:
-        await get_db_service().assign_orphaned_flows_to_superuser()
-    except sqlalchemy_exc.IntegrityError as exc:
-        await logger.awarning(f"Error assigning orphaned flows to the superuser: {exc!s}")
-    await clean_transactions(settings_service, session)
-    await clean_vertex_builds(settings_service, session)
+        try:
+            await get_db_service().assign_orphaned_flows_to_superuser(session)
+        except sqlalchemy_exc.IntegrityError as exc:
+            await logger.awarning(f"Error assigning orphaned flows to the superuser: {exc!s}")
+        await clean_transactions(settings_service, session)
+        await clean_vertex_builds(settings_service, session)
+        await load_flow_cache(session)
