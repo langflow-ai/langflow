@@ -58,7 +58,16 @@ export default function SettingsPage(): JSX.Element {
         />
       ),
     },
-
+    {
+      title: "Knowledge Base",
+      href: "/settings/kb-settings",
+      icon: (
+        <ForwardedIconComponent
+          name="Database"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
     {
       title: "Shortcuts",
       href: "/settings/shortcuts",
