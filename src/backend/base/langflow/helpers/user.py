@@ -29,6 +29,4 @@ async def get_user_by_flow_id_or_endpoint_name(flow_id_or_name: str) -> UserRead
 
 async def user_api_key_match_flow_user(user_id: str, flow_id: str) -> bool:
     user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
-    if user is None:
-        return False
     return user.id == user_id
