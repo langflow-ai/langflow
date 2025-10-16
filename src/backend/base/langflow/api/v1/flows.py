@@ -642,13 +642,13 @@ all_starter_folder_flows_response: Response | None = None
 
 @router.get("/basic_examples/", response_model=list[dict], status_code=200)
 async def read_basic_examples():
-    """Retrieve JSON content from all starter project JSON files.
+    """Retrieve JSON content from specific allowed starter project JSON files.
 
     Returns:
-        list[dict]: A list of JSON objects from the starter projects directory.
+        list[dict]: A list of JSON objects from only the hardcoded allowed files.
     """
     try:
-        from langflow.utils.starter_projects_utils import get_starter_projects_json_content
-        return get_starter_projects_json_content()
+        from langflow.utils.starter_projects_utils import get_filtered_basic_examples_json_content
+        return get_filtered_basic_examples_json_content()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

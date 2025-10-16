@@ -42,3 +42,69 @@ def get_starter_projects_json_content():
     except Exception:
         # Return empty list if there's any error accessing the directory
         return []
+
+
+# Hardcoded list of specific files to include in basic_examples response
+ALLOWED_BASIC_EXAMPLE_FILES = [
+    "Ask Auto Agent.json",
+    "BenefitCheckAgent.json", 
+    "EOCCheckAgent.json",
+    "EligibilityChecker.json",
+    "AccumulatorCheckAgent.json",
+    "ICD Extractor Agent.json",
+    "IE Criteria Simplification.json",
+    "sumarization agent.json",
+    "ICD Extractor Agent.json",
+    "Lab Value Extraction.json",
+    "Auth Guideline.json",
+    "AttachDocumentAgent.json",
+    "guideline-retrieval-agent.json"
+
+
+
+
+
+
+    # Add more filenames here as needed
+]
+
+
+def get_filtered_basic_examples_json_content():
+    """Get the JSON content from only the hardcoded allowed files.
+    
+    This function reads only specific predefined JSON files from the starter projects directory,
+    ensuring no duplicates and only returning the files specified in ALLOWED_BASIC_EXAMPLE_FILES.
+    
+    Returns:
+        list[dict]: List of JSON objects from the allowed files only.
+    """
+    try:
+        # Get the path to the starter projects directory
+        backend_dir = Path(__file__).parent.parent
+        starter_projects_dir = backend_dir / "initial_setup" / "starter_projects"
+        
+        if not starter_projects_dir.exists() or not starter_projects_dir.is_dir():
+            return []
+        
+        json_contents = []
+        
+        # Process only the hardcoded allowed files
+        for filename in ALLOWED_BASIC_EXAMPLE_FILES:
+            file_path = starter_projects_dir / filename
+            
+            # Skip if file doesn't exist
+            if not file_path.exists():
+                continue
+                
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    json_content = json.load(f)
+                    json_contents.append(json_content)
+            except (json.JSONDecodeError, IOError):
+                # Skip files that can't be read or aren't valid JSON
+                continue
+        
+        return json_contents
+    except Exception:
+        # Return empty list if there's any error accessing the directory
+        return []
