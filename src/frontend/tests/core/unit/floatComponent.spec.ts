@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -42,7 +43,7 @@ test(
 
     await page.getByText("Close").last().click();
 
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     await page.locator('//*[@id="int_int_seed"]').click();
     await page.locator('//*[@id="int_int_seed"]').fill("");

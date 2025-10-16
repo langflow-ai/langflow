@@ -1,5 +1,5 @@
 import pytest
-from langflow.inputs.inputs import (
+from lfx.inputs.inputs import (
     BoolInput,
     CodeInput,
     DataInput,
@@ -21,9 +21,9 @@ from langflow.inputs.inputs import (
     StrInput,
     TabInput,
     TableInput,
+    instantiate_input,
 )
-from langflow.inputs.utils import instantiate_input
-from langflow.schema.message import Message
+from lfx.schema.message import Message
 from pydantic import ValidationError
 
 
@@ -51,7 +51,7 @@ def test_str_input_valid():
 
 
 def test_str_input_invalid():
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="Invalid value type.*for input"):
         StrInput(name="invalid_str", value=1234)
 
 

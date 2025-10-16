@@ -14,10 +14,10 @@ jobs:
     name: Deploy to GitHub Pages
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: yarn
           cache-dependency-path: ./docs/yarn.lock
 

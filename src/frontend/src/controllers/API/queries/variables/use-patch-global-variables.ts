@@ -37,6 +37,7 @@ export const usePatchGlobalVariables: useMutationFunctionType<
       queryClient.refetchQueries({ queryKey: ["useGetGlobalVariables"] });
     },
     ...options,
+    retry: false,
   });
 
   return mutation;

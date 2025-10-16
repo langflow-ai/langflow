@@ -52,6 +52,7 @@ export type InputComponentType = {
   blockAddNewGlobalVariable?: boolean;
   hasRefreshButton?: boolean;
   hidePopover?: boolean;
+  allowCustomValue?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -69,6 +70,7 @@ export type DropDownComponent = {
   children?: ReactNode;
   name: string;
   dialogInputs?: any;
+  externalOptions?: any;
   toggle?: boolean;
 };
 export type ParameterComponentType = {

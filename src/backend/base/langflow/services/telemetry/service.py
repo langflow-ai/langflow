@@ -9,11 +9,12 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import httpx
-from loguru import logger
+from lfx.log.logger import logger
 
 from langflow.services.base import Service
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
 from langflow.services.telemetry.schema import (
+    ComponentIndexPayload,
     ComponentPayload,
     ExceptionPayload,
     PlaygroundPayload,
@@ -24,9 +25,8 @@ from langflow.services.telemetry.schema import (
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
+    from lfx.services.settings.service import SettingsService
     from pydantic import BaseModel
-
-    from langflow.services.settings.service import SettingsService
 
 
 class TelemetryService(Service):
@@ -49,6 +49,15 @@ class TelemetryService(Service):
             os.getenv("DO_NOT_TRACK", "False").lower() == "true" or settings_service.settings.do_not_track
         )
         self.log_package_version_task: asyncio.Task | None = None
+        self.client_type = self._get_client_type()
+
+        # Initialize static telemetry fields
+        version_info = get_version_info()
+        self.common_telemetry_fields = {
+            "langflow_version": version_info["version"],
+            "platform": "desktop" if self._get_langflow_desktop() else "python_package",
+            "os": platform.system().lower(),
+        }
 
     async def telemetry_worker(self) -> None:
         while self.running:
@@ -56,14 +65,17 @@ class TelemetryService(Service):
             try:
                 await func(payload, path)
             except Exception:  # noqa: BLE001
-                logger.error("Error sending telemetry data")
+                await logger.aerror("Error sending telemetry data")
             finally:
                 self.telemetry_queue.task_done()
 
     async def send_telemetry_data(self, payload: BaseModel, path: str | None = None) -> None:
         if self.do_not_track:
-            logger.debug("Telemetry tracking is disabled.")
+            await logger.adebug("Telemetry tracking is disabled.")
             return
+
+        if payload.client_type is None:
+            payload.client_type = self.client_type
 
         url = f"{self.base_url}"
         if path:
@@ -71,17 +83,25 @@ class TelemetryService(Service):
 
         try:
             payload_dict = payload.model_dump(by_alias=True, exclude_none=True, exclude_unset=True)
+
+            # Add common fields to all payloads except VersionPayload
+            if not isinstance(payload, VersionPayload):
+                payload_dict.update(self.common_telemetry_fields)
+                # Add timestamp dynamically
+            if "timestamp" not in payload_dict:
+                payload_dict["timestamp"] = datetime.now(timezone.utc).isoformat()
+
             response = await self.client.get(url, params=payload_dict)
             if response.status_code != httpx.codes.OK:
-                logger.error(f"Failed to send telemetry data: {response.status_code} {response.text}")
+                await logger.aerror(f"Failed to send telemetry data: {response.status_code} {response.text}")
             else:
-                logger.debug("Telemetry data sent successfully.")
+                await logger.adebug("Telemetry data sent successfully.")
         except httpx.HTTPStatusError:
-            logger.error("HTTP error occurred")
+            await logger.aerror("HTTP error occurred")
         except httpx.RequestError:
-            logger.error("Request error occurred")
+            await logger.aerror("Request error occurred")
         except Exception:  # noqa: BLE001
-            logger.error("Unexpected error occurred")
+            await logger.aerror("Unexpected error occurred")
 
     async def log_package_run(self, payload: RunPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "run"))
@@ -99,6 +119,9 @@ class TelemetryService(Service):
         # Coerce to bool, could be 1, 0, True, False, "1", "0", "True", "False"
         return str(os.getenv("LANGFLOW_DESKTOP", "False")).lower() in {"1", "true"}
 
+    def _get_client_type(self) -> str:
+        return "desktop" if self._get_langflow_desktop() else "oss"
+
     async def log_package_version(self) -> None:
         python_version = ".".join(platform.python_version().split(".")[:2])
         version_info = get_version_info()
@@ -113,7 +136,7 @@ class TelemetryService(Service):
             backend_only=self.settings_service.settings.backend_only,
             arch=self.architecture,
             auto_login=self.settings_service.auth_settings.AUTO_LOGIN,
-            desktop=self._get_langflow_desktop(),
+            client_type=self.client_type,
         )
         await self._queue_event((self.send_telemetry_data, payload, None))
 
@@ -122,6 +145,9 @@ class TelemetryService(Service):
 
     async def log_package_component(self, payload: ComponentPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "component"))
+
+    async def log_component_index(self, payload: ComponentIndexPayload) -> None:
+        await self._queue_event((self.send_telemetry_data, payload, "component_index"))
 
     async def log_exception(self, exc: Exception, context: str) -> None:
         """Log unhandled exceptions to telemetry.
@@ -161,7 +187,7 @@ class TelemetryService(Service):
         try:
             await self.telemetry_queue.join()
         except Exception:  # noqa: BLE001
-            logger.exception("Error flushing logs")
+            await logger.aexception("Error flushing logs")
 
     @staticmethod
     async def _cancel_task(task: asyncio.Task, cancel_msg: str) -> None:
@@ -186,7 +212,7 @@ class TelemetryService(Service):
                 await self._cancel_task(self.log_package_version_task, "Cancel telemetry log package version task")
             await self.client.aclose()
         except Exception:  # noqa: BLE001
-            logger.exception("Error stopping tracing service")
+            await logger.aexception("Error stopping tracing service")
 
     async def teardown(self) -> None:
         await self.stop()

@@ -3,12 +3,21 @@ import json
 from io import BytesIO
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from lfx.base.agents.utils import safe_cache_get, safe_cache_set
+from lfx.base.mcp.util import update_tools
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.api.v2.files import MCP_SERVERS_FILE, delete_file, download_file, get_file_by_name, upload_user_file
-from langflow.base.mcp.util import update_tools
+from langflow.api.v2.files import (
+    MCP_SERVERS_FILE,
+    delete_file,
+    download_file,
+    edit_file_name,
+    get_file_by_name,
+    get_mcp_file,
+    upload_user_file,
+)
 from langflow.logging import logger
-from langflow.services.deps import get_settings_service, get_storage_service
+from langflow.services.deps import get_settings_service, get_shared_component_cache_service, get_storage_service
 
 router = APIRouter(tags=["MCP"], prefix="/mcp")
 
@@ -24,7 +33,8 @@ async def upload_server_config(
     content_bytes = content_str.encode("utf-8")  # Convert to bytes
     file_obj = BytesIO(content_bytes)  # Use BytesIO for binary data
 
-    upload_file = UploadFile(file=file_obj, filename=MCP_SERVERS_FILE + ".json", size=len(content_str))
+    mcp_file = await get_mcp_file(current_user, extension=True)
+    upload_file = UploadFile(file=file_obj, filename=mcp_file, size=len(content_str))
 
     return await upload_user_file(
         file=upload_file,
@@ -41,8 +51,14 @@ async def get_server_list(
     storage_service=Depends(get_storage_service),
     settings_service=Depends(get_settings_service),
 ):
+    # Backwards compatibilty with old format file name
+    mcp_file = await get_mcp_file(current_user)
+    old_format_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
+    if old_format_config_file:
+        await edit_file_name(old_format_config_file.id, mcp_file, current_user, session)
+
     # Read the server configuration from a file using the files api
-    server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
+    server_config_file = await get_file_by_name(mcp_file, current_user, session)
 
     # Attempt to download the configuration file content
     try:
@@ -69,9 +85,10 @@ async def get_server_list(
         )
 
         # Fetch and download again
-        server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
+        mcp_file = await get_mcp_file(current_user)
+        server_config_file = await get_file_by_name(mcp_file, current_user, session)
         if not server_config_file:
-            raise HTTPException(status_code=500, detail="Failed to create _mcp_servers.json") from None
+            raise HTTPException(status_code=500, detail="Failed to create MCP Servers configuration file") from None
 
         server_config_bytes = await download_file(
             server_config_file.id,
@@ -115,6 +132,7 @@ async def get_servers(
     session: DbSession,
     storage_service=Depends(get_storage_service),
     settings_service=Depends(get_settings_service),
+    *,
     action_count: bool | None = None,
 ):
     """Get the list of available servers."""
@@ -140,27 +158,27 @@ async def get_servers(
                 server_info["error"] = "No tools found"
         except ValueError as e:
             # Configuration validation errors, invalid URLs, etc.
-            logger.error(f"Configuration error for server {server_name}: {e}")
+            await logger.aerror(f"Configuration error for server {server_name}: {e}")
             server_info["error"] = f"Configuration error: {e}"
         except ConnectionError as e:
             # Network connection and timeout issues
-            logger.error(f"Connection error for server {server_name}: {e}")
+            await logger.aerror(f"Connection error for server {server_name}: {e}")
             server_info["error"] = f"Connection failed: {e}"
         except (TimeoutError, asyncio.TimeoutError) as e:
             # Timeout errors
-            logger.error(f"Timeout error for server {server_name}: {e}")
+            await logger.aerror(f"Timeout error for server {server_name}: {e}")
             server_info["error"] = "Timeout when checking server tools"
         except OSError as e:
             # System-level errors (process execution, file access)
-            logger.error(f"System error for server {server_name}: {e}")
+            await logger.aerror(f"System error for server {server_name}: {e}")
             server_info["error"] = f"System error: {e}"
         except (KeyError, TypeError) as e:
             # Data parsing and access errors
-            logger.error(f"Data error for server {server_name}: {e}")
+            await logger.aerror(f"Data error for server {server_name}: {e}")
             server_info["error"] = f"Configuration data error: {e}"
         except (RuntimeError, ProcessLookupError, PermissionError) as e:
             # Runtime and process-related errors
-            logger.error(f"Runtime error for server {server_name}: {e}")
+            await logger.aerror(f"Runtime error for server {server_name}: {e}")
             server_info["error"] = f"Runtime error: {e}"
         except Exception as e:  # noqa: BLE001
             # Generic catch-all for other exceptions (including ExceptionGroup)
@@ -168,15 +186,15 @@ async def get_servers(
                 # Extract the first underlying exception for a more meaningful error message
                 underlying_error = e.exceptions[0]
                 if hasattr(underlying_error, "exceptions"):
-                    logger.error(
+                    await logger.aerror(
                         f"Error checking server {server_name}: {underlying_error}, {underlying_error.exceptions}"
                     )
                     underlying_error = underlying_error.exceptions[0]
                 else:
-                    logger.exception(f"Error checking server {server_name}: {underlying_error}")
+                    await logger.aexception(f"Error checking server {server_name}: {underlying_error}")
                 server_info["error"] = f"Error loading server: {underlying_error}"
             else:
-                logger.exception(f"Error checking server {server_name}: {e}")
+                await logger.aexception(f"Error checking server {server_name}: {e}")
                 server_info["error"] = f"Error loading server: {e}"
         return server_info
 
@@ -224,8 +242,10 @@ async def update_server(
         server_list["mcpServers"][server_name] = server_config
 
     # Remove the existing file
-    server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
+    mcp_file = await get_mcp_file(current_user)
+    server_config_file = await get_file_by_name(mcp_file, current_user, session)
 
+    # Now we are ready to delete it and reprocess
     if server_config_file:
         await delete_file(server_config_file.id, current_user, session, storage_service)
 
@@ -233,6 +253,14 @@ async def update_server(
     await upload_server_config(
         server_list, current_user, session, storage_service=storage_service, settings_service=settings_service
     )
+
+    shared_component_cache_service = get_shared_component_cache_service()
+    # Clear the servers cache
+    servers = safe_cache_get(shared_component_cache_service, "servers", {})
+    if isinstance(servers, dict):
+        if server_name in servers:
+            del servers[server_name]
+        safe_cache_set(shared_component_cache_service, "servers", servers)
 
     return await get_server(
         server_name,

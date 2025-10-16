@@ -42,13 +42,34 @@ We appreciate your efforts in helping us maintain a secure platform and look for
 
 ## Known Vulnerabilities
 
+### Environment Variable Loading Bug (Fixed in 1.6.4)
+
+Langflow versions `1.6.0` through `1.6.3` have a critical bug where environment variables from `.env` files are not being read. This affects all deployments using environment variables for configuration, including security settings.
+
+**Potential security impact:**
+- Environment variables from `.env` files are not read.
+- Security configurations like `AUTO_LOGIN=false` may not be applied, potentially allowing users to log in as the default superuser.
+- Database credentials, API keys, and other sensitive configuration may not be loaded.
+
+**DO NOT** upgrade to Langflow versions `1.6.0` through `1.6.3` if you use `.env` files for configuration. Instead, upgrade to version `1.6.4`, which includes a fix for this bug.
+
+**Fixed in**: Langflow >= 1.6.4
+
 ### Code Execution Vulnerability (Fixed in 1.3.0)
 
 Langflow allows users to define and run **custom code components** through endpoints like `/api/v1/validate/code`. In versions < 1.3.0, this endpoint did not enforce authentication or proper sandboxing, allowing **unauthenticated arbitrary code execution**.
 
 This means an attacker could send malicious code to the endpoint and have it executed on the server—leading to full system compromise, including data theft, remote shell access, or lateral movement within the network.
 
-To address, upgrade to >= 1.3.0.
+**CVE**: [CVE-2025-3248](https://nvd.nist.gov/vuln/detail/CVE-2025-3248)
+**Fixed in**: Langflow >= 1.3.0
+
+### Privilege Escalation via CLI Superuser Creation (Fixed in 1.5.1)
+
+A privilege escalation vulnerability exists in Langflow containers where an authenticated user with RCE access can invoke the internal CLI command `langflow superuser` to create a new administrative user. This results in full superuser access, even if the user initially registered through the UI as a regular (non-admin) account.
+
+**CVE**: [CVE-2025-57760](https://github.com/langflow-ai/langflow/security/advisories/GHSA-4gv9-mp8m-592r)
+**Fixed in**: Langflow >= 1.5.1
 
 ### No API key required if running Langflow with `LANGFLOW_AUTO_LOGIN=true` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true`
 

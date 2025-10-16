@@ -1,6 +1,8 @@
-import { test } from "@playwright/test";
+import { test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
@@ -23,11 +25,10 @@ test(
     await page
       .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 0, y: 0 },
+        targetPosition: { x: 50, y: 50 },
       });
 
     await zoomOut(page, 3);
-
     //second component
 
     await page.getByTestId("sidebar-search-input").click();
@@ -36,7 +37,7 @@ test(
     await page
       .getByTestId("dataURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 200 },
+        targetPosition: { x: 50, y: 300 },
       });
 
     //third component
@@ -47,7 +48,7 @@ test(
     await page
       .getByTestId("processingSplit Text")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 300, y: 300 },
+        targetPosition: { x: 300, y: 500 },
       });
 
     //fourth component
@@ -75,9 +76,7 @@ test(
     await updateOldComponents(page);
     await removeOldApiKeys(page);
 
-    await page.getByTestId("fit_view").click();
-
-    await zoomOut(page, 2);
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     //connection 1
     await page
@@ -101,7 +100,7 @@ test(
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .click();
 
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     await page.getByTestId("textarea_str_input_value").first().fill(",");
 
@@ -142,8 +141,7 @@ class CustomComponent(Component):
   `;
 
     await page.getByTestId("sidebar-custom-component-button").click();
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     await page.getByTestId("title-Custom Component").first().click();
 

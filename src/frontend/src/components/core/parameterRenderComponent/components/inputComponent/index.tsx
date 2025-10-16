@@ -44,6 +44,7 @@ export default function InputComponent({
   blockAddNewGlobalVariable = false,
   hasRefreshButton = false,
   hidePopover = false,
+  allowCustomValue = true,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const [cursor, setCursor] = useState<number | null>(null);
@@ -169,6 +170,7 @@ export default function InputComponent({
               blockAddNewGlobalVariable={blockAddNewGlobalVariable}
               hasRefreshButton={hasRefreshButton}
               hidePopover={hidePopover}
+              allowCustomValue={allowCustomValue}
             />
           )}
         </>

@@ -1,12 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import React from "react";
 import SidebarMenuButtons from "../sidebarFooterButtons";
 
 // Mock the UI components
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name, className }: any) => (
+  default: ({ name, className }: { name: string; className?: string }) => (
     <span data-testid={`icon-${name}`} className={className}>
       {name}
     </span>
@@ -21,8 +20,16 @@ jest.mock("@/components/ui/button", () => ({
     disabled,
     unstyled,
     ...props
-  }: any) => (
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    className?: string;
+    disabled?: boolean;
+    unstyled?: boolean;
+    [key: string]: unknown;
+  }) => (
     <button
+      type="button"
       onClick={onClick}
       className={className}
       disabled={disabled}
@@ -34,31 +41,57 @@ jest.mock("@/components/ui/button", () => ({
   ),
 }));
 
-jest.mock("@/components/ui/sidebar", () => ({
-  SidebarMenuButton: ({ children, asChild }: any) => (
-    <div data-testid="sidebar-menu-button" data-as-child={asChild}>
-      {children}
-    </div>
-  ),
-}));
+// Mock sidebar hook with default values
+const mockUseSidebar = jest.fn();
 
-jest.mock("@/customization/components/custom-link", () => ({
-  CustomLink: ({ children, to, target, rel, className }: any) => (
-    <a
-      data-testid="custom-link"
-      href={to}
-      target={target}
-      rel={rel}
+jest.mock("@/components/ui/sidebar", () => ({
+  SidebarMenuButton: ({
+    children,
+    asChild,
+    className,
+  }: {
+    children: React.ReactNode;
+    asChild?: boolean;
+    className?: string;
+  }) => (
+    <div
+      data-testid="sidebar-menu-button"
+      data-as-child={asChild}
       className={className}
     >
       {children}
-    </a>
+    </div>
   ),
+  useSidebar: () => mockUseSidebar(),
 }));
 
-// Mock feature flag
+// Mock feature flags
 jest.mock("@/customization/feature-flags", () => ({
-  ENABLE_LANGFLOW_STORE: true,
+  ENABLE_NEW_SIDEBAR: true,
+}));
+
+// Mock navigation hook
+const mockNavigate = jest.fn();
+jest.mock("@/customization/hooks/use-custom-navigate", () => ({
+  useCustomNavigate: () => mockNavigate,
+}));
+
+// Mock modal component
+jest.mock("@/modals/addMcpServerModal", () => ({
+  __esModule: true,
+  default: ({
+    open,
+    setOpen,
+  }: {
+    open: boolean;
+    setOpen: (open: boolean) => void;
+  }) => (
+    <div data-testid="add-mcp-server-modal" data-open={open}>
+      <button type="button" onClick={() => setOpen(false)}>
+        Close Modal
+      </button>
+    </div>
+  ),
 }));
 
 describe("SidebarMenuButtons", () => {
@@ -71,7 +104,6 @@ describe("SidebarMenuButtons", () => {
   };
 
   const defaultProps = {
-    hasStore: false,
     customComponent: mockCustomComponent,
     addComponent: mockAddComponent,
     isLoading: false,
@@ -79,10 +111,15 @@ describe("SidebarMenuButtons", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockNavigate.mockClear();
+    // Reset to default sidebar state
+    mockUseSidebar.mockReturnValue({
+      activeSection: "components",
+    });
   });
 
-  describe("Basic Rendering", () => {
-    it("should render custom component button", () => {
+  describe("Basic Rendering - Custom Component Mode", () => {
+    it("should render custom component button when not in MCP section", () => {
       render(<SidebarMenuButtons {...defaultProps} />);
 
       expect(
@@ -92,10 +129,12 @@ describe("SidebarMenuButtons", () => {
       expect(screen.getByTestId("icon-Plus")).toBeInTheDocument();
     });
 
-    it("should render sidebar menu buttons", () => {
+    it("should render custom component button container", () => {
       render(<SidebarMenuButtons {...defaultProps} />);
 
-      expect(screen.getByTestId("sidebar-menu-button")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("sidebar-custom-component-button"),
+      ).toBeInTheDocument();
     });
 
     it("should display correct text for custom component button", () => {
@@ -108,60 +147,6 @@ describe("SidebarMenuButtons", () => {
       render(<SidebarMenuButtons {...defaultProps} />);
 
       expect(screen.getByTestId("icon-Plus")).toBeInTheDocument();
-    });
-  });
-
-  describe("Store Link Rendering", () => {
-    it("should not render store link when hasStore is false", () => {
-      render(<SidebarMenuButtons {...defaultProps} />);
-
-      expect(screen.queryByTestId("custom-link")).not.toBeInTheDocument();
-      expect(
-        screen.queryByText("Discover more components"),
-      ).not.toBeInTheDocument();
-    });
-
-    it("should render store link when hasStore is true", () => {
-      const propsWithStore = { ...defaultProps, hasStore: true };
-      render(<SidebarMenuButtons {...propsWithStore} />);
-
-      expect(screen.getByTestId("custom-link")).toBeInTheDocument();
-      expect(screen.getByText("Discover more components")).toBeInTheDocument();
-      expect(screen.getByTestId("icon-Store")).toBeInTheDocument();
-      expect(
-        screen.getByTestId("icon-SquareArrowOutUpRight"),
-      ).toBeInTheDocument();
-    });
-
-    it("should render store link with correct attributes", () => {
-      const propsWithStore = { ...defaultProps, hasStore: true };
-      render(<SidebarMenuButtons {...propsWithStore} />);
-
-      const storeLink = screen.getByTestId("custom-link");
-      expect(storeLink).toHaveAttribute("href", "/store");
-      expect(storeLink).toHaveAttribute("target", "_blank");
-      expect(storeLink).toHaveAttribute("rel", "noopener noreferrer");
-    });
-
-    it("should render store link inside sidebar menu button", () => {
-      const propsWithStore = { ...defaultProps, hasStore: true };
-      render(<SidebarMenuButtons {...propsWithStore} />);
-
-      const sidebarMenuButtons = screen.getAllByTestId("sidebar-menu-button");
-      expect(sidebarMenuButtons).toHaveLength(2); // Store link + custom component button
-      expect(sidebarMenuButtons[0]).toContainElement(
-        screen.getByTestId("custom-link"),
-      );
-    });
-
-    it("should render store icons correctly", () => {
-      const propsWithStore = { ...defaultProps, hasStore: true };
-      render(<SidebarMenuButtons {...propsWithStore} />);
-
-      expect(screen.getByTestId("icon-Store")).toBeInTheDocument();
-      expect(
-        screen.getByTestId("icon-SquareArrowOutUpRight"),
-      ).toBeInTheDocument();
     });
   });
 
@@ -269,81 +254,258 @@ describe("SidebarMenuButtons", () => {
     });
   });
 
-  describe("Component Structure", () => {
-    it("should have correct DOM hierarchy without store", () => {
+  describe("MCP Functionality", () => {
+    beforeEach(() => {
+      // Mock the sidebar to be in MCP section
+      mockUseSidebar.mockReturnValue({
+        activeSection: "mcp",
+      });
+    });
+
+    it("should render MCP buttons when in MCP section", () => {
       render(<SidebarMenuButtons {...defaultProps} />);
 
-      const sidebarMenuButtons = screen.getAllByTestId("sidebar-menu-button");
-      expect(sidebarMenuButtons).toHaveLength(1);
-      expect(sidebarMenuButtons[0]).toContainElement(
-        screen.getByTestId("sidebar-custom-component-button"),
+      expect(
+        screen.getByTestId("sidebar-add-mcp-server-button"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("sidebar-manage-servers-button"),
+      ).toBeInTheDocument();
+
+      // Should not show custom component button
+      expect(
+        screen.queryByTestId("sidebar-custom-component-button"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should render Add MCP Server button with correct content", () => {
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      const addButton = screen.getByTestId("sidebar-add-mcp-server-button");
+      expect(addButton).toHaveTextContent("Add MCP Server");
+      expect(screen.getByTestId("icon-Plus")).toBeInTheDocument();
+    });
+
+    it("should render Manage Servers button with correct content", () => {
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      const manageButton = screen.getByTestId("sidebar-manage-servers-button");
+      expect(manageButton).toHaveTextContent("Manage Servers");
+      expect(screen.getByTestId("icon-ArrowUpRight")).toBeInTheDocument();
+    });
+
+    it("should open modal when Add MCP Server button is clicked", async () => {
+      const user = userEvent.setup();
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(screen.getByTestId("add-mcp-server-modal")).toHaveAttribute(
+        "data-open",
+        "false",
+      );
+
+      const addButton = screen.getByTestId("sidebar-add-mcp-server-button");
+      await user.click(addButton);
+
+      expect(screen.getByTestId("add-mcp-server-modal")).toHaveAttribute(
+        "data-open",
+        "true",
       );
     });
 
-    it("should have correct DOM hierarchy with store", () => {
-      const propsWithStore = { ...defaultProps, hasStore: true };
-      render(<SidebarMenuButtons {...propsWithStore} />);
+    it("should navigate to settings when Manage Servers button is clicked", async () => {
+      const user = userEvent.setup();
+      render(<SidebarMenuButtons {...defaultProps} />);
 
-      const sidebarMenuButtons = screen.getAllByTestId("sidebar-menu-button");
-      expect(sidebarMenuButtons).toHaveLength(2);
-      expect(sidebarMenuButtons[0]).toContainElement(
-        screen.getByTestId("custom-link"),
+      const manageButton = screen.getByTestId("sidebar-manage-servers-button");
+      await user.click(manageButton);
+
+      expect(mockNavigate).toHaveBeenCalledWith("/settings/mcp-servers");
+      expect(mockNavigate).toHaveBeenCalledTimes(1);
+    });
+
+    it("should disable MCP buttons when loading", () => {
+      render(<SidebarMenuButtons {...defaultProps} isLoading={true} />);
+
+      const addButton = screen.getByTestId("sidebar-add-mcp-server-button");
+      const manageButton = screen.getByTestId("sidebar-manage-servers-button");
+
+      expect(addButton).toBeDisabled();
+      expect(manageButton).toBeDisabled();
+    });
+
+    it("should close modal when close button is clicked", async () => {
+      const user = userEvent.setup();
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      // Open modal first
+      const addButton = screen.getByTestId("sidebar-add-mcp-server-button");
+      await user.click(addButton);
+      expect(screen.getByTestId("add-mcp-server-modal")).toHaveAttribute(
+        "data-open",
+        "true",
       );
-      expect(sidebarMenuButtons[1]).toContainElement(
-        screen.getByTestId("sidebar-custom-component-button"),
+
+      // Close modal
+      const closeButton = screen.getByText("Close Modal");
+      await user.click(closeButton);
+      expect(screen.getByTestId("add-mcp-server-modal")).toHaveAttribute(
+        "data-open",
+        "false",
       );
     });
 
+    it("should apply correct styling to MCP buttons", () => {
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      const addButton = screen.getByTestId("sidebar-add-mcp-server-button");
+      const manageButton = screen.getByTestId("sidebar-manage-servers-button");
+
+      expect(addButton).toHaveClass(
+        "flex",
+        "items-center",
+        "w-full",
+        "h-full",
+        "gap-3",
+        "hover:bg-muted",
+      );
+      expect(addButton).toHaveAttribute("data-unstyled", "true");
+      expect(manageButton).toHaveClass(
+        "flex",
+        "items-center",
+        "w-full",
+        "h-full",
+        "gap-3",
+        "hover:bg-muted",
+      );
+      expect(manageButton).toHaveAttribute("data-unstyled", "true");
+    });
+
+    it("should render MCP icons with correct styling", () => {
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      const plusIcon = screen.getByTestId("icon-Plus");
+      const arrowIcon = screen.getByTestId("icon-ArrowUpRight");
+
+      expect(plusIcon).toHaveClass("h-4", "w-4", "text-muted-foreground");
+      expect(arrowIcon).toHaveClass("h-4", "w-4", "text-muted-foreground");
+    });
+
+    it("should render MCP button text with correct styling", () => {
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      const addSpan = screen.getByText("Add MCP Server");
+      const manageSpan = screen.getByText("Manage Servers");
+
+      expect(addSpan).toHaveClass(
+        "group-data-[state=open]/collapsible:font-semibold",
+      );
+      expect(manageSpan).toHaveClass(
+        "group-data-[state=open]/collapsible:font-semibold",
+      );
+    });
+
+    it("should render modal component", () => {
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(screen.getByTestId("add-mcp-server-modal")).toBeInTheDocument();
+    });
+  });
+
+  describe("Section Switching", () => {
+    it("should show custom component button in components section", () => {
+      mockUseSidebar.mockReturnValue({
+        activeSection: "components",
+      });
+
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(
+        screen.getByTestId("sidebar-custom-component-button"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("sidebar-add-mcp-server-button"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should show MCP buttons in mcp section", () => {
+      mockUseSidebar.mockReturnValue({
+        activeSection: "mcp",
+      });
+
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(
+        screen.getByTestId("sidebar-add-mcp-server-button"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("sidebar-custom-component-button"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should show custom component button in bundles section", () => {
+      mockUseSidebar.mockReturnValue({
+        activeSection: "bundles",
+      });
+
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(
+        screen.getByTestId("sidebar-custom-component-button"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("sidebar-add-mcp-server-button"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should show custom component button in search section", () => {
+      mockUseSidebar.mockReturnValue({
+        activeSection: "search",
+      });
+
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(
+        screen.getByTestId("sidebar-custom-component-button"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("sidebar-add-mcp-server-button"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Component Structure", () => {
     it("should render fragments correctly", () => {
       const { container } = render(<SidebarMenuButtons {...defaultProps} />);
 
       // Component should render without wrapper elements (using React fragment)
       expect(container.children).toHaveLength(1);
     });
-  });
 
-  describe("CSS Classes", () => {
-    it("should apply correct classes to custom component button", () => {
+    it("should render custom component button with correct attributes", () => {
       render(<SidebarMenuButtons {...defaultProps} />);
 
       const customButton = screen.getByTestId(
         "sidebar-custom-component-button",
       );
-      expect(customButton).toHaveClass("flex", "items-center", "gap-2");
       expect(customButton).toHaveAttribute("data-unstyled", "true");
     });
 
-    it("should apply correct classes to store link", () => {
-      const propsWithStore = { ...defaultProps, hasStore: true };
-      render(<SidebarMenuButtons {...propsWithStore} />);
+    it("should render multiple SidebarMenuButtons in MCP mode", () => {
+      mockUseSidebar.mockReturnValue({
+        activeSection: "mcp",
+      });
 
-      const storeLink = screen.getByTestId("custom-link");
-      expect(storeLink).toHaveClass("group/discover");
-    });
+      render(<SidebarMenuButtons {...defaultProps} />);
 
-    it("should apply correct classes to icons", () => {
-      const propsWithStore = { ...defaultProps, hasStore: true };
-      render(<SidebarMenuButtons {...propsWithStore} />);
-
-      const storeIcon = screen.getByTestId("icon-Store");
-      const arrowIcon = screen.getByTestId("icon-SquareArrowOutUpRight");
-      const plusIcon = screen.getByTestId("icon-Plus");
-
-      expect(storeIcon).toHaveClass("h-4", "w-4", "text-muted-foreground");
-      expect(arrowIcon).toHaveClass(
-        "h-4",
-        "w-4",
-        "opacity-0",
-        "transition-all",
-        "group-hover/discover:opacity-100",
-      );
-      expect(plusIcon).toHaveClass("h-4", "w-4", "text-muted-foreground");
+      const sidebarMenuButtons = screen.getAllByTestId("sidebar-menu-button");
+      expect(sidebarMenuButtons).toHaveLength(2); // Add + Manage buttons
     });
   });
 
   describe("Props Handling", () => {
-    it("should handle default props correctly", () => {
+    it("should handle minimal props correctly", () => {
       const minimalProps = {
+        customComponent: mockCustomComponent,
         addComponent: mockAddComponent,
       };
 
@@ -352,23 +514,6 @@ describe("SidebarMenuButtons", () => {
       expect(
         screen.getByTestId("sidebar-custom-component-button"),
       ).not.toBeDisabled();
-      expect(screen.queryByTestId("custom-link")).not.toBeInTheDocument();
-    });
-
-    it("should handle all props provided", () => {
-      const fullProps = {
-        hasStore: true,
-        customComponent: mockCustomComponent,
-        addComponent: mockAddComponent,
-        isLoading: true,
-      };
-
-      render(<SidebarMenuButtons {...fullProps} />);
-
-      expect(screen.getByTestId("custom-link")).toBeInTheDocument();
-      expect(
-        screen.getByTestId("sidebar-custom-component-button"),
-      ).toBeDisabled();
     });
 
     it("should work with different customComponent objects", async () => {
@@ -433,16 +578,6 @@ describe("SidebarMenuButtons", () => {
       }).not.toThrow();
     });
 
-    it("should handle boolean hasStore values", () => {
-      const { rerender } = render(
-        <SidebarMenuButtons {...defaultProps} hasStore={false} />,
-      );
-      expect(screen.queryByTestId("custom-link")).not.toBeInTheDocument();
-
-      rerender(<SidebarMenuButtons {...defaultProps} hasStore={true} />);
-      expect(screen.getByTestId("custom-link")).toBeInTheDocument();
-    });
-
     it("should handle boolean isLoading values", () => {
       const { rerender } = render(
         <SidebarMenuButtons {...defaultProps} isLoading={false} />,
@@ -460,20 +595,12 @@ describe("SidebarMenuButtons", () => {
     it("should handle rapid prop changes", () => {
       const { rerender } = render(<SidebarMenuButtons {...defaultProps} />);
 
-      expect(screen.queryByTestId("custom-link")).not.toBeInTheDocument();
       expect(
         screen.getByTestId("sidebar-custom-component-button"),
       ).not.toBeDisabled();
 
-      rerender(
-        <SidebarMenuButtons
-          {...defaultProps}
-          hasStore={true}
-          isLoading={true}
-        />,
-      );
+      rerender(<SidebarMenuButtons {...defaultProps} isLoading={true} />);
 
-      expect(screen.getByTestId("custom-link")).toBeInTheDocument();
       expect(
         screen.getByTestId("sidebar-custom-component-button"),
       ).toBeDisabled();
@@ -481,48 +608,55 @@ describe("SidebarMenuButtons", () => {
   });
 
   describe("Text Content", () => {
-    it("should display correct text content", () => {
-      const propsWithStore = { ...defaultProps, hasStore: true };
-      render(<SidebarMenuButtons {...propsWithStore} />);
+    it("should display correct text content in custom mode", () => {
+      render(<SidebarMenuButtons {...defaultProps} />);
 
-      expect(screen.getByText("Discover more components")).toBeInTheDocument();
       expect(screen.getByText("New Custom Component")).toBeInTheDocument();
     });
 
-    it("should have spans with correct classes", () => {
-      const propsWithStore = { ...defaultProps, hasStore: true };
-      render(<SidebarMenuButtons {...propsWithStore} />);
+    it("should display correct text content in MCP mode", () => {
+      mockUseSidebar.mockReturnValue({
+        activeSection: "mcp",
+      });
 
-      const storeSpan = screen.getByText("Discover more components");
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(screen.getByText("Add MCP Server")).toBeInTheDocument();
+      expect(screen.getByText("Manage Servers")).toBeInTheDocument();
+    });
+
+    it("should have spans with correct classes", () => {
+      render(<SidebarMenuButtons {...defaultProps} />);
+
       const customSpan = screen.getByText("New Custom Component");
 
-      expect(storeSpan).toHaveClass(
-        "flex-1",
-        "group-data-[state=open]/collapsible:font-semibold",
-      );
       expect(customSpan).toHaveClass(
         "group-data-[state=open]/collapsible:font-semibold",
       );
     });
-  });
 
-  describe("SidebarMenuButton Integration", () => {
-    it("should render SidebarMenuButton with asChild prop", () => {
-      const propsWithStore = { ...defaultProps, hasStore: true };
-      render(<SidebarMenuButtons {...propsWithStore} />);
+    it("should apply correct styling to custom component button", () => {
+      render(<SidebarMenuButtons {...defaultProps} />);
 
-      const sidebarMenuButtons = screen.getAllByTestId("sidebar-menu-button");
-      sidebarMenuButtons.forEach((button) => {
-        expect(button).toHaveAttribute("data-as-child", "true");
-      });
+      const customButton = screen.getByTestId(
+        "sidebar-custom-component-button",
+      );
+      expect(customButton).toHaveClass(
+        "flex",
+        "items-center",
+        "w-full",
+        "h-full",
+        "gap-3",
+        "hover:bg-muted",
+      );
+      expect(customButton).toHaveAttribute("data-unstyled", "true");
     });
 
-    it("should wrap both store link and custom button in SidebarMenuButton", () => {
-      const propsWithStore = { ...defaultProps, hasStore: true };
-      render(<SidebarMenuButtons {...propsWithStore} />);
+    it("should apply group class to custom component SidebarMenuButton", () => {
+      render(<SidebarMenuButtons {...defaultProps} />);
 
-      const sidebarMenuButtons = screen.getAllByTestId("sidebar-menu-button");
-      expect(sidebarMenuButtons).toHaveLength(2);
+      const sidebarMenuButton = screen.getByTestId("sidebar-menu-button");
+      expect(sidebarMenuButton).toHaveClass("group");
     });
   });
 

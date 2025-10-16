@@ -130,7 +130,7 @@ describe("BundleItem", () => {
   });
 
   describe("Conditional Rendering", () => {
-    it("should return null when dataFilter has no items for bundle", () => {
+    it("should still render container even if dataFilter has no items for bundle", () => {
       const propsWithEmptyFilter = {
         ...defaultProps,
         dataFilter: {
@@ -139,10 +139,10 @@ describe("BundleItem", () => {
       };
 
       const { container } = render(<BundleItem {...propsWithEmptyFilter} />);
-      expect(container.firstChild).toBeNull();
+      expect(container.firstChild).not.toBeNull();
     });
 
-    it("should return null when bundle not in dataFilter", () => {
+    it("should still render when bundle not in dataFilter", () => {
       const propsWithMissingBundle = {
         ...defaultProps,
         dataFilter: {
@@ -153,7 +153,7 @@ describe("BundleItem", () => {
       };
 
       const { container } = render(<BundleItem {...propsWithMissingBundle} />);
-      expect(container.firstChild).toBeNull();
+      expect(container.firstChild).not.toBeNull();
     });
 
     it("should render when dataFilter has items for bundle", () => {

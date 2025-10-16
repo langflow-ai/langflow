@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { memo, type ReactNode, useCallback, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -12,6 +13,7 @@ import {
   useGetFlowsMCP,
   usePatchFlowsMCP,
 } from "@/controllers/API/queries/mcp";
+import { useGetProjectComposerUrl } from "@/controllers/API/queries/mcp/use-get-composer-url";
 import { useGetInstalledMCP } from "@/controllers/API/queries/mcp/use-get-installed-mcp";
 import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
@@ -24,15 +26,45 @@ import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import type { AuthSettingsType, MCPSettingsType } from "@/types/mcp";
 import { AUTH_METHODS } from "@/utils/mcpUtils";
-import { parseString } from "@/utils/stringManipulation";
+import { parseString, toSpaceCase } from "@/utils/stringManipulation";
 import { cn, getOS } from "@/utils/utils";
+
+interface MemoizedApiKeyButtonProps {
+  apiKey: string;
+  isGeneratingApiKey: boolean;
+  generateApiKey: () => void;
+}
+
+const MemoizedApiKeyButton = memo(
+  ({
+    apiKey,
+    isGeneratingApiKey,
+    generateApiKey,
+  }: MemoizedApiKeyButtonProps) => (
+    <Button
+      unstyled
+      className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
+      disabled={apiKey !== ""}
+      loading={isGeneratingApiKey}
+      onClick={generateApiKey}
+    >
+      <ForwardedIconComponent
+        name={"key"}
+        className="h-4 w-4"
+        aria-hidden="true"
+      />
+      <span>{apiKey === "" ? "Generate API key" : "API key generated"}</span>
+    </Button>
+  ),
+);
+MemoizedApiKeyButton.displayName = "MemoizedApiKeyButton";
 
 // Define interface for MemoizedCodeTag props
 interface MemoizedCodeTagProps {
   children: ReactNode;
   isCopied: boolean;
   copyToClipboard: () => void;
-  isAutoLogin: boolean | null;
+  isAuthApiKey: boolean | null;
   apiKey: string;
   isGeneratingApiKey: boolean;
   generateApiKey: () => void;
@@ -44,30 +76,19 @@ const MemoizedCodeTag = memo(
     children,
     isCopied,
     copyToClipboard,
-    isAutoLogin,
+    isAuthApiKey,
     apiKey,
     isGeneratingApiKey,
     generateApiKey,
   }: MemoizedCodeTagProps) => (
     <div className="relative bg-background text-[13px]">
       <div className="absolute right-4 top-4 flex items-center gap-6">
-        {!isAutoLogin && (
-          <Button
-            unstyled
-            className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
-            disabled={apiKey !== ""}
-            loading={isGeneratingApiKey}
-            onClick={generateApiKey}
-          >
-            <ForwardedIconComponent
-              name={"key"}
-              className="h-4 w-4"
-              aria-hidden="true"
-            />
-            <span>
-              {apiKey === "" ? "Generate API key" : "API key generated"}
-            </span>
-          </Button>
+        {isAuthApiKey && (
+          <MemoizedApiKeyButton
+            apiKey={apiKey}
+            isGeneratingApiKey={isGeneratingApiKey}
+            generateApiKey={generateApiKey}
+          />
         )}
         <Button
           unstyled
@@ -138,17 +159,39 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const { data: mcpProjectData } = useGetFlowsMCP({ projectId });
-  const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
+  const { data: mcpProjectData, isLoading: isLoadingMCPProjectData } =
+    useGetFlowsMCP({ projectId });
+  const { mutate: patchFlowsMCP, isPending: isPatchingFlowsMCP } =
+    usePatchFlowsMCP({ project_id: projectId });
 
   // Extract tools and auth_settings from the response
   const flowsMCP = mcpProjectData?.tools || [];
   const currentAuthSettings = mcpProjectData?.auth_settings;
+
+  // Only get composer URL for OAuth projects
+  // Disable the query during mutations to prevent stale auth state issues
+  const isOAuthProject =
+    currentAuthSettings?.auth_type === "oauth" && ENABLE_MCP_COMPOSER;
+  const shouldQueryComposerUrl = isOAuthProject && !isPatchingFlowsMCP;
+
+  const { data: composerUrlData } = useGetProjectComposerUrl(
+    {
+      projectId,
+    },
+    { enabled: !!projectId && shouldQueryComposerUrl },
+  );
+
   const { mutate: patchInstallMCP } = usePatchInstallMCP({
     project_id: projectId,
   });
 
-  const { data: installedMCP } = useGetInstalledMCP({ projectId });
+  const { data: installedMCPData } = useGetInstalledMCP({ projectId });
+
+  // Extract installed client names for backward compatibility
+  const installedMCP =
+    installedMCPData
+      ?.filter((client) => client.installed)
+      .map((client) => client.name) || [];
 
   const [selectedPlatform, setSelectedPlatform] = useState(
     operatingSystemTabs.find((tab) => tab.name.includes(getOS() || "windows"))
@@ -156,6 +199,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   );
 
   const isAutoLogin = useAuthStore((state) => state.autoLogin);
+  const isAuthApiKey = ENABLE_MCP_COMPOSER
+    ? currentAuthSettings?.auth_type === "apikey"
+    : !isAutoLogin;
 
   // Check if the current connection is local
   const isLocalConnection = useCustomIsLocalConnection();
@@ -223,9 +269,19 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     },
   };
 
-  const apiUrl = customGetMCPUrl(projectId);
+  // Check if OAuth project has MCP Composer errors
+  const hasOAuthError = isOAuthProject && composerUrlData?.error_message;
 
-  // Generate auth headers based on the authentication type
+  // Use the per-project MCP Composer SSE URL only if project uses composer, otherwise fallback to direct SSE
+  const apiUrl = customGetMCPUrl(
+    projectId,
+    isOAuthProject &&
+      !!composerUrlData?.sse_url &&
+      composerUrlData?.uses_composer,
+    composerUrlData?.sse_url,
+  );
+
+  // Generate auth headers based on authentication type
   const getAuthHeaders = () => {
     // If MCP auth is disabled, use the previous API key behavior
     if (!ENABLE_MCP_COMPOSER) {
@@ -240,62 +296,13 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       return "";
     }
 
-    switch (currentAuthSettings.auth_type) {
-      case "apikey":
-        return `
-        "--headers",
-        "x-api-key",
-        "${currentAuthSettings.api_key || "YOUR_API_KEY"}",`;
-      case "basic":
-        return `
-        "--headers",
-        "Authorization",
-        "Basic ${btoa(
-          `${currentAuthSettings.username || "USERNAME"}:${
-            currentAuthSettings.password || "PASSWORD"
-          }`,
-        )}",`;
-      case "bearer":
-        return `
-        "--headers",
-        "Authorization",
-        "Bearer ${currentAuthSettings.bearer_token || "YOUR_BEARER_TOKEN"}",`;
-      case "iam":
-        return `
-        "--headers",
-        "x-api-key",
-        "${currentAuthSettings.api_key || "YOUR_IAM_TOKEN"}",
-        "--headers",
-        "x-iam-endpoint",
-        "${currentAuthSettings.iam_endpoint || "YOUR_IAM_ENDPOINT"}",`;
-      case "oauth":
-        return `
-        "--auth_type",
-        "oauth",
-        "--sse-url",`;
-      default:
-        return "";
-    }
-  };
-
-  const getEnvVars = () => {
-    if (!ENABLE_MCP_COMPOSER || currentAuthSettings?.auth_type === "none")
-      return "";
-    if (currentAuthSettings?.auth_type === "oauth") {
+    if (currentAuthSettings.auth_type === "apikey") {
       return `
-      "env": {
-        "OAUTH_HOST": "${currentAuthSettings.oauth_host || "YOUR_OAUTH_HOST"}",
-        "OAUTH_PORT": "${currentAuthSettings.oauth_port || "YOUR_OAUTH_PORT"}",
-        "OAUTH_SERVER_URL": "${currentAuthSettings.oauth_server_url || "YOUR_OAUTH_SERVER_URL"}",
-        "OAUTH_CALLBACK_PATH": "${currentAuthSettings.oauth_callback_path || "YOUR_OAUTH_CALLBACK_PATH"}",
-        "OAUTH_CLIENT_ID": "${currentAuthSettings.oauth_client_id || "YOUR_OAUTH_CLIENT_ID"}",
-        "OAUTH_CLIENT_SECRET": "${currentAuthSettings.oauth_client_secret || "YOUR_OAUTH_CLIENT_SECRET"}",
-        "OAUTH_AUTH_URL": "${currentAuthSettings.oauth_auth_url || "YOUR_OAUTH_AUTH_URL"}",
-        "OAUTH_TOKEN_URL": "${currentAuthSettings.oauth_token_url || "YOUR_OAUTH_TOKEN_URL"}",
-        "OAUTH_MCP_SCOPE": "${currentAuthSettings.oauth_mcp_scope || "YOUR_OAUTH_MCP_SCOPE"}",
-        "OAUTH_PROVIDER_SCOPE": "${currentAuthSettings.oauth_provider_scope || "YOUR_OAUTH_PROVIDER_SCOPE"}"
-      }`;
+        "--headers",
+        "x-api-key",
+        "${apiKey || "YOUR_API_KEY"}",`;
     }
+
     return "";
   };
 
@@ -323,9 +330,25 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               ? `"uvx",
         `
               : ""
-        }"${ENABLE_MCP_COMPOSER ? "mcp-composer" : "mcp-proxy"}",${getAuthHeaders()}
-        "${apiUrl}"
-      ]${ENABLE_MCP_COMPOSER && currentAuthSettings?.auth_type === "oauth" ? `,` : ""}${getEnvVars()}
+        }${
+          isOAuthProject ? '"mcp-composer",' : '"mcp-proxy",'
+        }${getAuthHeaders()}${
+          isOAuthProject
+            ? `
+        "--mode",
+        "stdio",
+        "--sse-url",`
+            : ""
+        }
+        "${apiUrl}"${
+          isOAuthProject
+            ? `,
+        "--disable-composer-tools",
+        "--client_auth_type",
+        "oauth"`
+            : ""
+        }
+      ]
     }
   }
 }`;
@@ -366,6 +389,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const hasAuthentication =
     currentAuthSettings?.auth_type && currentAuthSettings.auth_type !== "none";
 
+  const isLoadingMCPProjectAuth = isLoadingMCPProjectData || isPatchingFlowsMCP;
+
   return (
     <div>
       <div className="flex justify-between gap-4 items-start">
@@ -395,7 +420,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               content="Flows in this project can be exposed as callable MCP tools."
               side="right"
             >
-              <div className="flex items-center text-mmd font-medium hover:cursor-help">
+              <div className="flex items-center text-sm font-medium hover:cursor-help">
                 Flows/Tools
                 <ForwardedIconComponent
                   name="info"
@@ -422,8 +447,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         <div className="flex flex-1 flex-col gap-4 overflow-hidden">
           {ENABLE_MCP_COMPOSER && (
             <div className="flex justify-between">
-              <span className="flex gap-2 items-center">
-                Auth:
+              <span className="flex gap-2 items-center text-sm cursor-default">
+                <span className=" font-medium">Auth:</span>
                 {!hasAuthentication ? (
                   <span className="text-accent-amber-foreground flex gap-2 text-mmd items-center">
                     <ForwardedIconComponent
@@ -433,20 +458,49 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                     None (public)
                   </span>
                 ) : (
-                  <span className="text-accent-emerald-foreground flex gap-2 text-mmd items-center">
-                    <ForwardedIconComponent
-                      name="Check"
-                      className="h-4 w-4 shrink-0"
-                    />
-                    {AUTH_METHODS[
-                      currentAuthSettings.auth_type as keyof typeof AUTH_METHODS
-                    ]?.label || currentAuthSettings.auth_type}
-                  </span>
+                  <ShadTooltip
+                    content={
+                      !composerUrlData?.error_message
+                        ? undefined
+                        : `MCP Server is not running: ${composerUrlData?.error_message}`
+                    }
+                  >
+                    <span
+                      className={cn(
+                        "flex gap-2 text-mmd items-center",
+                        isLoadingMCPProjectAuth
+                          ? "text-muted-foreground"
+                          : !composerUrlData?.error_message
+                            ? "text-accent-emerald-foreground"
+                            : "text-accent-amber-foreground",
+                      )}
+                    >
+                      <ForwardedIconComponent
+                        name={
+                          isLoadingMCPProjectAuth
+                            ? "Loader2"
+                            : !composerUrlData?.error_message
+                              ? "Check"
+                              : "AlertTriangle"
+                        }
+                        className={cn(
+                          "h-4 w-4 shrink-0",
+                          isLoadingMCPProjectAuth && "animate-spin",
+                        )}
+                      />
+                      {isLoadingMCPProjectAuth
+                        ? "Loading..."
+                        : AUTH_METHODS[
+                            currentAuthSettings.auth_type as keyof typeof AUTH_METHODS
+                          ]?.label || currentAuthSettings.auth_type}
+                    </span>
+                  </ShadTooltip>
                 )}
               </span>
               <Button
                 variant="outline"
                 size="sm"
+                className="!text-mmd !font-normal"
                 onClick={() => setAuthModalOpen(true)}
               >
                 <ForwardedIconComponent
@@ -499,24 +553,45 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                   </TabsList>
                 </Tabs>
                 <div className="overflow-hidden rounded-lg border border-border">
-                  <SyntaxHighlighter
-                    style={syntaxHighlighterStyle}
-                    CodeTag={({ children }) => (
-                      <MemoizedCodeTag
-                        isCopied={isCopied}
-                        copyToClipboard={copyToClipboard}
-                        isAutoLogin={isAutoLogin}
-                        apiKey={apiKey}
-                        isGeneratingApiKey={isGeneratingApiKey}
-                        generateApiKey={generateApiKey}
-                      >
-                        {children}
-                      </MemoizedCodeTag>
-                    )}
-                    language="json"
-                  >
-                    {MCP_SERVER_JSON}
-                  </SyntaxHighlighter>
+                  {hasOAuthError ? (
+                    <div className="p-4 bg-accent-red-subtle border border-accent-red-border rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ForwardedIconComponent
+                          name="AlertTriangle"
+                          className="h-4 w-4 text-accent-red-foreground"
+                        />
+                        <span className="font-medium text-accent-red-foreground">
+                          MCP Server Configuration Error
+                        </span>
+                      </div>
+                      <p className="text-mmd text-accent-red-foreground">
+                        {composerUrlData?.error_message}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Please fix the OAuth configuration in your project
+                        settings to generate the MCP server configuration.
+                      </p>
+                    </div>
+                  ) : (
+                    <SyntaxHighlighter
+                      style={syntaxHighlighterStyle}
+                      CodeTag={({ children }) => (
+                        <MemoizedCodeTag
+                          isCopied={isCopied}
+                          copyToClipboard={copyToClipboard}
+                          isAuthApiKey={isAuthApiKey}
+                          apiKey={apiKey}
+                          isGeneratingApiKey={isGeneratingApiKey}
+                          generateApiKey={generateApiKey}
+                        >
+                          {children}
+                        </MemoizedCodeTag>
+                      )}
+                      language="json"
+                    >
+                      {MCP_SERVER_JSON}
+                    </SyntaxHighlighter>
+                  )}
                 </div>
               </div>
               <div className="px-2 text-mmd text-muted-foreground">
@@ -551,70 +626,99 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                 </div>
               )}
               {autoInstallers.map((installer) => (
-                <Button
+                <ShadTooltip
                   key={installer.name}
-                  variant="ghost"
-                  className="flex items-center justify-between disabled:text-foreground disabled:opacity-50"
-                  disabled={
-                    installedMCP?.includes(installer.name) ||
-                    loadingMCP.includes(installer.name) ||
-                    !isLocalConnection
+                  content={
+                    !installedMCPData?.find(
+                      (client) => client.name === installer.name,
+                    )?.available
+                      ? `Install ${toSpaceCase(
+                          installer.name,
+                        )} to enable auto-install.`
+                      : ""
                   }
-                  onClick={() => {
-                    setLoadingMCP([...loadingMCP, installer.name]);
-                    patchInstallMCP(
-                      {
-                        client: installer.name,
-                      },
-                      {
-                        onSuccess: () => {
-                          setSuccessData({
-                            title: `MCP Server installed successfully on ${installer.title}. You may need to restart your client to see the changes.`,
-                          });
-                          setLoadingMCP(
-                            loadingMCP.filter(
-                              (name) => name !== installer.name,
-                            ),
-                          );
-                        },
-                        onError: (e) => {
-                          setErrorData({
-                            title: `Failed to install MCP Server on ${installer.title}`,
-                            list: [e.message],
-                          });
-                          setLoadingMCP(
-                            loadingMCP.filter(
-                              (name) => name !== installer.name,
-                            ),
-                          );
-                        },
-                      },
-                    );
-                  }}
+                  side="left"
                 >
-                  <div className="flex items-center gap-4 text-sm font-medium">
-                    <ForwardedIconComponent
-                      name={installer.icon}
-                      className={cn("h-5 w-5")}
-                      aria-hidden="true"
-                    />
-                    {installer.title}
+                  <div className="w-full flex">
+                    <Button
+                      variant="ghost"
+                      className="group flex flex-1 items-center justify-between disabled:text-foreground disabled:opacity-50"
+                      disabled={
+                        loadingMCP.includes(installer.name) ||
+                        !isLocalConnection ||
+                        !installedMCPData?.find(
+                          (client) => client.name === installer.name,
+                        )?.available
+                      }
+                      onClick={() => {
+                        setLoadingMCP([...loadingMCP, installer.name]);
+                        patchInstallMCP(
+                          {
+                            client: installer.name,
+                          },
+                          {
+                            onSuccess: () => {
+                              setSuccessData({
+                                title: `MCP Server installed successfully on ${installer.title}. You may need to restart your client to see the changes.`,
+                              });
+                              setLoadingMCP(
+                                loadingMCP.filter(
+                                  (name) => name !== installer.name,
+                                ),
+                              );
+                            },
+                            onError: (e) => {
+                              setErrorData({
+                                title: `Failed to install MCP Server on ${installer.title}`,
+                                list: [e.message],
+                              });
+                              setLoadingMCP(
+                                loadingMCP.filter(
+                                  (name) => name !== installer.name,
+                                ),
+                              );
+                            },
+                          },
+                        );
+                      }}
+                    >
+                      <div className="flex items-center gap-4 text-sm font-medium">
+                        <ForwardedIconComponent
+                          name={installer.icon}
+                          className={cn("h-5 w-5")}
+                          aria-hidden="true"
+                        />
+                        {installer.title}
+                      </div>
+                      <div className="relative h-4 w-4">
+                        <ForwardedIconComponent
+                          name={
+                            installedMCP?.includes(installer.name)
+                              ? "Check"
+                              : loadingMCP.includes(installer.name)
+                                ? "Loader2"
+                                : "Plus"
+                          }
+                          className={cn(
+                            "h-4 w-4 absolute top-0 left-0 opacity-100",
+                            loadingMCP.includes(installer.name) &&
+                              "animate-spin",
+                            installedMCP?.includes(installer.name) &&
+                              "group-hover:opacity-0",
+                          )}
+                        />
+                        {installedMCP?.includes(installer.name) && (
+                          <ForwardedIconComponent
+                            name={"RefreshCw"}
+                            className={cn(
+                              "h-4 w-4 absolute top-0 left-0 opacity-0 group-hover:opacity-100",
+                            )}
+                          />
+                        )}
+                      </div>
+                    </Button>
                   </div>
-
-                  <ForwardedIconComponent
-                    name={
-                      installedMCP?.includes(installer.name)
-                        ? "Check"
-                        : loadingMCP.includes(installer.name)
-                          ? "Loader2"
-                          : "Plus"
-                    }
-                    className={cn(
-                      "h-4 w-4",
-                      loadingMCP.includes(installer.name) && "animate-spin",
-                    )}
-                  />
-                </Button>
+                </ShadTooltip>
               ))}
             </div>
           )}
@@ -625,7 +729,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           open={authModalOpen}
           setOpen={setAuthModalOpen}
           authSettings={currentAuthSettings}
+          autoInstall={isLocalConnection}
           onSave={handleAuthSave}
+          installedClients={installedMCP ?? []}
         />
       )}
     </div>

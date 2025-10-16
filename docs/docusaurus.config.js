@@ -79,13 +79,9 @@ const config = {
 
   presets: [
     [
-      "docusaurus-preset-openapi",
+      "@docusaurus/preset-classic",
       /** @type {import('@docusaurus/preset-classic').Options} */
       ({
-        api: {
-          path: "openapi.json", // Path to your OpenAPI file
-          routeBasePath: "/api", // The base URL for your API docs
-        },
         docs: {
           routeBasePath: "/", // Serve the docs at the site's root
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
@@ -126,6 +122,25 @@ const config = {
         },
       }),
     ],
+    [
+      "redocusaurus",
+      {
+        openapi: {
+          path: "openapi",
+          routeBasePath: "/api",
+        },
+        specs: [
+          {
+            id: "api",
+            spec: "openapi/openapi.json",
+            route: "/api",
+          },
+        ],
+        theme: {
+          primaryColor: "#7528FC",
+        },
+      },
+    ],
   ],
   plugins: [
     ["docusaurus-node-polyfills", { excludeAliases: ["console"] }],
@@ -163,6 +178,7 @@ const config = {
               "/👋 Welcome-to-Langflow",
               "/getting-started-welcome-to-langflow",
               "/guides-new-to-llms",
+              "/about-langflow",
             ],
           },
           {
@@ -177,7 +193,7 @@ const config = {
             from: "/getting-started-quickstart",
           },
           {
-            to: "concepts-overview",
+            to: "/concepts-overview",
             from: [
               "/workspace-overview",
               "/365085a8-a90a-43f9-a779-f8769ec7eca1",
@@ -238,8 +254,12 @@ const config = {
             ],
           },
           {
-            to: "/components-vector-stores",
-            from: "/components-rag",
+            to: "/components-bundle-components",
+            from: [
+              "/components-rag",
+              "/components-vector-stores",
+              "/components-loaders",
+            ],
           },
           {
             to: "/api-keys-and-authentication",
@@ -271,16 +291,8 @@ const config = {
             from: "/components/custom",
           },
           {
-            to: "/components-bundle-components",
-            from: "/components-loaders",
-          },
-          {
             to: "/mcp-server",
             from: "/integrations-mcp",
-          },
-          {
-            to: "/integrations-nvidia-g-assist",
-            from: "/integrations-nvidia-system-assist",
           },
           {
             to: "/deployment-kubernetes-dev",
@@ -300,7 +312,10 @@ const config = {
           },
           {
             to: "/bundles-google",
-            from: "/integrations-setup-google-oauth-langflow",
+            from: [
+              "/integrations-setup-google-oauth-langflow",
+              "/integrations-google-big-query",
+            ],
           },
           {
             to: "/bundles-vertexai",
@@ -314,6 +329,47 @@ const config = {
             to: "/data-types",
             from: "/concepts-objects",
           },
+          {
+            to: "/components-helpers",
+            from: "/components-memories",
+          },
+          {
+            to: "/bundles-apify",
+            from: "/integrations-apify",
+          },
+          {
+            to: "/bundles-assemblyai",
+            from: "/integrations-assemblyai",
+          },
+          {
+            to: "/bundles-cleanlab",
+            from: "/integrations-cleanlab",
+          },
+          {
+            to: "/bundles-composio",
+            from: "/integrations-composio",
+          },
+          {
+            to: "/bundles-docling",
+            from: "/integrations-docling",
+          },
+          {
+            to: "/bundles-notion",
+            from: [
+              "/integrations/notion/setup",
+              "/integrations/notion/notion-agent-meeting-notes",
+              "/integrations/notion/notion-agent-conversational",
+            ],
+          },
+          {
+            to: "/bundles-nvidia",
+            from: [
+              "/integrations-nvidia-ingest-wsl2",
+              "/integrations-nvidia-ingest",
+              "/integrations-nvidia-g-assist",
+              "/integrations-nvidia-system-assist",
+            ]
+          }
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
@@ -397,16 +453,10 @@ const config = {
       docs: {
         sidebar: {
           hideable: false,
+          autoCollapseCategories: true,
         },
       },
       footer: {
-        logo: {
-          alt: "Langflow",
-          src: "img/lf-docs-light.svg",
-          srcDark: "img/lf-docs-dark.svg",
-          width: 160,
-          height: 40,
-        },
         links: [
           {
             title: null,
