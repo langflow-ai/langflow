@@ -1,4 +1,4 @@
-id: urn:agent:genesis:relation_extraction_agent:1
+id: urn:agent:relation-extraction-agent:1
 name: Relation Extraction Agent
 fullyQualifiedName: genesis.autonomize.ai.relation_extraction_agent
 description: Identifies and extracts relationships between clinical entities, such

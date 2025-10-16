@@ -1,4 +1,4 @@
-id: urn:agent:genesis:clinical_entity_extraction:1
+id: urn:agent:genesis:clinical_entity_extractor_agent:1
 name: Clinical Entity Extraction
 fullyQualifiedName: genesis.autonomize.ai.clinical_entity_extraction
 description: Navigate the Linguistic Landscape, Discover Opportunities. Extracts clinical entities from medical text including symptoms, conditions, medications, procedures, and lab values.

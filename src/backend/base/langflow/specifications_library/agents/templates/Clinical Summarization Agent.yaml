@@ -1,4 +1,4 @@
-id: urn:agent:genesis:clinical_summarization_agent:1
+id: urn:agent:clinical_summarization_agent:1
 name: Clinical Summarization Agent
 fullyQualifiedName: genesis.autonomize.ai.clinical_summarization_agent
 description: The Clinical Summarization Agent extracts and condenses essential information

@@ -1,4 +1,4 @@
-id: urn:agent:genesis:document_qa:1
+id: urn:agent:document_question_answer_agent:1
 name: Document Q&A
 fullyQualifiedName: genesis.autonomize.ai.document_qa
 description: Building Powerful Solutions with Language Models.. This agent performs

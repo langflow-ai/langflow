@@ -1,4 +1,4 @@
-id: urn:agent:genesis:entity_normalization:1
+id: urn:agent:entity_normalization_agent:1
 name: Entity Normalization
 fullyQualifiedName: genesis.autonomize.ai.entity_normalization
 description: Harness the Power of Conversational AI.. This agent performs entity normalization

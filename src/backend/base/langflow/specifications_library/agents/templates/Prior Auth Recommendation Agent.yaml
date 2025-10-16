@@ -1,4 +1,4 @@
-id: urn:agent:genesis:prior_auth_recommendation_agent:1
+id: urn:agent:prior-auth-recommendation-agent:1
 name: Prior Auth Recommendation Agent
 fullyQualifiedName: genesis.autonomize.ai.prior_auth_recommendation_agent
 description: Provide recommendations on prior authorization approvals based on the

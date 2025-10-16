@@ -1,4 +1,4 @@
-id: urn:agent:genesis:prior_auth_form_extraction:1
+id: urn:agent:prior-auth-form-extraction-agent:1
 name: Prior Auth Form Extraction Agent
 fullyQualifiedName: genesis.autonomize.ai.prior_auth_form_extraction
 description: Extracts structured data from prior authorization forms using vision and document processing capabilities
