@@ -345,7 +345,7 @@ async def check_flow_user_permission(
     """
     if api_key_user:
         user_can_run_flow = await user_api_key_match_flow_user(
-            user_id=api_key_user.id,
+            user_id=str(api_key_user.id),
             flow_id=flow_id,
         )
 
@@ -400,6 +400,9 @@ async def simplified_run_flow(
             - "token": Individual tokens during streaming
             - "end": Final execution result
     """
+    if flow is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
+
     await check_flow_user_permission(flow_id=str(flow.id), api_key_user=api_key_user)
 
     telemetry_service = get_telemetry_service()
