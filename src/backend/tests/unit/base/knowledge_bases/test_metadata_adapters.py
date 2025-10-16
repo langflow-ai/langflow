@@ -178,8 +178,16 @@ class TestOpenSearchMetadataAdapter:
         # Create a mock OpenSearch client and wrap it in the adapter
         mock_client = Mock()
         mock_client._index_name = "test-index"
+        mock_client.opensearch_url = "https://localhost:9200"
+        mock_client.search.return_value = {
+            "hits": {
+                "hits": [
+                    {"_source": {"text": "Test content", "source": "test"}},
+                    {"_source": {"text": "Content 2", "source": "test2"}},
+                ]
+            }
+        }
         return OpenSearchVectorStoreAdapter(mock_client, "test-index")
-
     @pytest.fixture
     def adapter(self, mock_opensearch_store):
         """OpenSearchMetadataAdapter instance."""
