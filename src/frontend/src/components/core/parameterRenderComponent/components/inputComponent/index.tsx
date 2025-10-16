@@ -43,6 +43,7 @@ export default function InputComponent({
   commandWidth,
   blockAddNewGlobalVariable = false,
   hasRefreshButton = false,
+  hidePopover = false,
   allowCustomValue = true,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
@@ -135,6 +136,7 @@ export default function InputComponent({
               blurOnEnter={blurOnEnter}
               optionsPlaceholder={optionsPlaceholder}
               className={className}
+              hidePopover={hidePopover}
             />
           ) : (
             <CustomInputPopover
@@ -167,6 +169,7 @@ export default function InputComponent({
               commandWidth={commandWidth}
               blockAddNewGlobalVariable={blockAddNewGlobalVariable}
               hasRefreshButton={hasRefreshButton}
+              hidePopover={hidePopover}
               allowCustomValue={allowCustomValue}
             />
           )}
@@ -185,7 +188,7 @@ export default function InputComponent({
             <button
               disabled={disabled}
               onClick={(e) => {
-                if (disabled) return;
+                if (disabled || hidePopover) return;
                 setShowOptions(!showOptions);
                 e.preventDefault();
                 e.stopPropagation();

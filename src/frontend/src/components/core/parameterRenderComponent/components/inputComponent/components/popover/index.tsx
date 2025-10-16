@@ -1,5 +1,4 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
-
 import { X } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -190,6 +189,7 @@ const CustomInputPopover = ({
   commandWidth,
   blockAddNewGlobalVariable,
   hasRefreshButton,
+  hidePopover,
   allowCustomValue,
 }) => {
   const [isFocused, setIsFocused] = useState(false);

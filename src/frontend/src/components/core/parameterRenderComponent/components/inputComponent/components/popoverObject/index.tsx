@@ -40,6 +40,7 @@ const CustomInputPopoverObject = ({
   optionsButton,
   handleKeyDown,
   showOptions,
+  hidePopover,
 }) => {
   const [cursor, setCursor] = useState<number | null>(null);
 
@@ -87,6 +88,7 @@ const CustomInputPopoverObject = ({
             (((selectedOption !== "" || !onChange) && setSelectedOption) ||
               ((selectedOptions?.length !== 0 || !onChange) &&
                 setSelectedOptions)) &&
+              !hidePopover &&
               setShowOptions(true);
           }}
           required={required}
