@@ -171,7 +171,7 @@ lfx_tests: ## run lfx package unit tests
 	@echo 'Running LFX Package Tests...'
 	@cd src/lfx && \
 	uv sync && \
-	uv run pytest tests/unit -v $(args)
+	uv run pytest tests/unit -v --cov=src/lfx --cov-report=xml --cov-report=html --cov-report=term-missing $(args)
 
 integration_tests:
 	uv run pytest src/backend/tests/integration \
@@ -436,6 +436,10 @@ publish_testpypi: ## build the frontend static files and package the project and
 ######################
 # LFX PACKAGE
 ######################
+
+build_component_index: ## build the component index with dynamic loading
+	@echo 'Building component index'
+	LFX_DEV=1 uv run python scripts/build_component_index.py
 
 lfx_build: ## build the LFX package
 	@echo 'Building LFX package'
