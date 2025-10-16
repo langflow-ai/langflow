@@ -24,6 +24,7 @@ def upgrade() -> None:
     inspector = sa.inspect(bind)
     columns = [col['name'] for col in inspector.get_columns('message')]
     
+    # Add context_id column if it doesn't exist
     if 'context_id' not in columns:
         op.add_column('message', sa.Column('context_id', sa.String(), nullable=True))
 
@@ -34,5 +35,6 @@ def downgrade() -> None:
     inspector = sa.inspect(bind)
     columns = [col['name'] for col in inspector.get_columns('message')]
     
+    # Drop context_id column if it exists
     if 'context_id' in columns:
         op.drop_column('message', 'context_id')
