@@ -123,61 +123,61 @@ export default function AgentMarketplaceDetailPage() {
       backTo="/agent-marketplace"
       showSeparator={false}
     >
-      <div className="flex w-full flex-col gap-4">
+      <div className="flex w-full flex-col gap-4 dark:text-white">
         <div className="flex flex-col">
           <Tabs defaultValue="flow" className="w-full">
-            <TabsList className="w-full justify-start gap-2 border-b border-border p-0">
-              <TabsTrigger value="flow" className="px-3 py-2 text-sm">
+            <TabsList className="w-full justify-start gap-2 border-b border-border dark:border-white/20 p-0">
+              <TabsTrigger value="flow" className="px-3 py-2 text-sm dark:text-white">
                 Flow Visualization
               </TabsTrigger>
-              <TabsTrigger value="spec" className="px-3 py-2 text-sm">
+              <TabsTrigger value="spec" className="px-3 py-2 text-sm dark:text-white">
                 Specification
               </TabsTrigger>
             </TabsList>
             <TabsContent value="flow" className="mt-4 w-full">
               {hasNoFlow ? (
-                <div className="flex h-[520px] w-full items-center justify-center rounded-lg border border-border bg-card">
+                <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center rounded-lg border border-border dark:border-white/20 bg-card dark:bg-black dark:text-white">
                   <div className="flex max-w-[640px] flex-col items-center gap-3 text-center">
                     <ForwardedIconComponent name="AlertCircle" className="h-6 w-6 text-amber-500" />
-                    <p className="text-sm font-medium text-foreground">
+                    <p className="text-sm font-medium text-foreground dark:text-white">
                       No flow available for this agent specification
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground dark:text-white/70">
                       This agent needs to be converted to a flow first. Check the Specification tab to view the YAML definition.
                     </p>
                   </div>
                 </div>
               ) : isLoadingFlow ? (
-                <div className="flex h-[520px] w-full items-center justify-center rounded-lg border border-border bg-card">
+                <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center rounded-lg border border-border dark:border-white/20 bg-card dark:bg-black dark:text-white">
                   <div className="flex flex-col items-center gap-3">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                    <p className="text-sm text-muted-foreground">Loading flow visualization...</p>
+                    <p className="text-sm text-muted-foreground dark:text-white/70">Loading flow visualization...</p>
                   </div>
                 </div>
               ) : flowError ? (
-                <div className="flex h-[520px] w-full items-center justify-center rounded-lg border border-border bg-card">
+                <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center rounded-lg border border-border dark:border-white/20 bg-card dark:bg-black dark:text-white">
                   <div className="flex max-w-[640px] flex-col items-center gap-3 text-center">
                     <ForwardedIconComponent name="AlertTriangle" className="h-6 w-6 text-red-500" />
-                    <p className="text-sm font-medium text-foreground">
+                    <p className="text-sm font-medium text-foreground dark:text-white">
                       Failed to load flow
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground dark:text-white/70">
                       {flowError}
                     </p>
                   </div>
                 </div>
               ) : flowLoaded ? (
-                <div className="h-[calc(100vh-200px)] w-full overflow-hidden rounded-lg border border-border">
+                <div className="h-[calc(100vh-200px)] w-full overflow-hidden rounded-lg border border-border dark:border-white/20">
                   <FlowPage view={true} flowId={flowId} />
                 </div>
               ) : (
-                <div className="flex h-[520px] w-full items-center justify-center rounded-lg border border-border bg-card">
+                <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center rounded-lg border border-border dark:border-white/20 bg-card dark:bg-black dark:text-white">
                   <div className="flex max-w-[640px] flex-col items-center gap-3 text-center">
                     <ForwardedIconComponent name="GitBranch" className="h-6 w-6" />
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground dark:text-white/70">
                       Flow visualization will appear here when available.
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground dark:text-white/70">
                       Name: {state.name || "Unknown"}
                     </p>
                   </div>
@@ -185,9 +185,9 @@ export default function AgentMarketplaceDetailPage() {
               )}
             </TabsContent>
             <TabsContent value="spec" className="mt-4 w-full">
-              <div className="flex h-[520px] w-full flex-col overflow-hidden rounded-lg border border-border">
-                <div className="flex items-center justify-between border-b border-border px-3 py-2">
-                  <div className="text-sm font-medium">YAML Specification</div>
+              <div className="flex h-[calc(100vh-200px)] w-full flex-col overflow-hidden rounded-lg border border-border dark:border-white/20">
+                <div className="flex items-center justify-between border-b border-border dark:border-white/20 px-3 py-2">
+                  <div className="text-sm font-medium dark:text-white">YAML Specification</div>
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
@@ -198,6 +198,7 @@ export default function AgentMarketplaceDetailPage() {
                         }
                       }}
                       disabled={isLoadingAgent}
+                      className="dark:border-white/20 dark:text-white"
                     >
                       Copy YAML
                     </Button>

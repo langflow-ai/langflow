@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { debounce } from "lodash";
-import { Search, Grid3x3, List, Filter } from "lucide-react";
+import { Search, Grid3x3, List, Filter, Moon, Sun } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -18,6 +18,7 @@ import ListSkeleton from "../MainPage/components/listSkeleton";
 import { useGetAgentMarketplaceQuery } from "@/controllers/API/queries/agent-marketplace/use-get-agent-marketplace";
 import { STATIC_MARKETPLACE_AGENTS } from "./data/agentsList";
 import type { AgentSpecItem } from "@/controllers/API/queries/agent-marketplace/use-get-agent-marketplace";
+import useTheme from "@/customization/hooks/use-custom-theme";
 
 export default function AgentMarketplacePage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -210,8 +211,9 @@ export default function AgentMarketplacePage() {
     setPageIndex(1); // Reset to first page when changing page size
   }, []);
 
+
   return (
-    <div className="flex h-full w-full flex-col overflow-y-auto bg-[#FBFAFF] dark:bg-background">
+    <div className="flex h-full w-full flex-col overflow-y-auto bg-[#FBFAFF] dark:bg-black dark:text-white">
       <div className="flex h-full w-full flex-col">
         <div className="flex w-full flex-1 flex-col gap-4 p-4 md:p-6">
           {/* Header + Controls Row */}
@@ -219,11 +221,11 @@ export default function AgentMarketplacePage() {
             {/* Left: Title + Search */}
             <div className="flex items-center gap-4">
               <h1
-                className="text-[#350E84] text-[21px] font-medium leading-normal not-italic"
+                className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic"
               >
                 Agent Marketplace
               </h1>
-              <span className="text-[#350E84] text-[21px] font-medium leading-normal not-italic">({total} Agents)</span>
+              <span className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic">({total} Agents)</span>
             </div>
 
             {/* Right: Sort + Filter + View Toggle */}
@@ -236,7 +238,7 @@ export default function AgentMarketplacePage() {
                   placeholder="Search agents..."
                   value={debouncedSearch}
                   onChange={(e) => setDebouncedSearch(e.target.value)}
-                  className="h-9 rounded-md border border-[#EBE8FF]"
+                  className="h-9 rounded-md border border-[#EBE8FF] dark:border-white/20 dark:bg-black dark:text-white placeholder:text-muted-foreground dark:placeholder:text-white/60"
                 />
               </div>
 
@@ -246,12 +248,12 @@ export default function AgentMarketplacePage() {
                   value={sortBy}
                   onValueChange={(v) => setSortBy(v as typeof sortBy)}
                 >
-                  <SelectTrigger className="h-8 w-[160px] rounded-md border border-[#EBE8FF] text-sm">
+                  <SelectTrigger className="h-8 w-[160px] rounded-md border border-[#EBE8FF] dark:border-white/20 dark:text-white text-sm">
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="name">Name</SelectItem>
-                    <SelectItem value="status">Status</SelectItem>
+                  <SelectContent className="dark:bg-black dark:text-white">
+                    <SelectItem value="name" className="dark:text-white">Name</SelectItem>
+                    <SelectItem value="status" className="dark:text-white">Status</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -262,7 +264,7 @@ export default function AgentMarketplacePage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 gap-2 rounded-md border border-[#EBE8FF]"
+                    className="h-8 gap-2 rounded-md border border-[#EBE8FF] dark:border-white/20"
                     aria-label="Filter"
                   >
                     <Filter className="h-4 w-4 text-muted-foreground" />
@@ -271,7 +273,7 @@ export default function AgentMarketplacePage() {
                 </PopoverTrigger>
                 <PopoverContent
                   align="end"
-                  className="w-[360px] rounded-md border border-[#EBE8FF] bg-white p-4 shadow-md"
+                  className="w-[360px] rounded-md border border-[#EBE8FF] dark:border-white/20 bg-white dark:bg-black dark:text-white p-4 shadow-md"
                 >
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -280,13 +282,13 @@ export default function AgentMarketplacePage() {
                         value={pendingTag}
                         onValueChange={(v) => setPendingTag(v as string)}
                       >
-                        <SelectTrigger className="h-10 w-full rounded-md border border-[#EBE8FF] text-sm">
+                        <SelectTrigger className="h-10 w-full rounded-md border border-[#EBE8FF] dark:border-white/20 text-sm dark:text-white">
                           <SelectValue placeholder="All Tags" />
                         </SelectTrigger>
-                        <SelectContent className="max-h-64 overflow-y-auto">
-                          <SelectItem value="all">All Tags</SelectItem>
+                        <SelectContent className="max-h-64 overflow-y-auto dark:bg-black dark:text-white">
+                          <SelectItem value="all" className="dark:text-white">All Tags</SelectItem>
                           {allTags.map((t) => (
-                            <SelectItem key={t} value={t}>
+                            <SelectItem key={t} value={t} className="dark:text-white">
                               {t}
                             </SelectItem>
                           ))}
@@ -298,7 +300,7 @@ export default function AgentMarketplacePage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-9 rounded-md border border-[#EBE8FF]"
+                        className="h-9 rounded-md border border-[#EBE8FF] dark:border-white/20"
                         onClick={() => {
                           setPendingTag(tagFilter);
                           setIsFilterOpen(false);
@@ -323,7 +325,7 @@ export default function AgentMarketplacePage() {
               </Popover>
 
               {/* View Toggle */}
-              <div className="flex items-center gap-1 rounded-md border border-[#EBE8FF] p-1">
+              <div className="flex items-center gap-1 rounded-md border border-[#EBE8FF] dark:border-white/20 p-1">
                 <Button
                   variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="sm"
@@ -387,7 +389,7 @@ export default function AgentMarketplacePage() {
 
               {/* Results Counter */}
               {!isLoading && total > 0 && (
-                <div className="mt-2 flex items-center justify-end text-xs text-[#444444]">
+                <div className="mt-2 flex items-center justify-end text-xs text-[#444444] dark:text-white/60">
                   {`Showing ${start + 1} - ${Math.min(
                     end,
                     total
@@ -399,7 +401,7 @@ export default function AgentMarketplacePage() {
 
           {/* Pagination */}
           {!isLoading && total > 0 && (
-            <div className="mt-6 flex justify-end border-t pt-4">
+            <div className="mt-6 flex justify-end border-t dark:border-white/20 pt-4">
               <AgentPagination
                 currentPage={currentPage}
                 pageSize={pageSize}

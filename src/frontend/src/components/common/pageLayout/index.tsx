@@ -42,24 +42,24 @@ export default function PageLayout({
                   >
                     <ForwardedIconComponent
                       name="ChevronLeft"
-                      className="flex cursor-pointer"
+                      className="flex cursor-pointer text-[#350E84] dark:text-white"
                     />
                   </Button>
                 )}
                 <h2
-                  className="text-[#350E84] text-[21px] font-medium leading-normal not-italic"
+                  className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic"
                   data-testid="mainpage_title"
                 >
                   {title}
                   {betaIcon && <span className="store-beta-icon">Beta</span>}
                 </h2>
               </div>
-              <p className="text-muted-foreground">{description}</p>
+              <p className="text-muted-foreground dark:text-white/80">{description}</p>
+              </div>
+              <div className="flex-shrink-0">{button && button}</div>
             </div>
-            <div className="flex-shrink-0">{button && button}</div>
           </div>
-        </div>
-        <div className="flex shrink-0 px-6">
+          <div className="flex shrink-0 px-6">
           {showSeparator && <Separator className="flex" />}
         </div>
         <div className="flex flex-1 p-2">{children}</div>
