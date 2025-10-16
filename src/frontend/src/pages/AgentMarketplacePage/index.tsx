@@ -201,6 +201,8 @@ export default function AgentMarketplacePage() {
   const start = (currentPage - 1) * pageSize;
   const end = start + pageSize;
   const visibleItems = sortedItems.slice(start, end);
+  // Cards should only expand when exactly 12 agents are shown on the page
+  const expandCards = visibleItems.length === 12;
 
   const handlePageChange = useCallback((newPageIndex: number) => {
     setPageIndex(newPageIndex);
@@ -365,7 +367,7 @@ export default function AgentMarketplacePage() {
               <div
                 className={
                   viewMode === "grid"
-                    ? "grid auto-rows-fr grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 min-h-[calc(100vh-280px)]"
+                    ? `grid ${expandCards ? "auto-rows-fr" : "auto-rows-auto"} grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 min-h-[calc(100vh-280px)]`
                     : "flex flex-col gap-4 flex-1 min-h-[calc(100vh-280px)]"
                 }
               >
@@ -374,6 +376,7 @@ export default function AgentMarketplacePage() {
                     key={`${item.folder_name}/${item.file_name}`}
                     item={item}
                     viewMode={viewMode}
+                    expand={viewMode === "grid" && expandCards}
                   />
                 ))}
               </div>
