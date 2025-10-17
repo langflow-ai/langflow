@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 import pytest
 from lfx.components.data import URLComponent
 from lfx.schema import DataFrame
+from lfx.schema.message import Message
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -227,3 +228,226 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         # Test invalid URL
         with pytest.raises(ValueError, match="Invalid URL"):
             component.ensure_url("not a url")
+
+    def test_url_component_with_custom_headers(self, mock_recursive_loader):
+        """Test URLComponent with custom headers."""
+        component = URLComponent()
+        custom_headers = [
+            {"key": "User-Agent", "value": "CustomBot/1.0"},
+            {"key": "Authorization", "value": "Bearer token123"},
+        ]
+        component.set_attributes({"urls": ["https://example.com"], "headers": custom_headers})
+
+        mock_doc = Mock(
+            page_content="test content",
+            metadata={
+                "source": "https://example.com",
+                "title": "Test Page",
+                "description": "Test Description",
+                "content_type": "text/html",
+                "language": "en",
+            },
+        )
+        mock_recursive_loader.return_value = [mock_doc]
+
+        data_frame = component.fetch_content()
+        assert isinstance(data_frame, DataFrame)
+        assert len(data_frame) == 1
+
+        # Verify the loader was called (headers are passed internally)
+        mock_recursive_loader.assert_called()
+
+    def test_url_component_with_timeout(self, mock_recursive_loader):
+        """Test URLComponent with custom timeout."""
+        component = URLComponent()
+        component.set_attributes({"urls": ["https://example.com"], "timeout": 60})
+
+        mock_doc = Mock(
+            page_content="test content",
+            metadata={
+                "source": "https://example.com",
+                "title": "Test Page",
+                "description": "Test Description",
+                "content_type": "text/html",
+                "language": "en",
+            },
+        )
+        mock_recursive_loader.return_value = [mock_doc]
+
+        data_frame = component.fetch_content()
+        assert isinstance(data_frame, DataFrame)
+        assert component.timeout == 60
+
+    def test_url_component_with_chunking(self, mock_recursive_loader):
+        """Test URLComponent with chunking enabled."""
+        component = URLComponent()
+        component.set_attributes(
+            {"urls": ["https://example.com"], "chunk_size": 100, "chunk_overlap": 20, "max_total_chars": 0}
+        )
+
+        # Create a document with content longer than chunk_size
+        long_content = "This is a test. " * 50  # Create content > 100 chars
+        mock_doc = Mock(
+            page_content=long_content,
+            metadata={
+                "source": "https://example.com",
+                "title": "Test Page",
+                "description": "Test Description",
+                "content_type": "text/html",
+                "language": "en",
+            },
+        )
+        mock_recursive_loader.return_value = [mock_doc]
+
+        data_frame = component.fetch_content()
+        assert isinstance(data_frame, DataFrame)
+        # Should have multiple chunks since content is longer than chunk_size
+        assert len(data_frame) > 1
+        # Verify chunk metadata exists
+        first_row = data_frame.iloc[0]
+        assert "chunk_index" in first_row
+        assert "total_chunks" in first_row
+
+    def test_url_component_without_chunking(self, mock_recursive_loader):
+        """Test URLComponent with chunking disabled."""
+        component = URLComponent()
+        component.set_attributes({"urls": ["https://example.com"], "chunk_size": 0})
+
+        mock_doc = Mock(
+            page_content="test content",
+            metadata={
+                "source": "https://example.com",
+                "title": "Test Page",
+                "description": "Test Description",
+                "content_type": "text/html",
+                "language": "en",
+            },
+        )
+        mock_recursive_loader.return_value = [mock_doc]
+
+        data_frame = component.fetch_content()
+        assert isinstance(data_frame, DataFrame)
+        assert len(data_frame) == 1
+        # Verify no chunk metadata
+        first_row = data_frame.iloc[0]
+        assert "chunk_index" not in first_row
+        assert "total_chunks" not in first_row
+
+    def test_url_component_max_total_chars(self, mock_recursive_loader):
+        """Test URLComponent respects max_total_chars limit with chunking."""
+        component = URLComponent()
+        component.set_attributes(
+            {"urls": ["https://example.com"], "max_total_chars": 150, "chunk_size": 50, "chunk_overlap": 0}
+        )
+
+        # Create documents with content longer than max_total_chars
+        long_content = "a" * 200
+        mock_doc = Mock(
+            page_content=long_content,
+            metadata={
+                "source": "https://example.com",
+                "title": "Test Page",
+                "description": "Test Description",
+                "content_type": "text/html",
+                "language": "en",
+            },
+        )
+        mock_recursive_loader.return_value = [mock_doc]
+
+        data_frame = component.fetch_content()
+        assert isinstance(data_frame, DataFrame)
+        # Content should be limited by max_total_chars when chunking is enabled
+        total_chars = sum(len(row["text"]) for _, row in data_frame.iterrows())
+        assert total_chars <= 150
+
+    def test_url_component_continue_on_failure(self, mock_recursive_loader):
+        """Test URLComponent continues on failure when enabled."""
+        component = URLComponent()
+        urls = ["https://example1.com", "https://example2.com"]
+        component.set_attributes({"urls": urls, "continue_on_failure": True})
+
+        # First URL fails, second succeeds
+        mock_doc = Mock(
+            page_content="Content from second URL",
+            metadata={
+                "source": "https://example2.com",
+                "title": "Second Page",
+                "description": "Second Description",
+                "content_type": "text/html",
+                "language": "en",
+            },
+        )
+
+        # Mock to fail on first call with RequestException, succeed on second
+        import requests
+
+        mock_recursive_loader.side_effect = [requests.exceptions.RequestException("Connection error"), [mock_doc]]
+
+        data_frame = component.fetch_content()
+        assert isinstance(data_frame, DataFrame)
+        # Should have content from the second URL even though first failed
+        assert len(data_frame) > 0
+
+    def test_url_component_check_response_status(self, mock_recursive_loader):
+        """Test URLComponent with check_response_status enabled."""
+        component = URLComponent()
+        component.set_attributes({"urls": ["https://example.com"], "check_response_status": True})
+
+        mock_doc = Mock(
+            page_content="test content",
+            metadata={
+                "source": "https://example.com",
+                "title": "Test Page",
+                "description": "Test Description",
+                "content_type": "text/html",
+                "language": "en",
+            },
+        )
+        mock_recursive_loader.return_value = [mock_doc]
+
+        data_frame = component.fetch_content()
+        assert isinstance(data_frame, DataFrame)
+        assert component.check_response_status is True
+
+    def test_url_component_autoset_encoding(self, mock_recursive_loader):
+        """Test URLComponent with autoset_encoding enabled."""
+        component = URLComponent()
+        component.set_attributes({"urls": ["https://example.com"], "autoset_encoding": True})
+
+        mock_doc = Mock(
+            page_content="test content with special chars: \u00e9\u00e0\u00fc",
+            metadata={
+                "source": "https://example.com",
+                "title": "Test Page",
+                "description": "Test Description",
+                "content_type": "text/html",
+                "language": "en",
+            },
+        )
+        mock_recursive_loader.return_value = [mock_doc]
+
+        data_frame = component.fetch_content()
+        assert isinstance(data_frame, DataFrame)
+        assert component.autoset_encoding is True
+
+    def test_url_component_fetch_content_as_message(self, mock_recursive_loader):
+        """Test URLComponent's fetch_content_as_message method."""
+        component = URLComponent()
+        component.set_attributes({"urls": ["https://example.com"]})
+
+        mock_doc = Mock(
+            page_content="test content",
+            metadata={
+                "source": "https://example.com",
+                "title": "Test Page",
+                "description": "Test Description",
+                "content_type": "text/html",
+                "language": "en",
+            },
+        )
+        mock_recursive_loader.return_value = [mock_doc]
+
+        message = component.fetch_content_as_message()
+        assert isinstance(message, Message)
+        assert "test content" in message.text
+        assert "data" in message.data
