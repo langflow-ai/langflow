@@ -2,7 +2,7 @@ import re
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 
-from astrapy import DataAPIClient
+from astrapy import DataAPIClient, Database
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import (
@@ -495,7 +495,7 @@ class AstraDBBaseComponent(Component):
             msg = f"Error fetching database object: {e}"
             raise ValueError(msg) from e
 
-    def collection_data(self, collection_name: str, database=None):
+    def collection_data(self, collection_name: str, database: Database = None):
         try:
             if not database:
                 client = DataAPIClient(environment=self.environment)

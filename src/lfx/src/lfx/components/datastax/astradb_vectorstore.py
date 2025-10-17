@@ -87,6 +87,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
     def build_vector_store(self):
         try:
             from langchain_astradb import AstraDBVectorStore
+            from langchain_astradb.utils.astradb import HybridSearchMode
         except ImportError as e:
             msg = (
                 "Could not import langchain Astra DB integration package. "
@@ -127,8 +128,6 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         }
 
         # Choose HybridSearchMode based on the selected param
-        from langchain_astradb.utils.astradb import HybridSearchMode
-
         hybrid_search_mode = HybridSearchMode.DEFAULT if self.search_method == "Hybrid Search" else HybridSearchMode.OFF
 
         # Attempt to build the Vector Store object
