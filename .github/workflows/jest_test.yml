@@ -35,7 +35,7 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup Node.js Environment
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
