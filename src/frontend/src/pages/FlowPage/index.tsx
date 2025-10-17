@@ -119,6 +119,12 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         return;
       }
 
+      // Handle canvas-only mode WITH ID
+      if (LANGFLOW_ONLY_CANVAS && id && currentFlowId === "") {
+        await getFlowToAddToCanvas(id);
+        return;
+      }
+
       if (flows && currentFlowId === "" && Object.keys(types).length > 0) {
         const isAnExistingFlow = flows.find((flow) => flow.id === id);
 
