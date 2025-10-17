@@ -8,6 +8,7 @@ import { useGetTagsQuery } from "@/controllers/API/queries/store";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { useGetVersionQuery } from "@/controllers/API/queries/version";
 import { CustomLoadingPage } from "@/customization/components/custom-loading-page";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import { useCustomPrimaryLoading } from "@/customization/hooks/use-custom-primary-loading";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -29,7 +30,7 @@ export function AppInitPage() {
   useGetTagsQuery({ enabled: isFetched });
   useGetFoldersQuery({ enabled: isFetched });
   const { isFetched: isExamplesFetched, refetch: refetchExamples } =
-    useGetBasicExamplesQuery();
+    useGetBasicExamplesQuery({ enabled: !LANGFLOW_ONLY_CANVAS });
 
   useEffect(() => {
     if (isFetched) {
@@ -42,17 +43,18 @@ export function AppInitPage() {
     }
   }, [isFetched, isConfigFetched]);
 
+  const shouldWaitForExamples = !LANGFLOW_ONLY_CANVAS;
+  const isReady = isFetched && (!shouldWaitForExamples || isExamplesFetched);
+
   return (
     //need parent component with width and height
     <>
       {isLoaded ? (
-        (isLoading || !isFetched || !isExamplesFetched) && (
-          <LoadingPage overlay />
-        )
+        (isLoading || !isReady) && <LoadingPage overlay />
       ) : (
         <CustomLoadingPage />
       )}
-      {isFetched && isExamplesFetched && <Outlet />}
+      {isReady && <Outlet />}
     </>
   );
 }

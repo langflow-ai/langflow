@@ -107,6 +107,18 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   // Set flow tab id
   useEffect(() => {
     const awaitgetTypes = async () => {
+      // Handle canvas-only mode without ID immediately
+      if (LANGFLOW_ONLY_CANVAS && !id && currentFlowId === "") {
+        const emptyFlow = {
+          id: "new",
+          name: "New Flow",
+          data: { nodes: [], edges: [] },
+          description: "",
+        };
+        setCurrentFlow(emptyFlow as any);
+        return;
+      }
+
       if (flows && currentFlowId === "" && Object.keys(types).length > 0) {
         const isAnExistingFlow = flows.find((flow) => flow.id === id);
 
