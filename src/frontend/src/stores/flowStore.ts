@@ -251,6 +251,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowPool: {},
       currentFlow: flow,
       positionDictionary: {},
+      rightClickedNodeId: null,
     });
   },
   setIsBuilding: (isBuilding) => {
@@ -414,6 +415,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
 
     get().setNodes(filteredNodes);
+
+    // Clear rightClickedNodeId if the deleted node was right-clicked
+    const rightClickedNodeId = get().rightClickedNodeId;
+    if (rightClickedNodeId && deletedNode) {
+      const isRightClickedNodeDeleted =
+        typeof nodeId === "string"
+          ? nodeId === rightClickedNodeId
+          : nodeId.includes(rightClickedNodeId);
+
+      if (isRightClickedNodeDeleted) {
+        set({ rightClickedNodeId: null });
+      }
+    }
 
     if (deletedNode) {
       track("Component Deleted", { componentType: deletedNode.data.type });
@@ -614,6 +628,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ getFilterComponent: newState });
   },
   getFilterComponent: "",
+  rightClickedNodeId: null,
+  setRightClickedNodeId: (nodeId) => {
+    set({ rightClickedNodeId: nodeId });
+  },
   onConnect: (connection) => {
     const _dark = useDarkStore.getState().dark;
     // const commonMarkerProps = {
@@ -1108,6 +1126,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       isPending: true,
       positionDictionary: {},
       componentsToUpdate: [],
+      rightClickedNodeId: null,
     });
   },
   dismissedNodes: [],

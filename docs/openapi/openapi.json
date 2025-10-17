@@ -11,7 +11,7 @@
           "Chat"
         ],
         "summary": "Retrieve Vertices Order",
-        "description": "Retrieve the vertices order for a given flow.\n\nArgs:\n    flow_id (str): The ID of the flow.\n    background_tasks (BackgroundTasks): The background tasks.\n    data (Optional[FlowDataRequest], optional): The flow data. Defaults to None.\n    stop_component_id (str, optional): The ID of the stop component. Defaults to None.\n    start_component_id (str, optional): The ID of the start component. Defaults to None.\n    session (AsyncSession, optional): The session dependency.\n\nReturns:\n    VerticesOrderResponse: The response containing the ordered vertex IDs and the run ID.\n\nRaises:\n    HTTPException: If there is an error checking the build status.",
+        "description": "Retrieve the vertices order for a given flow.<br><br>Args:<br>    flow_id (str): The ID of the flow.<br>    background_tasks (BackgroundTasks): The background tasks.<br>    data (Optional[FlowDataRequest], optional): The flow data. Defaults to None.<br>    stop_component_id (str, optional): The ID of the stop component. Defaults to None.<br>    start_component_id (str, optional): The ID of the start component. Defaults to None.<br>    session (AsyncSession, optional): The session dependency.<br><br>Returns:<br>    VerticesOrderResponse: The response containing the ordered vertex IDs and the run ID.<br><br>Raises:<br>    HTTPException: If there is an error checking the build status.",
         "operationId": "retrieve_vertices_order_api_v1_build__flow_id__vertices_post",
         "deprecated": true,
         "parameters": [
@@ -104,7 +104,7 @@
           "Chat"
         ],
         "summary": "Build Flow",
-        "description": "Build and process a flow, returning a job ID for event polling.\n\nThis endpoint requires authentication through the CurrentActiveUser dependency.\nFor public flows that don't require authentication, use the /build_public_tmp/flow_id/flow endpoint.\n\nArgs:\n    flow_id: UUID of the flow to build\n    background_tasks: Background tasks manager\n    inputs: Optional input values for the flow\n    data: Optional flow data\n    files: Optional files to include\n    stop_component_id: Optional ID of component to stop at\n    start_component_id: Optional ID of component to start from\n    log_builds: Whether to log the build process\n    current_user: The authenticated user\n    queue_service: Queue service for job management\n    flow_name: Optional name for the flow\n    event_delivery: Optional event delivery type - default is streaming\n\nReturns:\n    Dict with job_id that can be used to poll for build status",
+        "description": "Build and process a flow, returning a job ID for event polling.<br><br>This endpoint requires authentication through the CurrentActiveUser dependency.<br>For public flows that don't require authentication, use the /build_public_tmp/flow_id/flow endpoint.<br><br>Args:<br>    flow_id: UUID of the flow to build<br>    background_tasks: Background tasks manager<br>    inputs: Optional input values for the flow<br>    data: Optional flow data<br>    files: Optional files to include<br>    stop_component_id: Optional ID of component to stop at<br>    start_component_id: Optional ID of component to start from<br>    log_builds: Whether to log the build process<br>    current_user: The authenticated user<br>    queue_service: Queue service for job management<br>    flow_name: Optional name for the flow<br>    event_delivery: Optional event delivery type - default is streaming<br><br>Returns:<br>    Dict with job_id that can be used to poll for build status",
         "operationId": "build_flow_api_v1_build__flow_id__flow_post",
         "security": [
           {
@@ -326,7 +326,7 @@
           "Chat"
         ],
         "summary": "Build Vertex",
-        "description": "Build a vertex instead of the entire graph.\n\nArgs:\n    flow_id (str): The ID of the flow.\n    vertex_id (str): The ID of the vertex to build.\n    background_tasks (BackgroundTasks): The background tasks dependency.\n    inputs (Optional[InputValueRequest], optional): The input values for the vertex. Defaults to None.\n    files (List[str], optional): The files to use. Defaults to None.\n    current_user (Any, optional): The current user dependency. Defaults to Depends(get_current_active_user).\n\nReturns:\n    VertexBuildResponse: The response containing the built vertex information.\n\nRaises:\n    HTTPException: If there is an error building the vertex.",
+        "description": "Build a vertex instead of the entire graph.<br><br>Args:<br>    flow_id (str): The ID of the flow.<br>    vertex_id (str): The ID of the vertex to build.<br>    background_tasks (BackgroundTasks): The background tasks dependency.<br>    inputs (Optional[InputValueRequest], optional): The input values for the vertex. Defaults to None.<br>    files (List[str], optional): The files to use. Defaults to None.<br>    current_user (Any, optional): The current user dependency. Defaults to Depends(get_current_active_user).<br><br>Returns:<br>    VertexBuildResponse: The response containing the built vertex information.<br><br>Raises:<br>    HTTPException: If there is an error building the vertex.",
         "operationId": "build_vertex_api_v1_build__flow_id__vertices__vertex_id__post",
         "deprecated": true,
         "security": [
@@ -400,7 +400,7 @@
           "Chat"
         ],
         "summary": "Build Vertex Stream",
-        "description": "Build a vertex instead of the entire graph.\n\nThis function is responsible for building a single vertex instead of the entire graph.\nIt takes the `flow_id` and `vertex_id` as required parameters, and an optional `session_id`.\nIt also depends on the `ChatService` and `SessionService` services.\n\nIf `session_id` is not provided, it retrieves the graph from the cache using the `chat_service`.\nIf `session_id` is provided, it loads the session data using the `session_service`.\n\nOnce the graph is obtained, it retrieves the specified vertex using the `vertex_id`.\nIf the vertex does not support streaming, an error is raised.\nIf the vertex has a built result, it sends the result as a chunk.\nIf the vertex is not frozen or not built, it streams the vertex data.\nIf the vertex has a result, it sends the result as a chunk.\nIf none of the above conditions are met, an error is raised.\n\nIf any exception occurs during the process, an error message is sent.\nFinally, the stream is closed.\n\nReturns:\n    A `StreamingResponse` object with the streamed vertex data in text/event-stream format.\n\nRaises:\n    HTTPException: If an error occurs while building the vertex.",
+        "description": "Build a vertex instead of the entire graph.<br><br>This function is responsible for building a single vertex instead of the entire graph.<br>It takes the `flow_id` and `vertex_id` as required parameters, and an optional `session_id`.<br>It also depends on the `ChatService` and `SessionService` services.<br><br>If `session_id` is not provided, it retrieves the graph from the cache using the `chat_service`.<br>If `session_id` is provided, it loads the session data using the `session_service`.<br><br>Once the graph is obtained, it retrieves the specified vertex using the `vertex_id`.<br>If the vertex does not support streaming, an error is raised.<br>If the vertex has a built result, it sends the result as a chunk.<br>If the vertex is not frozen or not built, it streams the vertex data.<br>If the vertex has a result, it sends the result as a chunk.<br>If none of the above conditions are met, an error is raised.<br><br>If any exception occurs during the process, an error message is sent.<br>Finally, the stream is closed.<br><br>Returns:<br>    A `StreamingResponse` object with the streamed vertex data in text/event-stream format.<br><br>Raises:<br>    HTTPException: If an error occurs while building the vertex.",
         "operationId": "build_vertex_stream_api_v1_build__flow_id___vertex_id__stream_get",
         "deprecated": true,
         "parameters": [
@@ -447,7 +447,7 @@
           "Chat"
         ],
         "summary": "Build Public Tmp",
-        "description": "Build a public flow without requiring authentication.\n\nThis endpoint is specifically for public flows that don't require authentication.\nIt uses a client_id cookie to create a deterministic flow ID for tracking purposes.\n\nThe endpoint:\n1. Verifies the requested flow is marked as public in the database\n2. Creates a deterministic UUID based on client_id and flow_id\n3. Uses the flow owner's permissions to build the flow\n\nRequirements:\n- The flow must be marked as PUBLIC in the database\n- The request must include a client_id cookie\n\nArgs:\n    flow_id: UUID of the public flow to build\n    background_tasks: Background tasks manager\n    inputs: Optional input values for the flow\n    data: Optional flow data\n    files: Optional files to include\n    stop_component_id: Optional ID of component to stop at\n    start_component_id: Optional ID of component to start from\n    log_builds: Whether to log the build process\n    flow_name: Optional name for the flow\n    request: FastAPI request object (needed for cookie access)\n    queue_service: Queue service for job management\n    event_delivery: Optional event delivery type - default is streaming\n\nReturns:\n    Dict with job_id that can be used to poll for build status",
+        "description": "Build a public flow without requiring authentication.<br><br>This endpoint is specifically for public flows that don't require authentication.<br>It uses a client_id cookie to create a deterministic flow ID for tracking purposes.<br><br>The endpoint:<br>1. Verifies the requested flow is marked as public in the database<br>2. Creates a deterministic UUID based on client_id and flow_id<br>3. Uses the flow owner's permissions to build the flow<br><br>Requirements:<br>- The flow must be marked as PUBLIC in the database<br>- The request must include a client_id cookie<br><br>Args:<br>    flow_id: UUID of the public flow to build<br>    background_tasks: Background tasks manager<br>    inputs: Optional input values for the flow<br>    data: Optional flow data<br>    files: Optional files to include<br>    stop_component_id: Optional ID of component to stop at<br>    start_component_id: Optional ID of component to start from<br>    log_builds: Whether to log the build process<br>    flow_name: Optional name for the flow<br>    request: FastAPI request object (needed for cookie access)<br>    queue_service: Queue service for job management<br>    event_delivery: Optional event delivery type - default is streaming<br><br>Returns:<br>    Dict with job_id that can be used to poll for build status",
         "operationId": "build_public_tmp_api_v1_build_public_tmp__flow_id__flow_post",
         "parameters": [
           {
@@ -572,7 +572,7 @@
           "Base"
         ],
         "summary": "Get All",
-        "description": "Retrieve all component types with compression for better performance.\n\nReturns a compressed response containing all available component types.",
+        "description": "Retrieve all component types with compression for better performance.<br><br>Returns a compressed response containing all available component types.",
         "operationId": "get_all_api_v1_all_get",
         "responses": {
           "200": {
@@ -603,7 +603,7 @@
           "Base"
         ],
         "summary": "Simplified Run Flow",
-        "description": "Executes a specified flow by ID with support for streaming and telemetry.\n\nThis endpoint executes a flow identified by ID or name, with options for streaming the response\nand tracking execution metrics. It handles both streaming and non-streaming execution modes.\n\nArgs:\n    background_tasks (BackgroundTasks): FastAPI background task manager\n    flow (FlowRead | None): The flow to execute, loaded via dependency\n    input_request (SimplifiedAPIRequest | None): Input parameters for the flow\n    stream (bool): Whether to stream the response\n    api_key_user (UserRead): Authenticated user from API key\n    request (Request): The incoming HTTP request\n\nReturns:\n    Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results\n    or a RunResponse with the complete execution results\n\nRaises:\n    HTTPException: For flow not found (404) or invalid input (400)\n    APIException: For internal execution errors (500)\n\nNotes:\n    - Supports both streaming and non-streaming execution modes\n    - Tracks execution time and success/failure via telemetry\n    - Handles graceful client disconnection in streaming mode\n    - Provides detailed error handling with appropriate HTTP status codes\n    - In streaming mode, uses EventManager to handle events:\n        - \"add_message\": New messages during execution\n        - \"token\": Individual tokens during streaming\n        - \"end\": Final execution result",
+        "description": "Executes a specified flow by ID with support for streaming and telemetry.<br><br>This endpoint executes a flow identified by ID or name, with options for streaming the response<br>and tracking execution metrics. It handles both streaming and non-streaming execution modes.<br><br>Args:<br>    background_tasks (BackgroundTasks): FastAPI background task manager<br>    flow (FlowRead | None): The flow to execute, loaded via dependency<br>    input_request (SimplifiedAPIRequest | None): Input parameters for the flow<br>    stream (bool): Whether to stream the response<br>    api_key_user (UserRead): Authenticated user from API key<br>    request (Request): The incoming HTTP request<br><br>Returns:<br>    Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results<br>    or a RunResponse with the complete execution results<br><br>Raises:<br>    HTTPException: For flow not found (404) or invalid input (400)<br>    APIException: For internal execution errors (500)<br><br>Notes:<br>    - Supports both streaming and non-streaming execution modes<br>    - Tracks execution time and success/failure via telemetry<br>    - Handles graceful client disconnection in streaming mode<br>    - Provides detailed error handling with appropriate HTTP status codes<br>    - In streaming mode, uses EventManager to handle events:<br>        - \"add_message\": New messages during execution<br>        - \"token\": Individual tokens during streaming<br>        - \"end\": Final execution result",
         "operationId": "simplified_run_flow_api_v1_run__flow_id_or_name__post",
         "security": [
           {
@@ -699,7 +699,7 @@
           "Base"
         ],
         "summary": "Webhook Run Flow",
-        "description": "Run a flow using a webhook request.\n\nArgs:\n    flow (Flow, optional): The flow to be executed. Defaults to Depends(get_flow_by_id).\n    user (User): The flow user.\n    request (Request): The incoming HTTP request.\n    background_tasks (BackgroundTasks): The background tasks manager.\n\nReturns:\n    dict: A dictionary containing the status of the task.\n\nRaises:\n    HTTPException: If the flow is not found or if there is an error processing the request.",
+        "description": "Run a flow using a webhook request.<br><br>Args:<br>    flow (Flow, optional): The flow to be executed. Defaults to Depends(get_flow_by_id).<br>    user (User): The flow user.<br>    request (Request): The incoming HTTP request.<br>    background_tasks (BackgroundTasks): The background tasks manager.<br><br>Returns:<br>    dict: A dictionary containing the status of the task.<br><br>Raises:<br>    HTTPException: If the flow is not found or if there is an error processing the request.",
         "operationId": "webhook_run_flow_api_v1_webhook__flow_id_or_name__post",
         "parameters": [
           {
@@ -763,7 +763,7 @@
           "Base"
         ],
         "summary": "Experimental Run Flow",
-        "description": "Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.\n\nThis endpoint supports running flows with caching to enhance performance and efficiency.\n\n### Parameters:\n- `flow_id` (str): The unique identifier of the flow to be executed.\n- `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components\n  for the flow. Each input can target specific components and provide custom values.\n- `outputs` (List[str], optional): A list of output names to retrieve from the executed flow.\n  If not provided, all outputs are returned.\n- `tweaks` (Optional[Tweaks], optional): A dictionary of tweaks to customize the flow execution.\n  The tweaks can be used to modify the flow's parameters and components.\n  Tweaks can be overridden by the input values.\n- `stream` (bool, optional): Specifies whether the results should be streamed. Defaults to False.\n- `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow\n  execution.\n- `api_key_user` (User): The user associated with the current API key. Automatically resolved from the API key.\n\n### Returns:\nA `RunResponse` object containing the selected outputs (or all if not specified) of the executed flow\nand the session ID.\nThe structure of the response accommodates multiple inputs, providing a nested list of outputs for each input.\n\n### Raises:\nHTTPException: Indicates issues with finding the specified flow, invalid input formats, or internal errors during\nflow execution.\n\n### Example usage:\n```json\nPOST /run/flow_id\nx-api-key: YOUR_API_KEY\nPayload:\n{\n    \"inputs\": [\n        {\"components\": [\"component1\"], \"input_value\": \"value1\"},\n        {\"components\": [\"component3\"], \"input_value\": \"value2\"}\n    ],\n    \"outputs\": [\"Component Name\", \"component_id\"],\n    \"tweaks\": {\"parameter_name\": \"value\", \"Component Name\": {\"parameter_name\": \"value\"}, \"component_id\": {\"parameter_name\": \"value\"}}\n    \"stream\": false\n}\n```\n\nThis endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,\ncatering to diverse application requirements.",
+        "description": "Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.<br><br>This endpoint supports running flows with caching to enhance performance and efficiency.<br><br>### Parameters:<br>- `flow_id` (str): The unique identifier of the flow to be executed.<br>- `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components<br>  for the flow. Each input can target specific components and provide custom values.<br>- `outputs` (List[str], optional): A list of output names to retrieve from the executed flow.<br>  If not provided, all outputs are returned.<br>- `tweaks` (Optional[Tweaks], optional): A dictionary of tweaks to customize the flow execution.<br>  The tweaks can be used to modify the flow's parameters and components.<br>  Tweaks can be overridden by the input values.<br>- `stream` (bool, optional): Specifies whether the results should be streamed. Defaults to False.<br>- `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow<br>  execution.<br>- `api_key_user` (User): The user associated with the current API key. Automatically resolved from the API key.<br><br>### Returns:<br>A `RunResponse` object containing the selected outputs (or all if not specified) of the executed flow<br>and the session ID.<br>The structure of the response accommodates multiple inputs, providing a nested list of outputs for each input.<br><br>### Raises:<br>HTTPException: Indicates issues with finding the specified flow, invalid input formats, or internal errors during<br>flow execution.<br><br>### Example usage:<br>```json<br>POST /run/flow_id<br>x-api-key: YOUR_API_KEY<br>Payload:<br>{<br>    \"inputs\": [<br>        {\"components\": [\"component1\"], \"input_value\": \"value1\"},<br>        {\"components\": [\"component3\"], \"input_value\": \"value2\"}<br>    ],<br>    \"outputs\": [\"Component Name\", \"component_id\"],<br>    \"tweaks\": {\"parameter_name\": \"value\", \"Component Name\": {\"parameter_name\": \"value\"}, \"component_id\": {\"parameter_name\": \"value\"}}<br>    \"stream\": false<br>}<br>```<br><br>This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,<br>catering to diverse application requirements.",
         "operationId": "experimental_run_flow_api_v1_run_advanced__flow_id__post",
         "security": [
           {
@@ -920,7 +920,7 @@
           "Base"
         ],
         "summary": "Get Task Status",
-        "description": "Get the status of a task by ID (Deprecated).\n\nThis endpoint is deprecated and will be removed in a future version.",
+        "description": "Get the status of a task by ID (Deprecated).<br><br>This endpoint is deprecated and will be removed in a future version.",
         "operationId": "get_task_status_api_v1_task___task_id__get",
         "deprecated": true,
         "parameters": [
@@ -964,7 +964,7 @@
           "Base"
         ],
         "summary": "Create Upload File",
-        "description": "Upload a file for a specific flow (Deprecated).\n\nThis endpoint is deprecated and will be removed in a future version.",
+        "description": "Upload a file for a specific flow (Deprecated).<br><br>This endpoint is deprecated and will be removed in a future version.",
         "operationId": "create_upload_file_api_v1_upload__flow_id__post",
         "deprecated": true,
         "parameters": [
@@ -1090,7 +1090,7 @@
           "Base"
         ],
         "summary": "Custom Component Update",
-        "description": "Update an existing custom component with new code and configuration.\n\nProcesses the provided code and template updates, applies parameter changes (including those loaded from the\ndatabase), updates the component's build configuration, and validates outputs. Returns the updated component node as\na JSON-serializable dictionary.\n\nRaises:\n    HTTPException: If an error occurs during component building or updating.\n    SerializationError: If serialization of the updated component node fails.",
+        "description": "Update an existing custom component with new code and configuration.<br><br>Processes the provided code and template updates, applies parameter changes (including those loaded from the<br>database), updates the component's build configuration, and validates outputs. Returns the updated component node as<br>a JSON-serializable dictionary.<br><br>Raises:<br>    HTTPException: If an error occurs during component building or updating.<br>    SerializationError: If serialization of the updated component node fails.",
         "operationId": "custom_component_update_api_v1_custom_component_update_post",
         "requestBody": {
           "content": {
@@ -1141,7 +1141,7 @@
           "Base"
         ],
         "summary": "Get Config",
-        "description": "Retrieve the current application configuration settings.\n\nReturns:\n    ConfigResponse: The configuration settings of the application.\n\nRaises:\n    HTTPException: If an error occurs while retrieving the configuration.",
+        "description": "Retrieve the current application configuration settings.<br><br>Returns:<br>    ConfigResponse: The configuration settings of the application.<br><br>Raises:<br>    HTTPException: If an error occurs while retrieving the configuration.",
         "operationId": "get_config_api_v1_config_get",
         "responses": {
           "200": {
@@ -1841,7 +1841,7 @@
           "Flows"
         ],
         "summary": "Read Flows",
-        "description": "Retrieve a list of flows with pagination support.\n\nArgs:\n    current_user (User): The current authenticated user.\n    session (Session): The database session.\n    settings_service (SettingsService): The settings service.\n    components_only (bool, optional): Whether to return only components. Defaults to False.\n\n    get_all (bool, optional): Whether to return all flows without pagination. Defaults to True.\n    **This field must be True because of backward compatibility with the frontend - Release: 1.0.20**\n\n    folder_id (UUID, optional): The project ID. Defaults to None.\n    params (Params): Pagination parameters.\n    remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.\n    header_flows (bool, optional): Whether to return only specific headers of the flows. Defaults to False.\n\nReturns:\n    list[FlowRead] | Page[FlowRead] | list[FlowHeader]\n    A list of flows or a paginated response containing the list of flows or a list of flow headers.",
+        "description": "Retrieve a list of flows with pagination support.<br><br>Args:<br>    current_user (User): The current authenticated user.<br>    session (Session): The database session.<br>    settings_service (SettingsService): The settings service.<br>    components_only (bool, optional): Whether to return only components. Defaults to False.<br><br>    get_all (bool, optional): Whether to return all flows without pagination. Defaults to True.<br>    **This field must be True because of backward compatibility with the frontend - Release: 1.0.20**<br><br>    folder_id (UUID, optional): The project ID. Defaults to None.<br>    params (Params): Pagination parameters.<br>    remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.<br>    header_flows (bool, optional): Whether to return only specific headers of the flows. Defaults to False.<br><br>Returns:<br>    list[FlowRead] | Page[FlowRead] | list[FlowHeader]<br>    A list of flows or a paginated response containing the list of flows or a list of flow headers.",
         "operationId": "read_flows_api_v1_flows__get",
         "security": [
           {
@@ -1981,7 +1981,7 @@
           "Flows"
         ],
         "summary": "Delete Multiple Flows",
-        "description": "Delete multiple flows by their IDs.\n\nArgs:\n    flow_ids (List[str]): The list of flow IDs to delete.\n    user (User, optional): The user making the request. Defaults to the current active user.\n    db (Session, optional): The database session.\n\nReturns:\n    dict: A dictionary containing the number of flows deleted.",
+        "description": "Delete multiple flows by their IDs.<br><br>Args:<br>    flow_ids (List[str]): The list of flow IDs to delete.<br>    user (User, optional): The user making the request. Defaults to the current active user.<br>    db (Session, optional): The database session.<br><br>Returns:<br>    dict: A dictionary containing the number of flows deleted.",
         "operationId": "delete_multiple_flows_api_v1_flows__delete",
         "security": [
           {
@@ -2439,7 +2439,7 @@
           "Flows"
         ],
         "summary": "Read Basic Examples",
-        "description": "Retrieve a list of basic example flows.\n\nArgs:\n    session (Session): The database session.\n\nReturns:\n    list[FlowRead]: A list of basic example flows.",
+        "description": "Retrieve a list of basic example flows.<br><br>Args:<br>    session (Session): The database session.<br><br>Returns:<br>    list[FlowRead]: A list of basic example flows.",
         "operationId": "read_basic_examples_api_v1_flows_basic_examples__get",
         "responses": {
           "200": {
@@ -5402,7 +5402,7 @@
           "mcp_projects"
         ],
         "summary": "Update Project Mcp Settings",
-        "description": "Update the MCP settings of all flows in a project and project-level auth settings.\n\nOn MCP Composer failure, this endpoint should return with a 200 status code and an error message in\nthe body of the response to display to the user.",
+        "description": "Update the MCP settings of all flows in a project and project-level auth settings.<br><br>On MCP Composer failure, this endpoint should return with a 200 status code and an error message in<br>the body of the response to display to the user.",
         "operationId": "update_project_mcp_settings_api_v1_mcp_project__project_id__patch",
         "security": [
           {
@@ -5614,7 +5614,7 @@
           "mcp_projects"
         ],
         "summary": "Get Project Composer Url",
-        "description": "Get the MCP Composer URL for a specific project.\n\nOn failure, this endpoint should return with a 200 status code and an error message in\nthe body of the response to display to the user.",
+        "description": "Get the MCP Composer URL for a specific project.<br><br>On failure, this endpoint should return with a 200 status code and an error message in<br>the body of the response to display to the user.",
         "operationId": "get_project_composer_url_api_v1_mcp_project__project_id__composer_url_get",
         "security": [
           {
@@ -5720,7 +5720,7 @@
           "OpenAI Responses API"
         ],
         "summary": "Create Response",
-        "description": "Create a response using OpenAI Responses API format.\n\nThis endpoint accepts a flow_id in the model parameter and processes\nthe input through the specified Langflow flow.\n\nArgs:\n    request: OpenAI Responses API request with model (flow_id) and input\n    background_tasks: FastAPI background task manager\n    api_key_user: Authenticated user from API key\n    http_request: The incoming HTTP request\n    telemetry_service: Telemetry service for logging\n\nReturns:\n    OpenAI-compatible response or streaming response\n\nRaises:\n    HTTPException: For validation errors or flow execution issues",
+        "description": "Create a response using OpenAI Responses API format.<br><br>This endpoint accepts a flow_id in the model parameter and processes<br>the input through the specified Langflow flow.<br><br>Args:<br>    request: OpenAI Responses API request with model (flow_id) and input<br>    background_tasks: FastAPI background task manager<br>    api_key_user: Authenticated user from API key<br>    http_request: The incoming HTTP request<br>    telemetry_service: Telemetry service for logging<br><br>Returns:<br>    OpenAI-compatible response or streaming response<br><br>Raises:<br>    HTTPException: For validation errors or flow execution issues",
         "operationId": "create_response_api_v1_responses_post",
         "requestBody": {
           "content": {
@@ -6112,7 +6112,7 @@
           "Files"
         ],
         "summary": "Download File",
-        "description": "Download a file by its ID or return its content as a string/bytes.\n\nArgs:\n    file_id: UUID of the file.\n    current_user: Authenticated user.\n    session: Database session.\n    storage_service: File storage service.\n    return_content: If True, return raw content (str) instead of StreamingResponse.\n\nReturns:\n    StreamingResponse for client downloads or str for internal use.",
+        "description": "Download a file by its ID or return its content as a string/bytes.<br><br>Args:<br>    file_id: UUID of the file.<br>    current_user: Authenticated user.<br>    session: Database session.<br>    storage_service: File storage service.<br>    return_content: If True, return raw content (str) instead of StreamingResponse.<br><br>Returns:<br>    StreamingResponse for client downloads or str for internal use.",
         "operationId": "download_file_api_v2_files__file_id__get",
         "security": [
           {
@@ -6652,7 +6652,7 @@
           "Log"
         ],
         "summary": "Stream Logs",
-        "description": "HTTP/2 Server-Sent-Event (SSE) endpoint for streaming logs.\n\nIt establishes a long-lived connection to the server and receives log messages in real-time.\nThe client should use the header \"Accept: text/event-stream\".",
+        "description": "HTTP/2 Server-Sent-Event (SSE) endpoint for streaming logs.<br><br>It establishes a long-lived connection to the server and receives log messages in real-time.<br>The client should use the header \"Accept: text/event-stream\".",
         "operationId": "stream_logs_logs_stream_get",
         "responses": {
           "200": {
