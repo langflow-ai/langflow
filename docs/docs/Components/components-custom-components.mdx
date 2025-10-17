@@ -470,8 +470,7 @@ def compute_sum(self) -> int:
 
 ## Enable dynamic fields
 
-In **Langflow**, dynamic fields allow inputs to change or appear based on user interactions. You can make an input dynamic by setting `dynamic=True`.
-Optionally, setting `real_time_refresh=True` triggers the `update_build_config` method to adjust the input's visibility or properties in real time, creating a contextual visual editor experience that only exposes relevant fields based on the user's choices.
+In **Langflow**, dynamic fields allow inputs to change or appear based on user interactions. You can make an input dynamic by setting `dynamic=True`. Optionally, setting `real_time_refresh=True` triggers the `update_build_config` method to adjust the input's visibility or properties in real time, creating a contextual visual editor experience that only exposes relevant fields based on the user's choices.
 
 In this example, the operator field triggers updates with `real_time_refresh=True`.
 The `regex_pattern` field is initially hidden and controlled with `dynamic=True`.
@@ -501,11 +500,13 @@ class RegexRouter(Component):
     ]
 ```
 
-### Implement `update_build_config`
+### Show or hide fields based on user selections
 
-When a field with `real_time_refresh=True` is modified, Langflow calls the `update_build_config` method, passing the updated field name, value, and the component's configuration to dynamically adjust the visibility or properties of other fields based on user input.
+When a user changes a field with `real_time_refresh=True`, Langflow calls your `update_build_config` method.
 
-This example will show or hide the `regex_pattern` field when the user selects a different operator.
+This method lets you show, hide, or modify other fields based on what the user selected.
+
+This example shows the `regex_pattern` field only when the user selects "regex" from the operator dropdown.
 
 ```python
 def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
@@ -517,25 +518,31 @@ def update_build_config(self, build_config: dict, field_value: str, field_name: 
     return build_config
 ```
 
-### Additional Dynamic Field Controls
+You can modify additional field properties in `update_build_config` other than just `show` and `hide`.
 
-You can also modify other properties within `update_build_config`, such as:
-* `required`: Set `build_config["some_field"]["required"] = True/False`
+* **`required`**: Make fields required or optional dynamically
+  ```python
+  if field_value == "regex":
+      build_config["regex_pattern"]["required"] = True
+  else:
+      build_config["regex_pattern"]["required"] = False
+  ```
 
-* `advanced`: Set `build_config["some_field"]["advanced"] = True`
+* **`advanced`**: Move fields to the "Advanced" section
+  ```python
+  if field_value == "experimental":
+      build_config["regex_pattern"]["advanced"] = False  # Show in main section
+  else:
+      build_config["regex_pattern"]["advanced"] = True   # Hide in advanced
+  ```
 
-* `options`: Modify dynamic dropdown options.
-
-### Tips for Managing Dynamic Fields
-
-When working with dynamic fields, consider the following best practices to ensure a smooth user experience:
-
-* **Minimize field changes**: Hide only fields that are truly irrelevant to avoid confusing users.
-* **Test behavior**: Ensure that adding or removing fields doesn't accidentally erase user input.
-* **Preserve data**: Use `build_config["some_field"]["show"] = False` to hide fields without losing their values.
-* **Clarify logic**: Add `info` notes to explain why fields appear or disappear based on conditions.
-* **Keep it manageable**: If the dynamic logic becomes too complex, consider breaking it into smaller components, unless it serves a clear purpose in a single node.
-
+* **`options`**: Change dropdown options based on other selections
+  ```python
+  if field_value == "regex":
+      build_config["operator"]["options"] = ["regex", "contains", "starts_with"]
+  else:
+      build_config["operator"]["options"] = ["equals", "contains", "not_equals"]
+  ```
 
 ## Error handling and logging
 
