@@ -96,8 +96,8 @@ const Providers = ({ type }: { type: "enabled" | "available" }) => {
       Groq: ["llama2-70b", "mixtral-8x7b"],
     };
 
-    setProvidersData(prev =>
-      prev.map(p =>
+    setProvidersData((prev) =>
+      prev.map((p) =>
         p.provider === providerName
           ? {
               ...p,
@@ -105,20 +105,20 @@ const Providers = ({ type }: { type: "enabled" | "available" }) => {
               api_key: apiKey,
               models: mockModels[providerName] || [],
             }
-          : p
-      )
+          : p,
+      ),
     );
     setOpenApiKeyDialog(false);
     setSelectedProvider(null);
   };
 
   const handleRemoveProvider = (providerName: string) => {
-    setProvidersData(prev =>
-      prev.map(p =>
+    setProvidersData((prev) =>
+      prev.map((p) =>
         p.provider === providerName
           ? { ...p, is_enabled: false, api_key: undefined, models: [] }
-          : p
-      )
+          : p,
+      ),
     );
   };
 
@@ -134,10 +134,10 @@ const Providers = ({ type }: { type: "enabled" | "available" }) => {
 
   // Filter providers based on enabled status
   const filteredProviders: Provider[] = providersData
-    .filter(provider => {
+    .filter((provider) => {
       return type === "enabled" ? provider.is_enabled : !provider.is_enabled;
     })
-    .map(provider => ({
+    .map((provider) => ({
       provider: provider.provider,
       icon: provider.icon,
       is_enabled: provider.is_enabled,
@@ -154,7 +154,7 @@ const Providers = ({ type }: { type: "enabled" | "available" }) => {
         <h2 className="text-muted-foreground text-sm--medium">
           {type.charAt(0).toUpperCase() + type.slice(1)}
         </h2>
-        {filteredProviders.map(provider => (
+        {filteredProviders.map((provider) => (
           <div
             key={provider.provider}
             onClick={() => {
@@ -165,7 +165,7 @@ const Providers = ({ type }: { type: "enabled" | "available" }) => {
             className={cn(
               "flex items-center my-2 py-1 group ",
               type === "available" &&
-                "hover:bg-muted hover:rounded-md cursor-pointer"
+                "hover:bg-muted hover:rounded-md cursor-pointer",
             )}
           >
             <ForwardedIconComponent
@@ -188,7 +188,7 @@ const Providers = ({ type }: { type: "enabled" | "available" }) => {
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={e => {
+                onClick={(e) => {
                   e.stopPropagation();
                   if (type === "available") {
                     handleAddClick(provider.provider);
@@ -198,7 +198,7 @@ const Providers = ({ type }: { type: "enabled" | "available" }) => {
                 }}
                 className={cn(
                   "p-2",
-                  type === "available" && "group-hover:bg-transparent"
+                  type === "available" && "group-hover:bg-transparent",
                 )}
               >
                 <ForwardedIconComponent
@@ -206,7 +206,7 @@ const Providers = ({ type }: { type: "enabled" | "available" }) => {
                   className={cn(
                     "text-destructive",
                     type === "available" &&
-                      "group-hover:text-primary text-muted-foreground"
+                      "group-hover:text-primary text-muted-foreground",
                   )}
                 />
               </Button>
