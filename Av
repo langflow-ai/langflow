@@ -1,0 +1,57 @@
+# aviator_simulator.py
+# Simulates N rounds of a crash game and applies a simple "cashout at X" strategy.
+
+import random
+import math
+import statistics
+
+def generate_round(multiplier_max=1000, rng=random.random):
+    """
+    Generate one crash round multiplier >1.0.
+    This is a simple model: choose a crash multiplier using an exponential tail.
+    Not the real 1xBet algorithm (which is private/secure).
+    """
+    # Example: sample from a heavy-tailed distribution:
+    u = rng()
+    # transform to get values >=1.0; alpha controls tail heaviness
+    alpha = 1.5
+    m = 1.0 + ( (1.0 / (1.0 - u)) ** (1.0/alpha) - 1.0 )
+    # cap to avoid infinite values in simulation
+    return min(m, multiplier_max)
+
+def simulate(strategy_cashout, rounds=100000, stake=1.0):
+    """
+    strategy_cashout: multiplier at which player cashes out (e.g., 2.0)
+    rounds: number of simulated rounds
+    stake: bet amount per round
+    Returns: summary stats
+    """
+    profits = []
+    wins = 0
+    for _ in range(rounds):
+        m = generate_round()
+        if m >= strategy_cashout:
+            # player cashed out successfully
+            profit = stake * (strategy_cashout - 1.0)  # net profit
+            wins += 1
+        else:
+            # player crashed before cashout -> loses stake
+            profit = -stake
+        profits.append(profit)
+    total = sum(profits)
+    ev = total / rounds
+    win_rate = wins / rounds
+    return {
+        "rounds": rounds,
+        "cashout": strategy_cashout,
+        "total_profit": total,
+        "ev_per_round": ev,
+        "win_rate": win_rate,
+        "mean_profit": statistics.mean(profits),
+        "std_profit": statistics.pstdev(profits)
+    }
+
+if __name__ == "__main__":
+    for cashout in [1.25, 1.5, 2.0, 3.0, 5.0]:
+        res = simulate(cashout, rounds=200000, stake=1.0)
+        print(f"Cashout x{cashout}: EV={res['ev_per_round']:.4f}, win_rate={res['win_rate']:.4%}, std={res['std_profit']:.4f}")
