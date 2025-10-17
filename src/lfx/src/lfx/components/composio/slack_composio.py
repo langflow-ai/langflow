@@ -7,7 +7,7 @@ from lfx.log.logger import logger
 
 class ComposioSlackAPIComponent(ComposioBaseComponent):
     display_name: str = "Slack"
-    icon = "Slack"
+    icon = "SlackComposio"
     documentation: str = "https://docs.composio.dev"
     app_name = "slack"
 
