@@ -1,0 +1,204 @@
+id: urn:agent:genesis:autonomize.ai:claims-triage-agent:1.0.0
+name: Claims Triage Agent
+fullyQualifiedName: genesis.autonomize.ai.claims_triage_agent
+description: Segregates claims by complexity level, dollar value, and clinical flags using intake field analysis and claims metadata to optimize processing workflows and resource allocation
+domain: autonomize.ai
+subDomain: claims-operations
+version: 1.0.0
+environment: production
+agentOwner: claims-operations@autonomize.ai
+agentOwnerDisplayName: Claims Operations Team
+email: claims-operations@autonomize.ai
+status: ACTIVE
+kind: Single Agent
+agentGoal: Intelligently categorize and route incoming claims based on complexity assessment, financial impact, clinical indicators, and processing requirements to optimize workflow efficiency and resource utilization
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: ReflexiveAgent
+toolsUse: true
+learningCapability: None
+variables:
+- name: high_dollar_threshold
+  type: number
+  required: false
+  default: 5000
+  description: Dollar threshold for high-value claim classification
+- name: complex_claim_threshold
+  type: number
+  required: false
+  default: 0.7
+  description: Complexity score threshold for complex claim routing
+- name: auto_approve_threshold
+  type: number
+  required: false
+  default: 0.95
+  description: Confidence threshold for auto-approval routing
+- name: urgent_processing_days
+  type: number
+  required: false
+  default: 3
+  description: Days threshold for urgent processing classification
+tags:
+- claims-triage
+- workflow-optimization
+- complexity-assessment
+- processing-routing
+- resource-allocation
+- claims-categorization
+sampleInput:
+  claim_data:
+    claim_id: CLM-2024-006789
+    received_date: '2024-01-22T09:15:00Z'
+    member_id: MBR789123456
+    provider_npi: '3691470258'
+    provider_type: hospital
+    claim_type: institutional
+    total_claim_amount: 12500.0
+    service_dates:
+      from: '2024-01-15'
+      to: '2024-01-18'
+    diagnosis_codes:
+    - I21.9
+    - I50.9
+    - N18.3
+    procedure_codes:
+    - code: '99223'
+      description: Hospital inpatient care, high complexity
+      units: 4
+    - code: '93306'
+      description: Echocardiography, complete
+      units: 1
+    - code: '36415'
+      description: Venipuncture, age 3 years or older
+      units: 3
+    clinical_flags:
+    - cardiac_intensive_care
+    - multiple_diagnoses
+    - extended_stay
+    prior_authorization: pending
+    member_demographics:
+      age: 72
+      gender: M
+      plan_type: medicare_advantage
+components:
+- id: triage-input
+  type: genesis:chat_input
+  name: Claims Triage Input
+  description: Input for incoming claims requiring triage and routing decisions
+  provides:
+  - in: triage-orchestrator-agent
+    useAs: input
+    description: Claim data for triage analysis
+- id: complexity-analyzer
+  type: genesis:mcp_tool
+  name: Claims Complexity Analysis Engine
+  description: Analyzes multiple dimensions to determine claim processing complexity
+  config:
+    tool_name: claims_complexity_analyzer
+  provides:
+  - in: triage-orchestrator-agent
+    useAs: tool
+    description: Complexity assessment and scoring
+- id: clinical-flags-engine
+  type: genesis:mcp_tool
+  name: Clinical Flags Analysis Engine
+  description: Identifies clinical indicators that affect claim processing requirements
+  config:
+    tool_name: clinical_flags_analyzer
+  provides:
+  - in: triage-orchestrator-agent
+    useAs: tool
+    description: Clinical flag identification and analysis
+- id: processing-rules-engine
+  type: genesis:mcp_tool
+  name: Claims Processing Rules Engine
+  description: Applies processing rules and workflow routing logic based on claim characteristics
+  config:
+    tool_name: claims_processing_rules
+  provides:
+  - in: triage-orchestrator-agent
+    useAs: tool
+    description: Processing rules and workflow routing
+- id: historical-patterns-analyzer
+  type: genesis:mcp_tool
+  name: Historical Claims Pattern Analyzer
+  description: Analyzes historical claim patterns to improve triage accuracy and processing predictions
+  config:
+    tool_name: historical_claims_analyzer
+  provides:
+  - in: triage-orchestrator-agent
+    useAs: tool
+    description: Historical pattern analysis and predictions
+- id: workflow-optimizer
+  type: genesis:mcp_tool
+  name: Workflow Optimization Engine
+  description: Optimizes claim routing and resource allocation based on current workload and capacity
+  config:
+    tool_name: workflow_optimizer
+  provides:
+  - in: triage-orchestrator-agent
+    useAs: tool
+    description: Workflow optimization and resource allocation
+- id: triage-orchestrator-agent
+  type: genesis:agent
+  name: Claims Triage Orchestrator
+  description: Main coordinator for comprehensive claims triage, categorization, and routing decisions
+  config:
+    system_prompt: "You are a Claims Triage Specialist with expertise in healthcare claims processing, workflow optimization, and resource management. Your role is to intelligently categorize and route incoming claims to optimize processing efficiency and outcomes.\n\n**Triage Classification Framework:**\n\n1. **Complexity Categories:**\n   - **Simple Claims**: Routine procedures, clear documentation, standard processing\n   - **Moderate Claims**: Some complexity factors, may require specialist review\n   - **Complex Claims**: Multiple factors requiring specialized handling\n   - **High-Risk Claims**: Significant clinical or financial risk factors\n\n2. **Dollar Value Categories:**\n   - **Standard ($0-$1,000)**: Routine processing workflow\n   - **Moderate ($1,001-$5,000)**: Enhanced review procedures\n   - **High-Value ($5,001-$25,000)**: Specialized high-dollar review\n   - **Exceptional ($25,000+)**: Executive review and approval\n\n3. **Processing Priority Levels:**\n   - **Auto-Approval**:\
+      \ High confidence, low risk, automated processing\n   - **Standard**: Normal processing timeline and workflow\n   - **Priority**: Expedited processing for time-sensitive claims\n   - **Urgent**: Immediate attention required\n   - **Special Handling**: Unique circumstances requiring customized approach\n\n**Available Tools:**\n- **Complexity Analyzer** - Multi-dimensional complexity assessment\n- **Clinical Flags Engine** - Clinical indicator identification\n- **Processing Rules Engine** - Workflow routing and rules application\n- **Historical Patterns Analyzer** - Pattern-based predictions\n- **Workflow Optimizer** - Resource allocation and optimization\n\n**Triage Analysis Process:**\n1. Assess claim complexity using multiple analytical dimensions\n2. Identify clinical flags and special processing requirements\n3. Apply dollar value thresholds and financial risk assessment\n4. Analyze historical patterns for processing predictions\n5. Optimize routing based on current workflow capacity\n\
+      6. Generate comprehensive routing recommendations\n\n**Routing Decision Criteria:**\n- **Auto-Approval Queue**: Simple claims with high approval confidence\n- **Standard Processing**: Routine claims with normal complexity\n- **Specialist Review**: Claims requiring clinical or technical expertise\n- **High-Dollar Review**: Claims exceeding financial thresholds\n- **Priority Processing**: Time-sensitive or urgent claims\n- **Quality Review**: Claims flagged for quality or compliance review\n\n**Output Requirements:**\n- Clear triage category and routing decision\n- Detailed complexity assessment with scoring breakdown\n- Specific processing requirements and special handling needs\n- Estimated processing time and resource requirements\n- Priority level with justification\n- Workflow optimization recommendations\n\nConsider current processing capacity, specialist availability, and service level agreements when making routing decisions. Optimize for both processing efficiency and claim\
+      \ outcome quality.\n"
+    temperature: 0.1
+    max_tokens: 2000
+  provides:
+  - in: triage-output
+    useAs: input
+    description: Send triage analysis results to output
+- id: triage-output
+  type: genesis:chat_output
+  name: Claims Triage Results
+  description: Display comprehensive claims triage analysis and routing recommendations
+outputs:
+- triage_analysis
+- triage_category
+- routing_decision
+- complexity_assessment
+- priority_level
+- processing_requirements
+kpis:
+- name: triage_accuracy
+  description: Percentage of correctly triaged claims (optimal routing)
+  target: '>94%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: processing_time_optimization
+  description: Improvement in average processing time through triage
+  target: '>25%'
+  measurement: percentage
+  category: Performance
+  valueType: number
+- name: auto_approval_rate
+  description: Percentage of claims successfully auto-approved
+  target: '>45%'
+  measurement: percentage
+  category: Efficiency
+  valueType: percentage
+- name: resource_utilization
+  description: Optimal utilization of processing resources
+  target: '>85%'
+  measurement: percentage
+  category: Performance
+  valueType: percentage
+- name: queue_balance
+  description: Even distribution across processing queues
+  target: ±15% variance
+  measurement: percentage
+  category: Efficiency
+  valueType: percentage
+securityInfo:
+  visibility: Internal
+  gdprSensitive: true
+  hipaaCompliant: true

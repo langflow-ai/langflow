@@ -1,6 +1,6 @@
-id: urn:agent:genesis:autonomize.ai:guideline-retrieval:1.0.0
+id: urn:agent:genesis:autonomize.ai:guideline-retrieval-agent:1.0.0
 name: Guideline Retrieval Agent
-fullyQualifiedName: genesis.autonomize.ai.guideline_retrieval
+fullyQualifiedName: genesis.autonomize.ai.guideline_retrieval_agent
 description: Retrieve applicable clinical guidelines based on procedure codes
 domain: autonomize.ai
 subDomain: clinical-knowledge

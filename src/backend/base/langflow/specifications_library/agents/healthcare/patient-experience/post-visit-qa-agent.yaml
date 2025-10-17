@@ -1,6 +1,6 @@
-id: urn:agent:genesis:patient-experience:post-visit-qa:1.0.0
+id: urn:agent:genesis:patient-experience:post-visit-qa-agent:1.0.0
 name: Post-Visit QandA Agent
-fullyQualifiedName: genesis.autonomize.ai.post_visit_qa
+fullyQualifiedName: genesis.autonomize.ai.post_visit_qa_agent
 description: Uses discharge summaries, physician notes, and medication records to
   answer patient questions after a visit, supporting better adherence and satisfaction
 domain: autonomize.ai

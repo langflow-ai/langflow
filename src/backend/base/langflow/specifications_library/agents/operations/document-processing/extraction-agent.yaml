@@ -206,6 +206,7 @@ components:
   asTools: true
   config:
     tool_name: azure_form_recognizer
+    api_key: "${AZURE_FORM_RECOGNIZER_API_KEY}"
   provides:
   - useAs: tools
     in: extraction-agent

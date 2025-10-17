@@ -1,6 +1,6 @@
-id: urn:agent:genesis:provider-enablement:care-coordination-summarizer:1.0.0
+id: urn:agent:genesis:provider-enablement:care-coordination-summarizer-agent:1.0.0
 name: Care Coordination Summarizer Agent
-fullyQualifiedName: genesis.autonomize.ai.care-coordination-summarizer
+fullyQualifiedName: genesis.autonomize.ai.care_coordination_summarizer_agent
 description: Multi-agent system that gathers structured and unstructured data from
   multiple providers to generate comprehensive referral packets and discharge summaries
   for seamless transitions of care
@@ -93,6 +93,7 @@ components:
   asTools: true
   config:
     tool_name: clinical_documents_processor
+    api_key: "${CLINICAL_DOCUMENTS_API_KEY}"
   provides:
   - useAs: tools
     in: data-collection-agent

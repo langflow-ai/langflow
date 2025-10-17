@@ -1,6 +1,6 @@
-id: urn:agent:genesis:patient-experience:feedback-analyzer:1.0.0
+id: urn:agent:genesis:patient-experience:patient-feedback-analyzer-agent:1.0.0
 name: Patient Feedback Analyzer Agent
-fullyQualifiedName: genesis.autonomize.ai.feedback_analyzer
+fullyQualifiedName: genesis.autonomize.ai.patient_feedback_analyzer_agent
 description: Analyzes call center logs, survey responses, and complaints to extract
   themes and sentiment. Helps improve member experience metrics.
 domain: autonomize.ai

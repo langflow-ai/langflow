@@ -1,6 +1,6 @@
-id: urn:agent:genesis:autonomize.ai:eoc-check:1.0.0
+id: urn:agent:genesis:autonomize.ai:eoc-check-agent:1.0.0
 name: EOC Check Agent
-fullyQualifiedName: genesis.autonomize.ai.eoc_check
+fullyQualifiedName: genesis.autonomize.ai.eoc_check_agent
 description: Validates if services are covered under the member's Evidence of Coverage
 domain: autonomize.ai
 subDomain: benefit-validation

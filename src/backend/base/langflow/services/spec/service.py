@@ -13,7 +13,6 @@ from langflow.services.spec.component_template_service import component_template
 from langflow.services.database.models.flow import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
-from langflow.api.utils import DbSession
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from datetime import datetime, timezone
@@ -1401,7 +1400,7 @@ class SpecService:
         """
         try:
             from langflow.interface.components import get_and_cache_all_types_dict
-            from langflow.services.settings.service import get_settings_service
+            from langflow.services.deps import get_settings_service
 
             # Get ALL Langflow components
             all_langflow = await get_and_cache_all_types_dict(get_settings_service())

@@ -1,9 +1,7 @@
-id: urn:agent:genesis:provider-enablement:medical-coding-assistant:1.0.0
+id: urn:agent:genesis:provider-enablement:medical-coding-assistant-agent:1.0.0
 name: Medical Coding Assistant Agent
-fullyQualifiedName: genesis.autonomize.ai.medical-coding-assistant
-description: Uses diagnosis descriptions, procedure notes, and coding libraries (ICD,
-  CPT) to suggest accurate medical codes with supporting evidence, reducing coding
-  time and minimizing errors
+fullyQualifiedName: genesis.autonomize.ai.medical_coding_assistant_agent
+description: Uses diagnosis descriptions, procedure notes, and coding libraries (ICD, CPT) to suggest accurate medical codes with supporting evidence, reducing coding time and minimizing errors
 domain: autonomize.ai
 subDomain: provider-enablement
 version: 1.0.0
@@ -42,8 +40,7 @@ variables:
   type: string
   required: false
   default: general
-  description: Medical specialty context for coding optimization (general, cardiology,
-    orthopedic, etc.)
+  description: Medical specialty context for coding optimization (general, cardiology, orthopedic, etc.)
 - name: audit_mode
   type: boolean
   required: false
@@ -62,9 +59,7 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Provide accurate medical code suggestions (ICD-10, CPT) based on clinical
-  documentation, highlight supporting evidence, reduce coding time, and minimize coding
-  errors while ensuring compliance with CMS guidelines
+agentGoal: Provide accurate medical code suggestions (ICD-10, CPT) based on clinical documentation, highlight supporting evidence, reduce coding time, and minimize coding errors while ensuring compliance with CMS guidelines
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -77,8 +72,7 @@ components:
   name: Medical Coding Request Input
   kind: Data
   type: genesis:chat_input
-  description: Receive medical coding requests with clinical documentation, diagnosis
-    descriptions, and procedure notes
+  description: Receive medical coding requests with clinical documentation, diagnosis descriptions, and procedure notes
   provides:
   - useAs: input
     in: coding-agent
@@ -87,8 +81,7 @@ components:
   name: ICD-10 Code Model
   kind: Tool
   type: genesis:mcp_tool
-  description: Specialized AI model for ICD-10-CM and ICD-10-PCS code prediction and
-    validation with high accuracy clinical coding
+  description: Specialized AI model for ICD-10-CM and ICD-10-PCS code prediction and validation with high accuracy clinical coding
   asTools: true
   config:
     tool_name: icd_coding_library
@@ -100,8 +93,7 @@ components:
   name: CPT Code Model
   kind: Tool
   type: genesis:mcp_tool
-  description: Specialized AI model for CPT and HCPCS code prediction with advanced
-    procedure coding intelligence and modifier recommendations
+  description: Specialized AI model for CPT and HCPCS code prediction with advanced procedure coding intelligence and modifier recommendations
   asTools: true
   config:
     tool_name: cpt_coding_library
@@ -113,8 +105,7 @@ components:
   name: Clinical Language Model
   kind: Tool
   type: genesis:mcp_tool
-  description: Advanced clinical language model specialized for medical terminology
-    extraction, normalization, and clinical context understanding
+  description: Advanced clinical language model specialized for medical terminology extraction, normalization, and clinical context understanding
   asTools: true
   config:
     tool_name: medical_terminology_tool
@@ -126,8 +117,7 @@ components:
   name: Healthcare Validation Connector
   kind: Tool
   type: genesis:mcp_tool
-  description: Healthcare connector with integrated validation services for code combinations,
-    compliance checking, and accuracy verification
+  description: Healthcare connector with integrated validation services for code combinations, compliance checking, and accuracy verification
   asTools: true
   config:
     tool_name: coding_validation_tool
@@ -139,8 +129,7 @@ components:
   name: EHR Integration Connector
   kind: Tool
   type: genesis:mcp_tool
-  description: HIPAA-compliant EHR connector for accessing Electronic Health Record
-    systems with FHIR R4 support and clinical context retrieval
+  description: HIPAA-compliant EHR connector for accessing Electronic Health Record systems with FHIR R4 support and clinical context retrieval
   asTools: true
   config:
     tool_name: ehr_integration_tool
@@ -152,14 +141,10 @@ components:
   name: Medical Coding Agent Instructions
   kind: Prompt
   type: genesis:prompt_template
-  description: Specialized prompt template for medical coding agent with clinical
-    expertise
+  description: Specialized prompt template for medical coding agent with clinical expertise
   config:
     saved_prompt: medical_coding_agent_prompt_v1
-    template: 'You are a certified medical coding specialist with expertise in ICD-10-CM,
-      ICD-10-PCS, and CPT coding standards. Your role is to provide accurate medical
-      code suggestions based on clinical documentation while highlighting supporting
-      evidence.
+    template: 'You are a certified medical coding specialist with expertise in ICD-10-CM, ICD-10-PCS, and CPT coding standards. Your role is to provide accurate medical code suggestions based on clinical documentation while highlighting supporting evidence.
 
 
       CODING EXPERTISE:
@@ -233,8 +218,7 @@ components:
       - Coding quality metrics and compliance validation
 
 
-      Use your coding library tools to search for appropriate codes and validate accuracy.
-      Always prioritize patient safety and accurate representation of clinical care.
+      Use your coding library tools to search for appropriate codes and validate accuracy. Always prioritize patient safety and accurate representation of clinical care.
 
       '
   provides:
@@ -245,8 +229,7 @@ components:
   name: Medical Coding Specialist Agent
   kind: Agent
   type: genesis:agent
-  description: Certified medical coding specialist that analyzes clinical documentation
-    and suggests accurate medical codes
+  description: Certified medical coding specialist that analyzes clinical documentation and suggests accurate medical codes
   config:
     agent_llm: Azure OpenAI
     model_name: gpt-4
@@ -263,8 +246,7 @@ components:
   name: Medical Coding Analysis Output
   kind: Data
   type: genesis:chat_output
-  description: Present comprehensive medical coding suggestions with supporting evidence
-    and quality metrics
+  description: Present comprehensive medical coding suggestions with supporting evidence and quality metrics
   config:
     should_store_message: true
   provides: []
@@ -280,36 +262,43 @@ kpis:
   target: '> 95%'
   measurement: percentage
   category: Quality
+  valueType: percentage
 - name: Code Suggestion Confidence Score
   description: Average confidence score for suggested medical codes
   target: '> 0.90'
   measurement: score
   category: Quality
+  valueType: number
 - name: Evidence Coverage Rate
   description: Percentage of codes with highlighted supporting evidence
   target: '> 98%'
   measurement: percentage
   category: Quality
+  valueType: percentage
 - name: Coding Time Reduction
   description: Time saved compared to manual coding process
   target: '> 75%'
   measurement: percentage
   category: Efficiency
+  valueType: number
 - name: Coding Error Reduction Rate
   description: Reduction in coding errors compared to baseline manual process
   target: '> 80%'
   measurement: percentage
   category: Quality
+  valueType: percentage
 - name: Revenue Cycle Impact
   description: Improvement in coding accuracy leading to proper reimbursement
   target: '> 85%'
   measurement: percentage
   category: Financial
+  valueType: percentage
 - name: Documentation Improvement Identification
   description: Rate of identifying opportunities for better clinical documentation
   target: '> 70%'
   measurement: percentage
   category: Quality
+  valueType: percentage
 - name: CMS Guidelines Compliance Rate
   description: Adherence to CMS coding guidelines and requirements
   target: '> 99%'

@@ -1,6 +1,6 @@
-id: urn:agent:genesis:autonomize.ai:attach-document:1.0.0
+id: urn:agent:genesis:autonomize.ai:attach-document-agent:1.0.0
 name: Attach Document Agent
-fullyQualifiedName: genesis.autonomize.ai.attach_document
+fullyQualifiedName: genesis.autonomize.ai.attach_document_agent
 description: Attach original fax documents to case records for audit compliance
 domain: autonomize.ai
 subDomain: document-management

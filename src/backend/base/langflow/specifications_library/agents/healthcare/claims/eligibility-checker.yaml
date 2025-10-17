@@ -61,8 +61,7 @@ sampleInput:
   line_of_business: Medicare
 promptConfiguration:
   basePromptId: eligibility_check_v1
-  customPrompt: 'You are an insurance eligibility verification specialist. Your task
-    is to:
+  customPrompt: 'You are an insurance eligibility verification specialist. Your task is to:
 
     1. Verify member eligibility status
 
@@ -96,8 +95,7 @@ components:
   description: Prompt template for agent instructions
   config:
     saved_prompt: eligibility_checker_prompt_v1
-    template: 'You are an insurance eligibility verification specialist. Your task
-      is to:
+    template: 'You are an insurance eligibility verification specialist. Your task is to:
 
       1. Verify member eligibility status
 
@@ -136,6 +134,7 @@ components:
   - useAs: tools
     in: eligibility-agent
     description: Eligibility verification tool
+  asTools: true
 - id: eligibility-output
   name: Eligibility Results
   kind: Data

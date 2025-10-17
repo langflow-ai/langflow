@@ -1,6 +1,6 @@
-id: urn:agent:genesis:autonomize.ai:benefit-check-agent:1.0.0
+id: urn:agent:genesis:autonomize.ai:eligibility-verification-agent:1.0.0
 name: Eligibility Verification Agent
-fullyQualifiedName: genesis.autonomize.ai.benefit_check_agent
+fullyQualifiedName: genesis.autonomize.ai.eligibility_verification_agent
 description: Orchestrates comprehensive healthcare authorization analysis using specialized
   agents
 domain: autonomize.ai

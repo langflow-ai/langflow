@@ -1,6 +1,6 @@
-id: urn:agent:genesis:patient-experience:medication-adherence-coach:1.0.0
+id: urn:agent:genesis:patient-experience:medication-adherence-coach-agent:1.0.0
 name: Medication Adherence Coach Agent
-fullyQualifiedName: genesis.autonomize.ai.medication-adherence-coach
+fullyQualifiedName: genesis.autonomize.ai.medication_adherence_coach_agent
 description: Multi-agent system that uses pharmacy claims, care plans, and refill
   history to send targeted reminders and educational content for medication non-adherence
 domain: autonomize.ai

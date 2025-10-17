@@ -1,6 +1,6 @@
-id: urn:agent:genesis:autonomize.ai:summary-generation:1.0.0
+id: urn:agent:genesis:autonomize.ai:summary-generation-agent:1.0.0
 name: Summary Generation Agent
-fullyQualifiedName: genesis.autonomize.ai.summary_generation
+fullyQualifiedName: genesis.autonomize.ai.summary_generation_agent
 description: Generate human-readable summaries of prior authorization requests and
   extracted data
 domain: autonomize.ai

@@ -1,0 +1,252 @@
+id: urn:agent:genesis:autonomize.ai:fraud-and-waste-detection-agent:1.0.0
+name: Fraud and Waste Detection Agent
+fullyQualifiedName: genesis.autonomize.ai.fraud_waste_detection_agent
+description: Identifies outliers using time-series billing patterns, CPT frequency analysis, and comprehensive comparison with provider peer groups to detect potential fraudulent billing practices and wasteful healthcare spending
+domain: autonomize.ai
+subDomain: claims-operations
+version: 1.0.0
+environment: production
+agentOwner: claims-operations@autonomize.ai
+agentOwnerDisplayName: Claims Operations Team
+email: claims-operations@autonomize.ai
+status: ACTIVE
+kind: Single Agent
+agentGoal: Detect fraudulent billing patterns and wasteful practices through advanced analytics, time-series analysis, and machine learning algorithms to protect against improper payments and ensure healthcare spending integrity
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: LearningAgent
+toolsUse: true
+learningCapability: Supervised
+
+variables:
+- name: fraud_risk_threshold
+  type: number
+  required: false
+  default: 0.75
+  description: Threshold score for fraud risk classification
+- name: time_series_window
+  type: number
+  required: false
+  default: 180
+  description: Days of historical data for time-series analysis
+- name: peer_comparison_percentile
+  type: number
+  required: false
+  default: 95
+  description: Percentile threshold for peer comparison outliers
+- name: billing_frequency_threshold
+  type: number
+  required: false
+  default: 3.0
+  description: Standard deviation threshold for billing frequency analysis
+
+tags:
+  - fraud-detection
+  - waste-prevention
+  - billing-pattern-analysis
+  - provider-profiling
+  - time-series-analysis
+  - outlier-detection
+
+sampleInput:
+  analysis_request:
+    provider_npi: "1234567890"
+    analysis_period:
+      start_date: "2023-10-01"
+      end_date: "2024-01-31"
+    claim_data:
+      - claim_id: "CLM-2024-004567"
+        service_date: "2024-01-15"
+        cpt_codes: ["99213", "85025", "80053"]
+        total_amount: 375.00
+        member_id: "MBR987654321"
+      - claim_id: "CLM-2024-004568"
+        service_date: "2024-01-15"
+        cpt_codes: ["99214", "93000", "85025"]
+        total_amount: 425.00
+        member_id: "MBR123456789"
+    provider_info:
+      specialty: "internal_medicine"
+      practice_type: "solo_practice"
+      geographic_region: "midwest"
+      years_in_practice: 15
+
+components:
+- id: fraud-analysis-input
+  type: genesis:chat_input
+  name: Fraud Analysis Request
+  description: Input for provider or claim-specific fraud and waste analysis
+  provides:
+  - in: fraud-detection-agent
+    useAs: input
+    description: Provider or claim data for fraud analysis
+
+- id: fraud-detection-model
+  type: genesis:mcp_tool
+  name: Healthcare Fraud Detection Model
+  description: Advanced ML model trained to identify fraudulent billing patterns and anomalies
+  config:
+    tool_name: "healthcare_fraud_detection_model"
+  provides:
+  - in: fraud-detection-agent
+    useAs: tool
+    description: ML-based fraud pattern detection
+
+- id: time-series-analyzer
+  type: genesis:mcp_tool
+  name: Billing Pattern Time-Series Analyzer
+  description: Analyzes temporal billing patterns and identifies time-based anomalies
+  config:
+    tool_name: "billing_pattern_time_series_analyzer"
+  provides:
+  - in: fraud-detection-agent
+    useAs: tool
+    description: Time-series billing pattern analysis
+
+- id: provider-profiling-engine
+  type: genesis:mcp_tool
+  name: Provider Profiling Engine
+  description: Creates comprehensive provider profiles and peer comparisons for fraud detection
+  config:
+    tool_name: "provider_profiling_engine"
+  provides:
+  - in: fraud-detection-agent
+    useAs: tool
+    description: Provider profiling and peer comparison
+
+- id: claims-database-connector
+  type: genesis:mcp_tool
+  name: Claims Analytics Database
+  description: Connects to comprehensive claims database for historical analysis and pattern mining
+  config:
+    tool_name: "claims_analytics_database"
+  provides:
+  - in: fraud-detection-agent
+    useAs: tool
+    description: Historical claims data access for pattern analysis
+
+- id: regulatory-rules-engine
+  type: genesis:mcp_tool
+  name: Healthcare Regulatory Rules Engine
+  description: Applies healthcare fraud detection rules and regulatory compliance checks
+  config:
+    tool_name: "healthcare_regulatory_rules_engine"
+  provides:
+  - in: fraud-detection-agent
+    useAs: tool
+    description: Regulatory compliance and fraud rule application
+
+- id: fraud-detection-agent
+  type: genesis:agent
+  name: Fraud and Waste Detection Analyzer
+  description: Comprehensive fraud detection using multiple analytical approaches and machine learning
+  config:
+    system_prompt: |
+      You are a Healthcare Fraud and Waste Detection Specialist with expertise in billing pattern analysis, regulatory compliance, and investigative analytics. Your role is to identify suspicious billing practices and potential fraud using advanced analytical techniques.
+
+      **Fraud Detection Framework:**
+
+      1. **Primary Fraud Indicators:**
+         - **Upcoding**: Billing for more expensive services than provided
+         - **Unbundling**: Billing separately for services that should be bundled
+         - **Billing for Services Not Rendered**: Charging for non-existent services
+         - **Phantom Billing**: Billing for patients who don't exist or weren't seen
+         - **Kickback Schemes**: Inappropriate financial relationships
+
+      2. **Analytical Approaches:**
+         - **Statistical Outlier Detection**: Z-scores, IQR, isolation forests
+         - **Time-Series Analysis**: Trend analysis, change point detection
+         - **Peer Comparison**: Provider performance vs. specialty peers
+         - **Pattern Recognition**: Machine learning-based pattern identification
+         - **Rule-Based Detection**: Regulatory compliance rule application
+
+      3. **Available Tools:**
+         - **Fraud Detection Model** - ML-based pattern recognition
+         - **Time-Series Analyzer** - Temporal billing pattern analysis
+         - **Provider Profiling Engine** - Peer comparison and profiling
+         - **Claims Database** - Historical data and pattern mining
+         - **Regulatory Rules Engine** - Compliance and fraud rule application
+
+      **Analysis Process:**
+      1. Extract provider billing patterns and service mix analysis
+      2. Apply statistical outlier detection across multiple dimensions
+      3. Perform time-series analysis for temporal anomalies
+      4. Compare against peer groups and industry benchmarks
+      5. Apply regulatory fraud detection rules and guidelines
+      6. Generate risk scores with confidence levels and evidence
+
+      **Risk Classification:**
+      - **High Risk (0.75+)**: Strong indicators requiring immediate investigation
+      - **Medium Risk (0.50-0.74)**: Suspicious patterns requiring review
+      - **Low Risk (0.25-0.49)**: Minor anomalies for monitoring
+      - **No Risk (<0.25)**: Normal billing patterns within acceptable ranges
+
+      **Investigation Priorities:**
+      - Financial impact and potential overpayment amounts
+      - Confidence level of fraud indicators
+      - Pattern consistency across time periods
+      - Regulatory violation severity
+      - Patient safety and care quality implications
+
+      **Output Requirements:**
+      - Clear risk classification with confidence scores
+      - Specific fraud patterns identified with evidence
+      - Estimated financial impact and overpayment amounts
+      - Recommended investigation actions and priorities
+      - Regulatory compliance status and violations
+      - Supporting evidence and sample claims for review
+
+      Focus on identifying genuine fraud while minimizing false positives that could unfairly impact legitimate providers. Consider regional variations, specialty-specific practices, and legitimate coding variations.
+    temperature: 0.1
+    max_tokens: 2500
+  provides:
+  - in: fraud-analysis-output
+    useAs: input
+    description: Send fraud detection analysis to output
+
+- id: fraud-analysis-output
+  type: genesis:chat_output
+  name: Fraud Detection Results
+  description: Display comprehensive fraud and waste detection analysis with investigation recommendations
+
+outputs:
+- fraud_analysis
+- risk_score
+- pattern_anomalies
+- recommendations
+- estimated_overpayment
+- peer_comparison
+
+kpis:
+- name: fraud_detection_accuracy
+  description: Percentage of correctly identified fraud cases
+  target: ">88%"
+  valueType: percentage
+  category: quality
+- name: false_positive_rate
+  description: Rate of incorrectly flagged legitimate providers
+  target: "<12%"
+  valueType: percentage
+  category: quality
+- name: overpayment_recovery
+  description: Monthly overpayment amounts recovered through detection
+  target: ">$750,000"
+  valueType: number
+  category: business
+- name: investigation_efficiency
+  description: Percentage of high-risk cases yielding confirmed fraud
+  target: ">65%"
+  valueType: percentage
+  category: efficiency
+- name: detection_speed
+  description: Average time to complete fraud analysis
+  target: "<2 seconds"
+  valueType: duration
+  category: performance
+
+securityInfo:
+  visibility: Internal
+  gdprSensitive: true
+  hipaaCompliant: true

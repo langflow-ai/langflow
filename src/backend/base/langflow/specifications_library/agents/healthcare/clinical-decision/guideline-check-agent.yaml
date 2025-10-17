@@ -1,6 +1,6 @@
-id: urn:agent:genesis:autonomize.ai:guideline-check:1.0.0
+id: urn:agent:genesis:autonomize.ai:guideline-check-agent:1.0.0
 name: Guideline Check Agent
-fullyQualifiedName: genesis.autonomize.ai.guideline_check
+fullyQualifiedName: genesis.autonomize.ai.guideline_check_agent
 description: Perform rule-based checks for Medicare coverage, policy compliance, and
   medical necessity
 domain: autonomize.ai

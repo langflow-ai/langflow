@@ -1,6 +1,6 @@
-id: urn:agent:genesis:patient-experience:virtual-health-navigator:1.0.0
+id: urn:agent:genesis:patient-experience:virtual-health-navigator-agent:1.0.0
 name: Virtual Health Navigator Agent
-fullyQualifiedName: genesis.autonomize.ai.virtual_health_navigator
+fullyQualifiedName: genesis.autonomize.ai.virtual_health_navigator_agent
 description: Interactive chatbot that guides patients to appropriate care settings
   using symptom analysis, claims history, and plan rules to reduce unnecessary visits
   and improve navigation efficiency.

@@ -1,6 +1,6 @@
-id: urn:agent:genesis:appeals-grievances:case-classification:1.0.0
+id: urn:agent:genesis:appeals-grievances:case-classification-agent:1.0.0
 name: Case Classification Agent
-fullyQualifiedName: genesis.autonomize.ai.case-classification
+fullyQualifiedName: genesis.autonomize.ai.case_classification_agent
 description: Automatically classifies incoming grievances and appeals based on category,
   urgency, and regulatory compliance timelines, ensuring proper routing and timely
   processing according to CMS regulations and payer-specific requirements.
@@ -115,9 +115,12 @@ components:
     - key: Content-Type
       value: application/json
     body:
-      plan_type: input_plan_type
-      case_type: input_case_type
-      state: input_state
+    - key: plan_type
+      value: "{{input_plan_type}}"
+    - key: case_type
+      value: "{{input_case_type}}"
+    - key: state
+      value: "{{input_state}}"
     timeout: 25
   provides:
   - useAs: tools

@@ -1,6 +1,6 @@
-id: urn:agent:genesis:utilization-management:appeals-summarization:1.0.0
+id: urn:agent:genesis:utilization-management:appeals-summarization-agent:1.0.0
 name: Appeals Summarization Agent
-fullyQualifiedName: genesis.autonomize.ai.appeals-summarization
+fullyQualifiedName: genesis.autonomize.ai.appeals_summarization_agent
 description: Summarizes member or provider appeal letters using advanced NLP, intelligently
   linking summaries to original denial reasons, relevant policies, and referenced
   evidence for comprehensive appeals processing.

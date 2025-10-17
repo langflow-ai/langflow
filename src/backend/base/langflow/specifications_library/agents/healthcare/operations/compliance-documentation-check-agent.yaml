@@ -1,6 +1,6 @@
-id: urn:agent:genesis:provider-enablement:compliance-documentation-check:1.0.0
+id: urn:agent:genesis:provider-enablement:compliance-documentation-check-agent:1.0.0
 name: Compliance Documentation Check Agent
-fullyQualifiedName: genesis.autonomize.ai.compliance-documentation-check
+fullyQualifiedName: genesis.autonomize.ai.compliance_documentation_check_agent
 description: Audits provider notes for regulatory compliance using documentation standards,
   prior audits, and template matching. Flags missing attestation elements and ensures
   adherence to healthcare documentation requirements.
@@ -131,10 +131,14 @@ components:
     - key: Content-Type
       value: application/json
     body:
-      to: '{{recipient_email}}'
-      subject: '{{audit_subject}}'
-      html_content: '{{audit_report}}'
-      from: ${EMAIL_SENDER_ADDRESS}
+    - key: to
+      value: "{{recipient_email}}"
+    - key: subject
+      value: "{{audit_subject}}"
+    - key: html_content
+      value: "{{audit_report}}"
+    - key: from
+      value: "${EMAIL_SENDER_ADDRESS}"
     timeout: 30
   provides:
   - useAs: tools

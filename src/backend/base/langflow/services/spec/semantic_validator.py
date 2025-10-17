@@ -187,7 +187,7 @@ class SemanticValidator:
                     self.result.add_suggestion(
                         "GOAL_COMPONENT_ALIGNMENT",
                         f"Goal mentions '{keyword}' but no supporting components found",
-                        suggestion=f"Consider adding components like: {', '.join(f'genesis:{ind}' for ind in component_indicators[:2])}"
+                        action=f"Consider adding components like: {', '.join(f'genesis:{ind}' for ind in component_indicators[:2])}"
                     )
 
     def _validate_component_relationships(self, spec_dict: Dict[str, Any]):
@@ -565,7 +565,7 @@ class SemanticValidator:
                     "TOOL_SHARING_OPPORTUNITY",
                     f"Crew '{crew_id}' could benefit from tool sharing between agents",
                     component_id=crew_id,
-                    suggestion=f"Consider enabling tool delegation for agents: {', '.join(agents_without_tools)}"
+                    action=f"Consider enabling tool delegation for agents: {', '.join(agents_without_tools)}"
                 )
 
         # Validate delegation settings for tool access
@@ -581,7 +581,7 @@ class SemanticValidator:
                         "DELEGATION_RECOMMENDATION",
                         f"Agent '{agent_id}' has tools but delegation is disabled",
                         component_id=agent_id,
-                        suggestion="Consider enabling 'allow_delegation' to share tools with other agents"
+                        action="Consider enabling 'allow_delegation' to share tools with other agents"
                     )
 
     def _validate_single_agent_workflow(self, spec_dict: Dict[str, Any], components: List[Dict[str, Any]]):
@@ -822,7 +822,7 @@ class SemanticValidator:
             self.result.add_suggestion(
                 "MISSING_SECURITY_INFO",
                 "Specification uses API components but lacks security information",
-                suggestion="Add securityInfo section to document data handling and compliance"
+                action="Add securityInfo section to document data handling and compliance"
             )
 
         # Check for healthcare compliance

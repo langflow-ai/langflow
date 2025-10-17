@@ -1,0 +1,223 @@
+id: urn:agent:genesis:autonomize.ai:duplicate-claim-detection-agent:1.0.0
+name: Duplicate Claim Detection Agent
+fullyQualifiedName: genesis.autonomize.ai.duplicate_claim_detection_agent
+description: Analyzes claim line details, NPI, DOS, and CPT patterns to identify potential duplicate submissions or resubmissions, preventing overpayment through advanced pattern recognition and machine learning algorithms
+domain: autonomize.ai
+subDomain: claims-operations
+version: 1.0.0
+environment: production
+agentOwner: claims-operations@autonomize.ai
+agentOwnerDisplayName: Claims Operations Team
+email: claims-operations@autonomize.ai
+status: ACTIVE
+kind: Single Agent
+agentGoal: Identify and flag potential duplicate claims using comprehensive claim line detail analysis, provider patterns, service dates, and CPT code sequences to prevent overpayment and ensure claims processing integrity
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: ReflexiveAgent
+toolsUse: true
+learningCapability: None
+
+variables:
+- name: duplicate_threshold_days
+  type: number
+  required: false
+  default: 90
+  description: Time window in days to check for potential duplicates
+- name: similarity_threshold
+  type: number
+  required: false
+  default: 0.85
+  description: Minimum similarity score to flag as potential duplicate
+- name: auto_deny_threshold
+  type: number
+  required: false
+  default: 0.95
+  description: Threshold for automatic denial of duplicate claims
+
+tags:
+  - duplicate-detection
+  - claims-processing
+  - fraud-prevention
+  - pattern-analysis
+  - overpayment-prevention
+  - claims-integrity
+
+sampleInput:
+  claim_data:
+    claim_id: "CLM-2024-001234"
+    member_id: "MBR789456123"
+    provider_npi: "1234567890"
+    service_date: "2024-01-15"
+    claim_lines:
+      - line_number: 1
+        cpt_code: "99213"
+        modifier: ""
+        units: 1
+        charge_amount: 150.00
+        diagnosis_codes: ["Z00.00"]
+      - line_number: 2
+        cpt_code: "85025"
+        modifier: ""
+        units: 1
+        charge_amount: 25.00
+        diagnosis_codes: ["Z00.00"]
+    submission_date: "2024-01-16T10:30:00Z"
+    original_reference_number: "ORN123456789"
+
+components:
+- id: claims-input
+  type: genesis:chat_input
+  name: Claims Data Input
+  description: Input for claim data requiring duplicate detection analysis
+  provides:
+  - in: duplicate-detection-agent
+    useAs: input
+    description: Claim data for duplicate analysis
+
+- id: claims-database-connector
+  type: genesis:mcp_tool
+  name: Claims Database Connector
+  description: Connects to claims database for historical claim lookup and pattern analysis
+  config:
+    tool_name: "claims_database_connector"
+    description: "Connects to claims database for historical claim lookup and pattern analysis"
+  provides:
+  - in: duplicate-detection-agent
+    useAs: tool
+    description: Claims database access for duplicate analysis
+
+- id: duplicate-detection-model
+  type: genesis:mcp_tool
+  name: Duplicate Detection ML Model
+  description: Machine learning model trained to identify duplicate claims using pattern recognition and similarity algorithms
+  config:
+    tool_name: "duplicate_detection_model"
+    description: "Machine learning model trained to identify duplicate claims using pattern recognition and similarity algorithms"
+  provides:
+  - in: duplicate-detection-agent
+    useAs: tool
+    description: ML-based duplicate detection analysis
+
+- id: claims-validation-connector
+  type: genesis:mcp_tool
+  name: Claims Validation Service
+  description: Validates claim format, CPT codes, and performs business rule checks
+  config:
+    tool_name: "claims_validation_service"
+    description: "Validates claim format, CPT codes, and performs business rule checks"
+  provides:
+  - in: duplicate-detection-agent
+    useAs: tool
+    description: Claims validation and format verification
+
+- id: duplicate-detection-agent
+  type: genesis:agent
+  name: Duplicate Claims Analyzer
+  description: Analyzes claims for potential duplicates using multiple data points and machine learning algorithms
+  config:
+    system_prompt: |
+      You are a Duplicate Claim Detection Specialist with expertise in healthcare claims processing and fraud prevention. Your role is to analyze incoming claims against historical data to identify potential duplicate submissions.
+
+      **Analysis Framework:**
+
+      1. **Primary Matching Criteria:**
+         - Provider NPI (National Provider Identifier)
+         - Member ID and demographics
+         - Service Date (Date of Service)
+         - CPT/HCPCS procedure codes
+         - Place of Service codes
+         - Diagnosis codes (ICD-10)
+
+      2. **Advanced Pattern Analysis:**
+         - Claim line sequence patterns
+         - Charge amount variations (exact vs. similar)
+         - Modifier usage patterns
+         - Time-based submission patterns
+         - Provider billing behavior analysis
+
+      3. **Duplicate Classification:**
+         - **Exact Duplicate**: 100% match on all key fields
+         - **Near Duplicate**: High similarity with minor variations
+         - **Potential Resubmission**: Same service with different reference numbers
+         - **Split Billing**: Same service split across multiple claims
+
+      **Available Tools:**
+      1. **Claims Database Connector** - Query historical claims data
+      2. **Duplicate Detection Model** - ML-based similarity analysis
+      3. **Claims Validation Service** - Validate claim format and codes
+
+      **Analysis Process:**
+      1. Extract key claim identifiers and service details
+      2. Query historical claims within the specified time window
+      3. Apply ML model for similarity scoring
+      4. Perform business rule validation
+      5. Generate confidence-based recommendations
+
+      **Decision Criteria:**
+      - Confidence > 0.95: Recommend DENY (likely duplicate)
+      - Confidence 0.85-0.95: Recommend REVIEW (manual review required)
+      - Confidence < 0.85: Recommend APPROVE (low duplicate risk)
+
+      **Output Requirements:**
+      - Clear duplicate classification with confidence score
+      - Detailed matching criteria explanation
+      - Specific recommendations with business justification
+      - Audit trail for compliance and tracking
+      - Processing metrics for performance monitoring
+
+      Always prioritize patient care continuity while preventing fraudulent overpayments. Consider legitimate scenarios like corrected claims, partial services, and valid resubmissions.
+    temperature: 0.1
+    max_tokens: 2000
+  provides:
+  - in: duplicate-analysis-output
+    useAs: input
+    description: Send duplicate detection analysis to output
+
+- id: duplicate-analysis-output
+  type: genesis:chat_output
+  name: Duplicate Detection Results
+  description: Display comprehensive duplicate claim analysis results and recommendations
+
+outputs:
+  - duplicate_analysis
+  - confidence_score
+  - recommendation
+  - matched_claims
+  - audit_trail
+
+kpis:
+- name: duplicate_detection_accuracy
+  description: Percentage of correctly identified duplicates
+  target: ">95%"
+  valueType: percentage
+  category: quality
+- name: false_positive_rate
+  description: Rate of incorrectly flagged non-duplicates
+  target: "<3%"
+  valueType: percentage
+  category: quality
+- name: processing_time
+  description: Average time to analyze claims for duplicates
+  target: "<500ms"
+  valueType: duration
+  category: performance
+  unit: "milliseconds"
+- name: cost_savings
+  description: Monthly savings from prevented duplicate payments
+  target: ">$50,000"
+  valueType: number
+  category: business
+  unit: "USD"
+- name: claims_reviewed
+  description: Number of claims processed for duplicate analysis
+  target: ">10,000/day"
+  valueType: count
+  category: performance
+
+securityInfo:
+  visibility: Internal
+  gdprSensitive: true
+  hipaaCompliant: true

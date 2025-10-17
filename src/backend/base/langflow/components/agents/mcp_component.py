@@ -3050,6 +3050,122 @@ MOCK_TOOL_TEMPLATES = {
                 "valid_through": "2024-02-16"
             }
         }
+    },
+
+    # Appeals & Grievances Case Management Tools
+    "case_management_database": {
+        "name": "Case Management Database",
+        "description": "HIPAA-compliant database connector for case management, member information, and historical case data",
+        "input_schema": {
+            "query_type": {"type": "string", "description": "Type of query to execute", "enum": ["member_lookup", "case_history", "similar_cases", "update_status"]},
+            "member_id": {"type": "string", "description": "Member identifier for data retrieval"},
+            "case_id": {"type": "string", "description": "Case identifier for specific case operations"},
+            "search_criteria": {"type": "object", "description": "Additional search parameters"}
+        },
+        "mock_response": {
+            "query_id": "QRY_20241017_001",
+            "member_info": {
+                "member_id": "MEM987654321",
+                "plan_type": "medicare_advantage",
+                "enrollment_date": "2023-01-01",
+                "status": "active",
+                "demographics": {
+                    "age_range": "65-70",
+                    "state": "CA",
+                    "zip_code": "90210"
+                }
+            },
+            "case_history": [
+                {
+                    "case_id": "CASE_20240801_001",
+                    "case_type": "medical_appeal",
+                    "status": "approved",
+                    "resolution_date": "2024-08-15",
+                    "category": "diagnostic_imaging",
+                    "outcome": "approved_with_conditions"
+                },
+                {
+                    "case_id": "CASE_20240301_002",
+                    "case_type": "pharmacy_appeal",
+                    "status": "denied",
+                    "resolution_date": "2024-03-20",
+                    "category": "formulary_exception",
+                    "outcome": "alternative_medication_approved"
+                }
+            ],
+            "similar_cases": [
+                {
+                    "case_id": "CASE_20240915_003",
+                    "similarity_score": 0.87,
+                    "category": "diagnostic_imaging",
+                    "resolution": "approved",
+                    "processing_days": 12
+                }
+            ],
+            "compliance_flags": [],
+            "processing_time_ms": 245,
+            "hipaa_audit_id": "AUDIT_20241017_001"
+        }
+    },
+
+    "healthcare_appeals_nlp_classifier": {
+        "name": "Healthcare Appeals NLP Classifier",
+        "description": "Advanced NLP engine for healthcare appeals and grievances text analysis with medical terminology understanding",
+        "input_schema": {
+            "case_content": {"type": "string", "description": "Full text content of the appeal or grievance"},
+            "analysis_type": {"type": "string", "description": "Type of analysis to perform", "enum": ["classification", "urgency_assessment", "clinical_extraction", "sentiment_analysis"]},
+            "context_data": {"type": "object", "description": "Additional context like member plan type, submission method"},
+            "confidence_threshold": {"type": "number", "description": "Minimum confidence threshold for classifications (0.0-1.0)"}
+        },
+        "mock_response": {
+            "analysis_id": "NLP_20241017_001",
+            "text_analysis": {
+                "primary_category": {
+                    "category": "medical_appeal",
+                    "subcategory": "diagnostic_imaging",
+                    "confidence": 0.92,
+                    "keywords": ["MRI", "lower back pain", "conservative treatment", "medical necessity"]
+                },
+                "urgency_indicators": {
+                    "urgency_level": "standard_urgent",
+                    "confidence": 0.89,
+                    "indicators": ["persistent pain", "failed treatment", "physician recommendation"],
+                    "escalation_triggers": []
+                },
+                "clinical_entities": {
+                    "conditions": [
+                        {"name": "chronic lower back pain", "code": "M54.5", "confidence": 0.94},
+                        {"name": "radiculopathy", "code": "M54.1", "confidence": 0.76}
+                    ],
+                    "procedures": [
+                        {"name": "MRI lumbar spine", "code": "72148", "confidence": 0.98}
+                    ],
+                    "medications": [
+                        {"name": "ibuprofen", "generic": "ibuprofen", "confidence": 0.85}
+                    ],
+                    "treatments": [
+                        {"name": "physical therapy", "code": "97110", "confidence": 0.91}
+                    ]
+                },
+                "sentiment_analysis": {
+                    "overall_sentiment": "frustrated_but_polite",
+                    "urgency_tone": "moderate",
+                    "compliance_indicators": ["provided documentation", "followed prior steps"]
+                },
+                "regulatory_keywords": {
+                    "cms_references": ["medical necessity", "appeal rights"],
+                    "timeline_mentions": ["30 days", "expedited review"],
+                    "compliance_terms": ["prior authorization", "coverage determination"]
+                }
+            },
+            "processing_metadata": {
+                "processing_time_ms": 1567,
+                "model_version": "healthcare_nlp_v2.1",
+                "language_detected": "en_US",
+                "text_quality_score": 0.94,
+                "medical_terminology_density": 0.67
+            }
+        }
     }
 }
 

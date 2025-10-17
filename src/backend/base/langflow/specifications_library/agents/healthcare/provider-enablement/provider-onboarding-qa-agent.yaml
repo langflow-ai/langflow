@@ -1,0 +1,370 @@
+id: urn:agent:genesis:provider-enablement:provider-onboarding-qa-agent:1.0.0
+name: Provider Onboarding QA Agent
+fullyQualifiedName: genesis.autonomize.ai.provider-onboarding-qa
+description: Provides step-by-step instructions for onboarding, using policy manuals, SOPs, and HR data. Responds to questions via natural language interface and guides new providers through organizational processes.
+domain: autonomize.ai
+subDomain: provider-enablement
+version: 1.0.0
+environment: production
+agentOwner: provider-enablement@autonomize.ai
+agentOwnerDisplayName: Provider Enablement Team
+email: provider-enablement@autonomize.ai
+status: ACTIVE
+variables:
+- name: onboarding_phase
+  type: string
+  required: false
+  default: pre_start
+  description: Current onboarding phase (pre_start, orientation, clinical_integration, full_practice)
+- name: provider_type
+  type: string
+  required: false
+  default: physician
+  description: Type of healthcare provider (physician, nurse_practitioner, physician_assistant, specialist)
+- name: department_context
+  type: string
+  required: false
+  default: general
+  description: Department or specialty context for targeted onboarding (general, emergency, surgery, pediatrics, etc.)
+- name: compliance_tracking
+  type: boolean
+  required: false
+  default: true
+  description: Enable tracking of compliance requirements and completion status
+- name: personalization_level
+  type: string
+  required: false
+  default: standard
+  description: Level of onboarding personalization (basic, standard, comprehensive)
+- name: progress_tracking
+  type: boolean
+  required: false
+  default: true
+  description: Enable onboarding progress tracking and milestone completion
+- name: interactive_guidance
+  type: boolean
+  required: false
+  default: true
+  description: Enable interactive step-by-step guidance with real-time support
+- name: document_access_level
+  type: string
+  required: false
+  default: role_based
+  description: Document access level based on provider role and clearance
+- name: escalation_threshold
+  type: number
+  required: false
+  default: 3
+  description: Number of unanswered questions before escalating to human support
+tags:
+- provider-enablement
+- onboarding-automation
+- policy-guidance
+- sop-management
+- hr-integration
+- compliance-tracking
+- knowledge-management
+- workflow-automation
+- natural-language-interface
+- provider-support
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Provide comprehensive onboarding support for healthcare providers through step-by-step guidance, policy interpretation, SOP navigation, and compliance tracking using natural language interaction
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: None
+components:
+- id: onboarding-input
+  name: Provider Onboarding Query Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive onboarding questions, requests for guidance, and provider information for personalized support
+  provides:
+  - useAs: input
+    in: onboarding-agent
+    description: Provide onboarding queries and provider context for personalized assistance
+- id: policy-knowledge-hub
+  name: Organizational Policy Knowledge Base
+  kind: Tool
+  type: genesis:knowledge_hub_search
+  description: Comprehensive knowledge base containing organizational policies, procedures, compliance requirements, and governance documents
+  config:
+    collections: provider_policy_hub
+    max_results: 10
+    similarity_threshold: 0.75
+  provides:
+  - useAs: tools
+    in: onboarding-agent
+    description: Enable search and retrieval of organizational policies and procedures
+- id: sop-knowledge-hub
+  name: Standard Operating Procedures Repository
+  kind: Tool
+  type: genesis:knowledge_hub_search
+  description: Repository of standard operating procedures, workflow guides, and process documentation for healthcare operations
+  config:
+    collections: sop_repository_hub
+    max_results: 8
+    similarity_threshold: 0.8
+  provides:
+  - useAs: tools
+    in: onboarding-agent
+    description: Enable access to detailed SOPs and operational procedures
+- id: hr-data-connector
+  name: HR Information System Connector
+  kind: Tool
+  type: genesis:mcp_tool
+  description: HIPAA-compliant HR system connector for accessing employee onboarding data, compliance requirements, and organizational structure information
+  asTools: true
+  config:
+    tool_name: hr_information_connector
+  provides:
+  - useAs: tools
+    in: onboarding-agent
+    description: Enable secure access to HR data and employee onboarding requirements
+- id: compliance-tracker
+  name: Compliance Requirement Tracker
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Compliance tracking system for monitoring completion of required onboarding tasks, certifications, and regulatory requirements
+  asTools: true
+  config:
+    tool_name: compliance_requirement_tracker
+  provides:
+  - useAs: tools
+    in: onboarding-agent
+    description: Enable tracking and monitoring of compliance requirements and completion status
+- id: credentialing-tool
+  name: Provider Credentialing System
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Provider credentialing system interface for tracking medical licenses, certifications, and privileging requirements
+  asTools: true
+  config:
+    tool_name: provider_credentialing_system
+  provides:
+  - useAs: tools
+    in: onboarding-agent
+    description: Enable access to credentialing requirements and status tracking
+- id: training-scheduler
+  name: Training and Orientation Scheduler
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Training scheduling system for organizing orientation sessions, mandatory training, and competency assessments
+  asTools: true
+  config:
+    tool_name: training_orientation_scheduler
+  provides:
+  - useAs: tools
+    in: onboarding-agent
+    description: Enable scheduling and tracking of required training and orientation activities
+- id: facility-systems-guide
+  name: Healthcare Facility Systems Guide
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Comprehensive guide to healthcare facility systems including EHR, PACS, laboratory systems, and clinical workflows
+  asTools: true
+  config:
+    tool_name: facility_systems_guide
+  provides:
+  - useAs: tools
+    in: onboarding-agent
+    description: Enable guidance on healthcare facility systems and clinical technology
+- id: escalation-tool
+  name: Human Support Escalation Service
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Escalation service for routing complex questions to appropriate human support teams and subject matter experts
+  asTools: true
+  config:
+    tool_name: human_support_escalation
+  provides:
+  - useAs: tools
+    in: onboarding-agent
+    description: Enable escalation to human support when automated assistance is insufficient
+- id: onboarding-agent-prompt
+  name: Provider Onboarding Q&A Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for provider onboarding assistance with organizational knowledge and support expertise
+  config:
+    saved_prompt: provider_onboarding_qa_prompt_v1
+    template: 'You are a provider onboarding specialist with comprehensive knowledge of healthcare organization policies, procedures, and onboarding processes. Your role is to guide new healthcare providers through their onboarding journey with personalized, step-by-step assistance.
+
+      ONBOARDING EXPERTISE:
+      - Healthcare organization policies and procedures
+      - Provider credentialing and privileging requirements
+      - Compliance and regulatory requirements (Joint Commission, CMS, state regulations)
+      - HR processes and employee lifecycle management
+      - Training and orientation program coordination
+      - Healthcare facility systems and clinical workflows
+      - Quality improvement and patient safety protocols
+
+      ONBOARDING PHASE GUIDANCE:
+      1. Pre-Start Phase:
+         - Document submission and verification
+         - Background checks and reference validation
+         - Initial credentialing application submission
+         - Benefits enrollment and HR setup
+         - IT account creation and system access requests
+
+      2. Orientation Phase:
+         - Facility tours and department introductions
+         - Organizational culture and mission alignment
+         - Safety and emergency procedures training
+         - HIPAA and compliance training completion
+         - Basic system training and account setup
+
+      3. Clinical Integration Phase:
+         - Clinical workflow orientation
+         - EHR and clinical system training
+         - Department-specific procedures and protocols
+         - Mentorship assignment and shadowing
+         - Competency assessments and validation
+
+      4. Full Practice Phase:
+         - Independent practice privileges
+         - Quality metrics and performance expectations
+         - Ongoing education and professional development
+         - Performance review processes
+         - Career advancement opportunities
+
+      POLICY AND PROCEDURE GUIDANCE:
+      - Organizational policies interpretation and application
+      - Standard operating procedure navigation
+      - Compliance requirement explanations
+      - Quality and safety protocol adherence
+      - Documentation and reporting requirements
+      - Communication and escalation procedures
+
+      PERSONALIZED SUPPORT APPROACH:
+      - Assess provider type, role, and department context
+      - Customize guidance based on experience level and background
+      - Provide role-specific information and requirements
+      - Track individual progress and completion status
+      - Identify knowledge gaps and provide targeted support
+      - Escalate complex questions to appropriate experts
+
+      INTERACTIVE GUIDANCE METHODS:
+      - Step-by-step task breakdown with clear instructions
+      - Checklist creation for complex processes
+      - Timeline development for completion deadlines
+      - Resource identification and contact information
+      - Progress tracking and milestone celebration
+      - Proactive reminder and follow-up support
+
+      COMPLIANCE AND TRACKING:
+      - Monitor required training completion
+      - Track credentialing and privileging status
+      - Verify regulatory compliance requirements
+      - Document onboarding progress and milestones
+      - Identify potential delays or obstacles
+      - Generate compliance reports and updates
+
+      ESCALATION CRITERIA:
+      - Complex policy interpretation questions
+      - Urgent compliance or regulatory issues
+      - System access or technical problems
+      - Interpersonal conflicts or concerns
+      - Unusual circumstances requiring expert guidance
+      - Multiple failed attempts to resolve questions
+
+      OUTPUT REQUIREMENTS:
+      - Clear, actionable step-by-step instructions
+      - Relevant policy and procedure references
+      - Contact information for additional support
+      - Timeline expectations and deadlines
+      - Progress tracking and completion status
+      - Next steps and follow-up recommendations
+
+      Use your knowledge base tools to search policies and SOPs, HR connector for employee data, compliance tracker for requirements, and escalation service when needed. Always provide accurate, helpful, and timely support to ensure successful provider onboarding.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: onboarding-agent
+    description: Provide specialized provider onboarding and organizational knowledge expertise
+- id: onboarding-agent
+  name: Provider Onboarding Q&A Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Provider onboarding specialist that provides comprehensive guidance and support for new healthcare providers
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.2
+    max_tokens: 3000
+    handle_parsing_errors: true
+    max_iterations: 15
+    verbose: true
+  provides:
+  - useAs: input
+    in: onboarding-output
+    description: Provide comprehensive onboarding guidance and support responses
+- id: onboarding-output
+  name: Provider Onboarding Guidance Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive onboarding guidance with step-by-step instructions and progress tracking
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- onboarding_guidance
+- step_by_step_instructions
+- policy_procedure_references
+- compliance_tracking_status
+- training_schedule_recommendations
+- escalation_notifications
+- progress_assessment
+- next_steps_checklist
+kpis:
+- name: Question Resolution Rate
+  description: Percentage of onboarding questions successfully resolved by the agent
+  target: '> 88%'
+  valueType: percentage
+  category: quality
+- name: Onboarding Completion Time
+  description: Average time for providers to complete onboarding process with agent support
+  target: '< 14 days'
+  valueType: duration
+  category: efficiency
+- name: Provider Satisfaction Score
+  description: New provider satisfaction with onboarding guidance and support
+  target: '> 4.3/5'
+  valueType: number
+  category: user_experience
+- name: Compliance Requirement Completion Rate
+  description: Percentage of compliance requirements completed on time with agent guidance
+  target: '> 95%'
+  valueType: percentage
+  category: compliance
+- name: Policy Access Accuracy
+  description: Accuracy of policy and procedure information provided by the agent
+  target: '> 96%'
+  valueType: percentage
+  category: quality
+- name: Escalation Rate
+  description: Percentage of questions requiring escalation to human support
+  target: '< 15%'
+  valueType: percentage
+  category: technical
+- name: Time to Information Access
+  description: Average time to retrieve relevant policy or procedure information
+  target: '< 30 seconds'
+  valueType: duration
+  category: performance
+- name: Onboarding Process Adherence
+  description: Adherence to standardized onboarding processes and timelines
+  target: '> 92%'
+  valueType: percentage
+  category: quality
+securityInfo:
+  visibility: Internal
+  gdprSensitive: true
+  hipaaCompliant: true
+  dataClassification: pii

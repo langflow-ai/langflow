@@ -1,6 +1,6 @@
-id: urn:agent:genesis:utilization-management:inpatient-utilization-monitor:1.0.0
+id: urn:agent:genesis:utilization-management:inpatient-utilization-monitor-agent:1.0.0
 name: Inpatient Utilization Monitor Agent
-fullyQualifiedName: genesis.autonomize.ai.inpatient-utilization-monitor
+fullyQualifiedName: genesis.autonomize.ai.inpatient_utilization_monitor_agent
 description: Analyzes inpatient records, vitals, and lab results to identify cases
   no longer meeting medical necessity criteria. Supports level of care reviews and
   optimizes resource utilization through data-driven clinical decision support.

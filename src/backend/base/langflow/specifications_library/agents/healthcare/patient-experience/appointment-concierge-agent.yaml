@@ -1,6 +1,6 @@
-id: urn:agent:genesis:patient-experience:appointment-concierge:1.0.0
+id: urn:agent:genesis:patient-experience:appointment-concierge-agent:1.0.0
 name: Appointment Concierge Agent
-fullyQualifiedName: genesis.autonomize.ai.appointment_concierge
+fullyQualifiedName: genesis.autonomize.ai.appointment_concierge_agent
 description: Automates appointment scheduling using EHR calendars, insurance eligibility,
   and preferred location. Sends reminders and follow-ups across SMS and email.
 domain: autonomize.ai
