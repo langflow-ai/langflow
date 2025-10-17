@@ -9,6 +9,7 @@ class AstraDBChatMemory(LCChatMemoryComponent):
     display_name = "Astra DB Chat Memory"
     description = "Retrieves and store chat messages from Astra DB."
     name = "AstraDBChatMemory"
+    documentation: str = "https://docs.langflow.org/bundles-datastax#astra-db-chat-memory"
     icon: str = "AstraDB"
 
     inputs = [
@@ -22,7 +23,7 @@ class AstraDBChatMemory(LCChatMemoryComponent):
         ),
         SecretStrInput(
             name="api_endpoint",
-            display_name="API Endpoint",
+            display_name="Astra DB API Endpoint",
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
             required=True,
@@ -49,6 +50,7 @@ class AstraDBChatMemory(LCChatMemoryComponent):
 
     def build_message_history(self) -> Memory:
         try:
+            from astrapy.admin import parse_api_endpoint
             from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
 
         except ImportError as e:

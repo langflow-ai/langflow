@@ -4,7 +4,9 @@ import { useTypesStore } from "../typesStore";
 
 // Mock the complex utility functions
 jest.mock("../../utils/reactflowUtils", () => ({
-  extractFieldsFromComponenents: jest.fn((data) => new Set(Object.keys(data))),
+  extractSecretFieldsFromComponents: jest.fn(
+    (data) => new Set(Object.keys(data)),
+  ),
   templatesGenerator: jest.fn((data) => {
     const templates = {};
     Object.keys(data).forEach((key) => {
@@ -22,8 +24,8 @@ jest.mock("../../utils/reactflowUtils", () => ({
 }));
 
 // Mock imports
-const mockExtractFieldsFromComponents =
-  require("../../utils/reactflowUtils").extractFieldsFromComponenents;
+const mockExtractSecretFieldsFromComponents =
+  require("../../utils/reactflowUtils").extractSecretFieldsFromComponents;
 const mockTemplatesGenerator =
   require("../../utils/reactflowUtils").templatesGenerator;
 const mockTypesGenerator = require("../../utils/reactflowUtils").typesGenerator;
@@ -78,7 +80,7 @@ describe("useTypesStore", () => {
     jest.clearAllMocks();
 
     // Reset mock implementations
-    mockExtractFieldsFromComponents.mockImplementation((data) => {
+    mockExtractSecretFieldsFromComponents.mockImplementation((data) => {
       if (!data || typeof data !== "object") return new Set();
       return new Set(Object.keys(data));
     });
@@ -207,7 +209,7 @@ describe("useTypesStore", () => {
     it("should set types, templates, data, and component fields", () => {
       mockTypesGenerator.mockReturnValue(mockTypes);
       mockTemplatesGenerator.mockReturnValue(mockTemplates);
-      mockExtractFieldsFromComponents.mockReturnValue(
+      mockExtractSecretFieldsFromComponents.mockReturnValue(
         new Set(["TextInput", "NumberInput"]),
       );
 
@@ -219,7 +221,9 @@ describe("useTypesStore", () => {
 
       expect(mockTypesGenerator).toHaveBeenCalledWith(mockAPIData);
       expect(mockTemplatesGenerator).toHaveBeenCalledWith(mockAPIData);
-      expect(mockExtractFieldsFromComponents).toHaveBeenCalledWith(mockAPIData);
+      expect(mockExtractSecretFieldsFromComponents).toHaveBeenCalledWith(
+        mockAPIData,
+      );
 
       expect(result.current.types).toEqual(mockTypes);
       expect(result.current.templates).toEqual(mockTemplates);
@@ -241,7 +245,7 @@ describe("useTypesStore", () => {
       });
 
       expect(result.current.data).toEqual({ ...mockAPIData, ...mockAPIData2 });
-      expect(mockExtractFieldsFromComponents).toHaveBeenCalledWith({
+      expect(mockExtractSecretFieldsFromComponents).toHaveBeenCalledWith({
         ...mockAPIData,
         ...mockAPIData2,
       });
@@ -256,7 +260,7 @@ describe("useTypesStore", () => {
 
       expect(mockTypesGenerator).toHaveBeenCalledWith({});
       expect(mockTemplatesGenerator).toHaveBeenCalledWith({});
-      expect(mockExtractFieldsFromComponents).toHaveBeenCalledWith({});
+      expect(mockExtractSecretFieldsFromComponents).toHaveBeenCalledWith({});
     });
 
     it("should overwrite duplicate keys in data", () => {
@@ -356,7 +360,9 @@ describe("useTypesStore", () => {
       });
 
       expect(result.current.data).toEqual(mockAPIData);
-      expect(mockExtractFieldsFromComponents).toHaveBeenCalledWith(mockAPIData);
+      expect(mockExtractSecretFieldsFromComponents).toHaveBeenCalledWith(
+        mockAPIData,
+      );
     });
 
     it("should set data with function", () => {
@@ -374,7 +380,7 @@ describe("useTypesStore", () => {
       });
 
       expect(result.current.data).toEqual({ ...mockAPIData, ...mockAPIData2 });
-      expect(mockExtractFieldsFromComponents).toHaveBeenLastCalledWith({
+      expect(mockExtractSecretFieldsFromComponents).toHaveBeenLastCalledWith({
         ...mockAPIData,
         ...mockAPIData2,
       });
@@ -383,7 +389,7 @@ describe("useTypesStore", () => {
     it("should call setComponentFields after setting data", () => {
       const { result } = renderHook(() => useTypesStore());
       const expectedFields = new Set(["field1", "field2"]);
-      mockExtractFieldsFromComponents.mockReturnValue(expectedFields);
+      mockExtractSecretFieldsFromComponents.mockReturnValue(expectedFields);
 
       act(() => {
         result.current.setData(mockAPIData);
@@ -404,7 +410,9 @@ describe("useTypesStore", () => {
       });
 
       expect(result.current.data).toEqual({});
-      expect(mockExtractFieldsFromComponents).toHaveBeenLastCalledWith({});
+      expect(mockExtractSecretFieldsFromComponents).toHaveBeenLastCalledWith(
+        {},
+      );
     });
 
     it("should handle function that modifies existing data", () => {
@@ -433,7 +441,7 @@ describe("useTypesStore", () => {
       mockTemplatesGenerator.mockReturnValue({
         TestComponent: { template: {} },
       });
-      mockExtractFieldsFromComponents.mockReturnValue(
+      mockExtractSecretFieldsFromComponents.mockReturnValue(
         new Set(["TestComponent"]),
       );
 

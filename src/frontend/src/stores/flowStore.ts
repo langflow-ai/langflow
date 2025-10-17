@@ -226,6 +226,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       dismissedNodes: JSON.parse(
         localStorage.getItem(`dismiss_${flow?.id}`) ?? "[]",
       ) as string[],
+      dismissedNodesLegacy: JSON.parse(
+        localStorage.getItem(`dismiss_legacy_${flow?.id}`) ?? "[]",
+      ) as string[],
     });
     unselectAllNodesEdges(nodes, newEdges);
     if (flow?.id) {
@@ -242,6 +245,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowPool: {},
       currentFlow: flow,
       positionDictionary: {},
+      rightClickedNodeId: null,
     });
   },
   setIsBuilding: (isBuilding) => {
@@ -373,6 +377,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     get().setNodes(filteredNodes);
 
+    // Clear rightClickedNodeId if the deleted node was right-clicked
+    const rightClickedNodeId = get().rightClickedNodeId;
+    if (rightClickedNodeId && deletedNode) {
+      const isRightClickedNodeDeleted =
+        typeof nodeId === "string"
+          ? nodeId === rightClickedNodeId
+          : nodeId.includes(rightClickedNodeId);
+
+      if (isRightClickedNodeDeleted) {
+        set({ rightClickedNodeId: null });
+      }
+    }
+
     if (deletedNode) {
       track("Component Deleted", { componentType: deletedNode.data.type });
     }
@@ -388,6 +405,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     track("Component Connection Deleted", { edgeId });
   },
   paste: (selection, position) => {
+    if (get().currentFlow?.locked) return;
     // Collect IDs of nodes in the selection
     const selectedNodeIds = new Set(selection.nodes.map((node) => node.id));
     // Find existing edges in the flow that connect nodes within the selection
@@ -567,6 +585,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ getFilterEdge: newState });
   },
   getFilterEdge: [],
+  setFilterComponent: (newState) => {
+    set({ getFilterComponent: newState });
+  },
+  getFilterComponent: "",
+  rightClickedNodeId: null,
+  setRightClickedNodeId: (nodeId) => {
+    set({ rightClickedNodeId: nodeId });
+  },
   onConnect: (connection) => {
     const _dark = useDarkStore.getState().dark;
     // const commonMarkerProps = {
@@ -1050,6 +1076,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       isPending: true,
       positionDictionary: {},
       componentsToUpdate: [],
+      rightClickedNodeId: null,
     });
   },
   dismissedNodes: [],
@@ -1072,6 +1099,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       JSON.stringify(newDismissedNodes),
     );
     set({ dismissedNodes: newDismissedNodes });
+  },
+  dismissedNodesLegacy: [],
+  addDismissedNodesLegacy: (dismissedNodes: string[]) => {
+    const newDismissedNodes = Array.from(
+      new Set([...get().dismissedNodesLegacy, ...dismissedNodes]),
+    );
+    localStorage.setItem(
+      `dismiss_legacy_${get().currentFlow?.id}`,
+      JSON.stringify(newDismissedNodes),
+    );
+    set({ dismissedNodesLegacy: newDismissedNodes });
   },
   helperLineEnabled: false,
   setHelperLineEnabled: (helperLineEnabled: boolean) => {

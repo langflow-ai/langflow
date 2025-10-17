@@ -29,12 +29,10 @@ withEventDeliveryModes(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Market Research" }).click();
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await initialGPTsetup(page);
     await page
@@ -44,7 +42,7 @@ withEventDeliveryModes(
       .fill(process.env.TAVILY_API_KEY ?? "");
 
     await page
-      .getByTestId("handle-parser-shownode-data or dataframe-left")
+      .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")
       .click();
 
     await page.getByTestId("tab_1_stringify").click();

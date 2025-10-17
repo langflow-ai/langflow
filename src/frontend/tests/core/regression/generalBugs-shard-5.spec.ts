@@ -1,5 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -26,10 +27,8 @@ test(
     await page
       .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {});
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await zoomOut(page, 4);
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForTimeout(500);
 
@@ -168,13 +167,7 @@ test(
       .nth(1);
     await elementCombineTextInput1.click();
 
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTitle("fit view").click();
-
-    await zoomOut(page, 2);
-
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     await page
       .getByTestId("title-Combine Text")

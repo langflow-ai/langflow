@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from lfx.components.processing.data_operations import DataOperationsComponent
     from lfx.components.processing.data_to_dataframe import DataToDataFrameComponent
     from lfx.components.processing.dataframe_operations import DataFrameOperationsComponent
+    from lfx.components.processing.dataframe_to_toolset import DataFrameToToolsetComponent
+    from lfx.components.processing.dynamic_create_data import DynamicCreateDataComponent
     from lfx.components.processing.extract_key import ExtractDataKeyComponent
     from lfx.components.processing.filter_data import FilterDataComponent
     from lfx.components.processing.filter_data_values import DataFilterComponent
@@ -30,7 +32,6 @@ if TYPE_CHECKING:
     from lfx.components.processing.prompt import PromptComponent
     from lfx.components.processing.python_repl_core import PythonREPLComponent
     from lfx.components.processing.regex import RegexExtractorComponent
-    from lfx.components.processing.save_file import SaveToFileComponent
     from lfx.components.processing.select_data import SelectDataComponent
     from lfx.components.processing.split_text import SplitTextComponent
     from lfx.components.processing.structured_output import StructuredOutputComponent
@@ -45,6 +46,8 @@ _dynamic_imports = {
     "DataOperationsComponent": "data_operations",
     "DataToDataFrameComponent": "data_to_dataframe",
     "DataFrameOperationsComponent": "dataframe_operations",
+    "DataFrameToToolsetComponent": "dataframe_to_toolset",
+    "DynamicCreateDataComponent": "dynamic_create_data",
     "ExtractDataKeyComponent": "extract_key",
     "FilterDataComponent": "filter_data",
     "DataFilterComponent": "filter_data_values",
@@ -60,7 +63,6 @@ _dynamic_imports = {
     "PromptComponent": "prompt",
     "PythonREPLComponent": "python_repl_core",
     "RegexExtractorComponent": "regex",
-    "SaveToFileComponent": "save_file",
     "SelectDataComponent": "select_data",
     "SplitTextComponent": "split_text",
     "StructuredOutputComponent": "structured_output",
@@ -74,8 +76,10 @@ __all__ = [
     "CreateDataComponent",
     "DataFilterComponent",
     "DataFrameOperationsComponent",
+    "DataFrameToToolsetComponent",
     "DataOperationsComponent",
     "DataToDataFrameComponent",
+    "DynamicCreateDataComponent",
     "ExtractDataKeyComponent",
     "FilterDataComponent",
     "JSONCleaner",
@@ -90,7 +94,6 @@ __all__ = [
     "PromptComponent",
     "PythonREPLComponent",
     "RegexExtractorComponent",
-    "SaveToFileComponent",
     "SelectDataComponent",
     "SplitTextComponent",
     "StructuredOutputComponent",
