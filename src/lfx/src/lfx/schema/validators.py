@@ -22,6 +22,7 @@ def timestamp_to_str(timestamp: datetime | str) -> str:
         formats = [
             "%Y-%m-%dT%H:%M:%S",  # ISO format
             "%Y-%m-%d %H:%M:%S %Z",  # Standard with timezone
+            "%Y-%m-%d %H:%M:%S.%f %Z",  # Standard with timezone and microseconds
             "%Y-%m-%d %H:%M:%S",  # Without timezone
             "%Y-%m-%dT%H:%M:%S.%f",  # ISO with microseconds
             "%Y-%m-%dT%H:%M:%S%z",  # ISO with numeric timezone
@@ -30,7 +31,7 @@ def timestamp_to_str(timestamp: datetime | str) -> str:
         for fmt in formats:
             try:
                 parsed = datetime.strptime(timestamp.strip(), fmt).replace(tzinfo=timezone.utc)
-                return parsed.strftime("%Y-%m-%d %H:%M:%S %Z")
+                return parsed.strftime("%Y-%m-%d %H:%M:%S.%f %Z")
             except ValueError:
                 continue
 
@@ -55,13 +56,13 @@ def str_to_timestamp(timestamp: str | datetime) -> datetime:
         datetime: Datetime object with UTC timezone
 
     Raises:
-        ValueError: If string timestamp is not in 'YYYY-MM-DD HH:MM:SS UTC' format
+        ValueError: If string timestamp is not in 'YYYY-MM-DD HH:MM:SS.ffffff UTC' format
     """
     if isinstance(timestamp, str):
         try:
-            return datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+            return datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
         except ValueError as e:
-            msg = f"Invalid timestamp format: {timestamp}. Expected format: YYYY-MM-DD HH:MM:SS UTC"
+            msg = f"Invalid timestamp format: {timestamp}. Expected format: YYYY-MM-DD HH:MM:SS.ffffff UTC"
             raise ValueError(msg) from e
     return timestamp
 
