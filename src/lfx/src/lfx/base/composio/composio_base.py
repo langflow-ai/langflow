@@ -67,22 +67,24 @@ class ComposioBaseComponent(Component):
             auth_tooltip="Please insert a valid Composio API Key.",
             show=False,
         ),
-        # Pre-defined placeholder fields for dynamic auth - will be updated dynamically
-        StrInput(
+        # Pre-defined placeholder fields for dynamic auth - hidden by default
+        SecretStrInput(
             name="client_id",
-            display_name="Client id",
+            display_name="Client ID",
             info="",
             show=False,
             value="",
             required=False,
+            real_time_refresh=True,
         ),
-        StrInput(
+        SecretStrInput(
             name="client_secret",
-            display_name="Client secret",
+            display_name="Client Secret",
             info="",
             show=False,
             value="",
             required=False,
+            real_time_refresh=True,
         ),
         StrInput(
             name="verification_token",
@@ -91,40 +93,82 @@ class ComposioBaseComponent(Component):
             show=False,
             value="",
             required=False,
+            real_time_refresh=True,
         ),
         StrInput(
+            name="redirect_uri",
+            display_name="Redirect URI",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="authorization_url",
+            display_name="Authorization URL",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="token_url",
+            display_name="Token URL",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        # API Key auth fields
+        SecretStrInput(
             name="api_key_field",
             display_name="API Key",
             info="",
             show=False,
             value="",
             required=False,
+            real_time_refresh=True,
         ),
-        StrInput(
+        SecretStrInput(
+            name="generic_api_key",
+            display_name="API Key",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        SecretStrInput(
             name="token",
             display_name="Token",
             info="",
             show=False,
             value="",
             required=False,
+            real_time_refresh=True,
         ),
-        # Additional common auth fields
-        StrInput(
+        SecretStrInput(
             name="access_token",
             display_name="Access Token",
             info="",
             show=False,
             value="",
             required=False,
+            real_time_refresh=True,
         ),
-        StrInput(
+        SecretStrInput(
             name="refresh_token",
             display_name="Refresh Token",
             info="",
             show=False,
             value="",
             required=False,
+            real_time_refresh=True,
         ),
+        # Basic Auth fields
         StrInput(
             name="username",
             display_name="Username",
@@ -132,15 +176,18 @@ class ComposioBaseComponent(Component):
             show=False,
             value="",
             required=False,
+            real_time_refresh=True,
         ),
-        StrInput(
+        SecretStrInput(
             name="password",
             display_name="Password",
             info="",
             show=False,
             value="",
             required=False,
+            real_time_refresh=True,
         ),
+        # Other common auth fields
         StrInput(
             name="domain",
             display_name="Domain",
@@ -148,6 +195,7 @@ class ComposioBaseComponent(Component):
             show=False,
             value="",
             required=False,
+            real_time_refresh=True,
         ),
         StrInput(
             name="base_url",
@@ -156,6 +204,62 @@ class ComposioBaseComponent(Component):
             show=False,
             value="",
             required=False,
+            real_time_refresh=True,
+        ),
+        SecretStrInput(
+            name="bearer_token",
+            display_name="Bearer Token",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        SecretStrInput(
+            name="authorization_code",
+            display_name="Authorization Code",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="scopes",
+            display_name="Scopes",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        # Add more common auth fields
+        StrInput(
+            name="subdomain",
+            display_name="Subdomain",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="instance_url",
+            display_name="Instance URL",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="tenant_id",
+            display_name="Tenant ID",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
         ),
         SortableListInput(
             name="action_button",
@@ -177,6 +281,8 @@ class ComposioBaseComponent(Component):
     # Class-level caches
     _actions_cache: dict[str, dict[str, Any]] = {}
     _action_schema_cache: dict[str, dict[str, Any]] = {}
+    # Track all auth field names discovered across all toolkits
+    _all_auth_field_names: set[str] = set()
 
     outputs = [
         Output(name="dataFrame", display_name="DataFrame", method="as_dataframe"),
@@ -851,6 +957,9 @@ class ComposioBaseComponent(Component):
         for inp in lf_inputs:
             if inp.name is not None:
                 inp_dict = inp.to_dict() if hasattr(inp, "to_dict") else inp.__dict__.copy()
+
+                # Do not mutate input_types here; keep original configuration
+
                 inp_dict.setdefault("show", True)  # visible once action selected
                 # Preserve previously entered value if user already filled something
                 if inp.name in build_config:
@@ -1015,11 +1124,8 @@ class ComposioBaseComponent(Component):
             app_slug = getattr(self, "app_name", "").lower()
             if not app_slug:
                 return None
-            try:
-                schema = composio.toolkits.get(slug=app_slug)
-            except (AttributeError, ValueError, ConnectionError, TypeError) as e:
-                logger.debug(f"Could not get toolkit schema for {app_slug}: {e}")
-                return None
+            # Use the correct Composio SDK method
+            schema = composio.toolkits.get(slug=app_slug)
             self._toolkit_schema = self._to_plain_dict(schema)
         except (AttributeError, ValueError, ConnectionError, TypeError) as e:
             logger.debug(f"Could not retrieve toolkit schema for {getattr(self, 'app_name', '')}: {e}")
@@ -1036,9 +1142,9 @@ class ComposioBaseComponent(Component):
         managed = schema.get("composio_managed_auth_schemes") or schema.get("composioManagedAuthSchemes") or []
         has_managed_schemes = isinstance(managed, list) and len(managed) > 0
 
-        # Add "Composio managed" as first option if there are managed schemes
+        # Add "Composio_Managed" as first option if there are managed schemes
         if has_managed_schemes:
-            modes.append("Composio managed")
+            modes.append("Composio_Managed")
 
         # auth_config_details: list with entries containing mode
         details = schema.get("auth_config_details") or schema.get("authConfigDetails") or []
@@ -1091,6 +1197,49 @@ class ComposioBaseComponent(Component):
         except (TypeError, ValueError, AttributeError) as e:
             logger.debug(f"Failed to render auth_mode dropdown: {e}")
 
+    def _insert_field_before_action_button(self, build_config: dict, field_name: str, field_data: dict) -> None:
+        """Insert a field in the correct position (before action_button) in build_config."""
+        # If field already exists, don't add it again
+        if field_name in build_config:
+            return
+
+        # If action_button doesn't exist, just add the field normally
+        if "action_button" not in build_config:
+            build_config[field_name] = field_data
+            return
+
+        # Find all the keys we need to preserve order for
+        keys_before_action = []
+        keys_after_action = []
+        found_action = False
+
+        for key in list(build_config.keys()):
+            if key == "action_button":
+                found_action = True
+                keys_after_action.append(key)
+            elif found_action:
+                keys_after_action.append(key)
+            else:
+                keys_before_action.append(key)
+
+        # Create new ordered dict
+        new_config = {}
+
+        # Add all fields before action_button
+        for key in keys_before_action:
+            new_config[key] = build_config[key]
+
+        # Add the new field
+        new_config[field_name] = field_data
+
+        # Add action_button and all fields after it
+        for key in keys_after_action:
+            new_config[key] = build_config[key]
+
+        # Clear and update build_config to maintain reference
+        build_config.clear()
+        build_config.update(new_config)
+
     def _clear_auth_dynamic_fields(self, build_config: dict) -> None:
         for fname in list(self._auth_dynamic_fields):
             if fname in build_config and isinstance(build_config[fname], dict):
@@ -1121,19 +1270,50 @@ class ComposioBaseComponent(Component):
             if default_value is not None and default_value != "":
                 build_config[name]["value"] = default_value
         else:
-            # Create new field if not pre-defined
-            field = StrInput(
-                name=name,
-                display_name=display_name or name.replace("_", " ").title(),
-                info=info or "",
-                required=required,
-                real_time_refresh=True,
-                show=True,
-            ).to_dict()
+            # Create new field if it doesn't exist
+            # Use SecretStrInput for sensitive fields
+            sensitive_fields = {
+                "client_id",
+                "client_secret",
+                "api_key",
+                "api_key_field",
+                "generic_api_key",
+                "token",
+                "access_token",
+                "refresh_token",
+                "password",
+                "bearer_token",
+                "authorization_code",
+            }
+
+            if name in sensitive_fields:
+                field = SecretStrInput(
+                    name=name,
+                    display_name=display_name or name.replace("_", " ").title(),
+                    info=info or "",
+                    required=required,
+                    real_time_refresh=True,
+                    show=True,
+                ).to_dict()
+            else:
+                field = StrInput(
+                    name=name,
+                    display_name=display_name or name.replace("_", " ").title(),
+                    info=info or "",
+                    required=required,
+                    real_time_refresh=True,
+                    show=True,
+                ).to_dict()
+
             if default_value is not None and default_value != "":
                 field["value"] = default_value
-            build_config[name] = field
+
+            # Insert the field in the correct position (before action_button)
+            self._insert_field_before_action_button(build_config, name, field)
+
         self._auth_dynamic_fields.add(name)
+        # Also add to class-level cache for better tracking
+        self.__class__._all_auth_field_names.add(name)
 
     def _render_custom_auth_fields(self, build_config: dict, schema: dict[str, Any], mode: str) -> None:
         """Render fields for custom auth based on schema auth_config_details sections."""
@@ -1197,6 +1377,8 @@ class ComposioBaseComponent(Component):
                         name = entry.get("name") if isinstance(entry, dict) else None
                         if name:
                             names.add(name)
+                            # Add to class-level cache for tracking all discovered auth fields
+                            self.__class__._all_auth_field_names.add(name)
         # Only use names discovered from the toolkit schema; do not add aliases
         return names
 
@@ -1226,6 +1408,8 @@ class ComposioBaseComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         """Update build config for auth and action selection."""
+        # Avoid normalizing legacy input_types here; rely on upstream fixes
+
         # BULLETPROOF tool_mode checking - check all possible places where tool_mode could be stored
         instance_tool_mode = getattr(self, "tool_mode", False) if hasattr(self, "tool_mode") else False
 
@@ -1282,10 +1466,11 @@ class ComposioBaseComponent(Component):
             try:
                 selected_mode = (build_config.get("auth_mode") or {}).get("value")
                 managed = (schema or {}).get("composio_managed_auth_schemes") or []
-                # Don't render custom fields if "Composio managed" is selected
-                if selected_mode and selected_mode != "Composio managed":
+                # Don't render custom fields if "Composio_Managed" is selected
+                if selected_mode and selected_mode != "Composio_Managed":
                     self._clear_auth_dynamic_fields(build_config)
                     self._render_custom_auth_fields(build_config, schema or {}, selected_mode)
+                    # Already reordered in _render_custom_auth_fields
             except (TypeError, ValueError, AttributeError):
                 pass
 
@@ -1429,16 +1614,18 @@ class ComposioBaseComponent(Component):
                 build_config["create_auth_config"]["value"] = ""
                 build_config["create_auth_config"]["helper_text"] = ""
                 build_config["create_auth_config"]["options"] = ["create"]
-                if mode == "Composio managed":
-                    # Composio managed → no extra fields needed
+                if mode == "Composio_Managed":
+                    # Composio_Managed → no extra fields needed
                     pass
                 elif isinstance(managed, list) and mode in managed:
                     # This is a specific managed auth scheme (e.g., OAUTH2) but user can still choose custom
                     # So we should render custom fields for this mode
                     self._render_custom_auth_fields(build_config, schema, mode)
+                    # Already reordered in _render_custom_auth_fields
                 else:
                     # Custom → render only required fields based on the toolkit schema
                     self._render_custom_auth_fields(build_config, schema, mode)
+                    # Already reordered in _render_custom_auth_fields
                 return self.update_input_types(build_config)
 
         # Handle connection initiation when tool mode is enabled
@@ -1455,6 +1642,37 @@ class ComposioBaseComponent(Component):
                     build_config["auth_link"]["connection_id"] = connection_id
                     build_config["action_button"]["helper_text"] = ""
                     build_config["action_button"]["helper_text_metadata"] = {}
+
+                    # Clear auth fields when connected
+                    schema = self._get_toolkit_schema()
+                    self._clear_auth_fields_from_schema(build_config, schema)
+
+                    # Convert auth_mode to pill for connected state
+                    scheme, _ = self._get_connection_auth_info(connection_id)
+                    if scheme:
+                        build_config.setdefault("auth_mode", {})
+                        build_config["auth_mode"]["value"] = scheme
+                        build_config["auth_mode"]["options"] = [scheme]
+                        build_config["auth_mode"]["show"] = False
+                        try:
+                            pill = TabInput(
+                                name="auth_mode",
+                                display_name="Auth Mode",
+                                options=[scheme],
+                                value=scheme,
+                            ).to_dict()
+                            pill["show"] = True
+                            build_config["auth_mode"] = pill
+                        except (TypeError, ValueError, AttributeError):
+                            build_config["auth_mode"] = {
+                                "name": "auth_mode",
+                                "display_name": "Auth Mode",
+                                "type": "tab",
+                                "options": [scheme],
+                                "value": scheme,
+                                "show": True,
+                            }
+
                     logger.info(f"Using existing ACTIVE connection {connection_id} for {toolkit_slug}")
                     return self.update_input_types(build_config)
 
@@ -1472,13 +1690,14 @@ class ComposioBaseComponent(Component):
                         # If no managed default exists (400 Default auth config), require mode selection
                         managed = (schema or {}).get("composio_managed_auth_schemes") or []
 
-                        # Handle "Composio managed" mode explicitly
-                        if mode == "Composio managed":
-                            # Use Composio managed auth flow
+                        # Handle "Composio_Managed" mode explicitly
+                        if mode == "Composio_Managed":
+                            # Use Composio_Managed auth flow
                             redirect_url, connection_id = self._initiate_connection(toolkit_slug)
                             build_config["auth_link"]["value"] = redirect_url
                             logger.info(f"New OAuth URL created for {toolkit_slug}: {redirect_url}")
                             return self.update_input_types(build_config)
+
                         if not mode:
                             build_config["auth_link"]["value"] = "connect"
                             build_config["auth_link"]["auth_tooltip"] = "Select Auth Mode"
@@ -1686,6 +1905,33 @@ class ComposioBaseComponent(Component):
                             self._clear_auth_fields_from_schema(build_config, schema)
                             build_config["action_button"]["helper_text"] = ""
                             build_config["action_button"]["helper_text_metadata"] = {}
+
+                            # Convert auth_mode to pill for connected state
+                            if not redirect_url and mode:  # API_KEY or similar direct connection
+                                build_config["auth_link"]["connection_id"] = connection_id
+                                build_config.setdefault("auth_mode", {})
+                                build_config["auth_mode"]["value"] = mode
+                                build_config["auth_mode"]["options"] = [mode]
+                                build_config["auth_mode"]["show"] = False
+                                try:
+                                    pill = TabInput(
+                                        name="auth_mode",
+                                        display_name="Auth Mode",
+                                        options=[mode],
+                                        value=mode,
+                                    ).to_dict()
+                                    pill["show"] = True
+                                    build_config["auth_mode"] = pill
+                                except (TypeError, ValueError, AttributeError):
+                                    build_config["auth_mode"] = {
+                                        "name": "auth_mode",
+                                        "display_name": "Auth Mode",
+                                        "type": "tab",
+                                        "options": [mode],
+                                        "value": mode,
+                                        "show": True,
+                                    }
+
                             return self.update_input_types(build_config)
                         # Generic custom auth flow for any other mode (treat like API_KEY)
                         ac = composio.auth_configs.create(
@@ -1720,6 +1966,36 @@ class ComposioBaseComponent(Component):
                         else:
                             build_config["auth_link"]["value"] = "validated"
                             build_config["auth_link"]["auth_tooltip"] = "Disconnect"
+                            build_config["auth_link"]["connection_id"] = connection_id
+
+                            # Clear auth fields when connected
+                            schema = self._get_toolkit_schema()
+                            self._clear_auth_fields_from_schema(build_config, schema)
+
+                            # Convert auth_mode to pill for connected state
+                            if mode:
+                                build_config.setdefault("auth_mode", {})
+                                build_config["auth_mode"]["value"] = mode
+                                build_config["auth_mode"]["options"] = [mode]
+                                build_config["auth_mode"]["show"] = False
+                                try:
+                                    pill = TabInput(
+                                        name="auth_mode",
+                                        display_name="Auth Mode",
+                                        options=[mode],
+                                        value=mode,
+                                    ).to_dict()
+                                    pill["show"] = True
+                                    build_config["auth_mode"] = pill
+                                except (TypeError, ValueError, AttributeError):
+                                    build_config["auth_mode"] = {
+                                        "name": "auth_mode",
+                                        "display_name": "Auth Mode",
+                                        "type": "tab",
+                                        "options": [mode],
+                                        "value": mode,
+                                        "show": True,
+                                    }
                         return self.update_input_types(build_config)
                     except (ValueError, ConnectionError, TypeError) as e:
                         logger.error(f"Error creating connection: {e}")
@@ -1845,14 +2121,22 @@ class ComposioBaseComponent(Component):
             build_config.setdefault("auth_link", {})
             build_config["auth_link"]["show"] = False
             build_config["auth_link"]["display_name"] = ""
-            try:
-                schema = self._get_toolkit_schema()
-                mode = (build_config.get("auth_mode") or {}).get("value")
-                managed = (schema or {}).get("composio_managed_auth_schemes") or []
-                if mode and mode != "Composio managed" and not getattr(self, "_auth_dynamic_fields", set()):
-                    self._render_custom_auth_fields(build_config, schema or {}, mode)
-            except (TypeError, ValueError, AttributeError):
-                pass
+
+            # Only render auth fields if NOT already connected
+            active_connection = self._find_active_connection_for_app(self.app_name)
+            if not active_connection:
+                try:
+                    schema = self._get_toolkit_schema()
+                    mode = (build_config.get("auth_mode") or {}).get("value")
+                    managed = (schema or {}).get("composio_managed_auth_schemes") or []
+                    if mode and mode != "Composio_Managed" and not getattr(self, "_auth_dynamic_fields", set()):
+                        self._render_custom_auth_fields(build_config, schema or {}, mode)
+                        # Already reordered in _render_custom_auth_fields
+                except (TypeError, ValueError, AttributeError):
+                    pass
+            else:
+                # If connected, clear any auth fields that might be showing
+                self._clear_auth_dynamic_fields(build_config)
             # Do NOT return here; allow auth flow to run in Tool Mode
 
         if field_name == "tool_mode":
@@ -2039,6 +2323,36 @@ class ComposioBaseComponent(Component):
             build_config["auth_link"]["auth_tooltip"] = "Disconnect"
             build_config["action_button"]["helper_text"] = ""
             build_config["action_button"]["helper_text_metadata"] = {}
+
+            # Clear auth fields when connected
+            schema = self._get_toolkit_schema()
+            self._clear_auth_fields_from_schema(build_config, schema)
+
+            # Convert auth_mode to pill for connected state
+            scheme, _ = self._get_connection_auth_info(active_connection_id)
+            if scheme:
+                build_config.setdefault("auth_mode", {})
+                build_config["auth_mode"]["value"] = scheme
+                build_config["auth_mode"]["options"] = [scheme]
+                build_config["auth_mode"]["show"] = False
+                try:
+                    pill = TabInput(
+                        name="auth_mode",
+                        display_name="Auth Mode",
+                        options=[scheme],
+                        value=scheme,
+                    ).to_dict()
+                    pill["show"] = True
+                    build_config["auth_mode"] = pill
+                except (TypeError, ValueError, AttributeError):
+                    build_config["auth_mode"] = {
+                        "name": "auth_mode",
+                        "display_name": "Auth Mode",
+                        "type": "tab",
+                        "options": [scheme],
+                        "value": scheme,
+                        "show": True,
+                    }
         elif stored_connection_id:
             status = self._check_connection_status_by_id(stored_connection_id)
             if status == "INITIATED":
@@ -2283,7 +2597,34 @@ class ComposioBaseComponent(Component):
             "auth_mode",
             "auth_mode_pill",
             "create_auth_config",
+            # Pre-defined auth fields
+            "client_id",
+            "client_secret",
+            "verification_token",
+            "redirect_uri",
+            "authorization_url",
+            "token_url",
+            "api_key_field",
+            "generic_api_key",
+            "token",
+            "access_token",
+            "refresh_token",
+            "username",
+            "password",
+            "domain",
+            "base_url",
+            "bearer_token",
+            "authorization_code",
+            "scopes",
+            "subdomain",
+            "instance_url",
+            "tenant_id",
         }
+        # Add all dynamic auth fields to protected set
+        protected.update(self._auth_dynamic_fields)
+        # Also protect any auth fields discovered across all instances
+        protected.update(self.__class__._all_auth_field_names)
+
         for key, cfg in list(build_config.items()):
             if key in protected:
                 continue
