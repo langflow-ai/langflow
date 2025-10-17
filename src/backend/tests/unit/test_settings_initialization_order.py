@@ -21,9 +21,10 @@ class TestSettingsInitializationOrder:
     def test_is_settings_service_initialized_returns_false_initially(self):
         """Test that is_settings_service_initialized returns False before initialization."""
         from langflow.services.deps import is_settings_service_initialized
-        from langflow.services.manager import service_manager
+        from lfx.services.manager import get_service_manager
 
         # Clear services
+        service_manager = get_service_manager()
         service_manager.services.clear()
 
         # Should be False initially
@@ -32,9 +33,10 @@ class TestSettingsInitializationOrder:
     def test_is_settings_service_initialized_returns_true_after_init(self):
         """Test that is_settings_service_initialized returns True after initialization."""
         from langflow.services.deps import get_settings_service, is_settings_service_initialized
-        from langflow.services.manager import service_manager
+        from lfx.services.manager import get_service_manager
 
         # Clear services
+        service_manager = get_service_manager()
         service_manager.services.clear()
 
         # Initialize
@@ -46,10 +48,11 @@ class TestSettingsInitializationOrder:
     def test_is_settings_service_initialized_checks_service_manager(self):
         """Test that the function checks the service manager directly."""
         from langflow.services.deps import is_settings_service_initialized
-        from langflow.services.manager import service_manager
+        from lfx.services.manager import get_service_manager
         from langflow.services.schema import ServiceType
 
         # Clear services
+        service_manager = get_service_manager()
         service_manager.services.clear()
 
         # Manually add a mock service to the manager
@@ -66,9 +69,10 @@ class TestSettingsInitializationOrder:
         """Test the complete flow: load .env, then initialize settings."""
         from dotenv import load_dotenv
         from langflow.services.deps import get_settings_service, is_settings_service_initialized
-        from langflow.services.manager import service_manager
+        from lfx.services.manager import get_service_manager
 
         # Clear services
+        service_manager = get_service_manager()
         service_manager.services.clear()
 
         # Create .env file
@@ -102,9 +106,10 @@ class TestSettingsInitializationOrder:
         """Test the CLI check pattern when settings are NOT initialized (success case)."""
         from dotenv import load_dotenv
         from langflow.services.deps import is_settings_service_initialized
-        from langflow.services.manager import service_manager
+        from lfx.services.manager import get_service_manager
 
         # Clear services to ensure settings are NOT initialized
+        service_manager = get_service_manager()
         service_manager.services.clear()
 
         env_file = tmp_path / ".env.cli"
@@ -130,9 +135,10 @@ class TestSettingsInitializationOrder:
     def test_cli_check_pattern_error_case(self, tmp_path):
         """Test the CLI check pattern when settings ARE initialized (error case)."""
         from langflow.services.deps import get_settings_service, is_settings_service_initialized
-        from langflow.services.manager import service_manager
+        from lfx.services.manager import get_service_manager
 
         # Clear services
+        service_manager = get_service_manager()
         service_manager.services.clear()
 
         # Initialize settings FIRST
@@ -160,9 +166,10 @@ class TestSettingsInitializationOrder:
     def test_error_message_when_settings_already_initialized(self, tmp_path):
         """Test that we get a clear error when trying to load .env after settings init."""
         from langflow.services.deps import get_settings_service, is_settings_service_initialized
-        from langflow.services.manager import service_manager
+        from lfx.services.manager import get_service_manager
 
         # Clear services
+        service_manager = get_service_manager()
         service_manager.services.clear()
 
         # Initialize settings FIRST
@@ -203,10 +210,11 @@ class TestSettingsServiceSingleton:
     def test_settings_service_singleton_across_imports(self):
         """Test singleton behavior across different import paths."""
         from langflow.services.deps import get_settings_service
-        from langflow.services.manager import service_manager
+        from lfx.services.manager import get_service_manager
         from langflow.services.schema import ServiceType
 
         service1 = get_settings_service()
+        service_manager = get_service_manager()
         service2 = service_manager.get(ServiceType.SETTINGS_SERVICE)
 
         # Should be the same instance
