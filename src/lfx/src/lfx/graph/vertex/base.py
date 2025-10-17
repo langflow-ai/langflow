@@ -642,6 +642,8 @@ class Vertex:
         *,
         fallback_to_env_vars=False,
     ) -> None:
+        from lfx.graph.utils import log_transaction
+
         try:
             result = await initialize.loading.get_instance_results(
                 custom_component=custom_component,
@@ -658,6 +660,12 @@ class Vertex:
             tb = traceback.format_exc()
             await logger.aexception(exc)
             msg = f"Error building Component {self.display_name}: \n\n{exc}"
+
+            # Log transaction with error status at the component level
+            flow_id = self.graph.flow_id
+            if flow_id:
+                await log_transaction(flow_id=str(flow_id), source=self, status="error", target=None, error=exc)
+
             raise ComponentBuildError(msg, tb) from exc
 
     def _update_built_object_and_artifacts(self, result: Any | tuple[Any, dict] | tuple[Component, Any, dict]) -> None:
@@ -720,6 +728,7 @@ class Vertex:
     ) -> Any:
         # Add lazy loading check at the beginning
         # Check if we need to fully load this component first
+        from lfx.graph.utils import log_transaction
         from lfx.interface.components import ensure_component_loaded
         from lfx.services.deps import get_settings_service
 
@@ -761,13 +770,23 @@ class Vertex:
 
                 self.update_raw_params(chat_input, overwrite=True)
 
-            # Run steps
-            for step in self.steps:
-                if step not in self.steps_ran:
-                    await step(user_id=user_id, event_manager=event_manager, **kwargs)
-                    self.steps_ran.append(step)
+            try:
+                # Run steps
+                for step in self.steps:
+                    if step not in self.steps_ran:
+                        await step(user_id=user_id, event_manager=event_manager, **kwargs)
+                        self.steps_ran.append(step)
 
-            self.finalize_build()
+                self.finalize_build()
+            except Exception as exc:
+                # Log transaction with error status
+                flow_id = self.graph.flow_id
+                if flow_id:
+                    await log_transaction(
+                        flow_id=str(flow_id), source=self, status="error", target=requester, error=exc
+                    )
+                # Re-raise the exception after logging
+                raise
 
         return await self.get_requester_result(requester)
 
