@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, HandleInput, IntInput, MultilineInput, Output
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON
+from lfx.schema.dataframe import DataFrame, Table
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -23,9 +23,9 @@ class LambdaFilterComponent(Component):
     inputs = [
         DataInput(
             name="data",
-            display_name="Data",
+            display_name="JSON",
             info="The structured data to filter or transform using a lambda function.",
-            input_types=["Data", "DataFrame"],
+            input_types=["Data", "JSON"],
             is_list=True,
             required=True,
         ),
@@ -64,14 +64,16 @@ class LambdaFilterComponent(Component):
 
     outputs = [
         Output(
-            display_name="Output",
+            display_name="JSON Output",
             name="data_output",
             method="process_as_data",
+            types=["JSON", "Data"],
         ),
         Output(
-            display_name="Output",
+            display_name="Table Output",
             name="dataframe_output",
             method="process_as_dataframe",
+            types=["Table", "DataFrame"],
         ),
     ]
 
@@ -100,7 +102,7 @@ class LambdaFilterComponent(Component):
             # Handle list of Data or DataFrame objects
             combined_data = []
             for item in self.data:
-                if isinstance(item, DataFrame):
+                if isinstance(item, DataFrame) or isinstance(item, Table):
                     # DataFrame to list of dicts
                     combined_data.extend(item.to_dict(orient="records"))
                 elif hasattr(item, "data"):
@@ -117,8 +119,8 @@ class LambdaFilterComponent(Component):
                 data = {}
             else:
                 data = combined_data  # type: ignore[assignment]
-        elif isinstance(self.data, DataFrame):
-            # Single DataFrame to list of dicts
+        elif isinstance(self.data, DataFrame) or isinstance(self.data, Table):
+            # Single DataFrame or Table to list of dicts
             data = self.data.to_dict(orient="records")
         elif hasattr(self.data, "data"):
             # Single Data object
@@ -150,9 +152,7 @@ class LambdaFilterComponent(Component):
         self.log(data_sample)
 
         prompt = f"""Given this data structure and examples, create a Python lambda function that
-                    implements the following instruction:
-
-                    Data Structure:
+                    implements the following instruction: JSON Structure:
                     {dump_structure}
 
                     Example Items:
@@ -188,31 +188,31 @@ class LambdaFilterComponent(Component):
         # Apply the lambda function to the data
         return fn(data)
 
-    async def process_as_data(self) -> Data:
-        """Process the data and return as a Data object."""
+    async def process_as_data(self) -> JSON:
+        """Process the data and return as a JSON object."""
         result = await self._execute_lambda()
 
-        # Convert result to Data based on type
+        # Convert result to JSON based on type
         if isinstance(result, dict):
-            return Data(data=result)
+            return JSON(data=result)
         if isinstance(result, list):
-            return Data(data={"_results": result})
+            return JSON(data={"_results": result})
         # For other types, convert to string
-        return Data(data={"text": str(result)})
+        return JSON(data={"text": str(result)})
 
-    async def process_as_dataframe(self) -> DataFrame:
-        """Process the data and return as a DataFrame."""
+    async def process_as_dataframe(self) -> Table:
+        """Process the data and return as a Table."""
         result = await self._execute_lambda()
 
-        # Convert result to DataFrame based on type
+        # Convert result to Table based on type
         if isinstance(result, list):
             # Check if it's a list of dicts
             if all(isinstance(item, dict) for item in result):
-                return DataFrame(result)
+                return Table(result)
             # List of non-dicts: wrap each value
-            return DataFrame([{"value": item} for item in result])
+            return Table([{"value": item} for item in result])
         if isinstance(result, dict):
-            # Single dict becomes single-row DataFrame
-            return DataFrame([result])
+            # Single dict becomes single-row Table
+            return Table([result])
         # Other types: convert to string and wrap
-        return DataFrame([{"value": str(result)}])
+        return Table([{"value": str(result)}])

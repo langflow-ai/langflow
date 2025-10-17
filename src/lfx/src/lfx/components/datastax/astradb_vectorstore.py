@@ -22,7 +22,7 @@ from lfx.io import (
     SecretStrInput,
     StrInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.serialization import serialize
 from lfx.utils.version import get_version_info
 
@@ -1245,7 +1245,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         return args
 
-    def search_documents(self, vector_store=None) -> list[Data]:
+    def search_documents(self, vector_store=None) -> list[JSON]:
         vector_store = vector_store or self.build_vector_store()
 
         self.log(f"Search input: {self.search_query}")

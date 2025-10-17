@@ -18,7 +18,7 @@ from lfx.io import BoolInput, HandleInput, IntInput, MessageInput
 from lfx.log.logger import logger
 from lfx.memory import delete_message
 from lfx.schema.content_block import ContentBlock
-from lfx.schema.data import Data
+from lfx.schema.data import JSON
 from lfx.schema.message import Message
 from lfx.template.field.base import Output
 from lfx.utils.constants import MESSAGE_SENDER_AI
@@ -115,7 +115,7 @@ class LCAgentComponent(Component):
             }
         return {**base, "agent_executor_kwargs": agent_kwargs}
 
-    def get_chat_history_data(self) -> list[Data] | None:
+    def get_chat_history_data(self) -> list[JSON] | None:
         # might be overridden in subclasses
         return None
 

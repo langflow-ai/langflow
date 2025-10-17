@@ -13,7 +13,7 @@ from lfx.inputs.inputs import (
     MultilineInput,
     SecretStrInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class QuerySchema(BaseModel):
@@ -58,7 +58,7 @@ class GoogleSerperAPIComponent(LCToolComponent):
         ),
     ]
 
-    def run_model(self) -> Data | list[Data]:
+    def run_model(self) -> JSON | list[Data]:
         wrapper = self._build_wrapper(self.k, self.query_type, self.query_params)
         results = wrapper.results(query=self.query)
 

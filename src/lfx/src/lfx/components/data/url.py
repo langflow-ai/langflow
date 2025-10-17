@@ -10,7 +10,7 @@ from lfx.field_typing.range_spec import RangeSpec
 from lfx.helpers.data import safe_convert
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput, TableInput
 from lfx.log.logger import logger
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.schema.message import Message
 from lfx.utils.request_utils import get_user_agent
 
@@ -140,7 +140,7 @@ class URLComponent(Component):
             ],
             value=[{"key": "User-Agent", "value": USER_AGENT}],
             advanced=True,
-            input_types=["DataFrame"],
+            input_types=["DataFrame", "Table"],
         ),
         BoolInput(
             name="filter_text_html",
@@ -301,7 +301,7 @@ class URLComponent(Component):
             raise ValueError(msg) from e
         return data
 
-    def fetch_content(self) -> DataFrame:
+    def fetch_content(self) -> Table:
         """Convert the documents to a DataFrame."""
         return DataFrame(data=self.fetch_url_contents())
 

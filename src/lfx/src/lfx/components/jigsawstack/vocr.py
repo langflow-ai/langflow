@@ -1,6 +1,6 @@
 from lfx.custom.custom_component.component import Component
 from lfx.io import IntInput, MessageTextInput, Output, SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class JigsawStackVOCRComponent(Component):
@@ -58,7 +58,7 @@ class JigsawStackVOCRComponent(Component):
         Output(display_name="VOCR results", name="vocr_results", method="vocr"),
     ]
 
-    def vocr(self) -> Data:
+    def vocr(self) -> JSON:
         try:
             from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:

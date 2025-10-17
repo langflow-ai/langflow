@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import SecretStrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class NotionUserList(LCToolComponent):
@@ -26,7 +26,7 @@ class NotionUserList(LCToolComponent):
     class NotionUserListSchema(BaseModel):
         pass
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         users = self._list_users()
         records = []
         combined_text = ""

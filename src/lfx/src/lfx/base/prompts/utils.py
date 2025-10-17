@@ -2,10 +2,10 @@ from copy import deepcopy
 
 from langchain_core.documents import Document
 
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
-def data_to_string(record: Data) -> str:
+def data_to_string(record: JSON) -> str:
     """Convert a record to a string.
 
     Args:

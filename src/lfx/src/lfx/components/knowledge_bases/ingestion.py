@@ -31,7 +31,7 @@ from lfx.io import (
     StrInput,
     TableInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.table import EditMode
 from lfx.services.deps import (
     get_settings_service,
@@ -40,7 +40,7 @@ from lfx.services.deps import (
 )
 
 if TYPE_CHECKING:
-    from lfx.schema.dataframe import DataFrame
+    from lfx.schema.dataframe import Table
 
 HUGGINGFACE_MODEL_NAMES = [
     "sentence-transformers/all-MiniLM-L6-v2",
@@ -133,7 +133,7 @@ class KnowledgeIngestionComponent(Component):
                 "Table with all original columns (already chunked / processed). "
                 "Accepts Data or DataFrame. If Data is provided, it is converted to a DataFrame automatically."
             ),
-            input_types=["Data", "DataFrame"],
+            input_types=["Data", "JSON", "DataFrame", "Table"],
             required=True,
         ),
         TableInput(
@@ -404,9 +404,9 @@ class KnowledgeIngestionComponent(Component):
 
     async def _convert_df_to_data_objects(
         self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]
-    ) -> list[Data]:
+    ) -> list[JSON]:
         """Convert DataFrame to Data objects for vector store."""
-        data_objects: list[Data] = []
+        data_objects: list[JSON] = []
 
         # Set up vector store directory
         kb_path = await self._kb_path()
@@ -530,11 +530,11 @@ class KnowledgeIngestionComponent(Component):
     # ---------------------------------------------------------------------
     #                         OUTPUT METHODS
     # ---------------------------------------------------------------------
-    async def build_kb_info(self) -> Data:
+    async def build_kb_info(self) -> JSON:
         """Main ingestion routine → returns a dict with KB metadata."""
         try:
             input_value = self.input_df[0] if isinstance(self.input_df, list) else self.input_df
-            df_source: DataFrame = convert_to_dataframe(input_value, auto_parse=False)
+            df_source: Table = convert_to_dataframe(input_value, auto_parse=False)
 
             # Validate column configuration (using Structured Output patterns)
             config_list = self._validate_column_config(df_source)

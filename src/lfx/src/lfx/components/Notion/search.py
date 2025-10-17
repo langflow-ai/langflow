@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import DropdownInput, SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class NotionSearch(LCToolComponent):
@@ -49,7 +49,7 @@ class NotionSearch(LCToolComponent):
         filter_value: str = Field(default="page", description="Filter type: 'page' or 'database'.")
         sort_direction: str = Field(default="descending", description="Sort direction: 'ascending' or 'descending'.")
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         results = self._search_notion(self.query, self.filter_value, self.sort_direction)
         records = []
         combined_text = f"Results found: {len(results)}\n\n"

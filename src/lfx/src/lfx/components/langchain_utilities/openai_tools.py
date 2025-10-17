@@ -7,7 +7,7 @@ from lfx.inputs.inputs import (
     HandleInput,
     MultilineInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON
 
 
 class OpenAIToolsAgentComponent(LCToolsAgentComponent):
@@ -36,7 +36,7 @@ class OpenAIToolsAgentComponent(LCToolsAgentComponent):
         DataInput(name="chat_history", display_name="Chat History", is_list=True, advanced=True),
     ]
 
-    def get_chat_history_data(self) -> list[Data] | None:
+    def get_chat_history_data(self) -> list[JSON] | None:
         return self.chat_history
 
     def create_agent_runnable(self):

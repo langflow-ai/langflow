@@ -9,7 +9,7 @@ from pymongo.operations import SearchIndexModel
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
 from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class MongoVectorStoreComponent(LCVectorStoreComponent):
@@ -156,7 +156,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             )
         return MongoDBAtlasVectorSearch(embedding=self.embedding, collection=collection, index_name=self.index_name)
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         from bson.objectid import ObjectId
 
         vector_store = self.build_vector_store()

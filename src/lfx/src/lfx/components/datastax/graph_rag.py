@@ -7,7 +7,7 @@ from langchain_graph_retriever import GraphRetriever
 from lfx.base.vectorstores.model import LCVectorStoreComponent
 from lfx.helpers.data import docs_to_data
 from lfx.inputs.inputs import DropdownInput, HandleInput, MultilineInput, NestedDictInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON
 
 
 def traversal_strategies() -> list[str]:
@@ -36,7 +36,7 @@ class GraphRAGComponent(LCVectorStoreComponent):
     Methods:
         _build_search_args():
             Builds the arguments required for the search operation.
-        search_documents() -> list[Data]:
+        search_documents() -> list[JSON]:
             Searches for documents using the specified strategy, edge definition, and query.
         _edge_definition_from_input() -> tuple:
             Processes the edge definition input and returns it as a tuple.
@@ -87,11 +87,10 @@ class GraphRAGComponent(LCVectorStoreComponent):
         ),
     ]
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         """Searches for documents using the graph retriever based on the selected strategy, edge definition, and query.
 
-        Returns:
-            list[Data]: A list of retrieved documents.
+        Returns: list[JSON]: A list of retrieved documents.
 
         Raises:
             AttributeError: If there is an issue with attribute access.

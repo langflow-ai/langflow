@@ -79,7 +79,7 @@ class PythonCodeStructuredTool(LCToolComponent):
             name="global_variables",
             display_name="Global Variables",
             info="Enter the global variables or Create Data Component.",
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
             field_type=FieldTypes.DICT,
             is_list=True,
         ),

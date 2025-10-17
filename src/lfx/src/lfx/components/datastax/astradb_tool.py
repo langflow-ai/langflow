@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, create_model
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.io import BoolInput, DictInput, HandleInput, IntInput, SecretStrInput, StrInput, TableInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.table import EditMode
 
 
@@ -373,7 +373,7 @@ class AstraDBToolComponent(LCToolComponent):
                     filters[filter_key] = {**filters.get(filter_key, {}), filter_setting["operator"]: value}
         return filters
 
-    def run_model(self, **args) -> Data | list[Data]:
+    def run_model(self, **args) -> JSON | list[Data]:
         """Run the query to get the data from the Astra DB collection."""
         collection = self._build_collection()
         sort = {}
@@ -413,6 +413,6 @@ class AstraDBToolComponent(LCToolComponent):
 
         logger.info(f"Tool {self.tool_name} executed`")
 
-        data: list[Data] = [Data(data=doc) for doc in results]
+        data: list[JSON] = [Data(data=doc) for doc in results]
         self.status = data
         return data

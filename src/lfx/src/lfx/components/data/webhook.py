@@ -2,7 +2,7 @@ import json
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import MultilineInput, Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class WebhookComponent(Component):
@@ -35,10 +35,10 @@ class WebhookComponent(Component):
         ),
     ]
     outputs = [
-        Output(display_name="Data", name="output_data", method="build_data"),
+        Output(display_name="JSON", name="output_data", method="build_data"),
     ]
 
-    def build_data(self) -> Data:
+    def build_data(self) -> JSON:
         message: str | Data = ""
         if not self.data:
             self.status = "No data provided."

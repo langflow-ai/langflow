@@ -6,8 +6,8 @@ from langchain_community.utilities import BingSearchAPIWrapper
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import IntInput, MessageTextInput, MultilineInput, SecretStrInput
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.template.field.base import Output
 
 
@@ -28,14 +28,14 @@ class BingSearchAPIComponent(LCToolComponent):
     ]
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
+        Output(display_name="Table", name="dataframe", method="fetch_content_dataframe"),
         Output(display_name="Tool", name="tool", method="build_tool"),
     ]
 
-    def run_model(self) -> DataFrame:
+    def run_model(self) -> Table:
         return self.fetch_content_dataframe()
 
-    def fetch_content(self) -> list[Data]:
+    def fetch_content(self) -> list[JSON]:
         if self.bing_search_url:
             wrapper = BingSearchAPIWrapper(
                 bing_search_url=self.bing_search_url, bing_subscription_key=self.bing_subscription_key
@@ -47,7 +47,7 @@ class BingSearchAPIComponent(LCToolComponent):
         self.status = data
         return data
 
-    def fetch_content_dataframe(self) -> DataFrame:
+    def fetch_content_dataframe(self) -> Table:
         data = self.fetch_content()
         return DataFrame(data)
 

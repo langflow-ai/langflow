@@ -8,7 +8,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import FileInput, MultilineInput, Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class GoogleOAuthToken(Component):
@@ -53,7 +53,7 @@ class GoogleOAuthToken(Component):
             error_message = "Invalid scope format."
             raise ValueError(error_message)
 
-    def build_output(self) -> Data:
+    def build_output(self) -> JSON:
         self.validate_scopes(self.scopes)
 
         user_scopes = [scope.strip() for scope in self.scopes.split(",")]

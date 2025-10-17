@@ -3,7 +3,7 @@ from langchain_community.vectorstores import PGVector
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
 from lfx.io import HandleInput, IntInput, SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.utils.connection_string_parser import transform_connection_string
 
 
@@ -57,7 +57,7 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
 
         return pgvector
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():

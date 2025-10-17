@@ -9,7 +9,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.helpers.data import docs_to_data
 from lfx.inputs.inputs import MessageTextInput
 from lfx.io import SecretStrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.template.field.base import Output
 
 
@@ -35,7 +35,7 @@ class GoogleDriveComponent(Component):
         Output(display_name="Loaded Documents", name="docs", method="load_documents"),
     ]
 
-    def load_documents(self) -> Data:
+    def load_documents(self) -> JSON:
         class CustomGoogleDriveLoader(GoogleDriveLoader):
             creds: Credentials | None = None
             """Credentials object to be passed directly."""

@@ -9,7 +9,7 @@ from langchain_community.document_loaders.git import GitLoader
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, MessageTextInput, Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class GitLoaderComponent(Component):
@@ -75,7 +75,7 @@ class GitLoaderComponent(Component):
     ]
 
     outputs = [
-        Output(name="data", display_name="Data", method="load_documents"),
+        Output(name="data", display_name="JSON", method="load_documents"),
     ]
 
     @staticmethod
@@ -255,7 +255,7 @@ class GitLoaderComponent(Component):
             file_filter=combined_filter,
         )
 
-    async def load_documents(self) -> list[Data]:
+    async def load_documents(self) -> list[JSON]:
         gitloader = await self.build_gitloader()
         data = [Data.from_document(doc) async for doc in gitloader.alazy_load()]
         self.status = data

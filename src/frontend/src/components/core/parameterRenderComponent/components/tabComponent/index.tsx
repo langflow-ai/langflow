@@ -16,9 +16,16 @@ export default function TabComponent({
 
   // Update the active tab when the component props change
   useEffect(() => {
+    console.log("🔍 [TabComponent] useEffect triggered:");
+    console.log("  - id:", id);
+    console.log("  - value:", value);
+    console.log("  - options:", options);
+    console.log("  - value in options?", value && options.includes(value));
+
     if (options.length > 0) {
       // If value is one of the options, use it
       if (value && options.includes(value)) {
+        console.log("  - Setting activeTab to:", value);
         setActiveTab(value);
       }
     }

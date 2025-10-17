@@ -11,7 +11,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import BoolInput
 from lfx.io import MultilineInput, Output, SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 MAX_DESCRIPTION_LEN = 250
 
@@ -88,7 +88,7 @@ class ApifyActorsComponent(Component):
         super().__init__(*args, **kwargs)
         self._apify_client: ApifyClient | None = None
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         """Run the Actor and return node output."""
         input_ = json.loads(self.run_input)
         fields = ApifyActorsComponent.parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None

@@ -196,9 +196,17 @@ test(
     await page.getByText("Close").first().click();
     await page.waitForTimeout(600);
     // Remove all connections
-    const dataEdge = await page.locator(".react-flow__edge").first();
-    await dataEdge.click();
-    await page.keyboard.press("Backspace");
+    const numberOfConnections = await page
+      .locator(".react-flow__edge")
+      .first()
+      .count();
+
+    for (let i = 0; i < numberOfConnections; i++) {
+      const dataEdge = await page.locator(".react-flow__edge").first();
+      await dataEdge.click();
+      await page.keyboard.press("Backspace");
+      await page.waitForTimeout(600);
+    }
 
     await page.waitForTimeout(5000);
 

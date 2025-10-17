@@ -1,5 +1,5 @@
 from lfx.custom.custom_component.custom_component import CustomComponent
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class ExtractKeyFromDataComponent(CustomComponent):
@@ -22,7 +22,7 @@ class ExtractKeyFromDataComponent(CustomComponent):
         },
     }
 
-    def build(self, data: Data, keys: list[str], *, silent_error: bool = True) -> Data:
+    def build(self, data: JSON, keys: list[str], *, silent_error: bool = True) -> JSON:
         """Extracts the keys from a data.
 
         Args:

@@ -1,7 +1,7 @@
 from langchain_core.documents import Document
 
 from lfx.custom.custom_component.custom_component import CustomComponent
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class DocumentsToDataComponent(CustomComponent):
@@ -14,7 +14,7 @@ class DocumentsToDataComponent(CustomComponent):
         "documents": {"display_name": "Documents"},
     }
 
-    def build(self, documents: list[Document]) -> list[Data]:
+    def build(self, documents: list[Document]) -> list[JSON]:
         if isinstance(documents, Document):
             documents = [documents]
         data = [Data.from_document(document) for document in documents]

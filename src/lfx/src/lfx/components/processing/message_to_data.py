@@ -1,7 +1,7 @@
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageInput, Output
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class MessageToDataComponent(Component):
@@ -22,10 +22,10 @@ class MessageToDataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="convert_message_to_data"),
+        Output(display_name="JSON", name="data", method="convert_message_to_data"),
     ]
 
-    def convert_message_to_data(self) -> Data:
+    def convert_message_to_data(self) -> JSON:
         # Check for Message by checking if it has the expected attributes instead of isinstance
         if hasattr(self.message, "data") and hasattr(self.message, "text") and hasattr(self.message, "get_text"):
             # Convert Message to Data - this works for both langflow.Message and lfx.Message

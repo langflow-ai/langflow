@@ -5,7 +5,7 @@ from langchain_community.vectorstores import Vectara
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
 from lfx.io import HandleInput, IntInput, SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
@@ -81,7 +81,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
             self.log("No documents to add to Vectara.")
             self.status = "No valid documents to add to Vectara"
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():

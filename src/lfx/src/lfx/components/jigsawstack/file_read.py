@@ -2,7 +2,7 @@ import tempfile
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import Output, SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class JigsawStackFileReadComponent(Component):
@@ -33,7 +33,7 @@ class JigsawStackFileReadComponent(Component):
         Output(display_name="File Path", name="file_path", method="read_and_save_file"),
     ]
 
-    def read_and_save_file(self) -> Data:
+    def read_and_save_file(self) -> JSON:
         """Read file from JigsawStack and save to temp file, return file path."""
         try:
             from jigsawstack import JigsawStack, JigsawStackError

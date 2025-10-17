@@ -6,7 +6,7 @@ from lfx.base.memory.model import LCChatMemoryComponent
 from lfx.inputs.inputs import DictInput, HandleInput, MessageTextInput, NestedDictInput, SecretStrInput
 from lfx.io import Output
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON
 
 
 class Mem0MemoryComponent(LCChatMemoryComponent):
@@ -31,7 +31,7 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
                         },
                         "version": "v1.1"
                     }""",
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
         ),
         MessageTextInput(
             name="ingest_message",
@@ -113,7 +113,7 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
 
         return mem0_memory
 
-    def build_search_results(self) -> Data:
+    def build_search_results(self) -> JSON:
         """Searches the Mem0 memory for related messages based on the search query and returns the results."""
         mem0_memory = self.ingest_data()
         search_query = self.search_query

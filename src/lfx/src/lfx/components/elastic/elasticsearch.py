@@ -14,7 +14,7 @@ from lfx.io import (
     SecretStrInput,
     StrInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
@@ -240,7 +240,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
 
         return results
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         """Search for documents in the vector store based on the search input.
 
         If no search input is provided, retrieve all documents.

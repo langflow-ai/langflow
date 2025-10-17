@@ -4,7 +4,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DictInput, IntInput, MessageTextInput
 from lfx.io import Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.dotdict import dotdict
 
 
@@ -41,7 +41,7 @@ class CreateDataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="build_data"),
+        Output(display_name="JSON", name="data", method="build_data"),
     ]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
@@ -75,14 +75,14 @@ class CreateDataComponent(Component):
                         display_name=f"Field {i}",
                         name=key,
                         info=f"Key for field {i}.",
-                        input_types=["Message", "Data"],
+                        input_types=["Message", "Data", "JSON"],
                     )
                     build_config[field.name] = field.to_dict()
 
             build_config["number_of_fields"]["value"] = field_value_int
         return build_config
 
-    async def build_data(self) -> Data:
+    async def build_data(self) -> JSON:
         data = self.get_data()
         return_data = Data(data=data, text_key=self.text_key)
         self.status = return_data

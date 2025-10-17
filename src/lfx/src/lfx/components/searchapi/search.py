@@ -5,8 +5,8 @@ from langchain_community.utilities.searchapi import SearchApiAPIWrapper
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DictInput, DropdownInput, IntInput, MultilineInput, SecretStrInput
 from lfx.io import Output
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 
 
 class SearchComponent(Component):
@@ -29,21 +29,21 @@ class SearchComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
+        Output(display_name="Table", name="dataframe", method="fetch_content_dataframe"),
     ]
 
     def _build_wrapper(self):
         return SearchApiAPIWrapper(engine=self.engine, searchapi_api_key=self.api_key)
 
-    def run_model(self) -> DataFrame:
+    def run_model(self) -> Table:
         return self.fetch_content_dataframe()
 
-    def fetch_content(self) -> list[Data]:
+    def fetch_content(self) -> list[JSON]:
         wrapper = self._build_wrapper()
 
         def search_func(
             query: str, params: dict[str, Any] | None = None, max_results: int = 5, max_snippet_length: int = 100
-        ) -> list[Data]:
+        ) -> list[JSON]:
             params = params or {}
             full_results = wrapper.results(query=query, **params)
             organic_results = full_results.get("organic_results", [])[:max_results]
@@ -69,11 +69,10 @@ class SearchComponent(Component):
         self.status = results
         return results
 
-    def fetch_content_dataframe(self) -> DataFrame:
+    def fetch_content_dataframe(self) -> Table:
         """Convert the search results to a DataFrame.
 
-        Returns:
-            DataFrame: A DataFrame containing the search results.
+        Returns: Table: A DataFrame containing the search results.
         """
         data = self.fetch_content()
         return DataFrame(data)

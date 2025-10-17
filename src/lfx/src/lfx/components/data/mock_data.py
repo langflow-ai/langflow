@@ -4,6 +4,8 @@ from datetime import datetime, timedelta, timezone
 from lfx.custom.custom_component.component import Component
 from lfx.io import Output
 from lfx.schema import Data, DataFrame
+from lfx.schema.data import JSON
+from lfx.schema.dataframe import Table
 from lfx.schema.message import Message
 
 
@@ -33,7 +35,7 @@ class MockDataGeneratorComponent(Component):
         Output(display_name="Result", name="data_output", method="generate_data_output"),
     ]
 
-    def build(self) -> DataFrame:
+    def build(self) -> Table:
         """Default build method - returns DataFrame when component is standalone."""
         return self.generate_dataframe_output()
 
@@ -55,11 +57,10 @@ class MockDataGeneratorComponent(Component):
         else:
             return message
 
-    def generate_data_output(self) -> Data:
+    def generate_data_output(self) -> JSON:
         """Generate Data output specifically.
 
-        Returns:
-            Data: A Data object containing sample JSON data (1 record)
+        Returns: JSON: A Data object containing sample JSON data (1 record)
         """
         try:
             record_count = 1  # Fixed to 1 record for Data output
@@ -74,11 +75,10 @@ class MockDataGeneratorComponent(Component):
         else:
             return data
 
-    def generate_dataframe_output(self) -> DataFrame:
+    def generate_dataframe_output(self) -> Table:
         """Generate DataFrame output specifically.
 
-        Returns:
-            DataFrame: A Langflow DataFrame with sample data (50 records)
+        Returns: Table: A Langflow DataFrame with sample data (50 records)
         """
         try:
             record_count = 50  # Fixed to 50 records for DataFrame output
@@ -133,14 +133,13 @@ class MockDataGeneratorComponent(Component):
         selected_text = secrets.choice(lorem_ipsum_texts)
         return Message(text=selected_text)
 
-    def _generate_data(self, record_count: int) -> Data:
+    def _generate_data(self, record_count: int) -> JSON:
         """Generate sample Data with JSON structure.
 
         Args:
             record_count: Number of records to generate
 
-        Returns:
-            Data: A Data object containing sample JSON data
+        Returns: JSON: A Data object containing sample JSON data
         """
         # Sample data categories
         companies = [
@@ -205,14 +204,13 @@ class MockDataGeneratorComponent(Component):
 
         return Data(data=data_structure)
 
-    def _generate_dataframe(self, record_count: int) -> DataFrame:
+    def _generate_dataframe(self, record_count: int) -> Table:
         """Generate sample DataFrame with realistic business data.
 
         Args:
             record_count: Number of rows to generate
 
-        Returns:
-            DataFrame: A Langflow DataFrame with sample data
+        Returns: Table: A Langflow DataFrame with sample data
         """
         try:
             import pandas as pd

@@ -1,5 +1,5 @@
 from lfx.custom.custom_component.custom_component import CustomComponent
-from lfx.schema.data import Data
+from lfx.schema.data import JSON
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
@@ -40,7 +40,7 @@ class BaseMemoryComponent(CustomComponent):
             },
         }
 
-    def get_messages(self, **kwargs) -> list[Data]:
+    def get_messages(self, **kwargs) -> list[JSON]:
         raise NotImplementedError
 
     def add_message(

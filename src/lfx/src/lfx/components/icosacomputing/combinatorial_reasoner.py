@@ -5,7 +5,7 @@ from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DropdownInput, SecretStrInput, StrInput
 from lfx.io import MessageTextInput, Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.message import Message
 
 
@@ -78,7 +78,7 @@ class CombinatorialReasonerComponent(Component):
         self.reasons = response.json()["finalReasons"]
         return prompt
 
-    def build_reasons(self) -> Data:
+    def build_reasons(self) -> JSON:
         # list of selected reasons
         final_reasons = [reason[0] for reason in self.reasons]
         return Data(value=final_reasons)

@@ -92,7 +92,7 @@ test(
 
     //connection 3
     await page.getByTestId("handle-splittext-shownode-chunks-right").click();
-    await page.getByTestId("handle-parsedata-shownode-data-left").click();
+    await page.getByTestId("handle-parsedata-shownode-json-left").click();
 
     //connection 4
     await page.getByTestId("handle-parsedata-shownode-message-right").click();

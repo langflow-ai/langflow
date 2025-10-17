@@ -187,7 +187,7 @@ test(
 
     //connection 3
     const textEmbedderOutput_0 = await page
-      .getByTestId("handle-textembeddercomponent-shownode-embedding data-right")
+      .getByTestId("handle-textembeddercomponent-shownode-embedding json-right")
       .nth(0);
     await textEmbedderOutput_0.hover();
     await page.mouse.down();
@@ -201,7 +201,7 @@ test(
 
     //connection 4
     const textEmbedderOutput_1 = await page
-      .getByTestId("handle-textembeddercomponent-shownode-embedding data-right")
+      .getByTestId("handle-textembeddercomponent-shownode-embedding json-right")
       .nth(1);
     await textEmbedderOutput_1.hover();
     await page.mouse.down();
@@ -211,25 +211,25 @@ test(
     //connection 5
     const embeddingSimilarityOutput = await page
       .getByTestId(
-        "handle-embeddingsimilaritycomponent-shownode-similarity data-right",
+        "handle-embeddingsimilaritycomponent-shownode-similarity json-right",
       )
       .nth(0);
     await embeddingSimilarityOutput.hover();
     await page.mouse.down();
     const filterDataInput = await page
-      .getByTestId("handle-filterdata-shownode-data-left")
+      .getByTestId("handle-filterdata-shownode-json-left")
       .nth(0);
     await filterDataInput.hover();
     await page.mouse.up();
 
     //connection 6
     const filterDataOutput = await page
-      .getByTestId("handle-filterdata-shownode-filtered data-right")
+      .getByTestId("handle-filterdata-shownode-filtered json-right")
       .nth(0);
     await filterDataOutput.hover();
     await page.mouse.down();
     const parseDataInput = await page
-      .getByTestId("handle-parsedata-shownode-data-left")
+      .getByTestId("handle-parsedata-shownode-json-left")
       .nth(0);
     await parseDataInput.hover();
     await page.mouse.up();

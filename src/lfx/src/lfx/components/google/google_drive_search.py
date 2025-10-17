@@ -6,7 +6,7 @@ from googleapiclient.discovery import build
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DropdownInput, MessageTextInput
 from lfx.io import SecretStrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.template.field.base import Output
 
 
@@ -73,7 +73,7 @@ class GoogleDriveSearchComponent(Component):
         Output(display_name="Document URLs", name="doc_urls", method="search_doc_urls"),
         Output(display_name="Document IDs", name="doc_ids", method="search_doc_ids"),
         Output(display_name="Document Titles", name="doc_titles", method="search_doc_titles"),
-        Output(display_name="Data", name="Data", method="search_data"),
+        Output(display_name="JSON", name="Data", method="search_data"),
     ]
 
     def generate_query_string(self) -> str:
@@ -148,5 +148,5 @@ class GoogleDriveSearchComponent(Component):
     def search_doc_titles(self) -> list[str]:
         return self.search_files()["doc_titles"]
 
-    def search_data(self) -> Data:
+    def search_data(self) -> JSON:
         return Data(data={"text": self.search_files()["doc_titles_urls"]})

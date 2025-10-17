@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import DictInput, IntInput, MessageTextInput, MultilineInput, SecretStrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class SearchAPIComponent(LCToolComponent):
@@ -71,7 +71,7 @@ class SearchAPIComponent(LCToolComponent):
         self.status = f"Search API Tool created with engine: {self.engine}"
         return tool
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         tool = self.build_tool()
         results = tool.run(
             {

@@ -11,8 +11,8 @@ from lfx.io import (
     Output,
     TableInput,
 )
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.schema.table import EditMode
 
 
@@ -115,13 +115,15 @@ class StructuredOutputComponent(Component):
     outputs = [
         Output(
             name="structured_output",
-            display_name="Structured Output",
+            display_name="JSON Output",
             method="build_structured_output",
+            types=["JSON"],
         ),
         Output(
             name="dataframe_output",
-            display_name="Structured Output",
+            display_name="Table Output",
             method="build_structured_dataframe",
+            types=["Table"],
         ),
     ]
 
@@ -178,7 +180,7 @@ class StructuredOutputComponent(Component):
         # Extract the objects array (guaranteed to exist due to our Pydantic model structure)
         return structured_data.get("objects", structured_data)
 
-    def build_structured_output(self) -> Data:
+    def build_structured_output(self) -> JSON:
         output = self.build_structured_output_base()
         if not isinstance(output, list) or not output:
             # handle empty or unexpected type case
@@ -191,7 +193,7 @@ class StructuredOutputComponent(Component):
             return Data(data={"results": output})
         return Data()
 
-    def build_structured_dataframe(self) -> DataFrame:
+    def build_structured_dataframe(self) -> Table:
         output = self.build_structured_output_base()
         if not isinstance(output, list) or not output:
             # handle empty or unexpected type case

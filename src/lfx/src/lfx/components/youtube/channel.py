@@ -7,7 +7,7 @@ from googleapiclient.errors import HttpError
 
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, MessageTextInput, SecretStrInput
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.template.field.base import Output
 
 
@@ -143,7 +143,7 @@ class YouTubeChannelComponent(Component):
         else:
             return playlists
 
-    def get_channel_info(self) -> DataFrame:
+    def get_channel_info(self) -> Table:
         """Retrieves channel information and returns it as a DataFrame."""
         youtube = None
         try:

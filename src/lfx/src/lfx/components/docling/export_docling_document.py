@@ -6,6 +6,8 @@ from lfx.base.data.docling_utils import extract_docling_documents
 from lfx.custom import Component
 from lfx.io import DropdownInput, HandleInput, MessageTextInput, Output, StrInput
 from lfx.schema import Data, DataFrame
+from lfx.schema.data import JSON
+from lfx.schema.dataframe import Table
 
 
 class ExportDoclingDocumentComponent(Component):
@@ -18,9 +20,9 @@ class ExportDoclingDocumentComponent(Component):
     inputs = [
         HandleInput(
             name="data_inputs",
-            display_name="Data or DataFrame",
+            display_name="JSON or Table",
             info="The data with documents to export.",
-            input_types=["Data", "DataFrame"],
+            input_types=["Data", "JSON", "DataFrame", "Table"],
             required=True,
         ),
         DropdownInput(
@@ -66,7 +68,7 @@ class ExportDoclingDocumentComponent(Component):
 
     outputs = [
         Output(display_name="Exported data", name="data", method="export_document"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="Table", name="dataframe", method="as_dataframe"),
     ]
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
@@ -85,10 +87,10 @@ class ExportDoclingDocumentComponent(Component):
 
         return build_config
 
-    def export_document(self) -> list[Data]:
+    def export_document(self) -> list[JSON]:
         documents = extract_docling_documents(self.data_inputs, self.doc_key)
 
-        results: list[Data] = []
+        results: list[JSON] = []
         try:
             image_mode = ImageRefMode(self.image_mode)
             for doc in documents:
@@ -113,5 +115,5 @@ class ExportDoclingDocumentComponent(Component):
 
         return results
 
-    def as_dataframe(self) -> DataFrame:
+    def as_dataframe(self) -> Table:
         return DataFrame(self.export_document())
