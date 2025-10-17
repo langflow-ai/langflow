@@ -322,7 +322,23 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
-          prune-cache: false
+          prune-cache: true
+
+      - name: Clean up disk space before installing dependencies
+        run: |
+          echo "=== Disk usage before cleanup ==="
+          df -h
+          echo "=== Cleaning up system caches and temporary files ==="
+          # Clean up system caches (safe - only removes downloaded .deb files)
+          sudo apt-get clean || true
+          sudo rm -rf /var/lib/apt/lists/* || true
+          # Clean up temporary files (more targeted approach)
+          sudo find /tmp -type f -atime +1 -delete 2>/dev/null || true
+          sudo find /tmp -type d -empty -delete 2>/dev/null || true
+          # Clean up UV cache to free space
+          uv cache prune --ci || true
+          echo "=== Disk usage after cleanup ==="
+          df -h
 
       - name: Install Python Dependencies
         run: uv sync --extra audio
