@@ -3,6 +3,7 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 
 from astrapy import DataAPIClient, Database
+from langchain_astradb.utils.astradb import _AstraDBCollectionEnvironment
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import (
@@ -359,7 +360,6 @@ class AstraDBBaseComponent(Component):
             try:
                 from astrapy.data.info.reranking import RerankServiceOptions
                 from astrapy.info import CollectionLexicalOptions, CollectionRerankOptions
-                from langchain_astradb.utils.astradb import _AstraDBCollectionEnvironment
             except ImportError as e:
                 msg = (
                     "astrapy and langchain_astradb are required to create AstraDB collections with hybrid search. "
