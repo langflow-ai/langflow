@@ -426,9 +426,9 @@ module.exports = {
         "Contributing/contributing-community",
         "Contributing/contributing-how-to-contribute",
         "Contributing/contributing-components",
+        "Contributing/contributing-bundles",
         "Contributing/contributing-component-tests",
         "Contributing/contributing-templates",
-        "Contributing/contributing-bundles",
       ],
     },
     {
