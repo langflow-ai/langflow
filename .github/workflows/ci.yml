@@ -212,7 +212,7 @@ jobs:
         with:
           filters: ./.github/changes-filter.yaml
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Install deps for coverage check
@@ -316,7 +316,7 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.12
 
