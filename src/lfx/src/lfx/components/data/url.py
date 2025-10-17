@@ -182,6 +182,7 @@ class URLComponent(Component):
             value=4000,
             required=False,
             advanced=True,
+            tool_mode=True,
         ),
         IntInput(
             name="chunk_overlap",
@@ -190,6 +191,7 @@ class URLComponent(Component):
             value=200,
             required=False,
             advanced=True,
+            tool_mode=True,
         ),
         IntInput(
             name="max_total_chars",
@@ -198,6 +200,7 @@ class URLComponent(Component):
             value=50000,
             required=False,
             advanced=True,
+            tool_mode=True,
         ),
     ]
 
