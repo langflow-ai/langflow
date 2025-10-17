@@ -29,7 +29,11 @@ export default defineConfig({
   // reporter: [
   //   ["html", { open: "never", outputFolder: "playwright-report/test-results" }],
   // ],
-  reporter: process.env.CI ? "blob" : "html",
+  reporter: process.env.CI
+    ? "blob"
+    : process.env.PLAYWRIGHT_COVERAGE_TEST
+      ? [["html", { open: "never" }]]
+      : "html",
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */

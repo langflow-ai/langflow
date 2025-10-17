@@ -5,7 +5,7 @@
 FRONTEND_DIR = src/frontend
 NPM = npm
 
-.PHONY: install_frontend install_frontendci install_frontendc frontend_deps_check build_frontend run_frontend frontend frontendc format_frontend tests_frontend test_frontend test_frontend_watch test_frontend_coverage test_frontend_verbose test_frontend_ci test_frontend_clean test_frontend_file test_frontend_pattern test_frontend_snapshots test_frontend_config test_frontend_bail test_frontend_silent test_frontend_coverage_open help_frontend
+.PHONY: install_frontend install_frontendci install_frontendc frontend_deps_check build_frontend run_frontend frontend frontendc format_frontend test_frontend_playwright test_frontend_jest test_frontend_jest_watch test_frontend_jest_coverage test_frontend_jest_verbose test_frontend_jest_ci test_frontend_jest_clean test_frontend_jest_file test_frontend_jest_pattern test_frontend_jest_snapshots test_frontend_jest_config test_frontend_jest_bail test_frontend_jest_silent test_frontend_jest_coverage_open help_frontend
 
 ######################
 # FRONTEND DEPENDENCIES
@@ -70,52 +70,58 @@ format_frontend: ## frontend code formatters
 # FRONTEND E2E TESTS (PLAYWRIGHT)
 ######################
 
-tests_frontend: ## run frontend tests
-ifeq ($(UI), true)
-	@cd $(FRONTEND_DIR) && npx playwright test --ui --project=chromium
-else
-	@cd $(FRONTEND_DIR) && npx playwright test --project=chromium
-endif
+test_frontend_playwright: ## run playwright frontend tests
+	@echo "Running playwright frontend tests..."
+	ifeq ($(UI), true)
+		@cd $(FRONTEND_DIR) && npx playwright test --ui --project=chromium
+	else
+		@cd $(FRONTEND_DIR) && npx playwright test --project=chromium
+	endif
+
+test_frontend_playwright_coverage: ## run playwright frontend tests with coverage
+	@echo "Running playwright frontend tests with coverage report..."
+	@cd $(FRONTEND_DIR) && PLAYWRIGHT_COVERAGE_TEST=true npx playwright test --project=chromium || true && npx nyc report --reporter=html --report-dir=coverage/playwright
+
 
 ######################
 # FRONTEND UNIT TESTS (JEST)
 ######################
 
 # Run all frontend Jest unit tests
-test_frontend: frontend_deps_check ## run all frontend Jest unit tests
+test_frontend_jest: frontend_deps_check ## run all frontend Jest unit tests
 	@echo "Running all frontend Jest unit tests..."
 	@cd $(FRONTEND_DIR) && $(NPM) test
 
 # Run frontend tests in watch mode
-test_frontend_watch: frontend_deps_check ## run frontend tests in watch mode
+test_frontend_jest_watch: frontend_deps_check ## run frontend tests in watch mode
 	@echo "Running frontend tests in watch mode..."
 	@cd $(FRONTEND_DIR) && $(NPM) run test:watch
 
 # Run frontend tests with coverage report
-test_frontend_coverage: frontend_deps_check ## run frontend tests with coverage report
+test_frontend_jest_coverage: frontend_deps_check ## run frontend tests with coverage report
 	@echo "Running frontend tests with coverage report..."
 	@cd $(FRONTEND_DIR) && npx jest --coverage
 
 # Run frontend tests with verbose output
-test_frontend_verbose: frontend_deps_check ## run frontend tests with verbose output
+test_frontend_jest_verbose: frontend_deps_check ## run frontend tests with verbose output
 	@echo "Running frontend tests with verbose output..."
 	@cd $(FRONTEND_DIR) && npx jest --verbose
 
 # Run frontend tests in CI mode (no watch, with coverage)
-test_frontend_ci: frontend_deps_check ## run frontend tests in CI mode
+test_frontend_jest_ci: frontend_deps_check ## run frontend tests in CI mode
 	@echo "Running frontend tests in CI mode..."
 	@cd $(FRONTEND_DIR) && CI=true npx jest --ci --coverage --watchAll=false
 
 # Clean test cache and run tests
-test_frontend_clean: frontend_deps_check ## clean test cache and run tests
+test_frontend_jest_clean: frontend_deps_check ## clean test cache and run tests
 	@echo "Cleaning Jest cache and running tests..."
 	@cd $(FRONTEND_DIR) && npx jest --clearCache && npx jest
 
 # Run tests for a specific file
-test_frontend_file: frontend_deps_check ## run tests for a specific file (usage: make test_frontend_file path/to/test.ts)
+test_frontend_jest_file: frontend_deps_check ## run tests for a specific file (usage: make test_frontend_jest_file path/to/test.ts)
 	$(eval file := $(word 2,$(MAKECMDGOALS)))
 	@if [ -z "$(file)" ]; then \
-		echo "Usage: make test_frontend_file path/to/test.ts"; \
+		echo "Usage: make test_frontend_jest_file path/to/test.ts"; \
 		exit 1; \
 	fi
 	@echo "Running tests for file: $(file)"
@@ -126,37 +132,37 @@ test_frontend_file: frontend_deps_check ## run tests for a specific file (usage:
 	@:
 
 # Run tests matching a pattern
-test_frontend_pattern: frontend_deps_check ## run tests matching a pattern (usage: make test_frontend_pattern pattern)
+test_frontend_jest_pattern: frontend_deps_check ## run tests matching a pattern (usage: make test_frontend_jest_pattern pattern)
 	$(eval pattern := $(word 2,$(MAKECMDGOALS)))
 	@if [ -z "$(pattern)" ]; then \
-		echo "Usage: make test_frontend_pattern pattern"; \
+		echo "Usage: make test_frontend_jest_pattern pattern"; \
 		exit 1; \
 	fi
 	@echo "Running tests matching pattern: $(pattern)"
 	@cd $(FRONTEND_DIR) && npx jest --testNamePattern="$(pattern)"
 
 # Update test snapshots
-test_frontend_snapshots: frontend_deps_check ## update Jest snapshots
+test_frontend_jest_snapshots: frontend_deps_check ## update Jest snapshots
 	@echo "Updating Jest snapshots..."
 	@cd $(FRONTEND_DIR) && npx jest --updateSnapshot
 
 # Show test configuration
-test_frontend_config: ## show Jest configuration
+test_frontend_jest_config: ## show Jest configuration
 	@echo "Jest configuration:"
 	@cd $(FRONTEND_DIR) && npx jest --showConfig
 
 # Run Jest tests with bail (stop on first failure)
-test_frontend_bail: frontend_deps_check ## run tests with bail (stop on first failure)
+test_frontend_jest_bail: frontend_deps_check ## run tests with bail (stop on first failure)
 	@echo "Running Jest tests with bail (stop on first failure)..."
 	@cd $(FRONTEND_DIR) && npx jest --bail
 
 # Run Jest tests silently (minimal output)
-test_frontend_silent: frontend_deps_check ## run tests silently (minimal output)
+test_frontend_jest_silent: frontend_deps_check ## run tests silently (minimal output)
 	@echo "Running Jest tests silently..."
 	@cd $(FRONTEND_DIR) && npx jest --silent
 
 # Run Jest tests and open coverage report in browser
-test_frontend_coverage_open: test_frontend_coverage ## run tests with coverage and open report in browser
+test_frontend_jest_coverage_open: test_frontend_jest_coverage ## run tests with coverage and open report in browser
 	@echo "Opening coverage report in browser..."
 	@if command -v open >/dev/null 2>&1; then \
 		open $(FRONTEND_DIR)/coverage/lcov-report/index.html; \
@@ -164,6 +170,25 @@ test_frontend_coverage_open: test_frontend_coverage ## run tests with coverage a
 		xdg-open $(FRONTEND_DIR)/coverage/lcov-report/index.html; \
 	else \
 		echo "Coverage report generated at: $(FRONTEND_DIR)/coverage/lcov-report/index.html"; \
+	fi
+
+######################
+# COMBINED FRONTEND TEST COVERAGE
+######################
+
+# Run Jest and Playwright tests, merge coverage reports and open coverage report in browser
+test_frontend_combined_coverage: test_frontend_jest_coverage test_frontend_playwright_coverage
+	@echo "Merge coverage reports..."
+	@cd $(FRONTEND_DIR) && cp coverage/jest/coverage-final.json .nyc_output/jest-coverage-final.json && npx nyc report --reporter=html --report-dir=coverage/combined
+
+test_frontend_combined_coverage_open: test_frontend_combined_coverage
+	@echo "Opening combined frontend coverage report in browser..."
+	@if command -v open >/dev/null 2>&1; then \
+		open $(FRONTEND_DIR)/coverage/combined/index.html; \
+	elif command -v xdg-open >/dev/null 2>&1; then \
+		xdg-open $(FRONTEND_DIR)/coverage/combined/index.html; \
+	else \
+		echo "Coverage report generated at: $(FRONTEND_DIR)/coverage/combined/index.html"; \
 	fi
 
 ######################
@@ -192,25 +217,30 @@ help_frontend: ## show frontend help
 	@echo "  $(GREEN)make format_frontend_check$(NC) - Check frontend formatting (biome)"
 	@echo ''
 	@echo "$(GREEN)E2E Testing (Playwright):$(NC)"
-	@echo "  $(GREEN)make tests_frontend$(NC)       - Run Playwright e2e tests"
+	@echo "  $(GREEN)make test_frontend_playwright$(NC) - Run Playwright e2e tests"
+	@echo "  $(GREEN)make test_frontend_playwright_coverage$(NC) - Run frontend Playwright e2e tests with coverage"
 	@echo "  $(GREEN)make tests_frontend UI=true$(NC) - Run Playwright e2e tests with UI"
 	@echo ''
 	@echo "$(GREEN)Unit Testing (Jest):$(NC)"
-	@echo "  $(GREEN)make test_frontend$(NC)        - Run Jest unit tests"
-	@echo "  $(GREEN)make test_frontend_watch$(NC)  - Run unit tests in watch mode"
-	@echo "  $(GREEN)make test_frontend_coverage$(NC) - Run unit tests with coverage"
-	@echo "  $(GREEN)make test_frontend_coverage_open$(NC) - Run coverage and open report"
-	@echo "  $(GREEN)make test_frontend_verbose$(NC) - Run unit tests with verbose output"
-	@echo "  $(GREEN)make test_frontend_ci$(NC)     - Run unit tests in CI mode"
-	@echo "  $(GREEN)make test_frontend_clean$(NC)  - Clean cache and run unit tests"
-	@echo "  $(GREEN)make test_frontend_bail$(NC)   - Run unit tests with bail"
-	@echo "  $(GREEN)make test_frontend_silent$(NC) - Run unit tests silently"
+	@echo "  $(GREEN)make test_frontend_jest$(NC)        - Run Jest unit tests"
+	@echo "  $(GREEN)make test_frontend_jest_watch$(NC)  - Run Jest tests in watch mode"
+	@echo "  $(GREEN)make test_frontend_jest_coverage$(NC) - Run Jest with coverage"
+	@echo "  $(GREEN)make test_frontend_jest_coverage_open$(NC) - Run Jest coverage and open report"
+	@echo "  $(GREEN)make test_frontend_jest_verbose$(NC) - Run Jest tests with verbose output"
+	@echo "  $(GREEN)make test_frontend_jest_ci$(NC)     - Run Jest tests in CI mode"
+	@echo "  $(GREEN)make test_frontend_jest_clean$(NC)  - Clean cache and run Jest tests"
+	@echo "  $(GREEN)make test_frontend_jest_bail$(NC)   - Run Jest tests with bail"
+	@echo "  $(GREEN)make test_frontend_jest_silent$(NC) - Run Jest tests silently"
 	@echo ''
 	@echo "$(GREEN)Targeted Testing:$(NC)"
-	@echo "  $(GREEN)make test_frontend_file path$(NC) - Run tests for specific file"
-	@echo "  $(GREEN)make test_frontend_pattern pattern$(NC) - Run tests matching pattern"
-	@echo "  $(GREEN)make test_frontend_snapshots$(NC) - Update Jest snapshots"
-	@echo "  $(GREEN)make test_frontend_config$(NC) - Show Jest configuration"
+	@echo "  $(GREEN)make test_frontend_jest_file path$(NC) - Run Jest tests for specific file"
+	@echo "  $(GREEN)make test_frontend_jest_pattern pattern$(NC) - Run Jest tests matching pattern"
+	@echo "  $(GREEN)make test_frontend_jest_snapshots$(NC) - Update Jest snapshots"
+	@echo "  $(GREEN)make test_frontend_jest_config$(NC) - Show Jest configuration"
+	@echo ''
+	@echo "$(GREEN)Unit Testing (Combined):$(NC)"
+	@echo "  $(GREEN)make test_frontend_combined_coverage$(NC) - Run both Jest and Playwright coverage report"
+	@echo "  $(GREEN)make test_frontend_combined_coverage_open$(NC) - Run both Jest and Playwright coverage and open report"
 	@echo ''
 	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
 	@echo ''

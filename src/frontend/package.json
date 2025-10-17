@@ -84,8 +84,6 @@
     "use-stick-to-bottom": "^1.1.1",
     "uuid": "^10.0.0",
     "vanilla-jsoneditor": "^2.3.3",
-    "vite-plugin-svgr": "^4.2.0",
-    "vite-tsconfig-paths": "^4.3.2",
     "web-vitals": "^4.1.1",
     "zod": "^3.23.8",
     "zustand": "^4.5.2"
@@ -115,11 +113,34 @@
     ]
   },
   "proxy": "http://localhost:7860",
+  "nyc": {
+    "all": true,
+    "include": [
+      "src/**/*.{ts,tsx,js,jsx}"
+    ],
+    "exclude": [
+      "node_modules",
+      "tests",
+      "/tests/",
+      "/mocks/",
+      "**/*.{spec,test}.{ts,tsx,js,jsx}",
+      "/*.mock.{ts,tsx,js,jsx}",
+      "/*fixture.{ts,tsx,js,jsx}",
+      "**/*.d.ts"
+    ],
+    "reporter": [
+      "html",
+      "json",
+      "text",
+      "lcov"
+    ],
+    "report-dir": "coverage"
+  },
   "devDependencies": {
     "@biomejs/biome": "2.1.1",
     "@jest/types": "^30.0.1",
     "@modelcontextprotocol/server-everything": "^0.6.2",
-    "@playwright/test": "^1.52.0",
+    "@playwright/test": "^1.55.1",
     "@swc/cli": "^0.5.2",
     "@swc/core": "^1.6.1",
     "@tailwindcss/typography": "^0.5.13",
@@ -138,12 +159,16 @@
     "jest": "^30.0.3",
     "jest-environment-jsdom": "^30.0.2",
     "jest-junit": "^16.0.0",
+    "nyc": "^17.1.0",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
     "tailwindcss-dotted-background": "^1.1.0",
     "ts-jest": "^29.4.0",
     "typescript": "^5.4.5",
     "ua-parser-js": "^1.0.38",
-    "vite": "^5.4.19"
+    "vite": "^5.4.19",
+    "vite-plugin-istanbul": "^7.2.0",
+    "vite-plugin-svgr": "^4.2.0",
+    "vite-tsconfig-paths": "^4.3.2"
   }
 }
