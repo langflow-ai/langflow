@@ -19,7 +19,7 @@ This flow loads a text file, splits the text into chunks, generates embeddings f
 
 ![A semantic search flow that uses Embedding Model, File, Split Text, Chroma DB, Chat Input, and Chat Output components](/img/component-embedding-models-add-chat.png)
 
-1. Create a flow, add a **File** component, and then select a file containing text data, such as a PDF, that you can use to test the flow.
+1. Create a flow, add a **Read File** component, and then select a file containing text data, such as a PDF, that you can use to test the flow.
 
 2. Add the **Embedding Model** core component, and then provide a valid OpenAI API key.
 You can enter the API key directly or use a <Icon name="Globe" aria-hidden="true"/> [global variable](/configuration-global-variables).
@@ -38,7 +38,7 @@ This component stores the generated embeddings so they can be used for similarit
 
 5. Connect the components:
 
-    * Connect the **File** component's **Loaded Files** output to the **Split Text** component's **Data or DataFrame** input.
+    * Connect the **Read File** component's **Loaded Files** output to the **Split Text** component's **Data or DataFrame** input.
     * Connect the **Split Text** component's **Chunks** output to the vector store component's **Ingest Data** input.
     * Connect the **Embedding Model** component's **Embeddings** output to the vector store component's **Embedding** input.
 
