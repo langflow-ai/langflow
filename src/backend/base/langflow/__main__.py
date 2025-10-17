@@ -33,7 +33,7 @@ from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.main import setup_app
 from langflow.services.auth.utils import check_key, get_current_user_by_jwt
-from langflow.services.deps import get_db_service, get_settings_service, session_scope
+from langflow.services.deps import get_db_service, get_settings_service, is_settings_service_initialized, session_scope
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
@@ -269,6 +269,14 @@ def run(
 ) -> None:
     """Run Langflow."""
     if env_file:
+        if is_settings_service_initialized():
+            err = (
+                "Settings service is already initialized. This indicates potential race conditions "
+                "with settings initialization. Ensure the settings service is not created during "
+                "module loading."
+            )
+            # i.e. ensures the env file is loaded before the settings service is initialized
+            raise ValueError(err)
         load_dotenv(env_file, override=True)
 
     # Set and normalize log level, with precedence: cli > env > default

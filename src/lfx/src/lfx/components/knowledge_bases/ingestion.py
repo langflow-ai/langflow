@@ -48,12 +48,20 @@ HUGGINGFACE_MODEL_NAMES = [
 ]
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
 
-settings = get_settings_service().settings
-knowledge_directory = settings.knowledge_bases_dir
-if not knowledge_directory:
-    msg = "Knowledge bases directory is not set in the settings."
-    raise ValueError(msg)
-KNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()
+_KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
+
+
+def _get_knowledge_bases_root_path() -> Path:
+    """Lazy load the knowledge bases root path from settings."""
+    global _KNOWLEDGE_BASES_ROOT_PATH  # noqa: PLW0603
+    if _KNOWLEDGE_BASES_ROOT_PATH is None:
+        settings = get_settings_service().settings
+        knowledge_directory = settings.knowledge_bases_dir
+        if not knowledge_directory:
+            msg = "Knowledge bases directory is not set in the settings."
+            raise ValueError(msg)
+        _KNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()
+    return _KNOWLEDGE_BASES_ROOT_PATH
 
 
 class KnowledgeIngestionComponent(Component):
@@ -203,7 +211,7 @@ class KnowledgeIngestionComponent(Component):
     # ------ Internal helpers ---------------------------------------------
     def _get_kb_root(self) -> Path:
         """Return the root directory for knowledge bases."""
-        return KNOWLEDGE_BASES_ROOT_PATH
+        return _get_knowledge_bases_root_path()
 
     def _validate_column_config(self, df_source: pd.DataFrame) -> list[dict[str, Any]]:
         """Validate column configuration using Structured Output patterns."""
@@ -662,7 +670,7 @@ class KnowledgeIngestionComponent(Component):
                     raise ValueError(msg) from e
 
                 # Create the new knowledge base directory
-                kb_path = KNOWLEDGE_BASES_ROOT_PATH / kb_user / field_value["01_new_kb_name"]
+                kb_path = _get_knowledge_bases_root_path() / kb_user / field_value["01_new_kb_name"]
                 kb_path.mkdir(parents=True, exist_ok=True)
 
                 # Save the embedding metadata
@@ -675,7 +683,7 @@ class KnowledgeIngestionComponent(Component):
 
             # Update the knowledge base options dynamically
             build_config["knowledge_base"]["options"] = await get_knowledge_bases(
-                KNOWLEDGE_BASES_ROOT_PATH,
+                _get_knowledge_bases_root_path(),
                 user_id=self.user_id,
             )
 
