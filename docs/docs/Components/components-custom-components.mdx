@@ -8,18 +8,9 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import PartialBasicComponentStructure from '../_partial-basic-component-structure.mdx';
 
-Custom components extend Langflow's functionality through Python classes that inherit from `Component`. This enables integration of new features, data manipulation, external services, and specialized tools.
+Create your own custom components to add any functionality you need to Langflow, from API integrations to data processing.
 
-In Langflow's node-based environment, each node is a "component" that performs discrete functions. Custom components are Python classes which define:
-
-* **Inputs** — Data or parameters your component requires.
-* **Outputs** — Data your component provides to downstream nodes.
-* **Logic** — How you process inputs to produce outputs.
-
-The benefits of creating custom components include unlimited extensibility, reusability, automatic field generation in the visual editor based on inputs, and type-safe connections between nodes.
-
-Create custom components for performing specialized tasks, calling APIs, or adding advanced logic.
-
+In Langflow's node-based environment, each node is a "component" that performs discrete functions.
 Custom components in Langflow are built upon:
 
 * The Python class that inherits from `Component`.
@@ -28,10 +19,11 @@ Custom components in Langflow are built upon:
 * Methods that define the component's behavior and logic.
 * Internal variables for logging, such as `self.log()`, `self.status`, and `self.stop()`.
 
+Use the [Custom component quickstart](#quickstart) to add an example component to Langflow, and then use the reference guides that follow for more advanced component customization.
 
-## Custom component quickstart
+## Custom component quickstart {#quickstart}
 
-Create a basic custom component, save it in the right place, and load it into Langflow.
+Create a custom `DataFrameProcessor` component by creating a Python file, saving it in the correct folder, including an `__init__.py` file, and loading it into Langflow.
 
 ### Create a Python file
 
