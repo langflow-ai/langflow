@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.5b49702d.css">
-<script src="/assets/js/runtime~main.d7cf7fbf.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.806dce07.js" defer="defer"></script>
 <script src="/assets/js/main.c3c5ea89.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -59,7 +59,7 @@ The default storage path depends on your operating system and installation metho
 <li><strong>Langflow Desktop</strong>:<!-- -->
 <ul>
 <li><strong>macOS</strong>: <code>/Users/&lt;username&gt;/.langflow/data/database.db</code></li>
-<li><strong>Windows</strong>: <code>C:\Users\&lt;name&gt;\AppData\Roaming\com.Langflow\data\langflow.db</code></li>
+<li><strong>Windows</strong>: <code>C:\Users\&lt;name&gt;\AppData\Roaming\com.LangflowDesktop\data\database.db</code></li>
 </ul>
 </li>
 <li><strong>Langflow OSS</strong>
@@ -116,7 +116,7 @@ For more information and examples, see <a href="/configuration-custom-database">
 <p><code>LANGFLOW_DB_CONNECT_TIMEOUT</code>: The number of seconds to wait before giving up on a lock to be released or establishing a connection to the database. This may be separate from the <code>pool_timeout</code> in <code>LANGFLOW_DB_CONNECTION_SETTINGS</code>. Default: 30.</p>
 </li>
 <li>
-<p><code>LANGFLOW_DB_CONNECTION_SETTINGS</code>: A a JSON dictionary containing the following database connection pool settings:</p>
+<p><code>LANGFLOW_DB_CONNECTION_SETTINGS</code>: A JSON dictionary containing the following database connection pool settings:</p>
 <ul>
 <li><code>pool_size</code>: The base number of connections to keep open in the connection pool. Default: 20.</li>
 <li><code>max_overflow</code>: Maximum number of connections that can be created in excess of <code>pool_size</code> if needed. Default: 30.</li>
