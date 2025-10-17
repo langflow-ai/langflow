@@ -414,14 +414,11 @@ inputs = [
 
 ## Typed annotations
 
-In Langflow, **typed annotations** allow Langflow to visually guide users and maintain flow consistency.
+In Langflow, typed annotations allow Langflow to visually guide users and maintain flow consistency.
+Always annotate your output methods with return types like `-> Data`, `-> Message`, or `-> DataFrame` to enable proper visual editor color-coding and validation.
+Use `Data`, `Message`, or `DataFrame` wrappers instead of returning plain structures for better consistency. Stay consistent with types across your components to make flows predictable and easier to build.
 
-Typed annotations provide:
-
-* **Color-coding**: Outputs like `-> Data` or `-> Message` get distinct colors.
-* **Validation**: Langflow blocks incompatible connections automatically.
-* **Readability**: Developers can quickly understand data flow.
-* **Development tools**: Better code suggestions and error checking in your code editor.
+Typed annotations provide color-coding where outputs like `-> Data` or `-> Message` get distinct colors, automatic validation that blocks incompatible connections, and improved readability for users to quickly understand data flow between components.
 
 ### Common return types
 
@@ -470,16 +467,6 @@ def compute_sum(self) -> int:
 </TabItem>
 </Tabs>
 
-### Tips for typed annotations
-
-When using typed annotations, consider the following best practices:
-
-* **Always Annotate Outputs**: Specify return types like `-> Data`, `-> Message`, or `-> DataFrame` to enable proper visual editor color-coding and validation.
-* **Wrap Raw Data**: Use `Data`, `Message`, or `DataFrame` wrappers instead of returning plain structures.
-* **Use Primitives Carefully**: Direct `str` or `int` returns are fine for simple flows, but wrapping improves flexibility.
-* **Annotate Helpers Too**: Even if internal, typing improves maintainability and clarity.
-* **Handle Edge Cases**: Prefer returning structured `Data` with error fields when needed.
-* **Stay Consistent**: Use the same types across your components to make flows predictable and easier to build.
 
 ## Enable dynamic fields
 
