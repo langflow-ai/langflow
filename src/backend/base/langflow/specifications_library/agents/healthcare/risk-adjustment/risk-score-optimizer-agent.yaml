@@ -1,0 +1,331 @@
+id: urn:agent:genesis:risk-adjustment:risk-score-optimizer-agent:1.0.0
+name: Risk Score Optimizer Agent
+fullyQualifiedName: genesis.autonomize.ai.risk_score_optimizer_agent
+description: Simulates impact of suspected codes, non-compliant conditions, and missed RAF opportunities on risk scores across populations, providing optimization strategies and financial impact analysis for risk adjustment programs
+domain: autonomize.ai
+subDomain: risk-adjustment
+version: 1.0.0
+environment: production
+agentOwner: risk-adjustment@autonomize.ai
+agentOwnerDisplayName: Risk Adjustment Team
+email: risk-adjustment@autonomize.ai
+status: ACTIVE
+variables:
+- name: optimization_scope
+  type: string
+  required: false
+  default: population
+  description: Scope of optimization analysis (individual, cohort, population, enterprise)
+- name: raf_model_version
+  type: string
+  required: false
+  default: CMS-HCC-V28
+  description: RAF model version for calculations (CMS-HCC-V28, CMS-HCC-V24, RxHCC, ESRD)
+- name: payment_year
+  type: string
+  required: false
+  default: "2025"
+  description: Payment year for RAF calculations and model parameters
+- name: optimization_strategy
+  type: string
+  required: false
+  default: balanced
+  description: Optimization strategy approach (conservative, balanced, aggressive, audit-safe)
+- name: minimum_impact_threshold
+  type: number
+  required: false
+  default: 0.05
+  description: Minimum RAF impact threshold for optimization recommendations
+- name: confidence_requirement
+  type: number
+  required: false
+  default: 0.80
+  description: Minimum confidence level for optimization recommendations
+- name: population_segment_analysis
+  type: boolean
+  required: false
+  default: true
+  description: Enable detailed population segmentation and targeted optimization
+- name: financial_modeling_depth
+  type: string
+  required: false
+  default: comprehensive
+  description: Depth of financial impact modeling (basic, standard, comprehensive, detailed)
+tags:
+- risk-score-optimization
+- raf-calculation
+- population-analytics
+- financial-modeling
+- revenue-optimization
+- hcc-impact-analysis
+- strategic-planning
+- performance-analytics
+- risk-adjustment-strategy
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Analyze and optimize risk adjustment scores across populations by simulating the impact of coding improvements, identifying high-value opportunities, and providing strategic recommendations for maximum appropriate RAF value and revenue optimization
+targetUser: internal
+valueGeneration: InsightGeneration
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: optimization-input
+  name: Risk Score Optimization Request Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive optimization requests with population data, suspected conditions, and strategic parameters for comprehensive RAF analysis
+  provides:
+  - useAs: input
+    in: optimizer-agent
+    description: Provide population data and optimization requirements for analysis
+- id: raf-calculation-engine
+  name: Advanced RAF Calculation Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Comprehensive RAF calculation engine with demographic adjustments, geographic factors, and advanced optimization algorithms
+  asTools: true
+  config:
+    tool_name: raf_calculator
+  provides:
+  - useAs: tools
+    in: optimizer-agent
+    description: Enable advanced RAF calculation and scenario modeling
+- id: population-analytics-engine
+  name: Population Risk Analytics Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced analytics engine for population segmentation, risk stratification, and targeted optimization analysis
+  asTools: true
+  config:
+    tool_name: population_analytics_engine
+  provides:
+  - useAs: tools
+    in: optimizer-agent
+    description: Enable comprehensive population analytics and segmentation
+- id: financial-impact-modeler
+  name: Financial Impact Modeling Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Sophisticated financial modeling engine for calculating revenue impact, ROI analysis, and strategic financial planning
+  asTools: true
+  config:
+    tool_name: financial_impact_modeler
+  provides:
+  - useAs: tools
+    in: optimizer-agent
+    description: Enable comprehensive financial impact modeling and analysis
+- id: opportunity-prioritizer
+  name: Optimization Opportunity Prioritizer
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced prioritization engine for ranking optimization opportunities by impact, feasibility, and strategic value
+  asTools: true
+  config:
+    tool_name: optimization_opportunity_prioritizer
+  provides:
+  - useAs: tools
+    in: optimizer-agent
+    description: Enable optimization opportunity prioritization and strategic planning
+- id: scenario-simulator
+  name: Risk Adjustment Scenario Simulator
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced simulation engine for modeling various risk adjustment scenarios and their impact on populations and revenue
+  asTools: true
+  config:
+    tool_name: scenario_simulator
+  provides:
+  - useAs: tools
+    in: optimizer-agent
+    description: Enable advanced scenario simulation and impact analysis
+- id: performance-benchmarker
+  name: Risk Adjustment Performance Benchmarker
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Benchmarking tool for comparing risk adjustment performance against industry standards and best practices
+  asTools: true
+  config:
+    tool_name: risk_adjustment_benchmarker
+  provides:
+  - useAs: tools
+    in: optimizer-agent
+    description: Enable performance benchmarking and comparative analysis
+- id: optimizer-prompt
+  name: Risk Score Optimizer Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for risk score optimization with financial modeling expertise and strategic analysis focus
+  config:
+    saved_prompt: risk_score_optimizer_prompt_v1
+    template: 'You are a risk adjustment strategist and financial analyst with expertise in RAF optimization, population health analytics, and Medicare Advantage revenue modeling. Your role is to analyze risk adjustment opportunities and provide strategic optimization recommendations for maximum appropriate value.
+
+      OPTIMIZATION EXPERTISE:
+      - CMS-HCC model mathematics and RAF calculation methodology
+      - Population health analytics and risk stratification
+      - Financial modeling and revenue impact analysis
+      - Strategic optimization and portfolio management
+      - Performance benchmarking and comparative analysis
+      - Regulatory compliance and audit considerations
+
+      OPTIMIZATION ANALYSIS PROCESS:
+      1. Analyze current population risk profiles and RAF scores
+      2. Identify suspected conditions and missed coding opportunities
+      3. Calculate potential RAF impact for each optimization opportunity
+      4. Perform financial modeling and revenue impact projections
+      5. Segment population for targeted optimization strategies
+      6. Prioritize opportunities by impact, feasibility, and risk
+      7. Model various optimization scenarios and outcomes
+      8. Provide strategic recommendations and implementation roadmap
+
+      RAF OPTIMIZATION STRATEGIES:
+      - Individual member-level optimization for high-impact cases
+      - Population segment targeting for efficient resource allocation
+      - Condition-specific campaigns for high-value HCC categories
+      - Provider engagement strategies for documentation improvement
+      - Technology deployment for scalable optimization
+      - Compliance-first approaches for audit-safe optimization
+
+      FINANCIAL IMPACT MODELING:
+      - RAF score improvement projections and confidence intervals
+      - Revenue impact calculations by member, segment, and population
+      - ROI analysis for optimization initiatives and investments
+      - Cost-benefit analysis for different optimization strategies
+      - Sensitivity analysis for key variables and assumptions
+      - Multi-year financial projections and strategic planning
+
+      POPULATION SEGMENTATION ANALYSIS:
+      - High-opportunity members with significant RAF potential
+      - Documentation-gap segments requiring provider engagement
+      - Annual recapture populations for systematic review
+      - New member onboarding and initial risk assessment
+      - Chronic condition management optimization opportunities
+      - Provider performance variation and improvement targets
+
+      SCENARIO SIMULATION REQUIREMENTS:
+      - Current state baseline with existing RAF scores
+      - Optimized scenarios with suspected condition capture
+      - Conservative, moderate, and aggressive optimization approaches
+      - Time-phased implementation with progressive improvements
+      - Resource requirement modeling for different strategies
+      - Risk mitigation scenarios for compliance and audit protection
+
+      OPTIMIZATION PRIORITIZATION CRITERIA:
+      - Financial impact magnitude and revenue potential
+      - Implementation feasibility and resource requirements
+      - Compliance risk assessment and audit defensibility
+      - Provider engagement requirements and capacity
+      - Technology and operational readiness
+      - Strategic alignment with organizational goals
+
+      OUTPUT REQUIREMENTS:
+      - Comprehensive optimization opportunity assessment
+      - Financial impact projections with confidence intervals
+      - Population segmentation and targeting recommendations
+      - Scenario modeling results with strategic alternatives
+      - Implementation roadmap with prioritized initiatives
+      - Performance metrics and success measurement framework
+      - Risk mitigation strategies and compliance considerations
+
+      STRATEGIC RECOMMENDATIONS:
+      - High-impact optimization initiatives with clear ROI
+      - Resource allocation recommendations for maximum efficiency
+      - Provider engagement strategies for sustainable improvement
+      - Technology investments for scalable optimization
+      - Performance monitoring and continuous improvement framework
+      - Compliance and audit preparation strategies
+
+      Use your RAF calculator, population analytics, financial modeler, opportunity prioritizer, scenario simulator, and performance benchmarker to provide comprehensive optimization analysis. Always balance revenue optimization with compliance requirements and sustainable implementation strategies.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: optimizer-agent
+    description: Provide specialized risk score optimization instructions and strategic expertise
+- id: optimizer-agent
+  name: Risk Score Optimizer Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Risk adjustment strategist that analyzes optimization opportunities and provides comprehensive financial and strategic recommendations
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4500
+    handle_parsing_errors: true
+    max_iterations: 25
+    verbose: true
+  provides:
+  - useAs: input
+    in: optimizer-output
+    description: Provide comprehensive risk score optimization analysis and strategic recommendations
+- id: optimizer-output
+  name: Risk Score Optimization Analysis Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive optimization analysis with financial projections, strategic recommendations, and implementation roadmap
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- optimization_opportunities
+- financial_impact_projections
+- population_segmentation_analysis
+- scenario_modeling_results
+- strategic_recommendations
+- implementation_roadmap
+- performance_benchmarks
+- roi_analysis
+kpis:
+- name: RAF Optimization Accuracy
+  description: Accuracy of RAF impact projections compared to actual results
+  target: '> 90%'
+  valueType: percentage
+  category: quality
+- name: Revenue Impact Identification
+  description: Total additional revenue identified through optimization analysis
+  target: '> $500 per member per month'
+  valueType: number
+  category: business
+- name: Optimization Opportunity Coverage
+  description: Percentage of available optimization opportunities successfully identified
+  target: '> 85%'
+  valueType: percentage
+  category: performance
+- name: Strategic Recommendation Implementation Rate
+  description: Percentage of strategic recommendations successfully implemented
+  target: '> 70%'
+  valueType: percentage
+  category: business
+- name: Financial Projection Accuracy
+  description: Accuracy of financial impact projections against actual outcomes
+  target: '> 88%'
+  valueType: percentage
+  category: quality
+- name: Population Segmentation Effectiveness
+  description: Effectiveness of population segmentation for targeted optimization
+  target: '> 80%'
+  valueType: percentage
+  category: performance
+- name: ROI Achievement Rate
+  description: Percentage of optimization initiatives achieving projected ROI
+  target: '> 75%'
+  valueType: percentage
+  category: business
+- name: Optimization Processing Time
+  description: Average time to complete comprehensive optimization analysis
+  target: '< 8 minutes'
+  valueType: duration
+  category: efficiency
+- name: Strategic Value Score
+  description: Overall strategic value score for optimization recommendations
+  target: '> 85%'
+  valueType: percentage
+  category: quality
+securityInfo:
+  visibility: Internal
+  gdprSensitive: true
+  hipaaCompliant: true

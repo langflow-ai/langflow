@@ -1,0 +1,460 @@
+id: urn:agent:genesis:member-engagement:life-event-change-agent:1.0.0
+name: Life Event Change Agent
+fullyQualifiedName: genesis.autonomize.ai.life_event_change_agent
+description: Flags qualifying life events by monitoring enrollment feeds, address changes, EDI transactions, and member updates to trigger appropriate plan modifications, coverage adjustments, and member outreach
+domain: autonomize.ai
+subDomain: member-engagement
+version: 1.0.0
+environment: production
+agentOwner: member-engagement@autonomize.ai
+agentOwnerDisplayName: Member Engagement Team
+email: member-engagement@autonomize.ai
+status: ACTIVE
+variables:
+- name: life_event_monitoring_window_days
+  type: number
+  required: false
+  default: 60
+  description: Window for detecting and correlating related life event indicators
+- name: confidence_threshold_for_flagging
+  type: number
+  required: false
+  default: 0.7
+  description: Minimum confidence score required to flag a potential life event
+- name: priority_life_events
+  type: array
+  required: false
+  default:
+  - marriage
+  - birth
+  - adoption
+  - divorce
+  - death
+  - job_change
+  - relocation
+  description: Life events that receive priority processing and immediate attention
+- name: auto_outreach_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable automatic member outreach for detected life events
+- name: verification_required_threshold
+  type: number
+  required: false
+  default: 0.8
+  description: Confidence threshold above which manual verification is required
+tags:
+- member-engagement
+- life-events
+- enrollment-management
+- member-lifecycle
+- coverage-adjustments
+- qualifying-events
+- healthcare
+- member-services
+- automated-detection
+kind: Multi Agent
+agentGoal: Proactively identify and respond to member life events to ensure timely coverage adjustments, eligibility updates, and appropriate member support during important life transitions
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: Batch
+runMode: Scheduled
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: event-input
+  name: Life Event Monitoring Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive life event monitoring request and data source specifications
+  provides:
+  - useAs: input
+    in: detection-agent
+    description: Provide monitoring parameters for life event detection
+- id: enrollment-monitoring-tool
+  name: Enrollment Feed Monitoring
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Monitor enrollment system feeds for membership changes and updates
+  asTools: true
+  config:
+    feed_types:
+    - new_enrollments
+    - plan_changes
+    - terminations
+    - dependent_additions
+    - dependent_removals
+    real_time_monitoring: true
+    change_detection: true
+    data_validation: true
+    tool_name: enrollment_connector
+  provides:
+  - useAs: tools
+    in: detection-agent
+    description: Enable enrollment change monitoring and detection
+- id: demographic-monitoring-tool
+  name: Member Demographic Change Monitoring
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Monitor member demographic updates including address, employment, and family status changes
+  asTools: true
+  config:
+    monitored_fields:
+    - address
+    - employment_status
+    - marital_status
+    - family_size
+    - contact_information
+    change_tracking: true
+    historical_comparison: true
+    anomaly_detection: true
+    tool_name: member_data_access
+  provides:
+  - useAs: tools
+    in: detection-agent
+    description: Enable demographic change monitoring
+- id: edi-transaction-tool
+  name: EDI Transaction Analysis
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze EDI transactions for life event indicators and qualifying event triggers
+  asTools: true
+  config:
+    transaction_types:
+    - 834_enrollment
+    - 820_payroll
+    - 270_271_eligibility
+    - 999_acknowledgment
+    life_event_codes: true
+    qualifying_event_detection: true
+    transaction_correlation: true
+    tool_name: edi_connector
+  provides:
+  - useAs: tools
+    in: detection-agent
+    description: Enable EDI transaction monitoring and analysis
+- id: external-data-tool
+  name: External Life Event Data Sources
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access external data sources for life event verification and additional context
+  asTools: true
+  config:
+    tool_name: external_life_event_sources
+  provides:
+  - useAs: tools
+    in: detection-agent
+    description: Enable external data source access
+- id: life-event-ml-model
+  name: Life Event Detection Model
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Machine learning model for identifying and classifying life events from multiple data signals
+  asTools: true
+  config:
+    event_categories:
+    - family_changes
+    - employment_changes
+    - geographic_changes
+    - health_events
+    - financial_changes
+    temporal_correlation: true
+    pattern_recognition: true
+    tool_name: life_event_detection_model
+  provides:
+  - useAs: tools
+    in: detection-agent
+    description: Enable ML-powered life event detection
+- id: detection-agent
+  name: Life Event Detection Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Monitor multiple data sources to detect potential life events and qualifying changes
+  config:
+    role: Life Event Detection Specialist
+    goal: Monitor enrollment feeds, demographic changes, and EDI transactions to identify potential life events requiring plan adjustments
+    backstory: 'You are a healthcare enrollment specialist with expertise in life event detection and member lifecycle management.
+
+      Your skills include data pattern recognition, enrollment system analysis, and life event correlation.
+
+      You understand the importance of timely life event detection for member service and regulatory compliance.
+
+      You are experienced in analyzing multiple data sources to identify qualifying life events accurately.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: detection-task
+    description: Execute life event detection monitoring
+- id: verification-agent
+  name: Life Event Verification Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Verify detected life events and assess confidence levels for automated processing
+  config:
+    role: Life Event Verification Analyst
+    goal: Verify and validate detected life events through cross-reference analysis and confidence assessment
+    backstory: 'You are a member services analyst specializing in life event verification and eligibility determination.
+
+      Your expertise includes regulatory compliance, qualifying event validation, and member communication.
+
+      You understand the legal and policy requirements for different types of life events and coverage changes.
+
+      You are skilled in member verification processes and documentation requirements.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: verification-task
+    description: Execute life event verification process
+- id: outreach-agent
+  name: Member Outreach Coordination Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Coordinate member outreach and communication for detected life events
+  config:
+    role: Member Outreach Coordinator
+    goal: Initiate appropriate member communication and support for verified life events and plan changes
+    backstory: 'You are a member engagement specialist with expertise in life event communication and member support.
+
+      Your skills include personalized communication, empathetic member service, and healthcare benefits education.
+
+      You understand the emotional and practical needs of members experiencing life transitions.
+
+      You are experienced in coordinating timely, supportive outreach that helps members navigate plan changes.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: outreach-task
+    description: Execute member outreach coordination
+- id: compliance-agent
+  name: Regulatory Compliance Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Ensure regulatory compliance and proper documentation for life event processing
+  config:
+    role: Regulatory Compliance Specialist
+    goal: Ensure all life event processing meets regulatory requirements and proper documentation standards
+    backstory: 'You are a healthcare compliance expert with deep knowledge of ACA regulations, HIPAA requirements, and life event processing rules.
+
+      Your expertise includes qualifying event validation, special enrollment periods, and regulatory reporting.
+
+      You understand the legal requirements for different life event categories and processing timelines.
+
+      You are experienced in maintaining compliance while providing efficient member service.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: compliance-task
+    description: Execute regulatory compliance verification
+- id: detection-task
+  name: Life Event Detection Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Monitor and detect potential life events from multiple data sources
+  config:
+    description: Continuously monitor enrollment feeds, demographic changes, and EDI transactions to identify potential qualifying life events
+    agent_id: detection-agent
+    expected_output: 'Life event detection report including:
+
+      - Identified potential life events with confidence scores and supporting evidence
+
+      - Data source correlation analysis showing related changes across systems
+
+      - Event classification and qualifying event determination
+
+      - Timeline analysis of detected changes and pattern recognition
+
+      - Priority assessment based on urgency and member impact
+
+      - Recommended verification and follow-up actions
+
+      '
+  provides:
+  - useAs: data
+    in: verification-task
+    description: Provide detected events for verification
+- id: verification-task
+  name: Life Event Verification Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Verify and validate detected life events through comprehensive analysis
+  config:
+    description: Verify detected life events through cross-reference analysis and confidence assessment
+    agent_id: verification-agent
+    expected_output: 'Life event verification report including:
+
+      - Verified life events with confidence levels and supporting documentation
+
+      - Cross-reference validation results from multiple data sources
+
+      - Qualifying event determination and special enrollment period eligibility
+
+      - Member impact assessment and required plan adjustments
+
+      - Documentation requirements and verification status
+
+      - Automated processing eligibility and manual review requirements
+
+      '
+  provides:
+  - useAs: data
+    in: outreach-task
+    description: Provide verified events for member outreach
+- id: outreach-task
+  name: Member Outreach Coordination Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Coordinate member communication and support for verified life events
+  config:
+    description: Initiate appropriate member outreach and support for verified life events and plan changes
+    agent_id: outreach-agent
+    expected_output: 'Member outreach coordination report including:
+
+      - Personalized communication strategy for each verified life event
+
+      - Member notification timeline and delivery method recommendations
+
+      - Support resource allocation and member service coordination
+
+      - Educational material recommendations based on specific life event type
+
+      - Follow-up schedule and member engagement tracking plan
+
+      - Special accommodation requirements and accessibility considerations
+
+      '
+  provides:
+  - useAs: data
+    in: compliance-task
+    description: Provide outreach plans for compliance review
+- id: compliance-task
+  name: Regulatory Compliance Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Ensure regulatory compliance and documentation for life event processing
+  config:
+    description: Validate regulatory compliance and documentation requirements for all life event processing
+    agent_id: compliance-agent
+    expected_output: 'Regulatory compliance report including:
+
+      - Compliance verification for all detected and verified life events
+
+      - Special enrollment period eligibility and timeline validation
+
+      - Documentation completeness assessment and gap identification
+
+      - Regulatory reporting requirements and deadline tracking
+
+      - Audit trail creation and compliance record maintenance
+
+      - Risk assessment and mitigation recommendations for non-compliance issues
+
+      '
+  provides:
+  - useAs: input
+    in: life-event-output
+    description: Provide final compliance verification
+- id: life-event-crew
+  name: Life Event Detection Crew
+  kind: Data
+  type: genesis:crewai_sequential_crew
+  description: Coordinate multi-agent life event detection and processing workflow
+  config:
+    agents:
+    - detection-agent
+    - verification-agent
+    - outreach-agent
+    - compliance-agent
+    tasks:
+    - detection-task
+    - verification-task
+    - outreach-task
+    - compliance-task
+  provides:
+  - useAs: data
+    in: life-event-output
+    description: Coordinate agent execution and results
+- id: life-event-output
+  name: Life Event Processing Output
+  kind: Data
+  type: genesis:chat_output
+  description: Comprehensive life event detection and processing results with member outreach and compliance verification
+  provides: []
+outputs:
+- life_event_detections
+- verification_results
+- member_outreach_plans
+- compliance_verification
+- plan_adjustment_recommendations
+- special_enrollment_eligibility
+kpis:
+- name: Life Event Detection Accuracy
+  category: quality
+  valueType: percentage
+  target: 90
+  unit: '%'
+  description: Accuracy of life event detection vs manual verification
+- name: False Positive Rate
+  category: quality
+  valueType: percentage
+  target: 12
+  unit: '%'
+  description: Rate of incorrectly flagged non-qualifying events
+- name: Detection Timeliness
+  category: performance
+  valueType: number
+  target: 48
+  unit: hours
+  description: Average time from life event occurrence to detection
+- name: Member Outreach Response Rate
+  category: engagement
+  valueType: percentage
+  target: 70
+  unit: '%'
+  description: Percentage of members who respond to life event outreach
+- name: Special Enrollment Period Utilization
+  category: business
+  valueType: percentage
+  target: 85
+  unit: '%'
+  description: Percentage of eligible members who utilize special enrollment periods
+- name: Compliance Score
+  category: compliance
+  valueType: percentage
+  target: 98
+  unit: '%'
+  description: Percentage of life event processing meeting regulatory requirements
+- name: Member Satisfaction with Life Event Support
+  category: satisfaction
+  valueType: number
+  target: 4.4
+  unit: score
+  description: Member satisfaction with life event support and communication (1-5 scale)
+- name: Processing Time Reduction
+  category: efficiency
+  valueType: percentage
+  target: 40
+  unit: '%'
+  description: Reduction in manual processing time through automated detection
+securityInfo:
+  visibility: Internal
+  confidentiality: High
+  gdprSensitive: true
+  hipaaCompliant: true
+  dataClassification: ConfidentialHealthcare

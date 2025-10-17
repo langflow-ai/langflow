@@ -1,0 +1,309 @@
+id: urn:agent:genesis:provider-data-management:taxonomy-npi-classification-agent:1.0.0
+name: Taxonomy/NPI Classification Agent
+fullyQualifiedName: genesis.autonomize.ai.taxonomy_npi_classification_agent
+description: Reclassifies provider specialty using NPI taxonomy, claim patterns, and licensure data for network segmentation and accurate provider categorization
+domain: autonomize.ai
+subDomain: provider-data-management
+version: 1.0.0
+environment: production
+agentOwner: provider-data-management@autonomize.ai
+agentOwnerDisplayName: Provider Data Management Team
+email: provider-data-management@autonomize.ai
+status: ACTIVE
+variables:
+- name: classification_confidence_threshold
+  type: float
+  required: false
+  default: 0.85
+  description: Minimum confidence score required for automatic specialty reclassification
+- name: claims_analysis_period
+  type: number
+  required: false
+  default: 12
+  description: Number of months of claims data to analyze for provider specialty patterns
+- name: taxonomy_validation_strictness
+  type: string
+  required: false
+  default: comprehensive
+  description: Level of taxonomy validation against claims patterns (basic, standard, comprehensive)
+- name: specialty_migration_tracking
+  type: boolean
+  required: false
+  default: true
+  description: Track provider specialty changes and migration patterns over time
+- name: automated_reclassification
+  type: boolean
+  required: false
+  default: false
+  description: Enable automated reclassification based on high-confidence analysis results
+- name: multi_specialty_detection
+  type: boolean
+  required: false
+  default: true
+  description: Detect and classify providers with multiple specialty practices
+- name: subspecialty_granularity
+  type: boolean
+  required: false
+  default: true
+  description: Include subspecialty classification and detailed taxonomy analysis
+- name: network_segmentation_optimization
+  type: boolean
+  required: false
+  default: true
+  description: Optimize classifications for network adequacy and segmentation purposes
+tags:
+- provider-data-management
+- taxonomy-classification
+- npi-analysis
+- specialty-verification
+- claims-pattern-analysis
+- provider-segmentation
+- network-optimization
+- data-accuracy
+- licensure-validation
+- automated-classification
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Accurately classify and segment healthcare providers by analyzing NPI taxonomy codes, claims utilization patterns, and licensure data to optimize network management and ensure precise provider categorization
+targetUser: internal
+valueGeneration: InsightGeneration
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: classification-input
+  name: Provider Classification Data Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive provider information, NPI data, claims patterns, and licensure details for comprehensive specialty classification analysis
+  provides:
+  - useAs: input
+    in: classification-agent
+    description: Provide provider data and classification parameters for specialty analysis
+- id: npi-analyzer-tool
+  name: NPI Taxonomy Analysis Engine
+  kind: Tool
+  type: genesis:api_request
+  description: Advanced NPI taxonomy analysis engine that examines provider taxonomy codes, specialties, and registration details
+  asTools: true
+  config:
+    method: GET
+    url_input: https://npiregistry.cms.hhs.gov/api/v2.1/providers
+    headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    timeout: 30
+  provides:
+  - useAs: tools
+    in: classification-agent
+    description: Enable comprehensive NPI taxonomy analysis and specialty verification
+- id: claims-pattern-analyzer
+  name: Provider Claims Pattern Analysis Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Sophisticated claims pattern analysis engine that examines procedure codes, diagnosis patterns, and service utilization to determine actual provider specialty practice
+  asTools: true
+  config:
+    pattern_recognition: true
+    temporal_analysis: true
+    specialty_confidence_scoring: true
+    tool_name: claims_analysis_model
+  provides:
+  - useAs: tools
+    in: classification-agent
+    description: Enable comprehensive claims pattern analysis for specialty determination
+- id: licensure-validator-tool
+  name: Provider Licensure Validation System
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Comprehensive licensure validation system that verifies provider licenses, certifications, and specialty authorizations against claims patterns
+  asTools: true
+  config:
+    tool_name: provider_licensure_validator
+  provides:
+  - useAs: tools
+    in: classification-agent
+    description: Enable validation of provider licensure and specialty authorizations
+- id: taxonomy-classifier-tool
+  name: Healthcare Taxonomy Classification Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced machine learning-based taxonomy classification engine that predicts optimal provider specialty codes based on practice patterns and regulatory requirements
+  asTools: true
+  config:
+    taxonomy_standards:
+    - health_care_provider_taxonomy
+    - cms_specialty_codes
+    - ama_specialty_designations
+    - board_certification_specialties
+    classification_algorithms:
+    - pattern_matching
+    - clustering_analysis
+    - supervised_learning
+    - ensemble_methods
+    multi_label_classification: true
+    tool_name: taxonomy_classification_model
+  provides:
+  - useAs: tools
+    in: classification-agent
+    description: Enable advanced taxonomy classification using machine learning algorithms
+- id: specialty-validator-tool
+  name: Provider Specialty Cross-Validation Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Cross-validation tool that compares specialty classifications across multiple data sources to ensure accuracy and consistency
+  asTools: true
+  config:
+    tool_name: provider_specialty_validator
+  provides:
+  - useAs: tools
+    in: classification-agent
+    description: Enable cross-validation of specialty classifications across data sources
+- id: network-segmentation-tool
+  name: Network Segmentation Optimization Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Network segmentation optimization tool that recommends provider classifications for optimal network adequacy and member access
+  asTools: true
+  config:
+    tool_name: network_segmentation_optimizer
+  provides:
+  - useAs: tools
+    in: classification-agent
+    description: Enable optimization of provider classifications for network segmentation
+- id: migration-tracker-tool
+  name: Provider Specialty Migration Tracker
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Specialty migration tracking tool that monitors provider specialty changes over time and identifies practice evolution patterns
+  asTools: true
+  config:
+    tool_name: specialty_migration_tracker
+  provides:
+  - useAs: tools
+    in: classification-agent
+    description: Enable tracking of provider specialty changes and migration patterns
+- id: classification-prompt
+  name: Healthcare Provider Taxonomy Classification Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for healthcare provider taxonomy classification with medical specialty and data analysis expertise
+  config:
+    saved_prompt: taxonomy_classification_agent_prompt_v1
+    template: 'You are an expert healthcare data analyst with extensive experience in provider taxonomy classification, medical specialty verification, and healthcare network management. Your role is to accurately classify and segment providers based on their actual practice patterns, specialty qualifications, and regulatory requirements.
+
+      HEALTHCARE TAXONOMY EXPERTISE: - Health Care Provider Taxonomy Code Set structure and classification - CMS provider specialty codes and Medicare enrollment categories - AMA specialty designations and board certification requirements - Claims data analysis for specialty practice verification - Provider licensure and specialty authorization validation - Network adequacy and specialty coverage optimization
+
+      PROVIDER CLASSIFICATION WORKFLOW: 1. Analyze NPI registry data for provider taxonomy codes and specialty designations 2. Examine claims patterns to identify actual practice specialty and service lines 3. Validate provider licensure and specialty certifications against practice patterns 4. Apply machine learning algorithms to predict optimal taxonomy classifications 5. Cross-validate classifications across multiple data sources for accuracy 6. Optimize classifications for network segmentation and adequacy requirements 7. Track specialty migrations and practice evolution over time 8. Generate comprehensive classification reports with confidence scoring
+
+      CLAIMS PATTERN ANALYSIS METHODOLOGY: - Procedure Code Analysis: Examine CPT/HCPCS codes to identify specialty practice patterns - Diagnosis Pattern Recognition: Analyze ICD-10 codes to understand patient populations - Service Location Analysis: Evaluate practice settings and service delivery locations - Volume Analysis: Assess patient volumes and service frequency by specialty area - Referral Patterns: Analyze referral relationships and care coordination patterns - Billing Patterns: Identify specialty-specific billing and revenue patterns
+
+      TAXONOMY CLASSIFICATION CRITERIA: - Primary Specialty: Main area of medical practice and board certification - Secondary Specialties: Additional specialty areas and subspecialty practices - Practice Setting: Hospital-based, clinic-based, or multi-location practice - Service Lines: Specific services and procedures provided by the provider - Patient Demographics: Age groups and patient populations served - Geographic Scope: Practice locations and service area coverage
+
+      VALIDATION AND ACCURACY REQUIREMENTS: - Cross-Source Validation: Compare classifications across NPI, claims, and licensure data - Confidence Scoring: Assign confidence levels to classification decisions - Temporal Consistency: Ensure classifications align with historical practice patterns - Regulatory Compliance: Verify classifications meet licensing and specialty requirements - Network Optimization: Optimize classifications for network adequacy calculations - Quality Assurance: Implement checks for classification accuracy and consistency
+
+      SPECIALTY MIGRATION TRACKING: - Practice Evolution: Monitor changes in provider specialty focus over time - Career Transitions: Track provider movements between specialties and practice settings - Market Trends: Identify broader specialty migration patterns and market changes - Network Impact: Assess impact of specialty changes on network adequacy - Predictive Analysis: Predict potential future specialty transitions - Strategic Planning: Support network planning and provider recruitment strategies
+
+      NETWORK SEGMENTATION OPTIMIZATION: - Adequacy Analysis: Optimize classifications for network adequacy compliance - Access Optimization: Ensure classifications support member access requirements - Quality Metrics: Align classifications with quality measurement and reporting needs - Cost Management: Support cost-effective network design and provider contracting - Regulatory Compliance: Ensure classifications meet regulatory reporting requirements - Strategic Alignment: Align classifications with organizational network strategy
+
+      OUTPUT REQUIREMENTS: - Comprehensive provider classification report with primary and secondary specialties - Claims pattern analysis with supporting evidence for classification decisions - Taxonomy code recommendations with confidence scores and validation results - Network segmentation analysis with adequacy and optimization recommendations - Specialty migration tracking with historical trends and future predictions - Quality assurance summary with accuracy metrics and validation processes
+
+      Use your classification tools to analyze NPI data, examine claims patterns, validate licensure, classify taxonomy, validate specialties, optimize segmentation, and track migrations. Always prioritize accuracy, regulatory compliance, and network optimization in your classification activities.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: classification-agent
+    description: Provide specialized healthcare provider taxonomy classification and network segmentation expertise
+- id: classification-agent
+  name: Healthcare Provider Taxonomy Classification Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Expert healthcare data analyst specializing in provider taxonomy classification and network segmentation optimization
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 20
+    verbose: true
+  provides:
+  - useAs: input
+    in: classification-output
+    description: Provide comprehensive provider classification analysis and taxonomy recommendations
+- id: classification-output
+  name: Provider Classification Results Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present provider taxonomy classifications, specialty validation results, and network segmentation recommendations
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- provider_taxonomy_classifications
+- specialty_validation_results
+- claims_pattern_analysis
+- licensure_verification_status
+- network_segmentation_recommendations
+- specialty_migration_tracking
+- classification_confidence_scores
+- optimization_recommendations
+kpis:
+- name: Classification Accuracy Rate
+  description: Accuracy of provider specialty classifications compared to validated practice patterns
+  target: '> 92%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Claims Pattern Correlation
+  description: Correlation between assigned specialties and actual claims practice patterns
+  target: '> 88%'
+  measurement: percentage
+  category: Validation
+  valueType: percentage
+- name: Taxonomy Validation Success Rate
+  description: Success rate for validating provider taxonomy codes against multiple data sources
+  target: '> 95%'
+  measurement: percentage
+  category: Validation
+  valueType: percentage
+- name: Network Segmentation Optimization
+  description: Improvement in network adequacy metrics through optimized provider classifications
+  target: '> 15%'
+  measurement: percentage
+  category: Optimization
+  valueType: percentage
+- name: Multi-Specialty Detection Rate
+  description: Accuracy in identifying providers with multiple specialty practices
+  target: '> 85%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Classification Processing Efficiency
+  description: Average time to complete comprehensive provider taxonomy classification
+  target: < 20 minutes
+  measurement: time
+  category: Efficiency
+  valueType: percentage
+- name: Specialty Migration Prediction Accuracy
+  description: Accuracy of predicting provider specialty changes and practice evolution
+  target: '> 78%'
+  measurement: percentage
+  category: Predictive Analytics
+  valueType: percentage
+- name: Licensure Validation Completeness
+  description: Completeness of provider licensure validation against specialty classifications
+  target: '> 97%'
+  measurement: percentage
+  category: Compliance
+  valueType: percentage
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true

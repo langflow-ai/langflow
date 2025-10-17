@@ -1,0 +1,480 @@
+id: urn:agent:genesis:care-management:patient-progress-summarizer-agent:1.0.0
+name: Patient Progress Summarizer Agent
+fullyQualifiedName: genesis.autonomize.ai.patient_progress_summarizer_agent
+description: Multi-agent system that pulls structured outcomes and narrative documentation to summarize recent events for complex patients in care management programs
+domain: autonomize.ai
+subDomain: care-management
+version: 1.0.0
+environment: production
+agentOwner: care-management@autonomize.ai
+agentOwnerDisplayName: Care Management Team
+email: care-management@autonomize.ai
+status: ACTIVE
+variables:
+- name: summary_period_days
+  type: number
+  required: false
+  default: 30
+  description: Number of days to include in progress summary
+- name: complexity_threshold
+  type: number
+  required: false
+  default: 0.7
+  description: Patient complexity score threshold for detailed summarization
+- name: key_events_limit
+  type: number
+  required: false
+  default: 10
+  description: Maximum number of key events to highlight in summary
+- name: outcome_metrics_focus
+  type: string
+  required: false
+  default: clinical,functional,quality_of_life,utilization
+  description: Comma-separated list of outcome metric categories to prioritize
+- name: narrative_analysis_depth
+  type: string
+  required: false
+  default: comprehensive
+  description: Level of narrative analysis (basic, standard, comprehensive)
+- name: care_team_summary_length
+  type: string
+  required: false
+  default: executive
+  description: Summary length for care team consumption (brief, executive, detailed)
+tags:
+- care-management
+- patient-progress
+- clinical-summarization
+- complex-patients
+- outcomes-tracking
+- narrative-analysis
+- healthcare
+- multi-agent
+reusability:
+  asTools: false
+kind: Multi Agent
+agentGoal: Generate comprehensive, actionable progress summaries for complex care management patients by analyzing structured outcomes and narrative documentation
+targetUser: internal
+valueGeneration: InsightGeneration
+interactionMode: Batch
+runMode: Scheduled
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: progress-input
+  name: Patient Progress Request Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive patient progress summarization requests for complex care management patients
+  provides:
+  - useAs: input
+    in: data-collection-agent
+    description: Provide patient context for comprehensive progress data collection
+- id: ehr-outcomes-tool
+  name: EHR Structured Outcomes Access
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access structured clinical outcomes, assessments, and quality measures
+  asTools: true
+  config:
+    data_elements:
+    - observations
+    - conditions
+    - procedures
+    - medications
+    - vital_signs
+    - lab_results
+    - functional_assessments
+    - quality_measures
+    include_trends: true
+    include_goal_progress: true
+    tool_name: ehr_integration
+  provides:
+  - useAs: tools
+    in: data-collection-agent
+    description: Enable structured outcomes data collection
+- id: clinical-documentation-tool
+  name: Clinical Documentation Access
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access narrative clinical documentation including notes, assessments, and care plans
+  asTools: true
+  config:
+    include_care_team_notes: true
+    text_extraction: true
+    tool_name: ehr_integration
+  provides:
+  - useAs: tools
+    in: data-collection-agent
+    description: Enable clinical documentation access
+- id: care-management-records-tool
+  name: Care Management Records System
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access care management program records, interventions, and patient interactions
+  asTools: true
+  config:
+    tool_name: care_management_records
+    record_types:
+    - case_notes
+    - intervention_tracking
+    - patient_interactions
+    - care_plan_updates
+    - goal_tracking
+    - barrier_assessments
+    include_outcomes: true
+    track_program_enrollment: true
+  provides:
+  - useAs: tools
+    in: data-collection-agent
+    description: Enable care management records access
+- id: utilization-analytics-tool
+  name: Healthcare Utilization Analytics
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze healthcare utilization patterns and cost trends
+  asTools: true
+  config:
+    data_sources:
+    - inpatient
+    - outpatient
+    - emergency_department
+    - pharmacy
+    - ancillary_services
+    trend_analysis: true
+    benchmark_comparisons: true
+    tool_name: claims_connector
+  provides:
+  - useAs: tools
+    in: outcomes-analysis-agent
+    description: Enable utilization analytics
+- id: clinical-nlp-model
+  name: Clinical Natural Language Processing
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced NLP for clinical text analysis and insight extraction
+  asTools: true
+  config:
+    analysis_types:
+    - sentiment_analysis
+    - entity_extraction
+    - outcome_identification
+    - clinical_reasoning
+    - trend_detection
+    medical_terminology: true
+    context_understanding: true
+    summary_generation: true
+    tool_name: clinical_nlp_model
+  provides:
+  - useAs: tools
+    in: narrative-analysis-agent
+    description: Enable advanced clinical text analysis
+- id: outcomes-measurement-model
+  name: Patient Outcomes Measurement Model
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Comprehensive patient outcomes assessment and progress tracking
+  asTools: true
+  config:
+    outcome_domains:
+    - clinical
+    - functional
+    - quality_of_life
+    - patient_reported
+    - care_satisfaction
+    measurement_frameworks:
+    - value_based_care
+    - triple_aim
+    - quadruple_aim
+    progress_tracking: true
+    goal_achievement: true
+    risk_adjustment: true
+    tool_name: outcomes_measurement_model
+  provides:
+  - useAs: tools
+    in: outcomes-analysis-agent
+    description: Enable comprehensive outcomes measurement
+- id: data-collection-agent
+  name: Progress Data Collection Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Collect comprehensive patient progress data from multiple healthcare sources
+  config:
+    role: Patient Progress Data Specialist
+    goal: Gather comprehensive patient progress data including structured outcomes, clinical documentation, and care management records
+    backstory: 'You are a patient progress data specialist with expertise in healthcare data integration and outcomes tracking.
+
+      Your skills include clinical data collection, care management record analysis, and comprehensive progress monitoring.
+
+      You understand how to identify and gather all relevant data elements for complex patient progress summarization.
+
+      You are experienced in ensuring data completeness and quality for accurate progress assessment.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: data-collection-task
+    description: Execute comprehensive progress data collection task
+- id: outcomes-analysis-agent
+  name: Patient Outcomes Analysis Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Analyze structured outcomes data and calculate progress metrics
+  config:
+    role: Patient Outcomes Analyst
+    goal: Analyze structured patient outcomes data to identify progress trends, goal achievement, and areas of concern
+    backstory: 'You are a patient outcomes analyst with expertise in healthcare quality measurement and value-based care.
+
+      Your skills include outcomes analysis, trend identification, and progress assessment across multiple domains.
+
+      You understand how to interpret clinical outcomes in the context of care management goals and patient complexity.
+
+      You are experienced in translating outcomes data into actionable insights for care teams.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: outcomes-analysis-task
+    description: Execute outcomes analysis task
+- id: narrative-analysis-agent
+  name: Clinical Narrative Analysis Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Analyze narrative clinical documentation to extract insights and progress indicators
+  config:
+    role: Clinical Narrative Analyst
+    goal: Analyze narrative clinical documentation to extract meaningful insights, progress indicators, and care team observations
+    backstory: 'You are a clinical narrative analyst with expertise in medical text analysis and clinical documentation review.
+
+      Your skills include natural language processing, clinical reasoning extraction, and narrative synthesis.
+
+      You understand how to identify key insights and progress indicators from complex clinical documentation.
+
+      You are experienced in extracting actionable information from unstructured clinical text.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: narrative-analysis-task
+    description: Execute narrative analysis task
+- id: summary-generation-agent
+  name: Progress Summary Generation Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Generate comprehensive, actionable progress summaries for care teams
+  config:
+    role: Clinical Summary Specialist
+    goal: Generate comprehensive, actionable progress summaries that effectively communicate patient status and recommendations to care teams
+    backstory: 'You are a clinical summary specialist with expertise in medical communication and care team coordination.
+
+      Your skills include clinical writing, summary generation, and care team communication optimization.
+
+      You understand how to synthesize complex patient information into clear, actionable summaries.
+
+      You are experienced in creating summaries that support clinical decision-making and care coordination.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: summary-generation-task
+    description: Execute progress summary generation task
+- id: data-collection-task
+  name: Progress Data Collection Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Collect comprehensive patient progress data from all relevant sources
+  config:
+    description: Gather comprehensive patient progress data including structured outcomes, narrative documentation, and care management records
+    agent_id: data-collection-agent
+    expected_output: 'Comprehensive progress data package including:
+
+      - Structured clinical outcomes and quality measures
+
+      - Complete narrative clinical documentation for specified period
+
+      - Care management program records and interventions
+
+      - Healthcare utilization patterns and trends
+
+      - Patient-reported outcomes and satisfaction measures
+
+      - Care team observations and assessments
+
+      '
+  provides:
+  - useAs: data
+    in: outcomes-analysis-task
+    description: Provide collected data for outcomes analysis
+- id: outcomes-analysis-task
+  name: Patient Outcomes Analysis Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Analyze structured outcomes data and calculate comprehensive progress metrics
+  config:
+    description: Analyze structured patient outcomes to identify progress trends, goal achievement, and areas requiring attention
+    agent_id: outcomes-analysis-agent
+    expected_output: 'Outcomes analysis report including:
+
+      - Clinical outcome trends and progress metrics
+
+      - Care goal achievement status and trajectory
+
+      - Quality measure performance and benchmarking
+
+      - Utilization pattern analysis and cost trends
+
+      - Risk stratification changes and implications
+
+      - Quantitative progress indicators and alerts
+
+      '
+  provides:
+  - useAs: data
+    in: narrative-analysis-task
+    description: Provide outcomes context for narrative analysis
+- id: narrative-analysis-task
+  name: Clinical Narrative Analysis Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Analyze narrative documentation to extract insights and progress indicators
+  config:
+    description: Analyze narrative clinical documentation to extract meaningful insights, care team observations, and progress indicators
+    agent_id: narrative-analysis-agent
+    expected_output: 'Narrative analysis report including:
+
+      - Key clinical events and significant developments
+
+      - Care team observations and professional assessments
+
+      - Patient engagement and behavioral patterns
+
+      - Barriers to care and social determinants factors
+
+      - Clinical reasoning and decision-making insights
+
+      - Qualitative progress indicators and concerns
+
+      '
+  provides:
+  - useAs: data
+    in: summary-generation-task
+    description: Provide narrative insights for summary generation
+- id: summary-generation-task
+  name: Progress Summary Generation Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Generate comprehensive, actionable progress summaries for care teams
+  config:
+    description: Synthesize outcomes analysis and narrative insights into comprehensive, actionable progress summaries
+    agent_id: summary-generation-agent
+    expected_output: 'Comprehensive progress summary including:
+
+      - Executive summary of overall patient progress
+
+      - Key achievements and positive developments
+
+      - Areas of concern and deterioration indicators
+
+      - Care team recommendations and action items
+
+      - Goal updates and care plan modifications
+
+      - Next steps and follow-up priorities
+
+      '
+  provides:
+  - useAs: input
+    in: progress-output
+    description: Provide final progress summary and recommendations
+- id: patient-progress-crew
+  name: Patient Progress Summarization Crew
+  kind: Data
+  type: genesis:crewai_sequential_crew
+  description: Coordinate multi-agent patient progress analysis and summarization workflow
+  config:
+    agents:
+    - data-collection-agent
+    - outcomes-analysis-agent
+    - narrative-analysis-agent
+    - summary-generation-agent
+    tasks:
+    - data-collection-task
+    - outcomes-analysis-task
+    - narrative-analysis-task
+    - summary-generation-task
+  provides:
+  - useAs: data
+    in: progress-output
+    description: Coordinate agent execution and results
+- id: progress-output
+  name: Patient Progress Summary Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive patient progress summary and care recommendations
+  provides: []
+outputs:
+- progress_summary
+- outcomes_analysis
+- key_events
+- care_recommendations
+- goal_status
+kpis:
+- name: Summary Accuracy Score
+  category: quality
+  valueType: percentage
+  target: 92
+  unit: '%'
+  description: Accuracy of progress summaries compared to clinical review
+- name: Care Team Satisfaction with Summaries
+  category: quality
+  valueType: number
+  target: 4.3
+  unit: rating (1-5)
+  description: Care team satisfaction rating for progress summary quality and usefulness
+- name: Data Completeness Rate
+  category: performance
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Percentage of available relevant data included in progress analysis
+- name: Key Event Identification Rate
+  category: quality
+  valueType: percentage
+  target: 90
+  unit: '%'
+  description: Percentage of significant clinical events properly identified and summarized
+- name: Summary Generation Time
+  category: efficiency
+  valueType: number
+  target: 15
+  unit: minutes
+  description: Average time to generate comprehensive progress summary
+- name: Actionable Recommendation Rate
+  category: quality
+  valueType: percentage
+  target: 85
+  unit: '%'
+  description: Percentage of summaries containing actionable care recommendations
+- name: Clinical Decision Support Impact
+  category: quality
+  valueType: percentage
+  target: 70
+  unit: '%'
+  description: Percentage of summaries that influence care team decision-making
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true

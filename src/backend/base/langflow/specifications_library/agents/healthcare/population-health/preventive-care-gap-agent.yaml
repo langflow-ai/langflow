@@ -1,0 +1,429 @@
+id: urn:agent:genesis:population-health:preventive-care-gap-agent:1.0.0
+name: Preventive Care Gap Agent
+fullyQualifiedName: genesis.autonomize.ai.preventive_care_gap_agent
+description: Multi-agent system that detects overdue preventive care screenings using HEDIS logic, medical claims analysis, and clinical guidelines to identify care gaps and support targeted patient outreach for compliance and care closure
+domain: autonomize.ai
+subDomain: population-health
+version: 1.0.0
+environment: production
+agentOwner: population-health@autonomize.ai
+agentOwnerDisplayName: Population Health Team
+email: population-health@autonomize.ai
+status: ACTIVE
+variables:
+- name: hedis_measurement_year
+  type: number
+  required: false
+  default: 2024
+  description: HEDIS measurement year for quality measure calculations
+- name: lookback_period_months
+  type: number
+  required: false
+  default: 24
+  description: Number of months to look back for screening history analysis
+- name: gap_severity_thresholds
+  type: object
+  required: false
+  default: {"critical": 365, "high": 180, "medium": 90, "low": 30}
+  description: Days overdue thresholds for care gap severity classification
+- name: include_cms_measures
+  type: boolean
+  required: false
+  default: true
+  description: Include CMS Star Ratings and quality measures in gap analysis
+- name: patient_risk_stratification
+  type: boolean
+  required: false
+  default: true
+  description: Apply risk stratification to prioritize outreach efforts
+- name: exclude_recent_transitions
+  type: boolean
+  required: false
+  default: true
+  description: Exclude patients with recent insurance transitions from gap analysis
+- name: minimum_enrollment_months
+  type: number
+  required: false
+  default: 12
+  description: Minimum continuous enrollment months required for gap analysis
+- name: include_telehealth_services
+  type: boolean
+  required: false
+  default: true
+  description: Include telehealth services when analyzing completed screenings
+tags:
+- population-health
+- preventive-care
+- hedis
+- quality-measures
+- care-gaps
+- screening
+- cms-stars
+- outreach
+- healthcare
+- multi-agent
+reusability:
+  asTools: false
+kind: Multi Agent
+agentGoal: Systematically identify preventive care gaps using evidence-based guidelines and HEDIS logic to enable targeted patient outreach and improve healthcare quality measure performance
+targetUser: internal
+valueGeneration: InsightGeneration
+interactionMode: Batch
+runMode: Scheduled
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: cohort-input
+  name: Patient Cohort Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive patient cohort identification and preventive care gap analysis request
+  provides:
+  - useAs: input
+    in: enrollment-agent
+    description: Provide patient cohort for enrollment and eligibility verification
+- id: claims-data-tool
+  name: Claims Data Analysis Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access medical and pharmacy claims data for preventive care service analysis
+  asTools: true
+  config:
+    tool_name: claims_connector
+    description: "Access medical and pharmacy claims data for preventive care service analysis with HIPAA compliance"
+  provides:
+  - useAs: tools
+    in: enrollment-agent
+    description: Enable claims data analysis for service history
+  - useAs: tools
+    in: gap-analysis-agent
+    description: Enable preventive service claims analysis
+- id: ehr-clinical-tool
+  name: EHR Clinical Data Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access electronic health record data for clinical screening results and contraindications
+  asTools: true
+  config:
+    tool_name: ehr_connector
+    description: "Access electronic health record data for clinical screening results and contraindications using FHIR R4"
+  provides:
+  - useAs: tools
+    in: gap-analysis-agent
+    description: Enable EHR clinical data analysis
+  - useAs: tools
+    in: contraindication-agent
+    description: Enable contraindication and exclusion analysis
+- id: hedis-engine-tool
+  name: HEDIS Quality Measure Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Apply HEDIS logic and quality measure specifications for gap identification
+  asTools: true
+  config:
+    tool_name: hedis_quality_model
+    description: "Apply HEDIS 2024 logic and quality measure specifications for gap identification with exclusions and age stratification"
+  provides:
+  - useAs: tools
+    in: gap-analysis-agent
+    description: Enable HEDIS-compliant gap analysis
+- id: risk-stratification-tool
+  name: Patient Risk Stratification Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Assess patient risk levels to prioritize preventive care outreach
+  asTools: true
+  config:
+    tool_name: population_health_risk_model
+    description: "Assess patient risk levels for preventive care prioritization using chronic conditions and utilization patterns"
+  provides:
+  - useAs: tools
+    in: prioritization-agent
+    description: Enable risk-based outreach prioritization
+- id: outreach-optimization-tool
+  name: Outreach Optimization Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Optimize outreach timing, methodology, and resource allocation for care gap closure
+  asTools: true
+  config:
+    tool_name: outreach_optimizer
+    description: "Analyze patient preferences, contact history, and success patterns to optimize preventive care outreach strategies"
+  provides:
+  - useAs: tools
+    in: outreach-agent
+    description: Enable optimized outreach strategy development
+- id: enrollment-agent
+  name: Enrollment Verification Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Verify patient enrollment continuity and eligibility for preventive care gap analysis
+  config:
+    role: Enrollment Verification Specialist
+    goal: Verify patient enrollment continuity, insurance eligibility, and demographic requirements for HEDIS-compliant preventive care gap analysis
+    backstory: 'You are an enrollment verification specialist with expertise in health plan membership requirements and HEDIS specifications.
+
+      Your skills include analyzing enrollment patterns, identifying coverage gaps, and understanding member eligibility criteria for quality measures.
+
+      You excel at identifying patients who meet continuous enrollment requirements and excluding those with valid coverage transitions.
+
+      You understand the nuances of different insurance products and their impact on quality measure eligibility.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: enrollment-task
+    description: Execute enrollment verification task
+- id: gap-analysis-agent
+  name: Preventive Care Gap Analysis Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Identify preventive care gaps using HEDIS logic, claims analysis, and clinical guidelines
+  config:
+    role: Preventive Care Quality Analyst
+    goal: Systematically identify preventive care gaps using HEDIS specifications, evidence-based guidelines, and comprehensive data analysis
+    backstory: 'You are a preventive care quality analyst specializing in HEDIS measures and healthcare quality improvement.
+
+      Your expertise includes interpreting complex quality measure specifications, analyzing claims and clinical data, and identifying care opportunities.
+
+      You excel at applying evidence-based screening guidelines and understanding age-specific, gender-specific, and condition-specific recommendations.
+
+      You are skilled at distinguishing between true care gaps and documentation issues that require different intervention approaches.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: gap-analysis-task
+    description: Execute preventive care gap analysis task
+- id: contraindication-agent
+  name: Medical Contraindication Analysis Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Identify medical contraindications and valid exclusions for preventive care recommendations
+  config:
+    role: Clinical Contraindication Specialist
+    goal: Identify valid medical contraindications, exclusions, and special circumstances that affect preventive care recommendations and HEDIS measure eligibility
+    backstory: 'You are a clinical contraindication specialist with deep knowledge of medical conditions that preclude certain preventive care services.
+
+      Your expertise includes understanding complex contraindication criteria, drug interactions, and clinical conditions that affect screening safety.
+
+      You excel at interpreting clinical documentation and identifying both temporary and permanent exclusions from preventive care measures.
+
+      You understand the balance between population health goals and individual patient safety considerations.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: contraindication-task
+    description: Execute contraindication analysis task
+- id: prioritization-agent
+  name: Gap Prioritization Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Prioritize identified care gaps based on risk stratification, clinical urgency, and resource optimization
+  config:
+    role: Care Gap Prioritization Coordinator
+    goal: Prioritize identified preventive care gaps based on patient risk levels, clinical urgency, resource availability, and likelihood of successful outreach
+    backstory: 'You are a care gap prioritization coordinator specializing in population health management and outreach optimization.
+
+      Your skills include risk assessment, resource allocation, and understanding the clinical and financial impact of different preventive care services.
+
+      You excel at balancing multiple competing priorities and developing actionable outreach strategies that maximize population health impact.
+
+      You understand the importance of timing, patient engagement patterns, and care coordination in successful gap closure.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: prioritization-task
+    description: Execute gap prioritization task
+- id: outreach-agent
+  name: Outreach Strategy Development Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Develop comprehensive outreach strategies and care closure recommendations
+  config:
+    role: Preventive Care Outreach Specialist
+    goal: Develop evidence-based outreach strategies, care closure workflows, and follow-up protocols to maximize preventive care gap resolution
+    backstory: 'You are a preventive care outreach specialist with expertise in patient engagement and care coordination.
+
+      Your skills include developing culturally appropriate outreach strategies, understanding patient barriers to care, and designing effective follow-up protocols.
+
+      You excel at creating actionable care plans that address both clinical needs and practical barriers to preventive care completion.
+
+      You understand the importance of provider engagement, patient education, and care team coordination in successful gap closure.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: outreach-task
+    description: Execute outreach strategy development task
+- id: enrollment-task
+  name: Enrollment Verification Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Verify patient enrollment continuity and eligibility for preventive care analysis
+  config:
+    description: Verify patient enrollment status, continuous enrollment requirements, and demographic eligibility for HEDIS-compliant gap analysis
+    agent_id: enrollment-agent
+    expected_output: 'Enrollment verification report with patient eligibility status, demographic data, and HEDIS compliance assessment'
+  provides:
+  - useAs: data
+    in: gap-analysis-task
+    description: Provide enrollment verification for gap analysis
+- id: gap-analysis-task
+  name: Preventive Care Gap Analysis Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Systematically identify preventive care gaps using HEDIS logic and clinical guidelines
+  config:
+    description: Apply HEDIS specifications and evidence-based guidelines to identify preventive care gaps from claims and clinical data
+    agent_id: gap-analysis-agent
+    expected_output: 'Preventive care gap analysis with HEDIS measure identification, claims analysis, and gap severity classification'
+  provides:
+  - useAs: data
+    in: contraindication-task
+    description: Provide gap analysis for contraindication review
+- id: contraindication-task
+  name: Contraindication Analysis Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Identify medical contraindications and valid exclusions for identified care gaps
+  config:
+    description: Analyze clinical data to identify contraindications, exclusions, and special circumstances affecting preventive care recommendations
+    agent_id: contraindication-agent
+    expected_output: 'Medical contraindication analysis with exclusion identification, clinical rationale, and updated gap recommendations'
+  provides:
+  - useAs: data
+    in: prioritization-task
+    description: Provide refined gap analysis for prioritization
+- id: prioritization-task
+  name: Gap Prioritization Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Prioritize preventive care gaps based on risk stratification and clinical urgency
+  config:
+    description: Prioritize identified care gaps using risk stratification, clinical urgency, and resource optimization principles
+    agent_id: prioritization-agent
+    expected_output: 'Care gap prioritization report with risk-stratified patient lists, urgency assessment, and resource optimization recommendations'
+  provides:
+  - useAs: data
+    in: outreach-task
+    description: Provide prioritized gaps for outreach strategy development
+- id: outreach-task
+  name: Outreach Strategy Development Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Develop comprehensive outreach strategies and care closure recommendations
+  config:
+    description: Create evidence-based outreach strategies and care closure protocols for prioritized preventive care gaps
+    agent_id: outreach-agent
+    expected_output: 'Comprehensive outreach strategy with personalized recommendations, communication protocols, and care closure workflows'
+  provides:
+  - useAs: input
+    in: gap-output
+    description: Provide final outreach strategies and recommendations
+- id: preventive-care-crew
+  name: Preventive Care Gap Analysis Crew
+  kind: Data
+  type: genesis:crewai_sequential_crew
+  description: Coordinate multi-agent workflow for comprehensive preventive care gap analysis and outreach planning
+  config:
+    agents:
+    - enrollment-agent
+    - gap-analysis-agent
+    - contraindication-agent
+    - prioritization-agent
+    - outreach-agent
+    tasks:
+    - enrollment-task
+    - gap-analysis-task
+    - contraindication-task
+    - prioritization-task
+    - outreach-task
+  provides:
+  - useAs: data
+    in: gap-output
+    description: Coordinate agent execution and compile final recommendations
+- id: gap-output
+  name: Preventive Care Gap Analysis Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive preventive care gap analysis with prioritized outreach strategies and care closure recommendations
+  provides: []
+outputs:
+- care_gap_analysis
+- hedis_measure_performance
+- risk_stratified_priorities
+- outreach_strategies
+- contraindication_exclusions
+kpis:
+- name: Care Gap Identification Accuracy
+  category: quality
+  valueType: percentage
+  target: 92
+  unit: '%'
+  description: Accuracy of care gap identification compared to manual chart review
+- name: HEDIS Measure Compliance
+  category: quality
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Compliance with HEDIS measure specifications and exclusion criteria
+- name: Outreach Response Rate
+  category: performance
+  valueType: percentage
+  target: 35
+  unit: '%'
+  description: Percentage of contacted patients who respond to preventive care outreach
+- name: Gap Closure Rate
+  category: performance
+  valueType: percentage
+  target: 45
+  unit: '%'
+  description: Percentage of identified care gaps successfully closed within 90 days
+- name: Risk Stratification Accuracy
+  category: quality
+  valueType: number
+  target: 0.82
+  unit: 'C-statistic'
+  description: Accuracy of risk stratification model for predicting outreach success
+- name: Provider Engagement Rate
+  category: performance
+  valueType: percentage
+  target: 75
+  unit: '%'
+  description: Percentage of providers who engage with gap closure recommendations
+- name: Quality Measure Improvement
+  category: cost
+  valueType: percentage
+  target: 8
+  unit: '%'
+  description: Improvement in HEDIS measure rates following gap closure outreach
+- name: Cost per Gap Closed
+  category: cost
+  valueType: number
+  target: 125
+  unit: '$'
+  description: Average cost of outreach activities per successfully closed care gap
+securityInfo:
+  visibility: Internal
+  gdprSensitive: true
+  hipaaCompliant: true
+  dataClassification: confidential

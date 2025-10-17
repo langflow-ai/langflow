@@ -1,0 +1,437 @@
+id: urn:agent:genesis:care-management:risk-stratification-agent:1.0.0
+name: Risk Stratification Agent
+fullyQualifiedName: genesis.autonomize.ai.risk_stratification_agent
+description: Multi-agent system that combines claims, social determinants of health (SDoH), and EHR data to score and prioritize patients for care management outreach or chronic care programs
+domain: autonomize.ai
+subDomain: care-management
+version: 1.0.0
+environment: production
+agentOwner: care-management@autonomize.ai
+agentOwnerDisplayName: Care Management Team
+email: care-management@autonomize.ai
+status: ACTIVE
+variables:
+- name: risk_threshold_high
+  type: number
+  required: false
+  default: 0.8
+  description: Risk score threshold above which patients are classified as high-risk
+- name: risk_threshold_medium
+  type: number
+  required: false
+  default: 0.5
+  description: Risk score threshold for medium-risk classification
+- name: lookback_period_months
+  type: number
+  required: false
+  default: 12
+  description: Number of months to analyze historical data for risk assessment
+- name: sdoh_weight
+  type: number
+  required: false
+  default: 0.3
+  description: Weight given to social determinants of health in overall risk score
+- name: clinical_weight
+  type: number
+  required: false
+  default: 0.5
+  description: Weight given to clinical indicators in overall risk score
+- name: utilization_weight
+  type: number
+  required: false
+  default: 0.2
+  description: Weight given to healthcare utilization patterns in overall risk score
+tags:
+- care-management
+- risk-stratification
+- population-health
+- chronic-care
+- sdoh
+- predictive-analytics
+- healthcare
+- multi-agent
+reusability:
+  asTools: false
+kind: Multi Agent
+agentGoal: Identify and prioritize high-risk patients for proactive care management interventions using comprehensive data analysis and risk scoring algorithms
+targetUser: internal
+valueGeneration: InsightGeneration
+interactionMode: Batch
+runMode: Scheduled
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: patient-input
+  name: Patient Cohort Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive patient cohort identification and risk stratification request
+  provides:
+  - useAs: input
+    in: data-collection-agent
+    description: Provide patient context for comprehensive data collection
+- id: claims-data-tool
+  name: Claims Data Access
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access healthcare claims data for utilization patterns and cost analysis
+  asTools: true
+  config:
+    data_sources:
+    - medical_claims
+    - pharmacy_claims
+    - facility_claims
+    include_diagnosis_codes: true
+    include_procedure_codes: true
+    tool_name: claims_connector
+  provides:
+  - useAs: tools
+    in: data-collection-agent
+    description: Enable claims data collection and analysis
+- id: ehr-data-tool
+  name: EHR Clinical Data Access
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access electronic health record data for clinical indicators and assessments
+  asTools: true
+  config:
+    data_elements:
+    - conditions
+    - observations
+    - medications
+    - allergies
+    - vital_signs
+    include_lab_values: true
+    include_assessments: true
+    tool_name: ehr_integration
+  provides:
+  - useAs: tools
+    in: data-collection-agent
+    description: Enable EHR clinical data access
+- id: sdoh-assessment-tool
+  name: Social Determinants Assessment
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze social determinants of health data from multiple sources
+  asTools: true
+  config:
+    assessment_domains:
+    - housing
+    - food_security
+    - transportation
+    - social_support
+    - education
+    - employment
+    data_sources:
+    - surveys
+    - claims_indicators
+    - geographic_data
+    - community_resources
+    risk_scoring_enabled: true
+    tool_name: sdoh_assessment_model
+  provides:
+  - useAs: tools
+    in: data-collection-agent
+    description: Enable SDoH data collection and assessment
+- id: risk-prediction-model
+  name: Population Health Risk Model
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced ML model for healthcare risk prediction and stratification
+  asTools: true
+  config:
+    prediction_horizon_months: 6
+    risk_categories:
+    - hospitalization
+    - emergency_department
+    - cost_escalation
+    - chronic_disease_progression
+    include_comorbidity_index: true
+    calibrated_scoring: true
+    tool_name: population_health_risk_model
+  provides:
+  - useAs: tools
+    in: risk-analysis-agent
+    description: Enable advanced risk prediction modeling
+- id: data-collection-agent
+  name: Healthcare Data Collection Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Collect and aggregate comprehensive healthcare data from multiple sources
+  config:
+    role: Healthcare Data Integration Specialist
+    goal: Gather comprehensive patient data from claims, EHR, and SDoH sources for risk assessment
+    backstory: 'You are a healthcare data specialist with expertise in integrating clinical, administrative, and social data.
+
+      Your skills include FHIR data processing, claims analysis, and social determinants assessment.
+
+      You ensure data quality, completeness, and HIPAA compliance while creating comprehensive patient profiles.
+
+      You understand the importance of data accuracy for risk stratification and care management decisions.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: data-collection-task
+    description: Execute comprehensive data collection task
+- id: risk-analysis-agent
+  name: Risk Assessment and Stratification Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Analyze patient data and calculate comprehensive risk scores
+  config:
+    role: Population Health Risk Analyst
+    goal: Calculate comprehensive risk scores and stratify patients into appropriate care management categories
+    backstory: 'You are a population health analyst specializing in risk stratification and predictive modeling.
+
+      Your expertise includes clinical risk assessment, utilization analysis, and social determinants impact evaluation.
+
+      You understand how to combine multiple data sources to create accurate, actionable risk scores.
+
+      You are skilled in identifying high-risk patients who would benefit most from care management interventions.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: risk-analysis-task
+    description: Execute risk assessment and scoring task
+- id: prioritization-agent
+  name: Care Management Prioritization Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Prioritize patients for care management programs based on risk scores and resource availability
+  config:
+    role: Care Management Coordinator
+    goal: Prioritize patients for care management outreach based on risk levels, intervention potential, and resource capacity
+    backstory: 'You are a care management coordinator with expertise in patient prioritization and program optimization.
+
+      Your skills include resource allocation, intervention planning, and care gap identification.
+
+      You understand how to balance patient risk levels with available care management resources.
+
+      You are experienced in creating actionable prioritization lists that maximize patient outcomes and program effectiveness.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: prioritization-task
+    description: Execute patient prioritization task
+- id: analytics-agent
+  name: Population Health Analytics Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Generate population health insights and care management KPIs
+  config:
+    role: Population Health Analytics Specialist
+    goal: Generate comprehensive analytics on risk stratification results and population health trends
+    backstory: 'You are a population health analytics expert specializing in care management metrics and outcomes.
+
+      Your expertise includes risk model performance evaluation, population health trending, and KPI development.
+
+      You provide actionable insights to improve risk stratification accuracy and care management effectiveness.
+
+      You understand how to translate complex analytics into clear recommendations for care teams.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: analytics-task
+    description: Execute population health analytics task
+- id: data-collection-task
+  name: Comprehensive Data Collection Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Collect patient data from claims, EHR, and social determinants sources
+  config:
+    description: Collect comprehensive patient data from multiple healthcare data sources for risk stratification analysis
+    agent_id: data-collection-agent
+    expected_output: 'Comprehensive patient data package including:
+
+      - Medical and pharmacy claims history with diagnosis and procedure codes
+
+      - EHR clinical data including conditions, medications, lab values, and vital signs
+
+      - Social determinants of health assessment across all domains
+
+      - Data quality validation report with completeness metrics
+
+      - Patient demographic and enrollment information
+
+      '
+  provides:
+  - useAs: data
+    in: risk-analysis-task
+    description: Provide collected data for risk assessment
+- id: risk-analysis-task
+  name: Risk Assessment and Scoring Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Analyze patient data and calculate comprehensive risk scores using ML models
+  config:
+    description: Calculate comprehensive risk scores combining clinical, utilization, and social determinants data
+    agent_id: risk-analysis-agent
+    expected_output: 'Risk stratification analysis including:
+
+      - Overall composite risk scores (0-1 scale) for each patient
+
+      - Risk category classifications (low, medium, high, critical)
+
+      - Component risk scores (clinical, utilization, SDoH)
+
+      - Specific risk factors and drivers for each patient
+
+      - Predicted outcomes and intervention recommendations
+
+      - Model confidence scores and uncertainty measures
+
+      '
+  provides:
+  - useAs: data
+    in: prioritization-task
+    description: Provide risk scores for patient prioritization
+- id: prioritization-task
+  name: Care Management Prioritization Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Prioritize patients for care management programs based on risk and resources
+  config:
+    description: Create prioritized patient lists for care management outreach and intervention programs
+    agent_id: prioritization-agent
+    expected_output: 'Care management prioritization report including:
+
+      - Ranked patient lists by risk level and intervention potential
+
+      - Care management program recommendations for each patient
+
+      - Resource allocation suggestions and capacity planning
+
+      - Outreach timing and frequency recommendations
+
+      - Special considerations and contraindications
+
+      - Expected outcomes and success metrics for interventions
+
+      '
+  provides:
+  - useAs: data
+    in: analytics-task
+    description: Provide prioritization results for analytics
+- id: analytics-task
+  name: Population Health Analytics Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Generate population health insights and care management performance metrics
+  config:
+    description: Analyze population health trends and generate care management KPIs and insights
+    agent_id: analytics-agent
+    expected_output: 'Population health analytics report including:
+
+      - Risk stratification distribution and trends
+
+      - Population health metrics and quality indicators
+
+      - Care management program performance analytics
+
+      - Cost savings projections and ROI analysis
+
+      - Risk model performance evaluation and calibration metrics
+
+      - Recommendations for program optimization and improvement
+
+      '
+  provides:
+  - useAs: input
+    in: stratification-output
+    description: Provide final analytics and recommendations
+- id: risk-stratification-crew
+  name: Risk Stratification Crew
+  kind: Data
+  type: genesis:crewai_sequential_crew
+  description: Coordinate multi-agent risk stratification and care management prioritization workflow
+  config:
+    agents:
+    - data-collection-agent
+    - risk-analysis-agent
+    - prioritization-agent
+    - analytics-agent
+    tasks:
+    - data-collection-task
+    - risk-analysis-task
+    - prioritization-task
+    - analytics-task
+  provides:
+  - useAs: data
+    in: stratification-output
+    description: Coordinate agent execution and results
+- id: stratification-output
+  name: Risk Stratification Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive risk stratification results and care management recommendations
+  provides: []
+outputs:
+- risk_scores
+- patient_prioritization
+- care_management_recommendations
+- population_health_analytics
+- intervention_suggestions
+kpis:
+- name: Risk Model Accuracy (C-statistic)
+  category: quality
+  valueType: number
+  target: 0.75
+  unit: C-statistic
+  description: Area under the ROC curve for risk prediction model
+- name: High-Risk Patient Identification Rate
+  category: performance
+  valueType: percentage
+  target: 15
+  unit: '%'
+  description: Percentage of patient population identified as high-risk
+- name: Care Management Enrollment Rate
+  category: performance
+  valueType: percentage
+  target: 80
+  unit: '%'
+  description: Percentage of high-risk patients enrolled in care management
+- name: Risk Score Calibration
+  category: quality
+  valueType: number
+  target: 0.95
+  unit: calibration score
+  description: Accuracy of predicted vs actual risk levels
+- name: Data Completeness Rate
+  category: quality
+  valueType: percentage
+  target: 90
+  unit: '%'
+  description: Percentage of required data elements available for analysis
+- name: Intervention Response Rate
+  category: performance
+  valueType: percentage
+  target: 65
+  unit: '%'
+  description: Percentage of prioritized patients who engage with care management
+- name: Cost Savings per High-Risk Patient
+  category: financial
+  valueType: currency
+  target: 2500
+  unit: $
+  description: Average cost savings achieved through risk-based interventions
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true

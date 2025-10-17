@@ -1,0 +1,309 @@
+id: urn:agent:genesis:clinical-research:ie-criteria-simplification-agent:1.0.0
+name: IE Criteria Simplification Agent
+fullyQualifiedName: genesis.autonomize.ai.ie_criteria_simplification_agent
+description: Extracts and simplifies the eligibility criteria from clinical trial protocols, presenting clear and concise summaries to facilitate quicker participant screening and recruitment
+domain: autonomize.ai
+subDomain: clinical-research
+version: 1.0.0
+environment: production
+agentOwner: clinical-research@autonomize.ai
+agentOwnerDisplayName: Clinical Research Team
+email: clinical-research@autonomize.ai
+status: ACTIVE
+variables:
+- name: simplification_level
+  type: string
+  required: false
+  default: patient_friendly
+  description: Level of language simplification (technical, simplified, patient_friendly, layperson)
+- name: criteria_categorization
+  type: array
+  required: false
+  default:
+  - demographics
+  - medical_history
+  - current_conditions
+  - medications
+  - lab_values
+  description: Categories for organizing eligibility criteria
+- name: screening_workflow_optimization
+  type: boolean
+  required: false
+  default: true
+  description: Optimize criteria presentation for screening workflow efficiency
+- name: include_rationale
+  type: boolean
+  required: false
+  default: true
+  description: Include scientific rationale for complex eligibility requirements
+- name: language_localization
+  type: array
+  required: false
+  default:
+  - english
+  - spanish
+  description: Languages for criteria translation and localization
+- name: visual_aids_generation
+  type: boolean
+  required: false
+  default: true
+  description: Generate visual aids and flowcharts for complex criteria
+- name: recruitment_impact_assessment
+  type: boolean
+  required: false
+  default: true
+  description: Assess impact of criteria on patient recruitment feasibility
+tags:
+- clinical-research
+- eligibility-criteria
+- participant-screening
+- patient-recruitment
+- protocol-simplification
+- clinical-trials
+- inclusion-exclusion
+- screening-optimization
+- patient-communication
+- hipaa-compliant
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Extract, simplify, and clearly present inclusion and exclusion criteria from clinical trial protocols to facilitate efficient participant screening, improve recruitment processes, and enhance patient understanding
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: criteria-input
+  name: Eligibility Criteria Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive clinical trial protocols, eligibility criteria documents, and simplification requirements for processing
+  provides:
+  - useAs: input
+    in: criteria-agent
+    description: Provide eligibility criteria and simplification requirements for analysis
+- id: criteria-extractor
+  name: Eligibility Criteria Extraction Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Extract inclusion and exclusion criteria from clinical trial protocols with intelligent parsing and categorization
+  asTools: true
+  config:
+    document_type: eligibility_criteria
+    extraction_precision: high
+    categorization_enabled: true
+    tool_name: clinical_document_processor
+  provides:
+  - useAs: tools
+    in: criteria-agent
+    description: Enable intelligent eligibility criteria extraction and categorization
+- id: medical-simplifier
+  name: Medical Language Simplification Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Simplify complex medical terminology and clinical concepts into clear, understandable language for different audiences
+  asTools: true
+  config:
+    model_name: medical_language_simplifier
+    simplification_modes:
+    - patient_friendly
+    - simplified_clinical
+    - layperson
+    readability_optimization: true
+    tool_name: medical_language_model
+  provides:
+  - useAs: tools
+    in: criteria-agent
+    description: Enable medical language simplification and readability optimization
+- id: criteria-categorizer
+  name: Criteria Categorization Service
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Categorize and organize eligibility criteria by type, complexity, and screening workflow requirements
+  asTools: true
+  config:
+    tool_name: eligibility_criteria_categorizer
+  provides:
+  - useAs: tools
+    in: criteria-agent
+    description: Enable intelligent criteria categorization and organization
+- id: screening-optimizer
+  name: Screening Workflow Optimizer
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Optimize criteria presentation for efficient screening workflows and decision-making processes
+  asTools: true
+  config:
+    tool_name: screening_workflow_optimizer
+  provides:
+  - useAs: tools
+    in: criteria-agent
+    description: Enable screening workflow optimization and efficiency improvements
+- id: rationale-generator
+  name: Scientific Rationale Generator
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Generate clear explanations for the scientific rationale behind complex eligibility requirements
+  asTools: true
+  config:
+    model_name: clinical_rationale_generator
+    explanation_depth: accessible
+    evidence_based: true
+    tool_name: clinical_reasoning_model
+  provides:
+  - useAs: tools
+    in: criteria-agent
+    description: Enable scientific rationale generation and explanation
+- id: visual-aid-generator
+  name: Visual Aid Generation Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Generate visual aids, flowcharts, and decision trees for complex eligibility criteria navigation
+  asTools: true
+  config:
+    tool_name: clinical_visual_aid_generator
+  provides:
+  - useAs: tools
+    in: criteria-agent
+    description: Enable visual aid generation for complex criteria visualization
+- id: recruitment-assessor
+  name: Recruitment Impact Assessor
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Assess the impact of eligibility criteria on patient recruitment feasibility and timeline projections
+  asTools: true
+  config:
+    model_name: recruitment_impact_assessor
+    feasibility_modeling: true
+    population_estimation: true
+    tool_name: recruitment_analytics_model
+  provides:
+  - useAs: tools
+    in: criteria-agent
+    description: Enable recruitment impact assessment and feasibility analysis
+- id: criteria-prompt
+  name: IE Criteria Simplification Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for eligibility criteria simplification with clinical research expertise and patient communication best practices
+  config:
+    saved_prompt: ie_criteria_simplification_prompt_v1
+    template: 'You are a clinical research expert specializing in eligibility criteria analysis, patient communication, and recruitment optimization for clinical trials. Your role is to extract, simplify, and clearly present inclusion and exclusion criteria to facilitate efficient screening and improve patient understanding.
+
+      CLINICAL RESEARCH EXPERTISE: - Eligibility criteria design and patient selection principles - Clinical trial recruitment strategies and optimization - Medical terminology simplification and patient communication - Screening workflow design and efficiency optimization - Regulatory requirements for informed consent and patient protection - Population health and demographic considerations in trial design
+
+      CRITERIA SIMPLIFICATION METHODOLOGY: 1. Criteria Extraction and Analysis: - Parse inclusion and exclusion criteria from protocol documents - Identify complex medical terminology and clinical concepts - Categorize criteria by type, complexity, and verification requirements - Assess interdependencies and logical relationships between criteria
+
+      2. Language Simplification and Clarification: - Translate medical terminology into clear, understandable language - Maintain clinical accuracy while improving accessibility - Create multiple language versions for different audiences - Provide context and rationale for complex requirements
+
+      3. Organization and Workflow Optimization: - Group criteria by verification method and timing - Optimize screening sequence for efficiency and patient experience - Create decision trees and flowcharts for complex criteria navigation - Identify potential screening bottlenecks and optimization opportunities
+
+      4. Patient Communication Enhancement: - Develop patient-friendly explanations for eligibility requirements - Create visual aids and infographics for complex criteria - Generate frequently asked questions and answers - Provide guidance for patient conversations and education
+
+      CRITERIA CATEGORIZATION FRAMEWORK: - Demographics: Age, gender, geographic location requirements - Medical History: Previous conditions, surgeries, treatments - Current Health Status: Active conditions, severity levels, functional status - Medications: Current medications, contraindicated drugs, washout periods - Laboratory Values: Required test results, normal ranges, timing requirements - Lifestyle Factors: Smoking status, alcohol use, activity levels - Procedural Requirements: Imaging, biopsies, specialized assessments
+
+      SIMPLIFICATION PRINCIPLES: - Use plain language while maintaining clinical accuracy - Break complex criteria into simple, actionable steps - Provide clear yes/no decision points where possible - Include examples and scenarios to illustrate requirements - Explain the scientific rationale behind complex criteria - Consider cultural and linguistic diversity in communication
+
+      SCREENING WORKFLOW OPTIMIZATION: - Prioritize criteria by verification difficulty and cost - Group related criteria for efficient data collection - Identify criteria that can be pre-screened remotely - Optimize timing of expensive or invasive assessments - Create clear pathways for borderline cases and exceptions
+
+      RECRUITMENT IMPACT CONSIDERATIONS: - Assess criteria impact on eligible population size - Identify overly restrictive or unnecessary requirements - Evaluate geographic and demographic accessibility - Consider patient burden and participation barriers - Project recruitment timelines and feasibility
+
+      OUTPUT REQUIREMENTS: - Simplified eligibility criteria with clear language - Categorized criteria organized by verification workflow - Patient-friendly explanations with visual aids - Scientific rationale for complex requirements - Screening workflow optimization recommendations - Recruitment impact assessment and projections - Multi-language versions for diverse populations - Decision support tools for screening teams
+
+      Use your clinical research tools to extract criteria, simplify language, optimize workflows, and generate patient-friendly materials. Always prioritize clinical accuracy, patient understanding, and recruitment efficiency while maintaining regulatory compliance.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: criteria-agent
+    description: Provide specialized eligibility criteria simplification and patient communication expertise
+- id: criteria-agent
+  name: IE Criteria Simplification Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Expert clinical research specialist focused on eligibility criteria simplification and recruitment optimization
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.2
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 25
+    verbose: true
+  provides:
+  - useAs: input
+    in: criteria-output
+    description: Provide simplified eligibility criteria with patient-friendly explanations
+- id: criteria-output
+  name: Simplified Criteria Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present simplified eligibility criteria with clear explanations, visual aids, and screening workflow optimization
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- simplified_eligibility_criteria
+- patient_friendly_explanations
+- screening_workflow_recommendations
+- visual_aids_and_flowcharts
+- scientific_rationale_summaries
+- recruitment_impact_assessment
+- multi_language_versions
+- decision_support_tools
+kpis:
+- name: Criteria Simplification Accuracy
+  description: Accuracy of medical terminology simplification while maintaining clinical precision
+  target: '> 93%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Patient Comprehension Score
+  description: Patient understanding of simplified eligibility criteria
+  target: '> 85%'
+  measurement: percentage
+  category: Patient Experience
+  valueType: number
+- name: Screening Efficiency Improvement
+  description: Improvement in screening process efficiency after criteria optimization
+  target: '> 25%'
+  measurement: percentage
+  category: Efficiency
+  valueType: percentage
+- name: Recruitment Rate Improvement
+  description: Improvement in patient recruitment rates using simplified criteria
+  target: '> 20%'
+  measurement: percentage
+  category: Effectiveness
+  valueType: percentage
+- name: Language Simplification Quality
+  description: Quality rating of language simplification maintaining clinical accuracy
+  target: '> 4.4/5'
+  measurement: score
+  category: Quality
+  valueType: percentage
+- name: Visual Aid Effectiveness
+  description: Effectiveness of visual aids in improving criteria understanding
+  target: '> 80%'
+  measurement: percentage
+  category: Communication
+  valueType: percentage
+- name: Workflow Optimization Success
+  description: Success rate of screening workflow optimization recommendations
+  target: '> 75%'
+  measurement: percentage
+  category: Process Improvement
+  valueType: percentage
+- name: Multi-language Accuracy
+  description: Accuracy of criteria translation and localization
+  target: '> 90%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true

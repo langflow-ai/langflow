@@ -1,0 +1,323 @@
+id: urn:agent:genesis:chart-review:form-data-extraction-agent:1.0.0
+name: Form Data Extraction Agent
+fullyQualifiedName: genesis.autonomize.ai.form_data_extraction_agent
+description: Captures and organizes key information from structured forms, such as intake forms, transforming them into easily accessible structured data for clinical workflows and documentation
+domain: autonomize.ai
+subDomain: chart-review
+version: 1.0.0
+environment: production
+agentOwner: chart-review@autonomize.ai
+agentOwnerDisplayName: Chart Review Team
+email: chart-review@autonomize.ai
+status: ACTIVE
+variables:
+- name: form_types_supported
+  type: array
+  required: false
+  default:
+  - patient_intake
+  - insurance_verification
+  - consent_forms
+  - assessment_forms
+  - screening_questionnaires
+  description: Types of healthcare forms supported for data extraction
+- name: field_validation_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable field-level validation and error detection
+- name: structured_output_format
+  type: string
+  required: false
+  default: fhir_compatible
+  description: Format for structured output (fhir_compatible, hl7, json, xml, custom)
+- name: handwriting_recognition
+  type: boolean
+  required: false
+  default: true
+  description: Enable handwriting recognition for handwritten form entries
+- name: data_quality_threshold
+  type: float
+  required: false
+  default: 0.9
+  description: Minimum data quality score for extracted form information
+- name: enable_smart_field_mapping
+  type: boolean
+  required: false
+  default: true
+  description: Enable intelligent field mapping and form template recognition
+- name: compliance_validation
+  type: boolean
+  required: false
+  default: true
+  description: Validate extracted data for regulatory and clinical compliance requirements
+tags:
+- chart-review
+- form-processing
+- data-extraction
+- structured-data
+- patient-intake
+- document-processing
+- field-validation
+- handwriting-recognition
+- workflow-automation
+- hipaa-compliant
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Extract and organize information from healthcare forms including patient intake, insurance verification, and assessment forms, converting unstructured form data into structured, standardized formats for clinical workflows
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: form-input
+  name: Healthcare Form Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive healthcare forms, intake documents, questionnaires, and extraction requirements for processing
+  provides:
+  - useAs: input
+    in: form-agent
+    description: Provide healthcare forms and documents for comprehensive data extraction
+- id: form-recognition-tool
+  name: Form Recognition and Classification
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Recognize and classify different types of healthcare forms with template identification and field mapping
+  asTools: true
+  config:
+    model_name: healthcare_form_classifier
+    form_templates: extensive
+    field_mapping: intelligent
+    tool_name: document_classification_model
+  provides:
+  - useAs: tools
+    in: form-agent
+    description: Enable intelligent form recognition and template-based processing
+- id: ocr-engine
+  name: Advanced OCR Processing Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Process scanned forms with advanced OCR including handwriting recognition and medical terminology handling
+  asTools: true
+  config:
+    document_type: healthcare_forms
+    handwriting_recognition: true
+    medical_terminology_awareness: true
+    tool_name: clinical_document_processor
+  provides:
+  - useAs: tools
+    in: form-agent
+    description: Enable comprehensive OCR processing for printed and handwritten forms
+- id: field-extractor
+  name: Form Field Extraction Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Extract specific field values from forms using intelligent field recognition and data validation
+  asTools: true
+  config:
+    model_name: form_field_extractor
+    field_types:
+    - text
+    - checkbox
+    - dropdown
+    - date
+    - signature
+    - numeric
+    validation_enabled: true
+    tool_name: form_data_extractor
+  provides:
+  - useAs: tools
+    in: form-agent
+    description: Enable precise form field extraction with validation
+- id: data-validator
+  name: Healthcare Data Validation Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Validate extracted form data for accuracy, completeness, and compliance with healthcare standards
+  asTools: true
+  config:
+    model_name: healthcare_data_validator
+    validation_types:
+    - format
+    - range
+    - consistency
+    - clinical_logic
+    - regulatory
+    tool_name: clinical_data_quality_model
+  provides:
+  - useAs: tools
+    in: form-agent
+    description: Enable comprehensive healthcare data validation and quality control
+- id: smart-mapper
+  name: Intelligent Field Mapping Service
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Map form fields to standardized healthcare data elements and clinical terminologies
+  asTools: true
+  config:
+    tool_name: intelligent_field_mapper
+  provides:
+  - useAs: tools
+    in: form-agent
+    description: Enable intelligent field mapping to standardized healthcare elements
+- id: structured-formatter
+  name: Healthcare Data Structuring Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Format extracted form data into structured healthcare standards including FHIR, HL7, and clinical data models
+  asTools: true
+  config:
+    tool_name: healthcare_data_formatter
+  provides:
+  - useAs: tools
+    in: form-agent
+    description: Enable structured formatting for healthcare system integration
+- id: compliance-checker
+  name: Regulatory Compliance Validator
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Validate extracted form data against regulatory requirements including HIPAA, state regulations, and clinical standards
+  asTools: true
+  config:
+    model_name: healthcare_compliance_validator
+    regulatory_frameworks:
+    - hipaa
+    - state_regulations
+    - clinical_standards
+    tool_name: regulatory_compliance_model
+  provides:
+  - useAs: tools
+    in: form-agent
+    description: Enable regulatory compliance validation for healthcare form data
+- id: form-prompt
+  name: Form Data Extraction Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for healthcare form processing with clinical data management expertise and quality assurance focus
+  config:
+    saved_prompt: form_data_extraction_prompt_v1
+    template: 'You are a healthcare data management expert specializing in form processing, clinical data extraction, and healthcare documentation workflows. Your role is to extract, validate, and structure information from healthcare forms while ensuring accuracy, compliance, and data quality.
+
+      HEALTHCARE FORM PROCESSING EXPERTISE: - Healthcare form design and standardization principles - Clinical data elements and healthcare terminology systems - HIPAA compliance and protected health information handling - Healthcare workflow integration and system interoperability - Data validation and quality assurance methodologies - Regulatory requirements for healthcare documentation
+
+      FORM EXTRACTION METHODOLOGY: 1. Form Recognition and Analysis: - Identify form type and template structure - Recognize field layouts and data collection patterns - Assess form quality and completeness - Plan systematic extraction approach
+
+      2. Data Extraction and Processing: - Extract text from printed and handwritten fields - Process checkboxes, radio buttons, and selection fields - Capture dates, signatures, and special formatting - Handle multi-page forms and continuation sheets
+
+      3. Field Validation and Quality Control: - Validate field formats and data types - Check range constraints and logical consistency - Verify required field completeness - Assess data quality and confidence scores
+
+      4. Standardization and Structuring: - Map form fields to standardized healthcare data elements - Apply appropriate medical coding and terminology - Structure data according to healthcare standards - Ensure interoperability with clinical systems
+
+      HEALTHCARE FORM TYPES TO PROCESS: - Patient Intake Forms: Demographics, insurance, contact information - Medical History Forms: Previous conditions, surgeries, medications, allergies - Insurance Verification Forms: Coverage details, authorization information - Consent Forms: Treatment consent, privacy agreements, research participation - Assessment Forms: Clinical assessments, questionnaires, screening tools - Registration Forms: Patient registration, emergency contacts, preferences - Referral Forms: Provider referrals, specialist appointments, care coordination - Discharge Forms: Discharge planning, follow-up instructions, medications
+
+      FIELD EXTRACTION REQUIREMENTS: - Demographics: Name, address, phone, email, date of birth, gender - Insurance Information: Payer, policy numbers, group numbers, effective dates - Medical Information: Allergies, medications, medical history, symptoms - Emergency Contacts: Names, relationships, contact information - Preferences: Language, communication preferences, advance directives - Signatures: Patient signatures, witness signatures, dates signed - Clinical Data: Vital signs, measurements, assessment scores
+
+      DATA VALIDATION AND QUALITY CONTROL: - Verify data format consistency and accuracy - Check logical relationships between related fields - Validate against known constraints and reference data - Assess completeness according to form requirements - Identify potential errors and data quality issues
+
+      STANDARDIZATION AND COMPLIANCE: - Map to standardized healthcare data elements (FHIR, HL7) - Apply appropriate medical terminology and coding systems - Ensure HIPAA compliance for protected health information - Validate against regulatory requirements and clinical standards - Structure data for seamless integration with healthcare systems
+
+      STRUCTURED OUTPUT REQUIREMENTS: - Healthcare-standard formatted data (FHIR resources, HL7 messages) - Field-level validation results and quality indicators - Compliance verification and regulatory assessment - Data mapping documentation and terminology references - Integration-ready formats for clinical workflow systems
+
+      WORKFLOW INTEGRATION CONSIDERATIONS: - Electronic Health Record (EHR) integration compatibility - Practice Management System (PMS) data requirements - Clinical Decision Support System (CDSS) formatting - Patient Portal and engagement platform integration - Quality reporting and analytics system compatibility
+
+      OUTPUT REQUIREMENTS: - Comprehensive form data extraction with structured formatting - Field-level validation results with quality scores - Standardized healthcare data elements with appropriate coding - Compliance validation and regulatory assessment - Integration documentation and system compatibility information - Data quality metrics and confidence indicators
+
+      Use your form processing tools to recognize forms, extract data, validate information, and generate structured outputs. Always prioritize data accuracy, regulatory compliance, and seamless integration with healthcare workflows while maintaining patient privacy and data security.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: form-agent
+    description: Provide specialized healthcare form processing and data management expertise
+- id: form-agent
+  name: Form Data Extraction Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Expert healthcare data specialist focused on form processing and clinical data extraction
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 25
+    verbose: true
+  provides:
+  - useAs: input
+    in: form-output
+    description: Provide comprehensive form data extraction with structured formatting and validation
+- id: form-output
+  name: Form Extraction Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive form data extraction with structured formatting, validation results, and compliance assessment
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- extracted_form_data
+- structured_healthcare_data
+- field_validation_results
+- compliance_assessment
+- data_quality_metrics
+- standardized_data_elements
+- integration_documentation
+- workflow_compatibility_report
+kpis:
+- name: Form Data Extraction Accuracy
+  description: Accuracy of data extraction from healthcare forms including all field types
+  target: '> 94%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Handwriting Recognition Accuracy
+  description: Accuracy of handwritten text recognition in healthcare forms
+  target: '> 85%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Field Validation Success Rate
+  description: Success rate of field-level validation and error detection
+  target: '> 90%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Structured Output Compliance
+  description: Compliance with healthcare data standards for structured output
+  target: '> 95%'
+  measurement: percentage
+  category: Standardization
+  valueType: percentage
+- name: Processing Time Efficiency
+  description: Average time to process and extract data from healthcare forms
+  target: < 5 minutes
+  measurement: time
+  category: Efficiency
+  valueType: number
+- name: Data Quality Score
+  description: Overall data quality score for extracted form information
+  target: '> 88%'
+  measurement: percentage
+  category: Quality
+  valueType: number
+- name: Regulatory Compliance Rate
+  description: Percentage of extracted data meeting regulatory compliance requirements
+  target: '> 96%'
+  measurement: percentage
+  category: Compliance
+  valueType: percentage
+- name: Workflow Integration Success
+  description: Success rate of integrating extracted data with healthcare workflows
+  target: '> 92%'
+  measurement: percentage
+  category: Integration
+  valueType: percentage
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true

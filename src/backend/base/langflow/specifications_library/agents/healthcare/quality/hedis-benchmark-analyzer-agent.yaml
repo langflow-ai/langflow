@@ -1,0 +1,312 @@
+id: urn:agent:genesis:quality:hedis-benchmark-analyzer-agent:1.0.0
+name: HEDIS Benchmark Analyzer Agent
+fullyQualifiedName: genesis.autonomize.ai.hedis_benchmark_analyzer_agent
+description: Compares plan-level HEDIS performance to national benchmarks and recommends targeted interventions for quality improvement and competitive positioning
+domain: autonomize.ai
+subDomain: quality
+version: 1.0.0
+environment: production
+agentOwner: quality@autonomize.ai
+agentOwnerDisplayName: Quality Team
+email: quality@autonomize.ai
+status: ACTIVE
+variables:
+- name: benchmark_comparison_scope
+  type: array
+  required: false
+  default:
+  - national
+  - regional
+  - peer_plans
+  - top_performers
+  description: Scope of benchmark comparisons for HEDIS performance analysis
+- name: percentile_targets
+  type: object
+  required: false
+  default:
+    minimum: 50
+    target: 75
+    excellence: 90
+  description: Percentile targets for HEDIS measure performance evaluation
+- name: measure_weighting_strategy
+  type: string
+  required: false
+  default: stars_aligned
+  description: Strategy for weighting HEDIS measures (equal, stars_aligned, custom)
+- name: improvement_priority_threshold
+  type: float
+  required: false
+  default: 10.0
+  description: Minimum percentile gap to prioritize for improvement (percentile points)
+- name: intervention_impact_horizon
+  type: number
+  required: false
+  default: 12
+  description: Months to assess intervention impact on HEDIS performance
+- name: competitive_analysis_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable competitive positioning analysis against peer plans
+- name: trend_analysis_period
+  type: number
+  required: false
+  default: 36
+  description: Months of historical data for trend analysis
+tags:
+- quality
+- hedis-measures
+- benchmark-analysis
+- performance-comparison
+- competitive-positioning
+- quality-improvement
+- national-benchmarks
+- peer-comparison
+- intervention-planning
+- hipaa-compliant
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Analyze plan-level HEDIS performance against national and peer benchmarks, identify competitive gaps and improvement opportunities, and recommend evidence-based interventions for quality enhancement
+targetUser: internal
+valueGeneration: InsightGeneration
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: benchmark-input
+  name: HEDIS Benchmark Analysis Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive HEDIS performance data, benchmark analysis requests, and competitive positioning requirements
+  provides:
+  - useAs: input
+    in: hedis-agent
+    description: Provide HEDIS data and benchmark analysis requests
+- id: hedis-performance-tool
+  name: HEDIS Performance Data Service
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access plan-level HEDIS performance data with historical trends and measure-specific breakdowns
+  asTools: true
+  config:
+    data_scope: plan_level
+    include_historical: true
+    trend_analysis: true
+    tool_name: hedis_database
+  provides:
+  - useAs: tools
+    in: hedis-agent
+    description: Enable comprehensive HEDIS performance data access and analysis
+- id: national-benchmark-tool
+  name: National Benchmark Database
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access national HEDIS benchmarks, percentile distributions, and quality standards from NCQA and CMS
+  asTools: true
+  config:
+    database_type: hedis_benchmarks
+    include_percentiles: true
+    data_sources:
+    - ncqa
+    - cms
+    - industry
+    tool_name: healthcare_data_connector
+  provides:
+  - useAs: tools
+    in: hedis-agent
+    description: Enable access to national HEDIS benchmarks and quality standards
+- id: peer-comparison-tool
+  name: Peer Plan Comparison Service
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Compare HEDIS performance against peer plans with similar characteristics and market positioning
+  asTools: true
+  config:
+    tool_name: peer_plan_comparator
+  provides:
+  - useAs: tools
+    in: hedis-agent
+    description: Enable peer plan comparison and competitive positioning analysis
+- id: benchmark-analyzer
+  name: HEDIS Benchmark Analysis Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze HEDIS performance gaps, identify improvement opportunities, and calculate competitive positioning scores
+  asTools: true
+  config:
+    model_name: hedis_benchmark_analyzer
+    gap_analysis: true
+    competitive_scoring: true
+    tool_name: benchmark_analysis_model
+  provides:
+  - useAs: tools
+    in: hedis-agent
+    description: Enable intelligent benchmark analysis and gap identification
+- id: trend-analyzer
+  name: HEDIS Trend Analysis Service
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze HEDIS performance trends, seasonal patterns, and trajectory projections with statistical modeling
+  asTools: true
+  config:
+    model_name: hedis_trend_analyzer
+    forecasting_enabled: true
+    seasonal_adjustment: true
+    tool_name: trend_analysis_model
+  provides:
+  - useAs: tools
+    in: hedis-agent
+    description: Enable comprehensive HEDIS trend analysis and performance forecasting
+- id: intervention-mapper
+  name: HEDIS Intervention Mapping Service
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Map HEDIS performance gaps to evidence-based interventions with implementation guidance and impact projections
+  asTools: true
+  config:
+    model_name: hedis_intervention_mapper
+    evidence_based: true
+    impact_modeling: true
+    tool_name: intervention_recommendation_model
+  provides:
+  - useAs: tools
+    in: hedis-agent
+    description: Enable targeted intervention mapping and impact assessment
+- id: competitive-intelligence
+  name: Competitive Intelligence Service
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze competitive landscape, market positioning, and strategic implications of HEDIS performance gaps
+  asTools: true
+  config:
+    tool_name: competitive_intelligence_analyzer
+  provides:
+  - useAs: tools
+    in: hedis-agent
+    description: Enable competitive intelligence and strategic positioning analysis
+- id: hedis-prompt
+  name: HEDIS Benchmark Analysis Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for HEDIS benchmark analysis with quality measurement expertise and competitive intelligence
+  config:
+    saved_prompt: hedis_benchmark_analyzer_prompt_v1
+    template: 'You are a healthcare quality expert specializing in HEDIS measures, benchmark analysis, and competitive positioning for health plans. Your role is to analyze HEDIS performance against national benchmarks, identify improvement opportunities, and recommend strategic interventions.
+
+      HEDIS MEASUREMENT EXPERTISE: - HEDIS technical specifications and calculation methodologies - National benchmark data interpretation and trend analysis - Peer plan comparison and competitive positioning strategies - Quality improvement interventions and best practices - NCQA accreditation standards and quality ratings - CMS Stars rating integration with HEDIS performance
+
+      BENCHMARK ANALYSIS METHODOLOGY: 1. Performance Assessment: - Compare plan HEDIS performance to national percentiles - Analyze performance against peer plans and top performers - Identify significant performance gaps and opportunities - Calculate competitive positioning scores by measure
+
+      2. Trend and Trajectory Analysis: - Analyze multi-year HEDIS performance trends - Identify improving, declining, and stable measures - Project future performance based on current trajectories - Assess seasonal patterns and measurement cycle impacts
+
+      3. Gap Prioritization and Impact Analysis: - Rank performance gaps by improvement potential - Assess Stars rating impact of HEDIS improvements - Calculate member population affected by each gap - Evaluate competitive advantage potential
+
+      4. Intervention Strategy Development: - Map performance gaps to evidence-based interventions - Assess intervention feasibility and resource requirements - Project intervention impact on HEDIS performance - Develop implementation timelines and milestones
+
+      HEDIS MEASURE CATEGORIES AND FOCUS: - Effectiveness of Care: diabetes, cardiovascular, respiratory conditions - Access/Availability: preventive care and screening measures - Experience of Care: member satisfaction and communication - Utilization: appropriate use of services and medications - Health Plan Descriptive: network adequacy and provider qualifications
+
+      BENCHMARK COMPARISON FRAMEWORKS: - National percentile rankings (10th, 25th, 50th, 75th, 90th) - Regional performance comparisons and market variations - Peer plan analysis by size, geography, and member demographics - Top performer benchmarking and best practice identification - Historical performance trends and improvement trajectories
+
+      COMPETITIVE POSITIONING ANALYSIS: - Market share implications of quality performance - Member retention and acquisition impact - Regulatory compliance and accreditation status - Marketing and reputation considerations - Value-based contract performance implications
+
+      INTERVENTION PRIORITIZATION CRITERIA: - Performance gap magnitude and percentile improvement potential - Stars rating impact and bonus payment implications - Implementation feasibility and resource requirements - Time to impact and sustainability considerations - Competitive advantage and differentiation potential
+
+      OUTPUT REQUIREMENTS: - Comprehensive HEDIS performance scorecard with benchmark comparisons - Performance gap analysis with percentile rankings and trends - Competitive positioning assessment with peer comparisons - Prioritized intervention recommendations with impact projections - Implementation roadmap with timelines and resource requirements - Strategic recommendations for quality program enhancement
+
+      Use your HEDIS analytics tools to access performance data, compare benchmarks, analyze trends, and generate strategic recommendations. Always focus on evidence-based interventions, competitive positioning, and sustainable quality improvement.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: hedis-agent
+    description: Provide specialized HEDIS benchmark analysis and competitive positioning expertise
+- id: hedis-agent
+  name: HEDIS Benchmark Analysis Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Expert quality analyst specializing in HEDIS benchmark analysis and competitive quality positioning
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.2
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 25
+    verbose: true
+  provides:
+  - useAs: input
+    in: hedis-output
+    description: Provide comprehensive HEDIS benchmark analysis and strategic recommendations
+- id: hedis-output
+  name: HEDIS Benchmark Analysis Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive HEDIS benchmark analysis with competitive positioning and intervention recommendations
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- hedis_performance_scorecard
+- benchmark_comparison_analysis
+- competitive_positioning_assessment
+- performance_gap_prioritization
+- intervention_recommendations
+- trend_analysis_insights
+- strategic_quality_roadmap
+- roi_impact_projections
+kpis:
+- name: Benchmark Analysis Accuracy
+  description: Accuracy of HEDIS performance benchmarking and percentile calculations
+  target: '> 95%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Competitive Positioning Precision
+  description: Accuracy of competitive positioning analysis and peer comparisons
+  target: '> 88%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Intervention Impact Prediction Accuracy
+  description: Accuracy of predicted HEDIS improvement from recommended interventions
+  target: '> 75%'
+  measurement: percentage
+  category: Effectiveness
+  valueType: percentage
+- name: Performance Gap Detection Rate
+  description: Percentage of significant HEDIS performance gaps successfully identified
+  target: '> 90%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Trend Analysis Reliability
+  description: Accuracy of HEDIS performance trend analysis and forecasting
+  target: '> 80%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Strategic Recommendation Adoption Rate
+  description: Percentage of strategic quality recommendations implemented by plans
+  target: '> 60%'
+  measurement: percentage
+  category: Adoption
+  valueType: percentage
+- name: Benchmark Data Completeness
+  description: Completeness of national and peer benchmark data coverage
+  target: '> 92%'
+  measurement: percentage
+  category: Data Quality
+  valueType: percentage
+- name: Competitive Intelligence Value Score
+  description: Stakeholder rating of competitive intelligence insights and value
+  target: '> 4.2/5'
+  measurement: score
+  category: User Experience
+  valueType: number
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: false

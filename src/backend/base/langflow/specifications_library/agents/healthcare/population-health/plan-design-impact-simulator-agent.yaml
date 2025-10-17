@@ -1,0 +1,615 @@
+id: urn:agent:genesis:population-health:plan-design-impact-simulator-agent:1.0.0
+name: Plan Design Impact Simulator Agent
+fullyQualifiedName: genesis.autonomize.ai.plan_design_impact_simulator_agent
+description: Multi-agent system that simulates future cost and utilization impacts of benefit design changes using claims history analysis, actuarial modeling, and utilization patterns to predict financial and clinical outcomes of plan modifications
+domain: autonomize.ai
+subDomain: population-health
+version: 1.0.0
+environment: production
+agentOwner: population-health@autonomize.ai
+agentOwnerDisplayName: Population Health Team
+email: population-health@autonomize.ai
+status: ACTIVE
+variables:
+- name: simulation_horizon_years
+  type: number
+  required: false
+  default: 3
+  description: Number of years to project for impact simulation analysis
+- name: historical_data_years
+  type: number
+  required: false
+  default: 5
+  description: Number of historical years to use for baseline trend analysis
+- name: confidence_interval
+  type: number
+  required: false
+  default: 0.95
+  description: Statistical confidence interval for simulation results
+- name: monte_carlo_iterations
+  type: number
+  required: false
+  default: 10000
+  description: Number of Monte Carlo simulation iterations for robust projections
+- name: include_network_effects
+  type: boolean
+  required: false
+  default: true
+  description: Include provider network design impacts in simulation
+- name: apply_medical_inflation
+  type: boolean
+  required: false
+  default: true
+  description: Apply medical cost inflation trends to projections
+- name: member_behavior_elasticity
+  type: object
+  required: false
+  default: {"copay": -0.15, "deductible": -0.25, "coinsurance": -0.18}
+  description: Price elasticity coefficients for different cost-sharing mechanisms
+- name: include_induced_demand
+  type: boolean
+  required: false
+  default: true
+  description: Model induced demand effects from benefit design changes
+tags:
+- population-health
+- actuarial-modeling
+- benefit-design
+- cost-simulation
+- utilization-analysis
+- financial-projections
+- plan-optimization
+- healthcare-economics
+- multi-agent
+reusability:
+  asTools: false
+kind: Multi Agent
+agentGoal: Provide comprehensive impact analysis and projections for health plan benefit design changes using advanced actuarial modeling and behavioral economics to optimize plan performance and member outcomes
+targetUser: internal
+valueGeneration: InsightGeneration
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: plan-change-input
+  name: Plan Design Change Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive proposed benefit design changes and simulation parameters
+  provides:
+  - useAs: input
+    in: baseline-agent
+    description: Provide plan change specifications for baseline analysis
+- id: claims-data-tool
+  name: Claims Data Analysis Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access comprehensive claims data for historical utilization and cost analysis
+  asTools: true
+  config:
+    tool_name: claims_connector
+    description: "Access comprehensive claims data for historical utilization and cost analysis with financial metrics"
+  provides:
+  - useAs: tools
+    in: baseline-agent
+    description: Enable comprehensive claims data analysis
+  - useAs: tools
+    in: utilization-agent
+    description: Enable utilization pattern analysis
+- id: actuarial-modeling-tool
+  name: Actuarial Modeling Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced actuarial modeling for benefit design impact projections
+  asTools: true
+  config:
+    tool_name: actuarial_model
+    description: "Advanced actuarial modeling for benefit design impact projections using Monte Carlo and risk adjustment"
+  provides:
+  - useAs: tools
+    in: impact-modeling-agent
+    description: Enable advanced actuarial modeling and projections
+- id: behavioral-economics-tool
+  name: Behavioral Economics Model
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Model member behavioral responses to benefit design changes
+  asTools: true
+  config:
+    tool_name: behavioral_economics_model
+    description: "Model member behavioral responses to benefit design changes using elasticity and demand response analysis"
+  provides:
+  - useAs: tools
+    in: behavioral-agent
+    description: Enable behavioral response modeling
+- id: network-impact-tool
+  name: Provider Network Impact Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze provider network design impacts on utilization and costs
+  asTools: true
+  config:
+    tool_name: network_impact_analyzer
+    description: "Analyze provider network changes, access impacts, and cost differentials for benefit design modifications"
+  provides:
+  - useAs: tools
+    in: network-agent
+    description: Enable provider network impact analysis
+- id: financial-projection-tool
+  name: Financial Projection Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Generate comprehensive financial projections and sensitivity analysis
+  asTools: true
+  config:
+    tool_name: financial_projector
+    description: "Create detailed financial projections including cash flow, reserves, and risk corridors for plan design changes"
+  provides:
+  - useAs: tools
+    in: financial-agent
+    description: Enable financial impact projections
+- id: market-intelligence-tool
+  name: Market Intelligence Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Incorporate market trends and competitor analysis into projections
+  asTools: true
+  config:
+    tool_name: market_intelligence
+    description: "Analyze market trends, competitor plan designs, and regulatory environment impacts"
+  provides:
+  - useAs: tools
+    in: market-agent
+    description: Enable market trend analysis
+- id: baseline-agent
+  name: Baseline Analysis Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Analyze current plan performance and establish baseline metrics for impact simulation
+  config:
+    role: Actuarial Baseline Analyst
+    goal: Establish comprehensive baseline metrics for current plan performance including utilization patterns, cost trends, and member behavior to serve as foundation for impact simulation
+    backstory: 'You are an actuarial baseline analyst specializing in health plan performance measurement and trend analysis.
+
+      Your expertise includes claims data analysis, utilization trending, and risk adjustment methodologies.
+
+      You excel at identifying seasonal patterns, anomalies, and underlying trends that affect plan performance projections.
+
+      You understand the importance of credible baselines for accurate impact simulation and the nuances of different member populations.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: baseline-task
+    description: Execute baseline analysis task
+- id: utilization-agent
+  name: Utilization Pattern Analysis Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Analyze historical utilization patterns and trends to inform simulation models
+  config:
+    role: Healthcare Utilization Analyst
+    goal: Analyze comprehensive utilization patterns, service mix trends, and care-seeking behaviors to understand how benefit design changes will impact service usage
+    backstory: 'You are a healthcare utilization analyst with expertise in medical economics and healthcare delivery patterns.
+
+      Your skills include analyzing complex utilization data, identifying service substitution patterns, and understanding provider-patient interactions.
+
+      You excel at recognizing how different populations respond to incentive structures and access barriers.
+
+      You understand the clinical implications of utilization changes and their impact on health outcomes and costs.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: utilization-task
+    description: Execute utilization pattern analysis task
+- id: behavioral-agent
+  name: Member Behavioral Response Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Model member behavioral responses to proposed benefit design changes
+  config:
+    role: Behavioral Economics Specialist
+    goal: Model and predict member behavioral responses to benefit design changes using economic theory and empirical evidence to accurately project utilization shifts
+    backstory: 'You are a behavioral economics specialist with expertise in healthcare decision-making and consumer behavior.
+
+      Your skills include econometric modeling, price elasticity analysis, and understanding psychological factors in healthcare choices.
+
+      You excel at quantifying behavioral responses to financial incentives and predicting unintended consequences of benefit design changes.
+
+      You understand the heterogeneity of member populations and how different demographics respond to cost-sharing mechanisms.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: behavioral-task
+    description: Execute behavioral response modeling task
+- id: impact-modeling-agent
+  name: Actuarial Impact Modeling Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Develop comprehensive actuarial models to project financial and utilization impacts
+  config:
+    role: Senior Actuarial Modeler
+    goal: Develop sophisticated actuarial models that integrate baseline trends, behavioral responses, and external factors to project comprehensive impacts of benefit design changes
+    backstory: 'You are a senior actuarial modeler specializing in health insurance product design and financial projections.
+
+      Your expertise includes advanced statistical modeling, Monte Carlo simulation, and uncertainty quantification.
+
+      You excel at integrating multiple data sources and modeling approaches to create robust, defensible projections.
+
+      You understand regulatory requirements, reserve adequacy, and the balance between accuracy and interpretability in actuarial models.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: impact-modeling-task
+    description: Execute actuarial impact modeling task
+- id: network-agent
+  name: Provider Network Impact Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Analyze provider network impacts and access implications of benefit design changes
+  config:
+    role: Provider Network Analyst
+    goal: Analyze how benefit design changes affect provider network utilization, access patterns, and care quality to ensure comprehensive impact assessment
+    backstory: 'You are a provider network analyst with expertise in healthcare delivery systems and access analysis.
+
+      Your skills include network adequacy assessment, provider contracting impacts, and care coordination analysis.
+
+      You excel at understanding the interplay between benefit design and provider incentives.
+
+      You understand geographic access patterns, provider capacity constraints, and quality differentials across network tiers.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: network-task
+    description: Execute network impact analysis task
+- id: financial-agent
+  name: Financial Impact Projection Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Generate comprehensive financial projections and perform sensitivity analysis
+  config:
+    role: Financial Projection Specialist
+    goal: Create detailed financial projections including revenue, expenses, margins, and cash flow impacts with comprehensive sensitivity analysis and risk assessment
+    backstory: 'You are a financial projection specialist with expertise in health insurance financial modeling and risk management.
+
+      Your skills include cash flow modeling, reserve calculations, and regulatory capital requirements.
+
+      You excel at translating actuarial projections into business-relevant financial metrics and understanding stakeholder reporting needs.
+
+      You understand the importance of scenario planning and stress testing for robust financial management.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: financial-task
+    description: Execute financial projection task
+- id: market-agent
+  name: Market Intelligence Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Incorporate market trends and competitive intelligence into impact projections
+  config:
+    role: Healthcare Market Intelligence Analyst
+    goal: Integrate market trends, competitive dynamics, and regulatory environment considerations into benefit design impact projections
+    backstory: 'You are a healthcare market intelligence analyst with expertise in industry trends and competitive analysis.
+
+      Your skills include market research, regulatory trend analysis, and understanding the broader healthcare ecosystem.
+
+      You excel at identifying external factors that could influence plan performance beyond internal design changes.
+
+      You understand the importance of market context in interpreting actuarial projections and strategic planning.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: market-task
+    description: Execute market intelligence analysis task
+- id: baseline-task
+  name: Baseline Analysis Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Establish comprehensive baseline metrics for current plan performance
+  config:
+    description: Analyze current plan performance to establish credible baseline metrics for impact simulation
+    agent_id: baseline-agent
+    expected_output: 'Comprehensive baseline analysis including:
+
+      - Historical claims trends by service category with seasonality adjustments
+
+      - Current utilization rates and patterns by member demographics and risk segments
+
+      - Cost per member per month (PMPM) trends with medical inflation adjustments
+
+      - Member cost-sharing patterns and financial burden analysis
+
+      - Provider network utilization patterns and concentration metrics
+
+      - Quality metrics and member satisfaction baseline measurements
+
+      '
+  provides:
+  - useAs: data
+    in: utilization-task
+    description: Provide baseline metrics for utilization analysis
+- id: utilization-task
+  name: Utilization Pattern Analysis Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Analyze historical utilization patterns and service mix trends
+  config:
+    description: Conduct comprehensive analysis of utilization patterns to understand service usage trends and care-seeking behaviors
+    agent_id: utilization-agent
+    expected_output: 'Utilization pattern analysis including:
+
+      - Service category utilization trends with frequency and intensity analysis
+
+      - Care pathway analysis showing typical patient journeys and service sequences
+
+      - Seasonal and cyclical utilization patterns with statistical significance testing
+
+      - Service substitution patterns and cross-elasticity effects
+
+      - High-cost member analysis and outlier identification
+
+      - Geographic and demographic utilization variations
+
+      '
+  provides:
+  - useAs: data
+    in: behavioral-task
+    description: Provide utilization analysis for behavioral modeling
+- id: behavioral-task
+  name: Member Behavioral Response Modeling Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Model member behavioral responses to proposed benefit design changes
+  config:
+    description: Apply behavioral economics principles to model member responses to benefit design changes
+    agent_id: behavioral-agent
+    expected_output: 'Behavioral response modeling including:
+
+      - Price elasticity estimates for different service categories and cost-sharing mechanisms
+
+      - Demand response curves with confidence intervals and sensitivity analysis
+
+      - Income and substitution effects quantification for different member segments
+
+      - Access barrier analysis and utilization threshold effects
+
+      - Behavioral heterogeneity analysis across demographics and health status
+
+      - Unintended consequence identification and mitigation recommendations
+
+      '
+  provides:
+  - useAs: data
+    in: impact-modeling-task
+    description: Provide behavioral response models for impact projections
+- id: impact-modeling-task
+  name: Actuarial Impact Modeling Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Develop comprehensive actuarial models for impact projection
+  config:
+    description: Create sophisticated actuarial models integrating all impact factors for comprehensive projections
+    agent_id: impact-modeling-agent
+    expected_output: 'Actuarial impact modeling results including:
+
+      - Monte Carlo simulation results with distribution of projected outcomes
+
+      - Utilization impact projections by service category with confidence intervals
+
+      - Cost impact analysis including member and plan cost-sharing changes
+
+      - Risk adjustment and case mix impact assessment
+
+      - Credibility-weighted projections with uncertainty quantification
+
+      - Scenario analysis with optimistic, base, and pessimistic projections
+
+      '
+  provides:
+  - useAs: data
+    in: network-task
+    description: Provide impact projections for network analysis
+- id: network-task
+  name: Provider Network Impact Analysis Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Analyze provider network impacts and access implications
+  config:
+    description: Assess how benefit design changes affect provider network utilization and member access
+    agent_id: network-agent
+    expected_output: 'Provider network impact analysis including:
+
+      - Network tier utilization shifts and concentration effects
+
+      - Provider capacity impact assessment and access adequacy analysis
+
+      - Care quality implications of utilization pattern changes
+
+      - Provider financial impact assessment and stability analysis
+
+      - Geographic access pattern changes and disparities analysis
+
+      - Network optimization recommendations for benefit design changes
+
+      '
+  provides:
+  - useAs: data
+    in: financial-task
+    description: Provide network analysis for financial projections
+- id: financial-task
+  name: Financial Impact Projection Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Generate comprehensive financial projections and sensitivity analysis
+  config:
+    description: Create detailed financial projections incorporating all impact factors with comprehensive sensitivity analysis
+    agent_id: financial-agent
+    expected_output: 'Financial impact projections including:
+
+      - Revenue impact analysis including premium and cost-sharing changes
+
+      - Expense projections with medical cost and administrative cost components
+
+      - Margin impact analysis with confidence intervals and risk assessment
+
+      - Cash flow projections with timing effects and reserve requirements
+
+      - Return on investment analysis for benefit design implementation costs
+
+      - Sensitivity analysis with key variable impact assessment and break-even analysis
+
+      '
+  provides:
+  - useAs: data
+    in: market-task
+    description: Provide financial projections for market context analysis
+- id: market-task
+  name: Market Intelligence Analysis Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Incorporate market trends and competitive intelligence
+  config:
+    description: Integrate market intelligence and competitive factors into comprehensive impact assessment
+    agent_id: market-agent
+    expected_output: 'Market intelligence analysis including:
+
+      - Competitive positioning analysis and market differentiation assessment
+
+      - Regulatory environment impact evaluation and compliance considerations
+
+      - Industry trend analysis and external factor incorporation
+
+      - Member retention and acquisition impact projections
+
+      - Strategic recommendation development with market context considerations
+
+      - Implementation timeline recommendations with market timing optimization
+
+      '
+  provides:
+  - useAs: input
+    in: simulation-output
+    description: Provide final market intelligence and strategic recommendations
+- id: simulation-crew
+  name: Plan Design Impact Simulation Crew
+  kind: Data
+  type: genesis:crewai_sequential_crew
+  description: Coordinate multi-agent workflow for comprehensive benefit design impact simulation
+  config:
+    agents:
+    - baseline-agent
+    - utilization-agent
+    - behavioral-agent
+    - impact-modeling-agent
+    - network-agent
+    - financial-agent
+    - market-agent
+    tasks:
+    - baseline-task
+    - utilization-task
+    - behavioral-task
+    - impact-modeling-task
+    - network-task
+    - financial-task
+    - market-task
+  provides:
+  - useAs: data
+    in: simulation-output
+    description: Coordinate agent execution and compile comprehensive impact simulation
+- id: simulation-output
+  name: Plan Design Impact Simulation Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive impact simulation results with financial projections, utilization impacts, and strategic recommendations
+  provides: []
+outputs:
+- financial_projections
+- utilization_impact_analysis
+- behavioral_response_models
+- actuarial_projections
+- network_impact_assessment
+- market_intelligence_insights
+kpis:
+- name: Projection Accuracy
+  category: quality
+  valueType: percentage
+  target: 85
+  unit: '%'
+  description: Accuracy of financial projections compared to actual results (retrospective validation)
+- name: Model Confidence Level
+  category: quality
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Statistical confidence level for impact projections and simulations
+- name: Scenario Coverage Completeness
+  category: quality
+  valueType: percentage
+  target: 90
+  unit: '%'
+  description: Percentage of relevant scenario factors included in impact analysis
+- name: Stakeholder Decision Support Score
+  category: performance
+  valueType: number
+  target: 4.3
+  unit: '5-point scale'
+  description: Stakeholder rating of decision support quality and actionability
+- name: Implementation Risk Assessment Accuracy
+  category: quality
+  valueType: percentage
+  target: 80
+  unit: '%'
+  description: Accuracy of risk identification and mitigation recommendations
+- name: Financial Impact Precision
+  category: quality
+  valueType: percentage
+  target: 10
+  unit: '% deviation'
+  description: Average percentage deviation between projected and actual financial impacts
+- name: Model Runtime Performance
+  category: performance
+  valueType: number
+  target: 45
+  unit: 'minutes'
+  description: Average time to complete comprehensive impact simulation analysis
+- name: Behavioral Model Validation Score
+  category: quality
+  valueType: number
+  target: 0.78
+  unit: 'R-squared'
+  description: Explanatory power of behavioral response models for utilization changes
+securityInfo:
+  visibility: Internal
+  gdprSensitive: false
+  hipaaCompliant: true
+  dataClassification: confidential

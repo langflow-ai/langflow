@@ -1,0 +1,313 @@
+id: urn:agent:genesis:risk-adjustment:documentation-gap-filler-agent:1.0.0
+name: Documentation Gap Filler Agent
+fullyQualifiedName: genesis.autonomize.ai.documentation_gap_filler_agent
+description: Compares submitted codes to encounter text to identify missing documentation support, missed coding opportunities, and provides specific recommendations to improve clinical documentation for optimal risk adjustment
+domain: autonomize.ai
+subDomain: risk-adjustment
+version: 1.0.0
+environment: production
+agentOwner: risk-adjustment@autonomize.ai
+agentOwnerDisplayName: Risk Adjustment Team
+email: risk-adjustment@autonomize.ai
+status: ACTIVE
+variables:
+- name: documentation_standard
+  type: string
+  required: false
+  default: CMS-HCC-V28
+  description: Documentation standard for gap analysis (CMS-HCC-V28, CMS-HCC-V24, RADV-audit)
+- name: gap_severity_threshold
+  type: string
+  required: false
+  default: moderate
+  description: Minimum severity level to flag gaps (low, moderate, high, critical)
+- name: evidence_strength_requirement
+  type: number
+  required: false
+  default: 0.70
+  description: Minimum evidence strength score for documentation adequacy
+- name: coding_opportunity_confidence
+  type: number
+  required: false
+  default: 0.80
+  description: Minimum confidence threshold for identifying missed coding opportunities
+- name: template_recommendation_mode
+  type: boolean
+  required: false
+  default: true
+  description: Enable specific documentation template recommendations
+- name: specialty_documentation_focus
+  type: string
+  required: false
+  default: all
+  description: Focus on specialty-specific documentation patterns (all, primary_care, cardiology, endocrinology)
+- name: audit_defense_mode
+  type: boolean
+  required: false
+  default: true
+  description: Enable RADV audit defense optimization in recommendations
+- name: compliance_level
+  type: string
+  required: false
+  default: strict
+  description: Compliance level for documentation requirements (standard, strict, audit-ready)
+tags:
+- documentation-improvement
+- risk-adjustment
+- coding-gap-analysis
+- clinical-documentation
+- hcc-support
+- provider-education
+- audit-defense
+- revenue-optimization
+- compliance-enhancement
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Analyze the relationship between submitted codes and clinical documentation to identify gaps, missed opportunities, and provide actionable recommendations for improving documentation quality and coding accuracy
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: gap-analysis-input
+  name: Documentation and Coding Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive submitted codes, encounter documentation, and clinical notes for comprehensive gap analysis
+  provides:
+  - useAs: input
+    in: gap-filler-agent
+    description: Provide coding and documentation data for gap analysis
+- id: documentation-analyzer
+  name: Clinical Documentation Quality Analyzer
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced analyzer for evaluating clinical documentation quality, specificity, and adequacy for HCC coding support
+  asTools: true
+  config:
+    tool_name: documentation_analyzer
+  provides:
+  - useAs: tools
+    in: gap-filler-agent
+    description: Enable comprehensive documentation quality analysis
+- id: code-documentation-mapper
+  name: Code-to-Documentation Mapping Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Specialized engine for mapping submitted codes to supporting clinical documentation and identifying evidence gaps
+  asTools: true
+  config:
+    tool_name: code_documentation_mapper
+  provides:
+  - useAs: tools
+    in: gap-filler-agent
+    description: Enable precise code-to-documentation mapping and gap identification
+- id: missed-opportunity-detector
+  name: Missed Coding Opportunity Detector
+  kind: Tool
+  type: genesis:mcp_tool
+  description: AI model specialized in identifying missed HCC coding opportunities from clinical documentation patterns and clinical indicators
+  asTools: true
+  config:
+    tool_name: missed_opportunity_detector
+  provides:
+  - useAs: tools
+    in: gap-filler-agent
+    description: Enable identification of missed coding opportunities
+- id: documentation-template-engine
+  name: Documentation Template Recommendation Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Engine for recommending specific documentation templates and language improvements to support HCC coding requirements
+  asTools: true
+  config:
+    tool_name: documentation_template_engine
+  provides:
+  - useAs: tools
+    in: gap-filler-agent
+    description: Enable documentation template and improvement recommendations
+- id: audit-defense-analyzer
+  name: RADV Audit Defense Analyzer
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Specialized analyzer for evaluating documentation against RADV audit requirements and defensibility standards
+  asTools: true
+  config:
+    tool_name: radv_audit_analyzer
+  provides:
+  - useAs: tools
+    in: gap-filler-agent
+    description: Enable RADV audit defense analysis and recommendations
+- id: gap-filler-prompt
+  name: Documentation Gap Filler Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for documentation gap analysis with clinical documentation expertise and audit defense focus
+  config:
+    saved_prompt: documentation_gap_filler_prompt_v1
+    template: 'You are a clinical documentation improvement specialist and certified risk adjustment coder with expertise in documentation adequacy assessment, gap analysis, and RADV audit defense. Your role is to identify documentation gaps and provide actionable recommendations for improved clinical documentation.
+
+      DOCUMENTATION EXPERTISE:
+      - CMS-HCC documentation requirements and adequacy standards
+      - RADV audit defensibility criteria and documentation expectations
+      - Clinical documentation improvement (CDI) best practices
+      - Provider education and documentation template development
+      - Audit defense strategies and compliance optimization
+      - Revenue cycle impact of documentation quality
+
+      GAP ANALYSIS PROCESS:
+      1. Compare submitted HCC codes to supporting clinical documentation
+      2. Assess documentation adequacy and specificity for each code
+      3. Identify missing clinical elements required for code support
+      4. Analyze clinical notes for missed coding opportunities
+      5. Evaluate documentation against RADV audit standards
+      6. Generate specific improvement recommendations
+      7. Provide template language and documentation examples
+      8. Assess overall documentation quality and compliance risk
+
+      DOCUMENTATION ADEQUACY CRITERIA:
+      - Provider acknowledgment and clinical assessment of condition
+      - Specific condition documentation with appropriate detail
+      - Evidence of condition monitoring, treatment, or management
+      - Appropriate clinical terminology and medical specificity
+      - Temporal relationship and condition status clarity
+      - Diagnostic test correlation and clinical reasoning
+      - Treatment plan alignment with documented conditions
+
+      GAP IDENTIFICATION CATEGORIES:
+      - Missing clinical evidence for submitted codes
+      - Insufficient documentation specificity
+      - Lack of provider acknowledgment or assessment
+      - Missing monitoring or management evidence
+      - Inadequate temporal relationship documentation
+      - Absent diagnostic correlation
+      - Missed high-value coding opportunities
+
+      MISSED OPPORTUNITY ANALYSIS:
+      - Clinical indicators suggesting undocumented conditions
+      - Medication patterns indicating unspecified conditions
+      - Laboratory values supporting additional diagnoses
+      - Procedure codes suggesting underlying conditions
+      - Symptom documentation requiring diagnostic clarification
+      - Historical conditions requiring annual recapture
+
+      DOCUMENTATION IMPROVEMENT RECOMMENDATIONS:
+      - Specific language suggestions for provider documentation
+      - Template recommendations for condition-specific documentation
+      - Clinical assessment phrases that support HCC coding
+      - Monitoring and management documentation examples
+      - Diagnostic reasoning and clinical correlation suggestions
+      - Specialty-specific documentation best practices
+
+      OUTPUT REQUIREMENTS:
+      - Detailed gap analysis for each submitted code
+      - Evidence strength assessment and adequacy scores
+      - Specific missing documentation elements
+      - Missed coding opportunity identification
+      - Template language recommendations
+      - Provider education suggestions
+      - Revenue impact of documentation improvements
+      - RADV audit defensibility assessment
+
+      QUALITY METRICS:
+      - Documentation adequacy scores (0-100)
+      - Evidence strength ratings (weak, moderate, strong)
+      - Audit defensibility ratings (high-risk, moderate, low-risk)
+      - Revenue impact estimates for improvements
+      - Provider workload and training recommendations
+
+      Use your documentation analyzer, code mapper, opportunity detector, template engine, and audit analyzer to provide comprehensive gap analysis and improvement recommendations. Always prioritize accurate clinical representation while optimizing for risk adjustment value and audit defensibility.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: gap-filler-agent
+    description: Provide specialized documentation gap analysis instructions and expertise
+- id: gap-filler-agent
+  name: Documentation Gap Filler Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Clinical documentation specialist that analyzes gaps between codes and documentation to provide improvement recommendations
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 20
+    verbose: true
+  provides:
+  - useAs: input
+    in: gap-output
+    description: Provide comprehensive documentation gap analysis and recommendations
+- id: gap-output
+  name: Documentation Gap Analysis Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive documentation gap analysis with specific improvement recommendations and template suggestions
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- documentation_gap_analysis
+- evidence_adequacy_scores
+- missed_coding_opportunities
+- improvement_recommendations
+- template_suggestions
+- audit_defensibility_assessment
+- revenue_impact_analysis
+- provider_education_needs
+kpis:
+- name: Gap Identification Accuracy
+  description: Percentage of identified documentation gaps that are validated as legitimate deficiencies
+  target: '> 90%'
+  valueType: percentage
+  category: quality
+- name: Documentation Adequacy Improvement
+  description: Improvement in documentation adequacy scores after implementing recommendations
+  target: '> 35%'
+  valueType: percentage
+  category: quality
+- name: Missed Opportunity Detection Rate
+  description: Percentage of missed coding opportunities successfully identified
+  target: '> 80%'
+  valueType: percentage
+  category: efficiency
+- name: Template Utilization Rate
+  description: Percentage of recommended templates adopted by providers
+  target: '> 65%'
+  valueType: percentage
+  category: business
+- name: RADV Audit Defensibility Score
+  description: Improvement in audit defensibility scores for analyzed documentation
+  target: '> 45%'
+  valueType: percentage
+  category: compliance
+- name: Revenue Recovery Rate
+  description: Additional revenue captured through documentation improvements
+  target: '> $125 per member per month'
+  valueType: number
+  category: business
+- name: Provider Training Effectiveness
+  description: Improvement in provider documentation quality after training interventions
+  target: '> 40%'
+  valueType: percentage
+  category: quality
+- name: Gap Analysis Processing Time
+  description: Average time to complete comprehensive gap analysis per encounter
+  target: '< 4 minutes'
+  valueType: duration
+  category: efficiency
+- name: Compliance Risk Reduction
+  description: Reduction in documentation-related compliance risk
+  target: '> 50%'
+  valueType: percentage
+  category: compliance
+securityInfo:
+  visibility: Internal
+  gdprSensitive: true
+  hipaaCompliant: true
