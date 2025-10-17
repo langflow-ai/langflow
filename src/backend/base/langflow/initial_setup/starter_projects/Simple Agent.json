@@ -475,7 +475,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "Hello, how are you?"
               },
               "sender": {
                 "_input_type": "DropdownInput",
