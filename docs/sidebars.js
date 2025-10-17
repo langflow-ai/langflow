@@ -177,6 +177,11 @@ module.exports = {
           label: "Deploy a public Langflow server"
         },
         {
+          type: "doc",
+          id: "Deployment/deployment-nginx-ssl",
+          label: "Deploy Langflow with Nginx and SSL"
+        },
+        {
           type: "category",
           label: "Containerized deployments",
           items: [
@@ -300,7 +305,7 @@ module.exports = {
             "Components/bundles-clickhouse",
             "Components/bundles-cloudflare",
             "Components/bundles-cohere",
-            "Components/bundles-composio",
+            "Components/bundles-cometapi",
             "Components/bundles-couchbase",
             "Components/bundles-datastax",
             "Components/bundles-deepseek",
