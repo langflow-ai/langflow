@@ -377,23 +377,17 @@ class TestResetDimensionField:
 class TestCollectionData:
     """Tests for collection data retrieval."""
 
-    @patch("astrapy.DataAPIClient")
-    def test_collection_data_success(self, mock_client_class, mock_component):
+    def test_collection_data_success(self, mock_component):
         """Test successful collection data retrieval."""
         mock_database = Mock()
         mock_collection = Mock()
         mock_collection.estimated_document_count.return_value = 100
-
         mock_database.get_collection.return_value = mock_collection
-        mock_client = mock_client_class.return_value
-        mock_client.get_database.return_value = mock_database
 
-        with (
-            patch.object(mock_component, "get_api_endpoint", return_value="https://test.endpoint.com"),
-            patch.object(mock_component, "get_keyspace", return_value="default_keyspace"),
-        ):
-            count = mock_component.collection_data("test_collection")
-            assert count == 100
+        count = mock_component.collection_data("test_collection", database=mock_database)
+        assert count == 100
+        mock_database.get_collection.assert_called_once_with("test_collection")
+        mock_collection.estimated_document_count.assert_called_once()
 
     def test_collection_data_with_provided_database(self, mock_component):
         """Test collection data retrieval with provided database object."""
@@ -420,7 +414,7 @@ class TestDatabaseCreation:
     """Tests for database creation."""
 
     @pytest.mark.asyncio
-    @patch("astrapy.DataAPIClient")
+    @patch("lfx.base.datastax.astradb_base.DataAPIClient")
     async def test_create_database_api_success(self, mock_client_class):
         """Test successful database creation."""
         mock_admin = Mock()
@@ -445,7 +439,7 @@ class TestCollectionCreation:
     """Tests for collection creation."""
 
     @pytest.mark.asyncio
-    @patch("langchain_astradb.utils.astradb._AstraDBCollectionEnvironment")
+    @patch("lfx.base.datastax.astradb_base._AstraDBCollectionEnvironment")
     @patch.object(AstraDBBaseComponent, "get_vectorize_providers")
     async def test_create_collection_api_with_vectorize(self, mock_get_providers, mock_env_class):
         """Test collection creation with vectorize options."""
@@ -460,6 +454,7 @@ class TestCollectionCreation:
             new_collection_name="new_collection",
             token="test_token",  # noqa: S106
             api_endpoint="https://test.endpoint.com",
+            keyspace="default_keyspace",
             embedding_generation_provider="NVIDIA",
             embedding_generation_model="model1",
         )
@@ -470,7 +465,7 @@ class TestCollectionCreation:
         assert call_kwargs["collection_vector_service_options"] is not None
 
     @pytest.mark.asyncio
-    @patch("langchain_astradb.utils.astradb._AstraDBCollectionEnvironment")
+    @patch("lfx.base.datastax.astradb_base._AstraDBCollectionEnvironment")
     async def test_create_collection_api_with_dimension(self, mock_env_class):
         """Test collection creation with explicit dimension."""
         await AstraDBBaseComponent.create_collection_api(
@@ -478,6 +473,7 @@ class TestCollectionCreation:
             token="test_token",  # noqa: S106
             api_endpoint="https://test.endpoint.com",
             dimension=1536,
+            keyspace="default_keyspace",
         )
 
         mock_env_class.assert_called_once()
@@ -493,6 +489,7 @@ class TestCollectionCreation:
                 new_collection_name="",
                 token="test_token",  # noqa: S106
                 api_endpoint="https://test.endpoint.com",
+                keyspace="default_keyspace",
             )
 
 
@@ -543,7 +540,7 @@ class TestUpdateBuildConfig:
 class TestGetDatabaseObject:
     """Tests for getting database object."""
 
-    @patch("astrapy.DataAPIClient")
+    @patch("lfx.base.datastax.astradb_base.DataAPIClient")
     def test_get_database_object_success(self, mock_client_class, mock_component):
         """Test successful database object retrieval."""
         mock_database = Mock()
@@ -557,7 +554,7 @@ class TestGetDatabaseObject:
             db = mock_component.get_database_object()
             assert db == mock_database
 
-    @patch("astrapy.DataAPIClient")
+    @patch("lfx.base.datastax.astradb_base.DataAPIClient")
     def test_get_database_object_with_custom_endpoint(self, mock_client_class, mock_component):
         """Test database object retrieval with custom endpoint."""
         mock_database = Mock()
@@ -568,7 +565,7 @@ class TestGetDatabaseObject:
             db = mock_component.get_database_object(api_endpoint="https://custom.endpoint.com")
             assert db == mock_database
 
-    @patch("astrapy.DataAPIClient")
+    @patch("lfx.base.datastax.astradb_base.DataAPIClient")
     def test_get_database_object_error(self, mock_client_class, mock_component):
         """Test database object retrieval error handling."""
         mock_client_class.side_effect = Exception("Connection error")
