@@ -40,6 +40,7 @@ class Message(Data):
     sender_name: str | None = None
     files: list[str | Image] | None = Field(default=[])
     session_id: str | UUID | None = Field(default="")
+    context_id: str | UUID | None = Field(default="")
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
         default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
     )
@@ -188,6 +189,7 @@ class Message(Data):
             sender_name=data.sender_name,
             files=data.files,
             session_id=data.session_id,
+            context_id=data.context_id,
             timestamp=data.timestamp,
             flow_id=data.flow_id,
             error=data.error,
@@ -326,6 +328,7 @@ class MessageResponse(DefaultModel):
     sender: str
     sender_name: str
     session_id: str
+    context_id: str | None = None
     text: str
     files: list[str] = []
     edit: bool
@@ -383,6 +386,7 @@ class MessageResponse(DefaultModel):
             sender_name=message.sender_name,
             text=message.text,
             session_id=message.session_id,
+            context_id=message.context_id,
             files=message.files or [],
             timestamp=message.timestamp,
             flow_id=flow_id,
@@ -433,6 +437,7 @@ class ErrorMessage(Message):
         self,
         exception: BaseException,
         session_id: str | None = None,
+        context_id: str | None = None,
         source: Source | None = None,
         trace_name: str | None = None,
         flow_id: UUID | str | None = None,
@@ -451,6 +456,7 @@ class ErrorMessage(Message):
 
         super().__init__(
             session_id=session_id,
+            context_id=context_id,
             sender=source.display_name if source else None,
             sender_name=source.display_name if source else None,
             text=plain_reason,
