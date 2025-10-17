@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any
 
+from astrapy import Collection, DataAPIClient, Database
 from langchain_core.tools import StructuredTool, Tool
 from pydantic import BaseModel, Field, create_model
 
@@ -160,8 +161,6 @@ class AstraDBToolComponent(AstraDBBaseComponent, LCToolComponent):
             advanced=True,
         ),
     ]
-
-    from astrapy import Collection, DataAPIClient, Database
 
     _cached_client: DataAPIClient | None = None
     _cached_db: Database | None = None
