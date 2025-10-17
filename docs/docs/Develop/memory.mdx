@@ -14,26 +14,26 @@ Langflow's default storage option is a [SQLite](https://www.sqlite.org/) databas
 The default storage path depends on your operating system and installation method:
 
 - **Langflow Desktop**:
-    - **macOS**: `/Users/<username>/.langflow/data/database.db`
-    - **Windows**: `C:\Users\<name>\AppData\Roaming\com.Langflow\data\langflow.db`
+  - **macOS**: `/Users/<username>/.langflow/data/database.db`
+  - **Windows**: `C:\Users\<name>\AppData\Roaming\com.LangflowDesktop\data\database.db`
 - **Langflow OSS**
-    - **macOS/Windows/Linux/WSL with `uv pip install`**: `<path_to_venv>/lib/python3.12/site-packages/langflow/langflow.db` (Python version can vary. Database isn't shared between virtual environments because it is tied to the venv path.)
-    - **macOS/Windows/Linux/WSL with `git clone`**: `<path_to_clone>/src/backend/base/langflow/langflow.db`
+  - **macOS/Windows/Linux/WSL with `uv pip install`**: `<path_to_venv>/lib/python3.12/site-packages/langflow/langflow.db` (Python version can vary. Database isn't shared between virtual environments because it is tied to the venv path.)
+  - **macOS/Windows/Linux/WSL with `git clone`**: `<path_to_clone>/src/backend/base/langflow/langflow.db`
 
 Langflow offers a few alternatives to the default database path:
 
-* **Config directory**: Set `LANGFLOW_SAVE_DB_IN_CONFIG_DIR=True` to store the database in your Langflow config directory as set in [`LANGFLOW_CONFIG_DIR`](/logging).
+- **Config directory**: Set `LANGFLOW_SAVE_DB_IN_CONFIG_DIR=True` to store the database in your Langflow config directory as set in [`LANGFLOW_CONFIG_DIR`](/logging).
 
-* **External PostgreSQL database**: You can use an external PostgreSQL database for all of your Langflow storage.
-For more information, see [Configure external memory](#configure-external-memory)
+- **External PostgreSQL database**: You can use an external PostgreSQL database for all of your Langflow storage.
+  For more information, see [Configure external memory](#configure-external-memory)
 
-    External storage can be useful if you want to preserve the data after uninstalling Langflow or to share the same database between multiple virtual environments.
+      External storage can be useful if you want to preserve the data after uninstalling Langflow or to share the same database between multiple virtual environments.
 
-* **Separate chat memory**: You can selectively use external storage for chat memory only, separate from other Langflow storage.
-For more information, see [Store chat memory](#store-chat-memory).
+- **Separate chat memory**: You can selectively use external storage for chat memory only, separate from other Langflow storage.
+  For more information, see [Store chat memory](#store-chat-memory).
 
-* **No database**: To disable all database operations and run a no-op session, set `LANGFLOW_USE_NOOP_DATABASE=True` in your [Langflow environment variables](/environment-variables).
-This is useful for testing when you don't want to persist any data.
+- **No database**: To disable all database operations and run a no-op session, set `LANGFLOW_USE_NOOP_DATABASE=True` in your [Langflow environment variables](/environment-variables).
+  This is useful for testing when you don't want to persist any data.
 
 ## Langflow database tables
 
@@ -76,27 +76,27 @@ LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
 
 To fine-tune your database connection pool and timeout settings, you can set the following additional environment variables:
 
-* `LANGFLOW_DATABASE_CONNECTION_RETRY`: Whether to retry lost connections to your Langflow database. If `true`, Langflow tries to connect to the database again if the connection fails. Default: `false`.
+- `LANGFLOW_DATABASE_CONNECTION_RETRY`: Whether to retry lost connections to your Langflow database. If `true`, Langflow tries to connect to the database again if the connection fails. Default: `false`.
 
-* `LANGFLOW_DB_CONNECT_TIMEOUT`: The number of seconds to wait before giving up on a lock to be released or establishing a connection to the database. This may be separate from the `pool_timeout` in `LANGFLOW_DB_CONNECTION_SETTINGS`. Default: 30.
+- `LANGFLOW_DB_CONNECT_TIMEOUT`: The number of seconds to wait before giving up on a lock to be released or establishing a connection to the database. This may be separate from the `pool_timeout` in `LANGFLOW_DB_CONNECTION_SETTINGS`. Default: 30.
 
-* `LANGFLOW_DB_CONNECTION_SETTINGS`: A a JSON dictionary containing the following database connection pool settings:
+- `LANGFLOW_DB_CONNECTION_SETTINGS`: A a JSON dictionary containing the following database connection pool settings:
 
-    - `pool_size`: The base number of connections to keep open in the connection pool. Default: 20.
-    - `max_overflow`: Maximum number of connections that can be created in excess of `pool_size` if needed. Default: 30.
-    - `pool_timeout`: Number of seconds to wait for a connection from the pool before timing out. Default: 30.
-    - `pool_pre_ping`: If `true`, the pool tests connections for liveness upon each checkout. Default: `true`.
-    - `pool_recycle`: Number of seconds after which a connection is automatically recycled. Default: 1800 (30 minutes).
-    - `echo`: If `true`, SQL queries are logged for debugging purposes. Default: `false`.
+  - `pool_size`: The base number of connections to keep open in the connection pool. Default: 20.
+  - `max_overflow`: Maximum number of connections that can be created in excess of `pool_size` if needed. Default: 30.
+  - `pool_timeout`: Number of seconds to wait for a connection from the pool before timing out. Default: 30.
+  - `pool_pre_ping`: If `true`, the pool tests connections for liveness upon each checkout. Default: `true`.
+  - `pool_recycle`: Number of seconds after which a connection is automatically recycled. Default: 1800 (30 minutes).
+  - `echo`: If `true`, SQL queries are logged for debugging purposes. Default: `false`.
 
-    For example:
+  For example:
 
-    ```text
-    LANGFLOW_DB_CONNECTION_SETTINGS='{"pool_size": 20, "max_overflow": 30, "pool_timeout": 30, "pool_pre_ping": true, "pool_recycle": 1800, "echo": false}'
-    ```
+  ```text
+  LANGFLOW_DB_CONNECTION_SETTINGS='{"pool_size": 20, "max_overflow": 30, "pool_timeout": 30, "pool_pre_ping": true, "pool_recycle": 1800, "echo": false}'
+  ```
 
-    Don't use the deprecated environment variables `LANGFLOW_DB_POOL_SIZE` or `LANGFLOW_DB_MAX_OVERFLOW`.
-    Instead, use `pool_size` and `max_overflow` in `LANGFLOW_DB_CONNECTION_SETTINGS`.
+  Don't use the deprecated environment variables `LANGFLOW_DB_POOL_SIZE` or `LANGFLOW_DB_MAX_OVERFLOW`.
+  Instead, use `pool_size` and `max_overflow` in `LANGFLOW_DB_CONNECTION_SETTINGS`.
 
 ## Configure cache memory
 
@@ -111,15 +111,15 @@ Langflow officially supports only the default asynchronous, in-memory cache, whi
 Other cache options, such as Redis, are experimental and can change without notice.
 If you want to use a non-default cache setting, you can use the following environment variables:
 
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `LANGFLOW_CACHE_TYPE` | String | `async` | Set the cache type for Langflow's internal caching system. Possible values: `async`, `redis`, `memory`, `disk`. If you set the type to `redis`, then you must also set the `LANGFLOW_REDIS_*` environment variables. |
-| `LANGFLOW_LANGCHAIN_CACHE` | String | `InMemoryCache` | Set the cache storage type for the LangChain caching system (a Langflow dependency), either `InMemoryCache` or `SQLiteCache`. |
-| `LANGFLOW_REDIS_HOST` | String | `localhost` | Redis server hostname if `LANGFLOW_CACHE_TYPE=redis`. |
-| `LANGFLOW_REDIS_PORT` | Integer | `6379` | Redis server port if `LANGFLOW_CACHE_TYPE=redis`. |
-| `LANGFLOW_REDIS_DB` | Integer | `0` | Redis database number if `LANGFLOW_CACHE_TYPE=redis`. |
-| `LANGFLOW_REDIS_CACHE_EXPIRE` | Integer | `3600` | Cache expiration time in seconds if `LANGFLOW_CACHE_TYPE=redis`. |
-| `LANGFLOW_REDIS_PASSWORD` | String | Not set | Optional password for Redis authentication if `LANGFLOW_CACHE_TYPE=redis`. |
+| Variable                      | Type    | Default         | Description                                                                                                                                                                                                          |
+| ----------------------------- | ------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LANGFLOW_CACHE_TYPE`         | String  | `async`         | Set the cache type for Langflow's internal caching system. Possible values: `async`, `redis`, `memory`, `disk`. If you set the type to `redis`, then you must also set the `LANGFLOW_REDIS_*` environment variables. |
+| `LANGFLOW_LANGCHAIN_CACHE`    | String  | `InMemoryCache` | Set the cache storage type for the LangChain caching system (a Langflow dependency), either `InMemoryCache` or `SQLiteCache`.                                                                                        |
+| `LANGFLOW_REDIS_HOST`         | String  | `localhost`     | Redis server hostname if `LANGFLOW_CACHE_TYPE=redis`.                                                                                                                                                                |
+| `LANGFLOW_REDIS_PORT`         | Integer | `6379`          | Redis server port if `LANGFLOW_CACHE_TYPE=redis`.                                                                                                                                                                    |
+| `LANGFLOW_REDIS_DB`           | Integer | `0`             | Redis database number if `LANGFLOW_CACHE_TYPE=redis`.                                                                                                                                                                |
+| `LANGFLOW_REDIS_CACHE_EXPIRE` | Integer | `3600`          | Cache expiration time in seconds if `LANGFLOW_CACHE_TYPE=redis`.                                                                                                                                                     |
+| `LANGFLOW_REDIS_PASSWORD`     | String  | Not set         | Optional password for Redis authentication if `LANGFLOW_CACHE_TYPE=redis`.                                                                                                                                           |
 
 ## Store chat memory
 
@@ -155,27 +155,27 @@ For example, if you use user IDs as session IDs, then each user's chat history i
 
 Where and how chat memory is stored depends on the components used in your flow:
 
-* **Agent component**: This component has built-in chat memory that is enabled by default.
-This memory allows the agent to retrieve and reference messages from previous conversations associated with the same session ID.
-All messages are stored in [Langflow storage](#storage-options-and-paths), and the component provides minimal memory configuration options, such as the number of messages to retrieve.
+- **Agent component**: This component has built-in chat memory that is enabled by default.
+  This memory allows the agent to retrieve and reference messages from previous conversations associated with the same session ID.
+  All messages are stored in [Langflow storage](#storage-options-and-paths), and the component provides minimal memory configuration options, such as the number of messages to retrieve.
 
-    The **Agent** component's built-in chat memory is sufficient for most use cases.
+      The **Agent** component's built-in chat memory is sufficient for most use cases.
 
-    If you want to use external chat memory storage, retrieve memories outside the context of a chat, or use chat memory with a language model component (not an agent), you must use the **Message History** component (with or without a third-party chat memory component).
+      If you want to use external chat memory storage, retrieve memories outside the context of a chat, or use chat memory with a language model component (not an agent), you must use the **Message History** component (with or without a third-party chat memory component).
 
-* **Message History component**: By default, this component stores and retrieves memories from Langflow storage, unless you attach a third-party chat memory component. It provides a few more options for sorting and filtering memories, although most of these options are also built-in to the **Agent** component as configurable or fixed parameters.
+- **Message History component**: By default, this component stores and retrieves memories from Langflow storage, unless you attach a third-party chat memory component. It provides a few more options for sorting and filtering memories, although most of these options are also built-in to the **Agent** component as configurable or fixed parameters.
 
-    You can use the **Message History** component with or without a language model or agent.
-    For example, if you need to retrieve data from memories outside of chat, you can use the **Message History** component to fetch that data directly from your chat memory database without feeding it into a chat.
+  You can use the **Message History** component with or without a language model or agent.
+  For example, if you need to retrieve data from memories outside of chat, you can use the **Message History** component to fetch that data directly from your chat memory database without feeding it into a chat.
 
-* **Third-party chat memory components**: Use one of these components only if you need to store or retrieve chat memories from a dedicated external chat memory database.
-Typically, this is necessary only if you have specific storage needs that aren't met by Langflow storage.
-For example, if you want to manage chat memory data by directly working with the database, or if you want to use a different database than the default Langflow storage.
+- **Third-party chat memory components**: Use one of these components only if you need to store or retrieve chat memories from a dedicated external chat memory database.
+  Typically, this is necessary only if you have specific storage needs that aren't met by Langflow storage.
+  For example, if you want to manage chat memory data by directly working with the database, or if you want to use a different database than the default Langflow storage.
 
 For more information and examples, see [**Message History** component](/components-helpers#message-history) and [Agent memory](/agents#agent-memory).
 
 ## See also
 
-* [Langflow file management](/concepts-file-management)
-* [Langflow logs](/logging)
-* [Langflow environment variables](/environment-variables)
+- [Langflow file management](/concepts-file-management)
+- [Langflow logs](/logging)
+- [Langflow environment variables](/environment-variables)
