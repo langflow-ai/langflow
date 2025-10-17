@@ -16,6 +16,7 @@ import { BASENAME } from "./customization/config-constants";
 import {
   ENABLE_CUSTOM_PARAM,
   ENABLE_FILE_MANAGEMENT,
+  ENABLE_GLOBAL_MODEL_PROVIDER,
   ENABLE_KNOWLEDGE_BASES,
 } from "./customization/feature-flags";
 import { CustomRoutesStore } from "./customization/utils/custom-routes-store";
@@ -34,6 +35,7 @@ import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
 import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
+import ModelProvidersPage from "./pages/SettingsPage/pages/ModelProvidersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import ViewPage from "./pages/ViewPage";
@@ -140,6 +142,12 @@ const router = createBrowserRouter(
                     element={<GlobalVariablesPage />}
                   />
                   <Route path="mcp-servers" element={<MCPServersPage />} />
+                  {ENABLE_GLOBAL_MODEL_PROVIDER && (
+                    <Route
+                      path="model-providers"
+                      element={<ModelProvidersPage />}
+                    />
+                  )}
                   <Route path="api-keys" element={<ApiKeysPage />} />
                   <Route
                     path="general/:scrollId?"
