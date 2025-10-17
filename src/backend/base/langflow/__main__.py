@@ -42,7 +42,7 @@ app = typer.Typer(no_args_is_help=True)
 console = Console()
 if platform.system() == "Windows":
     console = Console(legacy_windows=True, emoji=False)  # Initialize console with Windows-safe settings
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # type: ignore[attr-defined]
 
 # Add LFX commands as a sub-app
 try:
