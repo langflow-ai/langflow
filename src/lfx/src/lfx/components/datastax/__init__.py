@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from .astradb_assistant_manager import AstraAssistantManager
     from .astradb_chatmemory import AstraDBChatMemory
     from .astradb_cql import AstraDBCQLToolComponent
+    from .astradb_graph import AstraDBGraphVectorStoreComponent
     from .astradb_tool import AstraDBToolComponent
     from .astradb_vectorize import AstraVectorizeComponent
     from .astradb_vectorstore import AstraDBVectorStoreComponent
@@ -29,6 +30,7 @@ _dynamic_imports = {
     "AstraAssistantManager": "astradb_assistant_manager",
     "AstraDBCQLToolComponent": "astradb_cql",
     "AstraDBChatMemory": "astradb_chatmemory",
+    "AstraDBGraphVectorStoreComponent": "astradb_graph",
     "AstraDBToolComponent": "astradb_tool",
     "AstraDBVectorStoreComponent": "astradb_vectorstore",
     "AstraVectorizeComponent": "astradb_vectorize",
@@ -46,6 +48,7 @@ __all__ = [
     "AstraAssistantManager",
     "AstraDBCQLToolComponent",
     "AstraDBChatMemory",
+    "AstraDBGraphVectorStoreComponent",
     "AstraDBToolComponent",
     "AstraDBVectorStoreComponent",
     "AstraVectorizeComponent",
