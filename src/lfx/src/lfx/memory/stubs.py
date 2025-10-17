@@ -165,6 +165,7 @@ async def aget_messages(
     sender: str | None = None,  # noqa: ARG001
     sender_name: str | None = None,  # noqa: ARG001
     session_id: str | UUID | None = None,  # noqa: ARG001
+    context_id: str | UUID | None = None,  # noqa: ARG001
     order_by: str | None = "timestamp",  # noqa: ARG001
     order: str | None = "DESC",  # noqa: ARG001
     flow_id: UUID | None = None,  # noqa: ARG001
@@ -176,6 +177,7 @@ async def aget_messages(
         sender (Optional[str]): The sender of the messages (e.g., "Machine" or "User")
         sender_name (Optional[str]): The name of the sender.
         session_id (Optional[str]): The session ID associated with the messages.
+        context_id (Optional[str]): The context ID associated with the messages.
         order_by (Optional[str]): The field to order the messages by. Defaults to "timestamp".
         order (Optional[str]): The order in which to retrieve the messages. Defaults to "DESC".
         flow_id (Optional[UUID]): The flow ID associated with the messages.
@@ -200,6 +202,7 @@ def get_messages(
     sender: str | None = None,
     sender_name: str | None = None,
     session_id: str | UUID | None = None,
+    context_id: str | UUID | None = None,
     order_by: str | None = "timestamp",
     order: str | None = "DESC",
     flow_id: UUID | None = None,
@@ -209,33 +212,49 @@ def get_messages(
 
     DEPRECATED: Use `aget_messages` instead.
     """
-    return run_until_complete(aget_messages(sender, sender_name, session_id, order_by, order, flow_id, limit))
+    return run_until_complete(
+        aget_messages(
+            sender,
+            sender_name,
+            session_id,
+            context_id,
+            order_by,
+            order,
+            flow_id,
+            limit,
+        )
+    )
 
 
-async def adelete_messages(session_id: str) -> None:
-    """Delete messages from the memory based on the provided session ID.
+async def adelete_messages(session_id: str | None = None, context_id: str | None = None) -> None:
+    """Delete messages from the memory based on the provided session or context ID.
 
     Args:
         session_id (str): The session ID associated with the messages to delete.
+        context_id (str): The context ID associated with the messages to delete.
     """
+    if not session_id and not context_id:
+        msg = "Either session_id or context_id must be provided to delete messages."
+        raise ValueError(msg)
+
     async with session_scope() as session:
         try:
             # In a real implementation, this would delete from database
             # For now, this is a no-op since we're using NoopSession
-            await session.delete(session_id)
+            await session.delete(session_id or context_id)  # type: ignore  # noqa: PGH003
             await session.commit()
-            logger.debug(f"Messages deleted for session: {session_id}")
+            logger.debug(f"Messages deleted for session: {session_id or context_id}")
         except Exception as e:
             logger.exception(f"Error deleting messages: {e}")
             raise
 
 
-def delete_messages(session_id: str) -> None:
+def delete_messages(session_id: str | None = None, context_id: str | None = None) -> None:
     """DEPRECATED - Delete messages based on the provided session ID.
 
     DEPRECATED: Use `adelete_messages` instead.
     """
-    return run_until_complete(adelete_messages(session_id))
+    return run_until_complete(adelete_messages(session_id, context_id))
 
 
 async def aadd_messages(messages: Message | list[Message]) -> list[Message]:
