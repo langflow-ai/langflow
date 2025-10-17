@@ -24,6 +24,56 @@ from lfx.log.logger import logger
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
 
+
+def _strip_none_values(obj: Any) -> Any:
+    """Recursively remove None values from dictionaries and lists.
+
+    Args:
+        obj: Object to strip None values from
+
+    Returns:
+        Object with None values removed
+    """
+    if isinstance(obj, dict):
+        return {k: _strip_none_values(v) for k, v in obj.items() if v is not None}
+    if isinstance(obj, list):
+        return [_strip_none_values(v) for v in obj]
+    return obj
+
+
+def _omit_empty_optionals(args: dict[str, Any], arg_schema: type[BaseModel]) -> dict[str, Any]:
+    """Omit empty/blank optional parameters to allow MCP servers to use their defaults.
+
+    Args:
+        args: Dictionary of arguments
+        arg_schema: Pydantic model schema
+
+    Returns:
+        Cleaned dictionary with empty optionals removed
+    """
+    if not isinstance(args, dict):
+        return args
+
+    cleaned: dict[str, Any] = {}
+    for name, value in args.items():
+        field = getattr(arg_schema, "model_fields", {}).get(name)
+        is_required = field.is_required() if field is not None else False
+
+        def is_empty(v: Any) -> bool:
+            if v is None:
+                return True
+            if isinstance(v, str):
+                return v.strip() == ""
+            if isinstance(v, (list, dict)):
+                return len(v) == 0
+            return False
+
+        if not is_required and is_empty(value):
+            continue
+        cleaned[name] = value
+    return cleaned
+
+
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 
 # HTTP status codes used in validation
@@ -257,14 +307,22 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
         # Merge in keyword arguments
         provided_args.update(kwargs)
         provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
+
+        # Drop blank optionals so MCP server defaults apply
+        provided_args = _omit_empty_optionals(provided_args, arg_schema)
+
         # Validate input and fill defaults for missing optional fields
         try:
             validated = arg_schema.model_validate(provided_args)
         except Exception as e:  # noqa: BLE001
             _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
 
+        # Dump only explicitly set values, remove nested Nones
+        payload = validated.model_dump(exclude_unset=True, exclude_none=True)
+        payload = _strip_none_values(payload)
+
         try:
-            return await client.run_tool(tool_name, arguments=validated.model_dump())
+            return await client.run_tool(tool_name, arguments=payload)
         except Exception as e:
             await logger.aerror(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -285,14 +343,22 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
             provided_args[field_names[i]] = arg
         provided_args.update(kwargs)
         provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
+
+        # Drop blank optionals so MCP server defaults apply
+        provided_args = _omit_empty_optionals(provided_args, arg_schema)
+
         try:
             validated = arg_schema.model_validate(provided_args)
         except Exception as e:  # noqa: BLE001
             _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
 
+        # Dump only explicitly set values, remove nested Nones
+        payload = validated.model_dump(exclude_unset=True, exclude_none=True)
+        payload = _strip_none_values(payload)
+
         try:
             loop = asyncio.get_event_loop()
-            return loop.run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump()))
+            return loop.run_until_complete(client.run_tool(tool_name, arguments=payload))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -1061,8 +1127,11 @@ class MCPStdioClient:
                 # Get or create persistent session
                 session = await self._get_or_create_session()
 
+                # Sanitize arguments before calling the tool
+                clean_args = _strip_none_values(arguments or {})
+
                 result = await asyncio.wait_for(
-                    session.call_tool(tool_name, arguments=arguments),
+                    session.call_tool(tool_name, arguments=clean_args),
                     timeout=30.0,  # 30 second timeout
                 )
             except Exception as e:
@@ -1323,8 +1392,11 @@ class MCPStreamableHttpClient:
                 # Get or create persistent session
                 session = await self._get_or_create_session()
 
+                # Sanitize arguments before calling the tool
+                clean_args = _strip_none_values(arguments or {})
+
                 result = await asyncio.wait_for(
-                    session.call_tool(tool_name, arguments=arguments),
+                    session.call_tool(tool_name, arguments=clean_args),
                     timeout=30.0,  # 30 second timeout
                 )
             except Exception as e:

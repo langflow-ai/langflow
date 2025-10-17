@@ -1,6 +1,6 @@
 """JSON Schema utilities for LFX."""
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import AliasChoices, BaseModel, Field, create_model
 
@@ -68,6 +68,14 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         if s is None:
             return None
         s = resolve_ref(s)
+
+        # Handle enum: map to Literal for proper dropdown rendering
+        if isinstance(s.get("enum"), list) and s["enum"]:
+            try:
+                return Literal[tuple(s["enum"])]
+            except TypeError:
+                # If Literal can't be created (e.g., non-hashable values), fallback to str
+                return str
 
         if "anyOf" in s:
             # Handle common pattern for nullable types (anyOf with string and null)
