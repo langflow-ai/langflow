@@ -421,7 +421,6 @@ class TestFieldNameConversion:
     def test_json_schema_alias_functionality(self):
         """Test that JSON schema creation includes aliases for camelCase field names."""
         from lfx.schema.json_schema import create_input_schema_from_json_schema
-
         from pydantic import ValidationError
 
         # Create a JSON schema with snake_case field names
