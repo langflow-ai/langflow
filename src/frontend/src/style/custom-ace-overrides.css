@@ -1,0 +1,70 @@
+/* Custom override for Ace Editor GitHub Dark theme background */
+.ace-github-dark, .ace-github-dark .ace_scroller {
+  background-color: #111 !important;
+}
+
+/* Custom override for Ace Editor Monokai theme background - only in dark mode */
+.dark .ace-monokai, .dark .ace-monokai .ace_scroller {
+  background-color: #141417 !important;
+}
+
+/* Monokai gutter (sidebar/line numbers) */
+.ace-monokai .ace_gutter,
+.ace-monokai .ace_gutter-active-line {
+  background: #181818 !important;
+  color: #555 !important;
+}
+
+/* Strongest override for Monokai selected line highlight */
+.ace-monokai .ace_marker-layer .ace_active-line,
+.ace-monokai .ace_active-line,
+.ace-monokai .ace_gutter-active-line,
+.ace-monokai .ace_marker-layer .ace_selected-word {
+  background-color: #181818 !important;
+  background: #181818 !important;
+  box-shadow: none !important;
+  border: 0px !important;
+}
+
+.dark .ace-monokai .ace_gutter,
+.dark .ace-monokai .ace_gutter-active-line {
+  background: #1a1a1e !important;
+  color: #555 !important;
+}
+
+.dark .ace-monokai .ace_marker-layer .ace_active-line,
+.dark .ace-monokai .ace_active-line,
+.dark .ace-monokai .ace_gutter-active-line,
+.dark .ace-monokai .ace_marker-layer .ace_selected-word {
+  background-color: #181818 !important;
+  background: #181818 !important;
+  box-shadow: none !important;
+  border: 1px !important;
+}
+
+.dark .ace-monokai .ace_content,
+.ace-github
+
+.dark .ace-monokai .ace_gutter,
+.ace-github
+
+.dark .ace-monokai,
+.ace-github {
+  border: 1px solid rgba(255,255,255,0.18) !important;
+  box-shadow: none !important;
+}
+
+.dark .ace-monokai .ace_marker-layer .ace_active-line,
+.ace-github .ace_marker-layer .ace_active-line {
+  top: 24px !important;
+  bottom: 24px !important;
+}
+
+.ace-github, .ace-github .ace_scroller {
+  background-color: #fafbfc !important;
+}
+
+.ace-github {
+  border: 1px solid rgba(0,0,0,0.10) !important;
+  box-shadow: none !important;
+} 
