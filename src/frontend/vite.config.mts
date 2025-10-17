@@ -56,7 +56,7 @@ export default defineConfig(({ mode }) => {
       "process.env.LANGFLOW_MCP_COMPOSER_ENABLED": JSON.stringify(
         envLangflow.LANGFLOW_MCP_COMPOSER_ENABLED ?? "true",
       ),
-      "process.env.LANGFLOW_ONLY_CANVAS": JSON.stringify(
+      "import.meta.env.LANGFLOW_ONLY_CANVAS": JSON.stringify(
         envLangflow.LANGFLOW_ONLY_CANVAS ?? "false",
       ),
     },
