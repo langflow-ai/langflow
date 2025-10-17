@@ -324,16 +324,6 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
 
-      - name: Free Disk Space
-        run: |
-          df -h
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo docker image prune --all --force || true
-          df -h
-
       - name: Install Python Dependencies
         run: uv sync --extra audio
 
