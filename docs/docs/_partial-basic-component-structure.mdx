@@ -2,10 +2,14 @@
 
 2. Write your component as an object of the [`Component`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/custom/custom_component/component.py) class. Create a new class that inherits from `Component` and override the base class's methods.
 
+    :::tip Backwards compatibility
+    The `lfx` import path replaced the `import from langflow.custom import Component` in Langflow 1.7, but the original input is still compatible and works the same way.
+    :::
+
     ```python
     from typing import Any, Dict, Optional
     import pandas as pd
-    from langflow.custom import Component
+    from lfx.custom.custom_component.component import Component
 
     class DataFrameProcessor(Component):
         """A component that processes pandas DataFrames with various operations."""
@@ -16,7 +20,7 @@
     ```python
     from typing import Any, Dict, Optional
     import pandas as pd
-    from langflow.custom import Component
+    from lfx.custom.custom_component.component import Component
 
     class DataFrameProcessor(Component):
         """A component that processes pandas DataFrames with various operations."""
@@ -44,7 +48,7 @@
     ```python
     from typing import Any, Dict, Optional
     import pandas as pd
-    from langflow.custom import Component
+    from lfx.custom.custom_component.component import Component
 
     class DataFrameProcessor(Component):
         """A component that processes pandas DataFrames with various operations."""

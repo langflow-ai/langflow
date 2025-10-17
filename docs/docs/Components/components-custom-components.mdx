@@ -29,9 +29,9 @@ Create a custom `DataFrameProcessor` component by creating a Python file, saving
 
 <PartialBasicComponentStructure />
 
-### Save the custom component
+### Save the custom component {#custom-component-path}
 
-Save the custom component in the Langflow directory where the UI will discover it.
+Save the custom component in the Langflow directory where the UI will discover and load it.
 
 By default, Langflow looks for custom components in the `src/lfx/src/lfx/components` directory.
 
@@ -134,6 +134,28 @@ Ensure the application builds your component.
 
 2. Refresh the frontend application.
 Your new `DataFrameProcessor` component is available in the <Icon name="Component" aria-hidden="true" /> **Core components** menu under the **Data** category in the visual editor.
+
+### Docker deployment
+
+When running Langflow in Docker, mount your custom components directory and set the `LANGFLOW_COMPONENTS_PATH` environment variable in the `docker run` command to point to the custom components directory.
+
+```bash
+docker run -d \
+  --name langflow \
+  -p 7860:7860 \
+  -v ./custom_components:/app/custom_components \
+  -e LANGFLOW_COMPONENTS_PATH=/app/custom_components \
+  langflowai/langflow:latest
+```
+
+Create the same custom components directory structure as the example in [Save the custom component](#custom-component-path).
+
+```
+/app/custom_components/          # LANGFLOW_COMPONENTS_PATH
+    └── data/
+        ├── __init__.py
+        └── dataframe_processor.py
+```
 
 ## Structure of a custom component
 
