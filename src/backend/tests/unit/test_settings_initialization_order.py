@@ -48,8 +48,8 @@ class TestSettingsInitializationOrder:
     def test_is_settings_service_initialized_checks_service_manager(self):
         """Test that the function checks the service manager directly."""
         from langflow.services.deps import is_settings_service_initialized
-        from lfx.services.manager import get_service_manager
         from langflow.services.schema import ServiceType
+        from lfx.services.manager import get_service_manager
 
         # Clear services
         service_manager = get_service_manager()
@@ -210,8 +210,8 @@ class TestSettingsServiceSingleton:
     def test_settings_service_singleton_across_imports(self):
         """Test singleton behavior across different import paths."""
         from langflow.services.deps import get_settings_service
-        from lfx.services.manager import get_service_manager
         from langflow.services.schema import ServiceType
+        from lfx.services.manager import get_service_manager
 
         service1 = get_settings_service()
         service_manager = get_service_manager()
