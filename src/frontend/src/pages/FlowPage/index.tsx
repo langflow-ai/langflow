@@ -107,6 +107,11 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   // Set flow tab id
   useEffect(() => {
     const awaitgetTypes = async () => {
+      // Wait for types to be loaded
+      if (Object.keys(types).length === 0) {
+        return;
+      }
+
       // Handle canvas-only mode without ID immediately
       if (LANGFLOW_ONLY_CANVAS && !id && currentFlowId === "") {
         const emptyFlow = {
@@ -125,7 +130,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         return;
       }
 
-      if (flows && currentFlowId === "" && Object.keys(types).length > 0) {
+      if (flows && currentFlowId === "") {
         const isAnExistingFlow = flows.find((flow) => flow.id === id);
 
         if (!isAnExistingFlow) {
