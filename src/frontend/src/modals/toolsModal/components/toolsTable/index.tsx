@@ -90,6 +90,8 @@ export default function ToolsTable({
     if (!open) {
       handleOnNewValue({
         value: data.map((row) => {
+          console.log(row);
+
           const name = parseString(row.name, [
             "snake_case",
             "no_blank",
@@ -254,6 +256,7 @@ export default function ToolsTable({
 
   const tableOptions = {
     block_hide: true,
+    hide_options: false,
   };
 
   const handleRowClicked = (event) => {
@@ -304,6 +307,9 @@ export default function ToolsTable({
             onRowClicked={handleRowClicked}
             getRowId={getRowId}
             onGridReady={handleGridReady}
+            pagination={true}
+            paginationPageSize={50}
+            paginationPageSizeSelector={[25, 50, 100, 200]}
           />
         </div>
       </main>
