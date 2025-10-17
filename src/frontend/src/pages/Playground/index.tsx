@@ -1,12 +1,12 @@
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { v4 as uuid } from "uuid";
+import { PlaygroundComponent } from "@/components/core/playgroundComponent/playground-component";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
-import { CustomIOModal } from "@/customization/components/custom-new-modal";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
-import useFlowStore from "@/stores/flowStore";
+import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { type CookieOptions, getCookie, setCookie } from "@/utils/utils";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -24,7 +24,7 @@ export default function PlaygroundPage() {
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
-  const setPlaygroundPage = useFlowStore((state) => state.setPlaygroundPage);
+  const setIsPlayground = usePlaygroundStore((state) => state.setIsPlayground);
 
   async function getFlowData() {
     try {
@@ -55,8 +55,11 @@ export default function PlaygroundPage() {
 
   useEffect(() => {
     if (id) track("Playground Page Loaded", { flowId: id });
-    setPlaygroundPage(true);
-  }, []);
+    setIsPlayground(true);
+    return () => {
+      setIsPlayground(false);
+    };
+  }, [setIsPlayground, track, id]);
 
   useEffect(() => {
     document.title = currentSavedFlow?.name || "Langflow";
@@ -81,7 +84,7 @@ export default function PlaygroundPage() {
       const newClientId = uuid();
       const cookieOptions: CookieOptions = {
         secure: window.location.protocol === "https:",
-        sameSite: "Strict",
+        sameSite: "strict",
       };
       setCookie("client_id", newClientId, cookieOptions);
       setClientId(newClientId);
@@ -92,16 +95,7 @@ export default function PlaygroundPage() {
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center align-middle">
-      {currentSavedFlow && (
-        <CustomIOModal
-          open={true}
-          setOpen={() => {}}
-          isPlayground
-          playgroundPage
-        >
-          <></>
-        </CustomIOModal>
-      )}
+      {currentSavedFlow && <PlaygroundComponent />}
     </div>
   );
 }

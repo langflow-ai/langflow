@@ -89,13 +89,13 @@ export default function PublishDropdown({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="ghost"
+            variant="default"
             size="md"
-            className="!px-2.5 font-normal"
+            className="font-normal !text-mmd"
             data-testid="publish-button"
           >
             Share
-            <IconComponent name="ChevronDown" className="!h-5 !w-5" />
+            <IconComponent name="ChevronDown" strokeWidth={1.7} />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent

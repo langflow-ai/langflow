@@ -63,7 +63,7 @@ export const MemoizedCanvasControls = memo(
 
 export const MemoizedSidebarTrigger = memo(() => {
   const { open, toggleSidebar, setActiveSection } = useSidebar();
-  const { focusSearch, isSearchFocused } = useSearchContext();
+  const { focusSearch } = useSearchContext();
   if (ENABLE_NEW_SIDEBAR) {
     return (
       <Panel
@@ -75,6 +75,7 @@ export const MemoizedSidebarTrigger = memo(() => {
       >
         {NAV_ITEMS.map((item) => (
           <CanvasControlButton
+            key={item.id}
             data-testid={`sidebar-trigger-${item.id}`}
             iconName={item.icon}
             iconClasses={item.id === "mcp" ? "h-8 w-8" : ""}
@@ -99,7 +100,7 @@ export const MemoizedSidebarTrigger = memo(() => {
   return (
     <Panel
       className={cn(
-        "react-flow__controls !top-auto !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
+        "react-flow__controls !top-auto !m-4 flex gap-1.5 rounded-md border border-secondary-hover bg-background p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
         "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
       )}
       position="top-left"
