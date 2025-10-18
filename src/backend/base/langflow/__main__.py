@@ -902,9 +902,53 @@ def version_option(
     pass
 
 
-# Genesis commands integration
+# Workflow commands integration
+def add_workflow_commands():
+    """Add Workflow CLI commands to the main app."""
+    try:
+        from langflow.cli.workflow.main import workflow as workflow_group
+
+        # Convert click group to typer command
+        @app.command("workflow", context_settings={"allow_extra_args": True, "allow_interspersed_args": False})
+        def workflow_wrapper(
+            ctx: typer.Context,
+        ) -> None:
+            """Workflow specification management commands.
+
+            Manage AI agent specifications, templates, and workflows using the Genesis
+            specification system integrated with AI Studio.
+
+            Examples:
+                ai-studio workflow create -t template.yaml
+                ai-studio workflow validate spec.yaml
+                ai-studio workflow export flow.json
+                ai-studio workflow list flows
+                ai-studio workflow config show
+            """
+            import sys
+            from click.testing import CliRunner
+
+            # Get the remaining arguments
+            args = ctx.args if ctx.args else []
+
+            # Execute workflow command
+            runner = CliRunner()
+            result = runner.invoke(workflow_group, args, catch_exceptions=False)
+
+            # Print output and exit with the same code
+            if result.output:
+                typer.echo(result.output, nl=False)
+
+            if result.exit_code != 0:
+                raise typer.Exit(result.exit_code)
+
+    except ImportError:
+        logger.warning("Workflow CLI not available. Workflow commands will not be registered.")
+
+
+# Genesis commands integration (backward compatibility)
 def add_genesis_commands():
-    """Add Genesis CLI commands to the main app."""
+    """Add Genesis CLI commands to the main app (deprecated - use workflow instead)."""
     try:
         from langflow.cli.genesis.main import genesis as genesis_group
 
@@ -913,19 +957,21 @@ def add_genesis_commands():
         def genesis_wrapper(
             ctx: typer.Context,
         ) -> None:
-            """Genesis Agent specification management commands.
+            """[DEPRECATED] Genesis Agent specification management commands.
 
-            Manage AI agent specifications, templates, and workflows using the Genesis
-            specification system integrated with AI Studio.
+            This command is deprecated. Use 'ai-studio workflow' instead.
 
             Examples:
-                ai-studio genesis create -t template.yaml
-                ai-studio genesis validate spec.yaml
-                ai-studio genesis list flows
-                ai-studio genesis config show
+                ai-studio workflow create -t template.yaml
+                ai-studio workflow validate spec.yaml
+                ai-studio workflow export flow.json
             """
             import sys
             from click.testing import CliRunner
+
+            # Show deprecation warning
+            typer.echo("[WARNING] The 'genesis' command is deprecated. Use 'workflow' instead.", err=True)
+            typer.echo("", err=True)
 
             # Get the remaining arguments
             args = ctx.args if ctx.args else []
@@ -975,7 +1021,10 @@ def api_key_banner(unmasked_api_key) -> None:
         logger.info(f"The API key has been copied to your clipboard. {ctrl_cmd} + V to paste it.")
 
 
-# Register Genesis commands
+# Register Workflow commands (replaces Genesis commands)
+add_workflow_commands()
+
+# Register Genesis commands for backward compatibility
 add_genesis_commands()
 
 
