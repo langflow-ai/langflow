@@ -105,13 +105,7 @@ class RunFlowComponent(RunFlowBaseComponent):
                             base_classes = ["Message"]
                         elif "TextOutput" in vertex_id:
                             base_classes = ["Message"]
-                        # Future output types - add here when they exist:
-                        # elif "DataOutput" in vertex_id:
-                        #     base_classes = ["Data"]
-                        # elif "FileOutput" in vertex_id:
-                        #     base_classes = ["File"]
-                        # elif "ImageOutput" in vertex_id:
-                        #     base_classes = ["Image"]
+                        # Future output types - add here when they exist
                         else:
                             # Default fallback
                             base_classes = ["Message"]
@@ -136,24 +130,16 @@ class RunFlowComponent(RunFlowBaseComponent):
                 raise ValueError(msg)
             if field_value is not None:
                 try:
-                    logger.info(f"Attempting to get graph for flow: {field_value}")
                     graph = await self.get_graph(field_value)
-                    logger.info(f"Successfully got graph with {len(graph.vertices)} vertices")
                     build_config = self.update_build_config_from_graph(build_config, graph)
                     
                     # Extract output types from the flow for dynamic output creation
                     self.flow_output_types = self.extract_output_types_from_graph(graph)
-                    logger.info(f"Extracted output types: {self.flow_output_types}")
-                    
-                    logger.info("Successfully updated build config from graph")
                 except Exception as e:
-                    logger.error(f"Error building graph for flow {field_value}: {str(e)}")
-                    logger.error(f"Error type: {type(e).__name__}")
-                    import traceback
-                    logger.error(f"Full traceback: {traceback.format_exc()}")
-                    # Don't raise the error - let it continue with the original build_config
+                    msg = f"Error building graph for flow {field_value}"
+                    await logger.aexception(msg)
                     self.flow_output_types = []  # Reset on error
-                    logger.warning("Continuing with original build_config due to graph error")
+                    raise RuntimeError(msg) from e
         return build_config
 
     async def run_flow_with_tweaks(self):
