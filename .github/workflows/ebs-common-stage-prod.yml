@@ -29,6 +29,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Free up disk space
+        run: |
+          echo "Initial disk usage:"
+          df -h
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          docker system prune -af || true
+          echo "After cleanup:"
+          df -h
+
       - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
