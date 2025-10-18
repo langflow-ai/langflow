@@ -50,16 +50,6 @@ class RunFlowComponent(RunFlowBaseComponent):
                         types=output_info["types"],
                     )
                 )
-        else:
-            # Fallback: create a generic output if no type info available
-            frontend_node["outputs"] = [
-                Output(
-                    display_name="Flow Output",
-                    name="flow_output", 
-                    method="flow_output",
-                    # No types - will be inferred at runtime
-                )
-            ]
         
         return frontend_node
 
