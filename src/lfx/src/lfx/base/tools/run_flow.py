@@ -9,9 +9,7 @@ from lfx.helpers import get_flow_inputs
 from lfx.inputs.inputs import DropdownInput, InputTypes, MessageInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
 from lfx.schema.dotdict import dotdict
-from lfx.schema.message import Message
 from lfx.template.field.base import Output
 
 if TYPE_CHECKING:
@@ -64,18 +62,18 @@ class RunFlowBaseComponent(Component):
     async def flow_output(self):
         """Return the output from the selected flow with the same type as the flow's output component."""
         run_outputs = await self.run_flow_with_tweaks()
-        
+
         if not run_outputs or not run_outputs[0].outputs:
             return None
-            
+
         # Get the first output and return its result with the original type
         first_output = run_outputs[0].outputs[0]
-        
+
         # Extract the result from the output and return it as-is to preserve the original type
         if first_output.results:
             _, result = next(iter(first_output.results.items()))
             return result
-        
+
         return None
 
     async def get_flow_names(self) -> list[str]:
