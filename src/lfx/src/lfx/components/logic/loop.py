@@ -123,3 +123,21 @@ class LoopComponent(Component):
             aggregated.append(loop_input)
             self.update_ctx({f"{self._id}_aggregated": aggregated})
         return aggregated
+
+    def reset_loop_state(self) -> None:
+        """Reset loop internal state for fresh execution.
+
+        This should be called before starting a new independent iteration
+        of the graph to ensure the loop starts from a clean state.
+
+        This method clears all loop-specific context variables including:
+        - initialization flag
+        - current index
+        - aggregated results
+        - stored data
+        """
+        loop_id = self._id
+        self.ctx.pop(f"{loop_id}_initialized", None)
+        self.ctx.pop(f"{loop_id}_index", None)
+        self.ctx.pop(f"{loop_id}_aggregated", None)
+        self.ctx.pop(f"{loop_id}_data", None)

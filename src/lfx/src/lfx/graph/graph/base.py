@@ -361,6 +361,7 @@ class Graph:
         self.prepare()
         if reset_output_values:
             self._reset_all_output_values()
+            self._reset_loop_components()
 
         # The idea is for this to return a generator that yields the result of
         # each step call and raise StopIteration when the graph is done
@@ -371,7 +372,7 @@ class Graph:
         yielded_counts: dict[str, int] = defaultdict(int)
 
         while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(event_manager=event_manager, inputs=inputs)
+            result = await self.astep(event_manager=event_manager, inputs=inputs, user_id=self.user_id)
             yield result
             if isinstance(result, Finish):
                 return
@@ -403,6 +404,24 @@ class Graph:
             if vertex.custom_component is None:
                 continue
             vertex.custom_component._reset_all_output_values()
+
+    def _reset_loop_components(self) -> None:
+        """Reset all loop components to fresh state.
+
+        This ensures loops start from index 0 when async_start is called
+        with fresh inputs or multiple times. This is necessary because loop
+        components maintain state in the graph context that persists across
+        async_start invocations.
+
+        Only components that have a reset_loop_state method will be reset.
+        Currently this applies to LoopComponent.
+        """
+        for vertex in self.vertices:
+            if vertex.custom_component is None:
+                continue
+            # Check if component has reset_loop_state method
+            if hasattr(vertex.custom_component, "reset_loop_state"):
+                vertex.custom_component.reset_loop_state()
 
     def start(
         self,
