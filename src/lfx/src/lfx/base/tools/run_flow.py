@@ -39,30 +39,7 @@ class RunFlowBaseComponent(Component):
             advanced=True,
         ),
     ]
-    _base_outputs: list[Output] = [
-        Output(
-            name="flow_outputs_data",
-            display_name="Flow Data Output",
-            method="data_output",
-            hidden=True,
-            group_outputs=True,
-            tool_mode=False,  # This output is not intended to be used as a tool, so tool_mode is disabled.
-        ),
-        Output(
-            name="flow_outputs_dataframe",
-            display_name="Flow Dataframe Output",
-            method="dataframe_output",
-            hidden=True,
-            group_outputs=True,
-            tool_mode=False,  # This output is not intended to be used as a tool, so tool_mode is disabled.
-        ),
-        Output(
-            name="flow_outputs_message",
-            group_outputs=True,
-            display_name="Flow Message Output",
-            method="message_output",
-        ),
-    ]
+    _base_outputs: list[Output] = []  # Dynamic outputs will be added based on selected flow
     default_keys = ["code", "_type", "flow_name_selected", "session_id"]
     FLOW_INPUTS: list[dotdict] = []
     flow_tweak_data: dict = {}
@@ -84,28 +61,22 @@ class RunFlowBaseComponent(Component):
         message_data = message_result.data
         return Data(data=message_data)
 
-    async def dataframe_output(self) -> DataFrame:
-        """Return the dataframe output."""
+    async def flow_output(self):
+        """Return the output from the selected flow with the same type as the flow's output component."""
         run_outputs = await self.run_flow_with_tweaks()
-        first_output = run_outputs[0]
-
-        if isinstance(first_output, DataFrame):
-            return first_output
-
-        # just adaptive output Message
-        _, message_result = next(iter(run_outputs[0].outputs[0].results.items()))
-        message_data = message_result.data
-        return DataFrame(data=message_data if isinstance(message_data, list) else [message_data])
-
-    async def message_output(self) -> Message:
-        """Return the message output."""
-        run_outputs = await self.run_flow_with_tweaks()
-        _, message_result = next(iter(run_outputs[0].outputs[0].results.items()))
-        if isinstance(message_result, Message):
-            return message_result
-        if isinstance(message_result, str):
-            return Message(text=message_result)
-        return Message(text=message_result.data["text"])
+        
+        if not run_outputs or not run_outputs[0].outputs:
+            return None
+            
+        # Get the first output and return its result with the original type
+        first_output = run_outputs[0].outputs[0]
+        
+        # Extract the result from the output and return it as-is to preserve the original type
+        if first_output.results:
+            _, result = next(iter(first_output.results.items()))
+            return result
+        
+        return None
 
     async def get_flow_names(self) -> list[str]:
         # TODO: get flfow ID with flow name
