@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from alembic.util.exc import CommandError
 from lfx.log.logger import logger
 from sqlmodel import text
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -49,7 +47,9 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
         # We need to delete the alembic_version table
         # and run the migrations again
         logger.warning("Wrong revision in DB, deleting alembic_version table and running migrations again")
-        async with session_getter(database_service) as session:
+        from langflow.services.deps import session_scope
+
+        async with session_scope() as session:
             await session.exec(text("DROP TABLE alembic_version"))
         await database_service.run_migrations(fix=fix_migration)
     except Exception as exc:
@@ -59,19 +59,6 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
             logger.exception(exc)
         raise
     await logger.adebug("Database initialized")
-
-
-@asynccontextmanager
-async def session_getter(db_service: DatabaseService):
-    try:
-        session = AsyncSession(db_service.engine, expire_on_commit=False)
-        yield session
-    except Exception:
-        await logger.aexception("Session rollback because of exception")
-        await session.rollback()
-        raise
-    finally:
-        await session.close()
 
 
 @dataclass
