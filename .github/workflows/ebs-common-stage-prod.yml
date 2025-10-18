@@ -109,23 +109,26 @@ jobs:
           echo "Using branch=$BRANCH_NAME commit=$COMMIT_ID"
 
           echo "=== Building Staging Image ==="
+          DOCKER=${DOCKER:-docker}
+
           DOCKER_BUILDKIT=1 \
           VITE_AUTO_LOGIN=false \
           VITE_CLERK_AUTH_ENABLED=true \
           VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.CLERK_PUBLISHABLE_KEY }} \
           VITE_CLERK_FRONTEND_API=${{ vars.STAGING_CLERK_FRONTEND_API }} \
-          make docker_build TAG=langflow:staging-$BRANCH_NAME-$COMMIT_ID
+          make docker_build TAG=langflow:staging-$BRANCH_NAME-$COMMIT_ID DOCKER=$DOCKER
 
           docker tag langflow:staging-$BRANCH_NAME-$COMMIT_ID forwardemailforaifirstdesk/langflow:staging-$BRANCH_NAME-$COMMIT_ID
           docker push forwardemailforaifirstdesk/langflow:staging-$BRANCH_NAME-$COMMIT_ID
 
           echo "=== Building Prod Image ==="
+
           DOCKER_BUILDKIT=1 \
           VITE_AUTO_LOGIN=false \
           VITE_CLERK_AUTH_ENABLED=true \
           VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.PROD_CLERK_PUBLISHABLE_KEY }} \
           VITE_CLERK_FRONTEND_API=${{ vars.PROD_CLERK_FRONTEND_API }} \
-          make docker_build TAG=langflow:prod-$BRANCH_NAME-$COMMIT_ID
+          make docker_build TAG=langflow:prod-$BRANCH_NAME-$COMMIT_ID DOCKER=$DOCKER
         
           docker tag langflow:prod-$BRANCH_NAME-$COMMIT_ID forwardemailforaifirstdesk/langflow:prod-$BRANCH_NAME-$COMMIT_ID
           docker push forwardemailforaifirstdesk/langflow:prod-$BRANCH_NAME-$COMMIT_ID
