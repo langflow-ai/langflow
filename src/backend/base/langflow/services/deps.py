@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from lfx.services.manager import get_service_manager
 
 from langflow.services.schema import ServiceType
 
@@ -114,9 +115,8 @@ def is_settings_service_initialized() -> bool:
     Returns:
         bool: True if the SettingsService is already initialized, False otherwise.
     """
-    from lfx.services.manager import get_service_manager
-
-    return ServiceType.SETTINGS_SERVICE in get_service_manager().services
+    manager = get_service_manager()
+    return ServiceType.SETTINGS_SERVICE in manager.services
 
 
 def get_settings_service() -> SettingsService:
