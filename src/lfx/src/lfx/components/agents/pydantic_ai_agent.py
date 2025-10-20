@@ -213,8 +213,19 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
                         # Skip thinking deltas for UI text
                         pass
                     elif isinstance(delta, ToolCallPartDelta):
-                        # Optional: could surface progressive args; we skip for now
-                        pass
+                        # Progressive tool-call args delta; merge shallowly and emit tool update
+                        tool_call_id = getattr(delta, "tool_call_id", None) or getattr(delta, "id", None)
+                        merged_args = {}
+                        if tool_call_id and tool_call_id in tool_call_mapping:
+                            run_id, tool_name = tool_call_mapping[tool_call_id]
+                            # current args not tracked, so send delta as-is under "args_delta"
+                            merged_args = {"args_delta": getattr(delta, "args_delta", {})}
+                            yield {
+                                "event": "on_tool_update",
+                                "run_id": run_id,
+                                "name": tool_name,
+                                "data": {"input": merged_args},
+                            }
                     continue
 
                 if isinstance(event, FunctionToolCallEvent):
@@ -299,7 +310,9 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
                         "name": "PydanticAIAgent",
                         "data": {"output": AgentFinish(return_values={"output": final_output}, log="")},
                     }
-
+        # INSERT_YOUR_CODE
+            import asyncio
+            await asyncio.sleep(0.05)
         except Exception as e:
             logger.error(f"Error in Pydantic AI agent streaming: {e}")
             yield {

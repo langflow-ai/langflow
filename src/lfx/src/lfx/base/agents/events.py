@@ -263,6 +263,46 @@ async def handle_on_tool_error(
     return agent_message, start_time
 
 
+async def handle_on_tool_update(
+    event: dict[str, Any],
+    agent_message: Message,
+    tool_blocks_map: dict[str, ToolContent],
+    send_message_method: SendMessageFunctionType,
+    start_time: float,
+) -> tuple[Message, float]:
+    """Update the existing tool content with new input (e.g., args delta)."""
+    run_id = event.get("run_id", "")
+    tool_name = event.get("name", "")
+    tool_key = f"{tool_name}_{run_id}"
+    tool_content = tool_blocks_map.get(tool_key)
+
+    if tool_content and isinstance(tool_content, ToolContent):
+        # Persist current streaming message then update the tool block
+        agent_message = await send_message_method(message=agent_message, skip_db_update=True)
+        new_start_time = perf_counter()
+
+        # Find and update the tool content in the current message
+        updated_tool_content = None
+        if agent_message.content_blocks and agent_message.content_blocks[0].contents:
+            for content in agent_message.content_blocks[0].contents:
+                if (
+                    isinstance(content, ToolContent)
+                    and content.name == tool_name
+                    and content.tool_input == tool_content.tool_input
+                ):
+                    updated_tool_content = content
+                    break
+
+        if updated_tool_content:
+            updated_tool_content.tool_input = event["data"].get("input", {})
+            updated_tool_content.header = {"title": f"Accessing **{updated_tool_content.name}**", "icon": "Hammer"}
+            updated_tool_content.duration = _calculate_duration(start_time)
+            tool_blocks_map[tool_key] = updated_tool_content
+
+        return agent_message, new_start_time
+    return agent_message, start_time
+
+
 async def handle_on_chain_stream(
     event: dict[str, Any],
     agent_message: Message,
@@ -332,6 +372,7 @@ TOOL_EVENT_HANDLERS: dict[str, ToolEventHandler] = {
     "on_tool_start": handle_on_tool_start,
     "on_tool_end": handle_on_tool_end,
     "on_tool_error": handle_on_tool_error,
+    "on_tool_update": handle_on_tool_update,
 }
 
 
