@@ -147,13 +147,14 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         # Configure search method and related options
         return self._configure_search_options(build_config)
 
+
     def _configure_search_options(self, build_config: dict) -> dict:
         """Configure hybrid search, reranker, and vector search options."""
         # Detect available hybrid search capabilities
         hybrid_capabilities = self._detect_hybrid_capabilities()
 
         # Return if we haven't selected a collection
-        if not build_config["collection_name"]["value"]:
+        if not build_config["collection_name"]["options"] or not build_config["collection_name"]["value"]:
             return build_config
 
         # Get collection options
@@ -188,7 +189,8 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
 
         # Configure reranker visibility and state
         hybrid_enabled = (
-            collection_options["rerank_enabled"] and build_config["search_method"]["value"] == "Hybrid Search"
+            collection_options["rerank_enabled"]
+            and build_config["search_method"]["value"] == "Hybrid Search"
         )
 
         build_config["reranker"]["show"] = hybrid_enabled
@@ -210,6 +212,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
 
         return build_config
 
+
     def _detect_hybrid_capabilities(self) -> dict:
         """Detect available hybrid search and reranking capabilities."""
         environment = self.get_environment(self.environment)
@@ -220,7 +223,9 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         try:
             providers = db_admin.find_reranking_providers()
             reranker_models = [
-                model.name for provider_data in providers.reranking_providers.values() for model in provider_data.models
+                model.name
+                for provider_data in providers.reranking_providers.values()
+                for model in provider_data.models
             ]
             reranker_metadata = [
                 {"icon": self.get_provider_icon(provider_name=model.name.split("/")[0])}
@@ -240,6 +245,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
                 "reranker_models": reranker_models,
                 "reranker_metadata": reranker_metadata,
             }
+
 
     def _get_collection_options(self, build_config: dict) -> dict:
         """Retrieve collection-level search options."""
