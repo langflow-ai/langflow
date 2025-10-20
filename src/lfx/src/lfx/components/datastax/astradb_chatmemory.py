@@ -6,7 +6,7 @@ from lfx.inputs.inputs import MessageTextInput
 
 class AstraDBChatMemory(AstraDBBaseComponent, LCChatMemoryComponent):
     display_name = "Astra DB Chat Memory"
-    description = "Retrieves and store chat messages from Astra DB."
+    description = "Retrieves and stores chat messages from Astra DB."
     name = "AstraDBChatMemory"
     icon: str = "AstraDB"
 

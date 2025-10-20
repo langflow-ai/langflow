@@ -1,11 +1,11 @@
+from astrapy import DataAPIClient
 from langchain_core.documents import Document
 
 from lfx.base.datastax.astradb_base import AstraDBBaseComponent
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
 from lfx.helpers.data import docs_to_data
-from lfx.inputs.inputs import FloatInput, NestedDictInput
-from lfx.io import DropdownInput, IntInput, QueryInput
+from lfx.io import BoolInput, DropdownInput, FloatInput, HandleInput, IntInput, NestedDictInput, QueryInput, StrInput
 from lfx.schema.data import Data
 from lfx.serialization import serialize
 from lfx.utils.version import get_version_info
@@ -22,6 +22,40 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
     inputs = [
         *AstraDBBaseComponent.inputs,
         *LCVectorStoreComponent.inputs,
+        HandleInput(
+            name="embedding_model",
+            display_name="Embedding Model",
+            input_types=["Embeddings"],
+            info="Specify the Embedding Model. Not required for Astra Vectorize collections.",
+            required=False,
+            show=True,
+        ),
+        StrInput(
+            name="content_field",
+            display_name="Content Field",
+            info="Field to use as the text content field for the vector store.",
+            advanced=True,
+        ),
+        StrInput(
+            name="deletion_field",
+            display_name="Deletion Based On Field",
+            info="When this parameter is provided, documents in the target collection with "
+            "metadata field values matching the input metadata field value will be deleted "
+            "before new data is loaded.",
+            advanced=True,
+        ),
+        BoolInput(
+            name="ignore_invalid_documents",
+            display_name="Ignore Invalid Documents",
+            info="Boolean flag to determine whether to ignore invalid documents at runtime.",
+            advanced=True,
+        ),
+        NestedDictInput(
+            name="astradb_vectorstore_kwargs",
+            display_name="AstraDBVectorStore Parameters",
+            info="Optional dictionary of additional parameters for the AstraDBVectorStore.",
+            advanced=True,
+        ),
         DropdownInput(
             name="search_method",
             display_name="Search Method",
@@ -82,6 +116,141 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
             advanced=True,
         ),
     ]
+
+    async def update_build_config(
+        self,
+        build_config: dict,
+        field_value: str | dict,
+        field_name: str | None = None,
+    ) -> dict:
+        """Update build configuration with proper handling of embedding and search options."""
+        # Handle base astra db build config updates
+        build_config = await super().update_build_config(
+            build_config,
+            field_value=field_value,
+            field_name=field_name,
+        )
+
+        # Set embedding model display based on provider selection
+        if isinstance(field_value, dict) and "02_embedding_generation_provider" in field_value:
+            embedding_provider = field_value.get("02_embedding_generation_provider")
+            is_custom_provider = embedding_provider and embedding_provider != "Bring your own"
+            provider = embedding_provider.lower() if is_custom_provider and embedding_provider is not None else None
+
+            build_config["embedding_model"]["show"] = not bool(provider)
+            build_config["embedding_model"]["required"] = not bool(provider)
+
+        # Early return if no API endpoint is configured
+        if not self.get_api_endpoint():
+            return build_config
+
+        # Configure search method and related options
+        return self._configure_search_options(build_config)
+
+
+    def _configure_search_options(self, build_config: dict) -> dict:
+        """Configure hybrid search, reranker, and vector search options."""
+        # Detect available hybrid search capabilities
+        hybrid_capabilities = self._detect_hybrid_capabilities()
+
+        # Get collection metadata
+        collection_options = self._get_collection_options(build_config)
+
+        # Determine search configuration
+        is_vector_search = build_config["search_method"]["value"] == "Vector Search"
+        is_autodetect = build_config["autodetect_collection"]["value"]
+
+        # Apply hybrid search configuration
+        if hybrid_capabilities["available"]:
+            build_config["search_method"]["show"] = True
+            build_config["search_method"]["options"] = ["Hybrid Search", "Vector Search"]
+            build_config["search_method"]["value"] = build_config["search_method"].get("value", "Hybrid Search")
+
+            build_config["reranker"]["options"] = hybrid_capabilities["reranker_models"]
+            build_config["reranker"]["options_metadata"] = hybrid_capabilities["reranker_metadata"]
+            if hybrid_capabilities["reranker_models"]:
+                build_config["reranker"]["value"] = hybrid_capabilities["reranker_models"][0]
+        else:
+            build_config["search_method"]["show"] = False
+            build_config["search_method"]["options"] = ["Vector Search"]
+            build_config["search_method"]["value"] = "Vector Search"
+            build_config["reranker"]["options"] = []
+            build_config["reranker"]["options_metadata"] = []
+
+        # Configure reranker visibility and state
+        hybrid_enabled = (
+            collection_options["rerank_enabled"]
+            and build_config["search_method"]["value"] == "Hybrid Search"
+        )
+
+        build_config["reranker"]["show"] = hybrid_enabled
+        build_config["reranker"]["toggle_value"] = hybrid_enabled
+        build_config["reranker"]["toggle_disable"] = is_vector_search
+
+        # Configure lexical terms
+        lexical_visible = collection_options["lexical_enabled"] and not is_vector_search
+        build_config["lexical_terms"]["show"] = lexical_visible
+        build_config["lexical_terms"]["value"] = "" if is_vector_search else build_config["lexical_terms"]["value"]
+
+        # Configure search type and score threshold
+        build_config["search_type"]["show"] = is_vector_search
+        build_config["search_score_threshold"]["show"] = is_vector_search
+
+        # Force similarity search for hybrid mode or autodetect
+        if hybrid_enabled or is_autodetect:
+            build_config["search_type"]["value"] = "Similarity"
+
+        return build_config
+
+
+    def _detect_hybrid_capabilities(self) -> dict:
+        """Detect available hybrid search and reranking capabilities."""
+        environment = self.get_environment(self.environment)
+        client = DataAPIClient(environment=environment)
+        admin_client = client.get_admin()
+        db_admin = admin_client.get_database_admin(self.get_api_endpoint(), token=self.token)
+
+        try:
+            providers = db_admin.find_reranking_providers()
+            reranker_models = [
+                model.name
+                for provider_data in providers.reranking_providers.values()
+                for model in provider_data.models
+            ]
+            reranker_metadata = [
+                {"icon": self.get_provider_icon(provider_name=model.name.split("/")[0])}
+                for provider in providers.reranking_providers.values()
+                for model in provider.models
+            ]
+        except (AttributeError, KeyError) as e:
+            self.log(f"Hybrid search not available: {e}")
+            return {
+                "available": False,
+                "reranker_models": [],
+                "reranker_metadata": [],
+            }
+        else:
+            return {
+                "available": True,
+                "reranker_models": reranker_models,
+                "reranker_metadata": reranker_metadata,
+            }
+
+
+    def _get_collection_options(self, build_config: dict) -> dict:
+        """Retrieve collection-level search options."""
+        database = self.get_database_object(api_endpoint=build_config["api_endpoint"]["value"])
+        collection = database.get_collection(
+            name=build_config["collection_name"]["value"],
+            keyspace=build_config["keyspace"]["value"],
+        )
+
+        col_options = collection.options()
+
+        return {
+            "rerank_enabled": bool(col_options.rerank and col_options.rerank.enabled),
+            "lexical_enabled": bool(col_options.lexical and col_options.lexical.enabled),
+        }
 
     @check_cached_vector_store
     def build_vector_store(self):
@@ -148,7 +317,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
                 **embedding_params,
                 **additional_params,
             )
-        except Exception as e:
+        except ValueError as e:
             msg = f"Error initializing AstraDBVectorStore: {e}"
             raise ValueError(msg) from e
 
@@ -180,7 +349,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
                 delete_values = list({doc.metadata[self.deletion_field] for doc in documents})
                 self.log(f"Deleting documents where {self.deletion_field} matches {delete_values}.")
                 collection.delete_many({f"metadata.{self.deletion_field}": {"$in": delete_values}})
-            except Exception as e:
+            except ValueError as e:
                 msg = f"Error deleting documents from AstraDBVectorStore based on '{self.deletion_field}': {e}"
                 raise ValueError(msg) from e
 
@@ -188,7 +357,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
             self.log(f"Adding {len(documents)} documents to the Vector Store.")
             try:
                 vector_store.add_documents(documents)
-            except Exception as e:
+            except ValueError as e:
                 msg = f"Error adding documents to AstraDBVectorStore: {e}"
                 raise ValueError(msg) from e
         else:
@@ -241,7 +410,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
 
         try:
             search_args = self._build_search_args()
-        except Exception as e:
+        except ValueError as e:
             msg = f"Error in AstraDBVectorStore._build_search_args: {e}"
             raise ValueError(msg) from e
 
@@ -255,7 +424,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         try:
             self.log(f"Calling vector_store.{search_method} with args: {search_args}")
             docs = getattr(vector_store, search_method)(**search_args)
-        except Exception as e:
+        except ValueError as e:
             msg = f"Error performing {search_method} in AstraDBVectorStore: {e}"
             raise ValueError(msg) from e
 
