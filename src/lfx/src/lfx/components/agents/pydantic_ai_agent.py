@@ -24,8 +24,8 @@ from pydantic_ai.models.openai import OpenAIModel  # noqa: F401
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.components.helpers.current_date import CurrentDateComponent
 from lfx.components.helpers.memory import MemoryComponent
-from lfx.field_typing import Tool  # noqa: F401
-from lfx.inputs.inputs import BoolInput, SecretStrInput
+from lfx.field_typing import LanguageModel, Tool  # noqa: F401
+from lfx.inputs.inputs import BoolInput, DropdownInput, SecretStrInput
 from lfx.io import HandleInput, IntInput, MessageInput, MultilineInput, Output, StrInput
 from lfx.log.logger import logger
 from lfx.schema.content_block import ContentBlock
@@ -48,11 +48,19 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
     name = "PydanticAIAgent"
 
     inputs = [
+        DropdownInput(
+            name="model_provider",
+            display_name="Model Provider",
+            info="Select the model provider. Use 'Custom' to connect any LangChain language model.",
+            options=["OpenAI", "Custom"],
+            value="OpenAI",
+            advanced=False,
+        ),
         SecretStrInput(
             name="openai_api_key",
             display_name="OpenAI API Key",
             info="The OpenAI API key to use for the agent.",
-            required=True,
+            required=False,
         ),
         StrInput(
             name="model_name",
@@ -60,6 +68,13 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
             info="The OpenAI model to use (e.g., gpt-4o, gpt-4-turbo, gpt-3.5-turbo).",
             value="gpt-4o",
             advanced=False,
+        ),
+        HandleInput(
+            name="language_model",
+            display_name="Language Model",
+            input_types=["LanguageModel"],
+            info="Connect a LangChain language model component. Only used when Model Provider is set to 'Custom'.",
+            required=False,
         ),
         MessageInput(
             name="input_value",
@@ -379,20 +394,32 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
             msg = "Message cannot be empty. Please provide a valid message."
             raise ValueError(msg)
 
-        # Validate OpenAI API key
-        if not self.openai_api_key:
-            msg = "OpenAI API key is required. Please provide a valid API key."
-            raise ValueError(msg)
+        # Validate model configuration based on provider
+        if self.model_provider == "OpenAI":
+            if not self.openai_api_key:
+                msg = "OpenAI API key is required when using OpenAI provider."
+                raise ValueError(msg)
+        elif self.model_provider == "Custom":
+            if not self.language_model:
+                msg = "Language Model input is required when using Custom provider."
+                raise ValueError(msg)
 
         try:
             self.chat_history, self.tools = await self.get_agent_requirements()
 
-            # Create OpenAI model for Pydantic AI
-            from pydantic_ai.models.openai import OpenAIResponsesModel
-            from pydantic_ai.providers.openai import OpenAIProvider
+            # Create model based on provider selection
+            if self.model_provider == "OpenAI":
+                from pydantic_ai.models.openai import OpenAIResponsesModel
+                from pydantic_ai.providers.openai import OpenAIProvider
 
-            provider = OpenAIProvider(api_key=self.openai_api_key)
-            model = OpenAIResponsesModel(self.model_name, provider=provider)
+                provider = OpenAIProvider(api_key=self.openai_api_key)
+                model = OpenAIResponsesModel(self.model_name, provider=provider)
+                logger.info(f"[PydanticAIAgent] Using OpenAI model: {self.model_name}")
+            else:  # Custom
+                from lfx.components.agents.langchain_pydantic_adapter import LangChainModel
+
+                model = LangChainModel(self.language_model, name=getattr(self.language_model, "model_name", "custom"))
+                logger.info("[PydanticAIAgent] Using custom LangChain model via adapter")
 
             # Convert LangChain tools to Pydantic AI tools before creating agent
             pydantic_tools = []
@@ -433,12 +460,16 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
                 logger.info("[PydanticAIAgent] Enabled Memory Tool")
 
             # Create Pydantic AI agent with tools and built-in tools
-            pydantic_agent = Agent(
-                model=model,
-                instructions=self.system_prompt,
-                tools=pydantic_tools if pydantic_tools else None,
-                builtin_tools=builtin_tools if builtin_tools else None,
-            )
+            agent_kwargs = {
+                "model": model,
+                "instructions": self.system_prompt,
+            }
+            if pydantic_tools:
+                agent_kwargs["tools"] = pydantic_tools
+            if builtin_tools:
+                agent_kwargs["builtin_tools"] = builtin_tools
+
+            pydantic_agent = Agent(**agent_kwargs)
 
             # Get input text
             input_text = self.input_value.text if hasattr(self.input_value, "text") else str(self.input_value)
