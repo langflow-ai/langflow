@@ -147,7 +147,6 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         # Configure search method and related options
         return self._configure_search_options(build_config)
 
-
     def _configure_search_options(self, build_config: dict) -> dict:
         """Configure hybrid search, reranker, and vector search options."""
         # Detect available hybrid search capabilities
@@ -245,7 +244,6 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
                 "reranker_models": reranker_models,
                 "reranker_metadata": reranker_metadata,
             }
-
 
     def _get_collection_options(self, build_config: dict) -> dict:
         """Retrieve collection-level search options."""
