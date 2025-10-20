@@ -119,6 +119,41 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
             info="The maximum number of attempts the agent can make to complete its task.",
         ),
         BoolInput(name="verbose", display_name="Verbose", value=True, advanced=True),
+        BoolInput(
+            name="enable_web_search",
+            display_name="Web Search Tool",
+            advanced=True,
+            info="Enable web search for queries requiring up-to-date data. Supported by OpenAI, Anthropic, Google, and Groq.",
+            value=False,
+        ),
+        BoolInput(
+            name="enable_code_execution",
+            display_name="Code Execution Tool",
+            advanced=True,
+            info="Enable code execution in a secure environment for computational tasks. Supported by OpenAI, Google, and Anthropic.",
+            value=False,
+        ),
+        BoolInput(
+            name="enable_image_generation",
+            display_name="Image Generation Tool",
+            advanced=True,
+            info="Enable image generation capabilities. Supported by OpenAI and Google.",
+            value=False,
+        ),
+        BoolInput(
+            name="enable_url_context",
+            display_name="URL Context Tool",
+            advanced=True,
+            info="Enable pulling URL contents into context. Currently supported by Google only.",
+            value=False,
+        ),
+        BoolInput(
+            name="enable_memory",
+            display_name="Memory Tool",
+            advanced=True,
+            info="Enable agent memory capabilities. Supported exclusively by Anthropic.",
+            value=False,
+        ),
     ]
 
     outputs = [
@@ -353,11 +388,11 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
             self.chat_history, self.tools = await self.get_agent_requirements()
 
             # Create OpenAI model for Pydantic AI
-            from pydantic_ai.models.openai import OpenAIChatModel
+            from pydantic_ai.models.openai import OpenAIResponsesModel
             from pydantic_ai.providers.openai import OpenAIProvider
 
             provider = OpenAIProvider(api_key=self.openai_api_key)
-            model = OpenAIChatModel(self.model_name, provider=provider)
+            model = OpenAIResponsesModel(self.model_name, provider=provider)
 
             # Convert LangChain tools to Pydantic AI tools before creating agent
             pydantic_tools = []
@@ -370,11 +405,39 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
                     except Exception as e:
                         logger.warning(f"[PydanticAIAgent] Failed to convert tool {tool.name}: {e}")
 
-            # Create Pydantic AI agent with tools
+            # Configure built-in tools based on boolean flags
+            builtin_tools = []
+            if self.enable_web_search:
+                from pydantic_ai import WebSearchTool
+                builtin_tools.append(WebSearchTool())
+                logger.info("[PydanticAIAgent] Enabled Web Search Tool")
+
+            if self.enable_code_execution:
+                from pydantic_ai import CodeExecutionTool
+                builtin_tools.append(CodeExecutionTool())
+                logger.info("[PydanticAIAgent] Enabled Code Execution Tool")
+
+            if self.enable_image_generation:
+                from pydantic_ai import ImageGenerationTool
+                builtin_tools.append(ImageGenerationTool())
+                logger.info("[PydanticAIAgent] Enabled Image Generation Tool")
+
+            if self.enable_url_context:
+                from pydantic_ai import UrlContextTool
+                builtin_tools.append(UrlContextTool())
+                logger.info("[PydanticAIAgent] Enabled URL Context Tool")
+
+            if self.enable_memory:
+                from pydantic_ai import MemoryTool
+                builtin_tools.append(MemoryTool())
+                logger.info("[PydanticAIAgent] Enabled Memory Tool")
+
+            # Create Pydantic AI agent with tools and built-in tools
             pydantic_agent = Agent(
                 model=model,
                 instructions=self.system_prompt,
                 tools=pydantic_tools if pydantic_tools else None,
+                builtin_tools=builtin_tools if builtin_tools else None,
             )
 
             # Get input text
