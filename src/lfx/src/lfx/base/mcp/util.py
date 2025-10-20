@@ -470,7 +470,7 @@ class MCPSessionManager:
             sessions_to_remove = []
 
             for session_id, session_info in list(sessions.items()):
-                if current_time - session_info["last_used"] > SESSION_IDLE_TIMEOUT:
+                if current_time - session_info["last_used"] > get_session_idle_timeout():
                     sessions_to_remove.append(session_id)
 
             # Clean up idle sessions
