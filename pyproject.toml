@@ -327,7 +327,7 @@ directory = "coverage"
 
 
 [tool.ruff]
-exclude = ["src/backend/base/langflow/alembic/*", "src/frontend/tests/assets/*", "src/lfx/src/lfx/_assets/component_index.json"]
+exclude = ["src/backend/base/langflow/alembic/*", "src/frontend/tests/assets/*", "src/lfx/src/lfx/_assets/component_index.json", "src/lfx/src/lfx/debug/examples/*.ipynb"]
 line-length = 120
 
 [tool.ruff.lint]
