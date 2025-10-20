@@ -186,7 +186,7 @@ class ALTKAgentComponent(AgentComponent):
     It uses components from the Agent Lifecycle ToolKit (https://github.com/AgentToolkit/agent-lifecycle-toolkit)
     """
 
-    display_name: str = "ALTKAgent"
+    display_name: str = "ALTK Agent"
     description: str = "Agent with enhanced tool calling capabilities. For more information on ALTK, visit https://github.com/AgentToolkit/agent-lifecycle-toolkit"
     documentation: str = "https://docs.langflow.org/agents"
     icon = "bot"
@@ -216,17 +216,6 @@ class ALTKAgentComponent(AgentComponent):
             refresh_button=False,
             input_types=[],
             options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA],
-            external_options={
-                "fields": {
-                    "data": {
-                        "node": {
-                            "name": "connect_other_models",
-                            "display_name": "Connect other models",
-                            "icon": "CornerDownLeft",
-                        }
-                    }
-                },
-            },
         ),
         *openai_inputs_filtered,
         MultilineInput(
@@ -317,7 +306,7 @@ class ALTKAgentComponent(AgentComponent):
         ),
         BoolInput(
             name="enable_post_tool_reflection",
-            display_name="Post Tool Processing",
+            display_name="Post Tool JSON Processing",
             info="If true, it passes the tool output to a json processing (if json) step.",
             value=True,
         ),
