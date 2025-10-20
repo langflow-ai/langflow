@@ -191,14 +191,12 @@ class AstraDBBaseComponent(Component):
         admin_client = client.get_admin(token=token)
 
         # Get the list of available regions
-        available_regions = admin_client.find_available_regions(
-            only_org_enabled_regions=True
-        )
+        available_regions = admin_client.find_available_regions(only_org_enabled_regions=True)
 
         provider_mapping: dict[str, dict[str, str]] = {
             "AWS": {"name": "Amazon Web Services", "id": "aws"},
             "GCP": {"name": "Google Cloud Platform", "id": "gcp"},
-            "Azure": {"name": "Microsoft Azure", "id": "azure"}
+            "Azure": {"name": "Microsoft Azure", "id": "azure"},
         }
 
         result: dict[str, dict[str, Any]] = {}
@@ -211,10 +209,7 @@ class AstraDBBaseComponent(Component):
                 provider_id = provider_mapping[cloud_provider]["id"]
 
                 if provider_name not in result:
-                    result[provider_name] = {
-                        "id": provider_id,
-                        "regions": []
-                    }
+                    result[provider_name] = {"id": provider_id, "regions": []}
 
                 result[provider_name]["regions"].append(region)
 
@@ -783,12 +778,10 @@ class AstraDBBaseComponent(Component):
 
         # Update the region options based on the selected cloud provider
         template = build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]
-        template["03_region"]["options"] = (
-            self.map_cloud_providers(
-                token=self.token,
-                environment=self.environment,
-            )[cloud_provider]["regions"]
-        )
+        template["03_region"]["options"] = self.map_cloud_providers(
+            token=self.token,
+            environment=self.environment,
+        )[cloud_provider]["regions"]
 
         # Reset the the 03_region value if it's not in the new options
         if template["03_region"]["value"] not in template["03_region"]["options"]:
