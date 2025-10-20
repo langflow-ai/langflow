@@ -19,11 +19,7 @@ if TYPE_CHECKING:
 
     from lfx.graph.graph.base import Graph
 
-from .test_execution_path_equivalence import (
-    ExecutionTrace,
-    ExecutionTracer,
-    assert_execution_equivalence,
-)
+from .test_execution_path_equivalence import ExecutionTrace, ExecutionTracer, assert_execution_equivalence
 
 TEST_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 
@@ -125,7 +121,7 @@ async def run_via_arun_traced(graph: Graph) -> ExecutionTrace:
 
 @pytest.mark.parametrize("flow_name", TEST_FLOWS)
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("loop_csv_path")
+@pytest.mark.usefixtures("loop_csv_path", "client")
 async def test_flow_execution_equivalence(flow_name: str):
     """Test that a flow produces identical results via both execution paths."""
     from uuid import uuid4
