@@ -275,10 +275,14 @@ async def handle_on_chain_stream(
         if output and isinstance(output, str | list):
             output_text = _extract_output_text(output)
             if output_text:
-                if isinstance(agent_message.text, str) and agent_message.text:
-                    agent_message.text += output_text
-                else:
+                # If the component marks the chunk as cumulative, set directly; otherwise append
+                if isinstance(data_chunk, dict) and data_chunk.get("cumulative"):
                     agent_message.text = output_text
+                else:
+                    if isinstance(agent_message.text, str) and agent_message.text:
+                        agent_message.text += output_text
+                    else:
+                        agent_message.text = output_text
         agent_message.properties.state = "partial"
         agent_message = await send_message_method(message=agent_message, skip_db_update=True)
         start_time = perf_counter()

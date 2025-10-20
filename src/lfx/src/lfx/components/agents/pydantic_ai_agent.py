@@ -188,6 +188,7 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
             # Map to track tool calls by their IDs
             tool_call_mapping: dict[str, tuple[str, str]] = {}
             aggregated_parts: list[str] = []
+            aggregated_text: str = ""
 
             async for event in pydantic_agent.run_stream_events(input_text):
                 # Strictly map on known event classes
@@ -201,11 +202,12 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
                         piece = delta.content_delta or ""
                         if piece:
                             aggregated_parts.append(piece)
+                            aggregated_text += piece
                             yield {
                                 "event": "on_chain_stream",
                                 "run_id": str(uuid.uuid4()),
                                 "name": "PydanticAIAgent",
-                                "data": {"chunk": {"output": [piece]}},
+                                "data": {"chunk": {"output": [aggregated_text], "cumulative": True}},
                             }
                     elif isinstance(delta, ThinkingPartDelta):
                         # Skip thinking deltas for UI text
@@ -249,7 +251,7 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
                     continue
 
                 if isinstance(event, FinalResultEvent):
-                    final_output = "".join(aggregated_parts)
+                    final_output = aggregated_text or "".join(aggregated_parts)
                     yield {
                         "event": "on_chain_end",
                         "run_id": str(uuid.uuid4()),
@@ -270,11 +272,12 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
                                 if not isinstance(piece, str):
                                     piece = str(piece)
                                 aggregated_parts.append(piece)
+                                aggregated_text += piece
                                 yield {
                                     "event": "on_chain_stream",
                                     "run_id": str(uuid.uuid4()),
                                     "name": "PydanticAIAgent",
-                                    "data": {"chunk": {"output": [piece]}},
+                                    "data": {"chunk": {"output": [aggregated_text], "cumulative": True}},
                                 }
                         except Exception as stream_err:
                             yield {
@@ -284,12 +287,12 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
                                 "data": {"error": str(stream_err)},
                             }
                             raise
-                        final_output = "".join(aggregated_parts)
+                        final_output = aggregated_text or "".join(aggregated_parts)
                     else:
                         if result_output is not None and hasattr(result_output, "data"):
                             final_output = str(result_output.data)
                         else:
-                            final_output = "".join(aggregated_parts) if aggregated_parts else str(result_output)
+                            final_output = aggregated_text or ("".join(aggregated_parts) if aggregated_parts else str(result_output))
                     yield {
                         "event": "on_chain_end",
                         "run_id": str(uuid.uuid4()),
