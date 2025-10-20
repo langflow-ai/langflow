@@ -140,9 +140,9 @@ class TestCloudProviderMapping:
         mock_region3 = Mock()
         mock_region3.cloud_provider = "Azure"
         mock_region3.name = "eastus"
-        
+
         mock_admin.find_available_regions.return_value = [mock_region1, mock_region2, mock_region3]
-        
+
         mock_client = mock_client_class.return_value
         mock_client.get_admin.return_value = mock_admin
 
@@ -170,9 +170,9 @@ class TestCloudProviderMapping:
         mock_region4 = Mock()
         mock_region4.cloud_provider = "Azure"
         mock_region4.name = "eastus"
-        
+
         mock_admin.find_available_regions.return_value = [mock_region1, mock_region2, mock_region3, mock_region4]
-        
+
         mock_client = mock_client_class.return_value
         mock_client.get_admin.return_value = mock_admin
 
@@ -198,9 +198,9 @@ class TestCloudProviderMapping:
         mock_region2 = Mock()
         mock_region2.cloud_provider = "GCP"
         mock_region2.name = "us-central1"
-        
+
         mock_admin.find_available_regions.return_value = [mock_region1, mock_region2]
-        
+
         mock_client = mock_client_class.return_value
         mock_client.get_admin.return_value = mock_admin
 
@@ -311,7 +311,7 @@ class TestDatabaseCreation:
         mock_admin = Mock()
         # Fix: Make async_create_database return a proper awaitable that yields a dict
         mock_admin.async_create_database = AsyncMock(return_value={"id": "new-db-id"})
-        
+
         # Mock find_available_regions to return a list of region objects
         mock_region = Mock()
         mock_region.cloud_provider = "AWS"
