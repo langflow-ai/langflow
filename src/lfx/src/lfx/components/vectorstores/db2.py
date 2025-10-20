@@ -1,3 +1,7 @@
+from langchain_community.vectorstores.utils import DistanceStrategy
+from langchain_core.documents import Document
+from langchain_db2.db2vs import DB2VS
+
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
 from lfx.inputs.inputs import DictInput, FloatInput
@@ -11,11 +15,6 @@ from lfx.io import (
 from lfx.schema.data import Data
 from lfx.serialization import serialize
 
-from langchain_community.vectorstores.utils import DistanceStrategy
-from langchain_core.documents import Document
-
-from langchain_db2 import db2vs
-from langchain_db2.db2vs import DB2VS
 
 class DB2VectorStoreComponent(LCVectorStoreComponent):
     display_name = "Db2"
@@ -26,18 +25,10 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
 
     inputs = [
         MessageTextInput(
-            name="database_name",
-            display_name="Db2 database name to connect",
-            info="Db2 database name to connect"
+            name="database_name", display_name="Db2 database name to connect", info="Db2 database name to connect"
         ),
-        MessageTextInput(
-            name="username", display_name="Username", info="Username for the Db2 database."
-        ),
-        SecretStrInput(
-            name="password",
-            display_name="Password",
-            info="User password for the Db2 database."
-        ),
+        MessageTextInput(name="username", display_name="Username", info="Username for the Db2 database."),
+        SecretStrInput(name="password", display_name="Password", info="User password for the Db2 database."),
         # e.g. conn_str=f"DATABASE={DB_NAME};hostname={DB_HOST};port={DB_PORT};uid={DB_USER};pwd={DB_PASSWORD};"
         MessageTextInput(
             name="conn_str",
@@ -86,7 +77,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             name="lambda_mult",
             display_name="lambda_mult for Max Marginal Relevance Search",
             info="the degree of diversity among the results with 0 corresponding"
-                 "to maximum diversity and 1 to minimum diversity",
+            "to maximum diversity and 1 to minimum diversity",
             value=0.5,
             advanced=True,
         ),
@@ -139,15 +130,12 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 self.embedding,
                 client=self.client,
                 table_name=self.table_name,
-                distance_strategy=distance_strategy
+                distance_strategy=distance_strategy,
             )
         else:
             self.log("No documents to initialize the Vector Store.")
             vs = DB2VS(
-                self.embedding,
-                client=self.client,
-                table_name=self.table_name,
-                distance_strategy=distance_strategy
+                self.embedding, client=self.client, table_name=self.table_name, distance_strategy=distance_strategy
             )
         self.client.commit()
         return vs
@@ -163,11 +151,21 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             try:
                 if self.search_type == "Similarity with score":
-                    docs = vector_store.similarity_search_with_score(query=self.search_query, k=self.number_of_results, filter=self.search_filter)
+                    docs = vector_store.similarity_search_with_score(
+                        query=self.search_query, k=self.number_of_results, filter=self.search_filter
+                    )
                 elif self.search_type == "Max Marginal Relevance Search":
-                    docs = vector_store.max_marginal_relevance_search(query=self.search_query, k=self.number_of_results, fetch_k=self.fetch_k, lambda_mult=self.lambda_mult, filter=self.search_filter)
+                    docs = vector_store.max_marginal_relevance_search(
+                        query=self.search_query,
+                        k=self.number_of_results,
+                        fetch_k=self.fetch_k,
+                        lambda_mult=self.lambda_mult,
+                        filter=self.search_filter,
+                    )
                 else:
-                    docs = vector_store.similarity_search(query=self.search_query, k=self.number_of_results, filter=self.search_filter)
+                    docs = vector_store.similarity_search(
+                        query=self.search_query, k=self.number_of_results, filter=self.search_filter
+                    )
             except KeyError as e:
                 if "content" in str(e):
                     msg = (
