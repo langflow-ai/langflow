@@ -8,8 +8,10 @@ python:
   - "src/backend/base/uv.lock"
   - "**/python_test.yml"
   - ".github/workflows/ci.yml"
+  - "src/lfx/src/lfx/_assets/component_index.json"
 components-changes:
   - "src/backend/base/langflow/components/**"
+  - "src/lfx/src/lfx/_assets/component_index.json"
 starter-projects-changes:
   - "src/backend/base/langflow/initial_setup/**"
 frontend-tests:
@@ -19,6 +21,7 @@ frontend:
   - "**/typescript_test.yml"
   - "**/jest_test.yml"
   - ".github/workflows/ci.yml"
+  - "src/lfx/src/lfx/_assets/component_index.json"
 docs:
   - "docs/**"
 docker:
@@ -66,6 +69,7 @@ components:
   - "src/backend/base/langflow/components/**"
   - "src/backend/base/langflow/initial_setup/**"
   - "src/backend/base/langflow/serialization/**"
+  - "src/lfx/src/lfx/_assets/component_index.json"
 
 workspace:
   - "src/backend/base/langflow/inputs/**"
