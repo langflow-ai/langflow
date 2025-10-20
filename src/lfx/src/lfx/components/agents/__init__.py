@@ -8,14 +8,16 @@ if TYPE_CHECKING:
     from lfx.components.agents.agent import AgentComponent
     from lfx.components.agents.cuga_agent import CugaComponent
     from lfx.components.agents.mcp_component import MCPToolsComponent
+    from lfx.components.agents.pydantic_ai_agent import PydanticAIAgentComponent
 
 _dynamic_imports = {
     "AgentComponent": "agent",
     "CugaComponent": "cuga_agent",
     "MCPToolsComponent": "mcp_component",
+    "PydanticAIAgentComponent": "pydantic_ai_agent",
 }
 
-__all__ = ["AgentComponent", "CugaComponent", "MCPToolsComponent"]
+__all__ = ["AgentComponent", "CugaComponent", "MCPToolsComponent", "PydanticAIAgentComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:
