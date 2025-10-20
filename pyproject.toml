@@ -37,7 +37,7 @@ dependencies = [
     'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
     "redis>=5.2.1,<6.0.0",
     "metaphor-python==0.1.23",
-    'pywin32==307; sys_platform == "win32"',
+    'pywin32>=310; sys_platform == "win32"',
     "langfuse==2.53.9",
     "metal_sdk==2.5.1",
     "MarkupSafe==3.0.2",
@@ -109,7 +109,6 @@ dependencies = [
     "uv==0.7.20",
     "scipy>=1.14.1,<1.16.2",
     "scrapegraph-py>=1.12.0,<2.0.0",
-    "pydantic-ai>=0.0.19,<1.0.0",
     "smolagents>=1.8.0,<2.0.0",
     "apify-client>=1.8.1,<2.0.0",
     "langchain-graph-retriever==0.8.0",
@@ -148,7 +147,7 @@ dependencies = [
     "traceloop-sdk>=0.43.1,<1.0.0",
     "vlmrun[all]>=0.2.0",
     "cuga==0.1.2",
-
+    "pydantic-ai-slim[openai]==1.1.0",
 ]
 
 
@@ -257,8 +256,8 @@ nv-ingest = [
     # due to incompatibility with <3.12 and how uv handles lockfile creation.
     # If upgrading, ensure `uv lock` and `uv sync` are run after upgrade with these,
     # and that afterward, the lockfile contains nv-ingest.
-    "nv-ingest-api==25.6.2,<26.0.0 ; python_version >= '3.12'",
-    "nv-ingest-client==25.6.3,<26.0.0 ; python_version >= '3.12'",
+    "nv-ingest-api>=25.6.2,<26.0.0 ; python_version >= '3.11'",
+    "nv-ingest-client>=25.9.0,<26.0.0 ; python_version >= '3.11'",
 ]
 
 postgresql = [
