@@ -84,7 +84,6 @@ export default function ApiKeyModal({
               editNode={false}
               required={true}
               autoFocus={true}
-              //   hidePopover={true}
             />
           </div>
         </div>
