@@ -4,8 +4,8 @@ from langchain_core.tools import ToolException
 
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import MultilineInput
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.template.field.base import Output
 
 
@@ -25,13 +25,13 @@ class WikidataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
+        Output(display_name="Table", name="dataframe", method="fetch_content_dataframe"),
     ]
 
-    def run_model(self) -> DataFrame:
+    def run_model(self) -> Table:
         return self.fetch_content_dataframe()
 
-    def fetch_content(self) -> list[Data]:
+    def fetch_content(self) -> list[JSON]:
         try:
             # Define request parameters for Wikidata API
             params = {
@@ -81,6 +81,6 @@ class WikidataComponent(Component):
         else:
             return data
 
-    def fetch_content_dataframe(self) -> DataFrame:
+    def fetch_content_dataframe(self) -> Table:
         data = self.fetch_content()
         return DataFrame(data)

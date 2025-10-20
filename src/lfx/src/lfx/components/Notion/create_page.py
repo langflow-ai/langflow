@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import MultilineInput, SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class NotionPageCreator(LCToolComponent):
@@ -40,7 +40,7 @@ class NotionPageCreator(LCToolComponent):
         database_id: str = Field(..., description="The ID of the Notion database.")
         properties_json: str = Field(..., description="The properties of the new page as a JSON string.")
 
-    def run_model(self) -> Data:
+    def run_model(self) -> JSON:
         result = self._create_notion_page(self.database_id, self.properties_json)
         if isinstance(result, str):
             # An error occurred, return it as text

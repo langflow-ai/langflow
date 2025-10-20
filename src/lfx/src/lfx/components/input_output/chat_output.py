@@ -7,7 +7,7 @@ from fastapi.encoders import jsonable_encoder
 from lfx.base.io.chat import ChatComponent
 from lfx.helpers.data import safe_convert
 from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.schema.properties import Source
@@ -32,7 +32,7 @@ class ChatOutput(ChatComponent):
             name="input_value",
             display_name="Inputs",
             info="Message to be passed as output.",
-            input_types=["Data", "DataFrame", "Message"],
+            input_types=["Data", "JSON", "DataFrame", "Table", "Message"],
             required=True,
         ),
         BoolInput(
@@ -133,7 +133,7 @@ class ChatOutput(ChatComponent):
         self.status = message
         return message
 
-    def _serialize_data(self, data: Data) -> str:
+    def _serialize_data(self, data: JSON) -> str:
         """Serialize Data object to JSON string."""
         # Convert data.data to JSON-serializable format
         serializable_data = jsonable_encoder(data.data)

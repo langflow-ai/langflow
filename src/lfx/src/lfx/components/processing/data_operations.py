@@ -10,6 +10,7 @@ from lfx.inputs import DictInput, DropdownInput, MessageTextInput, SortableListI
 from lfx.io import DataInput, MultilineInput, Output
 from lfx.log.logger import logger
 from lfx.schema import Data
+from lfx.schema.data import JSON
 from lfx.schema.dotdict import dotdict
 from lfx.utils.component_utils import set_current_fields, set_field_display
 
@@ -119,7 +120,7 @@ class DataOperationsComponent(Component):
         return obj
 
     inputs = [
-        DataInput(name="data", display_name="Data", info="Data object to filter.", required=True, is_list=True),
+        DataInput(name="data", display_name="JSON", info="Data object to filter.", required=True, is_list=True),
         SortableListInput(
             name="operations",
             display_name="Operations",
@@ -222,7 +223,7 @@ class DataOperationsComponent(Component):
         ),
     ]
     outputs = [
-        Output(display_name="Data", name="data_output", method="as_data"),
+        Output(display_name="JSON", name="data_output", method="as_data"),
     ]
 
     # Helper methods for data operations
@@ -231,7 +232,7 @@ class DataOperationsComponent(Component):
         data = self.data[0] if isinstance(self.data, list) and len(self.data) == 1 else self.data
         return data.model_dump()
 
-    def json_query(self) -> Data:
+    def json_query(self) -> JSON:
         import json
 
         import jq
@@ -282,7 +283,7 @@ class DataOperationsComponent(Component):
         raise ValueError(msg)
 
     # Data transformation operations
-    def select_keys(self, *, evaluate: bool | None = None) -> Data:
+    def select_keys(self, *, evaluate: bool | None = None) -> JSON:
         """Select specific keys from the data dictionary."""
         self.validate_single_data("Select Keys")
         data_dict = self.get_normalized_data()
@@ -304,7 +305,7 @@ class DataOperationsComponent(Component):
         # Return a new Data object with the filtered data directly in the data attribute
         return Data(data=filtered)
 
-    def remove_keys(self) -> Data:
+    def remove_keys(self) -> JSON:
         """Remove specified keys from the data dictionary, recursively."""
         self.validate_single_data("Remove Keys")
         data_dict = self.get_normalized_data()
@@ -313,7 +314,7 @@ class DataOperationsComponent(Component):
         filtered = DataOperationsComponent.remove_keys_recursive(data_dict, set(remove_keys_input))
         return Data(data=filtered)
 
-    def rename_keys(self) -> Data:
+    def rename_keys(self) -> JSON:
         """Rename keys in the data dictionary, recursively."""
         self.validate_single_data("Rename Keys")
         data_dict = self.get_normalized_data()
@@ -349,13 +350,13 @@ class DataOperationsComponent(Component):
                 return data
         return data
 
-    def evaluate_data(self) -> Data:
+    def evaluate_data(self) -> JSON:
         """Evaluate string values in the data dictionary."""
         self.validate_single_data("Literal Eval")
         logger.info("evaluating data")
         return Data(**self.recursive_eval(self.get_data_dict()))
 
-    def combine_data(self, *, evaluate: bool | None = None) -> Data:
+    def combine_data(self, *, evaluate: bool | None = None) -> JSON:
         """Combine multiple data objects into one."""
         logger.info("combining data")
         if not self.data_is_list():
@@ -416,7 +417,7 @@ class DataOperationsComponent(Component):
             return comparison_func(item_value, filter_value)
         return False
 
-    def multi_filter_data(self) -> Data:
+    def multi_filter_data(self) -> JSON:
         """Apply multiple filters to the data."""
         self.validate_single_data("Filter Values")
         data_filtered = self.get_normalized_data()
@@ -442,7 +443,7 @@ class DataOperationsComponent(Component):
 
         return Data(**data_filtered)
 
-    def append_update(self) -> Data:
+    def append_update(self) -> JSON:
         """Append or Update with new key-value pairs."""
         self.validate_single_data("Append or Update")
         data_filtered = self.get_normalized_data()
@@ -482,7 +483,7 @@ class DataOperationsComponent(Component):
 
         return build_config
 
-    def json_path(self) -> Data:
+    def json_path(self) -> JSON:
         try:
             if not self.data or not self.selected_key:
                 msg = "Missing input data or selected key."
@@ -498,7 +499,7 @@ class DataOperationsComponent(Component):
             self.log(self.status)
             return Data(data={"error": str(e)})
 
-    def as_data(self) -> Data:
+    def as_data(self) -> JSON:
         if not hasattr(self, "operations") or not self.operations:
             return Data(data={})
 

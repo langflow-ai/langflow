@@ -2,7 +2,7 @@ from langchain_text_splitters import CharacterTextSplitter
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import HandleInput, IntInput, MessageTextInput, Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.utils.util import unescape_string
 
 
@@ -17,7 +17,7 @@ class SplitTextComponent(Component):
             name="data_inputs",
             display_name="Data Inputs",
             info="The data to split.",
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
             is_list=True,
         ),
         IntInput(
@@ -47,7 +47,7 @@ class SplitTextComponent(Component):
     def _docs_to_data(self, docs):
         return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]
 
-    def split_text(self) -> list[Data]:
+    def split_text(self) -> list[JSON]:
         separator = unescape_string(self.separator)
 
         documents = [_input.to_lc_document() for _input in self.data_inputs if isinstance(_input, Data)]

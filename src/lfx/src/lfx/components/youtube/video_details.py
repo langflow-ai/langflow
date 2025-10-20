@@ -7,7 +7,7 @@ from googleapiclient.errors import HttpError
 
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, MessageTextInput, SecretStrInput
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.template.field.base import Output
 
 
@@ -116,7 +116,7 @@ class YouTubeVideoDetailsComponent(Component):
             return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
         return f"{minutes:02d}:{seconds:02d}"
 
-    def get_video_details(self) -> DataFrame:
+    def get_video_details(self) -> Table:
         """Retrieves detailed information about a YouTube video and returns as DataFrame."""
         try:
             with self.youtube_client() as youtube:

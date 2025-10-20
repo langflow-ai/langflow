@@ -15,7 +15,7 @@ from lfx.inputs.inputs import (
     SecretStrInput,
     StrInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.serialization import serialize
 
 
@@ -280,7 +280,7 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
                 args["filter"] = clean_filter
         return args
 
-    def search_documents(self, vector_store=None) -> list[Data]:
+    def search_documents(self, vector_store=None) -> list[JSON]:
         if not vector_store:
             vector_store = self.build_vector_store()
 

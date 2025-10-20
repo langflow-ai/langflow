@@ -5,7 +5,7 @@ from langchain_community.vectorstores import FAISS
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
 from lfx.io import BoolInput, HandleInput, IntInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class FaissVectorStoreComponent(LCVectorStoreComponent):
@@ -83,7 +83,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         faiss.save_local(str(path), self.index_name)
         return faiss
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         """Search for documents in the FAISS vector store."""
         path = self.get_persist_directory()
         index_path = path / f"{self.index_name}.faiss"

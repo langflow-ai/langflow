@@ -4,7 +4,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.custom.utils import get_function
 from lfx.io import CodeInput, Output
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 
@@ -60,7 +60,7 @@ class PythonFunctionComponent(Component):
             logger.debug("Error executing function", exc_info=True)
             return f"Error executing function: {e}"
 
-    def execute_function_data(self) -> list[Data]:
+    def execute_function_data(self) -> list[JSON]:
         results = self.execute_function()
         results = results if isinstance(results, list) else [results]
         return [(Data(text=x) if isinstance(x, str) else Data(**x)) for x in results]

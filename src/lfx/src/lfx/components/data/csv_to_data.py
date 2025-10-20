@@ -4,7 +4,7 @@ from pathlib import Path
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import FileInput, MessageTextInput, MultilineInput, Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class CSVToDataComponent(Component):
@@ -44,7 +44,7 @@ class CSVToDataComponent(Component):
         Output(name="data_list", display_name="Data List", method="load_csv_to_data"),
     ]
 
-    def load_csv_to_data(self) -> list[Data]:
+    def load_csv_to_data(self) -> list[JSON]:
         if sum(bool(field) for field in [self.csv_file, self.csv_path, self.csv_string]) != 1:
             msg = "Please provide exactly one of: CSV file, file path, or CSV string."
             raise ValueError(msg)

@@ -5,7 +5,7 @@ import httpx
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class OlivyaComponent(Component):
@@ -66,7 +66,7 @@ class OlivyaComponent(Component):
         Output(display_name="Output", name="output", method="build_output"),
     ]
 
-    async def build_output(self) -> Data:
+    async def build_output(self) -> JSON:
         try:
             payload = {
                 "variables": {

@@ -1,8 +1,8 @@
 from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data, retrieve_file_paths
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, IntInput, MessageTextInput, MultiselectInput
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.template.field.base import Output
 
 
@@ -71,7 +71,7 @@ class DirectoryComponent(Component):
         Output(display_name="Loaded Files", name="dataframe", method="as_dataframe"),
     ]
 
-    def load_directory(self) -> list[Data]:
+    def load_directory(self) -> list[JSON]:
         path = self.path
         types = self.types
         depth = self.depth
@@ -109,5 +109,5 @@ class DirectoryComponent(Component):
         self.status = valid_data
         return valid_data
 
-    def as_dataframe(self) -> DataFrame:
+    def as_dataframe(self) -> Table:
         return DataFrame(self.load_directory())

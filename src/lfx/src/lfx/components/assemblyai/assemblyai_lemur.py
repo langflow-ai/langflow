@@ -3,7 +3,7 @@ import assemblyai as aai
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, DropdownInput, FloatInput, IntInput, MultilineInput, Output, SecretStrInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class AssemblyAILeMUR(Component):
@@ -81,7 +81,7 @@ class AssemblyAILeMUR(Component):
         Output(display_name="LeMUR Response", name="lemur_response", method="run_lemur"),
     ]
 
-    def run_lemur(self) -> Data:
+    def run_lemur(self) -> JSON:
         """Use the LeMUR task endpoint to input the LLM prompt."""
         aai.settings.api_key = self.api_key
 

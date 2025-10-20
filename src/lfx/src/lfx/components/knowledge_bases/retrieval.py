@@ -13,7 +13,7 @@ from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.services.deps import get_settings_service, session_scope
 
 settings = get_settings_service().settings
@@ -170,7 +170,7 @@ class KnowledgeRetrievalComponent(Component):
         msg = f"Embedding provider '{provider}' is not supported for retrieval."
         raise NotImplementedError(msg)
 
-    async def retrieve_data(self) -> DataFrame:
+    async def retrieve_data(self) -> Table:
         """Retrieve data from the selected knowledge base by reading the Chroma collection.
 
         Returns:

@@ -1,7 +1,7 @@
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, Output
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class MergeDataComponent(Component):
@@ -11,7 +11,7 @@ class MergeDataComponent(Component):
     Missing keys are filled with empty strings to maintain consistency.
     """
 
-    display_name = "Merge Data"
+    display_name = "Merge JSON"
     description = (
         "Combines multiple Data objects into a unified list, ensuring all keys are present in each Data object."
     )
@@ -34,7 +34,7 @@ class MergeDataComponent(Component):
         ),
     ]
 
-    def merge_data(self) -> list[Data]:
+    def merge_data(self) -> list[JSON]:
         """Merges multiple Data objects into a single list of Data objects.
 
         Ensures that all keys from the input Data objects are present in each merged Data object.
@@ -45,7 +45,7 @@ class MergeDataComponent(Component):
         """
         logger.info("Initiating the data merging process.")
 
-        data_inputs: list[Data] = self.data_inputs
+        data_inputs: list[JSON] = self.data_inputs
         logger.debug(f"Received {len(data_inputs)} data input(s) for merging.")
 
         if not data_inputs:

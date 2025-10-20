@@ -10,8 +10,8 @@ from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DropdownInput, IntInput, MessageTextInput
 from lfx.io import Output
 from lfx.log.logger import logger
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 
 
 class YahooFinanceMethod(Enum):
@@ -77,10 +77,10 @@ to access financial data and market information from Yahoo! Finance."""
     ]
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
+        Output(display_name="Table", name="dataframe", method="fetch_content_dataframe"),
     ]
 
-    def run_model(self) -> DataFrame:
+    def run_model(self) -> Table:
         return self.fetch_content_dataframe()
 
     def _fetch_yfinance_data(self, ticker: yf.Ticker, method: YahooFinanceMethod, num_news: int | None) -> str:
@@ -98,7 +98,7 @@ to access financial data and market information from Yahoo! Finance."""
             self.status = error_message
             raise ToolException(error_message) from e
 
-    def fetch_content(self) -> list[Data]:
+    def fetch_content(self) -> list[JSON]:
         try:
             return self._yahoo_finance_tool(
                 self.symbol,
@@ -118,7 +118,7 @@ to access financial data and market information from Yahoo! Finance."""
         symbol: str,
         method: YahooFinanceMethod,
         num_news: int | None = 5,
-    ) -> list[Data]:
+    ) -> list[JSON]:
         ticker = yf.Ticker(symbol)
         result = self._fetch_yfinance_data(ticker, method, num_news)
 
@@ -132,6 +132,6 @@ to access financial data and market information from Yahoo! Finance."""
 
         return data_list
 
-    def fetch_content_dataframe(self) -> DataFrame:
+    def fetch_content_dataframe(self) -> Table:
         data = self.fetch_content()
         return DataFrame(data)

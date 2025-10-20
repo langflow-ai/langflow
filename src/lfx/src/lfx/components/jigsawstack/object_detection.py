@@ -1,6 +1,6 @@
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DropdownInput, MessageTextInput, Output, SecretStrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class JigsawStackObjectDetectionComponent(Component):
@@ -69,7 +69,7 @@ class JigsawStackObjectDetectionComponent(Component):
         Output(display_name="Object Detection results", name="object_detection_results", method="detect_objects"),
     ]
 
-    def detect_objects(self) -> Data:
+    def detect_objects(self) -> JSON:
         try:
             from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:

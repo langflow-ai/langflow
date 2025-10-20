@@ -10,7 +10,7 @@ from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vec
 from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
 from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput, TableInput
 from lfx.log import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 @vector_store_connection
@@ -82,7 +82,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 },
             ],
             value=[],
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
         ),
         StrInput(
             name="opensearch_url",
@@ -723,7 +723,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             for hit in hits
         ]
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         """Search documents and return results as Data objects.
 
         This is the main interface method that performs the search using the

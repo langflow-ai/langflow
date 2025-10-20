@@ -42,6 +42,7 @@ import {
   getConnectedSubgraph,
   getHandleId,
   getNodeId,
+  migrateTypeConverterNodes,
   scapedJSONStringfy,
   scapeJSONParse,
   unselectAllNodesEdges,
@@ -82,6 +83,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
   },
   autoSaveFlow: undefined,
+  updateNodeInternals: undefined,
   componentsToUpdate: [],
   setComponentsToUpdate: (change) => {
     const newChange =
@@ -212,6 +214,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   resetFlow: (flow) => {
     const nodes = flow?.data?.nodes ?? [];
     const edges = flow?.data?.edges ?? [];
+
+    // Run migration BEFORE detecting broken edges (pass edges to fix handles)
+    migrateTypeConverterNodes(nodes, edges);
+
     const brokenEdges = detectBrokenEdgesEdges(nodes, edges);
     if (brokenEdges.length > 0) {
       useAlertStore.getState().setErrorData({
@@ -277,7 +283,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setNodes: (change) => {
     const newChange =
       typeof change === "function" ? change(get().nodes) : change;
-    const newEdges = cleanEdges(newChange, get().edges);
+
+    // Run migration to fix TypeConverter outputs and edge handles
+    const currentEdges = get().edges;
+    migrateTypeConverterNodes(newChange, currentEdges);
+
+    const newEdges = cleanEdges(newChange, currentEdges);
+
     const { inputs, outputs } = getInputsAndOutputs(newChange);
     get().updateComponentsToUpdate(newChange);
     set({
@@ -315,10 +327,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       throw new Error("Node not found");
     }
 
-    const newChange =
-      typeof change === "function"
-        ? change(get().nodes.find((node) => node.id === id)!)
-        : change;
+    const oldNode = get().nodes.find((node) => node.id === id)!;
+
+    const newChange = typeof change === "function" ? change(oldNode) : change;
 
     const newNodes = get().nodes.map((node) => {
       if (node.id === id) {
@@ -334,18 +345,46 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     const newEdges = cleanEdges(newNodes, get().edges);
 
-    set((state) => {
-      if (callback) {
-        // Defer the callback execution to ensure it runs after state updates are fully applied.
-        queueMicrotask(callback);
-      }
-      return {
-        ...state,
-        nodes: newNodes,
-        edges: newEdges,
-      };
+    set({
+      nodes: newNodes,
+      edges: newEdges,
     });
+
     get().updateCurrentFlow({ nodes: newNodes, edges: newEdges });
+
+    // CRITICAL: Update node internals to refresh handle positions for ALL nodes
+    // This fixes edges disappearing after programmatic node updates
+    const updateInternals = () => {
+      const updateNodeInternalsFn = get().updateNodeInternals;
+
+      if (updateNodeInternalsFn) {
+        // Update the changed node
+        updateNodeInternalsFn(id);
+
+        // Also update all nodes connected to this node via edges
+        const connectedNodeIds = new Set<string>();
+        newEdges.forEach((edge) => {
+          if (edge.source === id) connectedNodeIds.add(edge.target);
+          if (edge.target === id) connectedNodeIds.add(edge.source);
+        });
+
+        connectedNodeIds.forEach((nodeId) => {
+          updateNodeInternalsFn(nodeId);
+        });
+      }
+    };
+
+    // Wait for ReactFlow to finish rendering before updating internals
+    // Using requestAnimationFrame ensures DOM has been updated
+    requestAnimationFrame(() => {
+      updateInternals();
+    });
+
+    if (callback) {
+      // Defer the callback execution to ensure it runs after state updates are fully applied.
+      queueMicrotask(callback);
+    }
+
     if (get().autoSaveFlow) {
       get().autoSaveFlow!();
     }
@@ -1022,7 +1061,18 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   currentFlow: undefined,
   setCurrentFlow: (flow) => {
+    // Run migration on the flow's nodes and edges before setting
+    if (flow?.data?.nodes) {
+      migrateTypeConverterNodes(flow.data.nodes, flow.data.edges);
+    }
+
     set({ currentFlow: flow });
+
+    // Immediately trigger nodes update if they exist to force re-render
+    const currentNodes = get().nodes;
+    if (currentNodes.length > 0) {
+      get().setNodes([...currentNodes]);
+    }
   },
   updateCurrentFlow: ({ nodes, edges }) => {
     set({

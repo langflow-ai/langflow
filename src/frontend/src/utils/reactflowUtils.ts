@@ -74,17 +74,130 @@ export function checkWebhookInput(nodes: Node[]) {
   return nodes.some((node) => node.data.type === "Webhook");
 }
 
+/**
+ * Migrate TypeConverter nodes to sync outputs with output_type value.
+ * This fixes the bug where loading a template shows "Message Output" even when output_type is "JSON".
+ */
+export function migrateTypeConverterNodes(
+  nodes: AllNodeType[],
+  edges?: EdgeType[],
+) {
+  // Track which nodes were migrated and their new output types
+  const migratedNodes = new Map<string, string[]>();
+
+  nodes.forEach((node) => {
+    // Only migrate TypeConverter components
+    if (node.data?.node?.display_name !== "Type Convert") {
+      return;
+    }
+
+    // Type guard: ensure this is a NodeDataType (not NoteDataType)
+    if (!("node" in node.data)) {
+      return;
+    }
+
+    const outputType = node.data.node?.template?.output_type?.value;
+    const currentOutputs = node.data.node?.outputs || [];
+
+    // Determine correct output based on output_type
+    let correctOutput;
+    let selectedOutput;
+    let outputTypes: string[];
+
+    if (outputType === "JSON" || outputType === "Data") {
+      outputTypes = ["JSON"];
+      correctOutput = {
+        types: outputTypes,
+        selected: "JSON",
+        name: "data_output",
+        display_name: "JSON Output",
+        method: "convert_to_data",
+        value: "__UNDEFINED__",
+        cache: true,
+      };
+      selectedOutput = "data_output";
+    } else if (outputType === "Table" || outputType === "DataFrame") {
+      outputTypes = ["Table"];
+      correctOutput = {
+        types: outputTypes,
+        selected: "Table",
+        name: "dataframe_output",
+        display_name: "Table Output",
+        method: "convert_to_dataframe",
+        value: "__UNDEFINED__",
+        cache: true,
+      };
+      selectedOutput = "dataframe_output";
+    } else {
+      // Default to Message
+      outputTypes = ["Message"];
+      correctOutput = {
+        types: outputTypes,
+        selected: "Message",
+        name: "message_output",
+        display_name: "Message Output",
+        method: "convert_to_message",
+        value: "__UNDEFINED__",
+        cache: true,
+      };
+      selectedOutput = "message_output";
+    }
+
+    // Check if migration is needed
+    const needsMigration =
+      currentOutputs.length !== 1 ||
+      currentOutputs[0]?.name !== correctOutput.name;
+
+    if (needsMigration) {
+      // Update outputs
+      node.data.node.outputs = [correctOutput];
+      (node.data as any).selected_output = selectedOutput;
+
+      // Track this migration for edge updates
+      migratedNodes.set(node.id, outputTypes);
+    }
+  });
+
+  // Update edges that connect to migrated nodes
+  if (edges && migratedNodes.size > 0) {
+    edges.forEach((edge) => {
+      // Check if source node was migrated
+      const sourceOutputTypes = migratedNodes.get(edge.source);
+      if (sourceOutputTypes && edge.sourceHandle) {
+        try {
+          const sourceHandle = scapeJSONParse(edge.sourceHandle);
+          // Update output_types in the handle
+          sourceHandle.output_types = sourceOutputTypes;
+          edge.sourceHandle = scapedJSONStringfy(sourceHandle);
+
+          // Also update in edge.data if it exists
+          if (edge.data?.sourceHandle) {
+            edge.data.sourceHandle.output_types = sourceOutputTypes;
+          }
+        } catch (e) {
+          // Handle parse error silently
+        }
+      }
+    });
+  }
+}
+
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
-  let newEdges: EdgeType[] = cloneDeep(
-    edges.map((edge) => ({ ...edge, selected: false, animated: false })),
-  );
+  const processedEdges: EdgeType[] = [];
+
   edges.forEach((edge) => {
+    // Start with a fresh copy of the edge
+    let processedEdge: EdgeType = {
+      ...edge,
+      selected: false,
+      animated: false,
+    };
+
     // check if the source and target node still exists
     const sourceNode = nodes.find((node) => node.id === edge.source);
     const targetNode = nodes.find((node) => node.id === edge.target);
     if (!sourceNode || !targetNode) {
-      newEdges = newEdges.filter((edg) => edg.id !== edge.id);
-      return;
+      return; // Skip this edge - node not found
     }
     // check if the source and target handle still exists
     const sourceHandle = edge.sourceHandle; //right
@@ -127,11 +240,23 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
       }
-      if (
-        scapedJSONStringfy(id) !== targetHandle ||
-        (targetNode.data.node?.tool_mode && isToolMode)
-      ) {
-        newEdges = newEdges.filter((e) => e.id !== edge.id);
+      const reconstructed = scapedJSONStringfy(id);
+      const isToolModeConflict = targetNode.data.node?.tool_mode && isToolMode;
+
+      if (reconstructed !== targetHandle) {
+        // CRITICAL FIX: Only update the data.targetHandle object, NOT the targetHandle string
+        // Changing targetHandle string breaks ReactFlow's ability to find the handle
+        processedEdge = {
+          ...processedEdge,
+          // DO NOT CHANGE: targetHandle: reconstructed,
+          data: {
+            ...processedEdge.data!,
+            targetHandle: id as targetHandleType,
+          },
+        };
+      } else if (isToolModeConflict) {
+        // Skip edge if there's a tool mode conflict
+        return;
       }
     }
     if (sourceHandle) {
@@ -150,7 +275,9 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
                   (output) => !output.group_outputs,
                 )?.length ?? 0) <= 1) &&
               output.name === name,
-          );
+          ) ??
+          // Fallback: if no output found and all have group_outputs, match by name
+          sourceNode.data.node!.outputs?.find((output) => output.name === name);
 
         if (output) {
           const outputTypes =
@@ -163,18 +290,40 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             dataType: sourceNode.data.type,
           };
 
-          if (scapedJSONStringfy(id) !== sourceHandle) {
-            newEdges = newEdges.filter((e) => e.id !== edge.id);
+          const reconstructed = scapedJSONStringfy(id);
+          if (reconstructed !== sourceHandle) {
+            // CRITICAL FIX: Only update the data.sourceHandle object, NOT the sourceHandle string
+            // Changing sourceHandle string breaks ReactFlow's ability to find the handle
+            processedEdge = {
+              ...processedEdge,
+              // DO NOT CHANGE: sourceHandle: reconstructed,
+              data: {
+                ...processedEdge.data!,
+                sourceHandle: id,
+              },
+            };
           }
         } else {
-          newEdges = newEdges.filter((e) => e.id !== edge.id);
+          return; // Skip this edge - output not found
         }
       }
     }
 
-    newEdges = filterHiddenFieldsEdges(edge, newEdges, targetNode);
+    // Check if edge should be filtered by hidden fields
+    const processedTargetHandle = processedEdge.data?.targetHandle;
+    if (processedTargetHandle) {
+      const fieldName = processedTargetHandle.fieldName;
+      const nodeTemplates = targetNode.data.node!.template;
+      if (nodeTemplates[fieldName]?.show === false) {
+        return; // Skip this edge - hidden field
+      }
+    }
+
+    // Add the processed edge to the result
+    processedEdges.push(processedEdge);
   });
-  return newEdges;
+
+  return processedEdges;
 }
 
 export function clearHandlesFromAdvancedFields(
@@ -216,24 +365,63 @@ const isAdvancedField = (data: APIClassType, fieldName: string): boolean => {
   return field && "advanced" in field && field.advanced === true;
 };
 
-export function filterHiddenFieldsEdges(
-  edge: EdgeType,
-  newEdges: EdgeType[],
-  targetNode: AllNodeType,
-) {
-  if (targetNode) {
-    const targetHandle = edge.data?.targetHandle;
-    if (!targetHandle) return newEdges;
-
-    const fieldName = targetHandle.fieldName;
-    const nodeTemplates = targetNode.data.node!.template;
-
-    // Only check the specific field the edge is connected to
-    if (nodeTemplates[fieldName]?.show === false) {
-      newEdges = newEdges.filter((e) => e.id !== edge.id);
-    }
+/**
+ * Check if two handles match, considering type migrations (Data→JSON, DataFrame→Table).
+ * This allows edges saved with old types to be compatible with new types.
+ */
+function handlesMatch(expectedHandle: string, actualHandle: string): boolean {
+  if (expectedHandle === actualHandle) {
+    return true;
   }
-  return newEdges;
+
+  // Parse both handles to compare their components
+  const expected = scapeJSONParse(expectedHandle);
+  const actual = scapeJSONParse(actualHandle);
+
+  // Check all properties except output_types
+  if (
+    expected.id !== actual.id ||
+    expected.name !== actual.name ||
+    expected.dataType !== actual.dataType
+  ) {
+    return false;
+  }
+
+  // Compare output_types with migration tolerance
+  const expectedTypes = expected.output_types || [];
+  const actualTypes = actual.output_types || [];
+
+  if (expectedTypes.length !== actualTypes.length) {
+    return false;
+  }
+
+  // Map of old types to new types for migration compatibility
+  const typeMigrations: Record<string, string> = {
+    Data: "JSON",
+    DataFrame: "Table",
+  };
+
+  // Check if types match exactly or via migration
+  for (let i = 0; i < expectedTypes.length; i++) {
+    const expectedType = expectedTypes[i];
+    const actualType = actualTypes[i];
+
+    if (expectedType === actualType) {
+      continue; // Exact match
+    }
+
+    // Check if actual type is the migrated version of expected type
+    if (
+      typeMigrations[actualType] === expectedType ||
+      typeMigrations[expectedType] === actualType
+    ) {
+      continue; // Migration match
+    }
+
+    return false; // No match
+  }
+
+  return true;
 }
 
 export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
@@ -301,16 +489,25 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
         targetNode.type === "genericNode"
       ) {
         const dataType = targetNode.data.type;
-        const outputTypes =
-          targetNode.data.node!.outputs?.find(
-            (output) => output.name === targetHandleObject.name,
-          )?.types ?? [];
+        const output = targetNode.data.node!.outputs?.find(
+          (output) => output.name === targetHandleObject.name,
+        );
+        const outputTypes = output?.types ?? [];
+
+        // For single-type outputs, use types directly
+        // For multi-type outputs, use selected if it exists
+        const finalTypes =
+          outputTypes.length === 1
+            ? outputTypes
+            : output?.selected
+              ? [output.selected]
+              : outputTypes;
 
         id = {
           dataType: dataType ?? "",
           name: targetHandleObject.name,
           id: targetNode.data.id,
-          output_types: outputTypes,
+          output_types: finalTypes,
         };
       } else {
         id = {
@@ -323,7 +520,17 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
           id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
       }
-      if (scapedJSONStringfy(id) !== targetHandle) {
+      const expectedHandle = scapedJSONStringfy(id);
+      const isMatch = handlesMatch(expectedHandle, targetHandle);
+
+      if (!isMatch) {
+        console.log("❌ Target handle mismatch:", {
+          edge: `${edge.source} -> ${edge.target}`,
+          expected: expectedHandle,
+          actual: targetHandle,
+          expectedParsed: scapeJSONParse(expectedHandle),
+          actualParsed: scapeJSONParse(targetHandle),
+        });
         newEdges = newEdges.filter((e) => e.id !== edge.id);
         BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
       }
@@ -336,8 +543,14 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
           (output) => output.name === name,
         );
         if (output) {
+          // For single-type outputs, use types directly
+          // For multi-type outputs, use selected if it exists, otherwise use types
           const outputTypes =
-            output!.types.length === 1 ? output!.types : [output!.selected!];
+            output!.types.length === 1
+              ? output!.types
+              : output!.selected
+                ? [output!.selected]
+                : output!.types;
 
           const id: sourceHandleType = {
             id: sourceNode.data.id,
@@ -345,7 +558,14 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
             output_types: outputTypes,
             dataType: sourceNode.data.type,
           };
-          if (scapedJSONStringfy(id) !== sourceHandle) {
+          if (!handlesMatch(scapedJSONStringfy(id), sourceHandle)) {
+            console.log("❌ Source handle mismatch:", {
+              edge: `${edge.source} -> ${edge.target}`,
+              expected: scapedJSONStringfy(id),
+              actual: sourceHandle,
+              expectedParsed: id,
+              actualParsed: parsedSourceHandle,
+            });
             newEdges = newEdges.filter((e) => e.id !== edge.id);
             BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
           }

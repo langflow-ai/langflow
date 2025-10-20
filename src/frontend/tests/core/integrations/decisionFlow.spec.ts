@@ -237,7 +237,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-data-left")
+      .getByTestId("handle-parsedata-shownode-json-left")
       .nth(0)
       .click();
     await page
@@ -245,7 +245,7 @@ test(
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-data-left")
+      .getByTestId("handle-parsedata-shownode-json-left")
       .nth(1)
       .click();
     await page

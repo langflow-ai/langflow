@@ -8,7 +8,7 @@ from google.oauth2.service_account import Credentials
 
 from lfx.custom import Component
 from lfx.io import BoolInput, FileInput, MessageTextInput, Output
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 
 
 class BigQueryExecutorComponent(Component):
@@ -98,7 +98,7 @@ class BigQueryExecutorComponent(Component):
         # This regex will remove backticks that are not part of a valid identifier
         return re.sub(r"`(?![a-zA-Z0-9_])|(?<![a-zA-Z0-9_])`", "", query)
 
-    def execute_sql(self) -> DataFrame:
+    def execute_sql(self) -> Table:
         try:
             # First try to read the file
             try:

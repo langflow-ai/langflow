@@ -1,7 +1,7 @@
 # from lfx.field_typing import Data
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class CustomComponent(Component):
@@ -25,7 +25,7 @@ class CustomComponent(Component):
         Output(display_name="Output", name="output", method="build_output"),
     ]
 
-    def build_output(self) -> Data:
+    def build_output(self) -> JSON:
         data = Data(value=self.input_value)
         self.status = data
         return data

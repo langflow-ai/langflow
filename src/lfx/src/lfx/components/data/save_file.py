@@ -11,6 +11,8 @@ from lfx.custom import Component
 from lfx.inputs import SortableListInput
 from lfx.io import DropdownInput, HandleInput, SecretStrInput, StrInput
 from lfx.schema import Data, DataFrame, Message
+from lfx.schema.data import JSON
+from lfx.schema.dataframe import Table
 from lfx.services.deps import get_settings_service, get_storage_service, session_scope
 from lfx.template.field.base import Output
 
@@ -63,7 +65,7 @@ class SaveToFileComponent(Component):
             display_name="File Content",
             info="The input to save.",
             dynamic=True,
-            input_types=["Data", "DataFrame", "Message"],
+            input_types=["Data", "JSON", "DataFrame", "Table", "Message"],
             required=True,
         ),
         StrInput(
@@ -300,7 +302,7 @@ class SaveToFileComponent(Component):
                     settings_service=get_settings_service(),
                 )
 
-    def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> str:
+    def _save_dataframe(self, dataframe: Table, path: Path, fmt: str) -> str:
         """Save a DataFrame to the specified file format."""
         if fmt == "csv":
             dataframe.to_csv(path, index=False)
@@ -315,7 +317,7 @@ class SaveToFileComponent(Component):
             raise ValueError(msg)
         return f"DataFrame saved successfully as '{path}'"
 
-    def _save_data(self, data: Data, path: Path, fmt: str) -> str:
+    def _save_data(self, data: JSON, path: Path, fmt: str) -> str:
         """Save a Data object to the specified file format."""
         if fmt == "csv":
             pd.DataFrame(data.data).to_csv(path, index=False)

@@ -7,7 +7,7 @@ import toml  # type: ignore[import-untyped]
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output
 from lfx.log.logger import logger
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 
 if TYPE_CHECKING:
     from langchain_core.runnables import Runnable
@@ -35,7 +35,7 @@ class BatchRunComponent(Component):
         ),
         DataFrameInput(
             name="df",
-            display_name="DataFrame",
+            display_name="Table",
             info="The DataFrame whose column (specified by 'column_name') we'll treat as text messages.",
             required=True,
         ),
@@ -73,6 +73,7 @@ class BatchRunComponent(Component):
             name="batch_results",
             method="run_batch",
             info="A DataFrame with all original columns plus the model's response column.",
+            types=["Table"],
         ),
     ]
 
@@ -110,11 +111,10 @@ class BatchRunComponent(Component):
                 "processing_status": "failed",
             }
 
-    async def run_batch(self) -> DataFrame:
+    async def run_batch(self) -> Table:
         """Process each row in df[column_name] with the language model asynchronously.
 
-        Returns:
-            DataFrame: A new DataFrame containing:
+        Returns: Table: A new DataFrame containing:
                 - All original columns
                 - The model's response column (customizable name)
                 - 'batch_index' column for processing order
@@ -126,7 +126,7 @@ class BatchRunComponent(Component):
         """
         model: Runnable = self.model
         system_msg = self.system_message or ""
-        df: DataFrame = self.df
+        df: Table = self.df
         col_name = self.column_name or ""
 
         # Validate inputs first

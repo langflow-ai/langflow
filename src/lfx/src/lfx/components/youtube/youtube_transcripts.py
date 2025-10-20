@@ -5,8 +5,8 @@ from langchain_community.document_loaders.youtube import TranscriptFormat
 
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DropdownInput, IntInput, MultilineInput
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.schema.message import Message
 from lfx.template.field.base import Output
 
@@ -58,7 +58,7 @@ class YouTubeTranscriptsComponent(Component):
         )
         return loader.load()
 
-    def get_dataframe_output(self) -> DataFrame:
+    def get_dataframe_output(self) -> Table:
         """Provides transcript output as a DataFrame with timestamp and text columns."""
         try:
             transcripts = self._load_transcripts(as_chunks=True)
@@ -88,7 +88,7 @@ class YouTubeTranscriptsComponent(Component):
             error_msg = f"Failed to get YouTube transcripts: {exc!s}"
             return Message(text=error_msg)
 
-    def get_data_output(self) -> Data:
+    def get_data_output(self) -> JSON:
         """Creates a structured data object with transcript and metadata.
 
         Returns a Data object containing transcript text, video URL, and any error

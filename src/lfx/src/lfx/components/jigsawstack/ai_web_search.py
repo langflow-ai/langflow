@@ -1,6 +1,6 @@
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DropdownInput, Output, QueryInput, SecretStrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.message import Message
 
 
@@ -53,7 +53,7 @@ class JigsawStackAIWebSearchComponent(Component):
         Output(display_name="Content Text", name="content_text", method="get_content_text"),
     ]
 
-    def search(self) -> Data:
+    def search(self) -> JSON:
         try:
             from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:

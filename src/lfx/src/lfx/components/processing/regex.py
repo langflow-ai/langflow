@@ -2,7 +2,7 @@ import re
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.message import Message
 
 
@@ -31,11 +31,11 @@ class RegexExtractorComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="extract_matches"),
+        Output(display_name="JSON", name="data", method="extract_matches"),
         Output(display_name="Message", name="text", method="get_matches_text"),
     ]
 
-    def extract_matches(self) -> list[Data]:
+    def extract_matches(self) -> list[JSON]:
         if not self.pattern or not self.input_text:
             self.status = []
             return []

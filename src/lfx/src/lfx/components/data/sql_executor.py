@@ -5,7 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from lfx.io import BoolInput, MessageTextInput, MultilineInput, Output
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.schema.message import Message
 from lfx.services.cache.utils import CacheMiss
 
@@ -94,7 +94,7 @@ class SQLComponent(ComponentWithCache):
             self.log(msg)
             raise ValueError(msg) from e
 
-    def run_sql_query(self) -> DataFrame:
+    def run_sql_query(self) -> Table:
         result = self.__execute_query()
         df_result = DataFrame(result)
         self.status = df_result

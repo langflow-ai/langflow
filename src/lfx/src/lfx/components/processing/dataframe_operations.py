@@ -4,11 +4,11 @@ from lfx.custom.custom_component.component import Component
 from lfx.inputs import SortableListInput
 from lfx.io import BoolInput, DataFrameInput, DropdownInput, IntInput, MessageTextInput, Output, StrInput
 from lfx.log.logger import logger
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 
 
 class DataFrameOperationsComponent(Component):
-    display_name = "DataFrame Operations"
+    display_name = "Table Operations"
     description = "Perform various operations on a DataFrame."
     documentation: str = "https://docs.langflow.org/components-processing#dataframe-operations"
     icon = "table"
@@ -30,7 +30,7 @@ class DataFrameOperationsComponent(Component):
     inputs = [
         DataFrameInput(
             name="df",
-            display_name="DataFrame",
+            display_name="Table",
             info="The input DataFrame to operate on.",
             required=True,
         ),
@@ -142,7 +142,7 @@ class DataFrameOperationsComponent(Component):
 
     outputs = [
         Output(
-            display_name="DataFrame",
+            display_name="Table",
             name="output",
             method="perform_operation",
             info="The resulting DataFrame after the operation.",
@@ -204,7 +204,7 @@ class DataFrameOperationsComponent(Component):
 
         return build_config
 
-    def perform_operation(self) -> DataFrame:
+    def perform_operation(self) -> Table:
         df_copy = self.df.copy()
 
         # Handle SortableListInput format for operation
@@ -242,7 +242,7 @@ class DataFrameOperationsComponent(Component):
         logger.error(msg)
         raise ValueError(msg)
 
-    def filter_rows_by_value(self, df: DataFrame) -> DataFrame:
+    def filter_rows_by_value(self, df: Table) -> Table:
         column = df[self.column_name]
         filter_value = self.filter_value
 
@@ -282,32 +282,32 @@ class DataFrameOperationsComponent(Component):
 
         return DataFrame(df[mask])
 
-    def sort_by_column(self, df: DataFrame) -> DataFrame:
+    def sort_by_column(self, df: Table) -> Table:
         return DataFrame(df.sort_values(by=self.column_name, ascending=self.ascending))
 
-    def drop_column(self, df: DataFrame) -> DataFrame:
+    def drop_column(self, df: Table) -> Table:
         return DataFrame(df.drop(columns=[self.column_name]))
 
-    def rename_column(self, df: DataFrame) -> DataFrame:
+    def rename_column(self, df: Table) -> Table:
         return DataFrame(df.rename(columns={self.column_name: self.new_column_name}))
 
-    def add_column(self, df: DataFrame) -> DataFrame:
+    def add_column(self, df: Table) -> Table:
         df[self.new_column_name] = [self.new_column_value] * len(df)
         return DataFrame(df)
 
-    def select_columns(self, df: DataFrame) -> DataFrame:
+    def select_columns(self, df: Table) -> Table:
         columns = [col.strip() for col in self.columns_to_select]
         return DataFrame(df[columns])
 
-    def head(self, df: DataFrame) -> DataFrame:
+    def head(self, df: Table) -> Table:
         return DataFrame(df.head(self.num_rows))
 
-    def tail(self, df: DataFrame) -> DataFrame:
+    def tail(self, df: Table) -> Table:
         return DataFrame(df.tail(self.num_rows))
 
-    def replace_values(self, df: DataFrame) -> DataFrame:
+    def replace_values(self, df: Table) -> Table:
         df[self.column_name] = df[self.column_name].replace(self.replace_value, self.replacement_value)
         return DataFrame(df)
 
-    def drop_duplicates(self, df: DataFrame) -> DataFrame:
+    def drop_duplicates(self, df: Table) -> Table:
         return DataFrame(df.drop_duplicates(subset=self.column_name))

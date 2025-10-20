@@ -9,7 +9,7 @@ from lfx.io import (
     SecretStrInput,
     StrInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class UpstashVectorStoreComponent(LCVectorStoreComponent):
@@ -108,7 +108,7 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
 
         return upstash_vs
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():

@@ -2,7 +2,7 @@ from typing import Any
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, DropdownInput, MessageTextInput, Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON
 
 
 class DataFilterComponent(Component):
@@ -18,20 +18,20 @@ class DataFilterComponent(Component):
     replacement = ["processing.DataOperations"]
 
     inputs = [
-        DataInput(name="input_data", display_name="Input Data", info="The list of data items to filter.", is_list=True),
+        DataInput(name="input_data", display_name="Input JSON", info="The list of data items to filter.", is_list=True),
         MessageTextInput(
             name="filter_key",
             display_name="Filter Key",
             info="The key to filter on (e.g., 'route').",
             value="route",
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
         ),
         MessageTextInput(
             name="filter_value",
             display_name="Filter Value",
             info="The value to filter by (e.g., 'CMIP').",
             value="CMIP",
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
         ),
         DropdownInput(
             name="operator",
@@ -44,7 +44,7 @@ class DataFilterComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Filtered Data", name="filtered_data", method="filter_data"),
+        Output(display_name="Filtered JSON", name="filtered_data", method="filter_data"),
     ]
 
     def compare_values(self, item_value: Any, filter_value: str, operator: str) -> bool:
@@ -60,9 +60,9 @@ class DataFilterComponent(Component):
             return str(item_value).endswith(filter_value)
         return False
 
-    def filter_data(self) -> list[Data]:
+    def filter_data(self) -> list[JSON]:
         # Extract inputs
-        input_data: list[Data] = self.input_data
+        input_data: list[JSON] = self.input_data
         filter_key: str = self.filter_key.text
         filter_value: str = self.filter_value.text
         operator: str = self.operator

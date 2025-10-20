@@ -2,7 +2,7 @@ from langchain_google_community import GoogleSearchAPIWrapper
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import IntInput, MultilineInput, Output, SecretStrInput
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 
 
 class GoogleSearchAPICore(Component):
@@ -43,7 +43,7 @@ class GoogleSearchAPICore(Component):
         ),
     ]
 
-    def search_google(self) -> DataFrame:
+    def search_google(self) -> Table:
         """Search Google using the provided query."""
         if not self.google_api_key:
             return DataFrame([{"error": "Invalid Google API Key"}])

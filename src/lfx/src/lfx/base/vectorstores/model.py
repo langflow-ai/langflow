@@ -7,8 +7,8 @@ from lfx.field_typing import Text, VectorStore
 from lfx.helpers.data import docs_to_data
 from lfx.inputs.inputs import BoolInput
 from lfx.io import HandleInput, Output, QueryInput
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 
 if TYPE_CHECKING:
     from langchain_core.documents import Document
@@ -60,7 +60,7 @@ class LCVectorStoreComponent(Component):
         HandleInput(
             name="ingest_data",
             display_name="Ingest Data",
-            input_types=["Data", "DataFrame"],
+            input_types=["Data", "DataFrame", "Table"],
             is_list=True,
         ),
         QueryInput(
@@ -129,7 +129,7 @@ class LCVectorStoreComponent(Component):
         vector_store: VectorStore,
         k=10,
         **kwargs,
-    ) -> list[Data]:
+    ) -> list[JSON]:
         """Search for data in the vector store based on the input value and search type.
 
         Args:
@@ -155,7 +155,7 @@ class LCVectorStoreComponent(Component):
         self.status = data
         return data
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         """Search for documents in the vector store."""
         if self._cached_vector_store is not None:
             vector_store = self._cached_vector_store
@@ -178,7 +178,7 @@ class LCVectorStoreComponent(Component):
         self.status = search_results
         return search_results
 
-    def as_dataframe(self) -> DataFrame:
+    def as_dataframe(self) -> Table:
         return DataFrame(self.search_documents())
 
     def get_retriever_kwargs(self):

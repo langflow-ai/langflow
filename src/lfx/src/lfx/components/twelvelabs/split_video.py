@@ -8,6 +8,7 @@ from typing import Any
 from lfx.custom import Component
 from lfx.inputs import BoolInput, DropdownInput, HandleInput, IntInput
 from lfx.schema import Data
+from lfx.schema.data import JSON
 from lfx.template import Output
 
 
@@ -26,7 +27,7 @@ class SplitVideoComponent(Component):
             display_name="Video Data",
             info="Input video data from VideoFile component",
             required=True,
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
         ),
         IntInput(
             name="clip_duration",
@@ -62,7 +63,7 @@ class SplitVideoComponent(Component):
             name="clips",
             display_name="Video Clips",
             method="process",
-            output_types=["Data"],
+            output_types=["Data", "JSON"],
         ),
     ]
 
@@ -119,7 +120,7 @@ class SplitVideoComponent(Component):
 
         return str(output_dir)
 
-    def process_video(self, video_path: str, clip_duration: int, *, include_original: bool) -> list[Data]:
+    def process_video(self, video_path: str, clip_duration: int, *, include_original: bool) -> list[JSON]:
         """Process video and split it into clips using FFmpeg."""
         try:
             # Get video duration
@@ -140,7 +141,7 @@ class SplitVideoComponent(Component):
             original_name = path_obj.stem
 
             # List to store all video paths (including original if requested)
-            video_paths: list[Data] = []
+            video_paths: list[JSON] = []
 
             # Add original video if requested
             if include_original:
@@ -265,7 +266,7 @@ class SplitVideoComponent(Component):
         else:
             return video_paths
 
-    def process(self) -> list[Data]:
+    def process(self) -> list[JSON]:
         """Process the input video and return a list of Data objects containing the clips."""
         try:
             # Get the input video path from the previous component

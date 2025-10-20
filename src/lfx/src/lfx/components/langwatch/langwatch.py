@@ -18,7 +18,7 @@ from lfx.io import (
     SecretStrInput,
 )
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.dotdict import dotdict
 
 
@@ -211,7 +211,7 @@ class LangWatchComponent(Component):
             return {}
         return dynamic_inputs
 
-    async def evaluate(self) -> Data:
+    async def evaluate(self) -> JSON:
         if not self.api_key:
             return Data(data={"error": "API key is required"})
 

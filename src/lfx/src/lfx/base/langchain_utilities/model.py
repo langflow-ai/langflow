@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing import Tool
 from lfx.io import Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.dataframe import DataFrame
 
 
@@ -27,7 +27,7 @@ class LCToolComponent(Component):
                 raise ValueError(msg)
 
     @abstractmethod
-    def run_model(self) -> Data | list[Data] | DataFrame:
+    def run_model(self) -> JSON | list[Data] | DataFrame:
         """Run model and return the output."""
 
     @abstractmethod

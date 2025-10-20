@@ -5,7 +5,7 @@ from collections.abc import Callable
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import MessageTextInput
 from lfx.io import Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class CalculatorComponent(Component):
@@ -33,7 +33,7 @@ class CalculatorComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="result", type_=Data, method="evaluate_expression"),
+        Output(display_name="JSON", name="result", type_=Data, method="evaluate_expression"),
     ]
 
     def _eval_expr(self, node: ast.AST) -> float:
@@ -62,7 +62,7 @@ class CalculatorComponent(Component):
         error_msg = f"Unsupported operation or expression type: {type(node).__name__}"
         raise TypeError(error_msg)
 
-    def evaluate_expression(self) -> Data:
+    def evaluate_expression(self) -> JSON:
         """Evaluate the mathematical expression and return the result."""
         try:
             tree = ast.parse(self.expression, mode="eval")

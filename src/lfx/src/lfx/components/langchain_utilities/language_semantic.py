@@ -10,7 +10,7 @@ from lfx.io import (
     MessageTextInput,
     Output,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class SemanticTextSplitterComponent(LCTextSplitterComponent):
@@ -28,7 +28,7 @@ class SemanticTextSplitterComponent(LCTextSplitterComponent):
             name="data_inputs",
             display_name="Data Inputs",
             info="List of Data objects containing text and metadata to split.",
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
             is_list=True,
             required=True,
         ),
@@ -82,11 +82,11 @@ class SemanticTextSplitterComponent(LCTextSplitterComponent):
         Output(display_name="Chunks", name="chunks", method="split_text"),
     ]
 
-    def _docs_to_data(self, docs: list[Document]) -> list[Data]:
+    def _docs_to_data(self, docs: list[Document]) -> list[JSON]:
         """Convert a list of Document objects to Data objects."""
         return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]
 
-    def split_text(self) -> list[Data]:
+    def split_text(self) -> list[JSON]:
         """Split the input data into semantically meaningful chunks."""
         try:
             embeddings = getattr(self, "embeddings", None)

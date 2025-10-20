@@ -11,8 +11,8 @@ from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import IntInput, MultilineInput, NestedDictInput, SecretStrInput, StrInput
 from lfx.io import Output
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 
 
 class GleanSearchAPISchema(BaseModel):
@@ -105,7 +105,7 @@ class GleanSearchAPIComponent(LCToolComponent):
     icon: str = "Glean"
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
+        Output(display_name="Table", name="dataframe", method="fetch_content_dataframe"),
     ]
 
     inputs = [
@@ -133,10 +133,10 @@ class GleanSearchAPIComponent(LCToolComponent):
 
         return tool
 
-    def run_model(self) -> DataFrame:
+    def run_model(self) -> Table:
         return self.fetch_content_dataframe()
 
-    def fetch_content(self) -> list[Data]:
+    def fetch_content(self) -> list[JSON]:
         tool = self.build_tool()
 
         results = tool.run(
@@ -163,11 +163,10 @@ class GleanSearchAPIComponent(LCToolComponent):
             glean_access_token=glean_access_token,
         )
 
-    def fetch_content_dataframe(self) -> DataFrame:
+    def fetch_content_dataframe(self) -> Table:
         """Convert the Glean search results to a DataFrame.
 
-        Returns:
-            DataFrame: A DataFrame containing the search results.
+        Returns: Table: A DataFrame containing the search results.
         """
         data = self.fetch_content()
         return DataFrame(data)

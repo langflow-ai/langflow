@@ -5,7 +5,7 @@ from json_repair import repair_json
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import FileInput, MessageTextInput, MultilineInput, Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class JSONToDataComponent(Component):
@@ -38,10 +38,10 @@ class JSONToDataComponent(Component):
     ]
 
     outputs = [
-        Output(name="data", display_name="Data", method="convert_json_to_data"),
+        Output(name="data", display_name="JSON", method="convert_json_to_data"),
     ]
 
-    def convert_json_to_data(self) -> Data | list[Data]:
+    def convert_json_to_data(self) -> JSON | list[Data]:
         if sum(bool(field) for field in [self.json_file, self.json_path, self.json_string]) != 1:
             msg = "Please provide exactly one of: JSON file, file path, or JSON string."
             self.status = msg

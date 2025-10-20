@@ -3,7 +3,7 @@ import assemblyai as aai
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class AssemblyAIListTranscripts(Component):
@@ -51,7 +51,7 @@ class AssemblyAIListTranscripts(Component):
         Output(display_name="Transcript List", name="transcript_list", method="list_transcripts"),
     ]
 
-    def list_transcripts(self) -> list[Data]:
+    def list_transcripts(self) -> list[JSON]:
         aai.settings.api_key = self.api_key
 
         params = aai.ListTranscriptParameters()

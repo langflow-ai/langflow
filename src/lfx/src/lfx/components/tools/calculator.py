@@ -9,7 +9,7 @@ from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import MessageTextInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class CalculatorToolComponent(LCToolComponent):
@@ -31,7 +31,7 @@ class CalculatorToolComponent(LCToolComponent):
     class CalculatorToolSchema(BaseModel):
         expression: str = Field(..., description="The arithmetic expression to evaluate.")
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         return self._evaluate_expression(self.expression)
 
     def build_tool(self) -> Tool:
@@ -66,13 +66,13 @@ class CalculatorToolComponent(LCToolComponent):
         msg = f"Unsupported operation or expression type: {type(node).__name__}"
         raise TypeError(msg)
 
-    def _eval_expr_with_error(self, expression: str) -> list[Data]:
+    def _eval_expr_with_error(self, expression: str) -> list[JSON]:
         try:
             return self._evaluate_expression(expression)
         except Exception as e:
             raise ToolException(str(e)) from e
 
-    def _evaluate_expression(self, expression: str) -> list[Data]:
+    def _evaluate_expression(self, expression: str) -> list[JSON]:
         try:
             # Parse the expression and evaluate it
             tree = ast.parse(expression, mode="eval")

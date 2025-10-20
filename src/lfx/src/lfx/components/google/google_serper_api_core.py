@@ -2,7 +2,7 @@ from langchain_community.utilities.google_serper import GoogleSerperAPIWrapper
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import IntInput, MultilineInput, Output, SecretStrInput
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.schema.message import Message
 
 
@@ -39,7 +39,7 @@ class GoogleSerperAPICore(Component):
         ),
     ]
 
-    def search_serper(self) -> DataFrame:
+    def search_serper(self) -> Table:
         try:
             wrapper = self._build_wrapper()
             results = wrapper.results(query=self.input_value)

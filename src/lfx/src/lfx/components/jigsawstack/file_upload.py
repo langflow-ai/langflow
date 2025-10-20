@@ -2,7 +2,7 @@ from pathlib import Path
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, FileInput, Output, SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class JigsawStackFileUploadComponent(Component):
@@ -58,7 +58,7 @@ class JigsawStackFileUploadComponent(Component):
         Output(display_name="File Store Result", name="file_upload_result", method="upload_file"),
     ]
 
-    def upload_file(self) -> Data:
+    def upload_file(self) -> JSON:
         try:
             from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:
