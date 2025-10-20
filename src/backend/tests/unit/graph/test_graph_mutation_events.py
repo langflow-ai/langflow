@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
+
+if TYPE_CHECKING:
+    from lfx.debug.events import GraphMutationEvent
 
 
 @pytest.mark.asyncio
 async def test_queue_operations_emit_events():
     """Test queue operations emit before/after events."""
-    from lfx.debug.events import GraphMutationEvent
     from lfx.graph.graph.base import Graph
 
     events = []

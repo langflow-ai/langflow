@@ -178,6 +178,22 @@ class Graph:
     def session_id(self, value: str):
         self._session_id = value
 
+    def get_run_queue(self) -> list[str]:
+        """Get current run queue (for debugging/observation).
+
+        Returns:
+            List of vertex IDs in the queue
+        """
+        return list(self._run_queue) if hasattr(self, "_run_queue") else []
+
+    def get_context_dict(self) -> dict[str, Any]:
+        """Get context as plain dict (for debugging/observation).
+
+        Returns:
+            Context dictionary
+        """
+        return dict(self.context) if hasattr(self, "context") else {}
+
     # ===== Graph Mutation Observer System =====
 
     def register_observer(self, observer: Any) -> None:

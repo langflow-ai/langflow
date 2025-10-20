@@ -150,7 +150,7 @@ class ExecutionTracer:
             return
 
         # This is a loop! Capture its state
-        loop_id = component._id if hasattr(component, "_id") else vertex_id
+        loop_id = component._id if hasattr(component, "_id") else vertex_id  # noqa: SLF001
 
         iteration_data = {
             "step": len(self.trace.vertices_executed),
@@ -178,8 +178,8 @@ class ExecutionTracer:
             before_run_manager = self.graph.run_manager.to_dict()
             self.trace.record_run_manager_snapshot(before_run_manager)
 
-        if hasattr(self.graph, "_run_queue"):
-            before_queue = list(self.graph._run_queue)
+        if hasattr(self.graph, "get_run_queue"):
+            before_queue = self.graph.get_run_queue()
             self.trace.record_run_queue_snapshot(before_queue)
 
         # Call original method
@@ -205,8 +205,8 @@ class ExecutionTracer:
                 if run_manager_delta:
                     delta["run_manager"] = run_manager_delta
 
-        if hasattr(self.graph, "_run_queue"):
-            after_queue = list(self.graph._run_queue)
+        if hasattr(self.graph, "get_run_queue"):
+            after_queue = self.graph.get_run_queue()
             self.trace.record_run_queue_snapshot(after_queue)
 
             if before_queue is not None:

@@ -281,11 +281,11 @@ class GraphRecording:
         if hasattr(graph, "_run_queue") and snapshot.queue_state_after:
             from collections import deque
 
-            graph._run_queue = deque(snapshot.queue_state_after)
+            graph._run_queue = deque(snapshot.queue_state_after)  # noqa: SLF001
 
         # Restore context
         if hasattr(graph, "_context") and snapshot.context:
-            graph._context.update(snapshot.context)
+            graph._context.update(snapshot.context)  # noqa: SLF001
 
     def _create_mock_build_vertex(self, cached_results: dict[str, Any], original_build: Any):
         """Create a mocked build_vertex that returns cached results for upstream components.
@@ -399,7 +399,7 @@ class GraphRecording:
 
         try:
             # Execute via astep for step-by-step control
-            while steps_executed < max_steps and graph._run_queue:
+            while steps_executed < max_steps and graph.get_run_queue():
                 result = await graph.astep(user_id=graph.user_id)
 
                 if result and hasattr(result, "vertex"):
@@ -486,7 +486,7 @@ async def record_graph(
 
                 # Get state AFTER this component executed
                 graph_state_after = graph.run_manager.to_dict() if hasattr(graph, "run_manager") else {}
-                queue_state_after = list(graph._run_queue) if hasattr(graph, "_run_queue") else []
+                queue_state_after = graph.get_run_queue() if hasattr(graph, "get_run_queue") else []
                 context = dict(graph.context) if hasattr(graph, "context") else {}
 
                 # For the "before" state, use the "after" state from previous snapshot

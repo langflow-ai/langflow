@@ -270,10 +270,10 @@ async def _trace_arun(graph_data: dict, flow_name: str) -> GraphTrace:
     """Trace via arun path."""
     from uuid import uuid4
 
+    from langflow.schema.schema import INPUT_FIELD_NAME
+
     from lfx.graph.graph.base import Graph
     from lfx.schema.schema import InputValueRequest
-
-    from langflow.schema.schema import INPUT_FIELD_NAME
 
     from .trace_data import ExecutionTrace, ExecutionTracer
 
