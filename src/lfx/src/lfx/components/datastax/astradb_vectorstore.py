@@ -211,7 +211,6 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
 
         return build_config
 
-
     def _detect_hybrid_capabilities(self) -> dict:
         """Detect available hybrid search and reranking capabilities."""
         environment = self.get_environment(self.environment)
