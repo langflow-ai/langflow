@@ -188,8 +188,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
 
         # Configure reranker visibility and state
         hybrid_enabled = (
-            collection_options["rerank_enabled"]
-            and build_config["search_method"]["value"] == "Hybrid Search"
+            collection_options["rerank_enabled"] and build_config["search_method"]["value"] == "Hybrid Search"
         )
 
         build_config["reranker"]["show"] = hybrid_enabled
@@ -221,9 +220,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         try:
             providers = db_admin.find_reranking_providers()
             reranker_models = [
-                model.name
-                for provider_data in providers.reranking_providers.values()
-                for model in provider_data.models
+                model.name for provider_data in providers.reranking_providers.values() for model in provider_data.models
             ]
             reranker_metadata = [
                 {"icon": self.get_provider_icon(provider_name=model.name.split("/")[0])}
