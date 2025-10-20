@@ -1794,7 +1794,7 @@
                   },
                   {
                     "name": "google",
-                    "version": "0.8.5"
+                    "version": "1.70.0"
                   },
                   {
                     "name": "googleapiclient",
