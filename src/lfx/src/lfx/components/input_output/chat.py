@@ -60,6 +60,13 @@ class ChatInput(ChatComponent):
             info="The session ID of the chat. If empty, the current session ID parameter will be used.",
             advanced=True,
         ),
+        MessageTextInput(
+            name="context_id",
+            display_name="Context ID",
+            info="The context ID of the chat. Adds an extra layer to the local memory.",
+            value="",
+            advanced=True,
+        ),
         FileInput(
             name="files",
             display_name="Files",
@@ -87,6 +94,7 @@ class ChatInput(ChatComponent):
             sender=self.sender,
             sender_name=self.sender_name,
             session_id=self.session_id,
+            context_id=self.context_id,
             files=files,
         )
         if self.session_id and isinstance(message, Message) and self.should_store_message:
