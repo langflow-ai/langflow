@@ -81,14 +81,24 @@ class LoopComponent(Component):
             self.aggregated_output()
             self.update_ctx({f"{self._id}_index": current_index + 1})
 
-        # Now we need to update the dependencies for the next run
+        # Update dependencies - call sync version for now
+        # TODO: Make this async when component output methods support async
         self.update_dependency()
+
         return current_item
 
     def update_dependency(self):
+        """Update loop dependencies using centralized graph API (sync).
+
+        This ensures run_predecessors and run_map stay synchronized.
+        Uses the fast path (no events) since called from sync context.
+        """
         item_dependency_id = self.get_incoming_edge_by_target_param("item")
-        if item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:
+        if item_dependency_id and item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:
+            # Call the fast path directly (no events since sync)
             self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)
+            if self._id not in self.graph.run_manager.run_map[item_dependency_id]:
+                self.graph.run_manager.run_map[item_dependency_id].append(self._id)
 
     def done_output(self) -> DataFrame:
         """Trigger the done output when iteration is complete."""

@@ -13,7 +13,7 @@ import pytest
 @pytest.mark.asyncio
 async def test_record_graph_creates_snapshots():
     """Test that recording captures all component executions."""
-    from langflow.debug.recorder import record_graph
+    from lfx.debug.recorder import record_graph
 
     recording = await record_graph("src/backend/tests/data/LoopTest.json")
 
@@ -40,7 +40,7 @@ async def test_record_graph_creates_snapshots():
 @pytest.mark.asyncio
 async def test_timeline_navigation():
     """Test jumping to different positions in timeline."""
-    from langflow.debug.recorder import record_graph
+    from lfx.debug.recorder import record_graph
 
     recording = await record_graph("src/backend/tests/data/LoopTest.json")
 
@@ -83,7 +83,7 @@ async def test_timeline_navigation():
 @pytest.mark.asyncio
 async def test_find_component_occurrences():
     """Test finding all occurrences of a component."""
-    from langflow.debug.recorder import record_graph
+    from lfx.debug.recorder import record_graph
 
     recording = await record_graph("src/backend/tests/data/LoopTest.json")
 
@@ -102,7 +102,7 @@ async def test_find_component_occurrences():
 @pytest.mark.asyncio
 async def test_state_inspection_has_required_data():
     """Test that state snapshots contain all required data."""
-    from langflow.debug.recorder import record_graph
+    from lfx.debug.recorder import record_graph
 
     recording = await record_graph("src/backend/tests/data/LoopTest.json")
 
@@ -132,7 +132,7 @@ async def test_save_and_load_preserves_state():
     """Test that save/load preserves recording state."""
     import tempfile
 
-    from langflow.debug.recorder import GraphRecording, record_graph
+    from lfx.debug.recorder import GraphRecording, record_graph
 
     recording = await record_graph("src/backend/tests/data/LoopTest.json")
 
@@ -165,7 +165,7 @@ async def test_save_and_load_preserves_state():
 @pytest.mark.asyncio
 async def test_compare_queue_across_loop_iterations():
     """Test comparing state across multiple loop iterations."""
-    from langflow.debug.recorder import record_graph
+    from lfx.debug.recorder import record_graph
 
     recording = await record_graph("src/backend/tests/data/LoopTest.json")
 
@@ -192,7 +192,7 @@ async def test_compare_queue_across_loop_iterations():
 @pytest.mark.asyncio
 async def test_context_contains_loop_state():
     """Test that context snapshots contain loop state."""
-    from langflow.debug.recorder import record_graph
+    from lfx.debug.recorder import record_graph
 
     recording = await record_graph("src/backend/tests/data/LoopTest.json")
 
@@ -220,7 +220,7 @@ async def test_context_contains_loop_state():
 @pytest.mark.asyncio
 async def test_replay_creates_new_graph():
     """Test that replay can create a fresh graph when needed."""
-    from langflow.debug.recorder import record_graph
+    from lfx.debug.recorder import record_graph
 
     recording = await record_graph("src/backend/tests/data/LoopTest.json")
 
@@ -240,7 +240,7 @@ async def test_recording_captures_errors():
     """Test that errors during execution are captured."""
     # This would need a flow that intentionally fails
     # For now, just verify the error field exists
-    from langflow.debug.recorder import record_graph
+    from lfx.debug.recorder import record_graph
 
     recording = await record_graph("src/backend/tests/data/LoopTest.json")
 
@@ -254,7 +254,7 @@ async def test_recording_captures_errors():
 @pytest.mark.asyncio
 async def test_multiple_recordings_independent():
     """Test that multiple recordings don't interfere with each other."""
-    from langflow.debug.recorder import record_graph
+    from lfx.debug.recorder import record_graph
 
     # Record same flow twice
     recording1 = await record_graph("src/backend/tests/data/LoopTest.json")
