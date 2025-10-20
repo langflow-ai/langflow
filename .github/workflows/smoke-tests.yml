@@ -146,7 +146,7 @@ jobs:
 
     steps:
       - name: Comment on PR with results
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const backendStatus = '${{ needs.backend-smoke-tests.result }}';
