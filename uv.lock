@@ -5962,7 +5962,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["aiosqlite"], specifier = ">=2.0.38,<3.0.0" },
     { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
     { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
-    { name = "sqlmodel", specifier = "==0.0.22" },
+    { name = "sqlmodel", specifier = ">=0.0.27,<0.1.0" },
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
     { name = "trustcall", specifier = ">=0.0.38,<1.0.0" },
     { name = "typer", specifier = ">=0.13.0,<1.0.0" },
@@ -12369,15 +12369,15 @@ postgresql-psycopg2binary = [
 
 [[package]]
 name = "sqlmodel"
-version = "0.0.22"
+version = "0.0.27"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "sqlalchemy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b5/39/8641040ab0d5e1d8a1c2325ae89a01ae659fc96c61a43d158fb71c9a0bf0/sqlmodel-0.0.22.tar.gz", hash = "sha256:7d37c882a30c43464d143e35e9ecaf945d88035e20117bf5ec2834a23cbe505e", size = 116392, upload-time = "2024-08-31T09:43:24.088Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/90/5a/693d90866233e837d182da76082a6d4c2303f54d3aaaa5c78e1238c5d863/sqlmodel-0.0.27.tar.gz", hash = "sha256:ad1227f2014a03905aef32e21428640848ac09ff793047744a73dfdd077ff620", size = 118053, upload-time = "2025-10-08T16:39:11.938Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/dd/b1/3af5104b716c420e40a6ea1b09886cae3a1b9f4538343875f637755cae5b/sqlmodel-0.0.22-py3-none-any.whl", hash = "sha256:a1ed13e28a1f4057cbf4ff6cdb4fc09e85702621d3259ba17b3c230bfb2f941b", size = 28276, upload-time = "2024-08-31T09:43:22.358Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/92/c35e036151fe53822893979f8a13e6f235ae8191f4164a79ae60a95d66aa/sqlmodel-0.0.27-py3-none-any.whl", hash = "sha256:667fe10aa8ff5438134668228dc7d7a08306f4c5c4c7e6ad3ad68defa0e7aa49", size = 29131, upload-time = "2025-10-08T16:39:10.917Z" },
 ]
 
 [[package]]

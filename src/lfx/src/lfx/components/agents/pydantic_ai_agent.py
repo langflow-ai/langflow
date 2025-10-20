@@ -70,6 +70,13 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
             value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
             advanced=False,
         ),
+        MultilineInput(
+            name="agent_description",
+            display_name="Agent Description [Deprecated]",
+            info="The description of the agent. This is only used when in Tool Mode.",
+            advanced=True,
+            value="A helpful assistant with access to the following tools:",
+        ),
         BoolInput(
             name="enable_streaming",
             display_name="Enable Streaming",
@@ -185,7 +192,7 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
 
                 elif event_type == "AgentRunResultEvent":
                     # Final result event
-                    result = event.run_result
+                    result = event.result.output
                     final_output = result.data if hasattr(result, "data") else str(result)
 
                     # Yield chain end event with final result
@@ -236,7 +243,11 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
             self.chat_history, self.tools = await self.get_agent_requirements()
 
             # Create OpenAI model for Pydantic AI
-            model = OpenAIModel(self.model_name, api_key=self.openai_api_key)
+            from pydantic_ai.models.openai import OpenAIChatModel
+            from pydantic_ai.providers.openai import OpenAIProvider
+
+            provider = OpenAIProvider(api_key=self.openai_api_key)
+            model = OpenAIChatModel(self.model_name, provider=provider)
 
             # Convert LangChain tools to Pydantic AI tools before creating agent
             pydantic_tools = []
@@ -251,8 +262,8 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
 
             # Create Pydantic AI agent with tools
             pydantic_agent = Agent(
-                model,
-                system_prompt=self.system_prompt,
+                model=model,
+                instructions=self.system_prompt,
                 tools=pydantic_tools if pydantic_tools else None,
             )
 

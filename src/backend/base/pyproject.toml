@@ -31,7 +31,7 @@ dependencies = [
     "structlog>=25.4.0,<26.0.0",
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental>=0.3.4,<1.0.0",
-    "sqlmodel==0.0.22",
+    "sqlmodel>=0.0.27,<0.1.0",
     "pydantic>=2.11.2,<3.0.0",
     "pydantic-settings>=2.2.0,<3.0.0",
     "typer>=0.13.0,<1.0.0",

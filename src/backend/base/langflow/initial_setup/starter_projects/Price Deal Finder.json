@@ -1566,7 +1566,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.10.6"
+                    "version": "2.12.3"
                   },
                   {
                     "name": "lfx",
