@@ -439,15 +439,11 @@ class TestUpdateBuildConfig:
         mock_init_db.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_update_build_config_search_method_change_to_hybrid(
-        self, mock_component, mock_build_config
-    ):
+    async def test_update_build_config_search_method_change_to_hybrid(self, mock_component, mock_build_config):
         """Test base update_build_config doesn't handle search_method."""
         # The base AstraDBBaseComponent doesn't handle search_method changes
         # This functionality is in the AstraDBVectorStoreComponent subclass
-        result = await mock_component.update_build_config(
-            mock_build_config, "Hybrid Search", "search_method"
-        )
+        result = await mock_component.update_build_config(mock_build_config, "Hybrid Search", "search_method")
 
         # Base component should return config unchanged for search_method
         assert result["lexical_terms"]["show"] is False  # Default value from fixture
