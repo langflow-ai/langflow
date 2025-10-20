@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "langflow-agentic": {
+      "command": "python",
+      "args": [
+        "-m",
+        "langflow.agentic.mcp.server"
+      ],
+      "env": {
+        "PYTHONPATH": "/path/to/langflow/src/backend/base"
+      }
+    }
+  }
+}
