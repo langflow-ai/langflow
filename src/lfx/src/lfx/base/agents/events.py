@@ -273,8 +273,13 @@ async def handle_on_chain_stream(
     if isinstance(data_chunk, dict) and data_chunk.get("output"):
         output = data_chunk.get("output")
         if output and isinstance(output, str | list):
-            agent_message.text = _extract_output_text(output)
-        agent_message.properties.state = "complete"
+            output_text = _extract_output_text(output)
+            if output_text:
+                if isinstance(agent_message.text, str) and agent_message.text:
+                    agent_message.text += output_text
+                else:
+                    agent_message.text = output_text
+        agent_message.properties.state = "partial"
         agent_message = await send_message_method(message=agent_message, skip_db_update=True)
         start_time = perf_counter()
     elif isinstance(data_chunk, AIMessageChunk):

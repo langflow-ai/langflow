@@ -1,18 +1,30 @@
 """Pydantic AI Agent Component for Langflow."""
 
+import json
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
 from langchain_core.agents import AgentFinish
-from pydantic_ai import Agent
+from pydantic_ai import (
+    Agent,
+    AgentStreamEvent,  # stream base type
+    FinalResultEvent,
+    FunctionToolCallEvent,
+    FunctionToolResultEvent,
+    PartDeltaEvent,
+    PartStartEvent,
+    TextPartDelta,
+    ThinkingPartDelta,
+    ToolCallPartDelta,
+)
 from pydantic_ai.ext.langchain import tool_from_langchain
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIModel  # noqa: F401
 
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.components.helpers.current_date import CurrentDateComponent
 from lfx.components.helpers.memory import MemoryComponent
-from lfx.field_typing import Tool
+from lfx.field_typing import Tool  # noqa: F401
 from lfx.inputs.inputs import BoolInput, SecretStrInput
 from lfx.io import HandleInput, IntInput, MessageInput, MultilineInput, Output, StrInput
 from lfx.log.logger import logger
@@ -138,6 +150,32 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
         self, pydantic_agent: Agent, input_text: str
     ) -> AsyncIterator[dict[str, Any]]:
         """Run the Pydantic AI agent with streaming enabled."""
+        def _coerce_tool_input(value: Any) -> dict[str, Any]:
+            if value is None:
+                return {}
+            if isinstance(value, dict):
+                return value
+            if hasattr(value, "model_dump"):
+                try:
+                    return value.model_dump()  # type: ignore[attr-defined]
+                except Exception:
+                    pass
+            if hasattr(value, "dict"):
+                try:
+                    return value.dict()  # type: ignore[attr-defined]
+                except Exception:
+                    pass
+            if isinstance(value, (list, tuple)):
+                return {"args": list(value)}
+            if isinstance(value, str):
+                try:
+                    parsed = json.loads(value)
+                    if isinstance(parsed, dict):
+                        return parsed
+                    return {"value": parsed}
+                except Exception:
+                    return {"value": value}
+            return {"value": str(value)}
         # Yield initial chain start event
         yield {
             "event": "on_chain_start",
@@ -147,55 +185,111 @@ class PydanticAIAgentComponent(LCToolsAgentComponent):
         }
 
         try:
-            # Use run_stream_events to get detailed streaming events
-            tool_call_mapping = {}  # Map to track tool calls by their IDs
+            # Map to track tool calls by their IDs
+            tool_call_mapping: dict[str, tuple[str, str]] = {}
+            aggregated_parts: list[str] = []
 
             async for event in pydantic_agent.run_stream_events(input_text):
-                event_type = type(event).__name__
+                # Strictly map on known event classes
+                if isinstance(event, PartStartEvent):
+                    # We don't emit UI events for generic part starts; tool starts use FunctionToolCallEvent below
+                    continue
 
-                if event_type == "PartStartEvent":
-                    # A new part is starting
-                    if hasattr(event, "part_kind"):
-                        part_kind = event.part_kind
-                        if part_kind == "tool-call" and hasattr(event, "part"):
-                            # Tool call is starting
-                            part = event.part
-                            tool_name = getattr(part, "tool_name", "unknown_tool")
-                            tool_call_id = getattr(part, "tool_call_id", None)
+                if isinstance(event, PartDeltaEvent):
+                    delta = event.delta
+                    if isinstance(delta, TextPartDelta):
+                        piece = delta.content_delta or ""
+                        if piece:
+                            aggregated_parts.append(piece)
+                            yield {
+                                "event": "on_chain_stream",
+                                "run_id": str(uuid.uuid4()),
+                                "name": "PydanticAIAgent",
+                                "data": {"chunk": {"output": [piece]}},
+                            }
+                    elif isinstance(delta, ThinkingPartDelta):
+                        # Skip thinking deltas for UI text
+                        pass
+                    elif isinstance(delta, ToolCallPartDelta):
+                        # Optional: could surface progressive args; we skip for now
+                        pass
+                    continue
 
-                            if tool_call_id:
-                                run_id = str(uuid.uuid4())
-                                tool_call_mapping[tool_call_id] = (run_id, tool_name)
+                if isinstance(event, FunctionToolCallEvent):
+                    part = event.part
+                    tool_name = getattr(part, "tool_name", "unknown_tool")
+                    tool_call_id = getattr(part, "tool_call_id", None)
+                    raw_args = getattr(part, "args", {})
+                    args = _coerce_tool_input(raw_args)
+                    if tool_call_id:
+                        run_id = str(uuid.uuid4())
+                        tool_call_mapping[tool_call_id] = (run_id, tool_name)
+                        yield {
+                            "event": "on_tool_start",
+                            "run_id": run_id,
+                            "name": tool_name,
+                            "data": {"input": args},
+                        }
+                    continue
 
-                                yield {
-                                    "event": "on_tool_start",
-                                    "run_id": run_id,
-                                    "name": tool_name,
-                                    "data": {"input": getattr(part, "args", {})},
-                                }
-
-                elif event_type == "FunctionToolResultEvent":
-                    # Tool execution completed
-                    if hasattr(event, "tool_call_id") and event.tool_call_id in tool_call_mapping:
-                        run_id, tool_name = tool_call_mapping[event.tool_call_id]
-                        result = getattr(event, "result", None)
-
+                if isinstance(event, FunctionToolResultEvent):
+                    tool_call_id = getattr(event, "tool_call_id", None)
+                    if tool_call_id and tool_call_id in tool_call_mapping:
+                        run_id, tool_name = tool_call_mapping[tool_call_id]
+                        # result.content is expected; fallback to str(event.result)
+                        result_content = getattr(event.result, "content", None)
+                        output_text = result_content if isinstance(result_content, str) else str(event.result)
                         yield {
                             "event": "on_tool_end",
                             "run_id": run_id,
                             "name": tool_name,
-                            "data": {"output": str(result) if result else ""},
+                            "data": {"output": output_text},
                         }
+                        del tool_call_mapping[tool_call_id]
+                    continue
 
-                        # Clean up the mapping
-                        del tool_call_mapping[event.tool_call_id]
+                if isinstance(event, FinalResultEvent):
+                    final_output = "".join(aggregated_parts)
+                    yield {
+                        "event": "on_chain_end",
+                        "run_id": str(uuid.uuid4()),
+                        "name": "PydanticAIAgent",
+                        "data": {"output": AgentFinish(return_values={"output": final_output}, log="")},
+                    }
+                    continue
 
-                elif event_type == "AgentRunResultEvent":
-                    # Final result event
-                    result = event.result.output
-                    final_output = result.data if hasattr(result, "data") else str(result)
-
-                    # Yield chain end event with final result
+                # Fallback: some older versions may emit AgentRunResultEvent with .result
+                if type(event).__name__ == "AgentRunResultEvent":
+                    result_output = getattr(event.result, "output", None)
+                    if result_output is not None and hasattr(result_output, "__aiter__"):
+                        try:
+                            async for out in result_output:  # type: ignore[func-returns-value]
+                                if out is None:
+                                    continue
+                                piece = getattr(out, "data", out)
+                                if not isinstance(piece, str):
+                                    piece = str(piece)
+                                aggregated_parts.append(piece)
+                                yield {
+                                    "event": "on_chain_stream",
+                                    "run_id": str(uuid.uuid4()),
+                                    "name": "PydanticAIAgent",
+                                    "data": {"chunk": {"output": [piece]}},
+                                }
+                        except Exception as stream_err:
+                            yield {
+                                "event": "on_chain_error",
+                                "run_id": str(uuid.uuid4()),
+                                "name": "PydanticAIAgent",
+                                "data": {"error": str(stream_err)},
+                            }
+                            raise
+                        final_output = "".join(aggregated_parts)
+                    else:
+                        if result_output is not None and hasattr(result_output, "data"):
+                            final_output = str(result_output.data)
+                        else:
+                            final_output = "".join(aggregated_parts) if aggregated_parts else str(result_output)
                     yield {
                         "event": "on_chain_end",
                         "run_id": str(uuid.uuid4()),
