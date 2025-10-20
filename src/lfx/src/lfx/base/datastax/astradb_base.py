@@ -899,18 +899,4 @@ class AstraDBBaseComponent(Component):
             )
             build_config["autodetect_collection"]["value"] = False
 
-        if not field_value:
-            return build_config
-
-        # Get the selected collection index
-        index = build_config["collection_name"]["options"].index(field_value)
-
-        # Set the provider of the selected collection
-        provider = build_config["collection_name"]["options_metadata"][index]["provider"]
-
-        # If the embedding model is a field, show it based on the provider presence
-        if "embedding_model" in build_config:
-            build_config["embedding_model"]["show"] = not bool(provider)
-            build_config["embedding_model"]["required"] = not bool(provider)
-
         return build_config

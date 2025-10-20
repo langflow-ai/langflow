@@ -153,8 +153,18 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         # Detect available hybrid search capabilities
         hybrid_capabilities = self._detect_hybrid_capabilities()
 
-        # Get collection metadata
+        # Return if we haven't selected a collection
+        if not build_config["collection_name"]["value"]:
+            return build_config
+
+        # Get collection options
         collection_options = self._get_collection_options(build_config)
+
+        # Get the selected collection index
+        index = build_config["collection_name"]["options"].index(build_config["collection_name"]["value"])
+        provider = build_config["collection_name"]["options_metadata"][index]["provider"]
+        build_config["embedding_model"]["show"] = not bool(provider)
+        build_config["embedding_model"]["required"] = not bool(provider)
 
         # Determine search configuration
         is_vector_search = build_config["search_method"]["value"] == "Vector Search"
