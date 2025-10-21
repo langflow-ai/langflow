@@ -1,0 +1,70 @@
+id: urn:agent:genesis:autonomize.ai:patient-billing-inquiry-agent:1.0.0
+name: patient-billing-inquiry-agent
+fullyQualifiedName: genesis.autonomize.ai.patient-billing-inquiry-agent
+description: Self-service patient billing inquiry agent that provides automated responses
+  to patient billing questions using EOBs, payment history, and account information
+domain: autonomize.ai
+subDomain: revenue-cycle-management
+version: 1.0.0
+environment: production
+agentOwner: healthcare-team@autonomize.ai
+agentOwnerDisplayName: Healthcare Team
+email: healthcare-team@autonomize.ai
+status: ACTIVE
+kind: Single Agent
+agentGoal: Improve patient satisfaction and reduce administrative burden by providing
+  instant, accurate responses to patient billing inquiries through intelligent automation
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: GoalBasedAgent
+toolsUse: true
+learningCapability: None
+tags:
+- revenue_cycle_management
+- healthcare
+- automation
+sampleInput:
+  request: Sample healthcare request
+outputs:
+- response
+- analysis
+- recommendations
+components:
+- id: input
+  name: Chat Input
+  kind: Data
+  type: genesis:chat_input
+  config: {}
+- id: patient-billing-inquiry-agent-agent
+  name: Patient Billing Inquiry Agent Agent
+  kind: Agent
+  type: genesis:agent
+  config:
+    system_message: You are a healthcare specialist for patient billing inquiry agent.
+      Provide accurate, helpful responses based on healthcare data and workflows.
+    max_tokens: 4000
+  provides:
+  - useAs: response
+    in: output
+- id: output
+  name: Chat Output
+  kind: Data
+  type: genesis:chat_output
+  config: {}
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true
+kpis:
+- name: processing_time
+  description: Time to process healthcare requests
+  target: < 30 seconds
+  category: performance
+  valueType: duration
+- name: accuracy_rate
+  description: Accuracy of healthcare analysis
+  target: '> 95%'
+  category: quality
+  valueType: percentage

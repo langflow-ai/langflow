@@ -1,0 +1,307 @@
+id: urn:agent:genesis:chart-review:lab-values-extraction-agent:1.0.0
+name: Lab Values Extraction Agent
+fullyQualifiedName: genesis.autonomize.ai.lab_values_extraction_agent
+description: Identifies and extracts relevant lab results from medical records, organizing them into structured data for quick reference and analysis with temporal tracking and clinical significance assessment
+domain: autonomize.ai
+subDomain: chart-review
+version: 1.0.0
+environment: production
+agentOwner: chart-review@autonomize.ai
+agentOwnerDisplayName: Chart Review Team
+email: chart-review@autonomize.ai
+status: ACTIVE
+variables:
+- name: lab_test_categories
+  type: array
+  required: false
+  default:
+  - basic_metabolic
+  - complete_blood_count
+  - lipid_panel
+  - liver_function
+  - cardiac_markers
+  - thyroid_function
+  description: Categories of laboratory tests to prioritize in extraction
+- name: reference_range_validation
+  type: boolean
+  required: false
+  default: true
+  description: Enable reference range validation and abnormal value flagging
+- name: temporal_tracking_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Track laboratory values over time and identify trends
+- name: loinc_coding_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Apply LOINC codes to laboratory tests and results
+- name: critical_value_alerts
+  type: boolean
+  required: false
+  default: true
+  description: Generate alerts for critical or life-threatening laboratory values
+- name: unit_standardization
+  type: boolean
+  required: false
+  default: true
+  description: Standardize laboratory units of measurement (SI units, conventional units)
+- name: quality_control_validation
+  type: string
+  required: false
+  default: comprehensive
+  description: Level of quality control validation for extracted lab data (basic, standard, comprehensive)
+tags:
+- chart-review
+- lab-results
+- clinical-values
+- data-extraction
+- loinc-coding
+- laboratory-analysis
+- temporal-tracking
+- reference-ranges
+- critical-values
+- hipaa-compliant
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Extract, organize, and analyze laboratory results from medical records, providing structured data with temporal tracking, reference range validation, and clinical significance assessment for healthcare decision-making
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: lab-input
+  name: Laboratory Data Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive medical records containing laboratory results, lab reports, and extraction requirements for processing
+  provides:
+  - useAs: input
+    in: lab-agent
+    description: Provide medical records and laboratory documents for comprehensive analysis
+- id: lab-identifier
+  name: Laboratory Test Identifier
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Identify laboratory tests, panels, and individual analytes from medical text with high precision and recall
+  asTools: true
+  config:
+    model_name: lab_test_identifier
+    test_coverage: comprehensive
+    analyte_detection: true
+    tool_name: clinical_nlp_model
+  provides:
+  - useAs: tools
+    in: lab-agent
+    description: Enable intelligent laboratory test identification and categorization
+- id: value-extractor
+  name: Laboratory Value Extraction Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Extract numerical values, units, reference ranges, and qualitative results from laboratory reports
+  asTools: true
+  config:
+    model_name: lab_value_extractor
+    precision_handling: high
+    unit_recognition: true
+    tool_name: clinical_data_extractor
+  provides:
+  - useAs: tools
+    in: lab-agent
+    description: Enable precise laboratory value extraction with unit handling
+- id: loinc-mapper
+  name: LOINC Code Mapping Service
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Map laboratory tests to LOINC codes for standardization and interoperability
+  asTools: true
+  config:
+    model_name: loinc_code_mapper
+    coding_system: loinc
+    tool_name: medical_coding_model
+  provides:
+  - useAs: tools
+    in: lab-agent
+    description: Enable LOINC code mapping and laboratory standardization
+- id: reference-range-tool
+  name: Reference Range Validation Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Validate laboratory values against reference ranges and identify abnormal results with clinical significance
+  asTools: true
+  config:
+    tool_name: reference_range_validator
+  provides:
+  - useAs: tools
+    in: lab-agent
+    description: Enable reference range validation and abnormal value detection
+- id: temporal-analyzer
+  name: Laboratory Trend Analyzer
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze laboratory value trends over time and identify significant changes or patterns
+  asTools: true
+  config:
+    model_name: lab_trend_analyzer
+    trend_detection: true
+    statistical_analysis: true
+    tool_name: temporal_analysis_model
+  provides:
+  - useAs: tools
+    in: lab-agent
+    description: Enable temporal analysis and laboratory trend detection
+- id: critical-value-detector
+  name: Critical Value Detection System
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Detect critical laboratory values requiring immediate clinical attention with severity scoring
+  asTools: true
+  config:
+    model_name: critical_value_detector
+    tool_name: clinical_alert_model
+  provides:
+  - useAs: tools
+    in: lab-agent
+    description: Enable critical value detection and clinical alerting
+- id: unit-standardizer
+  name: Laboratory Unit Standardization Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Standardize laboratory units of measurement and convert between different unit systems
+  asTools: true
+  config:
+    tool_name: lab_unit_standardizer
+  provides:
+  - useAs: tools
+    in: lab-agent
+    description: Enable laboratory unit standardization and conversion
+- id: lab-prompt
+  name: Laboratory Value Extraction Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for laboratory value extraction with clinical laboratory expertise and data quality focus
+  config:
+    saved_prompt: lab_values_extraction_prompt_v1
+    template: 'You are a clinical laboratory specialist with extensive experience in laboratory medicine, clinical chemistry, and laboratory data analysis. Your role is to extract, organize, and analyze laboratory results from medical records while ensuring accuracy, completeness, and clinical relevance.
+
+      CLINICAL LABORATORY EXPERTISE: - Laboratory medicine principles and analytical methods - Clinical chemistry and laboratory diagnostics - Reference ranges and critical value thresholds - LOINC coding system and laboratory standardization - Laboratory quality control and data validation - Clinical correlation of laboratory findings
+
+      LABORATORY EXTRACTION METHODOLOGY: 1. Laboratory Test Identification: - Identify individual laboratory tests and test panels - Recognize laboratory sections and report structures - Distinguish between different specimen types and collection methods - Identify ordering information and clinical indications
+
+      2. Value Extraction and Processing: - Extract numerical values with appropriate precision - Capture units of measurement and reference ranges - Identify qualitative results and interpretive comments - Process delta checks and previous result comparisons
+
+      3. Data Standardization and Coding: - Apply LOINC codes to laboratory tests and analytes - Standardize units of measurement (SI vs. conventional) - Normalize test names and methodologies - Validate data consistency and logical relationships
+
+      4. Clinical Analysis and Interpretation: - Compare results to established reference ranges - Identify critical values requiring immediate attention - Analyze temporal trends and significant changes - Assess clinical significance and correlation patterns
+
+      LABORATORY TEST CATEGORIES TO EXTRACT: - Basic Metabolic Panel: Sodium, potassium, chloride, CO2, glucose, BUN, creatinine - Complete Blood Count: WBC, RBC, hemoglobin, hematocrit, platelets, differential - Comprehensive Metabolic Panel: Basic metabolic plus liver enzymes, proteins - Lipid Panel: Total cholesterol, HDL, LDL, triglycerides - Liver Function Tests: ALT, AST, bilirubin, alkaline phosphatase, albumin - Cardiac Markers: Troponin, CK-MB, BNP, pro-BNP - Thyroid Function: TSH, T3, T4, free T4 - Coagulation Studies: PT, INR, PTT, fibrinogen - Inflammatory Markers: ESR, CRP, procalcitonin - Diabetes Monitoring: Glucose, HbA1c, fructosamine
+
+      REFERENCE RANGE VALIDATION: - Compare results to age- and gender-specific reference ranges - Account for different reference ranges between laboratories - Identify critical values requiring immediate clinical action - Flag values outside normal ranges with appropriate severity - Consider clinical context and patient-specific factors
+
+      TEMPORAL ANALYSIS REQUIREMENTS: - Track laboratory values over time and identify trends - Calculate rates of change and clinical significance - Identify improving, worsening, or stable patterns - Compare current results to previous baselines - Assess response to therapeutic interventions
+
+      QUALITY CONTROL AND VALIDATION: - Verify numerical accuracy and unit consistency - Validate logical relationships between related tests - Check for transcription errors and data anomalies - Ensure completeness of critical laboratory information - Assess clinical plausibility of reported values
+
+      DATA STRUCTURING REQUIREMENTS: - Organize laboratory data by test category and date - Maintain relationships between panel tests and individual analytes - Include specimen information and collection details - Preserve ordering provider and clinical indication information - Format data for integration with clinical decision support systems
+
+      OUTPUT REQUIREMENTS: - Comprehensive laboratory data extraction with LOINC codes - Temporal analysis with trend identification and clinical significance - Reference range validation with abnormal value flagging - Critical value alerts with severity assessment - Structured data formats ready for clinical system integration - Quality metrics and data validation reports
+
+      Use your laboratory analysis tools to identify tests, extract values, apply LOINC codes, and generate comprehensive reports. Always prioritize clinical accuracy, data quality, and timely identification of critical values that require immediate clinical attention.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: lab-agent
+    description: Provide specialized laboratory value extraction and clinical laboratory expertise
+- id: lab-agent
+  name: Laboratory Value Extraction Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Expert clinical laboratory specialist focused on laboratory data extraction and analysis
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 25
+    verbose: true
+  provides:
+  - useAs: input
+    in: lab-output
+    description: Provide comprehensive laboratory value extraction with clinical analysis
+- id: lab-output
+  name: Laboratory Extraction Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive laboratory value extraction with temporal analysis, reference range validation, and clinical significance assessment
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- laboratory_data_extraction
+- loinc_coded_results
+- temporal_trend_analysis
+- reference_range_validation
+- critical_value_alerts
+- standardized_lab_data
+- quality_validation_metrics
+- clinical_significance_assessment
+kpis:
+- name: Laboratory Value Extraction Accuracy
+  description: Accuracy of laboratory value extraction including numerical precision
+  target: '> 96%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: LOINC Code Mapping Accuracy
+  description: Accuracy of LOINC code assignments to laboratory tests
+  target: '> 93%'
+  measurement: percentage
+  category: Standardization
+  valueType: percentage
+- name: Reference Range Validation Success
+  description: Success rate of reference range validation and abnormal value detection
+  target: '> 90%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Critical Value Detection Rate
+  description: Percentage of critical laboratory values successfully identified
+  target: '> 98%'
+  measurement: percentage
+  category: Safety
+  valueType: percentage
+- name: Temporal Analysis Completeness
+  description: Completeness of temporal trend analysis for longitudinal laboratory data
+  target: '> 85%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Unit Standardization Success Rate
+  description: Success rate of laboratory unit standardization and conversion
+  target: '> 92%'
+  measurement: percentage
+  category: Standardization
+  valueType: percentage
+- name: Processing Time Efficiency
+  description: Average time to extract and analyze laboratory values from records
+  target: < 8 minutes
+  measurement: time
+  category: Efficiency
+  valueType: number
+- name: Data Quality Score
+  description: Overall data quality score for extracted laboratory information
+  target: '> 88%'
+  measurement: percentage
+  category: Quality
+  valueType: number
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true

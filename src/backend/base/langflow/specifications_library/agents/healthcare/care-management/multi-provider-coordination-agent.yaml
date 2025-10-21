@@ -1,0 +1,490 @@
+id: urn:agent:genesis:care-management:multi-provider-coordination-agent:1.0.0
+name: Multi-Provider Coordination Agent
+fullyQualifiedName: genesis.autonomize.ai.multi_provider_coordination_agent
+description: Multi-agent system that aggregates referrals, labs, notes, and patient messages across multiple providers to build longitudinal care views and coordinate interventions
+domain: autonomize.ai
+subDomain: care-management
+version: 1.0.0
+environment: production
+agentOwner: care-management@autonomize.ai
+agentOwnerDisplayName: Care Management Team
+email: care-management@autonomize.ai
+status: ACTIVE
+variables:
+- name: coordination_window_months
+  type: number
+  required: false
+  default: 6
+  description: Number of months to aggregate data for care coordination analysis
+- name: priority_specialty_types
+  type: string
+  required: false
+  default: cardiology,endocrinology,nephrology,oncology,psychiatry
+  description: Comma-separated list of priority specialty types for coordination
+- name: communication_urgency_threshold
+  type: number
+  required: false
+  default: 0.8
+  description: Threshold score for urgent care coordination communications
+- name: care_gap_detection_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable automatic detection of care gaps and coordination opportunities
+- name: duplicate_service_threshold
+  type: number
+  required: false
+  default: 3
+  description: Number of similar services within timeframe to flag as potential duplicates
+- name: provider_communication_delay_days
+  type: number
+  required: false
+  default: 5
+  description: Number of days delay to flag as provider communication gap
+tags:
+- care-management
+- care-coordination
+- multi-provider
+- longitudinal-care
+- referral-management
+- provider-communication
+- healthcare
+- multi-agent
+reusability:
+  asTools: false
+kind: Multi Agent
+agentGoal: Create comprehensive longitudinal care views across multiple providers and coordinate interventions to optimize patient care and reduce fragmentation
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RealTime
+runMode: Scheduled
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: coordination-input
+  name: Care Coordination Request Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive care coordination requests and patient identification for multi-provider analysis
+  provides:
+  - useAs: input
+    in: data-aggregation-agent
+    description: Provide patient context for comprehensive data aggregation
+- id: ehr-provider-data-tool
+  name: Multi-Provider EHR Data Access
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access clinical data across multiple provider systems and health networks
+  asTools: true
+  config:
+    data_elements:
+    - encounters
+    - observations
+    - conditions
+    - medications
+    - procedures
+    - care_plans
+    - clinical_notes
+    multi_provider_support: true
+    include_care_teams: true
+    cross_network_access: true
+    tool_name: ehr_integration
+  provides:
+  - useAs: tools
+    in: data-aggregation-agent
+    description: Enable multi-provider clinical data access
+- id: referral-management-tool
+  name: Referral Management System
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Track referrals, authorizations, and specialist communications across the care network
+  asTools: true
+  config:
+    tool_name: referral_management_system
+    tracking_elements:
+    - referral_requests
+    - authorization_status
+    - specialist_appointments
+    - consultation_reports
+    - follow_up_recommendations
+    provider_networks:
+    - internal
+    - external
+    - specialty_groups
+    status_monitoring: true
+  provides:
+  - useAs: tools
+    in: data-aggregation-agent
+    description: Enable referral tracking and management
+- id: lab-results-aggregation-tool
+  name: Laboratory Results Aggregation
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Aggregate lab results across multiple providers and laboratory systems
+  asTools: true
+  config:
+    tool_name: lab_results_aggregation
+    lab_systems:
+    - hospital_labs
+    - commercial_labs
+    - point_of_care
+    - specialty_labs
+    result_categories:
+    - routine_chemistry
+    - hematology
+    - microbiology
+    - pathology
+    - molecular_diagnostics
+    include_trends: true
+    duplicate_detection: true
+  provides:
+  - useAs: tools
+    in: data-aggregation-agent
+    description: Enable comprehensive lab results aggregation
+- id: patient-communication-tool
+  name: Patient Communication Hub
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Aggregate patient messages, portal communications, and care team interactions
+  asTools: true
+  config:
+    tool_name: patient_communication_hub
+    communication_channels:
+    - patient_portal
+    - secure_messaging
+    - phone_calls
+    - care_team_notes
+    - patient_surveys
+    sentiment_analysis: true
+    priority_flagging: true
+    response_tracking: true
+  provides:
+  - useAs: tools
+    in: communication-agent
+    description: Enable patient communication analysis
+- id: care-coordination-analytics-model
+  name: Care Coordination Analytics
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced analytics for care coordination assessment and optimization
+  asTools: true
+  config:
+    analysis_domains:
+    - care_continuity
+    - provider_communication
+    - care_gaps
+    - duplicate_services
+    - care_quality
+    coordination_scoring: true
+    gap_detection: true
+    intervention_recommendations: true
+    tool_name: care_coordination_model
+  provides:
+  - useAs: tools
+    in: coordination-analytics-agent
+    description: Enable advanced care coordination analytics
+- id: provider-notification-tool
+  name: Provider Notification System
+  kind: Tool
+  type: genesis:api_request
+  description: Send care coordination notifications and updates to provider care teams
+  asTools: true
+  config:
+    method: POST
+    url_input: ${PROVIDER_NOTIFICATION_ENDPOINT}
+    headers:
+    - key: Authorization
+      value: Bearer ${PROVIDER_API_TOKEN}
+    - key: Content-Type
+      value: application/json
+    - key: X-Care-Coordination
+      value: 'true'
+    timeout: 30
+  provides:
+  - useAs: tools
+    in: communication-agent
+    description: Enable provider care team notifications
+- id: data-aggregation-agent
+  name: Multi-Provider Data Aggregation Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Aggregate clinical data, referrals, and communications across multiple providers
+  config:
+    role: Multi-Provider Data Integration Specialist
+    goal: Aggregate comprehensive patient data from multiple providers, systems, and care settings to create unified longitudinal care views
+    backstory: 'You are a multi-provider data integration specialist with expertise in healthcare interoperability and data aggregation.
+
+      Your skills include FHIR data integration, provider network coordination, and comprehensive care view creation.
+
+      You understand the complexities of multi-provider care and can effectively aggregate disparate data sources.
+
+      You are experienced in maintaining data quality and consistency across different healthcare systems.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: data-aggregation-task
+    description: Execute comprehensive data aggregation task
+- id: coordination-analytics-agent
+  name: Care Coordination Analytics Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Analyze care coordination opportunities and identify optimization strategies
+  config:
+    role: Care Coordination Analyst
+    goal: Analyze multi-provider care patterns to identify coordination opportunities, care gaps, and optimization strategies
+    backstory: 'You are a care coordination analyst with expertise in healthcare delivery optimization and quality improvement.
+
+      Your skills include care pattern analysis, gap identification, and coordination strategy development.
+
+      You understand how to optimize care delivery across multiple providers and care settings.
+
+      You are experienced in identifying inefficiencies and developing practical coordination solutions.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: coordination-analytics-task
+    description: Execute care coordination analytics task
+- id: communication-agent
+  name: Provider Communication Coordination Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Coordinate communications between providers and manage patient engagement
+  config:
+    role: Provider Communication Coordinator
+    goal: Facilitate effective communication between providers and coordinate patient engagement across the care team
+    backstory: 'You are a provider communication coordinator with expertise in care team collaboration and patient engagement.
+
+      Your skills include communication facilitation, care team coordination, and patient advocacy.
+
+      You understand how to improve communication flow between providers for better care coordination.
+
+      You are experienced in managing complex care team dynamics and patient communication needs.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: communication-task
+    description: Execute provider communication task
+- id: intervention-planning-agent
+  name: Care Coordination Intervention Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Design and implement care coordination interventions and improvement strategies
+  config:
+    role: Care Coordination Intervention Specialist
+    goal: Design and implement targeted interventions to improve care coordination and patient outcomes across multiple providers
+    backstory: 'You are a care coordination intervention specialist with expertise in healthcare process improvement and care optimization.
+
+      Your skills include intervention design, workflow optimization, and outcome measurement.
+
+      You understand how to implement practical solutions that improve care coordination effectiveness.
+
+      You are experienced in designing interventions that work across different provider systems and care settings.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: intervention-planning-task
+    description: Execute intervention planning task
+- id: data-aggregation-task
+  name: Multi-Provider Data Aggregation Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Aggregate comprehensive patient data across multiple providers and systems
+  config:
+    description: Collect and aggregate patient data from multiple providers, referrals, labs, and communications to create unified care view
+    agent_id: data-aggregation-agent
+    expected_output: 'Comprehensive multi-provider data package including:
+
+      - Aggregated clinical data from all involved providers
+
+      - Complete referral history with status and outcomes
+
+      - Consolidated laboratory results with trend analysis
+
+      - Patient communications across all channels and providers
+
+      - Provider care team information and contact details
+
+      - Timeline of care activities and coordination points
+
+      '
+  provides:
+  - useAs: data
+    in: coordination-analytics-task
+    description: Provide aggregated data for coordination analysis
+- id: coordination-analytics-task
+  name: Care Coordination Analytics Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Analyze care coordination patterns and identify optimization opportunities
+  config:
+    description: Analyze multi-provider care patterns to identify coordination gaps, duplicate services, and optimization opportunities
+    agent_id: coordination-analytics-agent
+    expected_output: 'Care coordination analytics report including:
+
+      - Care continuity assessment and gap analysis
+
+      - Duplicate service identification and cost impact
+
+      - Provider communication effectiveness evaluation
+
+      - Care quality metrics and outcome predictions
+
+      - Coordination optimization recommendations
+
+      - Risk stratification for coordination failures
+
+      '
+  provides:
+  - useAs: data
+    in: communication-task
+    description: Provide analytics for communication planning
+- id: communication-task
+  name: Provider Communication Coordination Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Coordinate communications between providers and manage patient engagement
+  config:
+    description: Facilitate effective communication between providers and coordinate patient engagement across the care team
+    agent_id: communication-agent
+    expected_output: 'Provider communication coordination plan including:
+
+      - Provider-to-provider communication facilitation
+
+      - Patient engagement coordination across care team
+
+      - Communication gap identification and resolution
+
+      - Care team meeting recommendations and scheduling
+
+      - Patient communication preferences and protocols
+
+      - Communication effectiveness tracking and metrics
+
+      '
+  provides:
+  - useAs: data
+    in: intervention-planning-task
+    description: Provide communication plan for intervention design
+- id: intervention-planning-task
+  name: Care Coordination Intervention Planning Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Design targeted interventions to improve care coordination and outcomes
+  config:
+    description: Design and implement comprehensive care coordination interventions based on identified gaps and opportunities
+    agent_id: intervention-planning-agent
+    expected_output: 'Care coordination intervention plan including:
+
+      - Targeted coordination interventions for identified gaps
+
+      - Care team workflow optimization recommendations
+
+      - Patient navigation and advocacy strategies
+
+      - Technology solutions for improved coordination
+
+      - Outcome measurement and tracking protocols
+
+      - Implementation timeline and success metrics
+
+      '
+  provides:
+  - useAs: input
+    in: coordination-output
+    description: Provide final intervention plan and recommendations
+- id: multi-provider-coordination-crew
+  name: Multi-Provider Coordination Crew
+  kind: Data
+  type: genesis:crewai_sequential_crew
+  description: Coordinate multi-agent care coordination analysis and intervention planning workflow
+  config:
+    agents:
+    - data-aggregation-agent
+    - coordination-analytics-agent
+    - communication-agent
+    - intervention-planning-agent
+    tasks:
+    - data-aggregation-task
+    - coordination-analytics-task
+    - communication-task
+    - intervention-planning-task
+  provides:
+  - useAs: data
+    in: coordination-output
+    description: Coordinate agent execution and results
+- id: coordination-output
+  name: Multi-Provider Coordination Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive care coordination analysis and intervention recommendations
+  provides: []
+outputs:
+- longitudinal_care_view
+- coordination_analytics
+- communication_plan
+- intervention_recommendations
+- provider_notifications
+kpis:
+- name: Care Coordination Score
+  category: quality
+  valueType: number
+  target: 0.85
+  unit: coordination score
+  description: Composite score measuring care coordination effectiveness across providers
+- name: Provider Communication Response Time
+  category: performance
+  valueType: number
+  target: 24
+  unit: hours
+  description: Average time for provider-to-provider communication responses
+- name: Care Gap Identification Rate
+  category: quality
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Percentage of care gaps successfully identified through coordination analysis
+- name: Duplicate Service Reduction
+  category: efficiency
+  valueType: percentage
+  target: 30
+  unit: '%'
+  description: Reduction in duplicate services through improved coordination
+- name: Referral Completion Rate
+  category: performance
+  valueType: percentage
+  target: 90
+  unit: '%'
+  description: Percentage of referrals successfully completed with outcomes documented
+- name: Patient Satisfaction with Coordination
+  category: quality
+  valueType: number
+  target: 4.5
+  unit: rating (1-5)
+  description: Patient satisfaction rating for care coordination experience
+- name: Care Team Engagement Rate
+  category: performance
+  valueType: percentage
+  target: 85
+  unit: '%'
+  description: Percentage of care team members actively participating in coordination
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true

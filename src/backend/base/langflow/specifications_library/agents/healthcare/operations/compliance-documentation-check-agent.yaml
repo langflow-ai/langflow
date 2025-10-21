@@ -1,0 +1,227 @@
+id: urn:agent:genesis:provider-enablement:compliance-documentation-check-agent:1.0.0
+name: Compliance Documentation Check Agent
+fullyQualifiedName: genesis.autonomize.ai.compliance_documentation_check_agent
+description: Audits provider notes for regulatory compliance using documentation standards,
+  prior audits, and template matching. Flags missing attestation elements and ensures
+  adherence to healthcare documentation requirements.
+domain: autonomize.ai
+subDomain: provider-enablement
+version: 1.0.0
+environment: production
+agentOwner: provider-enablement@autonomize.ai
+agentOwnerDisplayName: Provider Enablement Team
+email: provider-enablement@autonomize.ai
+status: ACTIVE
+variables:
+- name: compliance_threshold
+  type: number
+  required: false
+  default: 0.85
+  description: Minimum compliance score threshold for flagging issues
+- name: audit_window_days
+  type: number
+  required: false
+  default: 30
+  description: Days to look back for prior audit history
+- name: template_matching_confidence
+  type: number
+  required: false
+  default: 0.8
+  description: Minimum confidence score for template matching
+- name: alert_severity_level
+  type: string
+  required: false
+  default: medium
+  description: Severity level for compliance alerts (low, medium, high, critical)
+tags:
+- provider-enablement
+- compliance
+- documentation-audit
+- regulatory-standards
+- attestation-elements
+- template-matching
+- healthcare-documentation
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Ensure all provider notes comply with regulatory standards by identifying
+  missing attestation elements, flagging non-compliance issues, and improving template
+  matching accuracy for comprehensive documentation audits
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: compliance-input
+  name: Compliance Audit Request Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive compliance audit requests with provider and documentation details
+  provides:
+  - useAs: input
+    in: compliance-agent
+    description: Provide audit context and parameters
+- id: provider-notes-api
+  name: Provider Notes API Access
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access provider clinical notes and documentation from EHR systems
+  asTools: true
+  config:
+    tool_name: provider_notes_api
+  provides:
+  - useAs: tools
+    in: compliance-agent
+    description: Enable provider notes access for compliance auditing
+- id: audit-database-connector
+  name: Prior Audits Database Connector
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access historical audit data and compliance templates for comparison
+    analysis
+  asTools: true
+  config:
+    tool_name: audit_database_connector
+  provides:
+  - useAs: tools
+    in: compliance-agent
+    description: Enable access to audit history and compliance templates
+- id: compliance-nlp-processor
+  name: Healthcare NLP Compliance Processor
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced NLP engine specialized for healthcare compliance analysis
+    and attestation element identification
+  asTools: true
+  config:
+    tool_name: healthcare_compliance_nlp
+  provides:
+  - useAs: tools
+    in: compliance-agent
+    description: Enable NLP-powered compliance analysis
+- id: template-matching-engine
+  name: Template Matching Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Machine learning-powered template matching for compliance standards
+    verification
+  asTools: true
+  config:
+    tool_name: template_matching_engine
+  provides:
+  - useAs: tools
+    in: compliance-agent
+    description: Enable intelligent template matching capabilities
+- id: email-notification-service
+  name: Email Notification Service
+  kind: Tool
+  type: genesis:api_request
+  description: Email service for sending compliance audit reports and non-compliance
+    alerts
+  asTools: true
+  config:
+    method: POST
+    url: ${EMAIL_API_URL}/send
+    headers:
+    - key: Authorization
+      value: Bearer ${EMAIL_API_TOKEN}
+    - key: Content-Type
+      value: application/json
+    body:
+    - key: to
+      value: "{{recipient_email}}"
+    - key: subject
+      value: "{{audit_subject}}"
+    - key: html_content
+      value: "{{audit_report}}"
+    - key: from
+      value: "${EMAIL_SENDER_ADDRESS}"
+    timeout: 30
+  provides:
+  - useAs: tools
+    in: compliance-agent
+    description: Enable email notifications for audit results
+- id: compliance-agent
+  name: Compliance Documentation Check Agent
+  kind: Agent
+  type: genesis:agent
+  description: Intelligent agent that audits provider documentation for regulatory
+    compliance and identifies missing attestation elements
+  config:
+    system_message: 'You are a healthcare compliance documentation auditor with expertise
+      in regulatory standards.
+
+      Your role is to:
+
+      1. Analyze provider clinical notes and documentation for compliance
+
+      2. Identify missing attestation elements and documentation gaps
+
+      3. Verify adherence to regulatory standards (CMS, Joint Commission, HIPAA)
+
+      4. Perform template matching against compliance standards
+
+      5. Generate detailed audit reports with actionable recommendations
+
+
+      Use your NLP and template matching tools to ensure comprehensive compliance
+      analysis.
+
+      Focus on identifying specific attestation elements that are missing or incomplete.
+
+      Provide clear, actionable recommendations for improving documentation compliance.
+
+      '
+  provides:
+  - useAs: output
+    in: compliance-output
+    description: Process compliance audit and generate detailed findings
+- id: compliance-output
+  name: Compliance Audit Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive compliance audit results with detailed findings
+    and recommendations
+  provides: []
+outputs:
+- audit_report
+- compliance_score
+- missing_elements
+- recommendations
+kpis:
+- name: Documentation Compliance Rate
+  category: quality
+  valueType: percentage
+  target: 90
+  unit: '%'
+  description: Percentage of provider notes meeting compliance standards
+- name: Attestation Element Completeness
+  category: quality
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Percentage of required attestation elements present
+- name: Template Matching Accuracy
+  category: quality
+  valueType: percentage
+  target: 85
+  unit: '%'
+  description: Accuracy rate of compliance template matching
+- name: Audit Processing Time
+  category: performance
+  valueType: number
+  target: 15
+  unit: minutes
+  description: Average time to complete compliance audit
+- name: Non-compliance Issue Detection Rate
+  category: quality
+  valueType: percentage
+  target: 92
+  unit: '%'
+  description: Percentage of compliance issues successfully identified
+securityInfo:
+  visibility: Internal
+  gdprSensitive: true

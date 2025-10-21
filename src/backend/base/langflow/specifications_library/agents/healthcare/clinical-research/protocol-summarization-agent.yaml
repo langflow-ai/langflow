@@ -1,0 +1,325 @@
+id: urn:agent:genesis:clinical-research:protocol-summarization-agent:1.0.0
+name: Protocol Summarization Agent
+fullyQualifiedName: genesis.autonomize.ai.protocol_summarization_agent
+description: Analyzes clinical trial protocols to extract and condense key elements, such as eligibility criteria, providing concise overviews for streamlined trial review and planning
+domain: autonomize.ai
+subDomain: clinical-research
+version: 1.0.0
+environment: production
+agentOwner: clinical-research@autonomize.ai
+agentOwnerDisplayName: Clinical Research Team
+email: clinical-research@autonomize.ai
+status: ACTIVE
+variables:
+- name: summary_detail_level
+  type: string
+  required: false
+  default: comprehensive
+  description: Level of detail for protocol summaries (brief, standard, comprehensive, executive)
+- name: focus_sections
+  type: array
+  required: false
+  default:
+  - objectives
+  - eligibility
+  - methodology
+  - endpoints
+  - timeline
+  - safety
+  description: Protocol sections to prioritize in summarization
+- name: medical_terminology_handling
+  type: string
+  required: false
+  default: simplified
+  description: Approach to medical terminology (technical, simplified, layered)
+- name: regulatory_compliance_focus
+  type: array
+  required: false
+  default:
+  - fda
+  - ich_gcp
+  - hipaa
+  - institutional_review
+  description: Regulatory compliance areas to highlight in summaries
+- name: stakeholder_audience
+  type: array
+  required: false
+  default:
+  - investigators
+  - sponsors
+  - regulatory
+  - ethics_committees
+  description: Target audiences for tailored summary generation
+- name: include_risk_assessment
+  type: boolean
+  required: false
+  default: true
+  description: Include risk assessment and safety considerations in summaries
+- name: protocol_version_tracking
+  type: boolean
+  required: false
+  default: true
+  description: Track and compare different versions of protocol documents
+tags:
+- clinical-research
+- protocol-analysis
+- trial-planning
+- regulatory-compliance
+- medical-documentation
+- research-methodology
+- eligibility-criteria
+- clinical-endpoints
+- research-ethics
+- hipaa-compliant
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Analyze clinical trial protocols to extract key elements, generate comprehensive summaries, and provide structured overviews that facilitate efficient trial review, planning, and stakeholder communication
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: protocol-input
+  name: Clinical Protocol Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive clinical trial protocols, research documents, and summarization requirements for analysis and processing
+  provides:
+  - useAs: input
+    in: protocol-agent
+    description: Provide clinical protocols and research documents for comprehensive analysis
+- id: protocol-parser
+  name: Clinical Protocol Parser
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Parse clinical trial protocols and extract structured information including objectives, methodology, and regulatory requirements
+  asTools: true
+  config:
+    document_type: clinical_protocol
+    extraction_scope: comprehensive
+    regulatory_standards:
+    - ich_gcp
+    - fda_guidelines
+    - good_clinical_practice
+    tool_name: clinical_document_processor
+  provides:
+  - useAs: tools
+    in: protocol-agent
+    description: Enable intelligent protocol parsing and structured information extraction
+- id: medical-terminology-tool
+  name: Medical Terminology Processor
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Process medical terminology, clinical concepts, and research methodology terminology with standardization and simplification capabilities
+  asTools: true
+  config:
+    model_name: clinical_terminology_processor
+    terminology_standards:
+    - snomed_ct
+    - mesh
+    - loinc
+    - icd11
+    simplification_enabled: true
+    tool_name: medical_terminology_model
+  provides:
+  - useAs: tools
+    in: protocol-agent
+    description: Enable medical terminology processing and standardization
+- id: eligibility-analyzer
+  name: Eligibility Criteria Analyzer
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze and structure eligibility criteria including inclusion/exclusion requirements with complexity assessment
+  asTools: true
+  config:
+    tool_name: eligibility_criteria_analyzer
+  provides:
+  - useAs: tools
+    in: protocol-agent
+    description: Enable detailed eligibility criteria analysis and structuring
+- id: methodology-extractor
+  name: Research Methodology Extractor
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Extract research methodology elements including study design, procedures, assessments, and timeline information
+  asTools: true
+  config:
+    tool_name: research_methodology_extractor
+  provides:
+  - useAs: tools
+    in: protocol-agent
+    description: Enable comprehensive methodology extraction and analysis
+- id: regulatory-compliance-tool
+  name: Regulatory Compliance Analyzer
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze regulatory compliance requirements and identify key compliance considerations for clinical trials
+  asTools: true
+  config:
+    model_name: clinical_trial_compliance_analyzer
+    regulatory_frameworks:
+    - fda_regulations
+    - ich_guidelines
+    - gcp_standards
+    tool_name: regulatory_compliance_model
+  provides:
+  - useAs: tools
+    in: protocol-agent
+    description: Enable regulatory compliance analysis and requirement identification
+- id: risk-assessment-tool
+  name: Clinical Trial Risk Assessor
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Assess clinical trial risks including safety considerations, operational risks, and regulatory compliance risks
+  asTools: true
+  config:
+    model_name: clinical_trial_risk_assessor
+    risk_categories:
+    - patient_safety
+    - operational
+    - regulatory
+    - scientific
+    tool_name: risk_assessment_model
+  provides:
+  - useAs: tools
+    in: protocol-agent
+    description: Enable comprehensive clinical trial risk assessment
+- id: summary-generator
+  name: Protocol Summary Generator
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Generate structured protocol summaries tailored for different stakeholder audiences with appropriate detail levels
+  asTools: true
+  config:
+    tool_name: protocol_summary_generator
+  provides:
+  - useAs: tools
+    in: protocol-agent
+    description: Enable targeted summary generation for multiple stakeholder audiences
+- id: protocol-prompt
+  name: Clinical Protocol Analysis Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for clinical protocol analysis with research methodology expertise and regulatory knowledge
+  config:
+    saved_prompt: protocol_summarization_prompt_v1
+    template: 'You are a clinical research expert specializing in protocol analysis, research methodology, and regulatory compliance for clinical trials. Your role is to analyze clinical trial protocols, extract key information, and generate comprehensive summaries for various stakeholders.
+
+      CLINICAL RESEARCH EXPERTISE: - Clinical trial design and methodology principles - ICH Good Clinical Practice (GCP) guidelines - FDA regulations and regulatory compliance requirements - Research ethics and institutional review board processes - Medical terminology and clinical endpoint definitions - Patient safety and risk management in clinical trials
+
+      PROTOCOL ANALYSIS METHODOLOGY: 1. Document Structure Analysis: - Parse protocol sections and identify key components - Extract study objectives, hypotheses, and rationale - Identify primary and secondary endpoints - Analyze study design and methodology framework
+
+      2. Eligibility Criteria Analysis: - Extract inclusion and exclusion criteria - Assess criteria complexity and feasibility - Identify patient population characteristics - Evaluate recruitment and retention considerations
+
+      3. Methodology and Procedures Review: - Analyze study procedures and assessments - Review treatment protocols and intervention details - Identify data collection methods and instruments - Assess study timeline and milestone planning
+
+      4. Regulatory and Safety Assessment: - Identify regulatory compliance requirements - Assess safety monitoring and reporting protocols - Review informed consent and ethics considerations - Evaluate risk management and mitigation strategies
+
+      KEY PROTOCOL ELEMENTS TO EXTRACT: - Study title, phase, and therapeutic area - Primary and secondary objectives - Study design and randomization methodology - Target population and sample size calculations - Inclusion and exclusion criteria - Treatment protocols and intervention details - Primary and secondary endpoints - Safety monitoring and adverse event reporting - Statistical analysis plan and methodology - Study timeline and operational considerations
+
+      SUMMARY GENERATION PRINCIPLES: - Tailor content to specific stakeholder audiences - Use clear, accessible language while maintaining accuracy - Highlight critical safety and compliance considerations - Provide structured information for efficient review - Include visual elements and organizational tools when helpful
+
+      STAKEHOLDER-SPECIFIC CONSIDERATIONS: - Investigators: Focus on operational procedures and patient management - Sponsors: Emphasize strategic objectives and regulatory compliance - Regulatory: Highlight compliance requirements and safety protocols - Ethics Committees: Focus on patient protection and informed consent - Site Staff: Emphasize practical procedures and workflow integration
+
+      REGULATORY COMPLIANCE FOCUS AREAS: - FDA regulations and guidance documents - ICH GCP standards and international guidelines - HIPAA privacy and data protection requirements - Institutional review board and ethics committee requirements - Good Documentation Practices and audit readiness
+
+      OUTPUT REQUIREMENTS: - Executive summary with key study characteristics - Detailed eligibility criteria analysis with complexity assessment - Methodology overview with procedural timelines - Regulatory compliance checklist and requirements - Risk assessment summary with mitigation strategies - Stakeholder-specific summary documents - Implementation considerations and operational planning
+
+      Use your clinical research tools to parse protocols, analyze methodology, assess compliance requirements, and generate comprehensive summaries. Always prioritize patient safety, regulatory compliance, and scientific integrity in your analysis.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: protocol-agent
+    description: Provide specialized clinical protocol analysis and research methodology expertise
+- id: protocol-agent
+  name: Clinical Protocol Analysis Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Expert clinical research analyst specializing in protocol analysis and research methodology
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 25
+    verbose: true
+  provides:
+  - useAs: input
+    in: protocol-output
+    description: Provide comprehensive protocol analysis and structured summaries
+- id: protocol-output
+  name: Protocol Summary Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive protocol summaries with structured analysis and stakeholder-specific documentation
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- protocol_executive_summary
+- eligibility_criteria_analysis
+- methodology_overview
+- regulatory_compliance_checklist
+- risk_assessment_summary
+- stakeholder_summaries
+- implementation_timeline
+- key_operational_considerations
+kpis:
+- name: Protocol Parsing Accuracy
+  description: Accuracy of protocol information extraction and element identification
+  target: '> 95%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Summary Completeness Score
+  description: Completeness of protocol summaries across all required elements
+  target: '> 90%'
+  measurement: percentage
+  category: Quality
+  valueType: number
+- name: Stakeholder Satisfaction Rating
+  description: Stakeholder satisfaction with summary quality and usefulness
+  target: '> 4.3/5'
+  measurement: score
+  category: User Experience
+  valueType: percentage
+- name: Regulatory Compliance Coverage
+  description: Percentage of regulatory requirements properly identified and documented
+  target: '> 92%'
+  measurement: percentage
+  category: Compliance
+  valueType: percentage
+- name: Processing Time Efficiency
+  description: Average time to generate comprehensive protocol summaries
+  target: < 30 minutes
+  measurement: time
+  category: Efficiency
+  valueType: number
+- name: Medical Terminology Accuracy
+  description: Accuracy of medical terminology processing and standardization
+  target: '> 93%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Risk Assessment Completeness
+  description: Completeness of clinical trial risk identification and assessment
+  target: '> 88%'
+  measurement: percentage
+  category: Safety
+  valueType: percentage
+- name: Summary Utilization Rate
+  description: Percentage of generated summaries actively used in trial planning
+  target: '> 85%'
+  measurement: percentage
+  category: Adoption
+  valueType: percentage
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true

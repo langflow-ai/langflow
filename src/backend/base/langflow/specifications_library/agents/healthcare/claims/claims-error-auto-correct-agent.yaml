@@ -1,0 +1,199 @@
+id: urn:agent:genesis:autonomize.ai:claims-error-auto-correct-agent:1.0.0
+name: Claims Error Auto-Correct Agent
+fullyQualifiedName: genesis.autonomize.ai.claims_error_auto_correct_agent
+description: Suggests intelligent code corrections based on denial history analysis and comprehensive rules engine to reduce claim rework before payer submission and improve first-pass approval rates
+domain: autonomize.ai
+subDomain: claims-operations
+version: 1.0.0
+environment: production
+agentOwner: claims-operations@autonomize.ai
+agentOwnerDisplayName: Claims Operations Team
+email: claims-operations@autonomize.ai
+status: ACTIVE
+kind: Single Agent
+agentGoal: Automatically identify and suggest corrections for common claim errors using historical denial patterns, coding guidelines, and intelligent rules engines to reduce claim rejections and improve processing efficiency
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: ReflexiveAgent
+toolsUse: true
+learningCapability: Supervised
+variables:
+- name: auto_correct_confidence_threshold
+  type: number
+  required: false
+  default: 0.9
+  description: Confidence threshold for automatic corrections
+- name: denial_history_lookback_days
+  type: number
+  required: false
+  default: 365
+  description: Days of denial history to analyze for patterns
+- name: max_corrections_per_claim
+  type: number
+  required: false
+  default: 10
+  description: Maximum number of corrections to suggest per claim
+- name: learning_model_update_frequency
+  type: string
+  required: false
+  default: weekly
+  description: Frequency for updating the correction model
+tags:
+- error-correction
+- denial-prevention
+- code-validation
+- auto-correction
+- claims-quality
+- processing-efficiency
+sampleInput:
+  claim_data:
+    claim_id: CLM-2024-005432
+    provider_npi: '2468135790'
+    member_id: MBR456123789
+    service_date: '2024-01-20'
+    submission_attempt: 1
+    claim_lines:
+    - line_number: 1
+      cpt_code: '99213'
+      modifier: ''
+      diagnosis_pointer: A
+      units: 1
+      charge_amount: 150.0
+    - line_number: 2
+      cpt_code: '85025'
+      modifier: ''
+      diagnosis_pointer: A
+      units: 1
+      charge_amount: 25.0
+    diagnosis_codes:
+    - pointer: A
+      icd10_code: Z00.00
+      description: Encounter for general adult medical examination without abnormal findings
+    payer_id: PAYER_BCBS_TX
+    claim_type: professional
+components:
+- id: error-correction-input
+  type: genesis:chat_input
+  name: Claims Error Correction Input
+  description: Input for claims requiring error detection and correction analysis
+  provides:
+  - in: error-correction-agent
+    useAs: input
+    description: Claim data for error analysis and correction
+- id: denial-history-analyzer
+  type: genesis:mcp_tool
+  name: Denial History Analysis Engine
+  description: Analyzes historical denial patterns to identify common errors and successful corrections
+  config:
+    tool_name: denial_history_analyzer
+    description: Analyzes historical denial patterns to identify common errors and successful corrections
+  provides:
+  - in: error-correction-agent
+    useAs: tool
+    description: Historical denial pattern analysis
+- id: coding-rules-engine
+  type: genesis:mcp_tool
+  name: Medical Coding Rules Engine
+  description: Comprehensive rules engine for medical coding guidelines and validation
+  config:
+    tool_name: coding_rules_engine
+    description: Comprehensive rules engine for medical coding guidelines and validation
+  provides:
+  - in: error-correction-agent
+    useAs: tool
+    description: Medical coding validation and rules application
+- id: payer-policy-engine
+  type: genesis:mcp_tool
+  name: Payer Policy Engine
+  description: Maintains and applies payer-specific billing policies and requirements
+  config:
+    tool_name: payer_policy_engine
+    description: Maintains and applies payer-specific billing policies and requirements
+  provides:
+  - in: error-correction-agent
+    useAs: tool
+    description: Payer-specific policy validation
+- id: auto-correction-model
+  type: genesis:mcp_tool
+  name: Claims Auto-Correction ML Model
+  description: Machine learning model trained to suggest optimal claim corrections
+  config:
+    tool_name: auto_correction_model
+    description: Machine learning model trained to suggest optimal claim corrections
+  provides:
+  - in: error-correction-agent
+    useAs: tool
+    description: ML-based correction suggestions
+- id: claims-validation-service
+  type: genesis:mcp_tool
+  name: Claims Validation Service
+  description: Comprehensive claims validation service for format and content verification
+  config:
+    tool_name: claims_validation_service
+    description: Comprehensive claims validation service for format and content verification
+  provides:
+  - in: error-correction-agent
+    useAs: tool
+    description: Claims validation and error identification
+- id: error-correction-agent
+  type: genesis:agent
+  name: Claims Error Auto-Correction Specialist
+  description: Analyzes claims for errors and provides intelligent correction suggestions using multiple data sources
+  config:
+    system_prompt: "You are a Claims Error Auto-Correction Specialist with expertise in medical coding, payer policies, and claims processing optimization. Your role is to identify errors in claims and suggest intelligent corrections to improve approval rates.\n\n**Error Detection and Correction Framework:**\n\n1. **Common Claim Error Categories:**\n   - **Coding Errors**: Incorrect CPT, ICD-10, or HCPCS codes\n   - **Modifier Issues**: Missing or incorrect modifiers\n   - **Diagnosis-Procedure Mismatch**: Incompatible diagnosis and procedure combinations\n   - **Bundling Violations**: Incorrectly bundled or unbundled services\n   - **Payer Policy Violations**: Non-compliance with payer-specific requirements\n   - **Medical Necessity**: Insufficient diagnosis support for procedures\n\n2. **Correction Methodology:**\n   - **Historical Pattern Analysis**: Learn from successful corrections\n   - **Coding Guidelines Application**: Apply current coding standards\n   - **Payer Policy Compliance**:\
+      \ Ensure payer-specific requirement adherence\n   - **Machine Learning Predictions**: Use AI to suggest optimal corrections\n   - **Confidence Scoring**: Provide reliability metrics for suggestions\n\n3. **Available Tools:**\n   - **Denial History Analyzer** - Historical denial pattern analysis\n   - **Coding Rules Engine** - Medical coding guidelines and validation\n   - **Payer Policy Engine** - Payer-specific requirements and policies\n   - **Auto-Correction Model** - ML-based correction suggestions\n   - **Claims Validation Service** - Comprehensive error identification\n\n**Correction Process:**\n1. Analyze claim structure and identify potential errors\n2. Query historical denial patterns for similar claims\n3. Apply coding guidelines and payer policy validation\n4. Generate correction suggestions with confidence scores\n5. Validate corrected claim against all rules and policies\n6. Estimate approval probability improvement\n\n**Correction Confidence Levels:**\n- **High Confidence\
+      \ (0.90+)**: Apply automatic corrections\n- **Medium Confidence (0.70-0.89)**: Suggest corrections for review\n- **Low Confidence (0.50-0.69)**: Flag for manual coding review\n- **Very Low Confidence (<0.50)**: Escalate to coding specialist\n\n**Correction Types:**\n- **Code Substitution**: Replace incorrect codes with appropriate alternatives\n- **Modifier Addition**: Add required modifiers for proper billing\n- **Diagnosis Optimization**: Select more specific or appropriate diagnoses\n- **Bundling Correction**: Properly bundle or unbundle service combinations\n- **Policy Compliance**: Adjust claim to meet payer-specific requirements\n\n**Output Requirements:**\n- Clear identification of all detected errors\n- Specific correction suggestions with confidence scores\n- Detailed reasoning for each correction recommendation\n- Estimated impact on claim approval probability\n- Validation results for corrected claim\n- Learning insights for future correction improvements\n\nAlways prioritize\
+      \ accuracy and compliance while maximizing claim approval potential. Consider both immediate correction needs and long-term pattern learning for continuous improvement.\n"
+    temperature: 0.1
+    max_tokens: 2500
+  provides:
+  - in: error-correction-output
+    useAs: input
+    description: Send error correction analysis to output
+- id: error-correction-output
+  type: genesis:chat_output
+  name: Claims Error Correction Results
+  description: Display comprehensive error analysis and correction recommendations
+outputs:
+- error_analysis
+- corrections_made
+- validation_results
+- approval_probability
+- learning_insights
+kpis:
+- name: first_pass_approval_rate
+  description: Percentage of claims approved on first submission after correction
+  target: '>92%'
+  type: percentage
+  valueType: percentage
+  category: performance
+- name: correction_accuracy
+  description: Percentage of corrections that result in claim approval
+  target: '>88%'
+  type: percentage
+  valueType: percentage
+  category: performance
+- name: processing_time_reduction
+  description: Reduction in claim processing time due to fewer rejections
+  target: '>40%'
+  type: percentage
+  valueType: number
+  category: performance
+- name: rework_elimination
+  description: Percentage reduction in claim rework due to corrections
+  target: '>75%'
+  type: percentage
+  valueType: percentage
+  category: performance
+- name: cost_savings
+  description: Monthly cost savings from reduced rework and faster processing
+  target: '>$25,000'
+  type: currency
+  valueType: percentage
+  category: performance
+securityInfo:
+  visibility: Internal
+  gdprSensitive: true
+  hipaaCompliant: true

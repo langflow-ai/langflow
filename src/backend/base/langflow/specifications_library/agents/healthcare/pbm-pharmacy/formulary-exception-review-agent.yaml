@@ -1,0 +1,312 @@
+id: urn:agent:genesis:pbm-pharmacy:formulary-exception-review-agent:1.0.0
+name: Formulary Exception Review Agent
+fullyQualifiedName: genesis.autonomize.ai.formulary_exception_review_agent
+description: Reviews exception requests using member benefit files, formulary status, clinical documentation, and pharmacy claims to streamline prior authorization and formulary exception processes
+domain: autonomize.ai
+subDomain: pbm-pharmacy
+version: 1.0.0
+environment: production
+agentOwner: pbm-pharmacy@autonomize.ai
+agentOwnerDisplayName: PBM & Pharmacy Team
+email: pbm-pharmacy@autonomize.ai
+status: ACTIVE
+variables:
+- name: clinical_review_depth
+  type: string
+  required: false
+  default: comprehensive
+  description: Depth of clinical review for exception requests (basic, standard, comprehensive, expert_review)
+- name: auto_approval_threshold
+  type: float
+  required: false
+  default: 0.85
+  description: Confidence threshold for automated approval of routine exception requests
+- name: drug_interaction_checking
+  type: boolean
+  required: false
+  default: true
+  description: Enable comprehensive drug interaction checking for exception requests
+- name: cost_effectiveness_analysis
+  type: boolean
+  required: false
+  default: true
+  description: Perform cost-effectiveness analysis comparing requested drugs to formulary alternatives
+- name: member_history_lookback
+  type: number
+  required: false
+  default: 12
+  description: Number of months to analyze member pharmacy history for exception review
+- name: clinical_criteria_strictness
+  type: string
+  required: false
+  default: evidence_based
+  description: Strictness of clinical criteria application (lenient, standard, evidence_based, strict)
+- name: expedited_review_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable expedited review process for urgent clinical situations
+- name: appeals_tracking_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable tracking and analysis of exception request appeals and outcomes
+tags:
+- pbm-pharmacy
+- formulary-management
+- prior-authorization
+- exception-review
+- clinical-review
+- drug-utilization
+- cost-effectiveness
+- member-safety
+- pharmacy-benefits
+- automated-processing
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Streamline formulary exception review processes by intelligently analyzing clinical documentation, member benefits, and pharmacy history to make evidence-based coverage decisions while ensuring patient safety and cost-effectiveness
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: exception-input
+  name: Formulary Exception Request Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive formulary exception requests with clinical documentation, member information, and prescriber details for comprehensive review
+  provides:
+  - useAs: input
+    in: exception-agent
+    description: Provide exception request data and clinical information for automated review processing
+- id: formulary-checker-tool
+  name: Formulary Status Validation Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Comprehensive formulary validation tool that checks drug coverage status, tier placement, and alternative options across member benefit plans
+  asTools: true
+  config:
+    tool_name: formulary_status_checker
+  provides:
+  - useAs: tools
+    in: exception-agent
+    description: Enable comprehensive formulary status checking and alternative identification
+- id: clinical-analyzer-tool
+  name: Clinical Documentation Analysis Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced clinical analysis engine that evaluates medical necessity, clinical appropriateness, and evidence-based treatment guidelines for exception requests
+  asTools: true
+  config:
+    analysis_categories:
+    - medical_necessity_assessment
+    - clinical_appropriateness_review
+    - evidence_based_guidelines_check
+    - contraindication_analysis
+    - therapeutic_equivalence_evaluation
+    - step_therapy_compliance
+    clinical_databases:
+    - lexicomp
+    - micromedex
+    - first_databank
+    - clinical_practice_guidelines
+    safety_scoring: true
+    drug_interaction_analysis: true
+    tool_name: clinical_analysis_model
+  provides:
+  - useAs: tools
+    in: exception-agent
+    description: Enable comprehensive clinical analysis and medical necessity evaluation
+- id: member-history-analyzer
+  name: Member Pharmacy History Analysis Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Member pharmacy history analysis tool that examines past medication usage, adherence patterns, and treatment outcomes to inform exception decisions
+  asTools: true
+  config:
+    tool_name: member_pharmacy_history_analyzer
+  provides:
+  - useAs: tools
+    in: exception-agent
+    description: Enable comprehensive analysis of member pharmacy history and treatment patterns
+- id: drug-database-tool
+  name: Comprehensive Drug Information Database
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Comprehensive drug database providing detailed medication information, interactions, contraindications, and therapeutic alternatives
+  asTools: true
+  config:
+    database_sources:
+    - ndc_directory
+    - orange_book
+    - rxnorm
+    - first_databank
+    - lexicomp
+    interaction_checking: true
+    therapeutic_equivalence: true
+    cost_information: true
+    clinical_monographs: true
+    tool_name: pharmacy_connector
+  provides:
+  - useAs: tools
+    in: exception-agent
+    description: Enable access to comprehensive drug information and clinical decision support
+- id: cost-analyzer-tool
+  name: Pharmacy Cost Analysis Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Pharmacy cost analysis engine that evaluates the financial impact of exception requests and compares costs to formulary alternatives
+  asTools: true
+  config:
+    tool_name: pharmacy_cost_analyzer
+  provides:
+  - useAs: tools
+    in: exception-agent
+    description: Enable comprehensive cost analysis and financial impact assessment
+- id: clinical-criteria-engine
+  name: Evidence-Based Clinical Criteria Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Clinical criteria engine that applies evidence-based guidelines and established protocols to evaluate exception requests against clinical standards
+  asTools: true
+  config:
+    tool_name: clinical_criteria_engine
+  provides:
+  - useAs: tools
+    in: exception-agent
+    description: Enable application of evidence-based clinical criteria and treatment guidelines
+- id: decision-support-tool
+  name: Formulary Exception Decision Support System
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Intelligent decision support system that integrates clinical, financial, and policy factors to recommend appropriate exception decisions
+  asTools: true
+  config:
+    tool_name: exception_decision_support
+  provides:
+  - useAs: tools
+    in: exception-agent
+    description: Enable comprehensive decision support for formulary exception determinations
+- id: exception-prompt
+  name: Formulary Exception Review Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for formulary exception review with clinical pharmacy and utilization management expertise
+  config:
+    saved_prompt: formulary_exception_agent_prompt_v1
+    template: 'You are an expert clinical pharmacist and pharmacy benefits specialist with extensive experience in formulary management, prior authorization, and clinical drug evaluation. Your role is to conduct comprehensive reviews of formulary exception requests to ensure appropriate medication access while maintaining cost-effectiveness and patient safety.
+
+      CLINICAL PHARMACY EXPERTISE: - Formulary management and drug coverage determination principles - Clinical pharmacy practice and evidence-based medicine - Drug utilization review and medication therapy management - Prior authorization and step therapy protocols - Drug interaction analysis and contraindication assessment - Therapeutic equivalence and substitution guidelines
+
+      FORMULARY EXCEPTION REVIEW WORKFLOW: 1. Validate formulary status and coverage determination for requested medication 2. Analyze clinical documentation for medical necessity and appropriateness 3. Review member pharmacy history and previous treatment outcomes 4. Evaluate therapeutic alternatives and step therapy compliance 5. Assess drug interactions, contraindications, and safety considerations 6. Perform cost-effectiveness analysis comparing to formulary options 7. Apply evidence-based clinical criteria and treatment guidelines 8. Generate recommendation with supporting rationale and documentation
+
+      CLINICAL EVALUATION CRITERIA: - Medical Necessity: Clinical indication supported by evidence-based guidelines - Contraindications: Documented contraindications to preferred formulary alternatives - Treatment Failure: Evidence of inadequate response or intolerance to formulary options - Unique Clinical Circumstances: Special patient factors requiring non-formulary therapy - Safety Considerations: Drug interactions or safety concerns with formulary alternatives - Evidence-Based Support: Published clinical evidence supporting requested therapy
+
+      MEMBER HISTORY ANALYSIS: - Previous Medication Trials: History of formulary drug trials and outcomes - Adherence Patterns: Member compliance with prescribed therapy regimens - Treatment Response: Clinical outcomes and effectiveness of previous therapies - Adverse Reactions: Documented adverse effects or intolerances - Comorbid Conditions: Additional health conditions affecting drug selection - Healthcare Utilization: Related medical services and provider interactions
+
+      COST-EFFECTIVENESS ASSESSMENT: - Drug Acquisition Costs: Comparative costs of requested versus formulary options - Total Cost of Care: Including monitoring, administration, and management costs - Outcomes Analysis: Cost per quality-adjusted life year and clinical outcomes - Budget Impact: Financial impact on plan and member cost-sharing - Value-Based Considerations: Cost-effectiveness relative to clinical benefit - Long-term Cost Implications: Projected costs over treatment duration
+
+      SAFETY AND INTERACTION ANALYSIS: - Drug-Drug Interactions: Comprehensive interaction screening with current medications - Drug-Disease Interactions: Contraindications based on member health conditions - Allergy Assessment: Known drug allergies and cross-sensitivity considerations - Renal/Hepatic Adjustments: Dose adjustments for organ function impairment - Age-Related Considerations: Pediatric or geriatric dosing and safety concerns - Pregnancy/Lactation: Safety considerations for reproductive-age women
+
+      DECISION SUPPORT FRAMEWORK: - Approval Criteria: Clear clinical and administrative criteria for exception approval - Denial Rationale: Evidence-based reasons for exception denial with alternatives - Conditional Approval: Approval with specific monitoring or duration limitations - Appeals Consideration: Factors supporting potential appeal and additional review - Policy Compliance: Adherence to plan policies and regulatory requirements - Documentation Standards: Comprehensive documentation supporting decisions
+
+      OUTPUT REQUIREMENTS: - Comprehensive exception review report with clinical analysis and recommendation - Evidence-based rationale supporting approval or denial decision - Alternative therapy recommendations with clinical and cost considerations - Safety assessment including interaction analysis and contraindication review - Cost-effectiveness analysis comparing requested therapy to formulary options - Appeals guidance and additional documentation requirements if applicable
+
+      Use your pharmacy tools to check formulary status, analyze clinical documentation, review member history, access drug databases, analyze costs, apply clinical criteria, and provide decision support. Always prioritize patient safety, clinical appropriateness, and evidence-based decision making in your exception reviews.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: exception-agent
+    description: Provide specialized formulary exception review and clinical pharmacy expertise
+- id: exception-agent
+  name: Formulary Exception Review Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Expert clinical pharmacist specializing in formulary exception review and pharmacy benefit management
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 20
+    verbose: true
+  provides:
+  - useAs: input
+    in: exception-output
+    description: Provide comprehensive exception review analysis and coverage determination
+- id: exception-output
+  name: Formulary Exception Review Results Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present exception review decisions, clinical analysis, alternative recommendations, and supporting documentation
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- exception_review_decision
+- clinical_analysis_summary
+- alternative_therapy_recommendations
+- cost_effectiveness_assessment
+- safety_interaction_analysis
+- member_history_evaluation
+- appeals_guidance_documentation
+- quality_metrics_reporting
+kpis:
+- name: Exception Review Accuracy
+  description: Accuracy of exception decisions based on clinical appropriateness and policy compliance
+  target: '> 94%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Processing Time Efficiency
+  description: Average time to complete comprehensive formulary exception review
+  target: < 24 hours
+  measurement: time
+  category: Efficiency
+  valueType: number
+- name: Clinical Documentation Completeness
+  description: Completeness of clinical analysis and supporting documentation for decisions
+  target: '> 96%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Member Safety Score
+  description: Comprehensive safety assessment score including interaction and contraindication analysis
+  target: '> 4.5/5'
+  measurement: score
+  category: Safety
+  valueType: number
+- name: Cost-Effectiveness Analysis Coverage
+  description: Percentage of exception reviews including comprehensive cost-effectiveness analysis
+  target: '> 92%'
+  measurement: percentage
+  category: Analysis Depth
+  valueType: percentage
+- name: Appeals Rate
+  description: Percentage of exception decisions that result in member or provider appeals
+  target: < 8%
+  measurement: percentage
+  category: Decision Quality
+  valueType: percentage
+- name: Alternative Therapy Identification Rate
+  description: Success rate in identifying appropriate formulary alternatives when exceptions are denied
+  target: '> 88%'
+  measurement: percentage
+  category: Clinical Value
+  valueType: percentage
+- name: Automated Processing Rate
+  description: Percentage of routine exception requests processed through automated decision pathways
+  target: '> 65%'
+  measurement: percentage
+  category: Automation
+  valueType: percentage
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true

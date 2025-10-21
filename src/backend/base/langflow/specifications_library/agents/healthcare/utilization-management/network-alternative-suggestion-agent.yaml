@@ -1,0 +1,136 @@
+id: urn:agent:genesis:autonomize.ai:network-alternative-suggestion-agent:1.0.0
+name: network-alternative-suggestion-agent
+fullyQualifiedName: genesis.autonomize.ai.network-alternative-suggestion-agent
+description: Matches PA requests against formulary, network, and eligibility to suggest lower-cost, in-network, or guideline-supported alternatives for optimal care and cost management
+domain: autonomize.ai
+subDomain: utilization-management
+version: "1.0.0"
+environment: production
+agentOwner: healthcare-team@autonomize.ai
+agentOwnerDisplayName: Healthcare Team
+email: healthcare-team@autonomize.ai
+status: ACTIVE
+kind: Single Agent
+
+agentGoal: Analyze prior authorization requests to identify and suggest clinically appropriate, cost-effective alternatives by matching against formulary tiers, provider networks, and clinical guidelines to optimize member care while reducing costs
+
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: GoalBasedAgent
+toolsUse: true
+learningCapability: None
+
+tags: ["prior-authorization", "network-optimization", "formulary", "cost-management", "clinical-alternatives"]
+
+sampleInput:
+  pa_request_id: "PA123456789"
+  member_id: "MBR987654321"
+  requested_service: "Brand medication Lipitor 20mg"
+  provider_id: "PRV456789123"
+  clinical_indication: "Cholesterol management"
+
+outputs:
+  - alternative_suggestions
+  - cost_analysis
+  - clinical_assessment
+  - recommendation_summary
+
+components:
+  - id: input
+    name: Chat Input
+    kind: Data
+    type: genesis:chat_input
+    config: {}
+
+  - id: formulary-tool
+    name: Formulary Search Tool
+    kind: Tool
+    type: genesis:mcp_tool
+    asTools: true
+    config:
+      tool_name: formulary_search
+      description: "Search formulary database for alternative medications and coverage details"
+    provides:
+    - useAs: tools
+      in: pa-analysis-agent
+
+  - id: network-tool
+    name: Provider Network Tool
+    kind: Tool
+    type: genesis:mcp_tool
+    asTools: true
+    config:
+      tool_name: provider_network_search
+      description: "Find in-network providers and alternative service locations"
+    provides:
+    - useAs: tools
+      in: pa-analysis-agent
+
+  - id: cost-analysis-tool
+    name: Cost Analysis Tool
+    kind: Tool
+    type: genesis:mcp_tool
+    asTools: true
+    config:
+      tool_name: cost_calculator
+      description: "Calculate cost differences and member financial impact"
+    provides:
+    - useAs: tools
+      in: pa-analysis-agent
+
+  - id: pa-analysis-agent
+    name: PA Analysis Agent
+    kind: Agent
+    type: genesis:agent
+    config:
+      system_message: |
+        You are a healthcare prior authorization specialist. Analyze PA requests and suggest clinically appropriate, cost-effective alternatives by:
+
+        1. Searching formulary for therapeutic alternatives with better coverage
+        2. Finding in-network providers for cost savings
+        3. Calculating financial impact for member and plan
+        4. Ensuring clinical appropriateness and safety
+
+        Provide specific recommendations with rationale and cost savings estimates.
+      max_tokens: 4000
+    provides:
+    - useAs: response
+      in: output
+
+  - id: output
+    name: Chat Output
+    kind: Data
+    type: genesis:chat_output
+    config: {}
+
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true
+
+kpis:
+  - name: average_cost_savings
+    description: Average cost savings per accepted alternative
+    target: "> $500"
+    category: performance
+    valueType: number
+
+  - name: alternative_acceptance_rate
+    description: Percentage of alternatives accepted by providers
+    target: "> 75%"
+    category: quality
+    valueType: percentage
+
+  - name: processing_time
+    description: Time to generate alternative suggestions
+    target: "< 2 minutes"
+    category: performance
+    valueType: duration
+
+  - name: clinical_safety_score
+    description: Clinical safety assessment of recommendations
+    target: "> 95%"
+    category: quality
+    valueType: percentage

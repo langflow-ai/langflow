@@ -1,0 +1,610 @@
+id: urn:agent:genesis:patient-experience:virtual-health-navigator-agent:1.0.0
+name: Virtual Health Navigator Agent
+fullyQualifiedName: genesis.autonomize.ai.virtual_health_navigator_agent
+description: Interactive chatbot that guides patients to appropriate care settings
+  using symptom analysis, claims history, and plan rules to reduce unnecessary visits
+  and improve navigation efficiency.
+domain: autonomize.ai
+subDomain: patient-experience
+version: 1.0.0
+environment: production
+agentOwner: patient-experience@autonomize.ai
+agentOwnerDisplayName: Patient Experience Team
+email: patient-experience@autonomize.ai
+status: ACTIVE
+variables:
+- name: llm_provider
+  type: string
+  required: false
+  default: Azure OpenAI
+  description: LLM provider for patient navigation logic
+- name: model_name
+  type: string
+  required: false
+  default: gpt-4
+  description: Model for complex symptom analysis and care recommendations
+- name: temperature
+  type: number
+  required: false
+  default: 0.2
+  description: Balanced temperature for empathetic yet accurate responses
+- name: max_tokens
+  type: number
+  required: false
+  default: 2000
+  description: Maximum tokens for comprehensive navigation guidance
+- name: symptom_severity_threshold
+  type: number
+  required: false
+  default: 0.7
+  description: Threshold for urgent care recommendations (0.0-1.0)
+- name: emergency_keywords_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable immediate emergency detection for critical symptoms
+- name: claims_history_lookback_months
+  type: number
+  required: false
+  default: 24
+  description: Months of claims history to analyze for patterns
+- name: enable_patient_feedback_collection
+  type: boolean
+  required: false
+  default: true
+  description: Enable post-navigation satisfaction feedback collection
+- name: preferred_care_radius_miles
+  type: number
+  required: false
+  default: 25
+  description: Radius for preferred care facility recommendations
+tags:
+- patient-experience
+- virtual-navigation
+- symptom-analysis
+- care-triage
+- cost-reduction
+- patient-satisfaction
+- interactive-chatbot
+- healthcare-guidance
+kind: Single Agent
+agentGoal: Guide patients to the most appropriate care setting or provider based on
+  comprehensive symptom analysis, claims history, and plan rules while reducing unnecessary
+  hospital visits and improving patient satisfaction
+targetUser: external
+valueGeneration: DecisionSupport
+interactionMode: Streaming
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+reusability:
+  asTools: true
+  standalone: true
+  provides:
+    toolName: VirtualHealthNavigator
+    toolDescription: Intelligent patient care navigation with symptom analysis and
+      personalized recommendations
+    inputSchema:
+      type: object
+      properties:
+        patient_id:
+          type: string
+          description: Patient identifier
+        symptoms:
+          type: array
+          items:
+            type: object
+            properties:
+              symptom:
+                type: string
+              severity:
+                type: integer
+                minimum: 1
+                maximum: 10
+              duration:
+                type: string
+              onset:
+                type: string
+          description: List of patient symptoms with severity and timing
+        patient_demographics:
+          type: object
+          properties:
+            age:
+              type: integer
+            gender:
+              type: string
+            chronic_conditions:
+              type: array
+              items:
+                type: string
+            current_medications:
+              type: array
+              items:
+                type: string
+        insurance_info:
+          type: object
+          properties:
+            plan_id:
+              type: string
+            member_id:
+              type: string
+            group_number:
+              type: string
+        urgency_level:
+          type: string
+          enum:
+          - low
+          - moderate
+          - high
+          - urgent
+        preferred_location:
+          type: object
+          properties:
+            zip_code:
+              type: string
+            max_distance_miles:
+              type: integer
+        communication_preferences:
+          type: object
+          properties:
+            language:
+              type: string
+              default: english
+            accessibility_needs:
+              type: array
+              items:
+                type: string
+      required:
+      - patient_id
+      - symptoms
+      - insurance_info
+    outputSchema:
+      type: object
+      properties:
+        navigation_recommendation:
+          type: object
+          properties:
+            recommended_care_setting:
+              type: string
+              enum:
+              - emergency_room
+              - urgent_care
+              - primary_care
+              - specialist
+              - telemedicine
+              - self_care
+              - pharmacy
+            rationale:
+              type: string
+            urgency_level:
+              type: string
+            estimated_cost:
+              type: object
+              properties:
+                copay:
+                  type: number
+                deductible_impact:
+                  type: number
+                total_estimate:
+                  type: number
+        provider_recommendations:
+          type: array
+          items:
+            type: object
+            properties:
+              provider_name:
+                type: string
+              facility_name:
+                type: string
+              address:
+                type: string
+              phone:
+                type: string
+              distance_miles:
+                type: number
+              availability:
+                type: string
+              in_network:
+                type: boolean
+              specialty_match:
+                type: number
+        symptom_analysis:
+          type: object
+          properties:
+            primary_concern:
+              type: string
+            severity_assessment:
+              type: string
+            potential_conditions:
+              type: array
+              items:
+                type: string
+            red_flags:
+              type: array
+              items:
+                type: string
+        next_steps:
+          type: array
+          items:
+            type: string
+        follow_up_schedule:
+          type: object
+          properties:
+            check_in_hours:
+              type: integer
+            escalation_triggers:
+              type: array
+              items:
+                type: string
+promptConfiguration:
+  basePromptId: virtual_health_navigator_v1
+  customPrompt: 'You are an expert Virtual Health Navigator specializing in patient
+    care guidance and symptom triage.
+
+    Your comprehensive responsibilities: 1. Intelligent Symptom Assessment and Triage
+    2. Personalized Care Setting Recommendations 3. Cost-Conscious Healthcare Navigation
+    4. Provider Matching and Availability Coordination 5. Patient Education and Empowerment
+
+    Navigation methodology:
+
+    STEP 1: COMPREHENSIVE SYMPTOM ASSESSMENT - Analyze all reported symptoms with
+    severity, duration, and onset patterns - Identify potential emergency conditions
+    requiring immediate attention - Evaluate symptom combinations and clinical significance
+    - Consider patient demographics, age, and medical history context - Flag critical
+    red flag symptoms that require urgent care
+
+    STEP 2: CLAIMS HISTORY AND PATTERN ANALYSIS - Review patient''s recent healthcare
+    utilization patterns - Identify recurring conditions or symptoms for context -
+    Analyze previous care settings used and outcomes - Consider seasonal patterns
+    or chronic condition management - Factor in recent procedures or ongoing treatments
+
+    STEP 3: INSURANCE PLAN RULES AND BENEFITS ANALYSIS - Verify coverage for recommended
+    care settings - Calculate estimated costs including copays and deductibles - Check
+    for prior authorization requirements - Identify in-network vs out-of-network implications
+    - Recommend most cost-effective appropriate care options
+
+    STEP 4: CARE SETTING DECISION MATRIX - Emergency Room: Life-threatening conditions,
+    severe trauma, critical symptoms - Urgent Care: Non-life-threatening urgent needs,
+    minor injuries, after-hours care - Primary Care: Routine concerns, preventive
+    care, chronic condition management - Specialist: Specific expertise needed, referral-based
+    care - Telemedicine: Consultations, follow-ups, minor concerns suitable for remote
+    care - Self-Care: Minor symptoms manageable at home with guidance - Pharmacy:
+    Minor conditions treatable with OTC medications
+
+    STEP 5: PROVIDER MATCHING AND RECOMMENDATIONS - Match providers by specialty,
+    location, and availability - Prioritize in-network providers to minimize costs
+    - Consider patient preferences for provider characteristics - Evaluate provider
+    ratings and patient satisfaction scores - Coordinate appointment availability
+    with urgency level
+
+    STEP 6: PERSONALIZED PATIENT EDUCATION - Explain the rationale behind care setting
+    recommendations - Provide condition-specific information and expectations - Offer
+    self-care instructions when appropriate - Share prevention strategies and lifestyle
+    modifications - Set clear expectations for treatment timelines and outcomes
+
+    Communication excellence principles: - Use empathetic, non-judgmental language
+    that reduces patient anxiety - Provide clear, actionable recommendations with
+    specific next steps - Explain medical terminology in patient-friendly language
+    - Acknowledge patient concerns and validate their healthcare experience - Maintain
+    cultural sensitivity and accommodate language preferences - Ensure accessibility
+    for patients with disabilities or special needs
+
+    Safety and escalation protocols: - IMMEDIATE ESCALATION: Chest pain with cardiac
+    risk factors, difficulty breathing, severe abdominal pain, neurological symptoms,
+    severe trauma - Provide emergency contact information when recommending urgent
+    care - Clear instructions for when to call 911 or go directly to emergency room
+    - Follow-up check-in scheduling for moderate-risk symptoms - Escalation triggers
+    if symptoms worsen or don''t improve
+
+    Cost optimization strategies: - Always consider insurance coverage in recommendations
+    - Suggest telemedicine when clinically appropriate to reduce costs - Recommend
+    urgent care over emergency room for non-emergent conditions - Guide patients to
+    in-network providers whenever possible - Inform patients of estimated costs before
+    care setting selection
+
+    Quality assurance standards: - Validate all symptom assessments against clinical
+    guidelines - Ensure provider recommendations match patient''s clinical needs -
+    Verify insurance coverage and cost estimates before final recommendations - Confirm
+    appointment availability and accessibility - Document all interactions for quality
+    improvement and learning
+
+    Always prioritize patient safety while optimizing for cost-effectiveness and patient
+    satisfaction. Provide compassionate, evidence-based guidance that empowers patients
+    to make informed healthcare decisions. '
+components:
+- id: input
+  name: Patient Navigation Request
+  kind: Data
+  type: genesis:chat_input
+  description: Patient symptoms, demographics, and navigation preferences
+  provides:
+  - useAs: input
+    in: navigator-agent
+    description: Patient information for navigation analysis
+- id: navigation-prompt
+  name: Health Navigation Guidelines
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Comprehensive patient navigation methodology and clinical triage protocols
+  config:
+    saved_prompt: virtual_health_navigator_prompt_v1
+    template: 'You are an expert Virtual Health Navigator providing intelligent patient
+      care guidance through comprehensive symptom analysis and personalized healthcare
+      recommendations.
+
+      Your expertise encompasses five critical navigation domains:
+
+      1. ADVANCED SYMPTOM ASSESSMENT AND CLINICAL TRIAGE - Conduct thorough symptom
+      evaluation with severity, timing, and pattern analysis - Apply evidence-based
+      clinical decision rules for triage accuracy - Identify emergency conditions
+      requiring immediate medical attention - Evaluate symptom combinations for differential
+      diagnosis considerations - Consider patient demographics, comorbidities, and
+      medication interactions - Flag critical red flag symptoms with appropriate urgency
+      escalation
+
+      2. PERSONALIZED HEALTHCARE CLAIMS PATTERN ANALYSIS - Analyze patient''s healthcare
+      utilization history and patterns - Identify recurring conditions and seasonal
+      healthcare trends - Review previous care setting effectiveness and outcomes
+      - Consider ongoing treatments and recent medical procedures - Factor chronic
+      condition management and specialist relationships - Optimize recommendations
+      based on historical care preferences
+
+      3. INSURANCE-INFORMED COST-CONSCIOUS NAVIGATION - Evaluate insurance plan coverage
+      for recommended care settings - Calculate comprehensive cost estimates including
+      copays and deductibles - Identify prior authorization requirements and approval
+      processes - Optimize in-network provider selection for cost minimization - Recommend
+      most cost-effective clinically appropriate care options - Provide transparent
+      cost information for patient decision-making
+
+      4. INTELLIGENT PROVIDER MATCHING AND AVAILABILITY COORDINATION - Match providers
+      by clinical specialty, expertise, and patient needs - Consider geographic proximity
+      and transportation accessibility - Evaluate provider availability for urgent
+      vs routine care needs - Factor patient preferences for provider characteristics
+      and communication styles - Incorporate provider ratings, patient satisfaction,
+      and quality metrics - Coordinate appointment scheduling with clinical urgency
+      requirements
+
+      5. EMPOWERING PATIENT EDUCATION AND COMMUNICATION - Deliver clear, empathetic
+      explanations of medical recommendations - Provide condition-specific patient
+      education and self-care guidance - Translate complex medical terminology into
+      understandable language - Address patient concerns and anxiety with compassionate
+      communication - Accommodate cultural preferences and accessibility requirements
+      - Empower informed decision-making through comprehensive information sharing
+
+      Clinical decision-making framework: - Emergency Room: Life-threatening conditions,
+      severe trauma, cardiac events, stroke symptoms, severe breathing difficulties
+      - Urgent Care: Non-emergent urgent needs, minor injuries, infections, after-hours
+      care needs - Primary Care: Routine health concerns, chronic disease management,
+      preventive care, health maintenance - Specialist Care: Condition-specific expertise,
+      complex diagnoses, referral-based specialized treatment - Telemedicine: Remote
+      consultations, follow-up visits, medication management, minor symptom evaluation
+      - Self-Care: Minor symptoms with home management protocols, wellness guidance,
+      prevention strategies - Pharmacy Care: Over-the-counter treatable conditions,
+      medication consultations, immunizations
+
+      Safety and quality protocols: - Maintain highest clinical safety standards with
+      conservative triage decisions - Provide clear escalation pathways for worsening
+      or concerning symptoms - Ensure all recommendations align with current medical
+      guidelines and best practices - Document rationale for care setting selection
+      with clinical justification - Implement follow-up protocols for moderate and
+      high-risk symptom presentations
+
+      Patient-centered care principles: - Respect patient autonomy and decision-making
+      preferences - Acknowledge and validate patient concerns and healthcare experiences
+      - Maintain cultural competency and language accessibility - Ensure equitable
+      access recommendations regardless of socioeconomic status - Support shared decision-making
+      with comprehensive information provision
+
+      Technology integration excellence: - Leverage symptom checker algorithms for
+      comprehensive assessment support - Utilize claims data analytics for personalized
+      recommendation optimization - Apply machine learning insights for provider matching
+      and outcome prediction - Integrate real-time availability data for appointment
+      coordination - Employ feedback systems for continuous navigation quality improvement
+
+      Always provide compassionate, evidence-based healthcare navigation that prioritizes
+      patient safety, optimizes clinical outcomes, minimizes unnecessary costs, and
+      empowers informed healthcare decisions.'
+  provides:
+  - useAs: prompt
+    in: navigator-agent
+    description: Provide navigation methodology and clinical protocols
+- id: symptom-checker-api
+  name: Symptom Analysis Engine
+  kind: Tool
+  type: genesis:api_request
+  description: AI-powered symptom checker API for clinical assessment and triage recommendations
+  asTools: true
+  config:
+    method: POST
+    url: ${SYMPTOM_CHECKER_API_URL}/analyze
+    headers:
+    - key: Authorization
+      value: Bearer ${SYMPTOM_CHECKER_API_TOKEN}
+    - key: Content-Type
+      value: application/json
+    - key: Accept
+      value: application/json
+    - key: X-API-Version
+      value: v3
+    body:
+      symptoms: '{{symptoms}}'
+      patient_demographics: '{{patient_demographics}}'
+      medical_history: '{{chronic_conditions}}'
+      urgency_level: '{{urgency_level}}'
+      clinical_guidelines: evidence_based
+      safety_protocols: conservative_triage
+      include_differential_diagnosis: true
+      include_red_flags: true
+      confidence_threshold: 0.8
+    timeout: 30
+  provides:
+  - useAs: tools
+    in: navigator-agent
+    description: Provide clinical symptom analysis and triage assessment
+- id: claims-database-api
+  name: Healthcare Claims Analytics
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Patient claims history analysis for personalized navigation patterns
+  asTools: true
+  config:
+    tool_name: healthcare_claims_database
+  provides:
+  - useAs: tools
+    in: navigator-agent
+    description: Provide claims history analysis for personalized recommendations
+- id: plan-rules-database
+  name: Insurance Plan Rules Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Healthcare plan benefits and coverage rules for cost-optimal navigation
+  asTools: true
+  config:
+    tool_name: insurance_plan_rules
+  provides:
+  - useAs: tools
+    in: navigator-agent
+    description: Provide insurance plan rules and coverage verification
+- id: patient-feedback-system
+  name: Patient Feedback Analytics
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Patient satisfaction and navigation outcome tracking system
+  asTools: true
+  config:
+    tool_name: patient_feedback_analytics
+  provides:
+  - useAs: tools
+    in: navigator-agent
+    description: Provide patient feedback collection and satisfaction analytics
+- id: hospital-clinic-database
+  name: Healthcare Facility Directory
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Comprehensive healthcare facility and provider directory with real-time
+    availability
+  asTools: true
+  config:
+    tool_name: healthcare_facility_directory
+  provides:
+  - useAs: tools
+    in: navigator-agent
+    description: Provide healthcare facility directory and provider matching
+- id: ml-analytics-engine
+  name: Navigation Analytics Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Machine learning analytics for personalized navigation optimization
+    and outcome prediction
+  asTools: true
+  config:
+    tool_name: navigation_ml_analytics
+  provides:
+  - useAs: tools
+    in: navigator-agent
+    description: Provide ML-powered navigation analytics and personalization
+- id: navigator-agent
+  name: Virtual Health Navigator
+  kind: Agent
+  type: genesis:agent
+  description: Intelligent patient navigation coordinator with comprehensive symptom
+    analysis and personalized care recommendations
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.2
+    max_tokens: 2000
+    handle_parsing_errors: true
+    max_iterations: 8
+    verbose: false
+  provides:
+  - useAs: input
+    in: navigation-output
+    description: Provide complete navigation recommendations and care guidance
+- id: navigation-output
+  name: Care Navigation Recommendations
+  kind: Data
+  type: genesis:chat_output
+  description: Comprehensive patient navigation recommendations with care setting,
+    providers, and next steps
+  config:
+    should_store_message: true
+outputs:
+- navigation_recommendation
+- provider_recommendations
+- symptom_analysis
+- cost_estimates
+- next_steps
+- follow_up_schedule
+- safety_instructions
+kpis:
+- name: Care Setting Recommendation Accuracy
+  category: quality
+  valueType: percentage
+  target: 92
+  unit: '%'
+  description: Percentage of navigation recommendations that result in appropriate
+    care setting utilization
+- name: Patient Satisfaction Rate
+  category: quality
+  valueType: percentage
+  target: 88
+  unit: '%'
+  description: Patient satisfaction with navigation recommendations and care outcomes
+- name: Reduction in Unnecessary Hospital Visits
+  category: performance
+  valueType: percentage
+  target: 35
+  unit: '%'
+  description: Percentage reduction in unnecessary emergency department visits through
+    appropriate triage
+- name: Average Navigation Time
+  category: performance
+  valueType: number
+  target: 180
+  unit: seconds
+  description: Average time to provide complete navigation recommendation to patients
+- name: Successful Care Setting Navigation Rate
+  category: quality
+  valueType: percentage
+  target: 94
+  unit: '%'
+  description: Percentage of patients successfully navigated to recommended care setting
+- name: Cost Savings Per Navigation
+  category: performance
+  valueType: number
+  target: 150
+  unit: dollars
+  description: Average healthcare cost savings achieved per patient navigation session
+- name: Provider Recommendation Accuracy
+  category: quality
+  valueType: percentage
+  target: 90
+  unit: '%'
+  description: Percentage of provider recommendations that meet patient needs and
+    preferences
+- name: Emergency Condition Detection Rate
+  category: quality
+  valueType: percentage
+  target: 98
+  unit: '%'
+  description: Accuracy rate for identifying emergency conditions requiring immediate
+    attention
+- name: Patient Follow-up Compliance
+  category: performance
+  valueType: percentage
+  target: 78
+  unit: '%'
+  description: Percentage of patients who complete recommended follow-up care
+- name: Insurance Coverage Accuracy
+  category: quality
+  valueType: percentage
+  target: 96
+  unit: '%'
+  description: Accuracy of insurance coverage verification and cost estimates
+securityInfo:
+  visibility: Private
+  confidentiality: High
+  gdprSensitive: true
+  hipaaCompliant: true

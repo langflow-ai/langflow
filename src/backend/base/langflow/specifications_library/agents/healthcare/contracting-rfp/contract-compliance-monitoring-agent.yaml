@@ -1,0 +1,304 @@
+id: urn:agent:genesis:contracting-rfp:contract-compliance-monitoring-agent:1.0.0
+name: Contract Compliance Monitoring Agent
+fullyQualifiedName: genesis.autonomize.ai.contract_compliance_monitoring_agent
+description: Monitors adherence to SLAs, contract clauses, and renewal terms using performance reports and payment files for ongoing healthcare contract compliance management
+domain: autonomize.ai
+subDomain: contracting-rfp
+version: 1.0.0
+environment: production
+agentOwner: contracting-rfp@autonomize.ai
+agentOwnerDisplayName: Contracting & RFP Team
+email: contracting-rfp@autonomize.ai
+status: ACTIVE
+variables:
+- name: sla_monitoring_frequency
+  type: string
+  required: false
+  default: monthly
+  description: Frequency for SLA performance monitoring (daily, weekly, monthly, quarterly)
+- name: compliance_threshold_tolerance
+  type: float
+  required: false
+  default: 0.05
+  description: Acceptable variance threshold for contract performance metrics (5% default)
+- name: alert_escalation_levels
+  type: array
+  required: false
+  default:
+  - warning
+  - critical
+  - urgent
+  description: Escalation levels for contract compliance alerts and notifications
+- name: renewal_notification_advance
+  type: number
+  required: false
+  default: 90
+  description: Days in advance to trigger contract renewal notifications and reviews
+- name: performance_trending_period
+  type: number
+  required: false
+  default: 12
+  description: Number of months for performance trend analysis and forecasting
+- name: automated_reporting_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable automated compliance reporting and dashboard updates
+- name: contract_risk_scoring
+  type: boolean
+  required: false
+  default: true
+  description: Enable automated risk scoring for contract compliance issues
+- name: healthcare_specific_metrics
+  type: array
+  required: false
+  default:
+  - quality_scores
+  - network_adequacy
+  - member_satisfaction
+  - clinical_outcomes
+  description: Healthcare-specific contract performance metrics to monitor
+tags:
+- contracting-rfp
+- contract-monitoring
+- sla-tracking
+- performance-management
+- compliance-monitoring
+- renewal-management
+- healthcare-contracts
+- risk-assessment
+- automated-alerts
+- contract-lifecycle
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Continuously monitor healthcare contract performance against SLAs and compliance requirements, provide early warning of potential breaches, and ensure timely renewal processes through automated tracking and intelligent alert systems
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: Streaming
+runMode: Scheduled
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: monitoring-input
+  name: Contract Performance Data Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive contract performance data, payment files, quality reports, and operational metrics for compliance monitoring
+  provides:
+  - useAs: input
+    in: monitoring-agent
+    description: Provide contract performance data and operational metrics for monitoring analysis
+- id: contract-parser-tool
+  name: Healthcare Contract Parser
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced contract parsing tool that extracts SLAs, performance metrics, compliance requirements, and renewal terms from healthcare contracts
+  asTools: true
+  config:
+    tool_name: healthcare_contract_parser
+  provides:
+  - useAs: tools
+    in: monitoring-agent
+    description: Enable comprehensive parsing and analysis of healthcare contract terms and requirements
+- id: performance-analyzer-tool
+  name: Contract Performance Analyzer
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Sophisticated performance analysis engine that evaluates contract metrics, SLA adherence, and healthcare quality indicators against contractual requirements
+  asTools: true
+  config:
+    metrics_categories:
+    - clinical_quality_measures
+    - network_adequacy_standards
+    - member_satisfaction_scores
+    - financial_performance_indicators
+    - operational_efficiency_metrics
+    - regulatory_compliance_measures
+    trending_analysis: true
+    benchmark_comparison: true
+    tool_name: performance_analysis_model
+  provides:
+  - useAs: tools
+    in: monitoring-agent
+    description: Enable comprehensive analysis of contract performance and healthcare quality metrics
+- id: sla-tracker-tool
+  name: SLA Compliance Tracking System
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Real-time SLA tracking system that monitors service level agreements, performance thresholds, and compliance requirements with automated alerting
+  asTools: true
+  config:
+    tool_name: sla_compliance_tracker
+  provides:
+  - useAs: tools
+    in: monitoring-agent
+    description: Enable real-time SLA monitoring and compliance tracking with automated alerts
+- id: payment-analyzer-tool
+  name: Contract Payment Analysis Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Financial analysis tool that tracks contract payments, identifies discrepancies, and monitors financial performance against contract terms
+  asTools: true
+  config:
+    tool_name: contract_payment_analyzer
+  provides:
+  - useAs: tools
+    in: monitoring-agent
+    description: Enable comprehensive financial analysis and payment tracking for contract compliance
+- id: renewal-tracker-tool
+  name: Contract Renewal Tracking System
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Automated contract renewal tracking system that monitors contract terms, renewal dates, and triggers timely notifications for contract management
+  asTools: true
+  config:
+    tool_name: contract_renewal_tracker
+  provides:
+  - useAs: tools
+    in: monitoring-agent
+    description: Enable automated contract renewal tracking and notification management
+- id: risk-assessor-tool
+  name: Contract Risk Assessment Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Intelligent risk assessment engine that evaluates contract compliance risks, predicts potential issues, and prioritizes remediation efforts
+  asTools: true
+  config:
+    tool_name: contract_risk_assessor
+  provides:
+  - useAs: tools
+    in: monitoring-agent
+    description: Enable comprehensive risk assessment and predictive analysis for contract compliance
+- id: alert-manager-tool
+  name: Compliance Alert Management System
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Automated alert management system that generates, prioritizes, and escalates contract compliance notifications based on severity and business impact
+  asTools: true
+  config:
+    tool_name: compliance_alert_manager
+  provides:
+  - useAs: tools
+    in: monitoring-agent
+    description: Enable automated alert generation and escalation for contract compliance issues
+- id: monitoring-prompt
+  name: Healthcare Contract Monitoring Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for healthcare contract compliance monitoring and performance analysis
+  config:
+    saved_prompt: contract_monitoring_agent_prompt_v1
+    template: 'You are an expert healthcare contract management specialist with extensive experience in SLA monitoring, compliance tracking, and contract lifecycle management. Your role is to continuously monitor contract performance, identify compliance issues, and ensure timely contract renewals through proactive analysis and alerting.
+
+      HEALTHCARE CONTRACT EXPERTISE: - Healthcare payer and provider contract management - Medicare Advantage and Medicaid managed care contracts - Provider network and credentialing agreements - Clinical quality and performance-based contracts - Vendor and technology service agreements - Regulatory compliance and audit requirements
+
+      CONTRACT MONITORING WORKFLOW: 1. Parse contract documents to extract SLAs, performance metrics, and compliance requirements 2. Analyze performance data against contractual benchmarks and thresholds 3. Track SLA adherence and identify performance gaps or trends 4. Monitor financial performance and payment compliance 5. Assess contract renewal timelines and notification requirements 6. Evaluate compliance risks and potential breach scenarios 7. Generate automated alerts and escalation notifications 8. Provide comprehensive performance reports and recommendations
+
+      PERFORMANCE MONITORING CATEGORIES: - Clinical Quality Measures: HEDIS scores, quality ratings, patient outcomes - Network Adequacy: Provider access, geographic coverage, specialty availability - Member Satisfaction: Customer service scores, grievance rates, satisfaction surveys - Financial Performance: Medical loss ratios, administrative costs, payment timeliness - Operational Efficiency: Claims processing times, prior authorization turnaround - Regulatory Compliance: Audit results, compliance scores, corrective action status
+
+      SLA TRACKING METHODOLOGY: - Performance Threshold Monitoring: Track metrics against contractual requirements - Trend Analysis: Identify patterns and predict potential performance issues - Variance Analysis: Assess acceptable performance ranges and tolerance levels - Benchmark Comparison: Compare performance against industry standards - Risk Scoring: Evaluate compliance risk levels and potential impact - Remediation Tracking: Monitor corrective action progress and effectiveness
+
+      CONTRACT RENEWAL MANAGEMENT: - Renewal Timeline Tracking: Monitor contract terms and renewal notification requirements - Performance Review Preparation: Compile performance data for renewal negotiations - Risk Assessment: Evaluate contract continuation risks and alternatives - Negotiation Support: Provide data-driven insights for contract discussions - Transition Planning: Prepare for potential contract changes or terminations - Documentation Management: Maintain comprehensive contract performance records
+
+      ALERT AND ESCALATION FRAMEWORK: - Warning Level: Performance approaching threshold limits requiring attention - Critical Level: SLA breaches or significant compliance issues requiring immediate action - Urgent Level: Contract jeopardy situations requiring executive intervention - Automated Escalation: Route alerts to appropriate stakeholders based on severity - Resolution Tracking: Monitor alert resolution and effectiveness of remediation efforts
+
+      QUALITY ASSURANCE STANDARDS: - Accurate performance measurement and threshold monitoring - Timely identification of compliance issues and potential risks - Comprehensive contract coverage without gaps or omissions - Reliable alert generation and escalation management - Clear documentation of performance trends and issues - Actionable recommendations for performance improvement
+
+      OUTPUT REQUIREMENTS: - Real-time contract performance dashboards with key metrics and trends - Automated compliance alerts with severity levels and recommended actions - Comprehensive performance reports with benchmark comparisons - Contract renewal notifications with performance summaries - Risk assessment reports with mitigation recommendations - Financial analysis including payment tracking and variance reporting
+
+      Use your contract tools to parse agreements, analyze performance, track SLAs, monitor payments, manage renewals, assess risks, and generate alerts. Always prioritize contract compliance, risk mitigation, and proactive management in your monitoring activities.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: monitoring-agent
+    description: Provide specialized healthcare contract monitoring and compliance management expertise
+- id: monitoring-agent
+  name: Healthcare Contract Monitoring Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Expert healthcare contract management specialist focused on continuous compliance monitoring and proactive risk management
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 20
+    verbose: true
+  provides:
+  - useAs: input
+    in: monitoring-output
+    description: Provide comprehensive contract compliance monitoring and performance analysis results
+- id: monitoring-output
+  name: Contract Monitoring Results Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present contract performance analysis, compliance status, alerts, and renewal recommendations
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- contract_performance_dashboard
+- sla_compliance_status
+- financial_performance_analysis
+- compliance_alert_summary
+- renewal_notification_tracker
+- risk_assessment_report
+- performance_trend_analysis
+- remediation_recommendations
+kpis:
+- name: SLA Compliance Rate
+  description: Percentage of SLA requirements meeting contractual performance thresholds
+  target: '> 95%'
+  measurement: percentage
+  category: Compliance
+  valueType: percentage
+- name: Contract Monitoring Coverage
+  description: Percentage of active contracts under continuous monitoring and tracking
+  target: '> 98%'
+  measurement: percentage
+  category: Coverage
+  valueType: percentage
+- name: Alert Response Time
+  description: Average time to generate and escalate compliance alerts after threshold breach
+  target: < 2 hours
+  measurement: time
+  category: Performance
+  valueType: number
+- name: Renewal Notification Accuracy
+  description: Accuracy of contract renewal notifications and timeline tracking
+  target: '> 97%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Risk Prediction Accuracy
+  description: Accuracy of predicting contract compliance risks and potential issues
+  target: '> 88%'
+  measurement: percentage
+  category: Risk Management
+  valueType: percentage
+- name: Performance Variance Detection
+  description: Effectiveness in detecting performance variances and threshold breaches
+  target: '> 92%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Contract Breach Prevention Rate
+  description: Percentage of potential contract breaches prevented through early detection
+  target: '> 85%'
+  measurement: percentage
+  category: Risk Management
+  valueType: percentage
+- name: Financial Discrepancy Detection Rate
+  description: Accuracy in identifying payment discrepancies and financial compliance issues
+  target: '> 94%'
+  measurement: percentage
+  category: Financial Management
+  valueType: percentage
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: false

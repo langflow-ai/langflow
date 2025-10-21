@@ -394,32 +394,32 @@ publish_testpypi: ## build the frontend static files and package the project and
 # example make alembic-revision message="Add user table"
 alembic-revision: ## generate a new migration
 	@echo 'Generating a new Alembic revision'
-	cd src/backend/base/langflow/ && uv run alembic revision --autogenerate -m "$(message)"
+	@export $$(grep -v '^#' .env | xargs) && cd src/backend/base && uv run --directory . python -m alembic -c langflow/alembic.ini revision --autogenerate -m "$(message)"
 
 
 alembic-upgrade: ## upgrade database to the latest version
 	@echo 'Upgrading database to the latest version'
-	cd src/backend/base/langflow/ && uv run alembic upgrade head
+	@export $$(grep -v '^#' .env | xargs) && cd src/backend/base && uv run --directory . python -m alembic -c langflow/alembic.ini upgrade head
 
 alembic-downgrade: ## downgrade database by one version
 	@echo 'Downgrading database by one version'
-	cd src/backend/base/langflow/ && uv run alembic downgrade -1
+	@export $$(grep -v '^#' .env | xargs) && cd src/backend/base && uv run --directory . python -m alembic -c langflow/alembic.ini downgrade -1
 
 alembic-current: ## show current revision
 	@echo 'Showing current Alembic revision'
-	cd src/backend/base/langflow/ && uv run alembic current
+	@export $$(grep -v '^#' .env | xargs) && cd src/backend/base && uv run --directory . python -m alembic -c langflow/alembic.ini current
 
 alembic-history: ## show migration history
 	@echo 'Showing Alembic migration history'
-	cd src/backend/base/langflow/ && uv run alembic history --verbose
+	@export $$(grep -v '^#' .env | xargs) && cd src/backend/base && uv run --directory . python -m alembic -c langflow/alembic.ini history --verbose
 
 alembic-check: ## check migration status
 	@echo 'Running alembic check'
-	cd src/backend/base/langflow/ && uv run alembic check
+	@export $$(grep -v '^#' .env | xargs) && cd src/backend/base && uv run --directory . python -m alembic -c langflow/alembic.ini check
 
 alembic-stamp: ## stamp the database with a specific revision
 	@echo 'Stamping the database with revision $(revision)'
-	cd src/backend/base/langflow/ && uv run alembic stamp $(revision)
+	@export $$(grep -v '^#' .env | xargs) && cd src/backend/base && uv run --directory . python -m alembic -c langflow/alembic.ini stamp $(revision)
 
 ######################
 # VERSION MANAGEMENT

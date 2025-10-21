@@ -2831,6 +2831,341 @@ MOCK_TOOL_TEMPLATES = {
                 "evidence_support": "Clinical evidence supports appropriateness of requested imaging after conservative treatment"
             }
         }
+    },
+
+    # Additional Eligibility Verification Tools
+    "eligibility_benefit_summary": {
+        "name": "Eligibility Benefit Summary",
+        "description": "Comprehensive benefit summary with detailed coverage information and financial details",
+        "input_schema": {
+            "member_id": {"type": "string", "description": "Insurance member ID"},
+            "plan_year": {"type": "string", "description": "Plan year (e.g., '2024')"},
+            "benefit_category": {"type": "string", "description": "Specific benefit category", "enum": ["all", "medical", "pharmacy", "dental", "vision"]}
+        },
+        "mock_response": {
+            "member_id": "BEN456789",
+            "plan_summary": {
+                "plan_name": "Health Plus Premium",
+                "plan_year": "2024",
+                "network_type": "HMO",
+                "formulary_tier": "Preferred"
+            },
+            "financial_summary": {
+                "deductible_individual": "$1500",
+                "deductible_family": "$3000",
+                "deductible_met": "$750",
+                "out_of_pocket_max": "$5000",
+                "out_of_pocket_met": "$1800"
+            },
+            "benefit_details": {
+                "preventive_care": {"coverage": "100%", "copay": "$0", "notes": "In-network only"},
+                "primary_care": {"coverage": "90%", "copay": "$25"},
+                "specialist_care": {"coverage": "80%", "copay": "$50", "referral_required": True},
+                "emergency_services": {"coverage": "80%", "copay": "$200"},
+                "prescription_drugs": {
+                    "generic": "$10",
+                    "brand_preferred": "$35",
+                    "brand_non_preferred": "$70",
+                    "specialty": "25% coinsurance"
+                }
+            },
+            "annual_limits": {
+                "physical_therapy": "20 visits",
+                "mental_health": "Unlimited",
+                "chiropractic": "12 visits"
+            }
+        }
+    },
+
+    "eligibility_network_provider_search": {
+        "name": "Network Provider Search",
+        "description": "Search for in-network healthcare providers by specialty, location, and availability",
+        "input_schema": {
+            "member_id": {"type": "string", "description": "Insurance member ID"},
+            "specialty": {"type": "string", "description": "Provider specialty (e.g., 'cardiology', 'dermatology')"},
+            "location": {"type": "string", "description": "Location (city, state, or zip code)"},
+            "radius_miles": {"type": "integer", "description": "Search radius in miles", "default": 25}
+        },
+        "mock_response": {
+            "search_criteria": {
+                "specialty": "cardiology",
+                "location": "Seattle, WA",
+                "radius": 25
+            },
+            "total_providers": 34,
+            "providers": [
+                {
+                    "npi": "1234567890",
+                    "name": "Dr. Sarah Johnson, MD",
+                    "specialty": "Cardiology",
+                    "practice_name": "Seattle Heart Institute",
+                    "address": "1234 Medical Center Dr, Seattle, WA 98101",
+                    "phone": "206-555-HEART",
+                    "distance_miles": 3.2,
+                    "accepting_new_patients": True,
+                    "next_available": "2024-02-15",
+                    "network_tier": "Preferred",
+                    "quality_rating": 4.8,
+                    "board_certifications": ["Cardiovascular Disease", "Internal Medicine"]
+                },
+                {
+                    "npi": "2345678901",
+                    "name": "Dr. Michael Chen, MD",
+                    "specialty": "Interventional Cardiology",
+                    "practice_name": "Northwest Cardiac Associates",
+                    "address": "5678 Health Way, Bellevue, WA 98004",
+                    "phone": "425-555-CARD",
+                    "distance_miles": 8.7,
+                    "accepting_new_patients": True,
+                    "next_available": "2024-02-20",
+                    "network_tier": "Standard",
+                    "quality_rating": 4.6,
+                    "board_certifications": ["Interventional Cardiology", "Cardiovascular Disease"]
+                }
+            ],
+            "search_metadata": {
+                "search_timestamp": "2024-01-16T10:30:00Z",
+                "results_cached_until": "2024-01-16T11:30:00Z",
+                "provider_data_last_updated": "2024-01-15"
+            }
+        }
+    },
+
+    "eligibility_prior_authorization_check": {
+        "name": "Prior Authorization Check",
+        "description": "Check prior authorization requirements for specific medical services and procedures",
+        "input_schema": {
+            "member_id": {"type": "string", "description": "Insurance member ID"},
+            "service_codes": {"type": "array", "description": "CPT/HCPCS codes for services"},
+            "provider_npi": {"type": "string", "description": "Provider NPI number"},
+            "service_date": {"type": "string", "description": "Planned service date (YYYY-MM-DD)"}
+        },
+        "mock_response": {
+            "member_id": "PA789012",
+            "prior_auth_summary": {
+                "total_services": 3,
+                "requiring_auth": 2,
+                "pre_approved": 0,
+                "not_required": 1
+            },
+            "service_details": [
+                {
+                    "service_code": "77078",
+                    "service_name": "Computed tomographic bone density study",
+                    "auth_required": True,
+                    "auth_status": "Required - Not Submitted",
+                    "estimated_approval_time": "3-5 business days",
+                    "submission_method": "Online portal or fax",
+                    "required_documentation": [
+                        "Clinical notes justifying medical necessity",
+                        "Previous imaging reports",
+                        "Treatment history"
+                    ]
+                },
+                {
+                    "service_code": "99213",
+                    "service_name": "Office visit, established patient",
+                    "auth_required": False,
+                    "auth_status": "Not Required",
+                    "notes": "Routine office visits do not require prior authorization"
+                },
+                {
+                    "service_code": "73721",
+                    "service_name": "MRI lower extremity, without contrast",
+                    "auth_required": True,
+                    "auth_status": "Required - Not Submitted",
+                    "estimated_approval_time": "5-7 business days",
+                    "submission_method": "Online portal",
+                    "clinical_criteria": [
+                        "Conservative treatment attempted for 6+ weeks",
+                        "Persistent symptoms affecting function",
+                        "Clinical exam findings consistent with pathology"
+                    ]
+                }
+            ],
+            "contact_information": {
+                "prior_auth_phone": "1-800-555-AUTH",
+                "online_portal": "https://provider.healthplan.com/auth",
+                "fax_number": "1-800-555-FAX",
+                "hours": "Monday-Friday 8AM-6PM EST"
+            }
+        }
+    },
+
+    "eligibility_cost_estimate": {
+        "name": "Medical Cost Estimate",
+        "description": "Calculate estimated patient costs for medical services based on current benefits",
+        "input_schema": {
+            "member_id": {"type": "string", "description": "Insurance member ID"},
+            "service_codes": {"type": "array", "description": "CPT codes for services"},
+            "provider_npi": {"type": "string", "description": "Provider NPI number"},
+            "facility_type": {"type": "string", "description": "Facility type", "enum": ["office", "hospital_outpatient", "hospital_inpatient", "ambulatory_surgery"]}
+        },
+        "mock_response": {
+            "member_id": "COST123456",
+            "estimate_date": "2024-01-16",
+            "total_estimate": {
+                "provider_charges": "$2,850",
+                "allowed_amount": "$2,200",
+                "patient_responsibility": "$340",
+                "insurance_payment": "$1,860"
+            },
+            "service_breakdown": [
+                {
+                    "service_code": "99214",
+                    "description": "Office visit, detailed",
+                    "provider_charge": "$350",
+                    "allowed_amount": "$280",
+                    "patient_copay": "$50",
+                    "deductible_applied": "$0",
+                    "coinsurance": "$46",
+                    "patient_total": "$96",
+                    "insurance_pays": "$184"
+                },
+                {
+                    "service_code": "93306",
+                    "description": "Echocardiography, complete",
+                    "provider_charge": "$2,500",
+                    "allowed_amount": "$1,920",
+                    "patient_copay": "$0",
+                    "deductible_applied": "$200",
+                    "coinsurance": "$344",
+                    "patient_total": "$544",
+                    "insurance_pays": "$1,376"
+                }
+            ],
+            "benefit_application": {
+                "deductible_remaining_before": "$750",
+                "deductible_remaining_after": "$550",
+                "out_of_pocket_remaining": "$3,200",
+                "annual_benefit_usage": "35%"
+            },
+            "estimate_accuracy": {
+                "confidence_level": "high",
+                "factors_affecting_cost": [
+                    "Actual charges may vary by provider",
+                    "Additional services may be required",
+                    "Benefit changes during plan year"
+                ],
+                "valid_through": "2024-02-16"
+            }
+        }
+    },
+
+    # Appeals & Grievances Case Management Tools
+    "case_management_database": {
+        "name": "Case Management Database",
+        "description": "HIPAA-compliant database connector for case management, member information, and historical case data",
+        "input_schema": {
+            "query_type": {"type": "string", "description": "Type of query to execute", "enum": ["member_lookup", "case_history", "similar_cases", "update_status"]},
+            "member_id": {"type": "string", "description": "Member identifier for data retrieval"},
+            "case_id": {"type": "string", "description": "Case identifier for specific case operations"},
+            "search_criteria": {"type": "object", "description": "Additional search parameters"}
+        },
+        "mock_response": {
+            "query_id": "QRY_20241017_001",
+            "member_info": {
+                "member_id": "MEM987654321",
+                "plan_type": "medicare_advantage",
+                "enrollment_date": "2023-01-01",
+                "status": "active",
+                "demographics": {
+                    "age_range": "65-70",
+                    "state": "CA",
+                    "zip_code": "90210"
+                }
+            },
+            "case_history": [
+                {
+                    "case_id": "CASE_20240801_001",
+                    "case_type": "medical_appeal",
+                    "status": "approved",
+                    "resolution_date": "2024-08-15",
+                    "category": "diagnostic_imaging",
+                    "outcome": "approved_with_conditions"
+                },
+                {
+                    "case_id": "CASE_20240301_002",
+                    "case_type": "pharmacy_appeal",
+                    "status": "denied",
+                    "resolution_date": "2024-03-20",
+                    "category": "formulary_exception",
+                    "outcome": "alternative_medication_approved"
+                }
+            ],
+            "similar_cases": [
+                {
+                    "case_id": "CASE_20240915_003",
+                    "similarity_score": 0.87,
+                    "category": "diagnostic_imaging",
+                    "resolution": "approved",
+                    "processing_days": 12
+                }
+            ],
+            "compliance_flags": [],
+            "processing_time_ms": 245,
+            "hipaa_audit_id": "AUDIT_20241017_001"
+        }
+    },
+
+    "healthcare_appeals_nlp_classifier": {
+        "name": "Healthcare Appeals NLP Classifier",
+        "description": "Advanced NLP engine for healthcare appeals and grievances text analysis with medical terminology understanding",
+        "input_schema": {
+            "case_content": {"type": "string", "description": "Full text content of the appeal or grievance"},
+            "analysis_type": {"type": "string", "description": "Type of analysis to perform", "enum": ["classification", "urgency_assessment", "clinical_extraction", "sentiment_analysis"]},
+            "context_data": {"type": "object", "description": "Additional context like member plan type, submission method"},
+            "confidence_threshold": {"type": "number", "description": "Minimum confidence threshold for classifications (0.0-1.0)"}
+        },
+        "mock_response": {
+            "analysis_id": "NLP_20241017_001",
+            "text_analysis": {
+                "primary_category": {
+                    "category": "medical_appeal",
+                    "subcategory": "diagnostic_imaging",
+                    "confidence": 0.92,
+                    "keywords": ["MRI", "lower back pain", "conservative treatment", "medical necessity"]
+                },
+                "urgency_indicators": {
+                    "urgency_level": "standard_urgent",
+                    "confidence": 0.89,
+                    "indicators": ["persistent pain", "failed treatment", "physician recommendation"],
+                    "escalation_triggers": []
+                },
+                "clinical_entities": {
+                    "conditions": [
+                        {"name": "chronic lower back pain", "code": "M54.5", "confidence": 0.94},
+                        {"name": "radiculopathy", "code": "M54.1", "confidence": 0.76}
+                    ],
+                    "procedures": [
+                        {"name": "MRI lumbar spine", "code": "72148", "confidence": 0.98}
+                    ],
+                    "medications": [
+                        {"name": "ibuprofen", "generic": "ibuprofen", "confidence": 0.85}
+                    ],
+                    "treatments": [
+                        {"name": "physical therapy", "code": "97110", "confidence": 0.91}
+                    ]
+                },
+                "sentiment_analysis": {
+                    "overall_sentiment": "frustrated_but_polite",
+                    "urgency_tone": "moderate",
+                    "compliance_indicators": ["provided documentation", "followed prior steps"]
+                },
+                "regulatory_keywords": {
+                    "cms_references": ["medical necessity", "appeal rights"],
+                    "timeline_mentions": ["30 days", "expedited review"],
+                    "compliance_terms": ["prior authorization", "coverage determination"]
+                }
+            },
+            "processing_metadata": {
+                "processing_time_ms": 1567,
+                "model_version": "healthcare_nlp_v2.1",
+                "language_detected": "en_US",
+                "text_quality_score": 0.94,
+                "medical_terminology_density": 0.67
+            }
+        }
     }
 }
 

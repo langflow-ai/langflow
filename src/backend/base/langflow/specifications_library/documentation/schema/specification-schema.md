@@ -228,6 +228,141 @@ Internal knowledge base search component.
       description: Knowledge Hub Search tool
 ```
 
+### 7. genesis:ehr_connector
+Electronic Health Record (EHR) integration component.
+
+**Configuration**:
+```yaml
+config:
+  ehr_system: string                   # Required: EHR system type
+  fhir_version: string                 # Required: FHIR version
+  authentication_type: string         # Required: Authentication method
+  base_url: string                     # Required: EHR system URL
+  operation: string                    # Required: Operation to perform
+```
+
+**Connections**: Connects to agents via `useAs: "tools"`
+
+```yaml
+- id: ehr-connector
+  type: genesis:ehr_connector
+  name: Epic EHR Integration
+  description: Retrieve patient data from Epic EHR system
+  asTools: true
+  config:
+    ehr_system: epic
+    fhir_version: R4
+    authentication_type: oauth2
+    base_url: "${EPIC_BASE_URL}"
+    operation: get_patient_data
+  provides:
+    - useAs: tools
+      in: clinical-agent
+      description: Provide EHR data access capability
+```
+
+### 8. genesis:claims_connector
+Healthcare claims processing integration component.
+
+**Configuration**:
+```yaml
+config:
+  clearinghouse: string                # Required: Claims clearinghouse
+  payer_id: string                    # Optional: Insurance payer identifier
+  provider_npi: string                # Optional: Provider NPI number
+  test_mode: boolean                  # Optional: Development vs production
+  operation: string                   # Required: Claims operation
+```
+
+**Connections**: Connects to agents via `useAs: "tools"`
+
+```yaml
+- id: claims-processor
+  type: genesis:claims_connector
+  name: Claims Processing System
+  description: Submit and track healthcare claims
+  asTools: true
+  config:
+    clearinghouse: change_healthcare
+    provider_npi: "${PROVIDER_NPI}"
+    test_mode: false
+    operation: submit_claim
+  provides:
+    - useAs: tools
+      in: billing-agent
+      description: Claims submission and tracking tools
+```
+
+### 9. genesis:eligibility_connector
+Insurance eligibility verification component.
+
+**Configuration**:
+```yaml
+config:
+  eligibility_service: string         # Required: Eligibility service provider
+  payer_list: array                  # Optional: Supported insurance payers
+  provider_npi: string               # Optional: Provider NPI
+  real_time_mode: boolean            # Optional: Real-time vs cached
+  cache_duration_minutes: integer    # Optional: Cache duration
+  operation: string                  # Required: Eligibility operation
+```
+
+**Connections**: Connects to agents via `useAs: "tools"`
+
+```yaml
+- id: eligibility-checker
+  type: genesis:eligibility_connector
+  name: Real-Time Eligibility Verification
+  description: Verify patient insurance eligibility and benefits
+  asTools: true
+  config:
+    eligibility_service: availity
+    provider_npi: "${PROVIDER_NPI}"
+    real_time_mode: true
+    cache_duration_minutes: 15
+    operation: verify_eligibility
+  provides:
+    - useAs: tools
+      in: eligibility-agent
+      description: Real-time eligibility verification tools
+```
+
+### 10. genesis:pharmacy_connector
+Pharmacy and medication management component.
+
+**Configuration**:
+```yaml
+config:
+  pharmacy_network: string            # Required: Pharmacy network
+  prescriber_npi: string              # Optional: Prescriber NPI
+  dea_number: string                  # Optional: DEA registration number
+  drug_database: string               # Optional: Drug database system
+  interaction_checking: boolean        # Optional: Enable drug interactions
+  formulary_checking: boolean         # Optional: Enable formulary verification
+  operation: string                   # Required: Pharmacy operation
+```
+
+**Connections**: Connects to agents via `useAs: "tools"`
+
+```yaml
+- id: eprescribing-system
+  type: genesis:pharmacy_connector
+  name: E-Prescribing System
+  description: Electronic prescription management with interaction checking
+  asTools: true
+  config:
+    pharmacy_network: surescripts
+    prescriber_npi: "${PRESCRIBER_NPI}"
+    dea_number: "${DEA_NUMBER}"
+    interaction_checking: true
+    formulary_checking: true
+    operation: send_prescription
+  provides:
+    - useAs: tools
+      in: prescribing-agent
+      description: E-prescribing and medication management tools
+```
+
 ## Variables Schema
 
 Configuration variables allow parameterization:
@@ -308,8 +443,106 @@ reusability:
 4. **useAs Values**: Must be valid connection types (`input`, `tools`, `system_prompt`)
 5. **Component Types**: Must be valid genesis component types
 
+## Healthcare-Specific Schema Extensions
+
+### Healthcare Component Category
+Healthcare connectors use a specific component category:
+```yaml
+kind: "Healthcare"                    # Optional: Healthcare component category
+```
+
+### Healthcare Domain Classification
+Healthcare agents should include specific domain classification:
+```yaml
+domain: autonomize.ai
+subDomain: healthcare-{area}          # e.g., clinical-workflow, patient-care
+targetUser: internal                  # Restrict to internal users for PHI data
+```
+
+### HIPAA Compliance Metadata
+Healthcare agents handling PHI data must include security metadata:
+```yaml
+securityInfo:
+  visibility: Private                 # Required for PHI data
+  confidentiality: High              # High security classification
+  gdprSensitive: true               # GDPR compliance flag
+```
+
+### Healthcare KPIs
+Healthcare agents should include compliance and quality metrics:
+```yaml
+kpis:
+  - name: HIPAA Compliance Score
+    category: Security
+    valueType: percentage
+    target: 100
+    unit: '%'
+    description: HIPAA compliance rating for data handling
+
+  - name: Clinical Accuracy
+    category: Quality
+    valueType: percentage
+    target: 98
+    unit: '%'
+    description: Accuracy of clinical recommendations
+
+  - name: Workflow Completion Rate
+    category: Quality
+    valueType: percentage
+    target: 95
+    unit: '%'
+    description: Percentage of healthcare workflows completed successfully
+```
+
+### Healthcare Configuration Variables
+Healthcare agents commonly use these configuration variables:
+```yaml
+variables:
+  - name: ehr_base_url
+    type: string
+    required: true
+    description: EHR system base URL
+
+  - name: provider_npi
+    type: string
+    required: true
+    description: National Provider Identifier
+
+  - name: encryption_key
+    type: string
+    required: true
+    description: Encryption key for PHI data
+
+  - name: audit_endpoint
+    type: string
+    required: true
+    description: Audit logging endpoint URL
+```
+
+### Healthcare Output Types
+Common healthcare output types:
+```yaml
+outputs:
+  - patient_data_summary
+  - clinical_assessment
+  - treatment_recommendations
+  - eligibility_verification_result
+  - claims_processing_status
+  - medication_interaction_analysis
+  - compliance_audit_report
+```
+
+## Healthcare Validation Rules
+
+1. **Healthcare Components**: Healthcare connectors must have `asTools: true`
+2. **PHI Data Handling**: Agents handling PHI must include `securityInfo` with `confidentiality: High`
+3. **Environment Variables**: Healthcare credentials must use environment variables (e.g., `"${EHR_BASE_URL}"`)
+4. **HIPAA Compliance**: Healthcare agents must include HIPAA compliance KPIs
+5. **Healthcare Domain**: Healthcare agents should use `subDomain` starting with "healthcare-"
+
 ## Best Practices
 
+### General Best Practices
 1. Use descriptive IDs and names for components
 2. Include detailed descriptions for complex agents
 3. Specify appropriate temperature values (0.1 for deterministic, higher for creative)
@@ -318,3 +551,13 @@ reusability:
 6. Add security classification for sensitive agents
 7. Define variables for configurable parameters
 8. Use tags for discoverability
+
+### Healthcare-Specific Best Practices
+1. **Security First**: Always include HIPAA compliance metadata for PHI data
+2. **Environment Variables**: Never hardcode healthcare credentials or API keys
+3. **Clinical Quality**: Include clinical accuracy and guideline compliance KPIs
+4. **Audit Requirements**: Define audit logging and compliance tracking variables
+5. **Mock Mode**: Use test_mode configuration for development and testing
+6. **Error Handling**: Implement secure error handling that doesn't expose PHI
+7. **Data Minimization**: Only request necessary healthcare data fields
+8. **Clinical Context**: Include clear clinical rationale in agent prompts

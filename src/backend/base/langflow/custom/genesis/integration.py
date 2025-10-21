@@ -19,7 +19,7 @@ from loguru import logger
 
 from .services import register_genesis_services
 from .auth.middleware import AuthMiddleware
-from .startup_extensions import initialize_genesis_studio_extensions
+from .startup_extensions import initialize_genesis_studio_extensions, initialize_complete_genesis_extensions
 
 
 
@@ -67,7 +67,7 @@ def setup_genesis_middleware(app: FastAPI) -> bool:
         return False
 
 
-def initialize_genesis_extensions(app: Optional[FastAPI] = None) -> bool:
+async def initialize_genesis_extensions(app: Optional[FastAPI] = None) -> bool:
     """Initialize all Genesis Studio extensions.
 
     Args:
@@ -93,16 +93,23 @@ def initialize_genesis_extensions(app: Optional[FastAPI] = None) -> bool:
             logger.error(f"❌ Failed to register services: {e}")
             success = False
 
-        # 2. Initialize startup extensions (starter projects, etc.)
-        logger.info("\n🎯 Initializing Genesis Startup Extensions...")
+        # 2. Initialize complete startup extensions (starter projects, component mappings, schema integration)
+        logger.info("\n🎯 Initializing Complete Genesis Startup Extensions...")
         try:
-            startup_success = initialize_genesis_studio_extensions()
-            if startup_success:
-                logger.debug("✅ Genesis Startup Extensions initialized")
-            else:
-                logger.debug("⚠️ Some startup extensions failed to initialize")
+            # Import session_getter for database access during startup
+            from langflow.services.database.utils import session_getter
+            from langflow.services.deps import get_db_service
+
+            # Use session context for database operations
+            db_service = get_db_service()
+            async with session_getter(db_service) as session:
+                startup_success = await initialize_complete_genesis_extensions(session)
+                if startup_success:
+                    logger.debug("✅ Complete Genesis Startup Extensions initialized")
+                else:
+                    logger.debug("⚠️ Some startup extensions failed to initialize")
         except Exception as e:
-            logger.error(f"❌ Failed to initialize startup extensions: {e}")
+            logger.error(f"❌ Failed to initialize complete startup extensions: {e}")
             success = False
 
         # Summary

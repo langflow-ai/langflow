@@ -1,0 +1,63 @@
+id: urn:agent:genesis:autonomize.ai:classification-agent:1.0.0
+name: Classification Agent
+fullyQualifiedName: genesis.autonomize.ai.classification_agent
+description: Classify incoming prior authorization faxes into specific categories
+  to route them correctly
+domain: autonomize.ai
+subDomain: document-processing
+version: 1.0.0
+environment: production
+agentOwner: document-processing@autonomize.ai
+agentOwnerDisplayName: Document Processing Team
+email: document-processing@autonomize.ai
+status: ACTIVE
+kind: Single Agent
+agentGoal: Classify incoming prior authorization faxes into specific categories such
+  as Radiology, DME, Pharmacy, or MSK to route them into the correct processing pipeline
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: ModelBasedReflexAgent
+toolsUse: false
+learningCapability: None
+components:
+- id: document-input
+  type: genesis:chat_input
+  name: Document Input
+  description: OCR text from fax document for classification
+  provides:
+  - in: classification-agent
+    useAs: input
+    description: Document text to classify
+- id: classification-agent
+  type: genesis:agent
+  name: Document Classification Agent
+  description: Classifies PA requests by type and domain
+  config:
+    system_prompt: "You are a document classification specialist for prior authorization\
+      \ requests. Analyze the provided OCR text and classify it accurately.\n\nPRIMARY\
+      \ CLASSIFICATION - PA Type (select one):\n- Radiology (MRI, CT, PET scans, X-rays,\
+      \ ultrasounds)\n- DME (Durable Medical Equipment: wheelchairs, CPAP, oxygen,\
+      \ hospital beds)\n- Pharmacy (medications, prescriptions, drug requests)\n-\
+      \ MSK (Musculoskeletal: PT, OT, chiropractic, joint surgeries)\n- Cardiology\
+      \ (cardiac procedures, stress tests, pacemakers)\n\nSECONDARY CLASSIFICATIONS:\n\
+      1. Line of Business: Medicare, Medicaid, Commercial\n2. Request Type: Initial,\
+      \ Renewal, Replacement, Concurrent\n3. Service Setting: Inpatient, Outpatient,\
+      \ Ambulatory, Home\n4. Urgency Level: STAT/Urgent, Routine, Scheduled\n5. Special\
+      \ Flags: High-cost procedure, Controlled substance, Manual review required\n\
+      \nOutput format:\n{\n  \"pa_type\": \"primary classification\",\n  \"line_of_business\"\
+      : \"LOB\",\n  \"request_type\": \"type\",\n  \"service_setting\": \"setting\"\
+      ,\n  \"urgency\": \"level\",\n  \"special_flags\": [\"flag1\", \"flag2\"],\n\
+      \  \"confidence\": 0.95,\n  \"routing_recommendation\": \"suggested pipeline\"\
+      \n}\n"
+    temperature: 0.1
+    max_tokens: 1000
+  provides:
+  - in: classification-output
+    useAs: input
+    description: Classification results
+- id: classification-output
+  type: genesis:chat_output
+  name: Classification Results
+  description: Display classification results and routing

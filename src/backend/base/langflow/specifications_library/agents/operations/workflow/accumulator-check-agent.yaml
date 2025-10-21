@@ -1,0 +1,276 @@
+id: urn:agent:genesis:autonomize.ai:accumulator-check-agent:1.0.0
+name: Accumulator Check Agent
+fullyQualifiedName: genesis.autonomize.ai.accumulator_check_agent
+description: Checks member's deductible, out-of-pocket maximums, and benefit utilization
+domain: autonomize.ai
+subDomain: benefit-validation
+version: 1.0.0
+environment: production
+agentOwner: benefit-validation@autonomize.ai
+agentOwnerDisplayName: Benefit Validation Team
+email: benefit-validation@autonomize.ai
+status: ACTIVE
+variables:
+- name: llm_provider
+  type: string
+  required: false
+  default: Azure OpenAI
+  description: LLM provider (AzureOpenAI, OpenAI, Anthropic, etc.)
+- name: model_name
+  type: string
+  required: false
+  default: gpt-4
+  description: Model name to use for analysis
+- name: temperature
+  type: number
+  required: false
+  default: 0.1
+  description: Temperature for model generation
+- name: lookback_months
+  type: number
+  required: false
+  default: 12
+  description: Number of months to look back for claims history
+- name: include_family_accumulators
+  type: boolean
+  required: false
+  default: true
+  description: Include family-level accumulator analysis
+tags:
+- UM
+- accumulator
+- utilization
+- reusable
+- healthcare
+- benefits
+kind: Single Agent
+agentGoal: Analyze member's benefit accumulators including deductibles, out-of-pocket
+  maximums, and utilization limits
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: None
+reusability:
+  asTools: true
+  standalone: true
+  provides:
+    toolName: AccumulatorChecker
+    toolDescription: Checks deductibles, OOP max, and benefit utilization
+    inputSchema:
+      type: object
+      properties:
+        member_id:
+          type: string
+          description: Member ID
+        benefit_year:
+          type: string
+          description: Benefit year (YYYY)
+        service_date:
+          type: string
+          description: Date of service
+        service_cost:
+          type: number
+          description: Estimated service cost
+      required:
+      - member_id
+      - benefit_year
+    outputSchema:
+      type: object
+      properties:
+        deductible_status:
+          type: object
+          properties:
+            individual_deductible:
+              type: object
+            family_deductible:
+              type: object
+        oop_status:
+          type: object
+          properties:
+            individual_oop:
+              type: object
+            family_oop:
+              type: object
+        utilization_status:
+          type: object
+        member_responsibility:
+          type: number
+  dependencies: []
+sampleInput:
+  member_id: M123456789
+  benefit_year: '2024'
+  service_date: '2024-03-15'
+  service_cost: 5000
+  service_code: '70553'
+  diagnosis_codes:
+  - M79.3
+  - R51.9
+  provider_npi: '1234567890'
+promptConfiguration:
+  basePromptId: accumulator_check_v1
+  customPrompt: 'You are a benefit accumulator specialist. Your role is to:
+
+    1. Check current deductible status (individual and family)
+
+    2. Verify out-of-pocket maximum status
+
+    3. Review benefit utilization limits
+
+    4. Calculate member responsibility
+
+    5. Identify when limits will be met
+
+
+    Provide clear explanations of accumulator impacts on member costs.
+
+    '
+components:
+- id: input
+  name: Accumulator Request
+  kind: Data
+  type: genesis:chat_input
+  description: Member and service information for accumulator check
+  provides:
+  - useAs: input
+    in: accumulator-agent
+    description: Request details
+- id: accumulator-agent-prompt
+  name: Agent Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Prompt template for agent instructions
+  config:
+    saved_prompt: accumulator_check_prompt_v1
+    template: 'You are a benefit accumulator specialist. Your role is to:
+
+      1. Check current deductible status (individual and family)
+
+      2. Verify out-of-pocket maximum status
+
+      3. Review benefit utilization limits
+
+      4. Calculate member responsibility based on accumulators
+
+      5. Identify when limits will be met
+
+
+      Use the QNXT Auth History tool to retrieve real claims data.
+
+      Use the Claims History API to analyze past utilization.
+
+      Use the Benefit Calculator to determine member costs.
+
+
+      Provide clear explanations of accumulator impacts on member costs.
+
+      Format your response with:
+
+      - Current accumulator status
+
+      - Impact on the requested service
+
+      - Member''s estimated responsibility
+
+      - When deductibles/OOP max will be met'
+  provides:
+  - useAs: system_prompt
+    in: accumulator-agent
+    description: System prompt for the agent
+- id: accumulator-agent
+  name: Accumulator Check Agent
+  kind: Agent
+  type: genesis:agent
+  description: Analyzes benefit accumulators
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 2000
+    handle_parsing_errors: true
+    max_iterations: 8
+    verbose: true
+  provides:
+  - useAs: input
+    in: accumulator-formatter
+    description: Accumulator analysis results
+- id: qnxt-accumulator
+  name: QNXT Auth History
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Retrieve claims and authorization history via MCP
+  asTools: true
+  config:
+    tool_name: qnext_auth_history
+  provides:
+  - useAs: tools
+    in: accumulator-agent
+    description: Real-time claims history
+- id: claims-history
+  name: Claims History API
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze claims history for accumulator impact via MCP
+  asTools: true
+  config:
+    tool_name: claims_history
+  provides:
+  - useAs: tools
+    in: accumulator-agent
+    description: Claims analysis tool
+- id: benefit-calculator
+  name: Member Responsibility Calculator
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Calculate member responsibility based on accumulators via MCP
+  asTools: true
+  config:
+    tool_name: benefit_calculator
+  provides:
+  - useAs: tools
+    in: accumulator-agent
+    description: Cost calculation tool
+- id: accumulator-formatter
+  name: Accumulator Report
+  kind: Data
+  type: genesis:chat_output
+  description: Display accumulator check results
+  config:
+    should_store_message: true
+outputs:
+- accumulator_summary
+- member_cost_estimate
+- deductible_details
+- oop_details
+- utilization_status
+kpis:
+- name: Accumulator Accuracy
+  category: quality
+  valueType: percentage
+  target: 99
+  unit: '%'
+  description: Accuracy of accumulator calculations
+- name: Query Response Time
+  category: performance
+  valueType: number
+  target: 2000
+  unit: ms
+  description: Time to retrieve and analyze accumulator data
+- name: Cost Estimate Accuracy
+  category: quality
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Accuracy of member responsibility estimates
+- name: Claims Data Coverage
+  category: quality
+  valueType: percentage
+  target: 98
+  unit: '%'
+  description: Completeness of claims history retrieval
+securityInfo:
+  visibility: Private
+  confidentiality: High
+  gdprSensitive: true

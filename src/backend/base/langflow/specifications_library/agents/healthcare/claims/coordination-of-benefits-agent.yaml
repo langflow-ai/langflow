@@ -1,0 +1,189 @@
+id: urn:agent:genesis:autonomize.ai:coordination-of-benefits-agent:1.0.0
+name: Coordination of Benefits Agent
+fullyQualifiedName: genesis.autonomize.ai.coordination_of_benefits_agent
+description: Confirms primary and secondary coverage via eligibility feeds, identifies incorrect billing sequences, and automatically adjusts claims according to COB rules to ensure proper coordination between multiple insurance plans
+domain: autonomize.ai
+subDomain: claims-operations
+version: 1.0.0
+environment: production
+agentOwner: claims-operations@autonomize.ai
+agentOwnerDisplayName: Claims Operations Team
+email: claims-operations@autonomize.ai
+status: ACTIVE
+kind: Single Agent
+agentGoal: Orchestrate coordination of benefits analysis by determining correct primary and secondary payer responsibilities, validating billing sequences, and ensuring compliant claims processing across multiple insurance coverages
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: ReflexiveAgent
+toolsUse: true
+learningCapability: None
+variables:
+- name: cob_lookup_timeout
+  type: number
+  required: false
+  default: 30
+  description: Timeout in seconds for COB eligibility lookups
+- name: auto_adjust_threshold
+  type: number
+  required: false
+  default: 0.9
+  description: Confidence threshold for automatic claim adjustments
+- name: secondary_payer_limit
+  type: number
+  required: false
+  default: 5
+  description: Maximum number of secondary payers to evaluate
+tags:
+- coordination-of-benefits
+- primary-secondary-coverage
+- eligibility-verification
+- claims-adjustment
+- multi-payer-coordination
+- billing-sequence
+sampleInput:
+  claim_data:
+    claim_id: CLM-2024-002456
+    member_id: MBR456789012
+    member_demographics:
+      first_name: Jane
+      last_name: Smith
+      date_of_birth: '1985-03-15'
+      gender: F
+    provider_npi: '9876543210'
+    service_date: '2024-01-20'
+    current_payer_info:
+      plan_id: PLAN-ABC123
+      group_number: GRP789
+      subscriber_id: SUB456789
+    claim_amount: 850.0
+    service_lines:
+    - cpt_code: '99214'
+      charge_amount: 200.0
+    - cpt_code: '85025'
+      charge_amount: 25.0
+    - cpt_code: '80053'
+      charge_amount: 625.0
+components:
+- id: cob-input
+  type: genesis:chat_input
+  name: COB Analysis Request
+  description: Input for claims requiring coordination of benefits analysis
+  provides:
+  - in: cob-orchestrator-agent
+    useAs: input
+    description: Claim data for COB analysis
+- id: eligibility-connector
+  type: genesis:mcp_tool
+  name: Multi-Payer Eligibility Service
+  description: Connects to multiple payer eligibility systems for comprehensive coverage verification. Supports multiple payers (aetna, anthem, bcbs, cigna, humana, united_health) with real-time verification, historical coverage lookup, HIPAA compliance, and audit logging.
+  config:
+    tool_name: multi_payer_eligibility_service
+  provides:
+  - in: cob-orchestrator-agent
+    useAs: tool
+    description: Multi-payer eligibility verification
+- id: cob-rules-engine
+  type: genesis:mcp_tool
+  name: COB Rules Engine
+  description: Applies industry-standard coordination of benefits rules and regulations including birthday rule, active employee rule, COBRA continuation rule, Medicare secondary payer, and workers compensation rule. CMS compliant with state-specific rules and auto-updates.
+  config:
+    tool_name: cob_rules_engine
+  provides:
+  - in: cob-orchestrator-agent
+    useAs: tool
+    description: COB rules application and analysis
+- id: claims-adjustment-processor
+  type: genesis:mcp_tool
+  name: Claims Adjustment Processor
+  description: Processes claims adjustments and generates corrected billing sequences. Supports adjustment types including reverse, rebill, coordination, and offset with auto-adjustment capabilities, approval workflow, and audit trail.
+  config:
+    tool_name: claims_adjustment_processor
+  provides:
+  - in: cob-orchestrator-agent
+    useAs: tool
+    description: Claims adjustment processing
+- id: payer-database-connector
+  type: genesis:mcp_tool
+  name: Payer Database Connector
+  description: Connects to comprehensive payer database for plan information and COB history
+  config:
+    tool_name: payer_database_service
+    description: Connects to comprehensive payer database for plan information and COB history
+  provides:
+  - in: cob-orchestrator-agent
+    useAs: tool
+    description: Payer database access for COB analysis
+- id: cob-orchestrator-agent
+  type: genesis:agent
+  name: COB Orchestrator
+  description: Main coordinator for comprehensive coordination of benefits analysis and processing
+  config:
+    system_prompt: "You are a Coordination of Benefits (COB) Specialist with expertise in multi-payer insurance coordination and claims processing. Your role is to ensure accurate primary and secondary payer determination and proper billing sequence management.\n\n**COB Analysis Framework:**\n\n1. **Primary Payer Determination Rules:**\n   - **Birthday Rule**: For dependent children, parent with earlier birthday month/day\n   - **Active Employee Rule**: Active employee plan over retiree/COBRA plan\n   - **Non-Dependent Rule**: Individual's own plan is primary over spouse's plan\n   - **Medicare Secondary Payer**: Special rules for Medicare coordination\n   - **Workers' Compensation**: Always primary for work-related injuries\n\n2. **Coverage Verification Process:**\n   - Verify active coverage status for all identified plans\n   - Check coverage effective and termination dates\n   - Validate member eligibility and relationship status\n   - Confirm benefit levels and coverage types\n\n3.\
+      \ **Available Tools:**\n   - **Multi-Payer Eligibility Service** - Real-time coverage verification\n   - **COB Rules Engine** - Industry-standard COB rule application\n   - **Claims Adjustment Processor** - Automated adjustment processing\n   - **Payer Database Connector** - Historical COB data and plan information\n\n**Analysis Process:**\n1. Extract member demographics and current claim payer information\n2. Query all known payers for coverage verification\n3. Apply appropriate COB rules to determine payer priority\n4. Validate current billing sequence against COB determination\n5. Generate adjustment recommendations if sequence is incorrect\n6. Calculate estimated payment impacts for all payers\n\n**Decision Logic:**\n- If billing sequence is correct: Approve for processing\n- If sequence is incorrect with high confidence (>90%): Recommend automatic adjustment\n- If sequence is unclear: Flag for manual review with detailed analysis\n\n**Output Requirements:**\n- Clear primary and\
+      \ secondary payer identification\n- Detailed COB rules application explanation\n- Specific adjustment recommendations with financial impact\n- Processing timeline and member communication requirements\n- Compliance validation for state and federal regulations\n\nAlways ensure member benefits are maximized while maintaining accurate payer responsibility allocation. Consider special circumstances like Medicare, Medicaid, and workers' compensation coordination.\n"
+    temperature: 0.1
+    max_tokens: 2500
+  provides:
+  - in: cob-output
+    useAs: input
+    description: Send COB analysis results to output
+- id: cob-output
+  type: genesis:chat_output
+  name: COB Analysis Results
+  description: Display comprehensive coordination of benefits analysis and recommendations
+outputs:
+- name: cob_analysis
+  description: Comprehensive COB analysis with payer determination
+  type: Data
+- name: primary_payer
+  description: Identified primary payer information and coverage details
+  type: Data
+- name: secondary_payers
+  description: List of secondary payers in priority order
+  type: Data
+- name: billing_sequence_correct
+  description: Whether current billing sequence follows COB rules
+  type: Data
+- name: recommended_adjustments
+  description: Specific adjustment recommendations with financial impact
+  type: Data
+- name: estimated_payments
+  description: Projected payments from each payer level
+  type: Data
+kpis:
+- name: cob_accuracy_rate
+  description: Percentage of correctly determined primary/secondary payers
+  target: '>98%'
+  type: percentage
+  valueType: percentage
+  category: performance
+- name: adjustment_processing_time
+  description: Average time to process COB adjustments
+  target: <2 hours
+  type: duration
+  valueType: number
+  category: performance
+- name: revenue_recovery
+  description: Additional revenue recovered through proper COB
+  target: '>$25,000/month'
+  type: currency
+  valueType: percentage
+  category: performance
+- name: eligibility_lookup_success
+  description: Success rate of multi-payer eligibility verification
+  target: '>95%'
+  type: percentage
+  valueType: percentage
+  category: performance
+- name: member_satisfaction
+  description: Member satisfaction with COB processing accuracy
+  target: '>4.5/5'
+  type: rating
+  valueType: percentage
+  category: performance
+securityInfo:
+  visibility: Internal
+  gdprSensitive: true
+  hipaaCompliant: true

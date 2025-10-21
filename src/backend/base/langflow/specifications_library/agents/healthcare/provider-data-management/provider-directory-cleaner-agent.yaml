@@ -1,0 +1,312 @@
+id: urn:agent:genesis:provider-data-management:provider-directory-cleaner-agent:1.0.0
+name: Provider Directory Cleaner Agent
+fullyQualifiedName: genesis.autonomize.ai.provider_directory_cleaner_agent
+description: Compares provider directories with claims, credentialing data, and NPI registry to detect and fix outdated or inaccurate listings for improved directory accuracy
+domain: autonomize.ai
+subDomain: provider-data-management
+version: 1.0.0
+environment: production
+agentOwner: provider-data-management@autonomize.ai
+agentOwnerDisplayName: Provider Data Management Team
+email: provider-data-management@autonomize.ai
+status: ACTIVE
+variables:
+- name: data_freshness_threshold
+  type: number
+  required: false
+  default: 30
+  description: Maximum age in days for provider data to be considered current and accurate
+- name: discrepancy_detection_sensitivity
+  type: string
+  required: false
+  default: high
+  description: Sensitivity level for detecting data discrepancies (low, medium, high, critical)
+- name: automated_correction_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable automated correction of minor data discrepancies and formatting issues
+- name: npi_registry_sync_frequency
+  type: string
+  required: false
+  default: weekly
+  description: Frequency for synchronizing with NPI registry updates (daily, weekly, monthly)
+- name: claims_data_lookback_period
+  type: number
+  required: false
+  default: 90
+  description: Number of days to analyze claims data for provider activity validation
+- name: data_quality_scoring
+  type: boolean
+  required: false
+  default: true
+  description: Enable comprehensive data quality scoring for provider directory entries
+- name: duplicate_detection_algorithm
+  type: string
+  required: false
+  default: fuzzy_matching
+  description: Algorithm for duplicate provider detection (exact_match, fuzzy_matching, machine_learning)
+- name: validation_rule_strictness
+  type: string
+  required: false
+  default: comprehensive
+  description: Strictness level for data validation rules (basic, standard, comprehensive)
+tags:
+- provider-data-management
+- directory-cleaning
+- data-quality
+- npi-validation
+- claims-reconciliation
+- credentialing-sync
+- duplicate-detection
+- automated-correction
+- data-accuracy
+- provider-verification
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Maintain accurate and up-to-date provider directories by systematically identifying and correcting inconsistencies, duplicates, and outdated information through comprehensive data reconciliation and validation processes
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: Scheduled
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: directory-input
+  name: Provider Directory Data Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive provider directory data, claims information, and credentialing updates for comprehensive data cleaning and validation
+  provides:
+  - useAs: input
+    in: directory-cleaner-agent
+    description: Provide provider directory and related data sources for cleaning and validation analysis
+- id: npi-registry-tool
+  name: NPI Registry Validation Service
+  kind: Tool
+  type: genesis:api_request
+  description: National Provider Identifier registry validation service for verifying provider information and detecting discrepancies
+  asTools: true
+  config:
+    method: GET
+    url_input: https://npiregistry.cms.hhs.gov/api/v2.1/providers
+    headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    timeout: 30
+  provides:
+  - useAs: tools
+    in: directory-cleaner-agent
+    description: Enable comprehensive NPI registry validation and provider information verification
+- id: claims-analyzer-tool
+  name: Provider Claims Data Analyzer
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced claims data analysis tool that validates provider activity, practice patterns, and directory accuracy against actual claims submissions
+  asTools: true
+  config:
+    tool_name: provider_claims_analyzer
+  provides:
+  - useAs: tools
+    in: directory-cleaner-agent
+    description: Enable comprehensive analysis of provider claims data for directory validation
+- id: credentialing-sync-tool
+  name: Credentialing Data Synchronization Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Credentialing data synchronization tool that compares provider directory information with current credentialing records and license status
+  asTools: true
+  config:
+    tool_name: credentialing_data_sync
+  provides:
+  - useAs: tools
+    in: directory-cleaner-agent
+    description: Enable synchronization and validation against current credentialing data
+- id: duplicate-detector-tool
+  name: Provider Duplicate Detection Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced machine learning-based duplicate detection engine that identifies duplicate provider entries using fuzzy matching and similarity algorithms
+  asTools: true
+  config:
+    matching_algorithms:
+    - exact_name_match
+    - fuzzy_name_matching
+    - npi_cross_reference
+    - address_similarity
+    - phone_number_matching
+    - taxonomy_code_comparison
+    confidence_threshold: 0.85
+    clustering_enabled: true
+    tool_name: data_deduplication_model
+  provides:
+  - useAs: tools
+    in: directory-cleaner-agent
+    description: Enable intelligent duplicate provider detection and resolution
+- id: data-validator-tool
+  name: Provider Data Validation Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Comprehensive data validation engine that checks provider information format, completeness, and accuracy against industry standards
+  asTools: true
+  config:
+    tool_name: provider_data_validator
+  provides:
+  - useAs: tools
+    in: directory-cleaner-agent
+    description: Enable comprehensive validation of provider data quality and accuracy
+- id: address-standardizer-tool
+  name: Address Standardization Service
+  kind: Tool
+  type: genesis:api_request
+  description: Address standardization and validation service that ensures consistent provider address formatting and accuracy
+  asTools: true
+  config:
+    method: POST
+    url_input: https://api.address-validation.com/v1/standardize
+    headers:
+    - key: Authorization
+      value: Bearer ${ADDRESS_VALIDATION_TOKEN}
+    - key: Content-Type
+      value: application/json
+    body:
+      address: provider_address_placeholder
+      standardize: true
+      validate: true
+  provides:
+  - useAs: tools
+    in: directory-cleaner-agent
+    description: Enable address standardization and validation for provider locations
+- id: correction-engine-tool
+  name: Automated Data Correction Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Intelligent data correction engine that automatically fixes common data quality issues and inconsistencies in provider directories
+  asTools: true
+  config:
+    tool_name: automated_data_corrector
+  provides:
+  - useAs: tools
+    in: directory-cleaner-agent
+    description: Enable automated correction of data quality issues and inconsistencies
+- id: directory-cleaner-prompt
+  name: Provider Directory Data Cleaning Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for provider directory data cleaning with healthcare data management expertise
+  config:
+    saved_prompt: directory_cleaner_agent_prompt_v1
+    template: 'You are an expert healthcare data management specialist with extensive experience in provider directory maintenance, data quality assurance, and healthcare information systems. Your role is to systematically identify and correct data inconsistencies, duplicates, and inaccuracies in provider directories through comprehensive data reconciliation and validation.
+
+      HEALTHCARE DATA MANAGEMENT EXPERTISE: - Provider directory standards and best practices - NPI registry structure and validation requirements - Healthcare claims data analysis and provider validation - Credentialing data management and synchronization - Data quality metrics and healthcare industry standards - Regulatory compliance for provider directory accuracy
+
+      DIRECTORY CLEANING WORKFLOW: 1. Analyze provider directory structure and identify data quality issues 2. Cross-reference provider information with NPI registry for validation 3. Compare directory data with recent claims activity patterns 4. Synchronize with current credentialing and license status information 5. Detect and resolve duplicate provider entries using multiple matching criteria 6. Validate and standardize provider addresses and contact information 7. Apply automated corrections for common data quality issues 8. Generate comprehensive data quality reports and recommendations
+
+      DATA VALIDATION METHODOLOGY: - NPI Registry Validation: Verify provider NPI numbers and associated information - Claims Activity Analysis: Confirm provider activity through claims data patterns - Credentialing Status Check: Validate current license and credentialing status - Address Validation: Standardize and verify provider practice locations - Contact Information Verification: Validate phone numbers and communication details - Specialty Code Validation: Confirm taxonomy codes and specialty classifications
+
+      DUPLICATE DETECTION STRATEGIES: - Exact Name Matching: Identify providers with identical names and information - Fuzzy Name Matching: Detect similar names with minor variations or misspellings - NPI Cross-Reference: Identify multiple entries for the same NPI number - Address Similarity: Find providers at the same or similar practice locations - Phone Number Matching: Detect shared contact information across entries - Comprehensive Scoring: Use multiple criteria for confident duplicate identification
+
+      DATA QUALITY ASSESSMENT CRITERIA: - Completeness: Assess missing required fields and information gaps - Accuracy: Validate information against authoritative sources - Consistency: Check for internal consistency and standard formatting - Currency: Evaluate data freshness and update recency - Compliance: Ensure adherence to industry standards and regulations - Usability: Assess data utility for member and provider search functions
+
+      AUTOMATED CORRECTION CAPABILITIES: - Format Standardization: Apply consistent formatting for names, addresses, phone numbers - Missing Data Population: Fill gaps using validated information from authoritative sources - Error Pattern Recognition: Identify and correct common data entry errors - Duplicate Resolution: Merge duplicate entries while preserving complete information - Status Updates: Update provider status based on current credentialing and activity - Quality Scoring: Assign quality scores to prioritize manual review efforts
+
+      OUTPUT REQUIREMENTS: - Comprehensive data quality assessment with identified issues and corrections - Duplicate provider analysis with recommended merge or removal actions - Validation results comparing directory data with authoritative sources - Automated correction summary with applied fixes and improvements - Data quality scorecard with metrics and trend analysis - Prioritized action plan for manual review and additional corrections
+
+      Use your data tools to validate NPIs, analyze claims, synchronize credentialing, detect duplicates, validate data, standardize addresses, and apply corrections. Always prioritize data accuracy, completeness, and regulatory compliance in your directory cleaning activities.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: directory-cleaner-agent
+    description: Provide specialized healthcare provider directory data cleaning and quality management expertise
+- id: directory-cleaner-agent
+  name: Healthcare Provider Directory Cleaning Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Expert healthcare data management specialist focused on provider directory accuracy and data quality optimization
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 20
+    verbose: true
+  provides:
+  - useAs: input
+    in: directory-output
+    description: Provide comprehensive provider directory cleaning analysis and corrected data
+- id: directory-output
+  name: Provider Directory Cleaning Results Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present cleaned provider directory data with quality metrics, corrections applied, and validation results
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- cleaned_provider_directory
+- data_quality_assessment
+- duplicate_detection_results
+- npi_validation_status
+- claims_reconciliation_report
+- credentialing_sync_results
+- automated_corrections_summary
+- data_quality_scorecard
+kpis:
+- name: Data Quality Improvement Rate
+  description: Percentage improvement in overall provider directory data quality scores
+  target: '> 25%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Duplicate Detection Accuracy
+  description: Accuracy of identifying actual duplicate provider entries without false positives
+  target: '> 95%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: NPI Validation Success Rate
+  description: Success rate for validating provider information against NPI registry
+  target: '> 98%'
+  measurement: percentage
+  category: Validation
+  valueType: percentage
+- name: Claims Data Reconciliation Rate
+  description: Percentage of provider directory entries successfully reconciled with claims data
+  target: '> 92%'
+  measurement: percentage
+  category: Validation
+  valueType: percentage
+- name: Automated Correction Accuracy
+  description: Accuracy of automated data corrections and formatting standardization
+  target: '> 96%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Directory Processing Efficiency
+  description: Average time to process and clean provider directory datasets
+  target: < 45 minutes
+  measurement: time
+  category: Efficiency
+  valueType: percentage
+- name: Data Completeness Improvement
+  description: Improvement in provider directory data completeness after cleaning
+  target: '> 20%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Regulatory Compliance Score
+  description: Provider directory compliance with industry standards and regulations
+  target: '> 4.5/5'
+  measurement: score
+  category: Compliance
+  valueType: number
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true

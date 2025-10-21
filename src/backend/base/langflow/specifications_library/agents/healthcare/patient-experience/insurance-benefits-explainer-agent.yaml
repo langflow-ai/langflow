@@ -1,0 +1,411 @@
+id: urn:agent:genesis:patient-experience:insurance-benefits-explainer-agent:1.0.0
+name: Insurance Benefits Explainer Agent
+fullyQualifiedName: genesis.autonomize.ai.insurance-benefits-explainer-agent
+description: Reads benefits summaries, EOBs, and plan documents to explain deductibles, coinsurance, and covered services to members via chatbot or portal
+domain: autonomize.ai
+subDomain: patient-experience
+version: 1.0.0
+environment: production
+agentOwner: patient-experience@autonomize.ai
+agentOwnerDisplayName: Patient Experience Team
+email: patient-experience@autonomize.ai
+status: ACTIVE
+variables:
+- name: llm_provider
+  type: string
+  required: false
+  default: Azure OpenAI
+  description: LLM provider for benefits explanation logic
+- name: model_name
+  type: string
+  required: false
+  default: gpt-4
+  description: Model for complex benefits interpretation and explanation
+- name: temperature
+  type: number
+  required: false
+  default: 0.2
+  description: Low temperature for consistent benefits explanations
+- name: explanation_complexity_level
+  type: string
+  required: false
+  default: intermediate
+  description: Explanation complexity level (basic, intermediate, advanced)
+- name: max_document_pages
+  type: number
+  required: false
+  default: 50
+  description: Maximum pages to process for benefits documents
+- name: language_preference
+  type: string
+  required: false
+  default: english
+  description: Primary language for benefits explanations
+- name: enable_multilingual_support
+  type: boolean
+  required: false
+  default: true
+  description: Enable multilingual benefits explanations
+- name: explanation_format
+  type: string
+  required: false
+  default: conversational
+  description: Format for explanations (conversational, bullet-points, detailed)
+tags:
+- patient-experience
+- insurance-benefits
+- benefits-explanation
+- healthcare
+- member-education
+- document-analysis
+- multilingual-support
+- financial-literacy
+kind: Single Agent
+agentGoal: Provide clear, accurate explanations of insurance benefits, deductibles, coinsurance, and covered services by analyzing benefits documents and EOBs
+targetUser: external
+valueGeneration: InsightGeneration
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: None
+reusability:
+  asTools: true
+  standalone: true
+  provides:
+    toolName: InsuranceBenefitsExplainer
+    toolDescription: Comprehensive insurance benefits explanation with document analysis and member education
+    inputSchema:
+      type: object
+      properties:
+        member_id:
+          type: string
+          description: Member identifier for personalized benefits
+        document_type:
+          type: string
+          enum:
+          - benefits_summary
+          - eob
+          - plan_document
+          - coverage_determination
+          - formulary
+          description: Type of document to analyze
+        document_content:
+          type: string
+          description: Text content or URL of benefits document
+        member_question:
+          type: string
+          description: Specific question about benefits or coverage
+        preferred_language:
+          type: string
+          description: Language preference for explanation
+        explanation_level:
+          type: string
+          enum:
+          - basic
+          - intermediate
+          - advanced
+          description: Complexity level for explanation
+        coverage_scenario:
+          type: object
+          properties:
+            service_type:
+              type: string
+            provider_type:
+              type: string
+            in_network:
+              type: boolean
+            procedure_codes:
+              type: array
+              items:
+                type: string
+          description: Specific coverage scenario to explain
+      required:
+      - member_id
+      - document_type
+      - member_question
+    outputSchema:
+      type: object
+      properties:
+        benefits_explanation:
+          type: object
+          properties:
+            summary:
+              type: string
+            detailed_breakdown:
+              type: object
+            financial_impact:
+              type: object
+            coverage_details:
+              type: object
+        member_cost_estimate:
+          type: object
+          properties:
+            deductible_remaining:
+              type: number
+            estimated_copay:
+              type: number
+            coinsurance_rate:
+              type: number
+            out_of_pocket_remaining:
+              type: number
+        educational_content:
+          type: object
+          properties:
+            key_terms_defined:
+              type: array
+              items:
+                type: object
+            tips_for_savings:
+              type: array
+              items:
+                type: string
+            next_steps:
+              type: array
+              items:
+                type: string
+        document_analysis:
+          type: object
+          properties:
+            document_processed:
+              type: boolean
+            key_findings:
+              type: array
+              items:
+                type: string
+            confidence_score:
+              type: number
+promptConfiguration:
+  basePromptId: insurance_benefits_explainer_v1
+  customPrompt: 'You are an expert insurance benefits educator specializing in translating complex insurance terms and documents into clear, understandable explanations for healthcare members.
+
+    Your comprehensive responsibilities: 1. Document Analysis and Interpretation 2. Benefits and Coverage Explanation 3. Financial Impact Assessment 4. Member Education and Empowerment 5. Multilingual Communication Support
+
+    Benefits explanation approach:
+
+    STEP 1: DOCUMENT ANALYSIS AND PROCESSING - Parse benefits summaries, EOBs, and plan documents thoroughly - Extract key coverage details, limitations, and exclusions - Identify deductibles, copays, coinsurance rates, and out-of-pocket maximums - Recognize network restrictions and provider requirements - Flag important dates, deadlines, and coverage periods
+
+    STEP 2: MEMBER CONTEXT UNDERSTANDING - Analyze member''s specific question or scenario - Consider their coverage tier and plan type - Assess their current benefit utilization and remaining benefits - Identify their preferred communication style and language needs - Determine appropriate explanation complexity level
+
+    STEP 3: BENEFITS EXPLANATION GENERATION - Create clear, jargon-free explanations of coverage terms - Use real-world examples and scenarios relevant to the member - Break down complex financial calculations step-by-step - Explain the difference between in-network and out-of-network costs - Clarify prior authorization requirements and approval processes
+
+    STEP 4: FINANCIAL IMPACT ASSESSMENT - Calculate estimated member costs for specific scenarios - Show how deductibles, copays, and coinsurance work together - Explain progression through deductible and out-of-pocket maximums - Provide cost comparison between different coverage options - Highlight potential cost-saving opportunities and strategies
+
+    STEP 5: EDUCATIONAL CONTENT DELIVERY - Define insurance terms in simple, understandable language - Provide practical tips for maximizing benefits and minimizing costs - Explain how to navigate the healthcare system effectively - Offer guidance on when to seek pre-authorization or appeals - Create actionable next steps for the member to follow
+
+    Communication standards: - Use plain language appropriate for diverse health literacy levels - Provide concrete examples with actual dollar amounts when possible - Break complex concepts into digestible, sequential steps - Use analogies and metaphors to clarify abstract insurance concepts - Maintain empathy and understanding for member frustrations - Ensure cultural sensitivity and multilingual accessibility
+
+    Document processing excellence: - Accurately extract and interpret key benefit information - Cross-reference multiple document sections for comprehensive understanding - Identify discrepancies or unclear language in benefits documents - Highlight important deadlines and time-sensitive information - Maintain context awareness across multiple document types
+
+    Error handling and escalation: - When benefits language is ambiguous: Provide multiple interpretations with disclaimers - When cost calculations are complex: Show methodology and assumptions clearly - When information is missing: Guide members on how to obtain additional details - When disputes arise: Explain appeals processes and member rights - When urgent issues occur: Provide immediate escalation pathways
+
+    Quality assurance principles: - Verify all financial calculations and benefit explanations - Cross-check information against current plan documents - Ensure explanations are accurate and up-to-date - Validate understanding through member feedback and clarification - Maintain compliance with healthcare communication regulations
+
+    Always prioritize member understanding and empowerment while ensuring accuracy and regulatory compliance in all benefits explanations. '
+components:
+- id: input
+  name: Benefits Inquiry Input
+  kind: Data
+  type: genesis:chat_input
+  description: Member inquiry about insurance benefits, documents, or coverage questions
+  provides:
+  - useAs: input
+    in: benefits-explainer-agent
+    description: Benefits explanation request from member
+- id: benefits-analysis-prompt
+  name: Benefits Analysis Guidelines
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Comprehensive methodology for analyzing and explaining insurance benefits
+  config:
+    saved_prompt: benefits_explainer_prompt_v1
+    template: 'You are an expert insurance benefits educator with deep expertise in healthcare coverage, financial literacy, and member communication.
+
+      Your role encompasses five critical areas:
+
+      1. ADVANCED DOCUMENT ANALYSIS - Parse complex insurance documents including benefits summaries, EOBs, SPDs, and plan riders - Extract and interpret coverage details, exclusions, limitations, and network requirements - Identify cost-sharing structures including deductibles, copays, coinsurance, and out-of-pocket maximums - Recognize prior authorization requirements, step therapy protocols, and coverage criteria - Understand pharmacy benefits, formulary tiers, and medication coverage patterns
+
+      2. PERSONALIZED BENEFITS EXPLANATION - Translate insurance jargon into clear, understandable language appropriate for diverse audiences - Create scenario-based explanations using member-specific situations and examples - Adapt explanation complexity based on member''s health literacy and preferences - Provide multilingual support while maintaining accuracy and cultural sensitivity - Use visual aids and analogies to clarify complex insurance concepts
+
+      3. COMPREHENSIVE FINANCIAL IMPACT ASSESSMENT - Calculate accurate cost estimates for specific healthcare scenarios and procedures - Show how different cost-sharing components interact throughout the benefit year - Explain deductible accumulation, coinsurance calculations, and out-of-pocket progression - Compare in-network versus out-of-network financial implications - Identify cost-saving opportunities and benefit optimization strategies
+
+      4. PROACTIVE MEMBER EDUCATION AND EMPOWERMENT - Define insurance terminology and concepts in accessible language - Provide practical guidance on navigating the healthcare system effectively - Explain member rights, appeals processes, and dispute resolution procedures - Offer tips for maximizing benefits and minimizing out-of-pocket costs - Create actionable next steps and follow-up recommendations
+
+      5. REGULATORY COMPLIANCE AND ACCURACY ASSURANCE - Ensure all explanations comply with healthcare communication regulations and guidelines - Maintain accuracy while avoiding provision of specific medical or legal advice - Provide appropriate disclaimers and guidance on when to seek professional consultation - Document member interactions for quality assurance and compliance purposes - Stay current with insurance regulations, benefit changes, and industry standards
+
+      Document processing methodology: - Systematically review all sections of benefits documents for comprehensive understanding - Cross-reference information across multiple document types to ensure consistency - Identify and flag important dates, deadlines, and time-sensitive requirements - Extract key financial information and verify calculations for accuracy - Recognize and explain any unusual or complex benefit provisions
+
+      Member communication excellence: - Listen actively to member questions and concerns to provide targeted explanations - Use empathetic language that acknowledges the complexity and frustration of insurance navigation - Provide clear, step-by-step guidance for specific member situations and scenarios - Offer multiple communication channels and follow-up options for ongoing support - Ensure explanations are actionable and include specific next steps for members
+
+      Quality assurance principles: - Verify all financial calculations and benefit interpretations before presenting to members - Cross-check information against current plan documents and regulatory requirements - Ensure explanations are current, accurate, and reflect the most recent benefit changes - Validate member understanding through feedback, questions, and clarification requests - Maintain detailed documentation of member interactions for quality improvement and compliance
+
+      Technology integration: - Leverage document analysis tools for efficient processing of complex benefits materials - Use member data systems to provide personalized and contextually relevant explanations - Integrate with cost estimation tools to provide accurate financial projections - Access current formulary and network information for up-to-date coverage details - Utilize multilingual capabilities to serve diverse member populations effectively
+
+      Success metrics focus: - Maximize member understanding and satisfaction with benefits explanations - Minimize member confusion and follow-up questions through clear initial explanations - Increase member engagement with their benefits and healthcare decision-making - Reduce member complaints and disputes through proactive education and transparency - Improve member health outcomes through better understanding of coverage options
+
+      Always maintain the highest standards of accuracy, empathy, and regulatory compliance while empowering members to make informed healthcare and financial decisions.'
+  provides:
+  - useAs: prompt
+    in: benefits-explainer-agent
+    description: Provide comprehensive benefits explanation methodology
+- id: document-analysis-tool
+  name: Document Analysis Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced OCR and NLP processing for insurance documents and EOBs
+  asTools: true
+  config:
+    tool_name: insurance_document_analyzer
+  provides:
+  - useAs: tools
+    in: benefits-explainer-agent
+    description: Provide document analysis and text extraction capabilities
+- id: benefits-database-tool
+  name: Benefits Database Access
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access to comprehensive benefits database with plan details and coverage rules
+  asTools: true
+  config:
+    tool_name: benefits_database_lookup
+  provides:
+  - useAs: tools
+    in: benefits-explainer-agent
+    description: Provide benefits database and plan lookup capabilities
+- id: cost-calculator-tool
+  name: Cost Calculation Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced cost estimation and financial impact calculation for various scenarios
+  asTools: true
+  config:
+    tool_name: healthcare_cost_calculator
+  provides:
+  - useAs: tools
+    in: benefits-explainer-agent
+    description: Provide cost calculation and financial analysis capabilities
+- id: multilingual-support-tool
+  name: Multilingual Translation Service
+  kind: Tool
+  type: genesis:api_request
+  description: Translation service for multilingual benefits explanations
+  asTools: true
+  config:
+    method: POST
+    url: ${TRANSLATION_API_URL}/translate
+    headers:
+    - key: Authorization
+      value: Bearer ${TRANSLATION_API_TOKEN}
+    - key: Content-Type
+      value: application/json
+    - key: X-Provider
+      value: azure-cognitive
+    body:
+      text: '{{explanation_content}}'
+      target_language: '{{target_language}}'
+      source_language: 'en'
+      domain: 'healthcare'
+      preserve_formatting: true
+      terminology_consistency: true
+    timeout: 20
+  provides:
+  - useAs: tools
+    in: benefits-explainer-agent
+    description: Provide multilingual translation capabilities
+- id: member-education-content-tool
+  name: Member Education Content Library
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access to educational content, glossaries, and member resources
+  asTools: true
+  config:
+    tool_name: member_education_library
+  provides:
+  - useAs: tools
+    in: benefits-explainer-agent
+    description: Provide educational content and resource access
+- id: benefits-explainer-agent
+  name: Insurance Benefits Explainer Agent
+  kind: Agent
+  type: genesis:agent
+  description: Intelligent benefits explanation agent providing clear, personalized insurance guidance
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.2
+    max_tokens: 3000
+    handle_parsing_errors: true
+    max_iterations: 8
+    verbose: false
+  provides:
+  - useAs: input
+    in: benefits-output
+    description: Provide comprehensive benefits explanation results
+- id: benefits-output
+  name: Benefits Explanation Output
+  kind: Data
+  type: genesis:chat_output
+  description: Clear, comprehensive insurance benefits explanation with cost estimates and educational content
+  config:
+    should_store_message: true
+outputs:
+- benefits_explanation_summary
+- member_cost_breakdown
+- coverage_details
+- educational_content
+- next_steps_guidance
+- document_analysis_results
+kpis:
+- name: Explanation Accuracy Rate
+  category: quality
+  valueType: percentage
+  target: 98
+  unit: '%'
+  description: Percentage of benefits explanations that are factually accurate
+- name: Member Understanding Rate
+  category: quality
+  valueType: percentage
+  target: 90
+  unit: '%'
+  description: Percentage of members who report understanding their benefits after explanation
+- name: Document Processing Success Rate
+  category: performance
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Percentage of documents successfully analyzed and processed
+- name: Cost Calculation Accuracy
+  category: quality
+  valueType: percentage
+  target: 99
+  unit: '%'
+  description: Accuracy of cost estimates and financial calculations
+- name: Member Satisfaction Score
+  category: quality
+  valueType: number
+  target: 4.8
+  unit: score
+  description: Member satisfaction with benefits explanation quality (1-5 scale)
+- name: Average Response Time
+  category: performance
+  valueType: number
+  target: 30
+  unit: seconds
+  description: Average time to provide comprehensive benefits explanation
+- name: Multilingual Explanation Success Rate
+  category: performance
+  valueType: percentage
+  target: 92
+  unit: '%'
+  description: Success rate of explanations in languages other than English
+- name: Follow-up Question Reduction
+  category: performance
+  valueType: percentage
+  target: 75
+  unit: '%'
+  description: Reduction in follow-up questions due to clear initial explanations
+securityInfo:
+  visibility: Private
+  confidentiality: High
+  gdprSensitive: true
+  hipaaCompliant: true

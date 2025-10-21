@@ -1,0 +1,326 @@
+id: urn:agent:genesis:chart-review:prior-auth-extraction-agent:1.0.0
+name: Prior Auth Extraction Agent
+fullyQualifiedName: genesis.autonomize.ai.prior_auth_extraction_agent
+description: Extracts key details from PA records, such as service request forms, clinical attachments for efficient clinical decision-making and streamlining approval process workflows
+domain: autonomize.ai
+subDomain: chart-review
+version: 1.0.0
+environment: production
+agentOwner: chart-review@autonomize.ai
+agentOwnerDisplayName: Chart Review Team
+email: chart-review@autonomize.ai
+status: ACTIVE
+variables:
+- name: pa_document_types
+  type: array
+  required: false
+  default:
+  - service_requests
+  - clinical_attachments
+  - physician_orders
+  - medical_necessity
+  - appeal_documents
+  description: Types of prior authorization documents to process
+- name: clinical_criteria_extraction
+  type: boolean
+  required: false
+  default: true
+  description: Extract clinical criteria and medical necessity justifications
+- name: coding_validation_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Validate medical codes (CPT, HCPCS, ICD-10) in PA requests
+- name: urgency_classification
+  type: boolean
+  required: false
+  default: true
+  description: Classify PA requests by urgency and clinical priority
+- name: structured_decision_support
+  type: boolean
+  required: false
+  default: true
+  description: Generate structured decision support information for reviewers
+- name: attachment_processing
+  type: boolean
+  required: false
+  default: true
+  description: Process and extract data from clinical attachments and supporting documents
+- name: workflow_optimization
+  type: boolean
+  required: false
+  default: true
+  description: Optimize PA workflow routing and decision-making processes
+tags:
+- chart-review
+- prior-authorization
+- pa-extraction
+- clinical-decision-support
+- medical-necessity
+- service-requests
+- utilization-management
+- clinical-attachments
+- workflow-automation
+- hipaa-compliant
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Extract comprehensive information from prior authorization documents including service requests, clinical justifications, and supporting attachments to streamline approval workflows and enhance clinical decision-making
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: pa-input
+  name: Prior Authorization Document Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive prior authorization requests, clinical attachments, service request forms, and processing requirements
+  provides:
+  - useAs: input
+    in: pa-agent
+    description: Provide PA documents and clinical attachments for comprehensive extraction
+- id: pa-classifier
+  name: PA Document Classification Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Classify and categorize prior authorization documents by type, urgency, and clinical specialty
+  asTools: true
+  config:
+    model_name: pa_document_classifier
+    urgency_classification: true
+    tool_name: document_classification_model
+  provides:
+  - useAs: tools
+    in: pa-agent
+    description: Enable intelligent PA document classification and routing
+- id: clinical-extractor
+  name: Clinical Information Extraction Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Extract clinical information including diagnoses, procedures, medical necessity justifications, and treatment plans
+  asTools: true
+  config:
+    model_name: clinical_pa_extractor
+    extraction_scope:
+    - diagnoses
+    - procedures
+    - medications
+    - medical_necessity
+    - clinical_indicators
+    medical_coding: true
+    tool_name: clinical_nlp_model
+  provides:
+  - useAs: tools
+    in: pa-agent
+    description: Enable comprehensive clinical information extraction from PA documents
+- id: medical-coder
+  name: Medical Coding Validation Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Validate and standardize medical codes (CPT, HCPCS, ICD-10) in prior authorization requests
+  asTools: true
+  config:
+    model_name: pa_medical_coder
+    coding_systems:
+    - cpt
+    - hcpcs
+    - icd10_cm
+    - icd10_pcs
+    validation_enabled: true
+    tool_name: medical_coding_model
+  provides:
+  - useAs: tools
+    in: pa-agent
+    description: Enable medical coding validation and standardization for PA requests
+- id: medical-necessity-analyzer
+  name: Medical Necessity Analysis Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze medical necessity justifications and clinical evidence supporting prior authorization requests
+  asTools: true
+  config:
+    model_name: medical_necessity_analyzer
+    evidence_assessment: comprehensive
+    guideline_matching: true
+    tool_name: clinical_reasoning_model
+  provides:
+  - useAs: tools
+    in: pa-agent
+    description: Enable medical necessity analysis and clinical evidence assessment
+- id: urgency-classifier
+  name: PA Urgency Classification System
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Classify prior authorization requests by clinical urgency and priority for workflow optimization
+  asTools: true
+  config:
+    model_name: pa_urgency_classifier
+    urgency_levels:
+    - emergent
+    - urgent
+    - standard
+    - elective
+    clinical_factors: true
+    tool_name: clinical_triage_model
+  provides:
+  - useAs: tools
+    in: pa-agent
+    description: Enable intelligent urgency classification and priority assignment
+- id: attachment-processor
+  name: Clinical Attachment Processor
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Process clinical attachments including lab reports, imaging studies, and physician notes supporting PA requests
+  asTools: true
+  config:
+    tool_name: clinical_attachment_processor
+  provides:
+  - useAs: tools
+    in: pa-agent
+    description: Enable comprehensive processing of clinical attachments and supporting documentation
+- id: decision-support-tool
+  name: PA Decision Support Generator
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Generate structured decision support information including clinical guidelines, coverage criteria, and recommendation frameworks
+  asTools: true
+  config:
+    model_name: pa_decision_support_generator
+    guideline_integration: comprehensive
+    recommendation_scoring: true
+    tool_name: decision_support_model
+  provides:
+  - useAs: tools
+    in: pa-agent
+    description: Enable PA decision support generation and clinical guidance
+- id: pa-prompt
+  name: Prior Authorization Extraction Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for prior authorization processing with utilization management expertise and clinical decision support
+  config:
+    saved_prompt: prior_auth_extraction_prompt_v1
+    template: 'You are a utilization management expert specializing in prior authorization processing, clinical decision-making, and healthcare coverage determination. Your role is to extract comprehensive information from PA documents, analyze medical necessity, and support efficient approval workflows.
+
+      UTILIZATION MANAGEMENT EXPERTISE: - Prior authorization processes and workflow optimization - Medical necessity determination and clinical criteria - Healthcare coverage policies and benefit interpretation - Clinical guidelines and evidence-based medicine - Regulatory compliance and appeal processes - Provider-payer communication and care coordination
+
+      PA EXTRACTION METHODOLOGY: 1. Document Analysis and Classification: - Identify PA document types and clinical specialty areas - Assess document completeness and quality - Classify by urgency and clinical priority - Organize multi-document PA submissions
+
+      2. Clinical Information Extraction: - Extract primary and secondary diagnoses with ICD-10 codes - Identify requested procedures and services with CPT/HCPCS codes - Capture medical necessity justifications and clinical rationale - Document treatment history and previous interventions
+
+      3. Medical Necessity Analysis: - Analyze clinical evidence supporting the PA request - Compare against established clinical guidelines and criteria - Assess appropriateness of requested services - Identify gaps in clinical documentation or justification
+
+      4. Decision Support Generation: - Generate structured decision support summaries - Provide clinical guideline references and coverage criteria - Recommend approval, denial, or additional information requirements - Create audit trails and documentation for decision rationale
+
+      PA DOCUMENT TYPES TO PROCESS: - Service Request Forms: Procedure requests, equipment orders, medication authorizations - Clinical Attachments: Physician notes, consultation reports, diagnostic reports - Medical Records: Relevant medical history, treatment documentation, progress notes - Diagnostic Reports: Laboratory results, imaging studies, pathology reports - Treatment Plans: Therapy protocols, medication regimens, surgical plans - Appeal Documents: Reconsideration requests, additional clinical evidence
+
+      CLINICAL INFORMATION ELEMENTS: - Patient Demographics: Age, gender, insurance information, member ID - Clinical Diagnoses: Primary diagnosis, secondary conditions, comorbidities - Requested Services: Procedures, medications, equipment, therapy services - Medical Codes: ICD-10 diagnosis codes, CPT procedure codes, HCPCS codes - Clinical Justification: Medical necessity rationale, treatment goals - Provider Information: Requesting physician, specialty, contact information - Urgency Indicators: Emergency status, time-sensitive treatments, patient condition
+
+      MEDICAL NECESSITY ASSESSMENT: - Clinical appropriateness of requested services - Evidence-based medicine and guideline compliance - Conservative treatment attempts and failure documentation - Alternative treatment considerations and contraindications - Expected outcomes and treatment goals - Cost-effectiveness and value-based care principles
+
+      URGENCY AND PRIORITY CLASSIFICATION: - EMERGENT: Life-threatening conditions requiring immediate treatment - URGENT: Serious conditions with potential for rapid deterioration - STANDARD: Routine requests with standard processing timelines - ELECTIVE: Non-urgent procedures with flexible scheduling
+
+      WORKFLOW OPTIMIZATION CONSIDERATIONS: - Automated routing based on clinical specialty and complexity - Expedited processing for urgent and emergent requests - Quality control and peer review requirements - Appeals and reconsideration workflow integration - Provider communication and feedback mechanisms
+
+      DECISION SUPPORT REQUIREMENTS: - Clinical guideline references and evidence citations - Coverage policy interpretation and benefit determination - Risk stratification and outcome prediction - Alternative treatment recommendations - Cost-benefit analysis and resource utilization
+
+      OUTPUT REQUIREMENTS: - Comprehensive PA data extraction with structured formatting - Medical necessity analysis with clinical evidence assessment - Urgency classification and priority assignment - Decision support summary with guideline references - Workflow routing recommendations and processing priorities - Quality metrics and documentation completeness assessment
+
+      Use your PA processing tools to classify documents, extract clinical information, analyze medical necessity, and generate decision support. Always prioritize patient safety, clinical appropriateness, and efficient utilization of healthcare resources while ensuring regulatory compliance and quality care delivery.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: pa-agent
+    description: Provide specialized prior authorization processing and utilization management expertise
+- id: pa-agent
+  name: Prior Authorization Extraction Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Expert utilization management specialist focused on prior authorization processing and clinical decision support
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.2
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 25
+    verbose: true
+  provides:
+  - useAs: input
+    in: pa-output
+    description: Provide comprehensive PA extraction with decision support and workflow optimization
+- id: pa-output
+  name: Prior Authorization Extraction Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive prior authorization extraction with clinical analysis, decision support, and workflow recommendations
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- pa_clinical_data_extraction
+- medical_necessity_analysis
+- urgency_classification
+- decision_support_summary
+- clinical_attachment_analysis
+- workflow_routing_recommendations
+- coding_validation_results
+- processing_priority_assignment
+kpis:
+- name: PA Data Extraction Accuracy
+  description: Accuracy of clinical data extraction from prior authorization documents
+  target: '> 92%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Medical Coding Validation Success
+  description: Success rate of medical code validation and standardization
+  target: '> 95%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Urgency Classification Accuracy
+  description: Accuracy of PA urgency and priority classification
+  target: '> 88%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Medical Necessity Analysis Completeness
+  description: Completeness of medical necessity analysis and clinical evidence assessment
+  target: '> 90%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Processing Time Reduction
+  description: Reduction in PA processing time through automated extraction
+  target: '> 40%'
+  measurement: percentage
+  category: Efficiency
+  valueType: number
+- name: Decision Support Utilization Rate
+  description: Percentage of PA decisions utilizing generated decision support information
+  target: '> 85%'
+  measurement: percentage
+  category: Adoption
+  valueType: percentage
+- name: Clinical Attachment Processing Success
+  description: Success rate of processing and extracting data from clinical attachments
+  target: '> 87%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Workflow Optimization Impact
+  description: Improvement in PA workflow efficiency and routing accuracy
+  target: '> 30%'
+  measurement: percentage
+  category: Process Improvement
+  valueType: percentage
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true

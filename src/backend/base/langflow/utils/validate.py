@@ -477,10 +477,22 @@ def extract_class_name(code: str) -> str:
                 continue
 
             # Check bases for Component inheritance
-            # TODO: Build a more robust check for Component inheritance
+            # Enhanced to handle healthcare connectors and other derived base classes
             for base in node.bases:
-                if isinstance(base, ast.Name) and any(pattern in base.id for pattern in ["Component", "LC"]):
-                    return node.name
+                if isinstance(base, ast.Name):
+                    # Direct Component inheritance
+                    if any(pattern in base.id for pattern in ["Component", "LC"]):
+                        return node.name
+                    # Healthcare connector base classes
+                    if "HealthcareConnectorBase" in base.id:
+                        return node.name
+                    # Other known base classes that inherit from Component
+                    if any(pattern in base.id for pattern in ["ConnectorBase", "BaseConnector"]):
+                        return node.name
+                elif isinstance(base, ast.Attribute):
+                    # Handle module.Component style inheritance
+                    if hasattr(base, 'attr') and any(pattern in base.attr for pattern in ["Component", "LC"]):
+                        return node.name
 
         msg = f"No Component subclass found in the code string. Code snippet: {code[:100]}"
         raise TypeError(msg)

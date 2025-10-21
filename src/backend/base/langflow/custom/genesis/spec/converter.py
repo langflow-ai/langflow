@@ -581,8 +581,8 @@ class FlowConverter:
         input_types = self._get_input_types_fixed(target_node, input_field)
         logger.debug(f"Input types: {input_types}")
 
-        # Validate type compatibility with enhanced logging for tool connections
-        is_tool_connection = (use_as == "tools" or "Tool" in output_types)
+        # CRITICAL FIX: Enhanced tool connection validation
+        is_tool_connection = (use_as == "tools")
 
         if is_tool_connection:
             logger.info(f"🔧 Tool Connection Attempt:")
@@ -594,9 +594,18 @@ class FlowConverter:
             logger.info(f"  Input field: {input_field}")
             logger.info(f"  Input types: {input_types}")
 
-        validation_result = self._validate_type_compatibility_fixed(
-            output_types, input_types, source_type, target_type
-        )
+        # CRITICAL FIX: Use different validation for tool connections
+        if is_tool_connection:
+            validation_result = self._validate_tool_connection_capability(
+                source_type, target_type, source_component
+            )
+            # For tool connections, override output types to indicate tool capability
+            if validation_result:
+                output_types = ["Tool"]  # Tool connections always provide Tool type
+        else:
+            validation_result = self._validate_type_compatibility_fixed(
+                output_types, input_types, source_type, target_type
+            )
 
         if not validation_result:
             if is_tool_connection:
@@ -668,14 +677,21 @@ class FlowConverter:
         # Get actual outputs from node data first
         outputs = self._get_component_outputs_fixed(source_node)
 
-        # Special case for tools - find the Tool output
+        # CRITICAL FIX: Special case for tools - handle component capabilities properly
         if use_as in ["tool", "tools"]:
+            # For MCP components, they provide tools but don't currently show Tool type
+            # They need to connect as tools regardless of current tool_mode setting
+            if "MCP" in source_type:
+                return "response"  # MCP components use response field
+
             # Look for Tool type output in the component's outputs
             if outputs:
                 for output in outputs:
                     if "Tool" in output.get("types", []):
                         return output.get("name", "component_as_tool")
-            return "component_as_tool"
+
+            # For other components marked with asTools=true, use standard output
+            return "response"
 
         if outputs:
             # For single output, use it
@@ -835,11 +851,21 @@ class FlowConverter:
             logger.debug(f"   Output types: {output_types}")
             logger.debug(f"   Input types: {input_types}")
 
-        # Tool connections
+        # Tool connections - Enhanced validation for tool capabilities
         if "Tool" in output_types and "Tool" in input_types:
             if is_tool_validation:
                 logger.debug(f"   ✓ Tool-to-Tool match found")
             return True
+
+        # Tool capability connections (components that can become tools)
+        if "Tool" in input_types:
+            # Allow various component outputs to connect to tool inputs
+            # when they represent tool-capable components
+            tool_compatible_outputs = ["DataFrame", "Data", "Message", "str", "Document", "object", "any"]
+            if any(otype in tool_compatible_outputs for otype in output_types):
+                if is_tool_validation:
+                    logger.debug(f"   ✓ Tool capability connection: {output_types} -> Tool input")
+                return True
 
         # Direct type matches
         if any(otype in input_types for otype in output_types):
@@ -853,17 +879,34 @@ class FlowConverter:
                 logger.debug(f"   ✓ Data-to-input_value compatibility")
             return True
 
-        # Compatible conversions - Enhanced for better coverage
+        # Compatible conversions - Enhanced for comprehensive tool connection support
         compatible = {
-            "Message": ["str", "text", "Text", "Data", "Document"],
-            "str": ["Message", "text", "Text", "Data"],
-            "Data": ["dict", "object", "any", "Message", "str", "Document"],
-            "DataFrame": ["Data", "object", "any", "Tool"],
-            "Document": ["Data", "Message", "str", "text"],
-            "Tool": ["DataFrame", "Data", "any", "object"],
-            "Text": ["Message", "str", "Data"],
-            "object": ["any", "Data", "DataFrame", "Tool"],
-            "any": ["Message", "str", "Data", "DataFrame", "Document", "Tool", "object", "text", "Text"]
+            # Message type conversions (primary agent communication)
+            "Message": ["str", "text", "Text", "Data", "Document", "dict", "object"],
+
+            # String/Text type conversions
+            "str": ["Message", "text", "Text", "Data", "Document"],
+            "text": ["Message", "str", "Text", "Data", "Document"],
+            "Text": ["Message", "str", "text", "Data", "Document"],
+
+            # Data type conversions (broad compatibility for data flow)
+            "Data": ["dict", "object", "any", "Message", "str", "Document", "DataFrame", "text", "Text"],
+
+            # DataFrame conversions (structured data)
+            "DataFrame": ["Data", "object", "any", "Tool", "dict", "Message"],
+
+            # Document conversions (knowledge and content)
+            "Document": ["Data", "Message", "str", "text", "Text", "dict", "object"],
+
+            # Tool type conversions (CRITICAL for tool connections)
+            "Tool": ["DataFrame", "Data", "any", "object", "Message", "str", "dict"],
+
+            # Generic object types (universal compatibility)
+            "object": ["any", "Data", "DataFrame", "Tool", "Message", "str", "Document", "dict"],
+            "dict": ["object", "Data", "Message", "str", "Document", "any"],
+
+            # Universal compatibility type
+            "any": ["Message", "str", "Data", "DataFrame", "Document", "Tool", "object", "text", "Text", "dict"]
         }
 
         for otype in output_types:
@@ -883,6 +926,74 @@ class FlowConverter:
             logger.debug(f"   ✗ No compatibility found")
             logger.debug(f"   Checked: Tool match, Direct match, Data compatibility, Conversions, Any/object")
 
+        return False
+
+    def _validate_tool_connection_capability(self, source_type: str, target_type: str,
+                                           source_component: Component) -> bool:
+        """
+        CRITICAL FIX: Validate if a component CAN be used as a tool.
+
+        This method checks if the source component has tool capability,
+        not whether it's currently configured as a tool.
+        """
+        logger.debug(f"Validating tool capability: {source_type} -> {target_type}")
+
+        # Target must be an agent that can accept tools
+        if not self._target_accepts_tools(target_type):
+            logger.warning(f"Target {target_type} cannot accept tools")
+            return False
+
+        # Check if source component has tool capability
+        if self._component_has_tool_capability(source_type, source_component):
+            logger.info(f"✅ {source_type} has tool capability")
+            return True
+
+        logger.warning(f"❌ {source_type} does not have tool capability")
+        return False
+
+    def _target_accepts_tools(self, target_type: str) -> bool:
+        """Check if target component can accept tools."""
+        # Agents can accept tools
+        agent_types = ["Agent", "AutonomizeAgent", "CrewAIAgentComponent"]
+        return any(agent_type in target_type for agent_type in agent_types)
+
+    def _component_has_tool_capability(self, source_type: str, source_component: Component) -> bool:
+        """
+        Check if component can be used as a tool.
+
+        Components can be tools if:
+        1. They have asTools: true in spec
+        2. They are MCP components (dynamic tool capability)
+        3. They are inherently tool components (knowledge search, etc.)
+        4. They have tool mode support
+        """
+        # Check spec configuration
+        if hasattr(source_component, 'asTools') and source_component.asTools:
+            logger.debug(f"Component has asTools=true")
+            return True
+
+        # MCP components can become tools dynamically
+        if "MCP" in source_type:
+            logger.debug(f"MCP component has dynamic tool capability")
+            return True
+
+        # Knowledge search components are inherently tools
+        if "KnowledgeHubSearch" in source_type:
+            logger.debug(f"Knowledge search component is inherently a tool")
+            return True
+
+        # Check for other inherently tool-capable components
+        tool_capable_types = [
+            "APIRequest", "Calculator", "WebSearchComponent",
+            "CSVToDataComponent", "JSONToDataComponent",
+            "DoclingInlineComponent", "SQLExecutor"
+        ]
+
+        if any(tool_type in source_type for tool_type in tool_capable_types):
+            logger.debug(f"Component type {source_type} is inherently tool-capable")
+            return True
+
+        logger.debug(f"Component {source_type} is not tool-capable")
         return False
 
     def _calculate_position(self, index: int, kind: str) -> Dict[str, int]:

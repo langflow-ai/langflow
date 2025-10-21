@@ -1,0 +1,71 @@
+id: urn:agent:genesis:autonomize.ai:eligibility-verification-agent:1.0.0
+name: eligibility-verification-agent
+fullyQualifiedName: genesis.autonomize.ai.eligibility-verification-agent
+description: Real-time insurance eligibility verification agent that checks coverage
+  status, benefits, copays, and deductibles using payer APIs for scheduled healthcare
+  services
+domain: autonomize.ai
+subDomain: revenue-cycle-management
+version: 1.0.0
+environment: production
+agentOwner: healthcare-team@autonomize.ai
+agentOwnerDisplayName: Healthcare Team
+email: healthcare-team@autonomize.ai
+status: ACTIVE
+kind: Single Agent
+agentGoal: Provide accurate, real-time insurance eligibility verification to reduce
+  claim denials and improve patient financial transparency
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: GoalBasedAgent
+toolsUse: true
+learningCapability: None
+tags:
+- revenue_cycle_management
+- healthcare
+- automation
+sampleInput:
+  request: Sample healthcare request
+outputs:
+- response
+- analysis
+- recommendations
+components:
+- id: input
+  name: Chat Input
+  kind: Data
+  type: genesis:chat_input
+  config: {}
+- id: eligibility-verification-agent-agent
+  name: Eligibility Verification Agent Agent
+  kind: Agent
+  type: genesis:agent
+  config:
+    system_message: You are a healthcare specialist for eligibility verification agent.
+      Provide accurate, helpful responses based on healthcare data and workflows.
+    max_tokens: 4000
+  provides:
+  - useAs: response
+    in: output
+- id: output
+  name: Chat Output
+  kind: Data
+  type: genesis:chat_output
+  config: {}
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true
+kpis:
+- name: processing_time
+  description: Time to process healthcare requests
+  target: < 30 seconds
+  category: performance
+  valueType: duration
+- name: accuracy_rate
+  description: Accuracy of healthcare analysis
+  target: '> 95%'
+  category: quality
+  valueType: percentage

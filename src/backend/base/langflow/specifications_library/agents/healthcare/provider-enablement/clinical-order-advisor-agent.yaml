@@ -1,0 +1,345 @@
+id: urn:agent:genesis:provider-enablement:clinical-order-advisor-agent:1.0.0
+name: Clinical Order Advisor Agent
+fullyQualifiedName: genesis.autonomize.ai.clinical_order_advisor_agent
+description: Uses EHR, labs, diagnosis codes, and care guidelines to suggest appropriate tests, referrals, or therapies to providers at point of care. Provides evidence-based clinical decision support.
+domain: autonomize.ai
+subDomain: provider-enablement
+version: 1.0.0
+environment: production
+agentOwner: provider-enablement@autonomize.ai
+agentOwnerDisplayName: Provider Enablement Team
+email: provider-enablement@autonomize.ai
+status: ACTIVE
+variables:
+- name: guideline_confidence_threshold
+  type: number
+  required: false
+  default: 0.85
+  description: Minimum confidence score for clinical guideline recommendations
+- name: max_recommendations_per_category
+  type: number
+  required: false
+  default: 5
+  description: Maximum number of recommendations per category (labs, imaging, referrals)
+- name: specialty_context
+  type: string
+  required: false
+  default: primary_care
+  description: Medical specialty context for targeted recommendations (primary_care, cardiology, endocrinology, etc.)
+- name: patient_risk_stratification
+  type: boolean
+  required: false
+  default: true
+  description: Enable patient risk stratification for personalized recommendations
+- name: cost_effectiveness_analysis
+  type: boolean
+  required: false
+  default: true
+  description: Include cost-effectiveness analysis in order recommendations
+- name: contraindication_checking
+  type: boolean
+  required: false
+  default: true
+  description: Enable contraindication and safety checking for recommended orders
+- name: evidence_level_threshold
+  type: string
+  required: false
+  default: B
+  description: Minimum evidence level for recommendations (A, B, C based on clinical guidelines)
+- name: urgency_classification
+  type: boolean
+  required: false
+  default: true
+  description: Enable urgency classification for recommended clinical orders
+- name: insurance_coverage_check
+  type: boolean
+  required: false
+  default: true
+  description: Include insurance coverage and prior authorization requirements
+tags:
+- provider-enablement
+- clinical-decision-support
+- order-management
+- care-guidelines
+- diagnostic-testing
+- clinical-recommendations
+- evidence-based-medicine
+- point-of-care
+- workflow-automation
+- quality-improvement
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Provide evidence-based clinical order recommendations including lab tests, imaging studies, referrals, and therapies based on patient data, diagnosis codes, clinical guidelines, and provider specialty context
+targetUser: internal
+valueGeneration: DecisionSupport
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: advisor-input
+  name: Clinical Order Request Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive clinical order advisor requests with patient data, diagnosis information, and provider context for decision support
+  provides:
+  - useAs: input
+    in: advisor-agent
+    description: Provide clinical context and patient information for order recommendations
+- id: ehr-data-tool
+  name: EHR Clinical Data Connector
+  kind: Tool
+  type: genesis:mcp_tool
+  description: HIPAA-compliant EHR connector for accessing patient clinical data, lab results, medical history, and current medications for informed order recommendations
+  asTools: true
+  config:
+    tool_name: ehr_clinical_data_connector
+  provides:
+  - useAs: tools
+    in: advisor-agent
+    description: Enable secure access to comprehensive patient clinical data from EHR systems
+- id: clinical-guidelines-tool
+  name: Clinical Guidelines Database
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Comprehensive clinical guidelines database with evidence-based recommendations from professional medical societies, CDC, and quality organizations
+  asTools: true
+  config:
+    tool_name: clinical_guidelines_database
+  provides:
+  - useAs: tools
+    in: advisor-agent
+    description: Enable access to current clinical guidelines and evidence-based recommendations
+- id: diagnostic-decision-tool
+  name: Diagnostic Decision Support Model
+  kind: Tool
+  type: genesis:mcp_tool
+  description: AI-powered diagnostic decision support model that analyzes patient symptoms, lab results, and clinical data to suggest appropriate diagnostic tests and procedures
+  asTools: true
+  config:
+    tool_name: diagnostic_decision_support
+  provides:
+  - useAs: tools
+    in: advisor-agent
+    description: Enable intelligent diagnostic test recommendations based on clinical presentation
+- id: lab-reference-tool
+  name: Laboratory Reference Service
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Laboratory test reference service with normal ranges, clinical significance, and ordering guidelines for comprehensive lab test recommendations
+  asTools: true
+  config:
+    tool_name: laboratory_reference_service
+  provides:
+  - useAs: tools
+    in: advisor-agent
+    description: Enable informed laboratory test selection and interpretation guidance
+- id: imaging-protocols-tool
+  name: Medical Imaging Protocol Guide
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Medical imaging protocol guide with appropriateness criteria, radiation considerations, and contrast protocols for optimal imaging recommendations
+  asTools: true
+  config:
+    tool_name: medical_imaging_protocols
+  provides:
+  - useAs: tools
+    in: advisor-agent
+    description: Enable evidence-based medical imaging recommendations and protocols
+- id: referral-network-tool
+  name: Provider Referral Network
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Provider referral network with specialist availability, expertise areas, insurance participation, and patient matching for optimal referral recommendations
+  asTools: true
+  config:
+    tool_name: provider_referral_network
+  provides:
+  - useAs: tools
+    in: advisor-agent
+    description: Enable intelligent specialist referral recommendations based on patient needs
+- id: contraindication-checker
+  name: Clinical Contraindication Checker
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Clinical contraindication and safety checker that validates recommended orders against patient allergies, medications, and medical conditions
+  asTools: true
+  config:
+    tool_name: clinical_contraindication_checker
+  provides:
+  - useAs: tools
+    in: advisor-agent
+    description: Enable safety validation and contraindication checking for clinical orders
+- id: cost-analysis-tool
+  name: Healthcare Cost Analysis Service
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Healthcare cost analysis service with procedure costs, insurance coverage analysis, and cost-effectiveness evaluation for clinical orders
+  asTools: true
+  config:
+    tool_name: healthcare_cost_analyzer
+  provides:
+  - useAs: tools
+    in: advisor-agent
+    description: Enable cost-effectiveness analysis and insurance coverage verification
+- id: advisor-agent-prompt
+  name: Clinical Order Advisor Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for clinical order advisor with evidence-based medicine expertise
+  config:
+    saved_prompt: clinical_order_advisor_prompt_v1
+    template: 'You are a clinical decision support specialist with expertise in evidence-based medicine, diagnostic testing, and clinical care guidelines. Your role is to provide appropriate clinical order recommendations based on patient data, diagnosis codes, and current medical evidence.
+
+      CLINICAL DECISION SUPPORT EXPERTISE:
+      - Evidence-based medicine principles and clinical guidelines
+      - Diagnostic test selection and interpretation
+      - Medical imaging appropriateness criteria
+      - Specialist referral protocols and timing
+      - Clinical care pathways and quality measures
+      - Risk stratification and patient safety considerations
+      - Cost-effectiveness analysis in healthcare decisions
+
+      ORDER RECOMMENDATION PROCESS:
+      1. Analyze patient clinical data and current presentation
+      2. Review relevant diagnosis codes and clinical history
+      3. Consult current clinical guidelines and evidence base
+      4. Evaluate diagnostic testing needs and appropriateness
+      5. Consider imaging studies with radiation and contrast safety
+      6. Assess specialist referral needs and urgency
+      7. Validate safety and contraindications for all recommendations
+      8. Provide cost-effectiveness and insurance coverage analysis
+
+      DIAGNOSTIC TESTING RECOMMENDATIONS:
+      - Laboratory tests: Based on clinical presentation and guidelines
+      - Blood work: CBC, CMP, lipid panels, cardiac markers, inflammatory markers
+      - Specialized labs: Endocrine panels, tumor markers, genetic testing
+      - Microbiology: Cultures, sensitivity testing, infectious disease panels
+      - Pathology: Tissue analysis, cytology, molecular diagnostics
+
+      IMAGING STUDY RECOMMENDATIONS:
+      - X-rays: Appropriate views and clinical indications
+      - CT scans: Contrast protocols and radiation considerations
+      - MRI: Sequences selection and contraindication screening
+      - Ultrasound: Point-of-care and specialty applications
+      - Nuclear medicine: Appropriate radiopharmaceuticals and timing
+
+      REFERRAL RECOMMENDATIONS:
+      - Specialty consultation needs and urgency classification
+      - Provider network and expertise matching
+      - Insurance participation and prior authorization requirements
+      - Communication templates and clinical information sharing
+      - Follow-up coordination and care transitions
+
+      SAFETY AND QUALITY CONSIDERATIONS:
+      - Patient safety screening and contraindication checking
+      - Allergy and medication interaction validation
+      - Clinical appropriateness and evidence level assessment
+      - Cost-effectiveness and resource utilization analysis
+      - Quality metrics and outcome tracking recommendations
+
+      EVIDENCE-BASED DECISION MAKING:
+      - Clinical guideline adherence and evidence levels
+      - Professional society recommendations integration
+      - Quality measure alignment and reporting
+      - Risk-benefit analysis for all recommendations
+      - Patient preference and shared decision making support
+
+      OUTPUT FORMAT:
+      - Laboratory test recommendations with clinical rationale
+      - Imaging study suggestions with appropriateness criteria
+      - Specialist referral recommendations with urgency classification
+      - Safety validation results and contraindication alerts
+      - Cost-effectiveness analysis and insurance coverage status
+      - Clinical guideline citations and evidence levels
+      - Quality metrics and outcome predictions
+
+      Use your clinical decision support tools to access patient data, guidelines, and safety information. Always prioritize patient safety, clinical appropriateness, and evidence-based medicine principles.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: advisor-agent
+    description: Provide specialized clinical decision support and evidence-based medicine expertise
+- id: advisor-agent
+  name: Clinical Order Advisor Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Clinical decision support specialist that provides evidence-based order recommendations for healthcare providers
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 3500
+    handle_parsing_errors: true
+    max_iterations: 18
+    verbose: true
+  provides:
+  - useAs: input
+    in: advisor-output
+    description: Provide comprehensive clinical order recommendations and decision support analysis
+- id: advisor-output
+  name: Clinical Order Recommendations Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present evidence-based clinical order recommendations with safety validation and cost analysis
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- laboratory_test_recommendations
+- imaging_study_suggestions
+- specialist_referral_recommendations
+- safety_validation_results
+- cost_effectiveness_analysis
+- clinical_guideline_citations
+- quality_metrics_assessment
+- insurance_coverage_status
+kpis:
+- name: Recommendation Accuracy Rate
+  description: Percentage of clinically appropriate order recommendations based on expert review
+  target: '> 92%'
+  category: quality
+  valueType: percentage
+- name: Guideline Adherence Rate
+  description: Percentage of recommendations aligned with current clinical guidelines
+  target: '> 95%'
+  category: quality
+  valueType: percentage
+- name: Clinical Decision Support Utilization
+  description: Provider adoption rate of recommended clinical orders
+  target: '> 78%'
+  category: user_experience
+  valueType: percentage
+- name: Safety Alert Accuracy
+  description: Accuracy of contraindication and safety alerts for clinical orders
+  target: '> 98%'
+  category: compliance
+  valueType: percentage
+- name: Cost Reduction Impact
+  description: Cost savings achieved through evidence-based order optimization
+  target: '> 15%'
+  category: cost
+  valueType: percentage
+- name: Provider Workflow Efficiency
+  description: Time saved in clinical decision making and order placement
+  target: '> 25%'
+  category: efficiency
+  valueType: percentage
+- name: Quality Measure Improvement
+  description: Improvement in clinical quality measures through optimized ordering
+  target: '> 12%'
+  category: quality
+  valueType: percentage
+- name: Patient Safety Score
+  description: Reduction in potential adverse events through safety validation
+  target: '> 20%'
+  category: compliance
+  valueType: percentage
+securityInfo:
+  visibility: Internal
+  gdprSensitive: true
+  hipaaCompliant: true
+  dataClassification: phi

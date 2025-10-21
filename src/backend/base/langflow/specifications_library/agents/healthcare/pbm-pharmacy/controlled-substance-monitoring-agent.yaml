@@ -1,0 +1,361 @@
+id: urn:agent:genesis:pbm-pharmacy:controlled-substance-monitoring-agent:1.0.0
+name: Controlled Substance Monitoring Agent
+fullyQualifiedName: genesis.autonomize.ai.controlled_substance_monitoring_agent
+description: Flags prescribing and dispensing anomalies for controlled substances using pharmacy claims, PDMP, and risk thresholds to prevent abuse and ensure regulatory compliance
+domain: autonomize.ai
+subDomain: pbm-pharmacy
+version: 1.0.0
+environment: production
+agentOwner: pbm-pharmacy@autonomize.ai
+agentOwnerDisplayName: PBM & Pharmacy Team
+email: pbm-pharmacy@autonomize.ai
+status: ACTIVE
+variables:
+- name: risk_scoring_algorithm
+  type: string
+  required: false
+  default: machine_learning
+  description: Algorithm for controlled substance risk scoring (rule_based, statistical, machine_learning, hybrid)
+- name: monitoring_frequency
+  type: string
+  required: false
+  default: real_time
+  description: Frequency of controlled substance monitoring analysis (real_time, daily, weekly)
+- name: pdmp_integration_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable integration with state Prescription Drug Monitoring Programs
+- name: anomaly_detection_sensitivity
+  type: string
+  required: false
+  default: high
+  description: Sensitivity level for detecting prescribing and dispensing anomalies (low, medium, high, critical)
+- name: abuse_pattern_categories
+  type: array
+  required: false
+  default:
+  - doctor_shopping
+  - early_refills
+  - dose_escalation
+  - multiple_pharmacies
+  - suspicious_combinations
+  description: Categories of abuse patterns to monitor and detect
+- name: regulatory_reporting_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable automated reporting to regulatory authorities for suspicious activities
+- name: provider_risk_profiling
+  type: boolean
+  required: false
+  default: true
+  description: Enable risk profiling and monitoring of prescribing providers
+- name: member_intervention_threshold
+  type: float
+  required: false
+  default: 0.75
+  description: Risk score threshold triggering member intervention and case management
+tags:
+- pbm-pharmacy
+- controlled-substances
+- abuse-prevention
+- regulatory-compliance
+- pdmp-integration
+- risk-assessment
+- anomaly-detection
+- provider-monitoring
+- member-safety
+- opioid-monitoring
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Proactively monitor controlled substance prescribing and dispensing patterns to identify potential abuse, ensure regulatory compliance, and protect member safety through comprehensive risk assessment and early intervention
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: Streaming
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: monitoring-input
+  name: Controlled Substance Monitoring Data Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive controlled substance prescription data, PDMP information, and monitoring parameters for comprehensive abuse detection analysis
+  provides:
+  - useAs: input
+    in: monitoring-agent
+    description: Provide controlled substance data and monitoring parameters for abuse detection analysis
+- id: pdmp-connector-tool
+  name: PDMP Data Integration Connector
+  kind: Tool
+  type: genesis:api_request
+  description: State Prescription Drug Monitoring Program integration connector that accesses multi-state PDMP data for comprehensive prescription history analysis
+  asTools: true
+  config:
+    method: POST
+    url_input: https://api.pdmp-network.com/v1/prescription-history
+    headers:
+    - key: Authorization
+      value: Bearer ${PDMP_API_TOKEN}
+    - key: Content-Type
+      value: application/json
+    body:
+      member_id: member_identifier_placeholder
+      lookback_days: 90
+      controlled_substances_only: true
+    timeout: 30
+  provides:
+  - useAs: tools
+    in: monitoring-agent
+    description: Enable comprehensive PDMP data access for controlled substance monitoring
+- id: claims-analyzer-tool
+  name: Controlled Substance Claims Analysis Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced claims analysis engine specialized for controlled substance monitoring that identifies suspicious patterns and abuse indicators
+  asTools: true
+  config:
+    analysis_categories:
+    - prescription_frequency_patterns
+    - dose_escalation_detection
+    - multiple_provider_visits
+    - pharmacy_shopping_behavior
+    - drug_combination_analysis
+    - geographic_anomalies
+    controlled_substance_schedules:
+    - schedule_ii
+    - schedule_iii
+    - schedule_iv
+    - schedule_v
+    pattern_recognition: true
+    temporal_analysis: true
+    cross_member_analysis: true
+    tool_name: claims_analysis_model
+  provides:
+  - useAs: tools
+    in: monitoring-agent
+    description: Enable comprehensive controlled substance claims pattern analysis
+- id: risk-scorer-tool
+  name: Controlled Substance Risk Scoring Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced risk scoring engine that evaluates member, provider, and pharmacy risk for controlled substance abuse and diversion
+  asTools: true
+  config:
+    risk_factors:
+    - prescription_frequency
+    - dose_progression
+    - provider_diversity
+    - pharmacy_patterns
+    - geographic_dispersion
+    - temporal_clustering
+    scoring_algorithms:
+    - machine_learning_ensemble
+    - statistical_modeling
+    - rule_based_scoring
+    - bayesian_networks
+    real_time_scoring: true
+    risk_thresholds: configurable
+    tool_name: risk_assessment_model
+  provides:
+  - useAs: tools
+    in: monitoring-agent
+    description: Enable comprehensive risk scoring for controlled substance abuse potential
+- id: anomaly-detector-tool
+  name: Controlled Substance Anomaly Detection Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Machine learning-based anomaly detection engine that identifies unusual prescribing and dispensing patterns for controlled substances
+  asTools: true
+  config:
+    detection_algorithms:
+    - unsupervised_clustering
+    - isolation_forest
+    - one_class_svm
+    - autoencoder_networks
+    - time_series_anomalies
+    anomaly_categories:
+    - prescribing_volume_spikes
+    - unusual_drug_combinations
+    - geographic_outliers
+    - temporal_anomalies
+    - dose_irregularities
+    sensitivity_tuning: true
+    false_positive_minimization: true
+    tool_name: anomaly_detection_model
+  provides:
+  - useAs: tools
+    in: monitoring-agent
+    description: Enable advanced anomaly detection for controlled substance monitoring
+- id: provider-profiler-tool
+  name: Provider Risk Profiling System
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Provider risk profiling system that analyzes prescribing patterns, DEA compliance, and professional standing for controlled substance monitoring
+  asTools: true
+  config:
+    tool_name: provider_controlled_substance_profiler
+  provides:
+  - useAs: tools
+    in: monitoring-agent
+    description: Enable comprehensive provider risk profiling for controlled substance prescribing
+- id: intervention-manager-tool
+  name: Member Intervention Management System
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Automated intervention management system that triggers appropriate interventions based on controlled substance abuse risk levels
+  asTools: true
+  config:
+    tool_name: controlled_substance_intervention_manager
+  provides:
+  - useAs: tools
+    in: monitoring-agent
+    description: Enable automated intervention management for high-risk controlled substance use
+- id: regulatory-reporter-tool
+  name: Regulatory Reporting and Compliance Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Automated regulatory reporting tool that generates required reports for DEA, state boards, and other regulatory authorities
+  asTools: true
+  config:
+    tool_name: controlled_substance_regulatory_reporter
+  provides:
+  - useAs: tools
+    in: monitoring-agent
+    description: Enable automated regulatory reporting and compliance management
+- id: case-manager-tool
+  name: Controlled Substance Case Management System
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Case management system that tracks investigations, interventions, and outcomes for controlled substance abuse cases
+  asTools: true
+  config:
+    tool_name: controlled_substance_case_manager
+  provides:
+  - useAs: tools
+    in: monitoring-agent
+    description: Enable comprehensive case management for controlled substance monitoring
+- id: monitoring-prompt
+  name: Controlled Substance Monitoring Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for controlled substance monitoring with regulatory compliance and abuse prevention expertise
+  config:
+    saved_prompt: controlled_substance_monitoring_agent_prompt_v1
+    template: 'You are an expert pharmacist and controlled substance compliance specialist with extensive experience in abuse prevention, regulatory compliance, and prescription drug monitoring. Your role is to identify potential controlled substance abuse patterns and ensure regulatory compliance while protecting member safety and preventing diversion.
+
+      CONTROLLED SUBSTANCE EXPERTISE: - DEA regulations and controlled substance scheduling - State prescription drug monitoring program requirements - Opioid abuse and diversion prevention strategies - Clinical indicators of substance abuse and dependency - Regulatory reporting requirements and compliance protocols - Intervention strategies and case management approaches
+
+      CONTROLLED SUBSTANCE MONITORING WORKFLOW: 1. Analyze controlled substance prescription claims for unusual patterns 2. Integrate PDMP data for comprehensive prescription history review 3. Apply risk scoring algorithms to identify high-risk members and providers 4. Detect anomalies in prescribing and dispensing patterns 5. Profile providers for controlled substance prescribing compliance 6. Trigger appropriate interventions based on risk levels 7. Generate regulatory reports and compliance documentation 8. Manage cases through investigation and resolution processes
+
+      ABUSE PATTERN DETECTION: - Doctor Shopping: Multiple providers prescribing controlled substances - Pharmacy Shopping: Filling prescriptions at multiple pharmacies - Early Refills: Requesting refills before appropriate timing - Dose Escalation: Rapid increases in dosage or strength - Geographic Anomalies: Unusual travel patterns for prescriptions - Suspicious Combinations: Dangerous drug combinations or interactions
+
+      RISK ASSESSMENT METHODOLOGY: - Prescription Frequency: Unusual frequency of controlled substance prescriptions - Provider Diversity: Number of different prescribing providers - Pharmacy Patterns: Patterns of pharmacy utilization and shopping - Dose Progression: Rate and pattern of dose increases over time - Geographic Distribution: Geographic spread of prescription fills - Temporal Clustering: Timing patterns of prescription requests
+
+      PDMP INTEGRATION AND ANALYSIS: - Multi-State Data Access: Comprehensive prescription history across states - Real-Time Monitoring: Current prescription status and recent activity - Historical Pattern Analysis: Long-term prescription behavior evaluation - Cross-Reference Validation: Verification against internal claims data - Provider Verification: Confirmation of prescriber authorization and status - Data Quality Assessment: Validation of PDMP data completeness and accuracy
+
+      PROVIDER MONITORING AND COMPLIANCE: - DEA Registration Status: Verification of current authorization - Prescribing Volume Analysis: Assessment of controlled substance prescribing rates - Pattern Recognition: Identification of unusual prescribing behaviors - Compliance History: Review of past regulatory compliance issues - Peer Comparison: Benchmarking against similar provider practices - Risk Scoring: Overall provider risk assessment for controlled substances
+
+      INTERVENTION AND CASE MANAGEMENT: - Risk-Based Interventions: Appropriate interventions based on risk levels - Member Education: Educational outreach and counseling services - Provider Notification: Communication with prescribing providers - Prior Authorization: Enhanced review for controlled substance prescriptions - Quantity Limits: Restrictions on dispensing quantities - Case Investigation: Formal investigation of suspected abuse cases
+
+      REGULATORY COMPLIANCE AND REPORTING: - DEA Reporting: Required reports to Drug Enforcement Administration - State Board Notifications: Reports to state pharmacy and medical boards - Suspicious Activity Reports: Documentation of suspected diversion - Compliance Documentation: Maintenance of regulatory compliance records - Audit Preparation: Documentation supporting regulatory audits - Legal Coordination: Support for legal proceedings when necessary
+
+      OUTPUT REQUIREMENTS: - Real-time controlled substance monitoring dashboard with risk alerts - Comprehensive abuse pattern analysis with supporting evidence - Provider risk assessment with prescribing pattern evaluation - Member intervention recommendations with risk-based prioritization - Regulatory compliance reports with required documentation - Case management tracking with investigation status and outcomes
+
+      Use your monitoring tools to access PDMP data, analyze claims, score risks, detect anomalies, profile providers, manage interventions, generate reports, and manage cases. Always prioritize member safety, regulatory compliance, and evidence-based intervention strategies in your controlled substance monitoring activities.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: monitoring-agent
+    description: Provide specialized controlled substance monitoring and regulatory compliance expertise
+- id: monitoring-agent
+  name: Controlled Substance Monitoring Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Expert pharmacist and compliance specialist focusing on controlled substance abuse prevention and regulatory compliance
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 20
+    verbose: true
+  provides:
+  - useAs: input
+    in: monitoring-output
+    description: Provide comprehensive controlled substance monitoring analysis and compliance recommendations
+- id: monitoring-output
+  name: Controlled Substance Monitoring Results Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present controlled substance monitoring alerts, risk assessments, intervention recommendations, and regulatory compliance status
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- controlled_substance_alerts
+- abuse_pattern_analysis
+- member_risk_assessments
+- provider_compliance_evaluation
+- pdmp_integration_results
+- intervention_recommendations
+- regulatory_compliance_reports
+- case_management_tracking
+kpis:
+- name: Abuse Pattern Detection Accuracy
+  description: Accuracy of identifying actual controlled substance abuse patterns
+  target: '> 88%'
+  measurement: percentage
+  category: Detection Quality
+  valueType: percentage
+- name: False Positive Alert Rate
+  description: Rate of false positive alerts for controlled substance monitoring
+  target: < 12%
+  measurement: percentage
+  category: Alert Quality
+  valueType: percentage
+- name: PDMP Data Integration Success Rate
+  description: Success rate for accessing and integrating PDMP data across states
+  target: '> 96%'
+  measurement: percentage
+  category: Data Integration
+  valueType: percentage
+- name: Risk Assessment Precision
+  description: Precision of controlled substance abuse risk scoring and classification
+  target: '> 85%'
+  measurement: percentage
+  category: Risk Assessment
+  valueType: percentage
+- name: Intervention Effectiveness Rate
+  description: Effectiveness of interventions in reducing high-risk controlled substance use
+  target: '> 72%'
+  measurement: percentage
+  category: Intervention Impact
+  valueType: percentage
+- name: Regulatory Compliance Score
+  description: Compliance with DEA and state regulatory requirements for monitoring
+  target: '> 98%'
+  measurement: percentage
+  category: Compliance
+  valueType: number
+- name: Real-Time Monitoring Coverage
+  description: Percentage of controlled substance prescriptions under real-time monitoring
+  target: '> 95%'
+  measurement: percentage
+  category: Coverage
+  valueType: number
+- name: Case Resolution Time
+  description: Average time to investigate and resolve controlled substance abuse cases
+  target: < 14 days
+  measurement: time
+  category: Case Management
+  valueType: number
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true

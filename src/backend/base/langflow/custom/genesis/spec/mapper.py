@@ -2,11 +2,21 @@
 
 from typing import Dict, Any, Optional, Tuple
 import logging
+import copy
 
 logger = logging.getLogger(__name__)
 
 # Lazy import to avoid circular dependencies
 _component_schema_inspector = None
+_component_mapping_service = None
+
+# Import healthcare mappings
+try:
+    from langflow.services.component_mapping.healthcare_mappings import get_healthcare_component_mappings
+    _healthcare_mappings_available = True
+except ImportError as e:
+    logger.warning(f"Healthcare mappings not available: {e}")
+    _healthcare_mappings_available = False
 
 
 class ComponentMapper:
@@ -16,9 +26,14 @@ class ComponentMapper:
         """Initialize component mapper with mappings."""
         self._init_mappings()
         self._use_real_introspection = True  # Flag to enable real component inspection
+        self._use_database_fallback = True  # Flag to enable database fallback
+        self._mapping_cache = {}  # Cache for database mappings
 
     def _init_mappings(self):
         """Initialize all component mappings."""
+        # Healthcare connectors - HIPAA-compliant medical system integrations
+        self.HEALTHCARE_MAPPINGS = self._load_healthcare_mappings()
+
         # AutonomizeModel variants - all clinical models unified
         self.AUTONOMIZE_MODELS = {
             "genesis:autonomize_model": {
@@ -52,6 +67,48 @@ class ComponentMapper:
             "genesis:combined_entity_linking": {
                 "component": "AutonomizeModel",
                 "config": {"selected_model": "Combined Entity Linking"}
+            },
+            # Enhanced decision framework - new autonomize component types
+            "autonomize:icd10_code_model": {
+                "component": "AutonomizeModel",
+                "config": {"selected_model": "ICD-10 Code"},
+                "dataType": "AutonomizeModel"
+            },
+            "autonomize:cpt_code_model": {
+                "component": "AutonomizeModel",
+                "config": {"selected_model": "CPT Code"},
+                "dataType": "AutonomizeModel"
+            },
+            "autonomize:clinical_llm": {
+                "component": "AutonomizeModel",
+                "config": {"selected_model": "Clinical LLM"},
+                "dataType": "AutonomizeModel"
+            },
+            "autonomize:ehr_connector": {
+                "component": "EHRConnector",
+                "config": {
+                    "ehr_system": "epic",
+                    "fhir_version": "R4",
+                    "authentication_type": "oauth2",
+                    "hipaa_compliant": True,
+                    "audit_logging": True
+                },
+                "dataType": "Data"
+            }
+        }
+
+        # Healthcare validation and connector extensions
+        self.HEALTHCARE_VALIDATION_MAPPINGS = {
+            "genesis:healthcare_validation_connector": {
+                "component": "HealthcareValidationConnector",
+                "config": {
+                    "validation_type": "comprehensive",
+                    "compliance_standards": ["CMS", "NCCI", "AMA"],
+                    "code_combination_checking": True,
+                    "audit_logging": True,
+                    "hipaa_compliant": True
+                },
+                "dataType": "Data"
             }
         }
 
@@ -240,6 +297,20 @@ class ComponentMapper:
             "genesis:composio": {"component": "ComposioComponent", "config": {}}
         }
 
+    def _load_healthcare_mappings(self) -> Dict[str, Any]:
+        """Load healthcare connector mappings."""
+        if not _healthcare_mappings_available:
+            logger.warning("Healthcare mappings not available, returning empty dict")
+            return {}
+
+        try:
+            healthcare_mappings = get_healthcare_component_mappings()
+            logger.info(f"Loaded {len(healthcare_mappings)} healthcare connector mappings")
+            return healthcare_mappings
+        except Exception as e:
+            logger.error(f"Error loading healthcare mappings: {e}")
+            return {}
+
     def map_component(self, spec_type: str) -> Dict[str, Any]:
         """
         Map a Genesis specification type to Langflow component.
@@ -250,17 +321,31 @@ class ComponentMapper:
         Returns:
             Dictionary with component name and configuration
         """
-        # Check AutonomizeModel mappings first
+        # Check Healthcare mappings first (highest priority for medical workflows)
+        if spec_type in self.HEALTHCARE_MAPPINGS:
+            return copy.deepcopy(self.HEALTHCARE_MAPPINGS[spec_type])
+
+        # Check Healthcare validation mappings
+        if spec_type in self.HEALTHCARE_VALIDATION_MAPPINGS:
+            return copy.deepcopy(self.HEALTHCARE_VALIDATION_MAPPINGS[spec_type])
+
+        # Check AutonomizeModel mappings
         if spec_type in self.AUTONOMIZE_MODELS:
-            return self.AUTONOMIZE_MODELS[spec_type].copy()
+            return copy.deepcopy(self.AUTONOMIZE_MODELS[spec_type])
 
         # Check MCP mappings
         if spec_type in self.MCP_MAPPINGS:
-            return self.MCP_MAPPINGS[spec_type].copy()
+            return copy.deepcopy(self.MCP_MAPPINGS[spec_type])
 
         # Check standard mappings
         if spec_type in self.STANDARD_MAPPINGS:
-            return self.STANDARD_MAPPINGS[spec_type].copy()
+            return copy.deepcopy(self.STANDARD_MAPPINGS[spec_type])
+
+        # Try database fallback if enabled
+        if self._use_database_fallback:
+            db_mapping = self._get_mapping_from_database(spec_type)
+            if db_mapping:
+                return db_mapping
 
         # Try to handle unknown types intelligently
         return self._handle_unknown_type(spec_type)
@@ -335,12 +420,24 @@ class ComponentMapper:
 
     def is_tool_component(self, spec_type: str) -> bool:
         """Check if a component type should be used as a tool."""
+        # Healthcare connectors are tools when used in tool mode
+        if spec_type in self.HEALTHCARE_MAPPINGS:
+            return True
+
         # MCP components are always tools
         if spec_type in self.MCP_MAPPINGS:
             return True
 
         # Check if it's a known tool type
         tool_types = [
+            # Healthcare tools
+            "genesis:ehr_connector",
+            "genesis:claims_connector",
+            "genesis:eligibility_connector",
+            "genesis:pharmacy_connector",
+            "genesis:prior_authorization",
+            "genesis:clinical_decision_support",
+
             # Core tools
             "genesis:knowledge_hub_search",
             "genesis:pa_lookup",
@@ -438,6 +535,43 @@ class ComponentMapper:
     def _get_hardcoded_io_mappings(self) -> Dict[str, Dict[str, Any]]:
         """Get the original hardcoded I/O mappings as fallback."""
         io_mappings = {
+            # Healthcare Connector I/O Mappings
+            "EHRConnector": {
+                "input_field": "patient_query",
+                "output_field": "ehr_data",
+                "output_types": ["Data"],
+                "input_types": ["str", "Message", "Data"]
+            },
+            "ClaimsConnector": {
+                "input_field": "claim_data",
+                "output_field": "claim_response",
+                "output_types": ["Data"],
+                "input_types": ["str", "Data"]
+            },
+            "EligibilityConnector": {
+                "input_field": "eligibility_request",
+                "output_field": "eligibility_response",
+                "output_types": ["Data"],
+                "input_types": ["str", "Data"]
+            },
+            "PharmacyConnector": {
+                "input_field": "prescription_data",
+                "output_field": "pharmacy_response",
+                "output_types": ["Data"],
+                "input_types": ["str", "Data"]
+            },
+            "PriorAuthorizationTool": {
+                "input_field": "pa_request",
+                "output_field": "pa_response",
+                "output_types": ["Data"],
+                "input_types": ["str", "Data"]
+            },
+            "ClinicalDecisionSupportTool": {
+                "input_field": "clinical_data",
+                "output_field": "cds_recommendations",
+                "output_types": ["Data"],
+                "input_types": ["str", "Data"]
+            },
             "AutonomizeModel": {
                 "input_field": "search_query",
                 "output_field": "prediction",
@@ -619,7 +753,13 @@ class ComponentMapper:
         }
 
         # Add all genesis mappings
-        all_mappings = {**self.AUTONOMIZE_MODELS, **self.MCP_MAPPINGS, **self.STANDARD_MAPPINGS}
+        all_mappings = {
+            **self.HEALTHCARE_MAPPINGS,
+            **self.HEALTHCARE_VALIDATION_MAPPINGS,
+            **self.AUTONOMIZE_MODELS,
+            **self.MCP_MAPPINGS,
+            **self.STANDARD_MAPPINGS
+        }
         for genesis_type, mapping in all_mappings.items():
             result["genesis_mapped"][genesis_type] = mapping
 
@@ -645,50 +785,6 @@ class ComponentMapper:
 
         return result
 
-    def validate_component_connection_enhanced(self, source_type: str, target_type: str,
-                                             source_output: str, target_input: str) -> Dict[str, Any]:
-        """
-        Validate connection between components using real component introspection.
-
-        Args:
-            source_type: Genesis type of source component
-            target_type: Genesis type of target component
-            source_output: Output field name
-            target_input: Input field name
-
-        Returns:
-            Validation result with compatibility information
-        """
-        inspector = self._get_component_schema_inspector()
-
-        # Map genesis types to component names
-        source_mapping = self.map_component(source_type)
-        target_mapping = self.map_component(target_type)
-
-        source_component = source_mapping.get("component")
-        target_component = target_mapping.get("component")
-
-        if not source_component or not target_component:
-            return {
-                "valid": False,
-                "error": f"Could not map component types: {source_type} -> {target_type}"
-            }
-
-        # Try real component validation first
-        if inspector and self._use_real_introspection:
-            try:
-                result = inspector.validate_component_connection(
-                    source_component, target_component, source_output, target_input
-                )
-                if result.get("valid") is not None:  # Got a real validation result
-                    return result
-            except Exception as e:
-                logger.warning(f"Real component validation failed: {e}")
-
-        # Fallback to hardcoded I/O validation
-        return self._validate_connection_hardcoded(
-            source_component, target_component, source_output, target_input
-        )
 
     def _validate_connection_hardcoded(self, source_component: str, target_component: str,
                                      source_output: str, target_input: str) -> Dict[str, Any]:
@@ -734,3 +830,269 @@ class ComponentMapper:
         """Enable or disable real component introspection."""
         self._use_real_introspection = enabled
         logger.info(f"Real component introspection {'enabled' if enabled else 'disabled'}")
+
+    def enable_database_fallback(self, enabled: bool = True):
+        """Enable or disable database fallback for component mappings."""
+        self._use_database_fallback = enabled
+        logger.info(f"Database fallback {'enabled' if enabled else 'disabled'}")
+
+    def _get_component_mapping_service(self):
+        """Get ComponentMappingService instance with lazy loading."""
+        global _component_mapping_service
+
+        if _component_mapping_service is None:
+            try:
+                from langflow.services.component_mapping.service import ComponentMappingService
+                _component_mapping_service = ComponentMappingService()
+            except ImportError as e:
+                logger.warning(f"Could not import ComponentMappingService: {e}")
+                _component_mapping_service = None
+
+        return _component_mapping_service
+
+    def _get_mapping_from_database(self, spec_type: str) -> Optional[Dict[str, Any]]:
+        """
+        Get component mapping from database (sync fallback).
+
+        Args:
+            spec_type: Genesis component type
+
+        Returns:
+            Component mapping dictionary or None if not found
+        """
+        try:
+            # For synchronous access, we'll implement a cache-based approach
+            # The cache will be populated by async operations
+            cache_key = f"mapping_cache_{spec_type}"
+
+            # Check if we have a cached mapping
+            if hasattr(self, '_mapping_cache') and cache_key in self._mapping_cache:
+                cached_mapping = self._mapping_cache[cache_key]
+                logger.debug(f"Found cached database mapping for {spec_type}")
+                return cached_mapping
+
+            # If no cache available, return None and suggest async lookup
+            logger.debug(f"No cached database mapping for {spec_type}, use async methods for database access")
+            return None
+
+        except Exception as e:
+            logger.error(f"Error getting mapping from database for {spec_type}: {e}")
+            return None
+
+    async def get_mapping_from_database_async(self, session, spec_type: str) -> Optional[Dict[str, Any]]:
+        """
+        Get component mapping from database asynchronously.
+
+        Args:
+            session: Database session
+            spec_type: Genesis component type
+
+        Returns:
+            Component mapping dictionary or None if not found
+        """
+        try:
+            service = self._get_component_mapping_service()
+            if not service:
+                return None
+
+            mapping = await service.get_component_mapping_by_genesis_type(session, spec_type)
+            if not mapping:
+                return None
+
+            # Convert database mapping to the expected format
+            result = {
+                "component": None,  # Will be determined from runtime adapter
+                "config": mapping.base_config or {},
+                "dataType": None,   # Will be determined from io_mapping
+            }
+
+            # Extract component and dataType from io_mapping if available
+            if mapping.io_mapping:
+                result["component"] = mapping.io_mapping.get("component")
+                result["dataType"] = mapping.io_mapping.get("dataType")
+
+            logger.info(f"Found database mapping for {spec_type}: {result}")
+            return result
+
+        except Exception as e:
+            logger.error(f"Error getting mapping from database for {spec_type}: {e}")
+            return None
+
+    async def get_runtime_adapter_async(self, session, spec_type: str, runtime_type: str = "langflow") -> Optional[Dict[str, Any]]:
+        """
+        Get runtime adapter from database asynchronously.
+
+        Args:
+            session: Database session
+            spec_type: Genesis component type
+            runtime_type: Target runtime type
+
+        Returns:
+            Runtime adapter configuration or None if not found
+        """
+        try:
+            service = self._get_component_mapping_service()
+            if not service:
+                return None
+
+            from langflow.services.database.models.component_mapping.runtime_adapter import RuntimeTypeEnum
+
+            # Convert string to enum
+            try:
+                runtime_enum = RuntimeTypeEnum(runtime_type.lower())
+            except ValueError:
+                logger.warning(f"Unsupported runtime type: {runtime_type}")
+                return None
+
+            adapter = await service.get_runtime_adapter_for_genesis_type(
+                session, spec_type, runtime_enum
+            )
+
+            if not adapter:
+                return None
+
+            result = {
+                "target_component": adapter.target_component,
+                "adapter_config": adapter.adapter_config or {},
+                "version": adapter.version,
+                "priority": adapter.priority,
+            }
+
+            logger.info(f"Found runtime adapter for {spec_type} on {runtime_type}: {result}")
+            return result
+
+        except Exception as e:
+            logger.error(f"Error getting runtime adapter for {spec_type}: {e}")
+            return None
+
+    async def migrate_hardcoded_mappings_to_database(self, session) -> Dict:
+        """
+        Migrate all hardcoded mappings to database.
+
+        Args:
+            session: Database session
+
+        Returns:
+            Migration results dictionary
+        """
+        try:
+            service = self._get_component_mapping_service()
+            if not service:
+                return {"error": "ComponentMappingService not available"}
+
+            # Combine all hardcoded mappings
+            all_mappings = {
+                **self.HEALTHCARE_MAPPINGS,
+                **self.AUTONOMIZE_MODELS,
+                **self.MCP_MAPPINGS,
+                **self.STANDARD_MAPPINGS,
+            }
+
+            results = await service.migrate_hardcoded_mappings(
+                session, all_mappings, overwrite_existing=False
+            )
+
+            logger.info(f"Migration completed: {results}")
+            return results
+
+        except Exception as e:
+            logger.error(f"Error migrating hardcoded mappings: {e}")
+            return {"error": str(e)}
+
+    def populate_mapping_cache(self, mappings: Dict[str, Dict[str, Any]]):
+        """
+        Populate the mapping cache with database mappings.
+
+        Args:
+            mappings: Dictionary of genesis_type -> mapping_data
+        """
+        for genesis_type, mapping_data in mappings.items():
+            cache_key = f"mapping_cache_{genesis_type}"
+            self._mapping_cache[cache_key] = mapping_data
+            logger.debug(f"Cached mapping for {genesis_type}")
+
+    def clear_mapping_cache(self):
+        """Clear the mapping cache."""
+        self._mapping_cache.clear()
+        logger.info("Mapping cache cleared")
+
+    def get_cache_status(self) -> Dict[str, Any]:
+        """Get status of the mapping cache."""
+        return {
+            "cache_enabled": self._use_database_fallback,
+            "cached_mappings": len(self._mapping_cache),
+            "cached_types": list(self._mapping_cache.keys()),
+        }
+
+    async def refresh_cache_from_database(self, session) -> Dict[str, Any]:
+        """
+        Refresh the mapping cache from database.
+
+        Args:
+            session: Database session
+
+        Returns:
+            Refresh results
+        """
+        try:
+            service = self._get_component_mapping_service()
+            if not service:
+                return {"error": "ComponentMappingService not available"}
+
+            # Get all active mappings from database
+            mappings = await service.get_all_component_mappings(session, active_only=True)
+
+            # Clear existing cache
+            self.clear_mapping_cache()
+
+            # Populate cache with database mappings
+            database_mappings = {}
+            for mapping in mappings:
+                if mapping.io_mapping:
+                    genesis_type = mapping.genesis_type
+                    mapping_data = {
+                        "component": mapping.io_mapping.get("component"),
+                        "config": mapping.base_config or {},
+                        "dataType": mapping.io_mapping.get("dataType"),
+                    }
+                    database_mappings[genesis_type] = mapping_data
+
+            self.populate_mapping_cache(database_mappings)
+
+            logger.info(f"Refreshed mapping cache with {len(database_mappings)} mappings from database")
+            return {
+                "refreshed": len(database_mappings),
+                "cached_types": list(database_mappings.keys()),
+                "status": "success",
+            }
+
+        except Exception as e:
+            logger.error(f"Error refreshing mapping cache: {e}")
+            return {"error": str(e)}
+
+    def get_mapping_source(self, spec_type: str) -> str:
+        """
+        Determine the source of a mapping for debugging.
+
+        Args:
+            spec_type: Genesis component type
+
+        Returns:
+            Source of the mapping (hardcoded, database, unknown)
+        """
+        # Check hardcoded mappings first
+        if spec_type in self.HEALTHCARE_MAPPINGS:
+            return "hardcoded_healthcare"
+        elif spec_type in self.AUTONOMIZE_MODELS:
+            return "hardcoded_autonomize"
+        elif spec_type in self.MCP_MAPPINGS:
+            return "hardcoded_mcp"
+        elif spec_type in self.STANDARD_MAPPINGS:
+            return "hardcoded_standard"
+
+        # Check cache (database)
+        cache_key = f"mapping_cache_{spec_type}"
+        if hasattr(self, '_mapping_cache') and cache_key in self._mapping_cache:
+            return "database_cached"
+
+        return "unknown"

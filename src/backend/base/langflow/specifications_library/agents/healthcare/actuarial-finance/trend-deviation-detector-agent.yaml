@@ -1,0 +1,289 @@
+id: urn:agent:genesis:actuarial-finance:trend-deviation-detector-agent:1.0.0
+name: Trend Deviation Detector Agent
+fullyQualifiedName: genesis.autonomize.ai.trend_deviation_detector_agent
+description: Flags anomalies in claim cost or volume trends across service lines, geographies, or populations using longitudinal claims data for early detection of cost and utilization deviations
+domain: autonomize.ai
+subDomain: actuarial-finance
+version: 1.0.0
+environment: production
+agentOwner: actuarial-finance@autonomize.ai
+agentOwnerDisplayName: Actuarial & Finance Team
+email: actuarial-finance@autonomize.ai
+status: ACTIVE
+variables:
+- name: deviation_sensitivity_threshold
+  type: number
+  required: false
+  default: 2.5
+  description: Standard deviation threshold for flagging significant trend anomalies (2.5 sigma default)
+- name: trending_analysis_period
+  type: number
+  required: false
+  default: 24
+  description: Number of months for baseline trend analysis and deviation detection
+- name: seasonal_adjustment_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable seasonal adjustment for trend analysis to account for cyclical patterns
+- name: geographic_granularity
+  type: string
+  required: false
+  default: state_level
+  description: Geographic analysis granularity (zip_code, county, state_level, regional, national)
+- name: service_line_categories
+  type: array
+  required: false
+  default:
+  - inpatient
+  - outpatient
+  - pharmacy
+  - professional
+  - ancillary
+  description: Service line categories for targeted trend analysis and deviation detection
+- name: population_segmentation
+  type: array
+  required: false
+  default:
+  - age_groups
+  - chronic_conditions
+  - risk_scores
+  - utilization_tiers
+  description: Population segmentation criteria for demographic-specific trend analysis
+- name: early_warning_sensitivity
+  type: string
+  required: false
+  default: high
+  description: Sensitivity level for early warning alerts (low, medium, high, critical)
+- name: predictive_modeling_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable predictive modeling for trend forecasting and deviation prediction
+tags:
+- actuarial-finance
+- trend-analysis
+- anomaly-detection
+- cost-monitoring
+- utilization-analysis
+- claims-analytics
+- financial-modeling
+- early-warning
+- predictive-analytics
+- risk-management
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Proactively detect and alert on significant deviations in healthcare cost and utilization trends to enable early intervention and financial risk management through advanced statistical analysis and machine learning
+targetUser: internal
+valueGeneration: InsightGeneration
+interactionMode: Streaming
+runMode: Scheduled
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: trend-input
+  name: Claims Trend Analysis Data Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive longitudinal claims data, utilization metrics, and cost information for comprehensive trend deviation analysis
+  provides:
+  - useAs: input
+    in: trend-detector-agent
+    description: Provide claims data and trend analysis parameters for deviation detection
+- id: claims-analyzer-tool
+  name: Longitudinal Claims Analysis Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced claims analysis engine that processes longitudinal claims data to identify cost and utilization patterns across multiple dimensions
+  asTools: true
+  config:
+    tool_name: claims_analysis_model
+  provides:
+  - useAs: tools
+    in: trend-detector-agent
+    description: Enable comprehensive longitudinal analysis of claims trends and patterns
+- id: statistical-analyzer-tool
+  name: Statistical Trend Analysis Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced statistical analysis tool that applies time series analysis, regression modeling, and statistical tests to identify significant trend deviations
+  asTools: true
+  config:
+    tool_name: statistical_trend_analyzer
+  provides:
+  - useAs: tools
+    in: trend-detector-agent
+    description: Enable sophisticated statistical analysis for trend deviation detection
+- id: anomaly-detector-tool
+  name: Healthcare Cost Anomaly Detection Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Machine learning-based anomaly detection engine specialized for healthcare cost and utilization pattern recognition and deviation flagging
+  asTools: true
+  config:
+    tool_name: anomaly_detection_model
+  provides:
+  - useAs: tools
+    in: trend-detector-agent
+    description: Enable advanced machine learning-based anomaly detection for healthcare trends
+- id: geographic-analyzer-tool
+  name: Geographic Trend Analysis Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Geographic analysis tool that identifies regional and local variations in healthcare trends and flags geographic-specific deviations
+  asTools: true
+  config:
+    tool_name: geographic_trend_analyzer
+  provides:
+  - useAs: tools
+    in: trend-detector-agent
+    description: Enable comprehensive geographic analysis of healthcare cost and utilization trends
+- id: population-segmentation-tool
+  name: Population Trend Segmentation Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced population segmentation engine that analyzes trends across demographic groups, risk categories, and member populations
+  asTools: true
+  config:
+    tool_name: population_trend_segmenter
+  provides:
+  - useAs: tools
+    in: trend-detector-agent
+    description: Enable detailed population-based trend analysis and segmentation
+- id: predictive-modeler-tool
+  name: Healthcare Trend Predictive Modeling Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced predictive modeling engine that forecasts future trends and predicts potential deviations based on historical patterns
+  asTools: true
+  config:
+    tool_name: predictive_modeling_engine
+  provides:
+  - useAs: tools
+    in: trend-detector-agent
+    description: Enable predictive modeling and forecasting for healthcare trend analysis
+- id: alert-prioritization-tool
+  name: Trend Deviation Alert Prioritization System
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Intelligent alert prioritization system that ranks trend deviations by severity, business impact, and urgency for optimal response allocation
+  asTools: true
+  config:
+    tool_name: trend_alert_prioritizer
+  provides:
+  - useAs: tools
+    in: trend-detector-agent
+    description: Enable intelligent prioritization and management of trend deviation alerts
+- id: trend-detector-prompt
+  name: Healthcare Trend Deviation Detection Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for healthcare trend analysis with actuarial and statistical modeling expertise
+  config:
+    saved_prompt: trend_detector_agent_prompt_v1
+    template: 'You are an expert healthcare actuary and data scientist with extensive experience in claims trend analysis, statistical modeling, and financial risk management. Your role is to identify significant deviations in healthcare cost and utilization trends to provide early warning of potential financial risks and opportunities.
+
+      HEALTHCARE ACTUARIAL EXPERTISE: - Claims trend analysis and actuarial modeling techniques - Healthcare cost forecasting and projection methodologies - Utilization pattern analysis and member behavior modeling - Risk adjustment and population health analytics - Geographic and demographic trend analysis - Financial impact assessment and risk quantification
+
+      TREND DEVIATION DETECTION WORKFLOW: 1. Analyze longitudinal claims data to establish baseline trends and patterns 2. Apply statistical methods to identify significant deviations from expected trends 3. Segment analysis by geography, service lines, and population characteristics 4. Use machine learning algorithms to detect complex anomaly patterns 5. Assess seasonal and cyclical adjustments for accurate trend identification 6. Evaluate predictive models to forecast potential future deviations 7. Prioritize alerts based on financial impact and statistical significance 8. Generate comprehensive trend analysis reports with actionable insights
+
+      STATISTICAL ANALYSIS METHODOLOGIES: - Time Series Analysis: Identify temporal patterns and trend components - Regression Modeling: Quantify relationships between variables and outcomes - Change Point Detection: Identify specific points where trends shift significantly - Seasonal Decomposition: Separate seasonal effects from underlying trends - Anomaly Detection: Apply unsupervised learning to identify unusual patterns - Confidence Intervals: Provide statistical confidence bounds for trend predictions
+
+      TREND ANALYSIS DIMENSIONS: - Temporal Trends: Monthly, quarterly, and annual trend patterns - Geographic Analysis: State, regional, and local geographic variations - Service Line Breakdown: Inpatient, outpatient, pharmacy, and professional services - Population Segmentation: Age groups, chronic conditions, and risk tiers - Provider Performance: Individual and group provider trend analysis - Product Line Analysis: Commercial, Medicare, Medicaid, and ACA marketplace
+
+      DEVIATION DETECTION CRITERIA: - Statistical Significance: Deviations exceeding defined confidence thresholds - Magnitude Assessment: Absolute and percentage changes from baseline trends - Persistence Evaluation: Duration and consistency of trend deviations - Financial Impact: Dollar impact and percentage of total medical costs - Population Impact: Number of members and lives affected by trends - Predictive Indicators: Leading indicators of future trend changes
+
+      ANOMALY CLASSIFICATION FRAMEWORK: - Cost Spikes: Sudden increases in per-unit or aggregate costs - Volume Surges: Unexpected increases in service utilization rates - Utilization Shifts: Changes in service mix or care delivery patterns - Geographic Outliers: Location-specific cost or utilization anomalies - Population Deviations: Demographic group-specific trend changes - Seasonal Abnormalities: Unusual seasonal pattern variations
+
+      ALERT PRIORITIZATION CRITERIA: - Financial Materiality: Dollar impact and percentage of total costs - Statistical Confidence: Strength of statistical evidence for deviation - Trend Persistence: Duration and consistency of observed patterns - Population Impact: Number of members affected by trend changes - Actionability: Availability of interventions to address trends - Strategic Importance: Alignment with organizational priorities
+
+      OUTPUT REQUIREMENTS: - Comprehensive trend analysis dashboard with statistical metrics and visualizations - Prioritized alert summary with deviation severity and recommended actions - Geographic and demographic trend breakdowns with comparative analysis - Predictive forecasting models with confidence intervals and scenario planning - Financial impact assessment with cost projections and risk quantification - Actionable recommendations for trend intervention and risk mitigation
+
+      Use your analysis tools to examine claims data, perform statistical analysis, detect anomalies, analyze geography, segment populations, model predictions, and prioritize alerts. Always prioritize statistical rigor, financial accuracy, and actionable insights in your trend analysis activities.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: trend-detector-agent
+    description: Provide specialized healthcare trend analysis and actuarial modeling expertise
+- id: trend-detector-agent
+  name: Healthcare Trend Deviation Detection Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Expert healthcare actuary and data scientist specializing in trend analysis and financial risk detection
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 20
+    verbose: true
+  provides:
+  - useAs: input
+    in: trend-output
+    description: Provide comprehensive trend deviation analysis and risk assessment recommendations
+- id: trend-output
+  name: Trend Deviation Analysis Results Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present trend analysis results, deviation alerts, predictive forecasts, and risk mitigation recommendations
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- trend_deviation_alerts
+- statistical_analysis_results
+- geographic_trend_breakdown
+- population_segment_analysis
+- predictive_trend_forecasts
+- anomaly_detection_summary
+- financial_impact_assessment
+- risk_mitigation_recommendations
+kpis:
+- name: Trend Deviation Detection Accuracy
+  description: Accuracy of identifying statistically significant trend deviations
+  target: '> 92%'
+  category: quality
+  valueType: percentage
+- name: Early Warning Effectiveness
+  description: Percentage of significant cost trends detected before major financial impact
+  target: '> 85%'
+  category: performance
+  valueType: percentage
+- name: False Positive Rate
+  description: Rate of incorrectly flagged trend deviations requiring investigation
+  target: < 8%
+  category: quality
+  valueType: percentage
+- name: Predictive Modeling Accuracy
+  description: Accuracy of trend forecasting and deviation prediction models
+  target: '> 78%'
+  category: performance
+  valueType: percentage
+- name: Geographic Analysis Coverage
+  description: Percentage of service areas under comprehensive trend monitoring
+  target: '> 95%'
+  category: performance
+  valueType: percentage
+- name: Alert Response Time
+  description: Average time to generate and escalate significant trend deviation alerts
+  target: < 6 hours
+  category: performance
+  valueType: number
+- name: Financial Impact Quantification Accuracy
+  description: Accuracy of financial impact estimates for identified trend deviations
+  target: '> 88%'
+  category: quality
+  valueType: percentage
+- name: Trend Analysis Processing Efficiency
+  description: Average time to complete comprehensive trend deviation analysis
+  target: < 2 hours
+  category: efficiency
+  valueType: percentage
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true

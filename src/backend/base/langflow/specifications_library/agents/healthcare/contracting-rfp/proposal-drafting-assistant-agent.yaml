@@ -1,0 +1,288 @@
+id: urn:agent:genesis:contracting-rfp:proposal-drafting-assistant-agent:1.0.0
+name: Proposal Drafting Assistant Agent
+fullyQualifiedName: genesis.autonomize.ai.proposal_drafting_assistant_agent
+description: Matches RFP questions to pre-approved language bank and auto-generates draft responses from past submissions and content libraries for healthcare contracting proposals
+domain: autonomize.ai
+subDomain: contracting-rfp
+version: 1.0.0
+environment: production
+agentOwner: contracting-rfp@autonomize.ai
+agentOwnerDisplayName: Contracting & RFP Team
+email: contracting-rfp@autonomize.ai
+status: ACTIVE
+variables:
+- name: language_matching_threshold
+  type: float
+  required: false
+  default: 0.85
+  description: Minimum similarity score for matching RFP questions to pre-approved language bank entries
+- name: content_reuse_confidence
+  type: float
+  required: false
+  default: 0.78
+  description: Minimum confidence score for reusing previous proposal content and responses
+- name: proposal_template_type
+  type: string
+  required: false
+  default: healthcare_standard
+  description: Proposal template format (healthcare_standard, medicare_advantage, medicaid_managed_care, commercial_payer)
+- name: compliance_verification_level
+  type: string
+  required: false
+  default: comprehensive
+  description: Level of compliance verification for generated content (basic, standard, comprehensive)
+- name: auto_generation_mode
+  type: string
+  required: false
+  default: guided
+  description: Auto-generation mode for proposal responses (automatic, guided, manual_review)
+- name: content_personalization
+  type: boolean
+  required: false
+  default: true
+  description: Enable personalization of content based on RFP specifics and client requirements
+- name: quality_scoring_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable quality scoring and ranking for generated proposal content
+- name: past_submissions_limit
+  type: number
+  required: false
+  default: 50
+  description: Maximum number of past submissions to consider for content matching and reuse
+tags:
+- contracting-rfp
+- proposal-generation
+- content-matching
+- language-bank
+- healthcare-proposals
+- response-automation
+- content-reuse
+- compliance-verification
+- template-management
+- rfp-response
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Generate high-quality healthcare proposal responses by intelligently matching RFP questions to pre-approved language banks and leveraging past successful submissions to create compliant, comprehensive, and competitive proposal content
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: proposal-input
+  name: RFP Proposal Request Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive RFP questions, proposal requirements, and drafting specifications for automated response generation
+  provides:
+  - useAs: input
+    in: proposal-drafting-agent
+    description: Provide RFP questions and proposal requirements for automated response generation
+- id: language-bank-search-tool
+  name: Pre-Approved Language Bank Search
+  kind: Tool
+  type: genesis:knowledge_hub_search
+  description: Search and retrieve pre-approved healthcare language, compliance statements, and standard proposal content from curated language banks
+  asTools: true
+  config:
+    knowledge_hub_id: healthcare_language_bank
+    search_type: semantic_similarity
+    result_limit: 10
+    relevance_threshold: 0.85
+  provides:
+  - useAs: tools
+    in: proposal-drafting-agent
+    description: Enable search and retrieval of pre-approved proposal language and content
+- id: content-matcher-tool
+  name: RFP Question Content Matcher
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced content matching engine that analyzes RFP questions and matches them to appropriate pre-approved responses and language templates
+  asTools: true
+  config:
+    similarity_algorithm: hybrid_semantic
+    question_classification: true
+    context_awareness: true
+    compliance_scoring: true
+    tool_name: content_matching_model
+  provides:
+  - useAs: tools
+    in: proposal-drafting-agent
+    description: Enable intelligent matching of RFP questions to appropriate proposal content
+- id: past-submissions-analyzer
+  name: Historical Proposal Submissions Analyzer
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze past successful proposal submissions to identify reusable content, winning strategies, and effective response patterns for healthcare RFPs
+  asTools: true
+  config:
+    tool_name: proposal_submissions_analyzer
+  provides:
+  - useAs: tools
+    in: proposal-drafting-agent
+    description: Enable analysis and reuse of successful past proposal submissions
+- id: compliance-validator-tool
+  name: Healthcare Proposal Compliance Validator
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Validate generated proposal content against healthcare compliance requirements, regulatory standards, and industry best practices
+  asTools: true
+  config:
+    compliance_frameworks:
+    - hipaa
+    - cms_requirements
+    - state_insurance_regulations
+    - accreditation_standards
+    validation_depth: comprehensive
+    regulatory_cross_check: true
+    tool_name: healthcare_compliance_connector
+  provides:
+  - useAs: tools
+    in: proposal-drafting-agent
+    description: Enable compliance validation and regulatory verification of proposal content
+- id: proposal-generator-tool
+  name: Healthcare Proposal Content Generator
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced proposal content generation tool that creates customized, compliant healthcare proposal responses using templates, language banks, and AI-driven content creation
+  asTools: true
+  config:
+    tool_name: healthcare_proposal_generator
+  provides:
+  - useAs: tools
+    in: proposal-drafting-agent
+    description: Enable automated generation of high-quality healthcare proposal content
+- id: quality-scorer-tool
+  name: Proposal Quality Scoring Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Comprehensive quality scoring engine that evaluates proposal content for completeness, compliance, competitiveness, and alignment with RFP requirements
+  asTools: true
+  config:
+    tool_name: proposal_quality_scorer
+  provides:
+  - useAs: tools
+    in: proposal-drafting-agent
+    description: Enable quality assessment and scoring of generated proposal content
+- id: proposal-drafting-prompt
+  name: Healthcare Proposal Drafting Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for healthcare proposal drafting with contracting and compliance expertise
+  config:
+    saved_prompt: proposal_drafting_agent_prompt_v1
+    template: 'You are an expert healthcare proposal writer with extensive experience in RFP responses, contracting, and compliance requirements. Your role is to generate high-quality, compliant, and competitive proposal responses by leveraging pre-approved language banks and successful past submissions.
+
+      HEALTHCARE PROPOSAL EXPERTISE: - Healthcare contracting and payer relationships - Medicare Advantage and Medicaid managed care proposals - Commercial health plan and employer group proposals - Provider network and credentialing proposals - Clinical program and quality measure proposals - Healthcare technology and integration proposals
+
+      PROPOSAL DRAFTING WORKFLOW: 1. Analyze RFP questions and requirements for context and intent 2. Search pre-approved language bank for relevant content and templates 3. Match questions to appropriate response frameworks and structures 4. Identify reusable content from past successful submissions 5. Generate customized responses using approved language and templates 6. Validate content for compliance with healthcare regulations 7. Score and rank response quality and competitiveness 8. Provide recommendations for response enhancement
+
+      CONTENT MATCHING STRATEGY: - Question Classification: Identify question type, scope, and intent - Semantic Matching: Find semantically similar content in language banks - Context Analysis: Consider RFP context, client type, and specific requirements - Compliance Alignment: Ensure content meets regulatory and compliance standards - Competitive Positioning: Leverage successful past responses and strategies - Customization: Adapt content to specific client needs and RFP requirements
+
+      HEALTHCARE COMPLIANCE REQUIREMENTS: - HIPAA privacy and security compliance statements - CMS regulations and Medicare/Medicaid requirements - State insurance regulations and licensing requirements - Accreditation standards (NCQA, AAAHC, Joint Commission) - Clinical quality measures and reporting requirements - Provider network adequacy and access standards
+
+      QUALITY ASSURANCE STANDARDS: - Content accuracy and factual verification - Compliance with all regulatory requirements - Consistency with company policies and capabilities - Competitive positioning and value proposition clarity - Professional tone and clear communication - Complete response to all RFP requirements
+
+      RESPONSE GENERATION PRINCIPLES: - Use pre-approved language whenever possible to ensure compliance - Customize content to address specific RFP requirements and client needs - Maintain consistency with past successful submissions - Ensure all healthcare regulatory requirements are addressed - Provide evidence-based responses with supporting documentation - Focus on value proposition and competitive advantages
+
+      OUTPUT REQUIREMENTS: - Complete, structured proposal responses addressing all RFP questions - Compliance verification results with regulatory requirement mapping - Quality scores and competitiveness assessment for each response - Recommendations for response enhancement and improvement - Source documentation references for content reuse and verification - Risk assessment highlighting potential compliance or competitive concerns
+
+      Use your content tools to search language banks, match questions to content, analyze past submissions, validate compliance, generate responses, and score quality. Always prioritize accuracy, compliance, and competitive positioning in your proposal responses.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: proposal-drafting-agent
+    description: Provide specialized healthcare proposal drafting and content generation expertise
+- id: proposal-drafting-agent
+  name: Healthcare Proposal Drafting Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Expert healthcare proposal writer specializing in automated response generation using pre-approved content and past successful submissions
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.2
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 20
+    verbose: true
+  provides:
+  - useAs: input
+    in: proposal-output
+    description: Provide comprehensive proposal responses with quality scoring and compliance verification
+- id: proposal-output
+  name: Healthcare Proposal Draft Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present structured proposal responses with quality metrics, compliance verification, and enhancement recommendations
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- drafted_proposal_responses
+- content_matching_results
+- compliance_verification_status
+- quality_scoring_metrics
+- past_submissions_analysis
+- language_bank_utilization
+- response_enhancement_recommendations
+- competitive_positioning_assessment
+kpis:
+- name: Content Matching Accuracy
+  description: Accuracy of matching RFP questions to appropriate pre-approved language and content
+  target: '> 88%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Proposal Generation Efficiency
+  description: Time reduction in proposal drafting compared to manual process
+  target: '> 75%'
+  measurement: percentage
+  category: Efficiency
+  valueType: percentage
+- name: Compliance Verification Rate
+  description: Percentage of generated content that passes healthcare compliance validation
+  target: '> 95%'
+  measurement: percentage
+  category: Compliance
+  valueType: percentage
+- name: Content Reuse Optimization
+  description: Percentage of proposal content sourced from pre-approved language bank and past submissions
+  target: '> 70%'
+  measurement: percentage
+  category: Efficiency
+  valueType: percentage
+- name: Response Quality Score
+  description: Average quality score for generated proposal responses based on completeness and competitiveness
+  target: '> 4.2/5'
+  measurement: score
+  category: Quality
+  valueType: number
+- name: RFP Question Coverage Rate
+  description: Percentage of RFP questions with complete and appropriate responses generated
+  target: '> 92%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Language Bank Utilization Rate
+  description: Effective utilization rate of pre-approved language bank content in proposals
+  target: '> 65%'
+  measurement: percentage
+  category: Efficiency
+  valueType: percentage
+- name: Proposal Win Rate Impact
+  description: Improvement in proposal win rates using automated drafting assistance
+  target: '> 15%'
+  measurement: percentage
+  category: Business Impact
+  valueType: percentage
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: false

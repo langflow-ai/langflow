@@ -1,0 +1,289 @@
+id: urn:agent:genesis:compliance:policy-change-impact-analyzer-agent:1.0.0
+name: Policy Change Impact Analyzer Agent
+fullyQualifiedName: genesis.autonomize.ai.policy_change_impact_analyzer_agent
+description: Summarizes CMS/state regulation updates and maps them to impacted workflows, policies, and implementation playbooks with comprehensive impact analysis and stakeholder notifications
+domain: autonomize.ai
+subDomain: compliance
+version: 1.0.0
+environment: production
+agentOwner: compliance@autonomize.ai
+agentOwnerDisplayName: Compliance Team
+email: compliance@autonomize.ai
+status: ACTIVE
+variables:
+- name: impact_severity_threshold
+  type: string
+  required: false
+  default: medium
+  description: Minimum impact severity for notifications (low, medium, high, critical)
+- name: regulation_sources
+  type: array
+  required: false
+  default:
+  - cms
+  - state_medicaid
+  - hipaa
+  - hitech
+  - aca
+  description: Regulatory sources to monitor for policy changes
+- name: stakeholder_notification_delay
+  type: number
+  required: false
+  default: 24
+  description: Hours to wait before sending stakeholder notifications
+- name: enable_automated_mapping
+  type: boolean
+  required: false
+  default: true
+  description: Enable automated workflow mapping for policy changes
+- name: compliance_deadline_buffer
+  type: number
+  required: false
+  default: 90
+  description: Days before compliance deadline to flag as urgent
+- name: include_implementation_templates
+  type: boolean
+  required: false
+  default: true
+  description: Include implementation playbook templates in analysis
+tags:
+- compliance
+- policy-analysis
+- regulatory-monitoring
+- cms-regulations
+- impact-assessment
+- workflow-mapping
+- stakeholder-notification
+- implementation-planning
+- hipaa-compliant
+- regulatory-compliance
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Analyze regulatory policy changes from CMS and state agencies, assess organizational impact, map affected workflows and policies, and generate actionable implementation guidance with stakeholder notifications
+targetUser: internal
+valueGeneration: DecisionSupport
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: policy-input
+  name: Policy Change Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive regulatory policy changes, CMS memos, state updates, and compliance notifications for impact analysis
+  provides:
+  - useAs: input
+    in: policy-analyzer-agent
+    description: Provide regulatory updates and policy changes for comprehensive analysis
+- id: regulatory-monitor-tool
+  name: Regulatory Monitoring Service
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Monitor CMS HPMS memos, state Medicaid updates, and federal healthcare regulations with automated change detection and priority classification
+  asTools: true
+  config:
+    tool_name: regulatory_monitoring_service
+  provides:
+  - useAs: tools
+    in: policy-analyzer-agent
+    description: Enable real-time regulatory monitoring and change detection
+- id: policy-analysis-model
+  name: Policy Analysis AI Model
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Specialized AI model for healthcare policy analysis, impact assessment, and regulatory interpretation with CMS expertise
+  asTools: true
+  config:
+    model_name: policy_analyzer_v2
+    analysis_depth: comprehensive
+    regulation_expertise:
+    - cms
+    - medicaid
+    - hipaa
+    - aca
+    tool_name: policy_analysis_model
+  provides:
+  - useAs: tools
+    in: policy-analyzer-agent
+    description: Enable intelligent policy analysis and impact assessment
+- id: workflow-mapping-tool
+  name: Workflow Impact Mapping Service
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Map policy changes to affected organizational workflows, processes, and procedures with dependency analysis and risk assessment
+  asTools: true
+  config:
+    tool_name: workflow_impact_mapper
+  provides:
+  - useAs: tools
+    in: policy-analyzer-agent
+    description: Enable automated workflow impact mapping and dependency analysis
+- id: policy-database-tool
+  name: Policy and Procedure Database
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access organizational policies, procedures, implementation playbooks, and compliance documentation with version control
+  asTools: true
+  config:
+    database_type: policy_management
+    include_versioning: true
+    compliance_metadata: true
+    tool_name: healthcare_data_connector
+  provides:
+  - useAs: tools
+    in: policy-analyzer-agent
+    description: Enable access to organizational policies and implementation templates
+- id: stakeholder-notification-tool
+  name: Stakeholder Notification Service
+  kind: Tool
+  type: genesis:api_request
+  description: Send targeted notifications to compliance officers, department heads, and implementation teams based on impact severity
+  asTools: true
+  config:
+    method: POST
+    url_input: ${NOTIFICATION_SERVICE_URL}/send-compliance-alert
+    headers:
+    - key: Authorization
+      value: Bearer ${NOTIFICATION_API_TOKEN}
+    - key: Content-Type
+      value: application/json
+    timeout: 30
+  provides:
+  - useAs: tools
+    in: policy-analyzer-agent
+    description: Enable automated stakeholder notifications and alerts
+- id: compliance-timeline-tool
+  name: Compliance Timeline Generator
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Generate implementation timelines, compliance deadlines, and milestone tracking for policy changes with calendar integration
+  asTools: true
+  config:
+    tool_name: compliance_timeline_generator
+  provides:
+  - useAs: tools
+    in: policy-analyzer-agent
+    description: Enable automated timeline generation and milestone tracking
+- id: policy-analyzer-prompt
+  name: Policy Impact Analysis Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for policy change analysis with regulatory expertise and impact assessment methodology
+  config:
+    saved_prompt: policy_impact_analyzer_prompt_v1
+    template: 'You are a healthcare compliance expert specializing in regulatory policy analysis, CMS regulations, and organizational impact assessment. Your role is to analyze policy changes, assess organizational impact, and provide actionable implementation guidance.
+
+      REGULATORY EXPERTISE: - CMS regulations and HPMS memo interpretation - State Medicaid policy changes and requirements - HIPAA, HITECH, and ACA compliance requirements - Medicare Advantage and managed care regulations - Quality measurement and reporting requirements - Payment policy and reimbursement changes
+
+      POLICY ANALYSIS METHODOLOGY: 1. Regulatory Document Analysis: - Parse CMS memos, state updates, and federal notices - Extract key requirements, deadlines, and compliance obligations - Identify mandatory vs. optional changes - Assess implementation complexity and resource requirements
+
+      2. Organizational Impact Assessment: - Map policy changes to affected departments and workflows - Assess operational, financial, and compliance impacts - Identify required system changes and staff training needs - Evaluate timeline constraints and implementation challenges
+
+      3. Workflow and Process Mapping: - Identify all organizational processes affected by policy changes - Map dependencies between affected workflows - Assess risks and mitigation strategies - Prioritize implementation tasks by urgency and complexity
+
+      4. Implementation Planning: - Generate actionable implementation roadmaps - Create compliance timelines with key milestones - Identify required resources, training, and system updates - Develop monitoring and validation procedures
+
+      STAKEHOLDER COMMUNICATION: - Compliance officers and legal teams - Department heads and operational managers - IT teams for system implementation - Training coordinators for staff education - Executive leadership for strategic decisions
+
+      IMPACT SEVERITY CLASSIFICATION: - CRITICAL: Immediate compliance risk, regulatory penalties - HIGH: Significant operational changes, tight deadlines - MEDIUM: Moderate process updates, reasonable timelines - LOW: Minor adjustments, flexible implementation
+
+      OUTPUT REQUIREMENTS: - Executive summary with key impacts and deadlines - Detailed impact analysis by department and workflow - Implementation roadmap with timelines and milestones - Resource requirements and cost estimates - Risk assessment and mitigation strategies - Stakeholder notification templates and communication plan
+
+      Use your regulatory tools to monitor policy changes, analyze organizational impact, map affected workflows, and generate comprehensive implementation guidance. Always prioritize regulatory compliance, patient safety, and operational continuity.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: policy-analyzer-agent
+    description: Provide specialized regulatory analysis and compliance expertise
+- id: policy-analyzer-agent
+  name: Policy Change Impact Analyst
+  kind: Agent
+  type: genesis:agent
+  description: Expert compliance analyst specializing in regulatory policy analysis and organizational impact assessment
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.2
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 25
+    verbose: true
+  provides:
+  - useAs: input
+    in: policy-output
+    description: Provide comprehensive policy impact analysis and implementation guidance
+- id: policy-output
+  name: Policy Impact Analysis Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive policy impact analysis with implementation roadmaps and stakeholder notifications
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- policy_impact_summary
+- affected_workflows_mapping
+- implementation_roadmap
+- compliance_timeline
+- stakeholder_notifications
+- risk_assessment
+- resource_requirements
+- regulatory_interpretation
+kpis:
+- name: Policy Change Detection Speed
+  description: Time from policy publication to internal notification
+  target: < 4 hours
+  measurement: time
+  category: Efficiency
+  valueType: percentage
+- name: Impact Assessment Accuracy
+  description: Accuracy of organizational impact predictions
+  target: '> 90%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Implementation Timeline Adherence
+  description: Percentage of implementations completed on schedule
+  target: '> 85%'
+  measurement: percentage
+  category: Compliance
+  valueType: number
+- name: Stakeholder Notification Coverage
+  description: Percentage of affected stakeholders properly notified
+  target: '> 95%'
+  measurement: percentage
+  category: Communication
+  valueType: percentage
+- name: Regulatory Compliance Rate
+  description: Successful compliance with analyzed policy changes
+  target: '> 98%'
+  measurement: percentage
+  category: Compliance
+  valueType: percentage
+- name: Workflow Mapping Completeness
+  description: Percentage of affected workflows properly identified
+  target: '> 92%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Implementation Cost Accuracy
+  description: Accuracy of resource requirement estimates
+  target: '> 80%'
+  measurement: percentage
+  category: Planning
+  valueType: percentage
+- name: Risk Mitigation Effectiveness
+  description: Success rate of identified risk mitigation strategies
+  target: '> 88%'
+  measurement: percentage
+  category: Risk Management
+  valueType: percentage
+securityInfo:
+  visibility: Internal
+  gdprSensitive: false
+  hipaaCompliant: true
+  dataClassification: Confidential

@@ -1,0 +1,298 @@
+id: urn:agent:genesis:risk-adjustment:suspect-condition-finder-agent:1.0.0
+name: Suspect Condition Finder Agent
+fullyQualifiedName: genesis.autonomize.ai.suspect_condition_finder_agent
+description: Uses advanced NLP to scan clinical notes, lab data, and diagnostic reports to identify undocumented HCC (Hierarchical Condition Category) conditions that should be coded for accurate risk adjustment
+domain: autonomize.ai
+subDomain: risk-adjustment
+version: 1.0.0
+environment: production
+agentOwner: risk-adjustment@autonomize.ai
+agentOwnerDisplayName: Risk Adjustment Team
+email: risk-adjustment@autonomize.ai
+status: ACTIVE
+variables:
+- name: hcc_version
+  type: string
+  required: false
+  default: HCC-V28
+  description: Version of HCC model to use (HCC-V28, HCC-V24, HCC-ESRD)
+- name: confidence_threshold
+  type: number
+  required: false
+  default: 0.80
+  description: Minimum confidence score for flagging suspect conditions
+- name: lookback_period_months
+  type: number
+  required: false
+  default: 12
+  description: Number of months to review for clinical evidence
+- name: priority_conditions
+  type: array
+  required: false
+  default: ["diabetes", "hypertension", "heart_failure", "copd", "ckd"]
+  description: High-value HCC conditions to prioritize in screening
+- name: enable_lab_analysis
+  type: boolean
+  required: false
+  default: true
+  description: Enable automatic analysis of lab results for condition indicators
+- name: specialty_focus
+  type: string
+  required: false
+  default: all
+  description: Medical specialty to focus analysis (all, cardiology, endocrinology, nephrology)
+- name: audit_mode
+  type: boolean
+  required: false
+  default: true
+  description: Enable detailed audit logging for compliance tracking
+tags:
+- risk-adjustment
+- hcc-coding
+- clinical-nlp
+- condition-detection
+- revenue-optimization
+- healthcare-automation
+- medical-coding
+- compliance
+- documentation-improvement
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Analyze clinical documentation using advanced NLP to identify undocumented HCC conditions, highlight supporting clinical evidence, and provide actionable recommendations to providers for accurate risk adjustment coding
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: condition-input
+  name: Clinical Documentation Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive clinical documentation including clinical notes, lab results, diagnostic reports, and patient history for HCC condition analysis
+  provides:
+  - useAs: input
+    in: condition-finder-agent
+    description: Provide clinical documentation for suspect condition analysis
+- id: clinical-nlp-model
+  name: Clinical NLP Model
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced clinical natural language processing model specialized for medical entity extraction, clinical context understanding, and HCC condition identification
+  asTools: true
+  config:
+    tool_name: clinical_nlp_model
+  provides:
+  - useAs: tools
+    in: condition-finder-agent
+    description: Enable advanced clinical NLP analysis for medical entity extraction
+- id: hcc-coding-model
+  name: HCC Coding Model
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Specialized AI model for HCC condition mapping and risk adjustment factor calculation with comprehensive knowledge of CMS-HCC models
+  asTools: true
+  config:
+    tool_name: hcc_code_model
+  provides:
+  - useAs: tools
+    in: condition-finder-agent
+    description: Enable HCC condition coding and risk score analysis
+- id: lab-analysis-tool
+  name: Clinical Lab Analysis Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced tool for analyzing laboratory results to identify clinical indicators supporting HCC conditions and chronic disease markers
+  asTools: true
+  config:
+    tool_name: clinical_lab_analyzer
+  provides:
+  - useAs: tools
+    in: condition-finder-agent
+    description: Enable comprehensive laboratory result analysis for condition detection
+- id: condition-evidence-tool
+  name: Clinical Evidence Extractor
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Specialized tool for extracting and correlating clinical evidence from multiple documentation sources to support HCC condition identification
+  asTools: true
+  config:
+    tool_name: condition_evidence_extractor
+  provides:
+  - useAs: tools
+    in: condition-finder-agent
+    description: Enable comprehensive clinical evidence extraction and correlation
+- id: ehr-integration-tool
+  name: EHR Integration Connector
+  kind: Tool
+  type: genesis:mcp_tool
+  description: HIPAA-compliant EHR connector for accessing comprehensive patient clinical data with FHIR R4 support and historical record retrieval
+  asTools: true
+  config:
+    tool_name: ehr_connector
+  provides:
+  - useAs: tools
+    in: condition-finder-agent
+    description: Enable secure EHR access for comprehensive clinical data retrieval
+- id: condition-finder-prompt
+  name: Suspect Condition Finder Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for suspect HCC condition identification with clinical expertise and risk adjustment focus
+  config:
+    saved_prompt: suspect_condition_finder_prompt_v1
+    template: 'You are a clinical documentation specialist and certified risk adjustment coder with expertise in HCC (Hierarchical Condition Category) coding and CMS risk adjustment methodologies. Your role is to analyze clinical documentation to identify undocumented HCC conditions that should be coded for accurate risk adjustment.
+
+      HCC EXPERTISE:
+      - CMS-HCC Model V28 with complete condition categories and risk factors
+      - Clinical documentation requirements for HCC code support
+      - Medicare Advantage risk adjustment methodology and RAF scoring
+      - Condition hierarchies and code interactions
+      - Annual recapture requirements and documentation standards
+
+      CONDITION IDENTIFICATION PROCESS:
+      1. Analyze clinical notes, lab results, and diagnostic reports comprehensively
+      2. Extract medical entities using advanced clinical NLP capabilities
+      3. Identify clinical indicators supporting potential HCC conditions
+      4. Correlate findings across multiple documentation sources and time periods
+      5. Map identified conditions to appropriate HCC categories
+      6. Calculate potential risk adjustment factor impact
+      7. Highlight specific clinical evidence supporting each suspect condition
+      8. Assess documentation adequacy for coding compliance
+
+      CLINICAL EVIDENCE ANALYSIS:
+      - Laboratory values indicating chronic conditions (HbA1c, eGFR, ejection fraction)
+      - Medication patterns suggesting ongoing condition management
+      - Symptom documentation supporting chronic disease states
+      - Procedure codes indicating condition monitoring or treatment
+      - Provider observations and clinical assessments
+      - Historical documentation patterns and condition progression
+
+      HCC PRIORITY CONDITIONS TO SCREEN:
+      - Diabetes with complications (HCC 17-19)
+      - Chronic kidney disease stages (HCC 135-137)
+      - Heart failure and cardiomyopathy (HCC 85)
+      - COPD and respiratory conditions (HCC 111)
+      - Major depressive and psychiatric disorders (HCC 55-58)
+      - Chronic liver disease (HCC 27-29)
+      - Peripheral vascular disease (HCC 107-108)
+      - Stroke and cerebrovascular disease (HCC 100-104)
+
+      DOCUMENTATION ASSESSMENT CRITERIA:
+      - Specificity of condition documentation
+      - Provider acknowledgment and monitoring evidence
+      - Treatment plan alignment with suspected conditions
+      - Diagnostic test correlation with clinical findings
+      - Temporal relationship and condition progression
+      - Medication appropriateness for suspected conditions
+
+      OUTPUT REQUIREMENTS:
+      - List of suspect HCC conditions with confidence scores
+      - Specific clinical evidence supporting each condition
+      - Recommended ICD-10 codes for provider consideration
+      - Documentation improvement opportunities
+      - Potential risk adjustment factor impact
+      - Provider query recommendations for clarification
+      - Compliance assessment and coding risk evaluation
+
+      QUALITY METRICS:
+      - Evidence strength assessment (strong, moderate, weak)
+      - Documentation adequacy scoring
+      - Coding compliance risk level
+      - Revenue impact estimation
+      - Provider workload prioritization
+
+      Use your clinical NLP, HCC coding, lab analysis, and evidence extraction tools to perform comprehensive condition screening. Always prioritize patient safety and accurate clinical representation while maximizing appropriate risk adjustment capture.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: condition-finder-agent
+    description: Provide specialized suspect condition finder instructions and clinical expertise
+- id: condition-finder-agent
+  name: Suspect Condition Finder Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Clinical documentation specialist that analyzes patient records to identify undocumented HCC conditions for risk adjustment optimization
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 20
+    verbose: true
+  provides:
+  - useAs: input
+    in: condition-output
+    description: Provide comprehensive suspect condition analysis and recommendations
+- id: condition-output
+  name: Suspect Condition Analysis Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive analysis of suspect HCC conditions with clinical evidence, coding recommendations, and risk adjustment impact
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- suspect_hcc_conditions
+- clinical_evidence_summary
+- coding_recommendations
+- documentation_gaps
+- risk_adjustment_impact
+- provider_queries
+- compliance_assessment
+- revenue_optimization_metrics
+kpis:
+- name: Condition Detection Accuracy Rate
+  description: Percentage of accurately identified HCC conditions confirmed by provider review
+  target: '> 85%'
+  valueType: percentage
+  category: quality
+- name: Clinical Evidence Coverage
+  description: Percentage of suspect conditions with comprehensive supporting clinical evidence
+  target: '> 95%'
+  valueType: percentage
+  category: quality
+- name: False Positive Rate
+  description: Rate of incorrectly flagged conditions that do not meet HCC criteria
+  target: '< 15%'
+  valueType: percentage
+  category: quality
+- name: Revenue Impact Identification
+  description: Potential additional revenue identified through undocumented condition detection
+  target: '> $50 per member per month'
+  valueType: number
+  category: business
+- name: Provider Query Generation Rate
+  description: Percentage of suspect conditions resulting in actionable provider queries
+  target: '> 70%'
+  valueType: percentage
+  category: efficiency
+- name: Documentation Improvement Score
+  description: Improvement in clinical documentation quality scores after implementation
+  target: '> 25%'
+  valueType: percentage
+  category: quality
+- name: HCC Capture Rate Enhancement
+  description: Increase in HCC condition capture rate compared to baseline
+  target: '> 30%'
+  valueType: percentage
+  category: business
+- name: Processing Time per Case
+  description: Average time to complete comprehensive condition screening per patient
+  target: '< 5 minutes'
+  valueType: duration
+  category: efficiency
+- name: Compliance Risk Reduction
+  description: Reduction in coding compliance risk through improved documentation
+  target: '> 40%'
+  valueType: percentage
+  category: compliance
+securityInfo:
+  visibility: Internal
+  gdprSensitive: true
+  hipaaCompliant: true

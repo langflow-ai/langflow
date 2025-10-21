@@ -1,0 +1,463 @@
+id: urn:agent:genesis:care-management:readmission-risk-predictor-agent:1.0.0
+name: Readmission Risk Predictor Agent
+fullyQualifiedName: genesis.autonomize.ai.readmission_risk_predictor_agent
+description: Multi-agent system that uses post-discharge data, prior utilization patterns, and comorbidity indexes to predict 30-day readmission risks and flag high-risk patients for intervention
+domain: autonomize.ai
+subDomain: care-management
+version: 1.0.0
+environment: production
+agentOwner: care-management@autonomize.ai
+agentOwnerDisplayName: Care Management Team
+email: care-management@autonomize.ai
+status: ACTIVE
+variables:
+- name: prediction_window_days
+  type: number
+  required: false
+  default: 30
+  description: Number of days post-discharge for readmission risk prediction
+- name: high_risk_threshold
+  type: number
+  required: false
+  default: 0.75
+  description: Risk score threshold for high-risk classification requiring intervention
+- name: moderate_risk_threshold
+  type: number
+  required: false
+  default: 0.5
+  description: Risk score threshold for moderate-risk classification
+- name: historical_lookback_months
+  type: number
+  required: false
+  default: 24
+  description: Number of months of historical data to analyze for patterns
+- name: comorbidity_weight
+  type: number
+  required: false
+  default: 0.4
+  description: Weight given to comorbidity factors in risk calculation
+- name: utilization_weight
+  type: number
+  required: false
+  default: 0.3
+  description: Weight given to utilization patterns in risk calculation
+- name: post_discharge_weight
+  type: number
+  required: false
+  default: 0.3
+  description: Weight given to post-discharge factors in risk calculation
+tags:
+- care-management
+- readmission-prevention
+- risk-prediction
+- post-discharge
+- quality-measures
+- cms-metrics
+- healthcare
+- multi-agent
+reusability:
+  asTools: false
+kind: Multi Agent
+agentGoal: Predict 30-day readmission risk for discharged patients and enable proactive interventions to prevent avoidable readmissions
+targetUser: internal
+valueGeneration: InsightGeneration
+interactionMode: RealTime
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: discharge-input
+  name: Discharge Notification Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive hospital discharge notifications and patient identification for readmission risk assessment
+  provides:
+  - useAs: input
+    in: data-collection-agent
+    description: Provide discharge context for comprehensive data collection
+- id: ehr-discharge-tool
+  name: EHR Discharge Data Access
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access discharge summaries, length of stay, and clinical condition data
+  asTools: true
+  config:
+    data_elements:
+    - discharge_summary
+    - length_of_stay
+    - discharge_diagnoses
+    - procedures
+    - medications
+    - vital_signs
+    - lab_results
+    include_severity_indicators: true
+    include_complications: true
+    tool_name: ehr_integration
+  provides:
+  - useAs: tools
+    in: data-collection-agent
+    description: Enable discharge data collection
+- id: utilization-history-tool
+  name: Healthcare Utilization History
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access historical utilization patterns including previous admissions and ED visits
+  asTools: true
+  config:
+    data_sources:
+    - inpatient_claims
+    - emergency_department
+    - observation_stays
+    - skilled_nursing
+    include_readmission_history: true
+    include_ed_patterns: true
+    tool_name: claims_connector
+  provides:
+  - useAs: tools
+    in: data-collection-agent
+    description: Enable utilization history analysis
+- id: comorbidity-assessment-tool
+  name: Comorbidity Assessment Model
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Calculate comprehensive comorbidity scores and risk factors
+  asTools: true
+  config:
+    scoring_methods:
+    - charlson
+    - elixhauser
+    - cms_hcc
+    include_severity_adjustments: true
+    calculate_frailty_index: true
+    assess_polypharmacy: true
+    mental_health_indicators: true
+    tool_name: comorbidity_assessment_model
+  provides:
+  - useAs: tools
+    in: risk-modeling-agent
+    description: Enable comorbidity risk assessment
+- id: readmission-prediction-model
+  name: Readmission Risk Prediction Model
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced ML model for 30-day readmission risk prediction
+  asTools: true
+  config:
+    prediction_horizon: 30
+    feature_categories:
+    - clinical
+    - demographic
+    - utilization
+    - social
+    - discharge_factors
+    include_confidence_intervals: true
+    calibrated_probabilities: true
+    explain_predictions: true
+    tool_name: readmission_prediction_model
+  provides:
+  - useAs: tools
+    in: risk-modeling-agent
+    description: Enable advanced readmission prediction
+- id: post-discharge-monitoring-tool
+  name: Post-Discharge Monitoring System
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Monitor post-discharge care activities and compliance indicators
+  asTools: true
+  config:
+    tool_name: post_discharge_monitoring
+    monitoring_elements:
+    - follow_up_appointments
+    - medication_fills
+    - home_health_visits
+    - patient_contacts
+    - care_plan_adherence
+    real_time_tracking: true
+  provides:
+  - useAs: tools
+    in: monitoring-agent
+    description: Enable post-discharge monitoring
+- id: data-collection-agent
+  name: Discharge Data Collection Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Collect comprehensive discharge and historical data for readmission risk analysis
+  config:
+    role: Discharge Data Analyst
+    goal: Gather comprehensive discharge data, utilization history, and clinical indicators for readmission risk assessment
+    backstory: 'You are a healthcare data analyst specializing in discharge planning and readmission prevention.
+
+      Your expertise includes clinical data integration, utilization pattern analysis, and risk factor identification.
+
+      You understand the critical factors that contribute to readmission risk and ensure comprehensive data collection.
+
+      You are skilled in identifying data quality issues and ensuring accuracy for predictive modeling.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: data-collection-task
+    description: Execute comprehensive data collection task
+- id: risk-modeling-agent
+  name: Readmission Risk Modeling Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Calculate readmission risk scores using advanced predictive models and clinical indicators
+  config:
+    role: Readmission Risk Analyst
+    goal: Calculate accurate 30-day readmission risk scores using advanced predictive models and comprehensive clinical data
+    backstory: 'You are a clinical data scientist specializing in readmission risk prediction and quality improvement.
+
+      Your expertise includes predictive modeling, comorbidity assessment, and clinical risk stratification.
+
+      You understand the complex factors that lead to readmissions and can accurately assess patient risk levels.
+
+      You are experienced in translating model predictions into actionable clinical insights.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: risk-modeling-task
+    description: Execute risk modeling and prediction task
+- id: monitoring-agent
+  name: Post-Discharge Monitoring Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Monitor post-discharge care activities and update risk assessments based on real-time data
+  config:
+    role: Post-Discharge Care Coordinator
+    goal: Monitor post-discharge care activities and adjust readmission risk assessments based on patient compliance and care engagement
+    backstory: 'You are a post-discharge care coordinator with expertise in transition care management and patient monitoring.
+
+      Your skills include care coordination, patient engagement tracking, and risk reassessment based on post-discharge activities.
+
+      You understand how post-discharge factors influence readmission risk and can update predictions accordingly.
+
+      You are experienced in identifying early warning signs and triggering appropriate interventions.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: monitoring-task
+    description: Execute post-discharge monitoring task
+- id: intervention-agent
+  name: Readmission Intervention Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Recommend targeted interventions for high-risk patients to prevent readmissions
+  config:
+    role: Readmission Prevention Specialist
+    goal: Design targeted intervention strategies for high-risk patients to prevent avoidable readmissions
+    backstory: 'You are a readmission prevention specialist with expertise in care transitions and quality improvement.
+
+      Your skills include intervention design, care coordination, and evidence-based readmission prevention strategies.
+
+      You understand effective interventions for different patient populations and risk factors.
+
+      You are experienced in creating practical, implementable intervention plans that reduce readmission risk.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: intervention-task
+    description: Execute intervention planning task
+- id: data-collection-task
+  name: Discharge Data Collection Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Collect comprehensive discharge and historical utilization data
+  config:
+    description: Gather all relevant discharge data and historical utilization patterns for readmission risk assessment
+    agent_id: data-collection-agent
+    expected_output: 'Comprehensive discharge data package including:
+
+      - Complete discharge summary with diagnoses, procedures, and medications
+
+      - Length of stay, complications, and severity indicators
+
+      - Historical utilization patterns including previous admissions and ED visits
+
+      - Demographic and social determinants factors
+
+      - Current clinical status and discharge conditions
+
+      - Data quality validation and completeness assessment
+
+      '
+  provides:
+  - useAs: data
+    in: risk-modeling-task
+    description: Provide collected data for risk modeling
+- id: risk-modeling-task
+  name: Readmission Risk Modeling Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Calculate comprehensive readmission risk scores using predictive models
+  config:
+    description: Calculate 30-day readmission risk scores using advanced predictive models and clinical indicators
+    agent_id: risk-modeling-agent
+    expected_output: 'Readmission risk assessment including:
+
+      - 30-day readmission probability score (0-1 scale)
+
+      - Risk category classification (low, moderate, high, critical)
+
+      - Comorbidity scores and severity assessments
+
+      - Key risk factors and clinical drivers
+
+      - Model confidence intervals and uncertainty measures
+
+      - Risk factor explanations and interpretability analysis
+
+      '
+  provides:
+  - useAs: data
+    in: monitoring-task
+    description: Provide risk scores for monitoring
+- id: monitoring-task
+  name: Post-Discharge Monitoring Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Monitor post-discharge activities and update risk assessments
+  config:
+    description: Monitor post-discharge care compliance and update readmission risk based on patient activities
+    agent_id: monitoring-agent
+    expected_output: 'Post-discharge monitoring report including:
+
+      - Follow-up appointment attendance and scheduling
+
+      - Medication adherence and prescription fill patterns
+
+      - Home health services utilization and compliance
+
+      - Patient contact responses and engagement levels
+
+      - Updated risk scores based on post-discharge factors
+
+      - Early warning indicators and escalation triggers
+
+      '
+  provides:
+  - useAs: data
+    in: intervention-task
+    description: Provide monitoring data for intervention planning
+- id: intervention-task
+  name: Readmission Intervention Planning Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Design targeted interventions to prevent readmissions for high-risk patients
+  config:
+    description: Create comprehensive intervention plans to prevent readmissions based on patient risk profile
+    agent_id: intervention-agent
+    expected_output: 'Readmission prevention plan including:
+
+      - Risk-stratified intervention recommendations
+
+      - Care coordination and transition support strategies
+
+      - Patient education and self-management resources
+
+      - Provider follow-up scheduling and protocols
+
+      - Community resource referrals and support services
+
+      - Monitoring schedules and success metrics for interventions
+
+      '
+  provides:
+  - useAs: input
+    in: readmission-output
+    description: Provide final intervention plan and recommendations
+- id: readmission-prediction-crew
+  name: Readmission Risk Prediction Crew
+  kind: Data
+  type: genesis:crewai_sequential_crew
+  description: Coordinate multi-agent readmission risk prediction and intervention planning workflow
+  config:
+    agents:
+    - data-collection-agent
+    - risk-modeling-agent
+    - monitoring-agent
+    - intervention-agent
+    tasks:
+    - data-collection-task
+    - risk-modeling-task
+    - monitoring-task
+    - intervention-task
+  provides:
+  - useAs: data
+    in: readmission-output
+    description: Coordinate agent execution and results
+- id: readmission-output
+  name: Readmission Risk Prediction Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive readmission risk assessment and prevention recommendations
+  provides: []
+outputs:
+- readmission_risk_scores
+- risk_factor_analysis
+- intervention_recommendations
+- monitoring_plan
+- quality_metrics
+kpis:
+- name: 30-Day Readmission Rate
+  category: quality
+  valueType: percentage
+  target: 12
+  unit: '%'
+  description: Hospital 30-day all-cause readmission rate
+- name: Risk Prediction Accuracy (C-statistic)
+  category: quality
+  valueType: number
+  target: 0.7
+  unit: C-statistic
+  description: Area under the ROC curve for readmission prediction
+- name: High-Risk Patient Identification Rate
+  category: performance
+  valueType: percentage
+  target: 20
+  unit: '%'
+  description: Percentage of discharged patients identified as high-risk
+- name: Intervention Completion Rate
+  category: performance
+  valueType: percentage
+  target: 85
+  unit: '%'
+  description: Percentage of high-risk patients who complete recommended interventions
+- name: Avoidable Readmission Reduction
+  category: quality
+  valueType: percentage
+  target: 25
+  unit: '%'
+  description: Reduction in avoidable readmissions among high-risk patients
+- name: Follow-up Appointment Completion
+  category: performance
+  valueType: percentage
+  target: 90
+  unit: '%'
+  description: Percentage of high-risk patients completing post-discharge follow-up
+- name: Model Calibration Score
+  category: quality
+  valueType: number
+  target: 0.95
+  unit: calibration score
+  description: Accuracy of predicted vs actual readmission rates
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true

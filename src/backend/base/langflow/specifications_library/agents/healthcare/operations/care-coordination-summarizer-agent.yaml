@@ -1,0 +1,412 @@
+id: urn:agent:genesis:provider-enablement:care-coordination-summarizer-agent:1.0.0
+name: Care Coordination Summarizer Agent
+fullyQualifiedName: genesis.autonomize.ai.care_coordination_summarizer_agent
+description: Multi-agent system that gathers structured and unstructured data from
+  multiple providers to generate comprehensive referral packets and discharge summaries
+  for seamless transitions of care
+domain: autonomize.ai
+subDomain: provider-enablement
+version: 1.0.0
+environment: production
+agentOwner: provider-enablement@autonomize.ai
+agentOwnerDisplayName: Provider Enablement Team
+email: provider-enablement@autonomize.ai
+status: ACTIVE
+variables:
+- name: summary_template_type
+  type: string
+  required: false
+  default: comprehensive
+  description: Type of summary template (comprehensive, focused, discharge, referral)
+- name: data_collection_window_days
+  type: number
+  required: false
+  default: 30
+  description: Days to look back for relevant clinical data collection
+- name: include_provider_notes
+  type: boolean
+  required: false
+  default: true
+  description: Include provider clinical notes in summary generation
+- name: fhir_version
+  type: string
+  required: false
+  default: R4
+  description: FHIR version for data exchange compatibility
+- name: quality_threshold_score
+  type: number
+  required: false
+  default: 0.85
+  description: Minimum quality score required for summary approval
+tags:
+- provider-enablement
+- care-coordination
+- transitions-of-care
+- clinical-summaries
+- referral-management
+- discharge-planning
+- healthcare-interoperability
+- multi-agent
+reusability:
+  asTools: false
+kind: Multi Agent
+agentGoal: Streamline transitions of care by automatically generating comprehensive,
+  accurate referral packets and discharge summaries that consolidate structured and
+  unstructured data from multiple healthcare providers and systems
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: coordination-input
+  name: Care Coordination Request Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive care coordination and transition requests with patient and
+    provider details
+  provides:
+  - useAs: input
+    in: data-collection-agent
+    description: Provide transition context for data collection
+- id: ehr-systems-tool
+  name: EHR Systems Integration
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access multiple Electronic Health Record systems for comprehensive
+    patient data
+  asTools: true
+  config:
+    tool_name: ehr_systems_integration
+  provides:
+  - useAs: tools
+    in: data-collection-agent
+    description: Enable EHR data collection
+- id: clinical-documents-tool
+  name: Clinical Documents Access
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Process unstructured clinical documents, notes, and reports using OCR
+    and NLP
+  asTools: true
+  config:
+    tool_name: clinical_documents_processor
+    api_key: "${CLINICAL_DOCUMENTS_API_KEY}"
+  provides:
+  - useAs: tools
+    in: data-collection-agent
+    description: Enable unstructured document processing
+- id: referral-management-tool
+  name: Referral Management Systems
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access referral management platforms for transition history and requirements
+  asTools: true
+  config:
+    tool_name: referral_management_systems
+  provides:
+  - useAs: tools
+    in: data-collection-agent
+    description: Enable referral data access
+- id: hie-integration-tool
+  name: Health Information Exchange
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access Health Information Exchanges for cross-provider data sharing
+  asTools: true
+  config:
+    tool_name: hie_integration
+  provides:
+  - useAs: tools
+    in: data-collection-agent
+    description: Enable HIE data access
+- id: care-management-tool
+  name: Care Management Platforms
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access care management systems for care plans and coordination data
+  asTools: true
+  config:
+    tool_name: care_management_platforms
+  provides:
+  - useAs: tools
+    in: data-collection-agent
+    description: Enable care management data access
+- id: data-collection-agent
+  name: Data Collection Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Gather and consolidate structured and unstructured data from multiple
+    healthcare sources
+  config:
+    role: Healthcare Data Integration Specialist
+    goal: Collect comprehensive patient data from multiple healthcare systems and
+      providers for transition of care
+    backstory: 'You are a healthcare informatics specialist with expertise in multi-system
+      data integration.
+
+      Your skills include EHR interoperability, FHIR standards, and clinical data
+      harmonization.
+
+      You ensure complete and accurate data collection while maintaining patient privacy
+      and security.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: data-collection-task
+    description: Execute comprehensive data collection
+- id: clinical-summarization-agent
+  name: Clinical Summarization Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Process and synthesize clinical information using NLP and medical knowledge
+  config:
+    role: Clinical Information Analyst
+    goal: Synthesize complex clinical data into coherent, accurate summaries for care
+      transitions
+    backstory: 'You are a clinical informaticist with deep knowledge of medical terminology
+      and care protocols.
+
+      Your expertise includes clinical NLP, medical coding, and evidence-based summarization.
+
+      You create clear, actionable clinical summaries that support seamless care transitions.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: clinical-summarization-task
+    description: Execute clinical data processing and synthesis
+- id: template-generation-agent
+  name: Template Generation Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Generate formatted referral packets and discharge summaries using clinical
+    templates
+  config:
+    role: Clinical Documentation Specialist
+    goal: Create comprehensive, well-formatted care transition documents that meet
+      clinical and regulatory standards
+    backstory: 'You are a clinical documentation expert with knowledge of healthcare
+      communication standards.
+
+      Your skills include template design, regulatory compliance, and provider workflow
+      optimization.
+
+      You create professional documents that facilitate effective care coordination.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: template-generation-task
+    description: Execute document template generation
+- id: quality-assurance-agent
+  name: Quality Assurance Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Validate completeness, accuracy, and compliance of generated summaries
+  config:
+    role: Clinical Quality Specialist
+    goal: Ensure generated care coordination documents meet quality standards and
+      clinical requirements
+    backstory: 'You are a clinical quality expert with experience in documentation
+      standards and care transitions.
+
+      Your expertise includes clinical accuracy validation, completeness assessment,
+      and regulatory compliance.
+
+      You ensure all care coordination documents meet the highest quality and safety
+      standards.
+
+      '
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: data
+    in: quality-assurance-task
+    description: Execute quality validation and compliance checking
+- id: data-collection-task
+  name: Data Collection Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Collect comprehensive patient and clinical data from multiple healthcare
+    sources
+  config:
+    description: Collect comprehensive patient and clinical data from multiple healthcare sources
+    agent_id: data-collection-agent
+    expected_output: 'Comprehensive patient data package including:
+
+      - Structured clinical data (medications, allergies, diagnoses, procedures)
+
+      - Unstructured clinical notes and provider documentation
+
+      - Cross-provider care history from HIE sources
+
+      - Referral and care management information
+
+      - Data quality and completeness assessment
+
+      '
+  provides:
+  - useAs: data
+    in: clinical-summarization-task
+    description: Provide collected data for clinical analysis
+- id: clinical-summarization-task
+  name: Clinical Summarization Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Process and synthesize clinical information into coherent summaries
+  config:
+    description: Process and synthesize clinical information into coherent summaries
+    agent_id: clinical-summarization-agent
+    expected_output: 'Synthesized clinical summary including:
+
+      - Key diagnoses and clinical conditions
+
+      - Medication reconciliation and allergy alerts
+
+      - Relevant procedures and clinical interventions
+
+      - Care gaps and follow-up requirements
+
+      - Clinical narrative supporting care continuity
+
+      '
+  provides:
+  - useAs: data
+    in: template-generation-task
+    description: Provide clinical synthesis for document generation
+- id: template-generation-task
+  name: Template Generation Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Generate formatted care transition documents using clinical templates
+  config:
+    description: Generate formatted care transition documents using clinical templates
+    agent_id: template-generation-agent
+    expected_output: 'Formatted care transition documents including:
+
+      - Comprehensive referral packet or discharge summary
+
+      - Structured clinical sections (diagnoses, medications, procedures)
+
+      - Provider contact and care team information
+
+      - Follow-up instructions and care plan recommendations
+
+      - FHIR-compatible structured data format
+
+      '
+  provides:
+  - useAs: data
+    in: quality-assurance-task
+    description: Provide generated documents for quality validation
+- id: quality-assurance-task
+  name: Quality Assurance Task
+  kind: Data
+  type: genesis:crewai_sequential_task
+  description: Validate completeness, accuracy, and compliance of care transition
+    documents
+  config:
+    description: Validate completeness, accuracy, and compliance of care transition documents
+    agent_id: quality-assurance-agent
+    expected_output: 'Quality assurance report including:
+
+      - Clinical accuracy validation results
+
+      - Data completeness score and metrics
+
+      - Compliance verification with standards
+
+      - Quality improvement recommendations
+
+      - Document approval status and transmission readiness
+
+      '
+  provides:
+  - useAs: input
+    in: coordination-output
+    description: Provide final quality-assured documents and metrics
+- id: care-coordination-crew
+  name: Care Coordination Crew
+  kind: Data
+  type: genesis:crewai_sequential_crew
+  description: Coordinate multi-agent care coordination summarization workflow
+  config:
+    agents:
+    - data-collection-agent
+    - clinical-summarization-agent
+    - template-generation-agent
+    - quality-assurance-agent
+    tasks:
+    - data-collection-task
+    - clinical-summarization-task
+    - template-generation-task
+    - quality-assurance-task
+  provides:
+  - useAs: data
+    in: coordination-output
+    description: Coordinate agent execution and results
+- id: coordination-output
+  name: Care Coordination Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive care coordination summaries and quality metrics
+  provides: []
+outputs:
+- care_summary
+- referral_packet
+- quality_metrics
+- fhir_bundle
+kpis:
+- name: Turnaround Time for Summary Generation
+  category: performance
+  valueType: number
+  target: 30
+  unit: minutes
+  description: Average time from request to completed summary
+- name: Data Completeness Score
+  category: quality
+  valueType: percentage
+  target: 90
+  unit: '%'
+  description: Percentage of required clinical data elements captured
+- name: Clinical Error Reduction Rate
+  category: quality
+  valueType: percentage
+  target: 75
+  unit: '%'
+  description: Reduction in clinical errors compared to manual processes
+- name: Provider Satisfaction Score
+  category: quality
+  valueType: number
+  target: 4.0
+  unit: score
+  description: Provider satisfaction with generated summaries
+- name: Manual Effort Reduction
+  category: efficiency
+  valueType: percentage
+  target: 80
+  unit: '%'
+  description: Reduction in manual documentation time
+- name: Transmission Success Rate
+  category: performance
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Successful delivery rate of care coordination documents
+securityInfo:
+  visibility: Internal
+  gdprSensitive: true

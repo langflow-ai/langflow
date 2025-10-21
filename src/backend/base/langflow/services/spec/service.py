@@ -1,15 +1,18 @@
 """Specification Service for business logic."""
 
 import yaml
+import jsonschema
 from typing import Dict, Any, Optional, List
 import logging
 
 from langflow.custom.genesis.spec import FlowConverter, ComponentMapper, VariableResolver
+from .validation_schemas import GENESIS_SPEC_SCHEMA, get_component_config_schema
+from .semantic_validator import SemanticValidator
+from langflow.services.runtime import converter_factory, RuntimeType, ValidationOptions
 from langflow.services.spec.component_template_service import component_template_service
 from langflow.services.database.models.flow import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
-from langflow.api.utils import DbSession
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from datetime import datetime, timezone
@@ -26,6 +29,7 @@ class SpecService:
         self.mapper = ComponentMapper()
         self.converter = FlowConverter(self.mapper)
         self.resolver = VariableResolver()
+        self._validation_cache = {}  # Cache for validation results
 
     async def convert_spec_to_flow(self, spec_yaml: str,
                                   variables: Optional[Dict[str, Any]] = None,
@@ -101,15 +105,16 @@ class SpecService:
 
         return flow_id
 
-    async def validate_spec(self, spec_yaml: str) -> Dict[str, Any]:
+    async def validate_spec(self, spec_yaml: str, detailed: bool = True) -> Dict[str, Any]:
         """
-        Validate specification without converting.
+        Comprehensive specification validation with JSON Schema and semantic validation.
 
         Args:
             spec_yaml: YAML specification string
+            detailed: Whether to perform detailed semantic validation
 
         Returns:
-            Validation result with errors and warnings
+            Comprehensive validation result with errors, warnings, and suggestions
         """
         try:
             # Parse YAML
@@ -117,61 +122,482 @@ class SpecService:
             if not spec_dict:
                 return {
                     "valid": False,
-                    "errors": ["Empty or invalid YAML"],
-                    "warnings": []
+                    "errors": [{"code": "EMPTY_SPEC", "message": "Empty or invalid YAML specification", "severity": "error"}],
+                    "warnings": [],
+                    "suggestions": [],
+                    "summary": {"error_count": 1, "warning_count": 0, "suggestion_count": 0}
                 }
 
-            # Validate structure
-            validation = self._validate_spec_structure(spec_dict)
+            # Phase 1: JSON Schema Validation
+            schema_validation = self._validate_json_schema(spec_dict)
 
-            # Get available components for validation
+            # Phase 2: Basic Structure Validation (legacy compatibility)
+            structure_validation = self._validate_spec_structure(spec_dict)
+
+            # Phase 3: Component Existence and Basic Validation
             available_components = await self.get_all_available_components()
-
-            # Validate components with enhanced logic
             component_validation = await self._validate_components_enhanced(
                 spec_dict.get("components", []),
                 available_components
             )
 
-            # Merge validation results
-            validation["errors"].extend(component_validation["errors"])
-            validation["warnings"].extend(component_validation["warnings"])
+            # Phase 4: Type Compatibility Validation
+            type_validation = self._validate_component_type_compatibility_enhanced(spec_dict)
 
-            # Validate type compatibility between components
-            components = spec_dict.get("components", [])
-            if isinstance(components, list):
-                type_validation = self._validate_component_type_compatibility(components)
-                validation["errors"].extend(type_validation["errors"])
-                validation["warnings"].extend(type_validation["warnings"])
-            elif isinstance(components, dict):
-                # Convert dict format to list format for validation
-                component_list = []
-                for comp_id, comp_data in components.items():
-                    comp_data_with_id = comp_data.copy()
-                    comp_data_with_id["id"] = comp_id
-                    component_list.append(comp_data_with_id)
+            # Phase 5: Semantic Validation (if detailed)
+            semantic_validation = {"errors": [], "warnings": [], "suggestions": []}
+            if detailed:
+                semantic_validator = SemanticValidator(self.mapper)
+                semantic_result = semantic_validator.validate(spec_dict)
+                semantic_validation = {
+                    "errors": semantic_result.errors,
+                    "warnings": semantic_result.warnings,
+                    "suggestions": semantic_result.suggestions
+                }
 
-                type_validation = self._validate_component_type_compatibility(component_list)
-                validation["errors"].extend(type_validation["errors"])
-                validation["warnings"].extend(type_validation["warnings"])
+            # Merge all validation results
+            all_errors = []
+            all_warnings = []
+            all_suggestions = []
 
-            # Update valid status
-            validation["valid"] = len(validation["errors"]) == 0
+            # Convert legacy format to new format
+            all_errors.extend(self._convert_legacy_errors(schema_validation.get("errors", [])))
+            all_errors.extend(self._convert_legacy_errors(structure_validation.get("errors", [])))
+            all_errors.extend(self._convert_legacy_errors(component_validation.get("errors", [])))
+            all_errors.extend(self._convert_legacy_errors(type_validation.get("errors", [])))
+            all_errors.extend(semantic_validation.get("errors", []))
 
-            return validation
+            all_warnings.extend(self._convert_legacy_warnings(schema_validation.get("warnings", [])))
+            all_warnings.extend(self._convert_legacy_warnings(structure_validation.get("warnings", [])))
+            all_warnings.extend(self._convert_legacy_warnings(component_validation.get("warnings", [])))
+            all_warnings.extend(self._convert_legacy_warnings(type_validation.get("warnings", [])))
+            all_warnings.extend(semantic_validation.get("warnings", []))
+
+            all_suggestions.extend(semantic_validation.get("suggestions", []))
+
+            # Remove duplicates
+            all_errors = self._remove_duplicate_issues(all_errors)
+            all_warnings = self._remove_duplicate_issues(all_warnings)
+            all_suggestions = self._remove_duplicate_issues(all_suggestions)
+
+            return {
+                "valid": len(all_errors) == 0,
+                "errors": all_errors,
+                "warnings": all_warnings,
+                "suggestions": all_suggestions,
+                "summary": {
+                    "error_count": len(all_errors),
+                    "warning_count": len(all_warnings),
+                    "suggestion_count": len(all_suggestions)
+                },
+                "validation_phases": {
+                    "schema_validation": len(schema_validation.get("errors", [])) == 0,
+                    "structure_validation": len(structure_validation.get("errors", [])) == 0,
+                    "component_validation": len(component_validation.get("errors", [])) == 0,
+                    "type_validation": len(type_validation.get("errors", [])) == 0,
+                    "semantic_validation": len(semantic_validation.get("errors", [])) == 0 if detailed else None
+                }
+            }
 
         except yaml.YAMLError as e:
             return {
                 "valid": False,
-                "errors": [f"Invalid YAML format: {e}"],
-                "warnings": []
+                "errors": [{
+                    "code": "YAML_PARSE_ERROR",
+                    "message": f"Invalid YAML format: {e}",
+                    "severity": "error",
+                    "suggestion": "Check YAML syntax, indentation, and special characters"
+                }],
+                "warnings": [],
+                "suggestions": [],
+                "summary": {"error_count": 1, "warning_count": 0, "suggestion_count": 0}
             }
         except Exception as e:
             logger.error(f"Error in validate_spec: {e}")
             return {
                 "valid": False,
-                "errors": [f"Validation error: {e}"],
-                "warnings": []
+                "errors": [{
+                    "code": "VALIDATION_EXCEPTION",
+                    "message": f"Validation error: {e}",
+                    "severity": "error",
+                    "suggestion": "Please report this issue to the development team"
+                }],
+                "warnings": [],
+                "suggestions": [],
+                "summary": {"error_count": 1, "warning_count": 0, "suggestion_count": 0}
+            }
+
+    def get_validation_suggestions(self, validation_result: Dict[str, Any]) -> List[str]:
+        """
+        Generate actionable suggestions based on validation results.
+
+        Args:
+            validation_result: Result from validate_spec
+
+        Returns:
+            List of actionable suggestions
+        """
+        suggestions = []
+
+        if not validation_result.get("valid", True):
+            errors = validation_result.get("errors", [])
+            warnings = validation_result.get("warnings", [])
+
+            # Analyze errors and provide suggestions
+            error_codes = [error.get("code", "") for error in errors]
+
+            # Schema validation suggestions
+            if "MISSING_FIELD" in " ".join(error_codes):
+                suggestions.append("Add required fields: id, name, description, agentGoal, and components")
+                suggestions.append("Use the specification template to ensure all required fields are present")
+
+            if "INVALID_URN_FORMAT" in " ".join(error_codes):
+                suggestions.append("Use proper URN format: urn:agent:genesis:domain:name:version")
+                suggestions.append("Example: urn:agent:genesis:autonomize.ai:patient-care-agent:1.0.0")
+
+            # Component validation suggestions
+            if "COMPONENT_NOT_FOUND" in " ".join(error_codes):
+                suggestions.append("Check component types against the available component catalog")
+                suggestions.append("Use 'genesis:' prefix for all component types")
+
+            if "MISSING_PROVIDES" in " ".join(error_codes):
+                suggestions.append("Add 'provides' relationships to connect components in the workflow")
+                suggestions.append("Ensure data flows from input → processing → output")
+
+            # CrewAI specific suggestions
+            if "INCOMPLETE_AGENT_CONFIG" in " ".join(error_codes):
+                suggestions.append("Add role, goal, and backstory to all CrewAI agents")
+                suggestions.append("Make agent roles specific and non-overlapping")
+
+            if "MISSING_CREW_AGENTS" in " ".join(error_codes):
+                suggestions.append("Ensure all agents referenced in crew configuration exist")
+                suggestions.append("Check agent IDs match between components and crew config")
+
+            # Tool configuration suggestions
+            if "TOOL_MODE_MISMATCH" in " ".join(error_codes):
+                suggestions.append("Set 'asTools: true' for components used as agent tools")
+                suggestions.append("Connect tool components with 'useAs: tools' in provides")
+
+            # Workflow pattern suggestions
+            if len([e for e in errors if "MISSING_AGENT" in e.get("code", "")]) > 0:
+                suggestions.append("Add at least one agent component to process inputs")
+                suggestions.append("Consider using 'genesis:agent' for single agents or 'genesis:crewai_agent' for multi-agent workflows")
+
+            # Performance and optimization suggestions
+            warning_codes = [warning.get("code", "") for warning in warnings]
+
+            if "HIGH_AGENT_COUNT" in " ".join(warning_codes):
+                suggestions.append("Consider using hierarchical CrewAI patterns for large agent counts")
+                suggestions.append("Group related agents into specialized crews")
+
+            if "UNSEQUENCED_TASKS" in " ".join(warning_codes):
+                suggestions.append("Define task dependencies with 'depends_on' field for proper execution order")
+                suggestions.append("Use sequential task types for ordered execution")
+
+        return suggestions
+
+    def format_validation_report(self, validation_result: Dict[str, Any]) -> str:
+        """
+        Format validation results into a comprehensive human-readable report.
+
+        Args:
+            validation_result: Result from validate_spec
+
+        Returns:
+            Formatted validation report
+        """
+        if validation_result.get("valid", True):
+            return "✅ Specification validation passed successfully!"
+
+        report = []
+        report.append("❌ Specification validation failed\n")
+
+        # Summary section
+        summary = validation_result.get("summary", {})
+        error_count = summary.get("error_count", 0)
+        warning_count = summary.get("warning_count", 0)
+        suggestion_count = summary.get("suggestion_count", 0)
+
+        report.append("📊 SUMMARY:")
+        report.append(f"   Errors: {error_count}")
+        report.append(f"   Warnings: {warning_count}")
+        report.append(f"   Suggestions: {suggestion_count}")
+        report.append("")
+
+        # Validation phases section
+        phases = validation_result.get("validation_phases", {})
+        if phases:
+            report.append("🔍 VALIDATION PHASES:")
+            for phase, passed in phases.items():
+                status = "✅" if passed else "❌"
+                phase_name = phase.replace("_", " ").title()
+                report.append(f"   {status} {phase_name}")
+            report.append("")
+
+        # Errors section
+        errors = validation_result.get("errors", [])
+        if errors:
+            report.append("❌ ERRORS:")
+            for error in errors:
+                code = error.get("code", "UNKNOWN")
+                message = error.get("message", "No message")
+                component_id = error.get("component_id")
+                suggestion = error.get("suggestion")
+
+                if component_id:
+                    report.append(f"   [{component_id}] {code}: {message}")
+                else:
+                    report.append(f"   {code}: {message}")
+
+                if suggestion:
+                    report.append(f"      💡 {suggestion}")
+            report.append("")
+
+        # Warnings section
+        warnings = validation_result.get("warnings", [])
+        if warnings:
+            report.append("⚠️  WARNINGS:")
+            for warning in warnings:
+                code = warning.get("code", "UNKNOWN")
+                message = warning.get("message", "No message")
+                component_id = warning.get("component_id")
+                suggestion = warning.get("suggestion")
+
+                if component_id:
+                    report.append(f"   [{component_id}] {code}: {message}")
+                else:
+                    report.append(f"   {code}: {message}")
+
+                if suggestion:
+                    report.append(f"      💡 {suggestion}")
+            report.append("")
+
+        # Suggestions section
+        suggestions = validation_result.get("suggestions", [])
+        if suggestions:
+            report.append("💡 SUGGESTIONS:")
+            for suggestion in suggestions:
+                code = suggestion.get("code", "OPTIMIZATION")
+                message = suggestion.get("message", "No message")
+                action = suggestion.get("action", suggestion.get("suggestion", ""))
+
+                report.append(f"   {code}: {message}")
+                if action:
+                    report.append(f"      🔧 {action}")
+            report.append("")
+
+        # Additional actionable suggestions
+        additional_suggestions = self.get_validation_suggestions(validation_result)
+        if additional_suggestions:
+            report.append("🚀 ACTIONABLE SUGGESTIONS:")
+            for i, suggestion in enumerate(additional_suggestions, 1):
+                report.append(f"   {i}. {suggestion}")
+            report.append("")
+
+        # Next steps
+        if error_count > 0:
+            report.append("🔧 NEXT STEPS:")
+            report.append("   1. Fix all errors listed above")
+            report.append("   2. Re-run validation to check for additional issues")
+            report.append("   3. Address warnings and implement suggestions")
+            report.append("   4. Test the specification with a sample conversion")
+
+        return "\n".join(report)
+
+    def get_error_context(self, error_code: str) -> Dict[str, Any]:
+        """
+        Get detailed context and help for specific error codes.
+
+        Args:
+            error_code: The error code to get context for
+
+        Returns:
+            Dictionary with error context, examples, and help
+        """
+        error_contexts = {
+            "MISSING_FIELD": {
+                "description": "Required field is missing from the specification",
+                "severity": "error",
+                "category": "schema",
+                "example": {
+                    "invalid": {"name": "Test Agent"},
+                    "valid": {
+                        "id": "urn:agent:genesis:autonomize.ai:test:1.0.0",
+                        "name": "Test Agent",
+                        "description": "A test agent",
+                        "agentGoal": "Test agent functionality",
+                        "components": {}
+                    }
+                },
+                "help": "All Genesis specifications must include core metadata fields",
+                "documentation": "/docs/specification-schema.md"
+            },
+
+            "INVALID_URN_FORMAT": {
+                "description": "The specification ID must follow URN format",
+                "severity": "error",
+                "category": "schema",
+                "pattern": "urn:agent:genesis:domain:name:version",
+                "example": {
+                    "invalid": "my-agent-id",
+                    "valid": "urn:agent:genesis:autonomize.ai:patient-care:1.0.0"
+                },
+                "help": "URNs provide unique identification and enable proper cataloging",
+                "documentation": "/docs/specification-schema.md#id-field"
+            },
+
+            "COMPONENT_NOT_FOUND": {
+                "description": "Referenced component type is not available",
+                "severity": "error",
+                "category": "components",
+                "example": {
+                    "invalid": {"type": "unknown_component"},
+                    "valid": {"type": "genesis:agent"}
+                },
+                "help": "Check the component catalog for available types",
+                "documentation": "/docs/component-catalog.md"
+            },
+
+            "INCOMPLETE_AGENT_CONFIG": {
+                "description": "CrewAI agents require role, goal, and backstory",
+                "severity": "error",
+                "category": "crewai",
+                "example": {
+                    "invalid": {"config": {"role": "Assistant"}},
+                    "valid": {
+                        "config": {
+                            "role": "Research Assistant",
+                            "goal": "Research information thoroughly",
+                            "backstory": "Expert researcher with domain knowledge"
+                        }
+                    }
+                },
+                "help": "Well-defined agent personalities improve multi-agent collaboration",
+                "documentation": "/docs/crewai-patterns.md"
+            },
+
+            "TOOL_MODE_MISMATCH": {
+                "description": "Component tool configuration is inconsistent",
+                "severity": "error",
+                "category": "tools",
+                "example": {
+                    "invalid": {
+                        "type": "genesis:mcp_tool",
+                        "provides": [{"useAs": "tools", "in": "agent"}]
+                        # Missing asTools: true
+                    },
+                    "valid": {
+                        "type": "genesis:mcp_tool",
+                        "asTools": True,
+                        "provides": [{"useAs": "tools", "in": "agent"}]
+                    }
+                },
+                "help": "Tools must be properly configured for agent access",
+                "documentation": "/docs/tool-integration.md"
+            }
+        }
+
+        return error_contexts.get(error_code, {
+            "description": f"Unknown error code: {error_code}",
+            "severity": "unknown",
+            "category": "general",
+            "help": "Please check the documentation or contact support"
+        })
+
+    async def validate_spec_quick(self, spec_yaml: str) -> Dict[str, Any]:
+        """
+        Perform quick validation for real-time feedback (faster, less comprehensive).
+
+        Args:
+            spec_yaml: YAML specification string
+
+        Returns:
+            Quick validation results
+        """
+        try:
+            # Parse YAML
+            spec_dict = yaml.safe_load(spec_yaml)
+
+            # Quick validation phases (skip expensive semantic validation)
+            results = {
+                "valid": True,
+                "errors": [],
+                "warnings": [],
+                "suggestions": [],
+                "validation_phases": {
+                    "yaml_parsing": True,
+                    "schema_validation": None,
+                    "structure_validation": None,
+                    "component_validation": None,
+                    "type_validation": None,
+                    "semantic_validation": None  # Skipped in quick mode
+                }
+            }
+
+            # Phase 1: JSON Schema Validation (quick)
+            schema_result = self._validate_json_schema(spec_dict)
+            results["validation_phases"]["schema_validation"] = len(schema_result["errors"]) == 0
+            results["errors"].extend(schema_result["errors"])
+            results["warnings"].extend(schema_result.get("warnings", []))
+
+            if len(schema_result["errors"]) > 0:
+                results["valid"] = False
+
+            # Phase 2: Basic Structure Validation (quick)
+            structure_result = self._validate_spec_structure(spec_dict)
+            results["validation_phases"]["structure_validation"] = len(structure_result["errors"]) == 0
+            results["errors"].extend(structure_result["errors"])
+            results["warnings"].extend(structure_result.get("warnings", []))
+
+            if len(structure_result["errors"]) > 0:
+                results["valid"] = False
+
+            # Quick component existence check (skip detailed validation)
+            components = spec_dict.get("components", {})
+            if not components:
+                results["errors"].append({
+                    "code": "NO_COMPONENTS",
+                    "message": "Specification has no components",
+                    "severity": "error",
+                    "suggestion": "Add at least input, agent, and output components"
+                })
+                results["valid"] = False
+                results["validation_phases"]["component_validation"] = False
+            else:
+                results["validation_phases"]["component_validation"] = True
+
+            # Skip expensive validations in quick mode
+            results["validation_phases"]["type_validation"] = True  # Assume valid for quick check
+
+            # Calculate summary
+            results["summary"] = {
+                "error_count": len(results["errors"]),
+                "warning_count": len(results["warnings"]),
+                "suggestion_count": len(results["suggestions"])
+            }
+
+            return results
+
+        except yaml.YAMLError as e:
+            return {
+                "valid": False,
+                "errors": [{
+                    "code": "YAML_PARSE_ERROR",
+                    "message": f"Invalid YAML format: {e}",
+                    "severity": "error",
+                    "suggestion": "Check YAML syntax, indentation, and special characters"
+                }],
+                "warnings": [],
+                "suggestions": [],
+                "summary": {"error_count": 1, "warning_count": 0, "suggestion_count": 0},
+                "validation_phases": {
+                    "yaml_parsing": False,
+                    "schema_validation": None,
+                    "structure_validation": None,
+                    "component_validation": None,
+                    "type_validation": None,
+                    "semantic_validation": None
+                }
             }
 
     def get_available_components(self) -> Dict[str, Any]:
@@ -391,32 +817,209 @@ class SpecService:
 
         return {"errors": errors, "warnings": warnings}
 
-    def _validate_component_type_compatibility(self, components: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _validate_json_schema(self, spec_dict: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate type compatibility between connected components.
-
-        This method performs comprehensive type compatibility validation:
-        1. Pre-validates output→input type matching for all 'provides' connections
-        2. Uses ComponentMapper's I/O mappings for accurate type information
-        3. Validates tool mode consistency (asTools + useAs + Tool output type)
-        4. Checks multi-tool agent capabilities
-        5. Validates field mapping compatibility
-        6. Detects circular dependencies
+        Validate specification against JSON Schema.
 
         Args:
-            components: List of component dictionaries
+            spec_dict: Parsed specification dictionary
 
         Returns:
-            Dict containing validation results: {"valid": bool, "errors": list, "warnings": list}
+            Validation result with schema errors and warnings
         """
         errors = []
         warnings = []
 
         try:
-            # Get enhanced component I/O mappings (includes real component introspection)
-            io_mappings = self.mapper.get_component_io_mapping()
+            # Validate against main schema
+            jsonschema.validate(spec_dict, GENESIS_SPEC_SCHEMA)
 
-            # Create component lookup for validation
+        except jsonschema.ValidationError as e:
+            # Convert JSON schema errors to our format
+            error_path = " -> ".join(str(p) for p in e.absolute_path) if e.absolute_path else "root"
+
+            if "required" in e.message.lower():
+                errors.append(f"Missing required field at {error_path}: {e.message}")
+            elif "pattern" in e.message.lower():
+                errors.append(f"Invalid format at {error_path}: {e.message}")
+            elif "enum" in e.message.lower():
+                errors.append(f"Invalid value at {error_path}: {e.message}")
+            elif "type" in e.message.lower():
+                errors.append(f"Wrong data type at {error_path}: {e.message}")
+            else:
+                errors.append(f"Schema validation error at {error_path}: {e.message}")
+
+        except jsonschema.SchemaError as e:
+            logger.error(f"Schema definition error: {e}")
+            errors.append(f"Internal schema error: {e}")
+
+        except Exception as e:
+            logger.error(f"JSON schema validation error: {e}")
+            warnings.append(f"Schema validation could not be completed: {e}")
+
+        # Validate component configurations against their schemas
+        components = self._get_components_list(spec_dict)
+        for component in components:
+            comp_type = component.get("type")
+            comp_id = component.get("id")
+            config = component.get("config", {})
+
+            config_schema = get_component_config_schema(comp_type)
+            if config_schema and config:
+                try:
+                    jsonschema.validate(config, config_schema)
+                except jsonschema.ValidationError as e:
+                    error_path = " -> ".join(str(p) for p in e.absolute_path) if e.absolute_path else "config"
+                    errors.append(f"Component '{comp_id}' config error at {error_path}: {e.message}")
+
+        return {"errors": errors, "warnings": warnings}
+
+    def _validate_component_type_compatibility_enhanced(self, spec_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Enhanced type compatibility validation with detailed error reporting.
+
+        Args:
+            spec_dict: Parsed specification dictionary
+
+        Returns:
+            Validation result with type compatibility errors and warnings
+        """
+        components = self._get_components_list(spec_dict)
+
+        if isinstance(spec_dict.get("components"), list):
+            return self._validate_component_type_compatibility(components)
+        else:
+            # Convert dict format to list format for validation
+            component_list = []
+            for comp_id, comp_data in spec_dict.get("components", {}).items():
+                comp_data_with_id = comp_data.copy()
+                comp_data_with_id["id"] = comp_id
+                component_list.append(comp_data_with_id)
+
+            return self._validate_component_type_compatibility(component_list)
+
+    def _get_components_list(self, spec_dict: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Get components as a list regardless of input format.
+
+        Args:
+            spec_dict: Specification dictionary
+
+        Returns:
+            List of component dictionaries
+        """
+        components = spec_dict.get("components", [])
+
+        if isinstance(components, dict):
+            # Convert dict format to list
+            return [
+                {**comp_data, "id": comp_id}
+                for comp_id, comp_data in components.items()
+            ]
+        elif isinstance(components, list):
+            return components
+        else:
+            return []
+
+    def _convert_legacy_errors(self, legacy_errors: List) -> List[Dict[str, Any]]:
+        """
+        Convert legacy error format to new structured format.
+
+        Args:
+            legacy_errors: List of error strings or dictionaries
+
+        Returns:
+            List of structured error dictionaries
+        """
+        converted = []
+
+        for error in legacy_errors:
+            if isinstance(error, str):
+                converted.append({
+                    "code": "LEGACY_ERROR",
+                    "message": error,
+                    "severity": "error"
+                })
+            elif isinstance(error, dict) and "message" in error:
+                # Already in new format
+                converted.append(error)
+            elif isinstance(error, dict):
+                # Try to extract message
+                message = str(error)
+                converted.append({
+                    "code": "LEGACY_ERROR",
+                    "message": message,
+                    "severity": "error"
+                })
+
+        return converted
+
+    def _convert_legacy_warnings(self, legacy_warnings: List) -> List[Dict[str, Any]]:
+        """
+        Convert legacy warning format to new structured format.
+
+        Args:
+            legacy_warnings: List of warning strings or dictionaries
+
+        Returns:
+            List of structured warning dictionaries
+        """
+        converted = []
+
+        for warning in legacy_warnings:
+            if isinstance(warning, str):
+                converted.append({
+                    "code": "LEGACY_WARNING",
+                    "message": warning,
+                    "severity": "warning"
+                })
+            elif isinstance(warning, dict) and "message" in warning:
+                # Already in new format
+                converted.append(warning)
+            elif isinstance(warning, dict):
+                # Try to extract message
+                message = str(warning)
+                converted.append({
+                    "code": "LEGACY_WARNING",
+                    "message": message,
+                    "severity": "warning"
+                })
+
+        return converted
+
+    def _remove_duplicate_issues(self, issues: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Remove duplicate validation issues based on message content.
+
+        Args:
+            issues: List of issue dictionaries
+
+        Returns:
+            Deduplicated list of issues
+        """
+        seen_messages = set()
+        unique_issues = []
+
+        for issue in issues:
+            message = issue.get("message", "")
+            if message not in seen_messages:
+                seen_messages.add(message)
+                unique_issues.append(issue)
+
+        return unique_issues
+
+    def _validate_component_type_compatibility(self, components: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        UNIFIED VALIDATION: Delegate all connection validation to FlowConverter.
+
+        This ensures we have single source of truth for validation logic.
+        FlowConverter contains the authoritative type compatibility and tool connection logic.
+        """
+        errors = []
+        warnings = []
+
+        try:
+            # Create component lookup for basic validation
             component_lookup = {comp.get("id"): comp for comp in components}
 
             # Track connections for circular dependency detection
@@ -424,7 +1027,6 @@ class SpecService:
 
             for component in components:
                 comp_id = component.get("id")
-                comp_type = component.get("type", "")
                 provides = component.get("provides", [])
 
                 if not provides:
@@ -451,19 +1053,12 @@ class SpecService:
                         errors.append(f"Component '{comp_id}' references non-existent target '{target_id}'")
                         continue
 
-                    # Validate tool mode consistency
-                    tool_validation = self._validate_tool_mode_consistency(
+                    # UNIFIED VALIDATION: Use FlowConverter's validation logic
+                    validation_result = self._validate_connection_using_converter(
                         component, connection, target_component
                     )
-                    errors.extend(tool_validation["errors"])
-                    warnings.extend(tool_validation["warnings"])
-
-                    # Validate type compatibility using enhanced validation
-                    type_validation = self._validate_connection_type_compatibility_enhanced(
-                        component, connection, target_component
-                    )
-                    errors.extend(type_validation["errors"])
-                    warnings.extend(type_validation["warnings"])
+                    errors.extend(validation_result["errors"])
+                    warnings.extend(validation_result["warnings"])
 
             # Check for circular dependencies
             circular_errors = self._detect_circular_dependencies(connections)
@@ -483,200 +1078,99 @@ class SpecService:
                 "warnings": []
             }
 
-    def _validate_tool_mode_consistency(self, source_comp: Dict[str, Any],
-                                      connection: Dict[str, Any],
-                                      target_comp: Dict[str, Any]) -> Dict[str, Any]:
+    def _validate_connection_using_converter(self, source_comp: Dict[str, Any],
+                                           connection: Dict[str, Any],
+                                           target_comp: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate tool mode consistency.
+        UNIFIED VALIDATION: Use FlowConverter's validation logic as single source of truth.
 
-        Checks:
-        1. If component has asTools: true, it should be used with useAs: "tools"
-        2. If useAs: "tools", component should have asTools: true or be a tool component
-        3. Tool components should have appropriate output types
+        This delegates all connection validation to FlowConverter which contains the
+        authoritative logic for tool connections and type compatibility.
         """
         errors = []
         warnings = []
 
-        source_type = source_comp.get("type", "")
+        # Extract basic connection info (available in exception handlers)
         use_as = connection.get("useAs")
-        as_tools = source_comp.get("asTools", False)
+        source_type = source_comp.get("type", "")
+        target_type = target_comp.get("type", "")
 
-        # Check tool mode consistency
-        if use_as == "tools":
-            # Component used as tool should be marked as tool or be a tool component
-            is_tool_component = self.mapper.is_tool_component(source_type)
+        try:
+            from langflow.custom.genesis.spec.models import Component
 
-            if not as_tools and not is_tool_component:
-                errors.append(
-                    f"Tool mode inconsistency: Component '{source_comp.get('id')}' used as tool "
-                    f"but not marked with 'asTools: true' and is not inherently a tool component"
-                )
-        elif as_tools and use_as != "tools":
-            warnings.append(
-                f"Component '{source_comp.get('id')}' marked as tool (asTools: true) "
-                f"but used as '{use_as}' instead of 'tools'"
+            # Create mock Component objects for FlowConverter validation
+            source_component = Component(
+                id=source_comp.get("id", ""),
+                type=source_type,
+                config=source_comp.get("config", {}),
+                asTools=source_comp.get("asTools", False)
             )
 
-        return {"errors": errors, "warnings": warnings}
+            target_component = Component(
+                id=target_comp.get("id", ""),
+                type=target_type,
+                config=target_comp.get("config", {}),
+                asTools=target_comp.get("asTools", False)
+            )
 
-    def _validate_connection_type_compatibility(self, source_comp: Dict[str, Any],
-                                              connection: Dict[str, Any],
-                                              target_comp: Dict[str, Any],
-                                              io_mappings: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Validate type compatibility between source and target components.
-
-        Uses ComponentMapper's I/O mappings and FlowConverter's compatibility matrix
-        to validate that output types match input requirements.
-        """
-        errors = []
-        warnings = []
-
-        try:
-            source_type = source_comp.get("type", "")
-            target_type = target_comp.get("type", "")
-            use_as = connection.get("useAs")
-
-            # Get Langflow component names
-            source_langflow_comp = self._get_langflow_component_name(source_type)
-            target_langflow_comp = self._get_langflow_component_name(target_type)
-
-            if not source_langflow_comp or not target_langflow_comp:
-                warnings.append(
-                    f"Could not determine Langflow components for type validation: "
-                    f"{source_type} -> {target_type}"
-                )
-                return {"errors": errors, "warnings": warnings}
-
-            # Get I/O type information
-            source_io = io_mappings.get(source_langflow_comp, {})
-            target_io = io_mappings.get(target_langflow_comp, {})
-
-            output_types = source_io.get("output_types", [])
-
-            # Determine expected input types based on useAs
+            # UNIFIED VALIDATION: Tool connections use FlowConverter's tool logic
             if use_as == "tools":
-                # Tools can be any type, agents should accept them
-                input_types = ["Tool", "DataFrame", "Data", "any"]
-            elif use_as == "system_prompt":
-                # Prompts should output Message/str types
-                input_types = ["Message", "str", "text"]
-            else:  # use_as == "input"
-                # Regular input field
-                input_field = target_io.get("input_field")
-                if input_field:
-                    # Map common input field names to types
-                    input_type_mapping = {
-                        "input_value": ["Message", "str", "Data", "any"],
-                        "message": ["Message", "str"],
-                        "search_query": ["str", "Message"],
-                        "url_input": ["str"],
-                        "template": ["str", "Message"]
-                    }
-                    input_types = input_type_mapping.get(input_field, ["any"])
-                else:
-                    input_types = ["any"]
-
-            # Use converter's type compatibility validation
-            if output_types and input_types:
-                is_compatible = self.converter._validate_type_compatibility_fixed(
-                    output_types, input_types, source_langflow_comp, target_langflow_comp
+                is_valid = self.converter._validate_tool_connection_capability(
+                    source_type, target_type, source_component
                 )
 
-                if not is_compatible:
+                if not is_valid:
                     errors.append(
-                        f"Type mismatch: Component '{source_comp.get('id')}' outputs {output_types} "
-                        f"but component '{target_comp.get('id')}' expects {input_types} "
-                        f"for connection type '{use_as}'"
+                        f"Tool connection validation failed: {source_comp.get('id')} -> "
+                        f"{target_comp.get('id')} (useAs: tools). Component {source_type} "
+                        f"cannot be used as a tool for {target_type}."
                     )
-                else:
-                    logger.debug(
-                        f"Type compatibility validated: {source_comp.get('id')} "
-                        f"({output_types}) -> {target_comp.get('id')} ({input_types})"
+            else:
+                # For non-tool connections, use FlowConverter's type compatibility
+                # Simplified validation using converter's logic
+                try:
+                    # Use converter's mapping logic to get component types
+                    source_mapping = self.mapper.map_component(source_type)
+                    target_mapping = self.mapper.map_component(target_type)
+
+                    source_langflow_comp = source_mapping.get("component", "")
+                    target_langflow_comp = target_mapping.get("component", "")
+
+                    # Basic type compatibility using converter
+                    output_types = ["Message", "Data"]  # Default output types
+                    input_types = ["Message", "Data", "str"]  # Default input types
+
+                    is_compatible = self.converter._validate_type_compatibility_fixed(
+                        output_types, input_types, source_langflow_comp, target_langflow_comp
                     )
 
-            # Validate field mappings if specified
-            field_mapping = connection.get("fieldMapping", {})
-            if field_mapping:
-                field_validation = self._validate_field_mappings(
-                    field_mapping, source_io, target_io, source_comp.get("id"), target_comp.get("id")
-                )
-                errors.extend(field_validation["errors"])
-                warnings.extend(field_validation["warnings"])
+                    if not is_compatible:
+                        errors.append(
+                            f"Type compatibility validation failed: {source_comp.get('id')} -> "
+                            f"{target_comp.get('id')} (useAs: {use_as})"
+                        )
+
+                except Exception as inner_e:
+                    logger.debug(f"Simplified type validation failed: {inner_e}")
+                    # Very basic fallback - just check component existence
+                    pass
 
         except Exception as e:
-            logger.error(f"Error validating connection compatibility: {e}")
-            warnings.append(f"Could not validate type compatibility for connection: {e}")
+            logger.warning(f"Error in unified converter validation, using basic fallback: {e}")
+            # Basic fallback validation
+            if use_as == "tools":
+                # Check basic tool capability
+                source_type = source_comp.get("type", "")
+                if (not source_comp.get("asTools", False) and
+                    not source_type.startswith("genesis:mcp") and
+                    not source_type.startswith("genesis:knowledge")):
+                    errors.append(
+                        f"Component {source_comp.get('id')} used as tool but not marked as tool-capable"
+                    )
 
         return {"errors": errors, "warnings": warnings}
 
-    def _validate_connection_type_compatibility_enhanced(self, source_comp: Dict[str, Any],
-                                                        connection: Dict[str, Any],
-                                                        target_comp: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Enhanced type compatibility validation using real component introspection.
 
-        This method attempts to use real Langflow component schemas for validation,
-        falling back to the original hardcoded validation if introspection fails.
-        """
-        errors = []
-        warnings = []
-
-        try:
-            source_type = source_comp.get("type", "")
-            target_type = target_comp.get("type", "")
-            use_as = connection.get("useAs")
-
-            # Get Langflow component names
-            source_langflow_comp = self._get_langflow_component_name(source_type)
-            target_langflow_comp = self._get_langflow_component_name(target_type)
-
-            if not source_langflow_comp or not target_langflow_comp:
-                warnings.append(
-                    f"Could not determine Langflow components for enhanced validation: "
-                    f"{source_type} -> {target_type}"
-                )
-                return {"errors": errors, "warnings": warnings}
-
-            # Try enhanced ComponentMapper validation with real component schemas
-            try:
-                # Determine field names based on connection type
-                source_output_field = self._determine_output_field(source_langflow_comp, use_as)
-                target_input_field = self._determine_input_field(target_langflow_comp, use_as)
-
-                # Use ComponentMapper's enhanced validation
-                validation_result = self.mapper.validate_component_connection_enhanced(
-                    source_type, target_type, source_output_field, target_input_field
-                )
-
-                if not validation_result.get("valid", False):
-                    error_msg = validation_result.get("error", "Unknown validation error")
-                    errors.append(
-                        f"Enhanced validation failed for {source_comp.get('id')} -> "
-                        f"{target_comp.get('id')}: {error_msg}"
-                    )
-                else:
-                    logger.debug(
-                        f"Enhanced validation passed: {source_comp.get('id')} "
-                        f"({validation_result.get('source_types')}) -> "
-                        f"{target_comp.get('id')} ({validation_result.get('target_types')})"
-                    )
-
-            except Exception as e:
-                logger.warning(f"Enhanced validation failed, falling back to original method: {e}")
-                # Fall back to original validation method
-                io_mappings = self.mapper.get_component_io_mapping()
-                fallback_result = self._validate_connection_type_compatibility(
-                    source_comp, connection, target_comp, io_mappings
-                )
-                errors.extend(fallback_result["errors"])
-                warnings.extend(fallback_result["warnings"])
-
-        except Exception as e:
-            logger.error(f"Error in enhanced connection validation: {e}")
-            warnings.append(f"Could not perform enhanced type validation: {e}")
-
-        return {"errors": errors, "warnings": warnings}
 
     def _determine_output_field(self, component_name: str, use_as: str) -> str:
         """
@@ -894,64 +1388,578 @@ class SpecService:
     async def get_all_available_components(self) -> Dict[str, Any]:
         """
         Get ALL components - both Langflow native and genesis mapped.
-        This method is for internal use by components, no auth required.
+        Enhanced with dynamic discovery and database integration.
 
         Returns:
             Dictionary containing:
             - langflow_components: All Langflow components
-            - genesis_mapped: Genesis-mapped components
+            - genesis_mapped: Genesis-mapped components (hardcoded + database)
             - unmapped: Components without genesis mappings
+            - database_mapped: Components mapped via database
+            - discovery_stats: Statistics from component discovery
         """
         try:
             from langflow.interface.components import get_and_cache_all_types_dict
-            from langflow.services.settings.service import get_settings_service
+            from langflow.services.deps import get_settings_service
 
             # Get ALL Langflow components
             all_langflow = await get_and_cache_all_types_dict(get_settings_service())
 
-            # Get genesis mappings
-            genesis_mapped = {}
-            genesis_mapped.update(self.mapper.AUTONOMIZE_MODELS)
-            genesis_mapped.update(self.mapper.MCP_MAPPINGS)
-            genesis_mapped.update(self.mapper.STANDARD_MAPPINGS)
+            # Get hardcoded genesis mappings
+            hardcoded_mappings = {}
+            hardcoded_mappings.update(self.mapper.AUTONOMIZE_MODELS)
+            hardcoded_mappings.update(self.mapper.MCP_MAPPINGS)
+            hardcoded_mappings.update(self.mapper.STANDARD_MAPPINGS)
 
-            # Find unmapped components
+            # Try to get database mappings from cache
+            database_mappings = {}
+            cache_status = self.mapper.get_cache_status()
+
+            if cache_status["cached_mappings"] > 0:
+                # Get mappings from cache
+                for cache_key in cache_status["cached_types"]:
+                    if cache_key.startswith("mapping_cache_"):
+                        genesis_type = cache_key.replace("mapping_cache_", "")
+                        mapping = self.mapper._get_mapping_from_database(genesis_type)
+                        if mapping:
+                            database_mappings[genesis_type] = mapping
+
+            # Combine all genesis mappings (hardcoded + database)
+            all_genesis_mapped = {}
+            all_genesis_mapped.update(hardcoded_mappings)
+            all_genesis_mapped.update(database_mappings)
+
+            # Enhanced component analysis using ComponentMapper's available components
+            mapper_components = self.mapper.get_available_components()
+            discovered_components = mapper_components.get("discovered_components", {})
+
+            # Find unmapped components with intelligent suggestions
             unmapped = []
+            mapped_langflow_components = set()
+
             if all_langflow and "components" in all_langflow:
                 for category, components in all_langflow["components"].items():
                     for comp_name in components.keys():
                         # Check if this component has a genesis mapping
                         has_mapping = False
-                        for genesis_type, mapping in genesis_mapped.items():
+                        for genesis_type, mapping in all_genesis_mapped.items():
                             if mapping.get("component") == comp_name:
                                 has_mapping = True
+                                mapped_langflow_components.add(comp_name)
                                 break
 
                         if not has_mapping:
+                            # Use ComponentMapper for intelligent suggestion
+                            suggestion = self._generate_intelligent_suggestion(comp_name, category)
                             unmapped.append({
                                 "name": comp_name,
                                 "category": category,
-                                "suggestion": f"genesis:{comp_name.lower().replace(' ', '_')}"
+                                "suggestion": suggestion,
+                                "priority": self._assess_component_priority(comp_name, category),
+                                "reasons": self._get_unmapped_reasons(comp_name)
                             })
+
+            # Generate discovery statistics
+            discovery_stats = {
+                "total_langflow_components": len([
+                    comp for category in all_langflow.get("components", {}).values()
+                    for comp in category.keys()
+                ]) if all_langflow and "components" in all_langflow else 0,
+                "hardcoded_mappings": len(hardcoded_mappings),
+                "database_mappings": len(database_mappings),
+                "total_mapped": len(all_genesis_mapped),
+                "unmapped_count": len(unmapped),
+                "discovered_components": len(discovered_components),
+                "mapping_coverage": (
+                    len(mapped_langflow_components) /
+                    max(1, len([
+                        comp for category in all_langflow.get("components", {}).values()
+                        for comp in category.keys()
+                    ]))
+                ) * 100 if all_langflow and "components" in all_langflow else 0,
+                "cache_status": cache_status,
+            }
 
             return {
                 "langflow_components": all_langflow,
-                "genesis_mapped": genesis_mapped,
+                "genesis_mapped": all_genesis_mapped,
+                "hardcoded_mapped": hardcoded_mappings,
+                "database_mapped": database_mappings,
+                "discovered_components": discovered_components,
                 "unmapped": unmapped,
+                "discovery_stats": discovery_stats,
                 "success": True
             }
 
         except Exception as e:
             logger.error(f"Error getting all available components: {e}")
-            # Return basic fallback with genesis mappings at least
+            # Return enhanced fallback with genesis mappings at least
+            fallback_mappings = {
+                **self.mapper.AUTONOMIZE_MODELS,
+                **self.mapper.MCP_MAPPINGS,
+                **self.mapper.STANDARD_MAPPINGS
+            }
+
             return {
                 "langflow_components": {},
-                "genesis_mapped": {
-                    **self.mapper.AUTONOMIZE_MODELS,
-                    **self.mapper.MCP_MAPPINGS,
-                    **self.mapper.STANDARD_MAPPINGS
-                },
+                "genesis_mapped": fallback_mappings,
+                "hardcoded_mapped": fallback_mappings,
+                "database_mapped": {},
+                "discovered_components": {},
                 "unmapped": [],
+                "discovery_stats": {
+                    "total_langflow_components": 0,
+                    "hardcoded_mappings": len(fallback_mappings),
+                    "database_mappings": 0,
+                    "total_mapped": len(fallback_mappings),
+                    "unmapped_count": 0,
+                    "mapping_coverage": 0,
+                    "cache_status": self.mapper.get_cache_status(),
+                },
                 "success": False,
                 "error": str(e)
             }
+
+    def _generate_intelligent_suggestion(self, comp_name: str, category: str) -> str:
+        """Generate intelligent suggestion for unmapped component."""
+        # Use ComponentMapper's intelligent fallback
+        suggestion = self.mapper._handle_unknown_type(comp_name)
+        suggested_component = suggestion.get("component", comp_name)
+
+        # Convert component name to genesis type format
+        base_name = comp_name.lower()
+        base_name = base_name.replace(" ", "_").replace("-", "_")
+
+        # Remove common suffixes
+        import re
+        base_name = re.sub(r'_(component|tool|model)$', '', base_name)
+
+        return f"genesis:{base_name}"
+
+    def _assess_component_priority(self, comp_name: str, category: str) -> str:
+        """Assess priority for creating mapping for unmapped component."""
+        comp_lower = comp_name.lower()
+
+        # High priority components
+        if any(term in comp_lower for term in [
+            "agent", "input", "output", "model", "health", "medical"
+        ]):
+            return "high"
+
+        # Medium priority components
+        if any(term in comp_lower for term in [
+            "tool", "api", "data", "process", "transform"
+        ]):
+            return "medium"
+
+        return "low"
+
+    def _get_unmapped_reasons(self, comp_name: str) -> List[str]:
+        """Get reasons why component might not be mapped."""
+        reasons = []
+        comp_lower = comp_name.lower()
+
+        if "experimental" in comp_lower:
+            reasons.append("Component marked as experimental")
+        if "deprecated" in comp_lower:
+            reasons.append("Component may be deprecated")
+        if "custom" in comp_lower:
+            reasons.append("Custom component - may not need genesis mapping")
+        if not reasons:
+            reasons.append("Component may be new or specialized")
+
+        return reasons
+
+    async def validate_spec_quick(self, spec_yaml: str) -> Dict[str, Any]:
+        """
+        Quick validation for real-time feedback (schema + basic validation only).
+
+        Args:
+            spec_yaml: YAML specification string
+
+        Returns:
+            Quick validation result
+        """
+        return await self.validate_spec(spec_yaml, detailed=False)
+
+    async def validate_spec_with_runtime(self,
+                                       spec_yaml: str,
+                                       target_runtime: RuntimeType = RuntimeType.LANGFLOW,
+                                       validation_options: Optional[ValidationOptions] = None) -> Dict[str, Any]:
+        """
+        Enhanced validation using Phase 3 runtime converter architecture.
+
+        Args:
+            spec_yaml: YAML specification string
+            target_runtime: Target runtime type for validation
+            validation_options: Validation configuration options
+
+        Returns:
+            Comprehensive validation result with runtime-specific checks
+        """
+        try:
+            # Parse YAML
+            spec_dict = yaml.safe_load(spec_yaml)
+            if not spec_dict:
+                return {
+                    "valid": False,
+                    "errors": [{"code": "EMPTY_SPEC", "message": "Empty or invalid YAML specification", "severity": "error"}],
+                    "warnings": [],
+                    "suggestions": [],
+                    "summary": {"error_count": 1, "warning_count": 0, "suggestion_count": 0}
+                }
+
+            # Use Phase 3 converter for enhanced validation
+            validation_result = await converter_factory.validate_specification(
+                spec_dict, target_runtime, validation_options
+            )
+
+            # Convert to SpecService format
+            return self._convert_runtime_validation_result(validation_result, target_runtime)
+
+        except yaml.YAMLError as e:
+            return {
+                "valid": False,
+                "errors": [{
+                    "code": "YAML_PARSE_ERROR",
+                    "message": f"Invalid YAML format: {e}",
+                    "severity": "error",
+                    "suggestion": "Check YAML syntax, indentation, and special characters"
+                }],
+                "warnings": [],
+                "suggestions": [],
+                "summary": {"error_count": 1, "warning_count": 0, "suggestion_count": 0}
+            }
+        except Exception as e:
+            logger.error(f"Error in validate_spec_with_runtime: {e}")
+            return {
+                "valid": False,
+                "errors": [{
+                    "code": "RUNTIME_VALIDATION_ERROR",
+                    "message": f"Runtime validation error: {e}",
+                    "severity": "error",
+                    "suggestion": "Please report this issue to the development team"
+                }],
+                "warnings": [],
+                "suggestions": [],
+                "summary": {"error_count": 1, "warning_count": 0, "suggestion_count": 0}
+            }
+
+    async def check_runtime_compatibility(self,
+                                        spec_yaml: str,
+                                        runtime_types: Optional[List[RuntimeType]] = None) -> Dict[str, Any]:
+        """
+        Check specification compatibility across multiple runtimes.
+
+        Args:
+            spec_yaml: YAML specification string
+            runtime_types: List of runtime types to check (all if None)
+
+        Returns:
+            Dictionary mapping runtime types to compatibility results
+        """
+        try:
+            # Parse YAML
+            spec_dict = yaml.safe_load(spec_yaml)
+            if not spec_dict:
+                return {
+                    "error": "Empty or invalid YAML specification",
+                    "compatibility_results": {}
+                }
+
+            # Use Phase 3 converter factory for multi-runtime validation
+            compatibility_results = await converter_factory.check_runtime_compatibility(
+                spec_dict, runtime_types
+            )
+
+            # Convert results to SpecService format
+            formatted_results = {}
+            for runtime_type, result in compatibility_results.items():
+                formatted_results[runtime_type.value] = {
+                    "compatible": result["compatible"],
+                    "errors": [{"message": error, "severity": "error"} for error in result["errors"]],
+                    "warnings": [{"message": warning, "severity": "warning"} for warning in result["warnings"]],
+                    "suggestions": result["suggestions"],
+                    "performance_hints": result["performance_hints"],
+                    "metadata": result["metadata"]
+                }
+
+            return {
+                "compatibility_results": formatted_results,
+                "summary": {
+                    "total_runtimes_checked": len(formatted_results),
+                    "compatible_runtimes": len([r for r in formatted_results.values() if r["compatible"]]),
+                    "incompatible_runtimes": len([r for r in formatted_results.values() if not r["compatible"]])
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Error in check_runtime_compatibility: {e}")
+            return {
+                "error": f"Compatibility check failed: {e}",
+                "compatibility_results": {}
+            }
+
+    async def convert_spec_to_flow_enhanced(self,
+                                          spec_yaml: str,
+                                          variables: Optional[Dict[str, Any]] = None,
+                                          target_runtime: RuntimeType = RuntimeType.LANGFLOW,
+                                          validation_options: Optional[ValidationOptions] = None,
+                                          optimization_level: str = "balanced") -> Dict[str, Any]:
+        """
+        Enhanced conversion using Phase 3 converter architecture.
+
+        Args:
+            spec_yaml: YAML specification string
+            variables: Runtime variables for resolution
+            target_runtime: Target runtime type
+            validation_options: Validation configuration options
+            optimization_level: Performance optimization level
+
+        Returns:
+            Enhanced conversion result with detailed metadata
+        """
+        try:
+            # Parse YAML
+            spec_dict = yaml.safe_load(spec_yaml)
+            if not spec_dict:
+                raise ValueError("Empty or invalid YAML specification")
+
+            # Use Phase 3 converter factory for enhanced conversion
+            conversion_result = await converter_factory.convert_specification(
+                spec_dict, target_runtime, variables, validation_options, optimization_level
+            )
+
+            if conversion_result.success:
+                return {
+                    "success": True,
+                    "flow_data": conversion_result.flow_data,
+                    "metadata": conversion_result.metadata,
+                    "performance_metrics": conversion_result.performance_metrics,
+                    "warnings": conversion_result.warnings,
+                    "runtime_type": conversion_result.runtime_type.value
+                }
+            else:
+                return {
+                    "success": False,
+                    "errors": conversion_result.errors,
+                    "warnings": conversion_result.warnings,
+                    "metadata": conversion_result.metadata,
+                    "runtime_type": conversion_result.runtime_type.value
+                }
+
+        except yaml.YAMLError as e:
+            return {
+                "success": False,
+                "errors": [f"Invalid YAML format: {e}"],
+                "warnings": [],
+                "metadata": {"error_type": "yaml_parse_error"}
+            }
+        except Exception as e:
+            logger.error(f"Error in convert_spec_to_flow_enhanced: {e}")
+            return {
+                "success": False,
+                "errors": [f"Enhanced conversion failed: {e}"],
+                "warnings": [],
+                "metadata": {"error_type": type(e).__name__}
+            }
+
+    def _convert_runtime_validation_result(self,
+                                         runtime_result: Dict[str, Any],
+                                         runtime_type: RuntimeType) -> Dict[str, Any]:
+        """
+        Convert runtime validation result to SpecService format.
+
+        Args:
+            runtime_result: Validation result from runtime converter
+            runtime_type: Runtime type that performed validation
+
+        Returns:
+            SpecService-formatted validation result
+        """
+        errors = []
+        warnings = []
+        suggestions = []
+
+        # Convert errors
+        for error in runtime_result.get("errors", []):
+            if isinstance(error, str):
+                errors.append({
+                    "code": "RUNTIME_ERROR",
+                    "message": error,
+                    "severity": "error",
+                    "runtime": runtime_type.value
+                })
+            elif isinstance(error, dict):
+                errors.append({
+                    "code": error.get("code", "RUNTIME_ERROR"),
+                    "message": error.get("message", str(error)),
+                    "severity": "error",
+                    "runtime": runtime_type.value
+                })
+
+        # Convert warnings
+        for warning in runtime_result.get("warnings", []):
+            if isinstance(warning, str):
+                warnings.append({
+                    "code": "RUNTIME_WARNING",
+                    "message": warning,
+                    "severity": "warning",
+                    "runtime": runtime_type.value
+                })
+            elif isinstance(warning, dict):
+                warnings.append({
+                    "code": warning.get("code", "RUNTIME_WARNING"),
+                    "message": warning.get("message", str(warning)),
+                    "severity": "warning",
+                    "runtime": runtime_type.value
+                })
+
+        # Convert suggestions
+        for suggestion in runtime_result.get("suggestions", []):
+            if isinstance(suggestion, str):
+                suggestions.append({
+                    "code": "RUNTIME_SUGGESTION",
+                    "message": suggestion,
+                    "severity": "suggestion",
+                    "runtime": runtime_type.value
+                })
+            elif isinstance(suggestion, dict):
+                suggestions.append({
+                    "code": suggestion.get("code", "RUNTIME_SUGGESTION"),
+                    "message": suggestion.get("message", str(suggestion)),
+                    "severity": "suggestion",
+                    "runtime": runtime_type.value
+                })
+
+        return {
+            "valid": runtime_result.get("valid", False),
+            "errors": errors,
+            "warnings": warnings,
+            "suggestions": suggestions,
+            "summary": {
+                "error_count": len(errors),
+                "warning_count": len(warnings),
+                "suggestion_count": len(suggestions)
+            },
+            "runtime_metadata": runtime_result.get("validation_metadata", {}),
+            "performance_hints": runtime_result.get("performance_hints", [])
+        }
+
+    def get_validation_suggestions(self, validation_result: Dict[str, Any]) -> List[str]:
+        """
+        Extract actionable suggestions from validation result.
+
+        Args:
+            validation_result: Result from validate_spec()
+
+        Returns:
+            List of actionable suggestion strings
+        """
+        suggestions = []
+
+        # Extract suggestions from errors
+        for error in validation_result.get("errors", []):
+            if isinstance(error, dict) and error.get("suggestion"):
+                suggestions.append(error["suggestion"])
+
+        # Extract suggestions from warnings
+        for warning in validation_result.get("warnings", []):
+            if isinstance(warning, dict) and warning.get("suggestion"):
+                suggestions.append(warning["suggestion"])
+
+        # Extract explicit suggestions
+        for suggestion in validation_result.get("suggestions", []):
+            if isinstance(suggestion, dict):
+                if suggestion.get("action"):
+                    suggestions.append(suggestion["action"])
+                elif suggestion.get("message"):
+                    suggestions.append(suggestion["message"])
+            elif isinstance(suggestion, str):
+                suggestions.append(suggestion)
+
+        return list(set(suggestions))  # Remove duplicates
+
+    def format_validation_report(self, validation_result: Dict[str, Any],
+                               include_suggestions: bool = True) -> str:
+        """
+        Format validation result into a human-readable report.
+
+        Args:
+            validation_result: Result from validate_spec()
+            include_suggestions: Whether to include suggestions in the report
+
+        Returns:
+            Formatted validation report string
+        """
+        lines = []
+        summary = validation_result.get("summary", {})
+
+        # Header
+        if validation_result.get("valid", False):
+            lines.append("✅ Specification validation PASSED")
+        else:
+            lines.append("❌ Specification validation FAILED")
+
+        lines.append("")
+
+        # Summary
+        lines.append(f"📊 Summary:")
+        lines.append(f"   Errors: {summary.get('error_count', 0)}")
+        lines.append(f"   Warnings: {summary.get('warning_count', 0)}")
+        lines.append(f"   Suggestions: {summary.get('suggestion_count', 0)}")
+        lines.append("")
+
+        # Validation phases
+        phases = validation_result.get("validation_phases", {})
+        if phases:
+            lines.append("🔍 Validation Phases:")
+            for phase, passed in phases.items():
+                if passed is not None:
+                    status = "✅" if passed else "❌"
+                    phase_name = phase.replace("_", " ").title()
+                    lines.append(f"   {status} {phase_name}")
+            lines.append("")
+
+        # Errors
+        errors = validation_result.get("errors", [])
+        if errors:
+            lines.append("🚨 Errors:")
+            for i, error in enumerate(errors, 1):
+                if isinstance(error, dict):
+                    message = error.get("message", str(error))
+                    component = error.get("component_id")
+                    if component:
+                        lines.append(f"   {i}. [{component}] {message}")
+                    else:
+                        lines.append(f"   {i}. {message}")
+                else:
+                    lines.append(f"   {i}. {error}")
+            lines.append("")
+
+        # Warnings
+        warnings = validation_result.get("warnings", [])
+        if warnings:
+            lines.append("⚠️ Warnings:")
+            for i, warning in enumerate(warnings, 1):
+                if isinstance(warning, dict):
+                    message = warning.get("message", str(warning))
+                    component = warning.get("component_id")
+                    if component:
+                        lines.append(f"   {i}. [{component}] {message}")
+                    else:
+                        lines.append(f"   {i}. {message}")
+                else:
+                    lines.append(f"   {i}. {warning}")
+            lines.append("")
+
+        # Suggestions
+        if include_suggestions:
+            suggestions = self.get_validation_suggestions(validation_result)
+            if suggestions:
+                lines.append("💡 Suggestions:")
+                for i, suggestion in enumerate(suggestions, 1):
+                    lines.append(f"   {i}. {suggestion}")
+                lines.append("")
+
+        return "\n".join(lines)

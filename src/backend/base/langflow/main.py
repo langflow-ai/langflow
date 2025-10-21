@@ -168,7 +168,7 @@ def get_lifespan(*, fix_migration=False, version=None):
                 from langflow.custom.genesis.integration import initialize_genesis_extensions, is_genesis_extensions_enabled
 
                 if is_genesis_extensions_enabled():
-                    success = initialize_genesis_extensions(_app)
+                    success = await initialize_genesis_extensions(_app)
                     if success:
                         await logger.adebug(f"Genesis Extensions initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
                     else:

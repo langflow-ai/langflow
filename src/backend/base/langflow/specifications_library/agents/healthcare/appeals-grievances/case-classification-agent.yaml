@@ -1,0 +1,273 @@
+id: urn:agent:genesis:appeals-grievances:case-classification-agent:1.0.0
+name: Case Classification Agent
+fullyQualifiedName: genesis.autonomize.ai.case_classification_agent
+description: Automatically classifies incoming grievances and appeals based on category,
+  urgency, and regulatory compliance timelines, ensuring proper routing and timely
+  processing according to CMS regulations and payer-specific requirements.
+domain: autonomize.ai
+subDomain: appeals-grievances
+version: 1.0.0
+environment: production
+agentOwner: appeals-grievances@autonomize.ai
+agentOwnerDisplayName: Appeals & Grievances Team
+email: appeals-grievances@autonomize.ai
+status: ACTIVE
+variables:
+- name: classification_confidence_threshold
+  type: string
+  required: false
+  default: '0.85'
+  description: Minimum confidence score for automatic classification (0.0-1.0)
+- name: urgency_classification_depth
+  type: string
+  required: false
+  default: comprehensive
+  description: Depth of urgency analysis (basic, standard, comprehensive)
+- name: regulatory_timeline_scope
+  type: string
+  required: false
+  default: all_applicable
+  description: Scope of regulatory timeline checking (cms_only, state_specific, all_applicable)
+- name: auto_routing_enabled
+  type: string
+  required: false
+  default: 'true'
+  description: Enable automatic routing based on classification results
+tags:
+- appeals-processing
+- grievance-processing
+- case-classification
+- regulatory-compliance
+- cms-timelines
+- workflow-automation
+- healthcare-operations
+- member-services
+- provider-relations
+- quality-assurance
+kind: Single Agent
+agentGoal: Accurately classify incoming grievances and appeals based on category,
+  urgency, and regulatory compliance timelines to ensure proper routing and timely
+  processing while maintaining compliance with CMS regulations and payer-specific
+  requirements
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+components:
+- id: case-input
+  name: Case Classification Request Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive grievance and appeal cases with member details, case content,
+    and supporting documentation for classification
+  provides:
+  - useAs: input
+    in: case-classification-agent
+    description: Provide case details and content for classification analysis
+- id: email-api-connector
+  name: Email API Connector
+  kind: Tool
+  type: genesis:api_request
+  description: Connect to email systems to retrieve grievance and appeal submissions
+    directly from email channels
+  asTools: true
+  config:
+    method: GET
+    url: ${EMAIL_API_ENDPOINT}/messages
+    headers:
+    - key: Authorization
+      value: Bearer ${EMAIL_API_TOKEN}
+    - key: Content-Type
+      value: application/json
+    timeout: 30
+  provides:
+  - useAs: tools
+    in: case-classification-agent
+    description: Enable access to email-based case submissions
+- id: case-data-connector
+  name: Case Management Database Connector
+  kind: Tool
+  type: genesis:mcp_tool
+  description: HIPAA-compliant database connector for storing and retrieving case
+    data, historical classifications, and member information
+  asTools: true
+  config:
+    tool_name: case_management_database
+  provides:
+  - useAs: tools
+    in: case-classification-agent
+    description: Enable comprehensive access to case history and member data
+- id: regulatory-compliance-api
+  name: Regulatory Compliance API
+  kind: Tool
+  type: genesis:api_request
+  description: Access regulatory compliance systems for CMS timeline requirements
+    and state-specific appeal regulations
+  asTools: true
+  config:
+    method: POST
+    url: ${COMPLIANCE_API_ENDPOINT}/timeline-check
+    headers:
+    - key: X-API-Key
+      value: ${COMPLIANCE_API_KEY}
+    - key: Content-Type
+      value: application/json
+    body:
+    - key: plan_type
+      value: "{{input_plan_type}}"
+    - key: case_type
+      value: "{{input_case_type}}"
+    - key: state
+      value: "{{input_state}}"
+    timeout: 25
+  provides:
+  - useAs: tools
+    in: case-classification-agent
+    description: Enable regulatory timeline and compliance checking
+- id: crm-integration-api
+  name: CRM Integration API
+  kind: Tool
+  type: genesis:api_request
+  description: Update customer relationship management system with case status and
+    routing information
+  asTools: true
+  config:
+    method: PUT
+    url: ${CRM_API_ENDPOINT}/cases/{case_id}/classification
+    headers:
+    - key: Authorization
+      value: Bearer ${CRM_API_TOKEN}
+    - key: Content-Type
+      value: application/json
+    timeout: 20
+  provides:
+  - useAs: tools
+    in: case-classification-agent
+    description: Enable CRM updates for case tracking and status management
+- id: healthcare-nlp-processor
+  name: Healthcare NLP Classification Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced natural language processing engine specialized for healthcare
+    appeals and grievances classification with medical terminology understanding
+  asTools: true
+  config:
+    tool_name: healthcare_appeals_nlp_classifier
+  provides:
+  - useAs: tools
+    in: case-classification-agent
+    description: Enable sophisticated text analysis and classification capabilities
+- id: case-classification-agent
+  name: Case Classification Agent
+  kind: Agent
+  type: genesis:agent
+  description: Intelligent agent that analyzes and classifies grievances and appeals
+    using regulatory knowledge, clinical context, and workflow automation expertise
+  config:
+    system_message: "You are a healthcare appeals and grievances classification specialist\
+      \ with expertise in regulatory compliance and clinical workflows.\n\nYour primary\
+      \ responsibilities:\n1. Classify incoming grievances and appeals by category\
+      \ (medical, pharmacy, administrative, quality of care)\n2. Determine urgency\
+      \ level and regulatory timeline requirements\n3. Assess regulatory compliance\
+      \ requirements (CMS, state insurance regulations)\n4. Recommend appropriate\
+      \ routing to specialized review teams\n5. Ensure HIPAA compliance throughout\
+      \ the classification process\n\nAvailable Tools:\n- email_api_connector: Access\
+      \ email-based case submissions\n- case_management_database: Retrieve case history\
+      \ and member information with HIPAA compliance\n- regulatory_compliance_api:\
+      \ Check CMS and state-specific regulatory timeline requirements\n- crm_integration_api:\
+      \ Update case status and routing in CRM system\n- healthcare_appeals_nlp_classifier:\
+      \ Advanced NLP analysis for medical terminology and clinical context\n\nClassification\
+      \ Categories:\n1. MEDICAL APPEALS:\n   - Prior authorization denials (procedures,\
+      \ diagnostics, treatments)\n   - Medical necessity determinations\n   - Coverage\
+      \ denials for services\n   - Network adequacy issues\n\n2. PHARMACY APPEALS:\n\
+      \   - Formulary denials\n   - Step therapy requirements\n   - Quantity limit\
+      \ appeals\n   - Prior authorization for medications\n\n3. ADMINISTRATIVE GRIEVANCES:\n\
+      \   - Billing disputes\n   - Claims processing issues\n   - Provider network\
+      \ problems\n   - Customer service complaints\n\n4. QUALITY OF CARE GRIEVANCES:\n\
+      \   - Provider performance issues\n   - Clinical care quality concerns\n   -\
+      \ Safety incidents\n   - Access to care problems\n\nUrgency Classifications:\n\
+      - EXPEDITED: Life-threatening, severe health consequences (decision within 72\
+      \ hours)\n- STANDARD_URGENT: Significant health impact (decision within 14-30\
+      \ days)\n- ROUTINE: Standard processing (decision within 30-60 days)\n\nRegulatory\
+      \ Timelines:\n- Medicare Advantage: 30 days standard, 72 hours expedited\n-\
+      \ Medicaid: 90 days standard, 3 business days expedited\n- Commercial: 30-60\
+      \ days based on state regulations\n\nFor each case, provide:\n1. Primary classification\
+      \ with confidence score\n2. Urgency level with regulatory timeline\n3. Compliance\
+      \ requirements and applicable regulations\n4. Routing recommendation with department\
+      \ and reviewer type\n5. Any special flags or escalation triggers\n\nAlways maintain\
+      \ HIPAA compliance and ensure accurate regulatory timeline assignments based\
+      \ on plan type and state requirements.\n"
+    temperature: 0.2
+    max_tokens: 2000
+  provides:
+  - useAs: output
+    in: classification-output
+    description: Process and classify appeals and grievances with comprehensive analysis
+- id: classification-output
+  name: Case Classification Results Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive classification results with routing recommendations,
+    regulatory compliance information, and quality metrics
+  provides: []
+outputs:
+- case_classification
+- urgency_assessment
+- regulatory_compliance
+- routing_recommendation
+- processing_metadata
+kpis:
+- name: Classification Accuracy Rate
+  category: quality
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Percentage of cases correctly classified as validated by quality review
+- name: Average Classification Time
+  category: performance
+  valueType: number
+  target: 5
+  unit: minutes
+  description: Average time taken to classify incoming cases from submission to routing
+- name: Regulatory Timeline Compliance
+  category: quality
+  valueType: percentage
+  target: 98
+  unit: '%'
+  description: Percentage of cases classified within regulatory compliance timelines
+- name: Auto-Routing Success Rate
+  category: performance
+  valueType: percentage
+  target: 90
+  unit: '%'
+  description: Percentage of cases successfully auto-routed to appropriate departments
+    without manual intervention
+- name: Urgency Classification Accuracy
+  category: quality
+  valueType: percentage
+  target: 93
+  unit: '%'
+  description: Percentage of urgency levels correctly assigned as validated by clinical
+    review
+- name: Manual Review Rate
+  category: efficiency
+  valueType: percentage
+  target: 10
+  unit: '%'
+  description: Percentage of cases requiring manual review due to low confidence scores
+    or complex scenarios
+- name: HIPAA Compliance Score
+  category: quality
+  valueType: percentage
+  target: 99
+  unit: '%'
+  description: Overall HIPAA compliance score based on data handling and audit trail
+    completeness
+- name: Error Rate Reduction
+  category: quality
+  valueType: percentage
+  target: 75
+  unit: '%'
+  description: Reduction in classification errors compared to previous manual process

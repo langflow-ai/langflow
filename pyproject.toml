@@ -147,7 +147,7 @@ dependencies = [
     "azure-storage-blob>=12.25.1",
     "autonomize-model-sdk[core]>=1.1.36",
     "azure-search-documents>=11.5.2",
-    "azure-identity==1.23.1"
+    "azure-identity==1.23.1",
 ]
 
 [dependency-groups]

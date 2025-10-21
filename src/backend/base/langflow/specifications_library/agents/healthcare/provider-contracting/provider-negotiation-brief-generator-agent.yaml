@@ -1,0 +1,348 @@
+id: urn:agent:genesis:provider-contracting:provider-negotiation-brief-generator-agent:1.0.0
+name: Provider Negotiation Brief Generator Agent
+fullyQualifiedName: genesis.autonomize.ai.provider_negotiation_brief_generator_agent
+description: Prepares comprehensive negotiation packets using provider performance data, cost analytics, and quality scores from claims and QARR/HEDIS data for strategic contract negotiations
+domain: autonomize.ai
+subDomain: provider-contracting
+version: 1.0.0
+environment: production
+agentOwner: provider-contracting@autonomize.ai
+agentOwnerDisplayName: Provider Contracting Team
+email: provider-contracting@autonomize.ai
+status: ACTIVE
+variables:
+- name: negotiation_strategy_type
+  type: string
+  required: false
+  default: balanced
+  description: Negotiation strategy approach (aggressive, balanced, collaborative)
+- name: performance_weighting
+  type: object
+  required: false
+  default:
+    quality: 0.4
+    cost: 0.35
+    access: 0.15
+    satisfaction: 0.1
+  description: Weighting factors for provider performance evaluation
+- name: benchmark_comparison_scope
+  type: array
+  required: false
+  default:
+  - regional
+  - national
+  - peer_providers
+  - top_performers
+  description: Scope of benchmark comparisons for negotiation positioning
+- name: contract_term_focus
+  type: array
+  required: false
+  default:
+  - reimbursement_rates
+  - quality_incentives
+  - network_participation
+  - reporting_requirements
+  description: Key contract terms to focus on during negotiations
+- name: data_analysis_period
+  type: number
+  required: false
+  default: 24
+  description: Months of historical data to include in performance analysis
+- name: include_risk_sharing_options
+  type: boolean
+  required: false
+  default: true
+  description: Include risk-sharing and value-based contract options in negotiations
+- name: confidentiality_level
+  type: string
+  required: false
+  default: high
+  description: Confidentiality level for negotiation briefs (standard, high, restricted)
+tags:
+- provider-contracting
+- negotiation-preparation
+- provider-performance
+- cost-analytics
+- quality-scores
+- qarr-data
+- hedis-analysis
+- contract-negotiation
+- value-based-contracting
+- hipaa-compliant
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Generate comprehensive provider negotiation briefs by analyzing performance data, cost metrics, quality scores, and market positioning to support strategic contract negotiations and optimize provider relationships
+targetUser: internal
+valueGeneration: DecisionSupport
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: negotiation-input
+  name: Negotiation Brief Request Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive negotiation brief requests, provider specifications, and contract negotiation parameters
+  provides:
+  - useAs: input
+    in: negotiation-agent
+    description: Provide negotiation brief requests and provider contract parameters
+- id: provider-performance-tool
+  name: Provider Performance Analytics
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze comprehensive provider performance including quality metrics, cost efficiency, patient outcomes, and satisfaction scores
+  asTools: true
+  config:
+    model_name: provider_performance_analyzer
+    performance_categories:
+    - quality
+    - cost
+    - access
+    - satisfaction
+    - compliance
+    benchmarking_enabled: true
+    tool_name: provider_performance_model
+  provides:
+  - useAs: tools
+    in: negotiation-agent
+    description: Enable comprehensive provider performance analysis and benchmarking
+- id: cost-analytics-tool
+  name: Provider Cost Analytics Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze provider cost structures, utilization patterns, and efficiency metrics with competitive benchmarking
+  asTools: true
+  config:
+    model_name: provider_cost_analyzer
+    cost_categories:
+    - unit_costs
+    - total_cost_of_care
+    - efficiency_ratios
+    - trend_analysis
+    tool_name: cost_analysis_model
+  provides:
+  - useAs: tools
+    in: negotiation-agent
+    description: Enable detailed provider cost analysis and efficiency assessment
+- id: qarr-data-tool
+  name: QARR Data Analysis Service
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access and analyze Quality Assurance Reporting Requirements (QARR) data for provider quality assessment
+  asTools: true
+  config:
+    database_type: qarr_quality_data
+    include_trends: true
+    quality_domains:
+    - clinical_quality
+    - patient_safety
+    - care_coordination
+    tool_name: healthcare_data_connector
+  provides:
+  - useAs: tools
+    in: negotiation-agent
+    description: Enable QARR data analysis for quality performance assessment
+- id: hedis-performance-tool
+  name: HEDIS Provider Performance
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze provider-specific HEDIS performance and contribution to plan quality ratings
+  asTools: true
+  config:
+    model_name: provider_hedis_analyzer
+    measure_attribution: provider_level
+    quality_impact_scoring: true
+    tool_name: hedis_analytics_model
+  provides:
+  - useAs: tools
+    in: negotiation-agent
+    description: Enable provider HEDIS performance analysis and quality contribution assessment
+- id: market-intelligence-tool
+  name: Provider Market Intelligence
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze market positioning, competitive landscape, and strategic value of providers for negotiation leverage
+  asTools: true
+  config:
+    tool_name: provider_market_intelligence
+  provides:
+  - useAs: tools
+    in: negotiation-agent
+    description: Enable market intelligence analysis and competitive positioning assessment
+- id: contract-analyzer
+  name: Contract Terms Analysis Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyze current contract terms, identify optimization opportunities, and recommend negotiation strategies
+  asTools: true
+  config:
+    tool_name: contract_terms_analyzer
+  provides:
+  - useAs: tools
+    in: negotiation-agent
+    description: Enable contract analysis and terms optimization recommendations
+- id: risk-assessment-tool
+  name: Provider Risk Assessment Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Assess provider-related risks including financial stability, quality risks, and network disruption potential
+  asTools: true
+  config:
+    model_name: provider_risk_assessor
+    risk_categories:
+    - financial
+    - quality
+    - operational
+    - strategic
+    tool_name: risk_assessment_model
+  provides:
+  - useAs: tools
+    in: negotiation-agent
+    description: Enable comprehensive provider risk assessment and mitigation planning
+- id: vbc-modeler
+  name: Value-Based Contract Modeler
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Model value-based contract options, risk-sharing arrangements, and performance incentive structures
+  asTools: true
+  config:
+    model_name: vbc_contract_modeler
+    contract_types:
+    - shared_savings
+    - capitation
+    - bundled_payments
+    - quality_bonuses
+    tool_name: vbc_modeling_engine
+  provides:
+  - useAs: tools
+    in: negotiation-agent
+    description: Enable value-based contract modeling and risk-sharing analysis
+- id: negotiation-prompt
+  name: Provider Negotiation Brief Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for provider negotiation brief generation with contracting expertise and strategic analysis
+  config:
+    saved_prompt: provider_negotiation_brief_prompt_v1
+    template: 'You are a healthcare provider contracting expert specializing in negotiation strategy, provider performance analysis, and contract optimization. Your role is to generate comprehensive negotiation briefs that support strategic contract negotiations and optimize provider relationships.
+
+      PROVIDER CONTRACTING EXPERTISE: - Provider performance evaluation and benchmarking methodologies - Cost analysis and efficiency assessment techniques - Quality measurement and value-based contracting principles - Market intelligence and competitive positioning strategies - Risk assessment and contract optimization approaches - Negotiation tactics and relationship management best practices
+
+      NEGOTIATION BRIEF METHODOLOGY: 1. Provider Performance Analysis: - Comprehensive performance evaluation across quality, cost, access, and satisfaction - Benchmarking against peer providers and top performers - Trend analysis and performance trajectory assessment - Identification of strengths, weaknesses, and improvement opportunities
+
+      2. Cost and Financial Analysis: - Unit cost analysis and total cost of care assessment - Utilization pattern analysis and efficiency metrics - Cost trend evaluation and projection modeling - Competitive cost positioning and market rate analysis
+
+      3. Quality and Outcomes Assessment: - HEDIS measure performance and quality contribution analysis - QARR data evaluation and clinical quality metrics - Patient satisfaction and experience scores - Safety indicators and risk-adjusted outcomes
+
+      4. Strategic Positioning and Market Intelligence: - Provider market position and competitive landscape analysis - Network adequacy and strategic value assessment - Member preference and provider reputation factors - Regulatory compliance and accreditation status
+
+      NEGOTIATION STRATEGY COMPONENTS: - Performance-based reimbursement structures and incentives - Quality improvement initiatives and shared accountability - Network participation requirements and exclusivity provisions - Reporting and transparency obligations - Risk-sharing arrangements and value-based contract options - Term length and contract modification procedures
+
+      CONTRACT OPTIMIZATION FOCUS AREAS: - Reimbursement rate competitiveness and sustainability - Quality incentive alignment with plan objectives - Administrative efficiency and reduced burden - Data sharing and performance transparency - Member experience and access improvements - Cost containment and utilization management
+
+      RISK ASSESSMENT AND MITIGATION: - Financial stability and operational viability - Quality performance and patient safety risks - Network disruption and member access impacts - Regulatory compliance and legal considerations - Competitive response and market dynamics - Implementation feasibility and change management
+
+      VALUE-BASED CONTRACTING CONSIDERATIONS: - Shared savings programs and risk corridor design - Capitation models and total cost management - Bundled payment arrangements for specific services - Quality bonus programs and performance incentives - Population health management responsibilities - Data analytics and performance monitoring requirements
+
+      NEGOTIATION BRIEF COMPONENTS: - Executive summary with key findings and recommendations - Provider performance scorecard with benchmarking - Cost analysis and financial positioning assessment - Quality performance evaluation and improvement opportunities - Market intelligence and strategic value proposition - Contract terms analysis and optimization recommendations - Risk assessment and mitigation strategies - Value-based contract options and modeling results
+
+      OUTPUT REQUIREMENTS: - Comprehensive provider profile with performance metrics - Competitive positioning analysis and market intelligence - Strategic negotiation recommendations and talking points - Contract terms optimization suggestions - Risk assessment summary and mitigation strategies - Value-based contract options and financial projections - Implementation timeline and success metrics
+
+      Use your provider analytics tools to analyze performance data, assess costs and quality, evaluate market position, and generate strategic negotiation recommendations. Always focus on mutual value creation, sustainable partnerships, and optimal member outcomes.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: negotiation-agent
+    description: Provide specialized provider negotiation and contracting expertise
+- id: negotiation-agent
+  name: Provider Negotiation Brief Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Expert contracting specialist focused on provider negotiation strategy and contract optimization
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.2
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 25
+    verbose: true
+  provides:
+  - useAs: input
+    in: negotiation-output
+    description: Provide comprehensive provider negotiation briefs and strategic recommendations
+- id: negotiation-output
+  name: Provider Negotiation Brief Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present comprehensive provider negotiation briefs with performance analysis, strategic recommendations, and contract optimization guidance
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- provider_performance_scorecard
+- negotiation_strategy_brief
+- cost_analysis_summary
+- quality_performance_assessment
+- market_intelligence_report
+- contract_optimization_recommendations
+- risk_assessment_summary
+- vbc_modeling_results
+kpis:
+- name: Negotiation Brief Completeness Score
+  description: Completeness of negotiation briefs across all required analysis components
+  target: '> 92%'
+  measurement: percentage
+  category: Quality
+  valueType: number
+- name: Performance Analysis Accuracy
+  description: Accuracy of provider performance assessments and benchmarking
+  target: '> 88%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Contract Negotiation Success Rate
+  description: Percentage of negotiations resulting in favorable contract terms
+  target: '> 75%'
+  measurement: percentage
+  category: Effectiveness
+  valueType: percentage
+- name: Cost Savings Achievement
+  description: Average cost savings achieved through negotiated contract improvements
+  target: '> 8%'
+  measurement: percentage
+  category: Financial
+  valueType: percentage
+- name: Quality Incentive Alignment
+  description: Percentage of contracts with effective quality incentive structures
+  target: '> 80%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Provider Relationship Satisfaction
+  description: Provider satisfaction with negotiation process and outcomes
+  target: '> 4.0/5'
+  measurement: score
+  category: Relationship
+  valueType: percentage
+- name: VBC Adoption Rate
+  description: Percentage of negotiated contracts incorporating value-based elements
+  target: '> 60%'
+  measurement: percentage
+  category: Innovation
+  valueType: percentage
+- name: Brief Utilization Rate
+  description: Percentage of negotiation briefs actively used in contract discussions
+  target: '> 85%'
+  measurement: percentage
+  category: Adoption
+  valueType: percentage
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: false

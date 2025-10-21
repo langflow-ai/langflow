@@ -9,6 +9,7 @@ yarn-error.log*
 lerna-debug.log*
 qdrant_storage
 
+backup_claude.md
 .dspy_cache
 # Mac
 .DS_Store
@@ -285,3 +286,4 @@ member_servers.json
 CLAUDE.md
 SPEC_CREATION_PROMPT.md
 test_spec_conversion.py
+.claude/

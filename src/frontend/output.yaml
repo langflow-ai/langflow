@@ -1,0 +1,10 @@
+components:
+  agent:
+    id: agent
+    type: Agent
+  llm:
+    id: llm
+    type: LLM
+description: Converted from Langflow
+domain: converted
+name: Test Agent

@@ -1,0 +1,320 @@
+id: urn:agent:genesis:pbm-pharmacy:specialty-drug-cost-predictor-agent:1.0.0
+name: Specialty Drug Cost Predictor Agent
+fullyQualifiedName: genesis.autonomize.ai.specialty_drug_cost_predictor_agent
+description: Predicts financial impact of new or recurring specialty drugs using historical authorizations and member-level cost trends to support budget planning and risk management
+domain: autonomize.ai
+subDomain: pbm-pharmacy
+version: 1.0.0
+environment: production
+agentOwner: pbm-pharmacy@autonomize.ai
+agentOwnerDisplayName: PBM & Pharmacy Team
+email: pbm-pharmacy@autonomize.ai
+status: ACTIVE
+variables:
+- name: prediction_horizon_months
+  type: number
+  required: false
+  default: 24
+  description: Number of months ahead to project specialty drug costs and utilization
+- name: cost_modeling_methodology
+  type: string
+  required: false
+  default: machine_learning
+  description: Cost prediction methodology (statistical_modeling, machine_learning, hybrid_approach, actuarial_modeling)
+- name: member_risk_stratification
+  type: boolean
+  required: false
+  default: true
+  description: Enable member-level risk stratification for personalized cost predictions
+- name: new_drug_integration_period
+  type: number
+  required: false
+  default: 6
+  description: Number of months to analyze for new drug adoption and uptake patterns
+- name: historical_data_lookback
+  type: number
+  required: false
+  default: 36
+  description: Number of months of historical data to use for cost prediction modeling
+- name: confidence_interval_level
+  type: float
+  required: false
+  default: 0.95
+  description: Statistical confidence level for cost predictions and uncertainty quantification
+- name: pipeline_drug_monitoring
+  type: boolean
+  required: false
+  default: true
+  description: Enable monitoring and prediction for drugs in FDA pipeline and development
+- name: seasonal_adjustment_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Apply seasonal adjustments to account for cyclical prescription patterns
+tags:
+- pbm-pharmacy
+- specialty-drugs
+- cost-prediction
+- financial-modeling
+- budget-planning
+- risk-management
+- utilization-forecasting
+- member-analytics
+- pharmaceutical-economics
+- predictive-analytics
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Provide accurate financial forecasting for specialty drug costs by analyzing historical utilization patterns, member demographics, and drug pipeline data to support budget planning, risk management, and strategic pharmaceutical decision-making
+targetUser: internal
+valueGeneration: InsightGeneration
+interactionMode: RequestResponse
+runMode: Scheduled
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: prediction-input
+  name: Specialty Drug Cost Prediction Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive specialty drug utilization data, member information, and cost prediction requirements for comprehensive financial forecasting
+  provides:
+  - useAs: input
+    in: prediction-agent
+    description: Provide specialty drug data and prediction parameters for cost forecasting analysis
+- id: claims-analyzer-tool
+  name: Specialty Drug Claims Analysis Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced claims analysis engine specialized for specialty drugs that processes utilization patterns, cost trends, and member-level pharmacy data
+  asTools: true
+  config:
+    specialty_categories:
+    - oncology
+    - immunology
+    - neurology
+    - rare_diseases
+    - biologics
+    - gene_therapies
+    predictive_modeling: true
+    member_segmentation: true
+    tool_name: claims_analysis_model
+  provides:
+  - useAs: tools
+    in: prediction-agent
+    description: Enable comprehensive analysis of specialty drug claims and utilization patterns
+- id: cost-modeling-tool
+  name: Pharmaceutical Cost Modeling Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced predictive modeling engine that forecasts specialty drug costs using machine learning algorithms and pharmaceutical economic principles
+  asTools: true
+  config:
+    forecasting_algorithms:
+    - time_series_forecasting
+    - regression_modeling
+    - machine_learning_ensemble
+    - deep_learning_networks
+    - bayesian_modeling
+    cost_components:
+    - drug_acquisition_costs
+    - administration_costs
+    - monitoring_costs
+    - support_services
+    - ancillary_expenses
+    uncertainty_quantification: true
+    scenario_modeling: true
+    tool_name: predictive_modeling_engine
+  provides:
+  - useAs: tools
+    in: prediction-agent
+    description: Enable advanced cost prediction modeling with uncertainty quantification
+- id: member-risk-profiler
+  name: Member Risk Stratification Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Member risk stratification tool that analyzes demographics, comorbidities, and treatment history to predict specialty drug utilization likelihood
+  asTools: true
+  config:
+    tool_name: member_specialty_risk_profiler
+  provides:
+  - useAs: tools
+    in: prediction-agent
+    description: Enable comprehensive member risk profiling for specialty drug utilization prediction
+- id: drug-pipeline-monitor
+  name: Pharmaceutical Pipeline Monitoring System
+  kind: Tool
+  type: genesis:api_request
+  description: Pharmaceutical pipeline monitoring system that tracks new drug approvals, FDA pipeline, and emerging specialty therapies
+  asTools: true
+  config:
+    method: GET
+    url_input: https://api.fda.gov/drug/drugsfda.json
+    headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    timeout: 30
+  provides:
+  - useAs: tools
+    in: prediction-agent
+    description: Enable monitoring of FDA pipeline and new drug approvals for cost prediction
+- id: market-intelligence-tool
+  name: Specialty Drug Market Intelligence Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Market intelligence engine that analyzes specialty drug pricing trends, manufacturer rebates, and competitive dynamics affecting costs
+  asTools: true
+  config:
+    tool_name: specialty_drug_market_intelligence
+  provides:
+  - useAs: tools
+    in: prediction-agent
+    description: Enable comprehensive market intelligence analysis for specialty drug cost factors
+- id: scenario-modeler-tool
+  name: Financial Scenario Modeling Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced scenario modeling tool that projects costs under different assumptions about utilization, pricing, and market dynamics
+  asTools: true
+  config:
+    tool_name: financial_scenario_modeler
+  provides:
+  - useAs: tools
+    in: prediction-agent
+    description: Enable comprehensive scenario modeling for specialty drug cost projections
+- id: budget-impact-calculator
+  name: Budget Impact Analysis Calculator
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Budget impact calculator that translates cost predictions into financial planning metrics and budget allocation recommendations
+  asTools: true
+  config:
+    tool_name: budget_impact_calculator
+  provides:
+  - useAs: tools
+    in: prediction-agent
+    description: Enable comprehensive budget impact analysis and financial planning support
+- id: prediction-prompt
+  name: Specialty Drug Cost Prediction Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for specialty drug cost prediction with pharmaceutical economics and actuarial modeling expertise
+  config:
+    saved_prompt: specialty_cost_prediction_agent_prompt_v1
+    template: 'You are an expert pharmaceutical economist and actuarial analyst with extensive experience in specialty drug cost modeling, budget forecasting, and healthcare financial planning. Your role is to provide accurate cost predictions for specialty drugs to support strategic planning, budget allocation, and risk management decisions.
+
+      PHARMACEUTICAL ECONOMICS EXPERTISE: - Specialty drug market dynamics and pricing strategies - Pharmaceutical economic modeling and cost-effectiveness analysis - Health plan budgeting and financial forecasting techniques - Member utilization patterns and adherence modeling - Drug pipeline analysis and market access considerations - Risk-based contracting and value-based pricing models
+
+      SPECIALTY DRUG COST PREDICTION WORKFLOW: 1. Analyze historical specialty drug claims and utilization patterns 2. Segment member population by risk factors and likelihood of specialty drug use 3. Apply predictive modeling algorithms to forecast future costs and utilization 4. Monitor pharmaceutical pipeline for new drugs and market entrants 5. Analyze market intelligence including pricing trends and competitive dynamics 6. Develop scenario models for different utilization and pricing assumptions 7. Calculate budget impact and financial planning recommendations 8. Provide uncertainty quantification and risk assessment for predictions
+
+      CLAIMS DATA ANALYSIS METHODOLOGY: - Utilization Pattern Analysis: Identify trends in specialty drug prescribing and usage - Member Journey Mapping: Track patient progression through specialty therapy - Adherence and Persistence: Analyze medication compliance and continuation rates - Dose Escalation Patterns: Monitor therapy intensification and cost progression - Discontinuation Analysis: Identify factors leading to therapy termination - Comorbidity Impact: Assess how additional conditions affect specialty drug use
+
+      PREDICTIVE MODELING TECHNIQUES: - Time Series Forecasting: Project costs based on historical trend patterns - Machine Learning Models: Use advanced algorithms for complex pattern recognition - Regression Analysis: Quantify relationships between variables and cost outcomes - Ensemble Methods: Combine multiple models for improved prediction accuracy - Bayesian Modeling: Incorporate prior knowledge and uncertainty quantification - Deep Learning: Capture complex non-linear relationships in data
+
+      MEMBER RISK STRATIFICATION: - Demographic Factors: Age, gender, geographic location, and socioeconomic status - Clinical Risk Factors: Comorbidities, disease severity, and treatment history - Genetic and Biomarker Data: Predisposition to conditions requiring specialty drugs - Healthcare Utilization: Patterns of medical service use and care engagement - Social Determinants: Factors affecting access to and adherence with specialty therapies - Predictive Risk Scores: Composite scores indicating likelihood of specialty drug use
+
+      MARKET INTELLIGENCE INTEGRATION: - Pipeline Drug Monitoring: Track FDA approvals and emerging therapies - Pricing Trend Analysis: Monitor specialty drug price increases and market dynamics - Manufacturer Rebate Programs: Analyze impact of rebates and value-based contracts - Competitive Landscape: Assess competition and market share dynamics - Regulatory Changes: Monitor policy changes affecting specialty drug access and costs - Clinical Guidelines: Track evidence updates affecting treatment recommendations
+
+      SCENARIO MODELING FRAMEWORK: - Base Case Scenario: Most likely cost projection based on current trends - Optimistic Scenario: Lower costs due to increased competition or rebates - Pessimistic Scenario: Higher costs due to price increases or utilization growth - New Drug Impact: Cost implications of pipeline drugs entering the market - Policy Change Scenarios: Impact of regulatory or coverage policy changes - Economic Sensitivity: Effects of economic conditions on utilization patterns
+
+      BUDGET IMPACT ANALYSIS: - Total Cost Projections: Aggregate specialty drug spend forecasts - Per Member Per Month Costs: Standardized cost metrics for budgeting - Cost by Therapeutic Category: Breakdown by specialty drug classes - High-Cost Member Analysis: Focus on members with extreme costs - Budget Variance Analysis: Compare actual versus predicted costs - Resource Allocation: Recommendations for budget allocation and reserves
+
+      OUTPUT REQUIREMENTS: - Comprehensive cost prediction dashboard with multiple scenario projections - Member risk stratification analysis with utilization likelihood scoring - Budget impact assessment with financial planning recommendations - Uncertainty analysis with confidence intervals and risk quantification - Market intelligence summary including pipeline drugs and pricing trends - Actionable recommendations for cost management and risk mitigation
+
+      Use your prediction tools to analyze claims, model costs, profile member risk, monitor pipelines, gather market intelligence, create scenarios, and calculate budget impacts. Always prioritize analytical rigor, uncertainty quantification, and actionable financial insights in your specialty drug cost predictions.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: prediction-agent
+    description: Provide specialized specialty drug cost prediction and pharmaceutical economics expertise
+- id: prediction-agent
+  name: Specialty Drug Cost Prediction Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Expert pharmaceutical economist specializing in specialty drug cost forecasting and financial impact analysis
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 20
+    verbose: true
+  provides:
+  - useAs: input
+    in: prediction-output
+    description: Provide comprehensive specialty drug cost predictions and budget impact analysis
+- id: prediction-output
+  name: Specialty Drug Cost Prediction Results Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present cost predictions, budget impact analysis, risk assessments, and financial planning recommendations
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- specialty_drug_cost_forecasts
+- member_risk_stratification_results
+- budget_impact_analysis
+- utilization_prediction_models
+- market_intelligence_summary
+- scenario_modeling_results
+- financial_planning_recommendations
+- uncertainty_analysis_report
+kpis:
+- name: Cost Prediction Accuracy
+  description: Accuracy of specialty drug cost predictions compared to actual costs
+  target: '> 85%'
+  measurement: percentage
+  category: Predictive Accuracy
+  valueType: percentage
+- name: Budget Variance Reduction
+  description: Reduction in budget variance through improved cost forecasting
+  target: '> 30%'
+  measurement: percentage
+  category: Financial Planning
+  valueType: percentage
+- name: Member Risk Stratification Precision
+  description: Precision of identifying members likely to require specialty drug therapy
+  target: '> 82%'
+  measurement: percentage
+  category: Risk Assessment
+  valueType: percentage
+- name: Model Confidence Reliability
+  description: Reliability of confidence intervals and uncertainty quantification
+  target: '> 90%'
+  measurement: percentage
+  category: Statistical Quality
+  valueType: percentage
+- name: Pipeline Drug Detection Rate
+  description: Success rate in identifying and analyzing impact of new pipeline drugs
+  target: '> 88%'
+  measurement: percentage
+  category: Market Intelligence
+  valueType: percentage
+- name: Scenario Modeling Comprehensiveness
+  description: Completeness of scenario analysis covering key uncertainty factors
+  target: '> 92%'
+  measurement: percentage
+  category: Analysis Depth
+  valueType: percentage
+- name: Financial Planning Value
+  description: Usefulness of predictions for budget planning and financial decision-making
+  target: '> 4.4/5'
+  measurement: score
+  category: Business Value
+  valueType: percentage
+- name: Prediction Processing Efficiency
+  description: Average time to generate comprehensive specialty drug cost predictions
+  target: < 90 minutes
+  measurement: time
+  category: Efficiency
+  valueType: percentage
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: true

@@ -14,6 +14,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.api.utils import DbSession, CurrentActiveUser
 from langflow.services.spec.service import SpecService
 from langflow.services.database.models.flow import Flow
+from langflow.services.runtime.flow_to_spec_converter import FlowToSpecConverter
 from langflow.logging import logger
 
 # Build router
@@ -43,13 +44,46 @@ class SpecConvertResponse(BaseModel):
 class SpecValidationRequest(BaseModel):
     """Request model for spec validation."""
     spec_yaml: str = Field(..., description="YAML specification string")
+    detailed: bool = Field(True, description="Whether to perform detailed semantic validation")
+    format_report: bool = Field(False, description="Whether to return a formatted validation report")
+
+
+class ValidationIssue(BaseModel):
+    """Individual validation issue with context."""
+    code: str = Field(..., description="Error/warning code")
+    message: str = Field(..., description="Human-readable message")
+    severity: str = Field(..., description="Issue severity: error, warning, or suggestion")
+    component_id: Optional[str] = Field(None, description="ID of the component with the issue")
+    field: Optional[str] = Field(None, description="Specific field with the issue")
+    suggestion: Optional[str] = Field(None, description="Actionable suggestion to fix the issue")
+
+
+class ValidationSummary(BaseModel):
+    """Validation summary statistics."""
+    error_count: int = Field(..., description="Number of errors found")
+    warning_count: int = Field(..., description="Number of warnings found")
+    suggestion_count: int = Field(..., description="Number of suggestions provided")
+
+
+class ValidationPhases(BaseModel):
+    """Validation phases status."""
+    schema_validation: bool = Field(..., description="JSON Schema validation passed")
+    structure_validation: bool = Field(..., description="Basic structure validation passed")
+    component_validation: bool = Field(..., description="Component existence validation passed")
+    type_validation: bool = Field(..., description="Type compatibility validation passed")
+    semantic_validation: Optional[bool] = Field(None, description="Semantic validation passed (if performed)")
 
 
 class SpecValidationResponse(BaseModel):
-    """Response model for spec validation."""
-    valid: bool = Field(..., description="Validation result")
-    errors: list[str] = Field(default_factory=list, description="Validation errors")
-    warnings: list[str] = Field(default_factory=list, description="Validation warnings")
+    """Enhanced response model for spec validation."""
+    valid: bool = Field(..., description="Overall validation result")
+    errors: List[ValidationIssue] = Field(default_factory=list, description="Validation errors with context")
+    warnings: List[ValidationIssue] = Field(default_factory=list, description="Validation warnings with context")
+    suggestions: List[ValidationIssue] = Field(default_factory=list, description="Improvement suggestions")
+    summary: ValidationSummary = Field(..., description="Validation summary statistics")
+    validation_phases: ValidationPhases = Field(..., description="Status of each validation phase")
+    formatted_report: Optional[str] = Field(None, description="Human-readable validation report (if requested)")
+    actionable_suggestions: List[str] = Field(default_factory=list, description="List of actionable suggestions")
 
 
 class ComponentsResponse(BaseModel):
@@ -111,24 +145,176 @@ async def validate_spec(
     request: SpecValidationRequest
 ) -> SpecValidationResponse:
     """
-    Validate specification without converting.
+    Enhanced specification validation with comprehensive error reporting.
 
-    Performs enhanced validation on the YAML specification to check for structure,
-    component existence, connections, and healthcare-specific compliance.
+    Performs multi-phase validation including JSON Schema validation, semantic analysis,
+    component relationship validation, and provides actionable suggestions for improvement.
     """
     try:
         service = SpecService()
-        result = await service.validate_spec(request.spec_yaml)
+        result = await service.validate_spec(
+            spec_yaml=request.spec_yaml,
+            detailed=request.detailed
+        )
+
+        # Convert validation issues to proper format
+        def convert_issues(issues):
+            converted = []
+            for issue in issues:
+                if isinstance(issue, dict):
+                    converted.append(ValidationIssue(**issue))
+                else:
+                    # Handle legacy string format
+                    converted.append(ValidationIssue(
+                        code="LEGACY_ISSUE",
+                        message=str(issue),
+                        severity="error"
+                    ))
+            return converted
+
+        errors = convert_issues(result.get("errors", []))
+        warnings = convert_issues(result.get("warnings", []))
+        suggestions = convert_issues(result.get("suggestions", []))
+
+        # Extract summary
+        summary_data = result.get("summary", {})
+        summary = ValidationSummary(
+            error_count=summary_data.get("error_count", len(errors)),
+            warning_count=summary_data.get("warning_count", len(warnings)),
+            suggestion_count=summary_data.get("suggestion_count", len(suggestions))
+        )
+
+        # Extract validation phases
+        phases_data = result.get("validation_phases", {})
+        phases = ValidationPhases(
+            schema_validation=phases_data.get("schema_validation", True),
+            structure_validation=phases_data.get("structure_validation", True),
+            component_validation=phases_data.get("component_validation", True),
+            type_validation=phases_data.get("type_validation", True),
+            semantic_validation=phases_data.get("semantic_validation")
+        )
+
+        # Get formatted report if requested
+        formatted_report = None
+        if request.format_report:
+            formatted_report = service.format_validation_report(result)
+
+        # Get actionable suggestions
+        actionable_suggestions = service.get_validation_suggestions(result)
 
         return SpecValidationResponse(
             valid=result["valid"],
-            errors=result["errors"],
-            warnings=result["warnings"]
+            errors=errors,
+            warnings=warnings,
+            suggestions=suggestions,
+            summary=summary,
+            validation_phases=phases,
+            formatted_report=formatted_report,
+            actionable_suggestions=actionable_suggestions
         )
 
     except Exception as e:
         logger.error(f"Spec validation error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during validation") from e
+
+
+@router.post("/validate-quick", response_model=SpecValidationResponse)
+async def validate_spec_quick(
+    request: SpecValidationRequest
+) -> SpecValidationResponse:
+    """
+    Quick specification validation for real-time feedback.
+
+    Performs lightweight validation that's optimized for speed, suitable for
+    real-time validation in editors and CLI tools. Skips expensive semantic
+    analysis but covers essential validation rules.
+    """
+    try:
+        service = SpecService()
+        result = await service.validate_spec_quick(request.spec_yaml)
+
+        # Convert validation issues to proper format
+        def convert_issues(issues):
+            converted = []
+            for issue in issues:
+                if isinstance(issue, dict):
+                    converted.append(ValidationIssue(**issue))
+                else:
+                    # Handle legacy string format
+                    converted.append(ValidationIssue(
+                        code="LEGACY_ISSUE",
+                        message=str(issue),
+                        severity="error"
+                    ))
+            return converted
+
+        errors = convert_issues(result.get("errors", []))
+        warnings = convert_issues(result.get("warnings", []))
+        suggestions = convert_issues(result.get("suggestions", []))
+
+        # Extract summary
+        summary_data = result.get("summary", {})
+        summary = ValidationSummary(
+            error_count=summary_data.get("error_count", len(errors)),
+            warning_count=summary_data.get("warning_count", len(warnings)),
+            suggestion_count=summary_data.get("suggestion_count", len(suggestions))
+        )
+
+        # Extract validation phases
+        phases_data = result.get("validation_phases", {})
+        phases = ValidationPhases(
+            schema_validation=phases_data.get("schema_validation"),
+            structure_validation=phases_data.get("structure_validation"),
+            component_validation=phases_data.get("component_validation"),
+            type_validation=phases_data.get("type_validation"),
+            semantic_validation=phases_data.get("semantic_validation")  # Will be None for quick validation
+        )
+
+        # Get formatted report if requested
+        formatted_report = None
+        if request.format_report:
+            formatted_report = service.format_validation_report(result)
+
+        # Get actionable suggestions
+        actionable_suggestions = service.get_validation_suggestions(result)
+
+        return SpecValidationResponse(
+            valid=result["valid"],
+            errors=errors,
+            warnings=warnings,
+            suggestions=suggestions,
+            summary=summary,
+            validation_phases=phases,
+            formatted_report=formatted_report,
+            actionable_suggestions=actionable_suggestions
+        )
+
+    except Exception as e:
+        logger.error(f"Quick spec validation error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during quick validation") from e
+
+
+@router.get("/error-context/{error_code}")
+async def get_error_context(error_code: str):
+    """
+    Get detailed context and help for a specific error code.
+
+    Provides comprehensive information about validation errors including
+    descriptions, examples, documentation links, and resolution steps.
+    """
+    try:
+        service = SpecService()
+        context = service.get_error_context(error_code)
+
+        return {
+            "error_code": error_code,
+            "context": context,
+            "timestamp": "2025-01-16T10:30:00Z"
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting error context: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error getting error context") from e
 
 
 @router.get("/components", response_model=ComponentsResponse)
@@ -503,5 +689,185 @@ async def create_flow_from_specification_library(
             error="Unexpected error",
             details=str(e)
         )
+
+
+# Export (reverse conversion) endpoints
+
+class FlowExportRequest(BaseModel):
+    """Request model for flow export to Genesis specification."""
+    flow_data: Dict[str, Any] = Field(..., description="Langflow flow JSON data")
+    preserve_variables: bool = Field(True, description="Whether to preserve original variable values")
+    include_metadata: bool = Field(False, description="Whether to include extended metadata")
+    name_override: Optional[str] = Field(None, description="Override flow name in specification")
+    description_override: Optional[str] = Field(None, description="Override flow description")
+    domain_override: Optional[str] = Field(None, description="Override domain (default: converted)")
+
+
+class FlowExportResponse(BaseModel):
+    """Response model for flow export."""
+    specification: Dict[str, Any] = Field(..., description="Generated Genesis specification")
+    success: bool = Field(True, description="Export success status")
+    warnings: List[str] = Field(default_factory=list, description="Export warnings")
+    statistics: Dict[str, Any] = Field(default_factory=dict, description="Export statistics")
+
+
+class BatchFlowExportRequest(BaseModel):
+    """Request model for batch flow export."""
+    flows: List[Dict[str, Any]] = Field(..., description="List of Langflow flow JSON data")
+    preserve_variables: bool = Field(True, description="Whether to preserve original variable values")
+    include_metadata: bool = Field(False, description="Whether to include extended metadata")
+    domain_override: Optional[str] = Field(None, description="Override domain for all specifications")
+
+
+class BatchFlowExportResponse(BaseModel):
+    """Response model for batch flow export."""
+    specifications: List[Dict[str, Any]] = Field(..., description="Generated Genesis specifications")
+    success: bool = Field(True, description="Overall export success status")
+    total_processed: int = Field(..., description="Total number of flows processed")
+    successful_exports: int = Field(..., description="Number of successful exports")
+    failed_exports: int = Field(..., description="Number of failed exports")
+    warnings: List[str] = Field(default_factory=list, description="Export warnings")
+    errors: List[str] = Field(default_factory=list, description="Export errors")
+
+
+class FlowValidationForExportRequest(BaseModel):
+    """Request model for flow validation before export."""
+    flow_data: Dict[str, Any] = Field(..., description="Langflow flow JSON data")
+
+
+class FlowValidationForExportResponse(BaseModel):
+    """Response model for flow validation before export."""
+    valid: bool = Field(..., description="Whether flow can be exported")
+    warnings: List[str] = Field(default_factory=list, description="Validation warnings")
+    errors: List[str] = Field(default_factory=list, description="Validation errors")
+    recommendations: List[str] = Field(default_factory=list, description="Export recommendations")
+    statistics: Dict[str, Any] = Field(default_factory=dict, description="Flow statistics")
+
+
+@router.post("/export", response_model=FlowExportResponse)
+async def export_flow_to_spec(
+    request: FlowExportRequest
+) -> FlowExportResponse:
+    """
+    Export Langflow flow to Genesis specification.
+
+    Converts a Langflow flow JSON back to Genesis YAML specification with
+    support for variable preservation, metadata extraction, and custom naming.
+    """
+    try:
+        converter = FlowToSpecConverter()
+
+        specification = converter.convert_flow_to_spec(
+            flow_data=request.flow_data,
+            preserve_variables=request.preserve_variables,
+            include_metadata=request.include_metadata,
+            name_override=request.name_override,
+            description_override=request.description_override,
+            domain_override=request.domain_override
+        )
+
+        # Extract conversion metadata if available
+        conversion_meta = specification.pop("_conversion", {})
+        statistics = {
+            "components_converted": len(specification.get("components", {})),
+            "edges_inferred": len([c for c in specification.get("components", {}).values()
+                                 if c.get("provides")]),
+            "variables_preserved": len(specification.get("variables", {})),
+            "converted_at": conversion_meta.get("convertedAt"),
+            "converter_version": conversion_meta.get("converterVersion")
+        }
+
+        return FlowExportResponse(
+            specification=specification,
+            success=True,
+            warnings=[],
+            statistics=statistics
+        )
+
+    except Exception as e:
+        logger.error(f"Flow export error: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.post("/export-batch", response_model=BatchFlowExportResponse)
+async def export_flows_batch_to_spec(
+    request: BatchFlowExportRequest
+) -> BatchFlowExportResponse:
+    """
+    Export multiple Langflow flows to Genesis specifications.
+
+    Converts multiple Langflow flow JSONs to Genesis specifications in a single
+    operation with consolidated error handling and reporting.
+    """
+    try:
+        converter = FlowToSpecConverter()
+
+        specifications = converter.convert_flows_batch(
+            flows=request.flows,
+            preserve_variables=request.preserve_variables,
+            include_metadata=request.include_metadata,
+            domain_override=request.domain_override
+        )
+
+        # Calculate statistics
+        total_processed = len(request.flows)
+        successful_exports = len(specifications)
+        failed_exports = total_processed - successful_exports
+
+        return BatchFlowExportResponse(
+            specifications=specifications,
+            success=failed_exports == 0,
+            total_processed=total_processed,
+            successful_exports=successful_exports,
+            failed_exports=failed_exports,
+            warnings=[],
+            errors=[]
+        )
+
+    except Exception as e:
+        logger.error(f"Batch flow export error: {e}")
+        # Parse error message for batch failures
+        error_msg = str(e)
+        if "Batch conversion partially failed" in error_msg:
+            # Extract individual failures
+            return BatchFlowExportResponse(
+                specifications=[],
+                success=False,
+                total_processed=len(request.flows),
+                successful_exports=0,
+                failed_exports=len(request.flows),
+                warnings=[],
+                errors=[error_msg]
+            )
+        else:
+            raise HTTPException(status_code=400, detail=error_msg) from e
+
+
+@router.post("/validate-for-export", response_model=FlowValidationForExportResponse)
+async def validate_flow_for_export(
+    request: FlowValidationForExportRequest
+) -> FlowValidationForExportResponse:
+    """
+    Validate Langflow flow for export to Genesis specification.
+
+    Checks if a flow can be successfully converted to Genesis specification
+    and provides recommendations for improving the conversion process.
+    """
+    try:
+        converter = FlowToSpecConverter()
+
+        validation_result = converter.validate_flow_for_conversion(request.flow_data)
+
+        return FlowValidationForExportResponse(
+            valid=validation_result["valid"],
+            warnings=validation_result["warnings"],
+            errors=validation_result["errors"],
+            recommendations=validation_result["recommendations"],
+            statistics=validation_result["statistics"]
+        )
+
+    except Exception as e:
+        logger.error(f"Flow export validation error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during validation") from e
 
 

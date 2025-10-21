@@ -902,6 +902,53 @@ def version_option(
     pass
 
 
+# Workflow commands integration
+def add_workflow_commands():
+    """Add Workflow CLI commands to the main app."""
+    try:
+        from langflow.cli.workflow.main import workflow as workflow_group
+
+        # Convert click group to typer command
+        @app.command("workflow", context_settings={"allow_extra_args": True, "allow_interspersed_args": False})
+        def workflow_wrapper(
+            ctx: typer.Context,
+        ) -> None:
+            """Workflow specification management commands.
+
+            Manage AI agent specifications, templates, and workflows using the Genesis
+            specification system integrated with AI Studio.
+
+            Examples:
+                ai-studio workflow create -t template.yaml
+                ai-studio workflow validate spec.yaml
+                ai-studio workflow export flow.json
+                ai-studio workflow list flows
+                ai-studio workflow config show
+            """
+            import sys
+            from click.testing import CliRunner
+
+            # Get the remaining arguments
+            args = ctx.args if ctx.args else []
+
+            # Execute workflow command
+            runner = CliRunner()
+            result = runner.invoke(workflow_group, args, catch_exceptions=False)
+
+            # Print output and exit with the same code
+            if result.output:
+                typer.echo(result.output, nl=False)
+
+            if result.exit_code != 0:
+                raise typer.Exit(result.exit_code)
+
+    except ImportError:
+        logger.warning("Workflow CLI not available. Workflow commands will not be registered.")
+
+
+# Note: Genesis CLI has been removed - use workflow commands instead
+
+
 def api_key_banner(unmasked_api_key) -> None:
     is_mac = platform.system() == "Darwin"
     import pyperclip
@@ -930,6 +977,10 @@ def api_key_banner(unmasked_api_key) -> None:
         logger.info("Make sure to store it in a secure location.")
         ctrl_cmd = "Ctrl" if not is_mac else "Cmd"
         logger.info(f"The API key has been copied to your clipboard. {ctrl_cmd} + V to paste it.")
+
+
+# Register Workflow commands
+add_workflow_commands()
 
 
 def main() -> None:

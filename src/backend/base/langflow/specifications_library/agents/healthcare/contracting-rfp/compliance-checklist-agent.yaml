@@ -1,0 +1,297 @@
+id: urn:agent:genesis:contracting-rfp:compliance-checklist-agent:1.0.0
+name: Compliance Checklist Agent
+fullyQualifiedName: genesis.autonomize.ai.compliance_checklist_agent
+description: Uses document comparison to check whether response files meet every checklist item in an RFP or contract for healthcare compliance verification and gap analysis
+domain: autonomize.ai
+subDomain: contracting-rfp
+version: 1.0.0
+environment: production
+agentOwner: contracting-rfp@autonomize.ai
+agentOwnerDisplayName: Contracting & RFP Team
+email: contracting-rfp@autonomize.ai
+status: ACTIVE
+variables:
+- name: checklist_matching_threshold
+  type: float
+  required: false
+  default: 0.9
+  description: Minimum confidence score for matching checklist items to response content
+- name: compliance_verification_depth
+  type: string
+  required: false
+  default: comprehensive
+  description: Depth of compliance verification (basic, standard, comprehensive, exhaustive)
+- name: document_comparison_algorithm
+  type: string
+  required: false
+  default: semantic_structural
+  description: Algorithm for document comparison (keyword_based, semantic_only, structural_only, semantic_structural)
+- name: gap_analysis_sensitivity
+  type: string
+  required: false
+  default: high
+  description: Sensitivity level for identifying compliance gaps (low, medium, high, critical_only)
+- name: healthcare_compliance_focus
+  type: array
+  required: false
+  default:
+  - hipaa
+  - hitech
+  - cms
+  - state_regulations
+  - accreditation
+  description: Healthcare compliance frameworks to prioritize in checklist verification
+- name: checklist_item_weighting
+  type: boolean
+  required: false
+  default: true
+  description: Apply importance weighting to different checklist items based on regulatory significance
+- name: automated_remediation_suggestions
+  type: boolean
+  required: false
+  default: true
+  description: Provide automated suggestions for addressing identified compliance gaps
+- name: cross_reference_validation
+  type: boolean
+  required: false
+  default: true
+  description: Enable cross-referencing of related checklist items and dependencies
+tags:
+- contracting-rfp
+- compliance-verification
+- document-comparison
+- checklist-validation
+- gap-analysis
+- healthcare-compliance
+- regulatory-verification
+- contract-validation
+- quality-assurance
+- audit-preparation
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Ensure complete compliance with RFP and contract requirements by systematically comparing response documents against comprehensive checklists, identifying gaps, and providing actionable remediation guidance for healthcare compliance verification
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+components:
+- id: compliance-input
+  name: Compliance Verification Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive RFP/contract checklists and response documents for comprehensive compliance verification and gap analysis
+  provides:
+  - useAs: input
+    in: compliance-agent
+    description: Provide checklist requirements and response documents for compliance verification
+- id: document-parser-tool
+  name: Healthcare Document Parser
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced document parsing tool that extracts structured content from RFP checklists, contracts, and response documents for detailed comparison analysis
+  asTools: true
+  config:
+    tool_name: healthcare_document_parser
+  provides:
+  - useAs: tools
+    in: compliance-agent
+    description: Enable comprehensive parsing and structure extraction from compliance documents
+- id: checklist-analyzer-tool
+  name: Compliance Checklist Analyzer
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Specialized compliance analysis engine that processes healthcare regulatory checklists and identifies all required compliance items with criticality scoring
+  asTools: true
+  config:
+    regulatory_frameworks:
+    - hipaa_privacy_rule
+    - hipaa_security_rule
+    - hitech_act
+    - cms_regulations
+    - state_insurance_laws
+    - accreditation_standards
+    criticality_scoring: true
+    dependency_mapping: true
+    tool_name: compliance_analysis_model
+  provides:
+  - useAs: tools
+    in: compliance-agent
+    description: Enable intelligent analysis and categorization of compliance checklist requirements
+- id: document-comparator-tool
+  name: Advanced Document Comparison Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Sophisticated document comparison tool that performs semantic and structural analysis to match checklist items with response content and identify compliance gaps
+  asTools: true
+  config:
+    tool_name: advanced_document_comparator
+  provides:
+  - useAs: tools
+    in: compliance-agent
+    description: Enable detailed document comparison and compliance gap identification
+- id: gap-analyzer-tool
+  name: Compliance Gap Analysis Tool
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Comprehensive gap analysis engine that identifies missing compliance elements, assesses risk levels, and prioritizes remediation efforts for healthcare requirements
+  asTools: true
+  config:
+    tool_name: compliance_gap_analyzer
+  provides:
+  - useAs: tools
+    in: compliance-agent
+    description: Enable systematic identification and analysis of compliance gaps and risks
+- id: regulatory-validator-tool
+  name: Healthcare Regulatory Validator
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Healthcare-specific regulatory validation tool that verifies compliance against current healthcare regulations, standards, and best practices
+  asTools: true
+  config:
+    compliance_frameworks:
+    - hipaa
+    - hitech
+    - cms_conditions_of_participation
+    - meaningful_use
+    - quality_payment_program
+    - state_licensing_requirements
+    real_time_updates: true
+    regulatory_cross_check: true
+    tool_name: healthcare_compliance_connector
+  provides:
+  - useAs: tools
+    in: compliance-agent
+    description: Enable healthcare regulatory compliance validation and verification
+- id: remediation-advisor-tool
+  name: Compliance Remediation Advisor
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Intelligent remediation advisory tool that provides specific, actionable recommendations for addressing identified compliance gaps and improving response quality
+  asTools: true
+  config:
+    tool_name: compliance_remediation_advisor
+  provides:
+  - useAs: tools
+    in: compliance-agent
+    description: Enable automated generation of compliance remediation recommendations
+- id: compliance-prompt
+  name: Healthcare Compliance Verification Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for healthcare compliance verification and checklist validation expertise
+  config:
+    saved_prompt: compliance_checklist_agent_prompt_v1
+    template: 'You are an expert healthcare compliance analyst with extensive experience in regulatory requirements, contract compliance, and healthcare quality assurance. Your role is to systematically verify that response documents meet all checklist requirements and identify any compliance gaps or risks.
+
+      HEALTHCARE COMPLIANCE EXPERTISE: - HIPAA Privacy and Security Rules implementation and verification - CMS regulations including Conditions of Participation and quality measures - State insurance regulations and licensing requirements - Healthcare accreditation standards (NCQA, AAAHC, Joint Commission) - Clinical quality measures and performance standards - Healthcare technology and interoperability compliance
+
+      COMPLIANCE VERIFICATION WORKFLOW: 1. Parse and analyze RFP/contract checklists to identify all required items 2. Categorize checklist items by compliance framework and criticality level 3. Extract and structure content from response documents 4. Perform systematic comparison of checklist items against response content 5. Identify missing, incomplete, or inadequate compliance elements 6. Assess risk levels and potential compliance implications 7. Generate prioritized remediation recommendations 8. Provide comprehensive compliance verification report
+
+      CHECKLIST ANALYSIS METHODOLOGY: - Requirement Classification: Categorize by regulatory framework and importance - Content Mapping: Map specific response content to checklist requirements - Gap Identification: Identify missing or inadequate compliance elements - Risk Assessment: Evaluate potential regulatory and business risks - Dependency Analysis: Identify related requirements and cross-dependencies - Remediation Planning: Provide specific steps to address gaps
+
+      HEALTHCARE COMPLIANCE FRAMEWORKS: - HIPAA Privacy Rule: PHI protection, patient rights, administrative safeguards - HIPAA Security Rule: Technical, administrative, and physical safeguards - HITECH Act: Breach notification, business associate requirements - CMS Regulations: Provider enrollment, quality reporting, payment rules - State Regulations: Insurance laws, provider licensing, network adequacy - Accreditation Standards: Quality measures, patient safety, care coordination
+
+      DOCUMENT COMPARISON TECHNIQUES: - Semantic Analysis: Understand meaning and intent of checklist items - Structural Analysis: Identify document organization and completeness - Cross-Reference Validation: Verify consistency across related sections - Evidence Mapping: Link specific evidence to compliance requirements - Completeness Assessment: Ensure all required elements are addressed - Quality Evaluation: Assess adequacy and quality of compliance responses
+
+      QUALITY ASSURANCE STANDARDS: - Comprehensive coverage of all checklist items without omissions - Accurate identification of compliance gaps and risks - Clear prioritization of remediation efforts based on regulatory impact - Specific, actionable recommendations for addressing gaps - Consistent application of compliance standards and criteria - Thorough documentation of verification process and findings
+
+      OUTPUT REQUIREMENTS: - Complete compliance verification matrix showing all checklist items and status - Detailed gap analysis with risk assessment and priority ranking - Specific remediation recommendations with implementation guidance - Compliance score and overall assessment of response adequacy - Risk mitigation strategies for identified compliance deficiencies - Documentation supporting all findings and recommendations
+
+      Use your compliance tools to parse documents, analyze checklists, compare content, identify gaps, validate regulations, and provide remediation advice. Always prioritize patient safety, data security, and regulatory compliance in your analysis.
+
+      '
+  provides:
+  - useAs: system_prompt
+    in: compliance-agent
+    description: Provide specialized healthcare compliance verification and regulatory analysis expertise
+- id: compliance-agent
+  name: Healthcare Compliance Verification Specialist
+  kind: Agent
+  type: genesis:agent
+  description: Expert healthcare compliance analyst specializing in systematic checklist verification and regulatory gap analysis
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 20
+    verbose: true
+  provides:
+  - useAs: input
+    in: compliance-output
+    description: Provide comprehensive compliance verification analysis and gap remediation recommendations
+- id: compliance-output
+  name: Compliance Verification Results Output
+  kind: Data
+  type: genesis:chat_output
+  description: Present detailed compliance verification results with gap analysis, risk assessment, and remediation guidance
+  config:
+    should_store_message: true
+  provides: []
+outputs:
+- compliance_verification_matrix
+- gap_analysis_report
+- risk_assessment_summary
+- remediation_recommendations
+- regulatory_validation_results
+- checklist_completion_status
+- compliance_score_metrics
+- audit_preparation_summary
+kpis:
+- name: Checklist Item Coverage Rate
+  description: Percentage of checklist items successfully verified and assessed
+  target: '> 98%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Compliance Gap Detection Accuracy
+  description: Accuracy of identifying missing or inadequate compliance elements
+  target: '> 95%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Regulatory Validation Accuracy
+  description: Accuracy of healthcare regulatory compliance validation against current standards
+  target: '> 97%'
+  measurement: percentage
+  category: Compliance
+  valueType: percentage
+- name: Document Comparison Efficiency
+  description: Time efficiency in comparing response documents against compliance checklists
+  target: < 15 minutes
+  measurement: time
+  category: Efficiency
+  valueType: percentage
+- name: Remediation Recommendation Quality
+  description: Quality and actionability of compliance remediation recommendations
+  target: '> 4.3/5'
+  measurement: score
+  category: Quality
+  valueType: percentage
+- name: Risk Prioritization Accuracy
+  description: Accuracy of risk assessment and prioritization for identified compliance gaps
+  target: '> 92%'
+  measurement: percentage
+  category: Risk Management
+  valueType: percentage
+- name: False Positive Rate
+  description: Rate of incorrectly identified compliance gaps or issues
+  target: < 5%
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+- name: Compliance Verification Completeness
+  description: Completeness of compliance verification across all regulatory frameworks
+  target: '> 94%'
+  measurement: percentage
+  category: Quality
+  valueType: percentage
+securityInfo:
+  visibility: Internal
+  confidentiality: Medium
+  gdprSensitive: false
