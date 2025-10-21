@@ -414,25 +414,31 @@ class MCPComposerService(Service):
             return True
 
         auth_type = new_auth.get("auth_type", "")
-
-        # Auth type changed?
         if existing_auth.get("auth_type") != auth_type:
             return True
 
-        # Define which fields to check for each auth type
-        fields_to_check = []
         if auth_type == "oauth":
-            # Get all oauth_* fields plus host/port from both configs
-            all_keys = set(existing_auth.keys()) | set(new_auth.keys())
-            fields_to_check = [k for k in all_keys if k.startswith("oauth_") or k in ["host", "port"]]
+            # Avoid repeated set construction/allocation, merge keys once
+            all_keys = list(existing_auth.keys())
+            for k in new_auth.keys():
+                if k not in existing_auth:
+                    all_keys.append(k)
+            # Only keep relevant fields
+            fields_to_check = [k for k in all_keys if k.startswith("oauth_") or k in {"host", "port"}]
         elif auth_type == "apikey":
             fields_to_check = ["api_key"]
+        else:
+            fields_to_check = []
 
-        # Compare relevant fields
+        # Use local references for the static method for a slight speed gain in tight loops
+        normalize = self._normalize_config_value
+        exist_get = existing_auth.get
+        new_get = new_auth.get
+
+        # Exit early on first difference
         for field in fields_to_check:
-            old_normalized = self._normalize_config_value(existing_auth.get(field))
-            new_normalized = self._normalize_config_value(new_auth.get(field))
-
+            old_normalized = normalize(exist_get(field))
+            new_normalized = normalize(new_get(field))
             if old_normalized != new_normalized:
                 return True
 
