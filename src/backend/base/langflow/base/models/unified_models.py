@@ -43,6 +43,7 @@ def get_unified_models_detailed(
     provider: str | None = None,
     model_name: str | None = None,
     model_type: str | None = None,
+    *, 
     include_unsupported: bool | None = None,
     **metadata_filters,
 ):
