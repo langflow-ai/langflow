@@ -19,7 +19,6 @@ from langchain_core.tools import BaseTool
 from langchain_openai.chat_models.base import ChatOpenAI
 from pydantic import Field
 
-from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
 from lfx.base.agents.utils import data_to_messages
@@ -28,15 +27,13 @@ from lfx.base.models.model_input_constants import (
     MODELS_METADATA,
 )
 from lfx.components.agents import AgentComponent
-from lfx.components.helpers.memory import MemoryComponent
 from lfx.inputs.inputs import BoolInput
-from lfx.io import DropdownInput, IntInput, MultilineInput, Output, TableInput
+from lfx.io import DropdownInput, IntInput, Output
 from lfx.log.logger import logger
 from lfx.memory import delete_message
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data
 from lfx.schema.message import Message
-from lfx.schema.table import EditMode
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
@@ -49,6 +46,13 @@ def set_advanced_true(component_input):
 
 
 MODEL_PROVIDERS_LIST = ["Anthropic", "OpenAI"]
+INPUT_NAMES_TO_BE_OVERRIDDEN = ["agent_llm"]
+
+
+def get_parent_agent_inputs():
+    return [
+        input_field for input_field in AgentComponent.inputs if input_field.name not in INPUT_NAMES_TO_BE_OVERRIDDEN
+    ]
 
 
 class PostToolProcessor(BaseTool):
@@ -145,7 +149,7 @@ class PostToolProcessor(BaseTool):
 
         return llm_client_obj
 
-    def process_tool_response(self, tool_response: str, **_kwargs) -> None:
+    def process_tool_response(self, tool_response: str, **_kwargs):
         logger.info("Calling process_tool_response of PostToolProcessor")
         tool_response_str = self._get_tool_response_str(tool_response)
 
@@ -193,8 +197,6 @@ class ALTKAgentComponent(AgentComponent):
     beta = True
     name = "ALTKAgent"
 
-    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
-
     # Filter out json_mode from OpenAI inputs since we handle structured output differently
     if "OpenAI" in MODEL_PROVIDERS_DICT:
         openai_inputs_filtered = [
@@ -217,93 +219,7 @@ class ALTKAgentComponent(AgentComponent):
             input_types=[],
             options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA],
         ),
-        *openai_inputs_filtered,
-        MultilineInput(
-            name="system_prompt",
-            display_name="Agent Instructions",
-            info="System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-            value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
-            advanced=False,
-        ),
-        IntInput(
-            name="n_messages",
-            display_name="Number of Chat History Messages",
-            value=100,
-            info="Number of chat history messages to retrieve.",
-            advanced=True,
-            show=True,
-        ),
-        MultilineInput(
-            name="format_instructions",
-            display_name="Output Format Instructions",
-            info="Generic Template for structured output formatting. Valid only with Structured response.",
-            value=(
-                "You are an AI that extracts structured JSON objects from unstructured text. "
-                "Use a predefined schema with expected types (str, int, float, bool, dict). "
-                "Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. "
-                "Fill missing or ambiguous values with defaults: null for missing values. "
-                "Remove exact duplicates but keep variations that have different field values. "
-                "Always return valid JSON in the expected format, never throw errors. "
-                "If multiple objects can be extracted, return them all in the structured format."
-            ),
-            advanced=True,
-        ),
-        TableInput(
-            name="output_schema",
-            display_name="Output Schema",
-            info=(
-                "Schema Validation: Define the structure and data types for structured output. "
-                "No validation if no output schema."
-            ),
-            advanced=True,
-            required=False,
-            value=[],
-            table_schema=[
-                {
-                    "name": "name",
-                    "display_name": "Name",
-                    "type": "str",
-                    "description": "Specify the name of the output field.",
-                    "default": "field",
-                    "edit_mode": EditMode.INLINE,
-                },
-                {
-                    "name": "description",
-                    "display_name": "Description",
-                    "type": "str",
-                    "description": "Describe the purpose of the output field.",
-                    "default": "description of field",
-                    "edit_mode": EditMode.POPOVER,
-                },
-                {
-                    "name": "type",
-                    "display_name": "Type",
-                    "type": "str",
-                    "edit_mode": EditMode.INLINE,
-                    "description": ("Indicate the data type of the output field (e.g., str, int, float, bool, dict)."),
-                    "options": ["str", "int", "float", "bool", "dict"],
-                    "default": "str",
-                },
-                {
-                    "name": "multiple",
-                    "display_name": "As List",
-                    "type": "boolean",
-                    "description": "Set to True if this output field should be a list of the specified type.",
-                    "default": "False",
-                    "edit_mode": EditMode.INLINE,
-                },
-            ],
-        ),
-        *LCToolsAgentComponent._base_inputs,
-        # removed memory inputs from agent component
-        # *memory_inputs,
-        BoolInput(
-            name="add_current_date_tool",
-            display_name="Current Date",
-            advanced=True,
-            info="If true, will add a tool to the agent that returns the current date.",
-            value=True,
-        ),
+        *get_parent_agent_inputs(),
         BoolInput(
             name="enable_post_tool_reflection",
             display_name="Post Tool JSON Processing",
