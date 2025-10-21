@@ -14,7 +14,6 @@ _dynamic_imports = {
     "EmbeddingModelComponent": "embedding_model",
     "LanguageModelComponent": "language_model",
     "ModelsProviderSetupComponent": "models_provider_setup",
-
 }
 
 __all__ = ["EmbeddingModelComponent", "LanguageModelComponent", "ModelsProviderSetupComponent"]
