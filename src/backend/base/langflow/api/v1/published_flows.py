@@ -50,12 +50,29 @@ async def publish_flow(
     existing = existing_result.first()
 
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Flow is already published. Please unpublish first to re-publish.",
-        )
+        # Update existing published flow with new snapshot
+        existing.version = payload.version
+        existing.description = flow.description
+        existing.tags = flow.tags if flow.tags else None
+        existing.category = payload.category
+        existing.flow_data = flow.data  # New snapshot
+        existing.published_at = datetime.now(timezone.utc)  # Update timestamp
+        existing.updated_at = datetime.now(timezone.utc)
+        existing.status = PublishStatusEnum.PUBLISHED  # Ensure published
 
-    # Create published flow record with snapshot
+        session.add(existing)
+        await session.commit()
+        await session.refresh(existing)
+
+        # Return updated record
+        result_data = PublishedFlowRead.model_validate(existing, from_attributes=True)
+        result_data.flow_name = flow.name
+        result_data.flow_icon = flow.icon if flow.icon else None
+        result_data.published_by_username = current_user.username
+
+        return result_data
+
+    # Create new published flow record with snapshot
     published_flow = PublishedFlow(
         flow_id=flow_id,
         user_id=current_user.id,
@@ -262,6 +279,49 @@ async def get_published_flow(
     item.published_by_username = user.username
 
     return item
+
+
+@router.get("/{published_flow_id}/spec", status_code=status.HTTP_200_OK)
+async def get_published_flow_spec(
+    published_flow_id: UUID,
+    session: DbSession,
+):
+    """
+    Get Genesis specification for a published flow (public endpoint).
+    Converts the flow_data snapshot to Genesis specification format.
+    """
+    query = select(PublishedFlow, Flow).join(Flow, PublishedFlow.flow_id == Flow.id).where(
+        PublishedFlow.id == published_flow_id
+    )
+    result = await session.exec(query)
+    row = result.first()
+
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Published flow not found")
+
+    published_flow, flow = row
+
+    try:
+        # Import FlowToSpecConverter
+        from langflow.services.runtime.flow_to_spec_converter import FlowToSpecConverter
+
+        # Initialize converter
+        converter = FlowToSpecConverter()
+
+        # Convert flow_data to Genesis specification
+        spec = converter.convert_flow_to_spec(
+            flow_data=published_flow.flow_data,
+            preserve_variables=True,
+            include_metadata=False,
+            name_override=flow.name,
+            description_override=published_flow.description or flow.description,
+        )
+
+        return spec
+
+    except Exception as e:
+        msg = f"Failed to generate specification: {e}"
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg) from e
 
 
 @router.delete("/{published_flow_id}", status_code=status.HTTP_200_OK)

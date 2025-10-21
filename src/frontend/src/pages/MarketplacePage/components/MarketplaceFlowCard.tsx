@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import IconComponent from "@/components/common/genericIconComponent";
 import moment from "moment";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 
 interface MarketplaceFlowCardProps {
   item: any;
@@ -12,8 +13,17 @@ export default function MarketplaceFlowCard({
   item,
   viewMode,
 }: MarketplaceFlowCardProps) {
+  const navigate = useCustomNavigate();
+
+  const handleClick = () => {
+    navigate(`/marketplace/detail/${item.id}`);
+  };
+
   return (
-    <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer">
+    <Card
+      className="p-4 hover:shadow-lg transition-shadow cursor-pointer"
+      onClick={handleClick}
+    >
       <div className="flex flex-col gap-3">
         {/* Header */}
         <div className="flex items-start justify-between">
