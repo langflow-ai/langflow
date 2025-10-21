@@ -533,6 +533,7 @@ class MCPToolsComponent(ComponentWithCache):
             msg = f"Error in build_output: {e!s}"
             await logger.aexception(msg)
             raise ValueError(msg) from e
+
     def process_output_item(self, item_dict):
         """Process the output of a tool."""
         if item_dict.get("type") == "text":
@@ -544,7 +545,7 @@ class MCPToolsComponent(ComponentWithCache):
             except Exception:
                 return item_dict
         return item_dict
-            
+
     def _get_session_context(self) -> str | None:
         """Get the Langflow session ID for MCP session caching."""
         # Try to get session ID from the component's execution context
