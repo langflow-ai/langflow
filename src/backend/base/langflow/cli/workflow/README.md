@@ -1,63 +1,67 @@
-# Genesis CLI for AI Studio
+# Workflow CLI for AI Studio
 
-This directory contains the Genesis Agent CLI integration for AI Studio, providing unified `ai-studio genesis` commands for managing agent specifications, templates, and workflows.
+This directory contains the Workflow CLI for AI Studio, providing unified `ai-studio workflow` commands for managing agent specifications, templates, and workflows.
 
 ## Overview
 
-The Genesis CLI enables developers to:
+The Workflow CLI enables developers to:
 - Create flows from YAML specifications
 - Validate specifications with detailed feedback
+- Export existing flows to specifications
 - List and manage flows, templates, and components
 - Configure AI Studio connections
 - Browse and use healthcare agent templates
 
 ## Installation
 
-The Genesis CLI is automatically available when AI Studio is installed. No additional installation required.
+The Workflow CLI is automatically available when AI Studio is installed. No additional installation required.
 
 ## Quick Start
 
 ```bash
 # Show available commands
-ai-studio genesis --help
+ai-studio workflow --help
 
 # Create a flow from template
-ai-studio genesis create -t healthcare/medication-extractor
+ai-studio workflow create -t healthcare/medication-extractor
 
 # Validate a specification
-ai-studio genesis validate my-spec.yaml
+ai-studio workflow validate my-spec.yaml
+
+# Export a flow to specification
+ai-studio workflow export flow.json
 
 # List available templates
-ai-studio genesis templates
+ai-studio workflow templates
 
 # Configure AI Studio connection
-ai-studio genesis config show
+ai-studio workflow config show
 ```
 
 ## Command Reference
 
-### `ai-studio genesis create`
+### `ai-studio workflow create`
 
 Create flows from YAML specifications.
 
 ```bash
 # Create from local file
-ai-studio genesis create -t template.yaml
+ai-studio workflow create -t template.yaml
 
 # Create from library template
-ai-studio genesis create -t healthcare/eligibility-checker
+ai-studio workflow create -t healthcare/eligibility-checker
 
 # Use variables and tweaks
-ai-studio genesis create -t template.yaml \
+ai-studio workflow create -t template.yaml \
   --var api_key=test \
   --var temperature=0.7 \
   --tweak agent.model=gpt-4
 
 # Validate only
-ai-studio genesis create -t template.yaml --validate-only
+ai-studio workflow create -t template.yaml --validate-only
 
 # Save to file instead of creating in AI Studio
-ai-studio genesis create -t template.yaml -o flow.json
+ai-studio workflow create -t template.yaml -o flow.json
 ```
 
 **Options:**
@@ -71,22 +75,22 @@ ai-studio genesis create -t template.yaml -o flow.json
 - `--var-file`: Load variables from JSON/YAML file
 - `--tweak`: Apply component tweaks (format: component.field=value)
 
-### `ai-studio genesis validate`
+### `ai-studio workflow validate`
 
 Validate YAML specifications with comprehensive feedback.
 
 ```bash
 # Basic validation
-ai-studio genesis validate template.yaml
+ai-studio workflow validate template.yaml
 
 # Detailed validation with semantic analysis
-ai-studio genesis validate template.yaml --detailed
+ai-studio workflow validate template.yaml --detailed
 
 # Quick validation for real-time feedback
-ai-studio genesis validate template.yaml --quick
+ai-studio workflow validate template.yaml --quick
 
 # JSON output for integration
-ai-studio genesis validate template.yaml --format json
+ai-studio workflow validate template.yaml --format json
 ```
 
 **Options:**
@@ -94,22 +98,50 @@ ai-studio genesis validate template.yaml --format json
 - `-q, --quick`: Quick validation optimized for speed
 - `-f, --format`: Output format (table, report, json)
 
-### `ai-studio genesis list`
+### `ai-studio workflow export`
 
-List Genesis resources.
+Export existing flows to YAML specifications.
+
+```bash
+# Export a flow by file
+ai-studio workflow export flow.json
+
+# Export with custom options
+ai-studio workflow export flow.json --format yaml --output spec.yaml
+
+# Include metadata in export
+ai-studio workflow export flow.json --include-metadata
+
+# Preserve variables in export
+ai-studio workflow export flow.json --preserve-vars
+
+# Export with agent goal extraction
+ai-studio workflow export flow.json --agent-goal "Process healthcare data"
+```
+
+**Options:**
+- `-f, --format`: Output format (yaml, json)
+- `-o, --output`: Output file path
+- `--include-metadata`: Include flow metadata
+- `--preserve-vars`: Preserve variable placeholders
+- `--agent-goal`: Specify agent goal for the specification
+
+### `ai-studio workflow list`
+
+List workflow resources.
 
 ```bash
 # List flows
-ai-studio genesis list flows
+ai-studio workflow list flows
 
 # List templates with category filter
-ai-studio genesis list templates --category healthcare
+ai-studio workflow list templates --category healthcare
 
 # List components with search
-ai-studio genesis list components --search agent
+ai-studio workflow list components --search agent
 
 # List folders
-ai-studio genesis list folders
+ai-studio workflow list folders
 ```
 
 **Options:**
@@ -119,26 +151,26 @@ ai-studio genesis list folders
 - `--format`: Output format (table, json, simple)
 - `--limit`: Maximum number of results
 
-### `ai-studio genesis config`
+### `ai-studio workflow config`
 
 Manage CLI configuration.
 
 ```bash
 # Show current configuration
-ai-studio genesis config show
+ai-studio workflow config show
 
 # Set configuration values
-ai-studio genesis config set ai_studio_url http://localhost:7860
-ai-studio genesis config set ai_studio_api_key your-api-key
+ai-studio workflow config set ai_studio_url http://localhost:7860
+ai-studio workflow config set ai_studio_api_key your-api-key
 
 # Test connection
-ai-studio genesis config test
+ai-studio workflow config test
 
-# Import from genesis-agent-cli
-ai-studio genesis config import
+# Import from legacy genesis-agent-cli
+ai-studio workflow config import
 
 # Reset to defaults
-ai-studio genesis config reset
+ai-studio workflow config reset
 ```
 
 **Configuration Keys:**
@@ -149,58 +181,58 @@ ai-studio genesis config reset
 - `templates_path`: Custom templates directory
 - `verbose`: Enable verbose output
 
-### `ai-studio genesis components`
+### `ai-studio workflow components`
 
-Discover and explore Genesis components.
+Discover and explore workflow components.
 
 ```bash
 # List all components
-ai-studio genesis components
+ai-studio workflow components
 
 # Search for specific components
-ai-studio genesis components --search healthcare
+ai-studio workflow components --search healthcare
 
 # Show only tool components
-ai-studio genesis components --tools-only
+ai-studio workflow components --tools-only
 
 # Get detailed component info
-ai-studio genesis components --info genesis:agent
+ai-studio workflow components --info Agent
 
 # Filter by category
-ai-studio genesis components --category healthcare
+ai-studio workflow components --category healthcare
 ```
 
-### `ai-studio genesis templates`
+### `ai-studio workflow templates`
 
 Browse and manage specification templates.
 
 ```bash
 # List all templates
-ai-studio genesis templates
+ai-studio workflow templates
 
 # Filter by category
-ai-studio genesis templates --category healthcare
+ai-studio workflow templates --category healthcare
 
 # Search templates
-ai-studio genesis templates --search medication
+ai-studio workflow templates --search medication
 
 # Show template details
-ai-studio genesis templates --show healthcare/medication-extractor
+ai-studio workflow templates --show healthcare/medication-extractor
 
-# List local custom templates
-ai-studio genesis templates --local
+# Create new template from flow
+ai-studio workflow templates --create-from-flow flow-id
 ```
 
 ## Configuration
 
-Genesis CLI configuration is stored in `~/.ai-studio/genesis-config.yaml`:
+Workflow CLI configuration is stored in `~/.ai-studio/genesis-config.yaml`:
 
 ```yaml
 ai_studio:
   url: http://localhost:7860
   api_key: your-api-key
 default_project: Healthcare Agents
-default_folder: genesis-flows
+default_folder: workflow-flows
 templates_path: /path/to/custom/templates
 verbose: false
 ```
@@ -235,7 +267,7 @@ config:
 
 Usage:
 ```bash
-ai-studio genesis create -t template.yaml \
+ai-studio workflow create -t template.yaml \
   --var agent_name="My Agent" \
   --var temperature=0.7
 ```
@@ -245,7 +277,7 @@ ai-studio genesis create -t template.yaml \
 Modify component configurations at runtime:
 
 ```bash
-ai-studio genesis create -t template.yaml \
+ai-studio workflow create -t template.yaml \
   --tweak agent.config.temperature=0.8 \
   --tweak agent.config.model=gpt-4
 ```
@@ -255,7 +287,7 @@ ai-studio genesis create -t template.yaml \
 Built-in templates are organized by category:
 
 ```
-templates/genesis/
+templates/
 ├── healthcare/
 │   ├── single-agents/
 │   │   ├── medication-extractor.yaml
@@ -272,7 +304,7 @@ templates/genesis/
 
 ## Healthcare Templates
 
-The Genesis CLI includes a comprehensive library of healthcare agent templates:
+The Workflow CLI includes a comprehensive library of healthcare agent templates:
 
 ### Single Agent Templates
 - **Medication Extractor**: Extract medications with RxNorm codes
@@ -291,11 +323,11 @@ The Genesis CLI includes a comprehensive library of healthcare agent templates:
 
 ## Integration with AI Studio
 
-The Genesis CLI is tightly integrated with AI Studio backend:
+The Workflow CLI is tightly integrated with AI Studio backend:
 
 - **SpecService**: Leverages existing spec validation and conversion
 - **FlowConverter**: Uses enhanced spec-to-flow conversion
-- **ComponentMapper**: Accesses Genesis type mappings
+- **ComponentMapper**: Accesses component type mappings
 - **API Endpoints**: Communicates through `/api/v1/spec/` endpoints
 - **Database Integration**: Flows are saved to AI Studio database
 
@@ -304,7 +336,7 @@ The Genesis CLI is tightly integrated with AI Studio backend:
 ### Automatic Configuration Import
 
 ```bash
-ai-studio genesis config import
+ai-studio workflow config import
 ```
 
 This will automatically detect and import configuration from:
@@ -322,17 +354,18 @@ All existing genesis-agent-cli templates work without modification:
 
 ### Command Mapping
 
-| genesis-agent-cli | ai-studio genesis |
+| genesis-agent-cli | ai-studio workflow |
 |------------------|-------------------|
-| `genesis-agent create` | `ai-studio genesis create` |
-| `genesis-agent validate` | `ai-studio genesis validate` |
-| `genesis-agent list` | `ai-studio genesis list` |
-| `genesis-agent config` | `ai-studio genesis config` |
-| `genesis-agent components` | `ai-studio genesis components` |
+| `genesis-agent create` | `ai-studio workflow create` |
+| `genesis-agent validate` | `ai-studio workflow validate` |
+| `genesis-agent list` | `ai-studio workflow list` |
+| `genesis-agent config` | `ai-studio workflow config` |
+| `genesis-agent components` | `ai-studio workflow components` |
+| N/A | `ai-studio workflow export` |
 
 ## Error Handling
 
-The Genesis CLI provides comprehensive error handling:
+The Workflow CLI provides comprehensive error handling:
 
 - **Connection errors**: Clear messages when AI Studio is unreachable
 - **Validation errors**: Detailed feedback with suggestions
@@ -345,10 +378,10 @@ Enable verbose output for debugging:
 
 ```bash
 # Via command line
-ai-studio genesis create -t template.yaml --debug
+ai-studio workflow create -t template.yaml --debug
 
 # Via configuration
-ai-studio genesis config set verbose true
+ai-studio workflow config set verbose true
 
 # Via environment variable
 export GENESIS_VERBOSE=true
@@ -359,21 +392,30 @@ export GENESIS_VERBOSE=true
 ### Running Tests
 
 ```bash
-# Run all Genesis CLI tests
-pytest src/backend/base/langflow/cli/genesis/tests/
+# Run all Workflow CLI tests
+pytest tests/unit/cli/workflow/
 
 # Run specific test file
-pytest src/backend/base/langflow/cli/genesis/tests/test_template_manager.py
+pytest tests/unit/cli/workflow/commands/test_create.py
 
 # Run with coverage
-pytest --cov=langflow.cli.genesis src/backend/base/langflow/cli/genesis/tests/
+pytest --cov=langflow.cli.workflow tests/unit/cli/workflow/
 ```
+
+### Test Coverage
+
+The Workflow CLI has comprehensive test coverage with 272 unit tests:
+
+- **Commands**: 7 test modules covering all CLI commands
+- **Configuration**: Complete config management testing
+- **Utilities**: API client, output formatting, template management
+- **Integration**: Main CLI entry point and command registration
 
 ### Adding New Commands
 
 1. Create command module in `commands/`
 2. Import and register in `main.py`
-3. Add tests in `tests/`
+3. Add tests in `/tests/unit/cli/workflow/commands/`
 4. Update documentation
 
 ### Adding New Templates
@@ -387,23 +429,28 @@ pytest --cov=langflow.cli.genesis src/backend/base/langflow/cli/genesis/tests/
 
 ### Common Issues
 
-**"Genesis CLI not available"**
+**"Workflow CLI not available"**
 - Ensure AI Studio is properly installed
 - Check Python environment and dependencies
 
 **"Cannot connect to AI Studio"**
 - Verify AI Studio is running
-- Check URL configuration: `ai-studio genesis config show`
-- Test connection: `ai-studio genesis config test`
+- Check URL configuration: `ai-studio workflow config show`
+- Test connection: `ai-studio workflow config test`
 
 **"Template not found"**
-- Check template path: `ai-studio genesis templates`
+- Check template path: `ai-studio workflow templates`
 - Verify custom templates path if using local templates
 
 **"Validation failed"**
 - Check YAML syntax
 - Verify component types exist
 - Review error messages for specific issues
+
+**"Export failed"**
+- Ensure flow file exists and is valid JSON
+- Check AI Studio connectivity for flow validation
+- Verify output directory permissions
 
 ### Getting Help
 
@@ -419,3 +466,28 @@ Contributions are welcome! Please:
 2. Add comprehensive tests
 3. Update documentation
 4. Ensure backward compatibility
+
+## Architecture
+
+The Workflow CLI is organized into several modules:
+
+```
+src/backend/base/langflow/cli/workflow/
+├── commands/          # CLI command implementations
+│   ├── create.py     # Flow creation from templates
+│   ├── validate.py   # Specification validation
+│   ├── export.py     # Flow to spec export
+│   ├── list_cmd.py   # Resource listing
+│   ├── config.py     # Configuration management
+│   ├── components.py # Component discovery
+│   └── templates.py  # Template management
+├── config/           # Configuration management
+│   └── manager.py    # ConfigManager class
+├── utils/            # Utility modules
+│   ├── api_client.py # AI Studio API client
+│   ├── output.py     # Output formatting
+│   └── template_manager.py # Template operations
+└── main.py           # Main CLI entry point
+```
+
+This modular architecture ensures maintainability and testability while providing a clean separation of concerns.
