@@ -5,6 +5,8 @@ from lfx.inputs.inputs import InputTypes, SecretStrInput
 from lfx.template.field.base import Input
 
 
+
+
 class ModelProvidersDict(TypedDict):
     fields: dict
     inputs: list[InputTypes]
@@ -78,6 +80,15 @@ def add_combobox_true(component_input):
 def create_input_fields_dict(inputs: list[Input], prefix: str) -> dict[str, Input]:
     return {f"{prefix}{input_.name}": input_.to_dict() for input_ in inputs}
 
+def _get_watsonx_inputs_and_fields():
+    try:
+        from lfx.components.ibm.watsonx import WatsonxAIComponent
+
+        watsonx_inputs = get_filtered_inputs(WatsonxAIComponent)
+    except ImportError as e:
+        msg = "IBM watsonx.ai is not installed. Please install it with `pip install langchain-ibm-watsonx`."
+        raise ImportError(msg) from e
+    return watsonx_inputs, create_input_fields_dict(watsonx_inputs, "")
 
 def _get_google_generative_ai_inputs_and_fields():
     try:
@@ -293,6 +304,20 @@ try:
 except ImportError:
     pass
 
+try:
+    from lfx.components.ibm.watsonx import WatsonxAIComponent
+    watsonx_inputs, watsonx_fields = _get_watsonx_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["IBM watsonx.ai"] = {
+        "fields": watsonx_fields,
+        "inputs": watsonx_inputs,
+        "prefix": "",
+        "component_class": WatsonxAIComponent(),
+        "icon": WatsonxAIComponent.icon,
+        "is_active": True,
+    }
+except ImportError:
+    pass
+
 # Expose only active providers ----------------------------------------------
 ACTIVE_MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {
     name: prov for name, prov in MODEL_PROVIDERS_DICT.items() if prov.get("is_active", True)
@@ -302,10 +327,10 @@ MODEL_PROVIDERS: list[str] = list(ACTIVE_MODEL_PROVIDERS_DICT.keys())
 
 ALL_PROVIDER_FIELDS: list[str] = [field for prov in ACTIVE_MODEL_PROVIDERS_DICT.values() for field in prov["fields"]]
 
-MODEL_DYNAMIC_UPDATE_FIELDS = ["api_key", "model", "tool_model_enabled", "base_url", "model_name"]
+MODEL_DYNAMIC_UPDATE_FIELDS = ["api_key", "model", "tool_model_enabled", "base_url", "model_name","watsonx_endpoint"]
 
 MODELS_METADATA = {name: {"icon": prov["icon"]} for name, prov in ACTIVE_MODEL_PROVIDERS_DICT.items()}
 
-MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "OpenAI"]
+MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "OpenAI","IBM watsonx.ai"]
 
 MODEL_OPTIONS_METADATA = [MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA]
