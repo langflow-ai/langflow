@@ -1,4 +1,5 @@
 import json
+import re
 import traceback
 
 import requests
@@ -28,20 +29,14 @@ class WatsonxGovernanceComponent(Component):
         StrInput(
             name="endpoint_url",
             display_name="Deployment endpoint URL",
-            info="The base endpoint URL (e.g., https://us-south.ml.cloud.ibm.com)",
-            required=True,
-        ),
-        StrInput(
-            name="deployment_id",
-            display_name="Deployment ID",
-            info="The ID of your deployment",
+            info="The public endpoint URL for your deployed template. Must include Deployment ID",
             required=True,
         ),
         StrInput(
             name="prompt_variables",
             display_name="Prompt Variables",
             required=True,
-            info="Prompt variables as JSON object with SEARCH_CHUNKS and USER_QUERY",
+            info='JSON Object of the prompt variables used in your template. Example format: "{ "Key 1": "Val 1", ...}',
         ),
     ]
 
@@ -90,15 +85,7 @@ class WatsonxGovernanceComponent(Component):
             return Data(text=msg, data={"error": str(e), "success": False})
 
         # Parse prompt_variables if it's a string
-        if isinstance(self.prompt_variables, str):
-            try:
-                prompt_vars = json.loads(self.prompt_variables)
-            except json.JSONDecodeError as e:
-                error_msg = f"Invalid JSON in prompt_variables: {e!s}"
-                logger.error(error_msg)
-                return Data(text=error_msg, data={"error": str(e), "success": False})
-        else:
-            prompt_vars = self.prompt_variables
+        prompt_vars = self.format_prompt_vars()
 
         # Construct the payload - this matches the curl example
         payload = {"parameters": {"prompt_variables": prompt_vars}}
@@ -155,4 +142,43 @@ class WatsonxGovernanceComponent(Component):
             error_msg = f"Error logging payload to watsonx.governance: {e!s}"
             logger.error(error_msg)
             logger.error(traceback.format_exc())
+            return Data(text=error_msg, data={"error": str(e), "success": False})
+
+    def format_prompt_vars(self) -> dict:
+        """Cleans and reformats user-supplied 'prompt_variables' input into valid JSON.
+
+        Args:
+            user_input: The raw user input
+
+        Returns:
+            Correctly formatted prompt variables
+        """
+        user_input = self.prompt_variables
+        try:
+            s = user_input.strip()
+
+            # Add braces if missing
+            if not s.startswith("{"):
+                s = "{" + s
+            if not s.endswith("}"):
+                s = s + "}"
+
+            # Replace single quotes with double quotes
+            s = s.replace("'", '"')
+
+            # Remove trailing commas before closing brace
+            s = re.sub(r",\s*}", "}", s)
+
+            # Add missing quotes around unquoted keys
+            s = re.sub(r"([{,]\s*)([A-Za-z0-9_]+)(\s*:)", r'\1"\2"\3', s)
+
+            # Try to parse to dict
+            parsed = json.loads(s)
+
+            # Ensure all keys/values are strings
+            return {str(k): str(v) for k, v in parsed.items()}
+
+        except json.JSONDecodeError as e:
+            error_msg = f"Invalid JSON in prompt_variables: {e!s}"
+            logger.error(error_msg)
             return Data(text=error_msg, data={"error": str(e), "success": False})
