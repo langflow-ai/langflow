@@ -19,7 +19,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
     @pytest.fixture(autouse=True)
     def mock_knowledge_base_path(self, tmp_path):
         """Mock the knowledge base root path directly."""
-        with patch("langflow.components.knowledge_bases.ingestion.KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
+        with patch("langflow.components.knowledge_bases.ingestion._KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
             yield
 
     @pytest.fixture

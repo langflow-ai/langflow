@@ -1473,15 +1473,22 @@ class TestMCPStructuredTool:
 
     def test_run_passes_config_and_kwargs(self, mcp_tool, mock_client):
         """Test that run method properly passes config and kwargs to parent."""
+        from unittest.mock import MagicMock, patch
+
         input_data = {"weatherMain": "Clear", "topN": 1}
         config = {"some": "config"}
         extra_kwargs = {"extra": "param"}
 
-        # Just verify that the method completes successfully with config/kwargs
-        mcp_tool.run(input_data, config=config, **extra_kwargs)
+        # Mock the event loop to prevent the "no current event loop" error
+        mock_loop = MagicMock()
+        mock_loop.run_until_complete = MagicMock(return_value="tool_result")
 
-        # Verify the tool was executed
-        mock_client.run_tool.assert_called_once()
+        with patch("asyncio.get_event_loop", return_value=mock_loop):
+            # Just verify that the method completes successfully with config/kwargs
+            mcp_tool.run(input_data, config=config, **extra_kwargs)
+
+            # Verify the tool was executed
+            mock_client.run_tool.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_arun_passes_config_and_kwargs(self, mcp_tool, mock_client):
