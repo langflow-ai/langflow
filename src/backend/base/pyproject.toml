@@ -252,3 +252,4 @@ all = [
 
 [project.scripts]
 langflow-base = "langflow.__main__:main"
+ai-studio = "langflow.__main__:main"
