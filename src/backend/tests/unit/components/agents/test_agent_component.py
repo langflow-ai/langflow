@@ -364,7 +364,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert structured_output.method == "json_response"
         assert structured_output.tool_mode is False
 
-    async def test_agent_filters_empty_chat_history_messages(self, component_class, default_kwargs):
+    async def test_agent_filters_empty_chat_history_messages(self):
         """Test that empty messages in chat history are filtered out."""
         from lfx.base.agents.utils import data_to_messages
         from lfx.schema.message import Message
