@@ -1,6 +1,5 @@
 import json
 import traceback
-from typing import Any
 
 import requests
 
@@ -11,7 +10,6 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 
 
-# from lfx.io import Input, Output
 class WatsonxGovernanceComponent(Component):
     """A component that logs generative AI payloads to IBM watsonx.governance for tracking and compliance."""
 
@@ -30,20 +28,20 @@ class WatsonxGovernanceComponent(Component):
         StrInput(
             name="endpoint_url",
             display_name="Deployment endpoint URL",
-            info="The endpoint of your deployed prompt template ",
+            info="The base endpoint URL (e.g., https://us-south.ml.cloud.ibm.com)",
             required=True,
         ),
         StrInput(
             name="deployment_id",
             display_name="Deployment ID",
             info="The ID of your deployment",
-            required=False,
+            required=True,
         ),
         StrInput(
             name="prompt_variables",
             display_name="Prompt Variables",
             required=True,
-            info="Prompt variables to be passed to your deployed endpoint. Enter in format",
+            info="Prompt variables as JSON object with SEARCH_CHUNKS and USER_QUERY",
         ),
     ]
 
@@ -73,8 +71,9 @@ class WatsonxGovernanceComponent(Component):
             token_response = requests.post(iam_url, headers=token_headers, data=token_data, timeout=10)
             token_response.raise_for_status()
             return token_response.json()["access_token"]
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.exception("Error getting token: " + str(e))
+            raise
 
     def execute_call(self) -> Data:
         """Execute the governance logging call to watsonx.governance.
@@ -90,20 +89,39 @@ class WatsonxGovernanceComponent(Component):
             logger.error(traceback.format_exc())
             return Data(text=msg, data={"error": str(e), "success": False})
 
-        endpoint = self.endpoint_url
+        # Parse prompt_variables if it's a string
+        if isinstance(self.prompt_variables, str):
+            try:
+                prompt_vars = json.loads(self.prompt_variables)
+            except json.JSONDecodeError as e:
+                error_msg = f"Invalid JSON in prompt_variables: {e!s}"
+                logger.error(error_msg)
+                return Data(text=error_msg, data={"error": str(e), "success": False})
+        else:
+            prompt_vars = self.prompt_variables
 
-        prompt_vars: dict[str, Any] = self.prompt_variables
-
+        # Construct the payload - this matches the curl example
         payload = {"parameters": {"prompt_variables": prompt_vars}}
 
+        # Construct endpoint URL with deployment_id
+        base_url = self.endpoint_url.rstrip("/")
+        endpoint = f"{base_url}/ml/v1/deployments/{self.deployment_id}/text/generation?version=2021-05-01"
+
         headers = {
+            "Content-Type": "application/json",
             "Accept": "application/json",
             "Authorization": f"Bearer {iam_token}",
-            "Content-Type": "application/json",
         }
+
+        logger.info(f"Sending request to: {endpoint}")
+        logger.info(f"Payload: {json.dumps(payload, indent=2)}")
 
         try:
             response = requests.post(endpoint, headers=headers, json=payload, timeout=30)
+
+            # Log response details for debugging
+            logger.info(f"Response status: {response.status_code}")
+
             response.raise_for_status()
 
             try:
@@ -116,84 +134,25 @@ class WatsonxGovernanceComponent(Component):
             logger.info("Payload logged with Governance")
             return Data(text=body_text, data=body)
 
+        except requests.exceptions.HTTPError as e:
+            error_msg = f"HTTP Error: {e!s}"
+            response_body = response.text if "response" in locals() else "No response body"
+            logger.error(error_msg)
+            logger.error(f"Response body: {response_body}")
+            logger.error(traceback.format_exc())
+            return Data(
+                text=f"{error_msg}\nResponse: {response_body}",
+                data={"error": str(e), "response": response_body, "success": False},
+            )
+
         except json.JSONDecodeError as e:
             error_msg = f"Error parsing JSON payload: {e!s}"
             logger.error(error_msg)
             logger.error(traceback.format_exc())
             return Data(text=error_msg, data={"error": str(e), "success": False})
 
-        except Exception as e:  # noqa: BLE001 - Catch-all for unexpected errors during governance logging
+        except Exception as e:  # noqa: BLE001
             error_msg = f"Error logging payload to watsonx.governance: {e!s}"
             logger.error(error_msg)
             logger.error(traceback.format_exc())
             return Data(text=error_msg, data={"error": str(e), "success": False})
-
-    # async def execute_call(self) -> Data:
-    #     """Execute the governance logging call to watsonx.governance.
-
-    #     Returns:
-    #         Data object containing the result of the governance logging operation.
-    #     """
-    #     try:
-    #         # Step 1: Initialize authenticator and client
-    #         authenticator = IAMAuthenticator(apikey=self.api_key, url="https://iam.cloud.ibm.com/identity/token")
-
-    #         wos_client = APIClient(
-    #             authenticator=authenticator, service_instance_id=self.deployment_id, service_url=self.endpoint_url
-    #         )
-
-    #         logger.info("Successfully initialized Watson OpenScale client")
-
-    #         # Step 2: Get payload logging dataset ID
-    #         payload_logging_data_set_id = (
-    #             wos_client.data_sets.list(
-    #                 type=DataSetTypes.PAYLOAD_LOGGING,
-    #                 target_target_id=self.deployment_id,
-    #                 target_target_type=TargetTypes.SUBSCRIPTION,
-    #             )
-    #             .result.data_sets[0]
-    #             .metadata.id
-    #         )
-
-    #         logger.info(f"Using dataset ID: {payload_logging_data_set_id}")
-
-    #         # Step 3: Parse request and response data
-    #         request_data = json.loads(self.prompt_variables) if isinstance(self.prompt_variables, str) else self.prompt_variables  # noqa: E501
-
-    #         logger.info(f"Request data: {request_data}")
-
-    #         # Step 4: Store payload record
-    #         wos_client.data_sets.store_records(
-    #             data_set_id=payload_logging_data_set_id,
-    #             request_body=[
-    #                 PayloadRecord(request=request_data, response_time=self.response_time)
-    #             ],
-    #         )
-
-    #         logger.info("Watson OpenScale payload logged successfully.")
-
-    #         result = {
-    #             "success": True,
-    #             "dataset_id": payload_logging_data_set_id,
-    #             "message": "Payload logged successfully to watsonx.governance",
-    #         }
-
-    #         return Data(text=json.dumps(result, indent=2), data=result)
-
-    #     except IndexError:
-    #         error_msg = "No payload logging dataset found for the given subscription ID"
-    #         logger.error(error_msg)
-    #         logger.error(traceback.format_exc())
-    #         return Data(text=error_msg, data={"error": error_msg, "success": False})
-
-    #     except json.JSONDecodeError as e:
-    #         error_msg = f"Error parsing JSON payload: {e!s}"
-    #         logger.error(error_msg)
-    #         logger.error(traceback.format_exc())
-    #         return Data(text=error_msg, data={"error": str(e), "success": False})
-
-    #     except Exception as e:
-    #         error_msg = f"Error logging payload to watsonx.governance: {e!s}"
-    #         logger.error(error_msg)
-    #         logger.error(traceback.format_exc())
-    #         return Data(text=error_msg, data={"error": str(e), "success": False})
