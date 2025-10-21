@@ -35,11 +35,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             value="OpenAI",
             info="Select the embedding model provider",
             real_time_refresh=True,
-            options_metadata=[
-                {"icon": "OpenAI"},
-                {"icon": "Ollama"},
-                {"icon": "WatsonxAI"}
-            ],
+            options_metadata=[{"icon": "OpenAI"}, {"icon": "Ollama"}, {"icon": "WatsonxAI"}],
         ),
         DropdownInput(
             name="model",
