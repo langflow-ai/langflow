@@ -37,6 +37,7 @@ class FieldTypes(str, Enum):
     QUERY = "query"
     TOOLS = "tools"
     MCP = "mcp"
+    MODEL = "model"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
@@ -115,6 +116,11 @@ class BaseInputMixin(CrossModuleModel, validate_assignment=True):  # type: ignor
             dump["type"] = dump.pop("field_type")
         dump["_input_type"] = self.__class__.__name__
         return dump
+
+
+class ModelInputMixin(BaseModel):
+    model_name: str | None = None
+    """Name of the model to be used in the input."""
 
 
 class ToolModeMixin(BaseModel):
