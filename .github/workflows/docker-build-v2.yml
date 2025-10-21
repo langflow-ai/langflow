@@ -143,10 +143,62 @@ jobs:
     if: ${{ inputs.release_type == 'main' }}
     strategy:
       matrix:
+        component: [docker-backend, docker-frontend, ghcr-backend, ghcr-frontend]
         include:
-          - arch: amd64
-            runner: [Langflow-runner]
-          - arch: arm64
+          - component: docker-backend
+            dockerfile: ./docker/build_and_push_backend.Dockerfile
+            tags: langflowai/langflow-backend:${{ inputs.ref }},langflowai/langflow-backend:latest
+            langflow_image: langflowai/langflow:${{ inputs.ref }}
+            arch: amd64
+            runner: Langflow-runner
+
+          - component: docker-backend
+            dockerfile: ./docker/build_and_push_backend.Dockerfile
+            tags: langflowai/langflow-backend:${{ inputs.ref }},langflowai/langflow-backend:latest
+            langflow_image: langflowai/langflow:${{ inputs.ref }}
+            arch: arm64
+            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+
+          - component: docker-frontend
+            dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
+            tags: langflowai/langflow-frontend:${{ inputs.ref }},langflowai/langflow-frontend:latest
+            langflow_image: langflowai/langflow:${{ inputs.ref }}
+            arch: amd64
+            runner: Langflow-runner
+
+          - component: docker-frontend
+            dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
+            tags: langflowai/langflow-frontend:${{ inputs.ref }},langflowai/langflow-frontend:latest
+            langflow_image: langflowai/langflow:${{ inputs.ref }}
+            arch: arm64
+            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+
+          - component: ghcr-backend
+            dockerfile: ./docker/build_and_push_backend.Dockerfile
+            tags: ghcr.io/langflow-ai/langflow-backend:${{ inputs.ref }},ghcr.io/langflow-ai/langflow-backend:latest
+            langflow_image: ghcr.io/langflow-ai/langflow:${{ inputs.ref }}
+            arch: amd64
+            runner: Langflow-runner
+
+          - component: ghcr-backend
+            dockerfile: ./docker/build_and_push_backend.Dockerfile
+            tags: ghcr.io/langflow-ai/langflow-backend:${{ inputs.ref }},ghcr.io/langflow-ai/langflow-backend:latest
+            langflow_image: ghcr.io/langflow-ai/langflow:${{ inputs.ref }}
+            arch: arm64
+            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+
+          - component: ghcr-frontend
+            dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
+            tags: ghcr.io/langflow-ai/langflow-frontend:${{ inputs.ref }},ghcr.io/langflow-ai/langflow-frontend:latest
+            langflow_image: ghcr.io/langflow-ai/langflow:${{ inputs.ref }}
+            arch: amd64
+            runner: Langflow-runner
+
+          - component: ghcr-frontend
+            dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
+            tags: ghcr.io/langflow-ai/langflow-frontend:${{ inputs.ref }},ghcr.io/langflow-ai/langflow-frontend:latest
+            langflow_image: ghcr.io/langflow-ai/langflow:${{ inputs.ref }}
+            arch: arm64
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
