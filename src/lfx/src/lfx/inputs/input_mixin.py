@@ -121,6 +121,18 @@ class BaseInputMixin(CrossModuleModel, validate_assignment=True):  # type: ignor
 class ModelInputMixin(BaseModel):
     model_name: str | None = None
     """Name of the model to be used in the input."""
+    model_type: str | None = "language"
+    """Type of model: 'language' or 'embedding'. Defaults to 'language'."""
+    model_options: list[dict[str, Any]] | None = Field(default=None, serialization_alias="options")
+    """List of model options with name, icon, category, provider, and metadata."""
+    providers: list[str] | None = None
+    """List of provider names to prioritize (e.g., ['OpenAI', 'Anthropic'])."""
+    temperature: float | None = None
+    """Temperature parameter for model generation."""
+    max_tokens: int | None = None
+    """Maximum tokens for model generation."""
+    limit: int | None = None
+    """Limit for the number of options to display."""
 
 
 class ToolModeMixin(BaseModel):

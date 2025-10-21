@@ -307,6 +307,19 @@ export function ParameterRenderComponent({
             value={templateValue}
           />
         );
+      case "model":
+        return (
+          <ModelInputComponent
+            {...baseInputProps}
+            model_type={templateData.model_type || "language"}
+            options={templateData?.options || []}
+            placeholder={templateData?.placeholder || "Select a Model"}
+            temperature={templateData?.temperature}
+            max_tokens={templateData?.max_tokens}
+            limit={templateData?.limit}
+            providers={templateData?.providers}
+          />
+        );
       default:
         return <EmptyParameterComponent {...baseInputProps} />;
     }
