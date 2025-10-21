@@ -8,6 +8,7 @@ class AssistantsListAssistants(ComponentWithCache):
     display_name = "List Assistants"
     description = "Returns a list of assistant id's"
     icon = "AstraDB"
+    legacy = True
     outputs = [
         Output(display_name="Assistants", name="assistants", method="process_inputs"),
     ]
