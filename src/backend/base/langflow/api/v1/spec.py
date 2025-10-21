@@ -14,6 +14,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.api.utils import DbSession, CurrentActiveUser
 from langflow.services.spec.service import SpecService
 from langflow.services.database.models.flow import Flow
+from langflow.services.runtime.flow_to_spec_converter import FlowToSpecConverter
 from langflow.logging import logger
 
 # Build router
@@ -688,5 +689,185 @@ async def create_flow_from_specification_library(
             error="Unexpected error",
             details=str(e)
         )
+
+
+# Export (reverse conversion) endpoints
+
+class FlowExportRequest(BaseModel):
+    """Request model for flow export to Genesis specification."""
+    flow_data: Dict[str, Any] = Field(..., description="Langflow flow JSON data")
+    preserve_variables: bool = Field(True, description="Whether to preserve original variable values")
+    include_metadata: bool = Field(False, description="Whether to include extended metadata")
+    name_override: Optional[str] = Field(None, description="Override flow name in specification")
+    description_override: Optional[str] = Field(None, description="Override flow description")
+    domain_override: Optional[str] = Field(None, description="Override domain (default: converted)")
+
+
+class FlowExportResponse(BaseModel):
+    """Response model for flow export."""
+    specification: Dict[str, Any] = Field(..., description="Generated Genesis specification")
+    success: bool = Field(True, description="Export success status")
+    warnings: List[str] = Field(default_factory=list, description="Export warnings")
+    statistics: Dict[str, Any] = Field(default_factory=dict, description="Export statistics")
+
+
+class BatchFlowExportRequest(BaseModel):
+    """Request model for batch flow export."""
+    flows: List[Dict[str, Any]] = Field(..., description="List of Langflow flow JSON data")
+    preserve_variables: bool = Field(True, description="Whether to preserve original variable values")
+    include_metadata: bool = Field(False, description="Whether to include extended metadata")
+    domain_override: Optional[str] = Field(None, description="Override domain for all specifications")
+
+
+class BatchFlowExportResponse(BaseModel):
+    """Response model for batch flow export."""
+    specifications: List[Dict[str, Any]] = Field(..., description="Generated Genesis specifications")
+    success: bool = Field(True, description="Overall export success status")
+    total_processed: int = Field(..., description="Total number of flows processed")
+    successful_exports: int = Field(..., description="Number of successful exports")
+    failed_exports: int = Field(..., description="Number of failed exports")
+    warnings: List[str] = Field(default_factory=list, description="Export warnings")
+    errors: List[str] = Field(default_factory=list, description="Export errors")
+
+
+class FlowValidationForExportRequest(BaseModel):
+    """Request model for flow validation before export."""
+    flow_data: Dict[str, Any] = Field(..., description="Langflow flow JSON data")
+
+
+class FlowValidationForExportResponse(BaseModel):
+    """Response model for flow validation before export."""
+    valid: bool = Field(..., description="Whether flow can be exported")
+    warnings: List[str] = Field(default_factory=list, description="Validation warnings")
+    errors: List[str] = Field(default_factory=list, description="Validation errors")
+    recommendations: List[str] = Field(default_factory=list, description="Export recommendations")
+    statistics: Dict[str, Any] = Field(default_factory=dict, description="Flow statistics")
+
+
+@router.post("/export", response_model=FlowExportResponse)
+async def export_flow_to_spec(
+    request: FlowExportRequest
+) -> FlowExportResponse:
+    """
+    Export Langflow flow to Genesis specification.
+
+    Converts a Langflow flow JSON back to Genesis YAML specification with
+    support for variable preservation, metadata extraction, and custom naming.
+    """
+    try:
+        converter = FlowToSpecConverter()
+
+        specification = converter.convert_flow_to_spec(
+            flow_data=request.flow_data,
+            preserve_variables=request.preserve_variables,
+            include_metadata=request.include_metadata,
+            name_override=request.name_override,
+            description_override=request.description_override,
+            domain_override=request.domain_override
+        )
+
+        # Extract conversion metadata if available
+        conversion_meta = specification.pop("_conversion", {})
+        statistics = {
+            "components_converted": len(specification.get("components", {})),
+            "edges_inferred": len([c for c in specification.get("components", {}).values()
+                                 if c.get("provides")]),
+            "variables_preserved": len(specification.get("variables", {})),
+            "converted_at": conversion_meta.get("convertedAt"),
+            "converter_version": conversion_meta.get("converterVersion")
+        }
+
+        return FlowExportResponse(
+            specification=specification,
+            success=True,
+            warnings=[],
+            statistics=statistics
+        )
+
+    except Exception as e:
+        logger.error(f"Flow export error: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.post("/export-batch", response_model=BatchFlowExportResponse)
+async def export_flows_batch_to_spec(
+    request: BatchFlowExportRequest
+) -> BatchFlowExportResponse:
+    """
+    Export multiple Langflow flows to Genesis specifications.
+
+    Converts multiple Langflow flow JSONs to Genesis specifications in a single
+    operation with consolidated error handling and reporting.
+    """
+    try:
+        converter = FlowToSpecConverter()
+
+        specifications = converter.convert_flows_batch(
+            flows=request.flows,
+            preserve_variables=request.preserve_variables,
+            include_metadata=request.include_metadata,
+            domain_override=request.domain_override
+        )
+
+        # Calculate statistics
+        total_processed = len(request.flows)
+        successful_exports = len(specifications)
+        failed_exports = total_processed - successful_exports
+
+        return BatchFlowExportResponse(
+            specifications=specifications,
+            success=failed_exports == 0,
+            total_processed=total_processed,
+            successful_exports=successful_exports,
+            failed_exports=failed_exports,
+            warnings=[],
+            errors=[]
+        )
+
+    except Exception as e:
+        logger.error(f"Batch flow export error: {e}")
+        # Parse error message for batch failures
+        error_msg = str(e)
+        if "Batch conversion partially failed" in error_msg:
+            # Extract individual failures
+            return BatchFlowExportResponse(
+                specifications=[],
+                success=False,
+                total_processed=len(request.flows),
+                successful_exports=0,
+                failed_exports=len(request.flows),
+                warnings=[],
+                errors=[error_msg]
+            )
+        else:
+            raise HTTPException(status_code=400, detail=error_msg) from e
+
+
+@router.post("/validate-for-export", response_model=FlowValidationForExportResponse)
+async def validate_flow_for_export(
+    request: FlowValidationForExportRequest
+) -> FlowValidationForExportResponse:
+    """
+    Validate Langflow flow for export to Genesis specification.
+
+    Checks if a flow can be successfully converted to Genesis specification
+    and provides recommendations for improving the conversion process.
+    """
+    try:
+        converter = FlowToSpecConverter()
+
+        validation_result = converter.validate_flow_for_conversion(request.flow_data)
+
+        return FlowValidationForExportResponse(
+            valid=validation_result["valid"],
+            warnings=validation_result["warnings"],
+            errors=validation_result["errors"],
+            recommendations=validation_result["recommendations"],
+            statistics=validation_result["statistics"]
+        )
+
+    except Exception as e:
+        logger.error(f"Flow export validation error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during validation") from e
 
 

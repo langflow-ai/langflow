@@ -1,5 +1,5 @@
 id: urn:agent:genesis:healthcare:clinical-note-analyzer-agent-enhanced:1.0.0
-name: Clinical Note Analyzer Agent (Enhanced Framework)
+name: Clinical Note Analyzer Agent
 fullyQualifiedName: genesis.autonomize.ai.clinical_note_analyzer_agent_enhanced
 description: Advanced clinical note analysis using enhanced decision framework with specialized AI models for medical terminology extraction, diagnostic coding, and clinical insights
 domain: autonomize.ai
