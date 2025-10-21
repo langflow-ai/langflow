@@ -1,8 +1,8 @@
 """Add category column to variable table, to support models.
 
 Revision ID: 50bdbf646c1c
-Revises: 3162e83e485f
-Create Date: 2025-08-13 13:36:47.517609
+Revises: 182e5471b900
+Create Date: 2025-10-21 13:36:47.517609
 
 """
 
@@ -14,7 +14,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "50bdbf646c1c"
-down_revision: str | None = "3162e83e485f"
+down_revision: str | None = "182e5471b900"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
