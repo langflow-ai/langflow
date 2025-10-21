@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api";
+import { getURL } from "../../helpers/constants";
 
 export interface GetAllPublishedFlowsParams {
   page?: number;
@@ -15,7 +16,7 @@ export const useGetAllPublishedFlows = (params: GetAllPublishedFlowsParams) => {
   return useQuery({
     queryKey: ["all-published-flows", params],
     queryFn: async () => {
-      const response = await api.get("/api/v1/published-flows/all", { params });
+      const response = await api.get(`${getURL("PUBLISHED_FLOWS")}/all`, { params });
       return response.data;
     },
   });

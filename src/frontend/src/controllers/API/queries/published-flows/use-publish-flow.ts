@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api";
+import { getURL } from "../../helpers/constants";
 
 export interface PublishFlowPayload {
   version?: string;
@@ -12,7 +13,7 @@ export const usePublishFlow = () => {
   return useMutation({
     mutationFn: async (data: { flowId: string; payload: PublishFlowPayload }) => {
       const response = await api.post(
-        `/api/v1/published-flows/publish/${data.flowId}`,
+        `${getURL("PUBLISHED_FLOWS")}/publish/${data.flowId}`,
         data.payload
       );
       return response.data;

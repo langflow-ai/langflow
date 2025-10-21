@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api";
+import { getURL } from "../../helpers/constants";
 
 export const useUnpublishFlow = () => {
   const queryClient = useQueryClient();
@@ -7,7 +8,7 @@ export const useUnpublishFlow = () => {
   return useMutation({
     mutationFn: async (flowId: string) => {
       const response = await api.post(
-        `/api/v1/published-flows/unpublish/${flowId}`
+        `${getURL("PUBLISHED_FLOWS")}/unpublish/${flowId}`
       );
       return response.data;
     },

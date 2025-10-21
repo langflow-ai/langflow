@@ -31,6 +31,7 @@ export const URLs = {
   MCP_SERVERS: `mcp/servers`,
   KNOWLEDGE_BASES: `knowledge_bases`,
   AGENT_MARKETPLACE: `agent-marketplace`,
+  PUBLISHED_FLOWS: `published-flows`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility
