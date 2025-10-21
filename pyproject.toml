@@ -349,6 +349,13 @@ external = ["RUF027"]
     "SLF001",
     "BLE001",  # allow broad-exception catching in tests
 ]
+"src/lfx/tests/*" = [
+    "D1",
+    "PLR2004",
+    "S101",
+    "SLF001",
+    "BLE001",  # allow broad-exception catching in tests
+]
 "src/backend/tests/locust/*" = [
     "D1",      # Missing docstrings (CLI tools don't need full docstrings)
     "T201",    # Print statements (needed for CLI output)
