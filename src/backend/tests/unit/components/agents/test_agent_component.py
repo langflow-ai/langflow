@@ -364,6 +364,23 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert structured_output.method == "json_response"
         assert structured_output.tool_mode is False
 
+    async def test_agent_filters_empty_chat_history_messages(self):
+        """Test that empty messages in chat history are filtered out."""
+        from lfx.base.agents.utils import data_to_messages
+        from lfx.schema.message import Message
+
+        # Create messages with varying content
+        empty_message = Message(text="", sender="User", sender_name="User")
+        whitespace_message = Message(text="   ", sender="User", sender_name="User")
+        valid_message = Message(text="Hello", sender="User", sender_name="User")
+
+        # Convert to LC messages (should filter out empty ones)
+        messages = data_to_messages([empty_message, whitespace_message, valid_message])
+
+        # Should only have the valid message
+        assert len(messages) == 1
+        assert messages[0].content == "Hello"
+
 
 class TestAgentComponentWithClient(ComponentTestBaseWithClient):
     @pytest.fixture
@@ -457,6 +474,23 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
 
                 if "4" not in response_text:
                     failed_models[model_name] = f"Expected '4' in response but got: {response_text}"
+            except Exception as e:
+                failed_models[model_name] = f"Exception occurred: {e!s}"
+
+            try:
+                # Test with empty string input
+                tools = [CalculatorToolComponent().build_tool()]
+                agent = AgentComponent(
+                    tools=tools,
+                    input_value=" ",
+                    api_key=api_key,
+                    model_name=model_name,
+                    agent_llm="Anthropic",
+                    _session_id=str(uuid4()),
+                )
+
+                response = await agent.message_response()
+                response_text = response.data.get("text", "")
 
             except Exception as e:
                 failed_models[model_name] = f"Exception occurred: {e!s}"
@@ -464,3 +498,118 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
         assert not failed_models, "The following models failed the test:\n" + "\n".join(
             f"{model}: {error}" for model, error in failed_models.items()
         )
+
+    @pytest.mark.api_key_required
+    @pytest.mark.no_blockbuster
+    async def test_agent_handles_empty_input_with_openai(self):
+        """Test that Agent component handles empty input value without errors with OpenAI."""
+        api_key = os.getenv("OPENAI_API_KEY")
+        tools = [CalculatorToolComponent().build_tool()]
+
+        # Test with empty string input
+        agent = AgentComponent(
+            tools=tools,
+            input_value="",
+            api_key=api_key,
+            model_name="gpt-4o",
+            agent_llm="OpenAI",
+            temperature=0.1,
+            _session_id=str(uuid4()),
+        )
+
+        # This should not raise an error - the agent should provide a default input
+        response = await agent.message_response()
+        assert response is not None
+        assert hasattr(response, "text") or hasattr(response, "data")
+
+    @pytest.mark.api_key_required
+    @pytest.mark.no_blockbuster
+    async def test_agent_handles_whitespace_input_with_openai(self):
+        """Test that Agent component handles whitespace-only input without errors with OpenAI."""
+        api_key = os.getenv("OPENAI_API_KEY")
+        tools = [CalculatorToolComponent().build_tool()]
+
+        # Test with whitespace-only input
+        agent = AgentComponent(
+            tools=tools,
+            input_value="   \n\t  ",
+            api_key=api_key,
+            model_name="gpt-4o",
+            agent_llm="OpenAI",
+            temperature=0.1,
+            _session_id=str(uuid4()),
+        )
+
+        # This should not raise an error - the agent should provide a default input
+        response = await agent.message_response()
+        assert response is not None
+        assert hasattr(response, "text") or hasattr(response, "data")
+
+    @pytest.mark.api_key_required
+    @pytest.mark.no_blockbuster
+    async def test_agent_handles_empty_input_with_anthropic(self):
+        """Test that Agent component handles empty input value without errors with Anthropic.
+
+        This test specifically addresses the issue:
+        'messages.2: all messages must have non-empty content'
+        """
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        tools = [CalculatorToolComponent().build_tool()]
+
+        # Test with empty string input - this previously caused the error
+        agent = AgentComponent(
+            tools=tools,
+            input_value="",
+            api_key=api_key,
+            model_name="claude-3-5-sonnet-20241022",
+            agent_llm="Anthropic",
+            _session_id=str(uuid4()),
+        )
+
+        # This should not raise the "messages.2: all messages must have non-empty content" error
+        try:
+            response = await agent.message_response()
+            assert response is not None
+            assert hasattr(response, "text") or hasattr(response, "data")
+        except Exception as e:
+            # If an error occurs, make sure it's NOT the empty content error
+            error_message = str(e)
+            assert "messages.2" not in error_message, f"Empty content error still occurs: {error_message}"
+            assert "must have non-empty content" not in error_message, (
+                f"Empty content error still occurs: {error_message}"
+            )
+            # Re-raise if it's a different error
+            raise
+
+    @pytest.mark.api_key_required
+    @pytest.mark.no_blockbuster
+    async def test_agent_handles_whitespace_input_with_anthropic(self):
+        """Test that Agent component handles whitespace-only input without errors with Anthropic."""
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        tools = [CalculatorToolComponent().build_tool()]
+        from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
+
+        # Test with whitespace-only input
+        agent = AgentComponent(
+            tools=tools,
+            input_value="   \n\t  ",
+            api_key=api_key,
+            model_name=ANTHROPIC_MODELS_DETAILED[0]["name"],
+            agent_llm="Anthropic",
+            _session_id=str(uuid4()),
+        )
+
+        # This should not raise the "messages.2: all messages must have non-empty content" error
+        try:
+            response = await agent.message_response()
+            assert response is not None
+            assert hasattr(response, "text") or hasattr(response, "data")
+        except Exception as e:
+            # If an error occurs, make sure it's NOT the empty content error
+            error_message = str(e)
+            assert "messages.2" not in error_message, f"Empty content error still occurs: {error_message}"
+            assert "must have non-empty content" not in error_message, (
+                f"Empty content error still occurs: {error_message}"
+            )
+            # Re-raise if it's a different error
+            raise
