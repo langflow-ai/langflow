@@ -33,6 +33,7 @@ import SettingsPage from "./pages/SettingsPage";
 import AgentBuilderPage from "./pages/AgentBuilderPage";
 import AgentMarketplacePage from "./pages/AgentMarketplacePage";
 import AgentMarketplaceDetailPage from "./pages/AgentMarketplacePage/DetailPage";
+import MarketplacePage from "./pages/MarketplacePage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
@@ -143,6 +144,7 @@ const router = createBrowserRouter(
                   </Route>
                 </Route>
                 <Route path="agent-marketplace/detail/:flowId" element={<AgentMarketplaceDetailPage />} />
+                <Route path="marketplace" element={<MarketplacePage />} />
                 <Route path="settings" element={<SettingsPage />}>
                   <Route
                     index
