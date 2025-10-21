@@ -252,7 +252,7 @@ def get_kb_metadata(kb_path: Path) -> dict:
         )
 
         # Access the raw collection
-        collection = chroma._collection
+        collection = chroma._collection  # noqa: SLF001
 
         # Fetch all documents and metadata
         results = collection.get(include=["documents", "metadatas"])

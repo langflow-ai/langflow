@@ -27,8 +27,9 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             name="mongodb_atlas_client_cert",
             display_name="MongoDB Atlas Combined Client Certificate",
             required=False,
+            # pragma: allowlist secret
             info="Client Certificate combined with the private key in the following format:\n "
-            "-----BEGIN PRIVATE KEY-----\n...\n -----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----\n"
+            "-----BEGIN PRIVATE KEY-----\n...\n -----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----\n"  # pragma: allowlist secret  # noqa: E501
             "...\n-----END CERTIFICATE-----\n",
         ),
         StrInput(name="db_name", display_name="Database Name", required=True),
@@ -161,7 +162,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
 
         vector_store = self.build_vector_store()
 
-        self.verify_search_index(vector_store._collection)
+        self.verify_search_index(vector_store._collection)  # noqa: SLF001
 
         if self.search_query and isinstance(self.search_query, str):
             docs = vector_store.similarity_search(
