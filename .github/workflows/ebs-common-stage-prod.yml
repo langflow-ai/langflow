@@ -29,15 +29,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Free up disk space
-        run: |
-          echo "Initial disk usage:"
-          df -h
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
-          docker system prune -af || true
-          echo "After cleanup:"
-          df -h
-
       - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
@@ -118,26 +109,23 @@ jobs:
           echo "Using branch=$BRANCH_NAME commit=$COMMIT_ID"
 
           echo "=== Building Staging Image ==="
-          DOCKER=${DOCKER:-docker}
-
           DOCKER_BUILDKIT=1 \
           VITE_AUTO_LOGIN=false \
           VITE_CLERK_AUTH_ENABLED=true \
           VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.CLERK_PUBLISHABLE_KEY }} \
           VITE_CLERK_FRONTEND_API=${{ vars.STAGING_CLERK_FRONTEND_API }} \
-          make docker_build TAG=langflow:staging-$BRANCH_NAME-$COMMIT_ID DOCKER=$DOCKER
+          make docker_build TAG=langflow:staging-$BRANCH_NAME-$COMMIT_ID
 
           docker tag langflow:staging-$BRANCH_NAME-$COMMIT_ID forwardemailforaifirstdesk/langflow:staging-$BRANCH_NAME-$COMMIT_ID
           docker push forwardemailforaifirstdesk/langflow:staging-$BRANCH_NAME-$COMMIT_ID
 
           echo "=== Building Prod Image ==="
-
           DOCKER_BUILDKIT=1 \
           VITE_AUTO_LOGIN=false \
           VITE_CLERK_AUTH_ENABLED=true \
           VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.PROD_CLERK_PUBLISHABLE_KEY }} \
           VITE_CLERK_FRONTEND_API=${{ vars.PROD_CLERK_FRONTEND_API }} \
-          make docker_build TAG=langflow:prod-$BRANCH_NAME-$COMMIT_ID DOCKER=$DOCKER
+          make docker_build TAG=langflow:prod-$BRANCH_NAME-$COMMIT_ID
         
           docker tag langflow:prod-$BRANCH_NAME-$COMMIT_ID forwardemailforaifirstdesk/langflow:prod-$BRANCH_NAME-$COMMIT_ID
           docker push forwardemailforaifirstdesk/langflow:prod-$BRANCH_NAME-$COMMIT_ID
