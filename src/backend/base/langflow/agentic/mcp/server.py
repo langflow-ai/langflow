@@ -21,8 +21,7 @@ mcp = FastMCP("langflow-agentic")
 @mcp.tool()
 def search_templates(
     query: str | None = None,
-    fields: list[str] | None = None,
-    tags: list[str] | None = None,
+    fields: list[str]= ["id", "name", "description", "tags", "endpoint_name", "icon"]
 ) -> list[dict[str, Any]]:
     """Search and load template data with configurable field selection.
 
@@ -60,7 +59,8 @@ def search_templates(
     # Set default fields if not provided
     if fields is None:
         fields = ["id", "name", "description", "tags", "endpoint_name", "icon"]
-    return list_templates(query=query, fields=fields, tags=tags)
+    return list_templates(query=query, fields=fields)
+
 
 
 @mcp.tool()
