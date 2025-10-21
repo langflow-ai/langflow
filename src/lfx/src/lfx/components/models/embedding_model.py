@@ -151,8 +151,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 "apikey": api_key,
             }
 
-            if project_id:
-                params["project_id"] = project_id
+            params["project_id"] = project_id
 
             return WatsonxEmbeddings(**params)
 
