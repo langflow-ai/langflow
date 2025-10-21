@@ -227,7 +227,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
                 for provider in providers.reranking_providers.values()
                 for model in provider.models
             ]
-        except Exception as e:  # noqa: BLE001
+        except (AttributeError, KeyError) as e:
             self.log(f"Hybrid search not available: {e}")
             return {
                 "available": False,
