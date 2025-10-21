@@ -10,6 +10,7 @@ class RunPayload(BasePayload):
     run_seconds: int = Field(serialization_alias="runSeconds")
     run_success: bool = Field(serialization_alias="runSuccess")
     run_error_message: str = Field("", serialization_alias="runErrorMessage")
+    run_id: str | None = Field(None, serialization_alias="runId")
 
 
 class ShutdownPayload(BasePayload):
@@ -32,6 +33,7 @@ class PlaygroundPayload(BasePayload):
     playground_component_count: int | None = Field(None, serialization_alias="playgroundComponentCount")
     playground_success: bool = Field(serialization_alias="playgroundSuccess")
     playground_error_message: str = Field("", serialization_alias="playgroundErrorMessage")
+    playground_run_id: str | None = Field(None, serialization_alias="playgroundRunId")
 
 
 class ComponentPayload(BasePayload):
@@ -39,6 +41,7 @@ class ComponentPayload(BasePayload):
     component_seconds: int = Field(serialization_alias="componentSeconds")
     component_success: bool = Field(serialization_alias="componentSuccess")
     component_error_message: str | None = Field(None, serialization_alias="componentErrorMessage")
+    component_run_id: str | None = Field(None, serialization_alias="componentRunId")
 
 
 class ExceptionPayload(BasePayload):
@@ -46,3 +49,12 @@ class ExceptionPayload(BasePayload):
     exception_message: str = Field(serialization_alias="exceptionMessage")
     exception_context: str = Field(serialization_alias="exceptionContext")  # "lifespan" or "handler"
     stack_trace_hash: str | None = Field(None, serialization_alias="stackTraceHash")  # Hash for grouping
+
+
+class ComponentIndexPayload(BasePayload):
+    index_source: str = Field(serialization_alias="indexSource")  # "builtin", "cache", or "dynamic"
+    num_modules: int = Field(serialization_alias="numModules")
+    num_components: int = Field(serialization_alias="numComponents")
+    dev_mode: bool = Field(serialization_alias="devMode")
+    filtered_modules: str | None = Field(None, serialization_alias="filteredModules")  # CSV if filtering
+    load_time_ms: int = Field(serialization_alias="loadTimeMs")
