@@ -79,10 +79,26 @@ const AuthModal = ({
   };
 
   const handleAuthFieldChange = (field: string, value: string) => {
-    setAuthFields((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setAuthFields((prev) => {
+      const newFields = {
+        ...prev,
+        [field]: value,
+      };
+
+      // Auto-sync Server URL and Callback Path when Port or Host changes
+      if (field === "oauthPort" || field === "oauthHost") {
+        const host =
+          field === "oauthHost" ? value : prev.oauthHost || "localhost";
+        const port = field === "oauthPort" ? value : prev.oauthPort || "";
+
+        if (port) {
+          newFields.oauthServerUrl = `http://${host}:${port}`;
+          newFields.oauthCallbackPath = `http://${host}:${port}/auth/idaas/callback`;
+        }
+      }
+
+      return newFields;
+    });
   };
 
   const handleSave = () => {
