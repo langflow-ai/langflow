@@ -108,6 +108,17 @@ def get_variable_service() -> VariableService:
     return get_service(ServiceType.VARIABLE_SERVICE, VariableServiceFactory())
 
 
+def is_settings_service_initialized() -> bool:
+    """Check if the SettingsService is already initialized without triggering initialization.
+
+    Returns:
+        bool: True if the SettingsService is already initialized, False otherwise.
+    """
+    from lfx.services.manager import get_service_manager
+
+    return ServiceType.SETTINGS_SERVICE in get_service_manager().services
+
+
 def get_settings_service() -> SettingsService:
     """Retrieves the SettingsService instance.
 
