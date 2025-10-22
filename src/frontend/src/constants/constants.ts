@@ -981,4 +981,8 @@ export const UUID_PARSING_ERROR = "uuid_parsing";
 export const CATEGORY_GLOBAL = "Global";
 export const CATEGORY_LLM = "LLM";
 export const CATEGORY_SETTINGS = "Settings";
-export const VALID_CATEGORIES = [CATEGORY_GLOBAL, CATEGORY_LLM, CATEGORY_SETTINGS] as const;
+export const VALID_CATEGORIES = [
+  CATEGORY_GLOBAL,
+  CATEGORY_LLM,
+  CATEGORY_SETTINGS,
+] as const;
