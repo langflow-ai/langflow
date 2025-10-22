@@ -20,7 +20,7 @@ from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComp
 from lfx.custom.custom_component.component import get_component_toolkit
 from lfx.custom.utils import update_component_build_config
 from lfx.helpers.base_model import build_model_from_schema
-from lfx.inputs.inputs import BoolInput
+from lfx.inputs.inputs import BoolInput, SecretStrInput, StrInput
 from lfx.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, TableInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
@@ -51,6 +51,9 @@ class AgentComponent(ToolCallingAgentComponent):
             for input_field in MODEL_PROVIDERS_DICT["OpenAI"]["inputs"]
             if not (hasattr(input_field, "name") and input_field.name == "json_mode")
         ]
+    if "IBM watsonx.ai" in MODEL_PROVIDERS_DICT:
+        watsonx_inputs_filtered = list(MODEL_PROVIDERS_DICT["IBM watsonx.ai"]["inputs"])
+        print(watsonx_inputs_filtered)
     else:
         openai_inputs_filtered = []
 
@@ -77,7 +80,32 @@ class AgentComponent(ToolCallingAgentComponent):
                 },
             },
         ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="The API key to use for the model.",
+            required=True,
+        ),
+        StrInput(
+            name="base_url",
+            display_name="Base URL",
+            info="The base URL of the API.",
+            required=True,
+            show=False,
+        ),
+        StrInput(
+            name="project_id",
+            display_name="Project ID",
+            info="The project ID of the model.",
+            required=True,
+            show=False,
+        ),
+        IntInput(
+            name="max_output_tokens", display_name="Max Output Tokens", info="The maximum number of tokens to generate.",
+            show=False,
+        ),
         *openai_inputs_filtered,
+        # *watsonx_inputs_filtered,
         MultilineInput(
             name="system_prompt",
             display_name="Agent Instructions",
@@ -471,7 +499,8 @@ class AgentComponent(ToolCallingAgentComponent):
     def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:
         """Delete specified fields from build_config."""
         for field in fields:
-            build_config.pop(field, None)
+            if build_config is not None and field in build_config:
+                build_config.pop(field, None)
 
     def update_input_types(self, build_config: dotdict) -> dotdict:
         """Update input types for all fields in build_config."""

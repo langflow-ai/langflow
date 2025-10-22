@@ -16,14 +16,14 @@ class ModelProvidersDict(TypedDict):
     is_active: bool
 
 
-def get_filtered_inputs(component_class):
+def get_filtered_inputs(component_class,provider_name: str = None):
     base_input_names = {field.name for field in LCModelComponent.get_base_inputs()}
     component_instance = component_class()
 
-    return [process_inputs(input_) for input_ in component_instance.inputs if input_.name not in base_input_names]
+    return [process_inputs(input_,provider_name) for input_ in component_instance.inputs if input_.name not in base_input_names]
 
 
-def process_inputs(component_data: Input):
+def process_inputs(component_data: Input,provider_name: str = None):
     """Processes and modifies an input configuration based on its type or name.
 
     Adjusts properties such as value, advanced status, real-time refresh, and additional information for specific
@@ -45,9 +45,11 @@ def process_inputs(component_data: Input):
         component_data.advanced = True
         component_data.value = True
     elif component_data.name in {"temperature", "base_url"}:
-        component_data = set_advanced_true(component_data)
+        if provider_name not in ["IBM watsonx.ai"]:
+            component_data = set_advanced_true(component_data)
     elif component_data.name == "model_name":
-        component_data = set_real_time_refresh_false(component_data)
+        if provider_name not in ["IBM watsonx.ai"]:
+            component_data = set_real_time_refresh_false(component_data)
         component_data = add_combobox_true(component_data)
         component_data = add_info(
             component_data,
@@ -84,7 +86,7 @@ def _get_watsonx_inputs_and_fields():
     try:
         from lfx.components.ibm.watsonx import WatsonxAIComponent
 
-        watsonx_inputs = get_filtered_inputs(WatsonxAIComponent)
+        watsonx_inputs = get_filtered_inputs(WatsonxAIComponent,provider_name="IBM watsonx.ai")
     except ImportError as e:
         msg = "IBM watsonx.ai is not installed. Please install it with `pip install langchain-ibm-watsonx`."
         raise ImportError(msg) from e
@@ -327,7 +329,7 @@ MODEL_PROVIDERS: list[str] = list(ACTIVE_MODEL_PROVIDERS_DICT.keys())
 
 ALL_PROVIDER_FIELDS: list[str] = [field for prov in ACTIVE_MODEL_PROVIDERS_DICT.values() for field in prov["fields"]]
 
-MODEL_DYNAMIC_UPDATE_FIELDS = ["api_key", "model", "tool_model_enabled", "base_url", "model_name","watsonx_endpoint"]
+MODEL_DYNAMIC_UPDATE_FIELDS = ["api_key", "model", "tool_model_enabled", "base_url", "model_name","watsonx_endpoint","url"]
 
 MODELS_METADATA = {name: {"icon": prov["icon"]} for name, prov in ACTIVE_MODEL_PROVIDERS_DICT.items()}
 
