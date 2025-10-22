@@ -5,7 +5,6 @@ import httpx
 from langchain_openai import ChatOpenAI
 from openai import BadRequestError
 from pydantic.v1 import SecretStr
-from typing_extensions import override
 
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
@@ -166,7 +165,6 @@ class OpenRouterComponent(LCModelComponent):
             pass
         return None
 
-    @override
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Update build configuration based on field updates."""
         try:
