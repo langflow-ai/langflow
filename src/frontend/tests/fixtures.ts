@@ -64,7 +64,68 @@ export const test = base.extend({
           url.includes("/run/"))
       ) {
         try {
-          const responseBody = await response.text();
+          const headers = response.headers();
+          const contentType = (headers["content-type"] || "").toLowerCase();
+          const streamingContentHints = [
+            "text/event-stream",
+            "application/grpc",
+            "application/octet-stream",
+            "application/x-ndjson",
+          ];
+          const isStreamLike = streamingContentHints.some((hint) =>
+            contentType.includes(hint),
+          );
+          if (isStreamLike) {
+            console.log(
+              `Skipping streaming response body parsing for ${url} (${contentType || "unknown content-type"})`,
+            );
+            return;
+          }
+
+          const READ_BODY_TIMEOUT_MS = 2000;
+          const bodyTimeoutToken = Symbol("response-body-timeout");
+          let responseBody: string | undefined;
+          let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+          try {
+            const bodyResult = await Promise.race([
+              response.text(),
+              new Promise<symbol>((resolve) => {
+                timeoutId = setTimeout(
+                  () => resolve(bodyTimeoutToken),
+                  READ_BODY_TIMEOUT_MS,
+                );
+              }),
+            ]);
+
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+              timeoutId = undefined;
+            }
+
+            if (bodyResult === bodyTimeoutToken) {
+              console.warn(
+                `Timed out reading response body for ${url}; skipping body inspection.`,
+              );
+              return;
+            }
+
+            responseBody = bodyResult;
+          } catch (bodyReadErr) {
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+              timeoutId = undefined;
+            }
+            console.warn(
+              `Failed to read response body for ${url}; skipping body inspection.`,
+              bodyReadErr,
+            );
+            return;
+          }
+
+          if (!responseBody) {
+            return;
+          }
 
           // Try to parse as JSON and extract error details
           let errorPreview: string | null = null;
