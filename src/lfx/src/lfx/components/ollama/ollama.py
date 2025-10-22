@@ -112,7 +112,12 @@ class ChatOllamaComponent(LCModelComponent):
             name="top_k", display_name="Top K", info="Limits token selection to top K. (Default: 40)", advanced=True
         ),
         FloatInput(name="top_p", display_name="Top P", info="Works together with top-k. (Default: 0.9)", advanced=True),
-        BoolInput(name="enable_verbose_output", display_name="Ollama Verbose Output", info="Whether to print out response text.", advanced=True),
+        BoolInput(
+            name="enable_verbose_output",
+            display_name="Ollama Verbose Output",
+            info="Whether to print out response text.",
+            advanced=True,
+        ),
         MessageTextInput(
             name="tags",
             display_name="Tags",
