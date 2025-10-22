@@ -4,6 +4,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { CustomStoreSidebar } from "@/customization/components/custom-store-sidebar";
 import {
   ENABLE_DATASTAX_LANGFLOW,
+  ENABLE_GLOBAL_MODEL_PROVIDER,
   ENABLE_LANGFLOW_STORE,
   ENABLE_PROFILE_ICONS,
 } from "@/customization/feature-flags";
@@ -31,6 +32,19 @@ export default function SettingsPage(): JSX.Element {
       icon: (
         <ForwardedIconComponent
           name="SlidersHorizontal"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    });
+  }
+
+  if (ENABLE_GLOBAL_MODEL_PROVIDER) {
+    sidebarNavItems.push({
+      title: "Model Providers",
+      href: "/settings/model-providers",
+      icon: (
+        <ForwardedIconComponent
+          name="BrainCircuit"
           className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
         />
       ),
