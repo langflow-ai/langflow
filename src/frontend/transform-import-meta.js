@@ -11,7 +11,7 @@ module.exports = {
         // Replace import.meta.env with process.env before ts-jest processes it
         let modifiedSource = sourceText.replace(
           /import\.meta\.env/g,
-          "process.env"
+          "process.env",
         );
 
         // Call the original ts-jest transformer
