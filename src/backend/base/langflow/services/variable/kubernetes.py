@@ -11,7 +11,7 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead
 from langflow.services.variable.base import VariableService
-from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.services.variable.constants import CATEGORY_GLOBAL, CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.kubernetes_secrets import KubernetesSecretManager, encode_user_id
 
 if TYPE_CHECKING:
@@ -146,6 +146,7 @@ class KubernetesSecretService(VariableService, Service):
         user_id: UUID | str,
         name: str,
         value: str,
+        category: str = CATEGORY_GLOBAL,
         *,
         default_fields: list[str],
         type_: str,
