@@ -3,9 +3,11 @@ from typing import Any
 from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
 
+from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
+from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
 from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.openai_constants import OPENAI_REASONING_MODEL_NAMES
+from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput
@@ -22,31 +24,60 @@ class LanguageModelComponent(LCModelComponent):
 
     @staticmethod
     def get_model_options() -> list[dict[str, Any]]:
-        """Return a list of available model providers."""
-        # TODO: Use the CRUD endpoints to fetch available providers dynamically
-        return [
+        """Return a list of available model providers with their configuration."""
+        # OpenAI models
+        openai_options = [
             {
-                "name": "gpt-4",
+                "name": model_name,
                 "icon": "OpenAI",
                 "category": "OpenAI",
                 "provider": "OpenAI",
-                "metadata": {"context_length": 8192},
-            },
+                "metadata": {
+                    "context_length": 128000,  # Default, can be model-specific if needed
+                    "model_class": ChatOpenAI,
+                    "model_name_param": "model_name",
+                    "api_key_param": "openai_api_key",
+                    "reasoning_models": OPENAI_REASONING_MODEL_NAMES,
+                }
+            }
+            for model_name in OPENAI_CHAT_MODEL_NAMES
+        ]
+
+        # Anthropic models
+        anthropic_options = [
             {
-                "name": "claude-3-opus",
+                "name": model_name,
                 "icon": "Anthropic",
                 "category": "Anthropic",
                 "provider": "Anthropic",
-                "metadata": {"context_length": 200000},
-            },
+                "metadata": {
+                    "context_length": 200000,  # Default for Anthropic
+                    "model_class": ChatAnthropic,
+                    "model_name_param": "model",
+                    "api_key_param": "anthropic_api_key",
+                }
+            }
+            for model_name in ANTHROPIC_MODELS
+        ]
+
+        # Google models
+        google_options = [
             {
-                "name": "gemini-pro",
+                "name": model_name,
                 "icon": "GoogleGenerativeAI",
                 "category": "Google",
                 "provider": "Google",
-                "metadata": {"context_length": 32768},
-            },
+                "metadata": {
+                    "context_length": 32768,  # Default for Google
+                    "model_class": ChatGoogleGenerativeAIFixed,
+                    "model_name_param": "model",
+                    "api_key_param": "google_api_key",
+                }
+            }
+            for model_name in GOOGLE_GENERATIVE_AI_MODELS
         ]
+
+        return openai_options + anthropic_options + google_options
 
     inputs = [
         ModelInput(
@@ -59,7 +90,7 @@ class LanguageModelComponent(LCModelComponent):
         ),
         SecretStrInput(
             name="api_key",
-            display_name="OpenAI API Key",
+            display_name="API Key",
             info="Model Provider API key",
             required=False,
             show=True,
@@ -98,44 +129,38 @@ class LanguageModelComponent(LCModelComponent):
         temperature = self.temperature
         stream = self.stream
 
-        # Extract the provider and model name
-        provider = model.get("provider")
+        # Extract model configuration from metadata
         model_name = model.get("name")
+        provider = model.get("provider")
+        metadata = model.get("metadata", {})
 
-        if provider == "OpenAI":
-            if not self.api_key:
-                msg = "OpenAI API key is required when using OpenAI provider"
-                raise ValueError(msg)
+        # Validate API key
+        if not self.api_key:
+            msg = f"{provider} API key is required when using {provider} provider"
+            raise ValueError(msg)
 
-            if model_name in OPENAI_REASONING_MODEL_NAMES:
-                # reasoning models do not support temperature (yet)
-                temperature = None
+        # Get model class and parameter names from metadata
+        model_class = metadata.get("model_class")
+        if not model_class:
+            msg = f"No model class defined for {model_name}"
+            raise ValueError(msg)
 
-            return ChatOpenAI(
-                model_name=model_name,
-                temperature=temperature,
-                streaming=stream,
-                openai_api_key=self.api_key,
-            )
-        if provider == "Anthropic":
-            if not self.api_key:
-                msg = "Anthropic API key is required when using Anthropic provider"
-                raise ValueError(msg)
-            return ChatAnthropic(
-                model=model_name,
-                temperature=temperature,
-                streaming=stream,
-                anthropic_api_key=self.api_key,
-            )
-        if provider == "Google":
-            if not self.api_key:
-                msg = "Google API key is required when using Google provider"
-                raise ValueError(msg)
-            return ChatGoogleGenerativeAIFixed(
-                model=model_name,
-                temperature=temperature,
-                streaming=stream,
-                google_api_key=self.api_key,
-            )
-        msg = f"Unknown provider: {provider}"
-        raise ValueError(msg)
+        model_name_param = metadata.get("model_name_param", "model")
+        api_key_param = metadata.get("api_key_param", "api_key")
+
+        # Check if this is a reasoning model that doesn't support temperature
+        reasoning_models = metadata.get("reasoning_models", [])
+        if model_name in reasoning_models:
+            temperature = None
+
+        # Build kwargs dynamically
+        kwargs = {
+            model_name_param: model_name,
+            "streaming": stream,
+            api_key_param: self.api_key,
+        }
+
+        if temperature is not None:
+            kwargs["temperature"] = temperature
+
+        return model_class(**kwargs)
