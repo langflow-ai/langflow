@@ -1,0 +1,83 @@
+name: Autofix component_index.json on PRs
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: component-index-autofix-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  autofix:
+    name: Resolve and regenerate component_index.json
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    env:
+      TARGET_FILE: src/lfx/src/lfx/_assets/component_index.json
+      BASE_REF: ${{ github.event.pull_request.base.ref }}
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch base branch
+        run: |
+          git fetch origin "${BASE_REF}:${BASE_REF}" --update-head-ok || true
+
+      - name: Accept base version of component_index.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Ensure base ref exists locally
+          git show "origin/${BASE_REF}:${TARGET_FILE}" >/dev/null 2>&1 || {
+            echo "Base ref or target file not found; skipping base accept step";
+            exit 0;
+          }
+          # Replace target file with version from base branch (main)
+          git checkout "origin/${BASE_REF}" -- "${TARGET_FILE}" || true
+          # Stage the change but do not commit yet; we'll regenerate next
+          git add "${TARGET_FILE}" || true
+
+      - name: Install uv
+        shell: bash
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Regenerate component index
+        shell: bash
+        run: |
+          set -euo pipefail
+          LFX_DEV=1 uv run python scripts/build_component_index.py
+
+      - name: Commit and push if changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add "${TARGET_FILE}"
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "ci: auto-resolve and regenerate component_index.json"
+          git push origin "${HEAD_REF}"
+
+      - name: Skip for forks
+        if: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+        run: echo "PR from fork; skipping autofix because push is not permitted."
+
+
