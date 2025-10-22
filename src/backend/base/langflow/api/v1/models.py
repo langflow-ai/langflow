@@ -65,13 +65,13 @@ async def list_models(
 
     # Get filtered models
     filtered_models = get_unified_models_detailed(
-        providers=selected_providers,
         model_name=model_name,
         include_unsupported=include_unsupported,
         model_type=model_type,
         **metadata_filters,
     )
-
+    if selected_providers:
+        filtered_models = [m for m in filtered_models if m.get("provider") in selected_providers]
     # Add enabled status to each provider
     for provider_dict in filtered_models:
         provider_dict["is_enabled"] = provider_status.get(provider_dict.get("provider"), False)
