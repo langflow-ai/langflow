@@ -977,17 +977,8 @@ export const BUG_REPORT_URL = "https://github.com/langflow-ai/langflow/issues";
 
 export const UUID_PARSING_ERROR = "uuid_parsing";
 
-// File: src/frontend/src/constants/providerConstants.ts
-
-import {
-  CATEGORY_GLOBAL,
-  CATEGORY_LLM,
-  CATEGORY_SETTINGS,
-} from "@/constants/constants";
-
-export const VARIABLE_CATEGORY = {
-  GLOBAL: CATEGORY_GLOBAL,
-  SETTINGS: CATEGORY_SETTINGS,
-  LLM: CATEGORY_LLM,
-  CREDENTIAL: "Credential", // UI-only; do not send to backend
-} as const;
+// Variable categories
+export const CATEGORY_GLOBAL = "Global";
+export const CATEGORY_LLM = "LLM";
+export const CATEGORY_SETTINGS = "Settings";
+export const VALID_CATEGORIES = [CATEGORY_GLOBAL, CATEGORY_LLM, CATEGORY_SETTINGS] as const;
