@@ -3,7 +3,6 @@
 import asyncio
 
 import pytest
-
 from lfx.memory import (
     aadd_messages,
     aadd_messagetables,
