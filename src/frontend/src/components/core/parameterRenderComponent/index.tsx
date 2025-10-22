@@ -54,7 +54,7 @@ export function ParameterRenderComponent({
   isToolMode?: boolean;
   nodeInformationMetadata?: NodeInfoType;
 }) {
-  console.log(templateData);
+  // no-op
   const id = (
     templateData.type +
     "_" +
