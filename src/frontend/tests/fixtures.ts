@@ -1,5 +1,9 @@
 // tests/fixtures.ts
 import { test as base, expect } from "@playwright/test";
+import * as fs from "fs";
+import * as path from "path";
+
+const istanbulCLIOutput = path.join(process.cwd(), ".nyc_output");
 
 // Extend test to log backend errors
 export const test = base.extend({
@@ -258,6 +262,48 @@ export const test = base.extend({
           `Test failed due to ${flowErrors.length} flow execution error(s):${errorDetails}\n\n` +
             `If this error is expected, call page.allowFlowErrors() at the start of your test.`,
         );
+      }
+    }
+  },
+  context: async ({ context }, use, testInfo) => {
+    await context.addInitScript(() =>
+      window.addEventListener("beforeunload", () =>
+        (window as any).collectIstanbulCoverage(
+          JSON.stringify((window as any).__coverage__),
+        ),
+      ),
+    );
+    await fs.promises.mkdir(istanbulCLIOutput, { recursive: true });
+    await context.exposeFunction(
+      "collectIstanbulCoverage",
+      async (coverageJSON: string) => {
+        if (coverageJSON) {
+          try {
+            await fs.promises.writeFile(
+              path.join(
+                istanbulCLIOutput,
+                `playwright_coverage_${testInfo.titlePath[1]}.json`,
+              ),
+              coverageJSON,
+            );
+          } catch (error) {
+            console.warn(
+              `Failed to write coverage for ${testInfo.titlePath.join("/")}: ${error}`,
+            );
+          }
+        }
+      },
+    );
+    await use(context);
+    for (const page of context.pages()) {
+      try {
+        await page.evaluate(() =>
+          (window as any).collectIstanbulCoverage(
+            JSON.stringify((window as any).__coverage__),
+          ),
+        );
+      } catch (error) {
+        console.warn(`Failed to collect coverage: ${error}`);
       }
     }
   },
