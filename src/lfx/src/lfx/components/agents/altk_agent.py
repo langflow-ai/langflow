@@ -92,14 +92,14 @@ class PostToolProcessor(BaseTool):
                 # Ensure config is provided for StructuredTool
                 if "config" not in kwargs:
                     kwargs["config"] = {}
-                return self.wrapped_tool._run(*args, **kwargs)
+                return self.wrapped_tool._run(*args, **kwargs) # noqa: SLF001
             return self.wrapped_tool.run(*args, **kwargs)
         except TypeError as e:
             if "config" in str(e):
                 # Fallback: try without config for older tools
                 kwargs.pop("config", None)
                 if hasattr(self.wrapped_tool, "_run"):
-                    return self.wrapped_tool._run(*args, **kwargs)
+                    return self.wrapped_tool._run(*args, **kwargs) # noqa: SLF001
                 return self.wrapped_tool.run(*args, **kwargs)
             raise
 
