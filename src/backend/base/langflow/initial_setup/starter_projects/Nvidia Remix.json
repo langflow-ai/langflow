@@ -2024,7 +2024,7 @@
                         "api_key": "google_api_key",
                         "model": "model",
                         "model_kwargs": "client_options",
-                        "request_timeout": "request_options"
+                        "request_timeout": "request_options.timeout"
                       }
                     },
                     "name": "GoogleGenerativeAIEmbeddings",

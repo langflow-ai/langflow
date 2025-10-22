@@ -39,7 +39,7 @@ def _get_embedding_model_options() -> list[dict[str, Any]]:
                     "api_base": "base_url",
                     "dimensions": "dimensions",
                     "chunk_size": "chunk_size",
-                    "request_timeout": "timeout",
+                    "request_timeout": "request_timeout",
                     "max_retries": "max_retries",
                     "show_progress_bar": "show_progress_bar",
                     "model_kwargs": "model_kwargs",
@@ -209,6 +209,14 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         # Add optional parameters if they have values and are mapped
         for param_name, param_value in optional_params.items():
             if param_value is not None and param_name in param_mapping:
-                kwargs[param_mapping[param_name]] = param_value
+                # Special handling for request_timeout with Google provider
+                if param_name == "request_timeout":
+                    provider = model.get("provider")
+                    if provider == "Google" and isinstance(param_value, (int, float)):
+                        kwargs[param_mapping[param_name]] = {"timeout": param_value}
+                    else:
+                        kwargs[param_mapping[param_name]] = param_value
+                else:
+                    kwargs[param_mapping[param_name]] = param_value
 
         return kwargs

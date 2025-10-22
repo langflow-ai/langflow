@@ -33,8 +33,8 @@ def _get_language_model_options() -> list[dict[str, Any]]:
             "metadata": {
                 "context_length": 128000,  # Default, can be model-specific if needed
                 "model_class": "ChatOpenAI",
-                "model_name_param": "model_name",
-                "api_key_param": "openai_api_key",
+                "model_name_param": "model",
+                "api_key_param": "api_key",
                 "reasoning_models": OPENAI_REASONING_MODEL_NAMES,
             },
         }
@@ -52,7 +52,7 @@ def _get_language_model_options() -> list[dict[str, Any]]:
                 "context_length": 200000,  # Default for Anthropic
                 "model_class": "ChatAnthropic",
                 "model_name_param": "model",
-                "api_key_param": "anthropic_api_key",
+                "api_key_param": "api_key",
             },
         }
         for model_name in ANTHROPIC_MODELS
@@ -75,7 +75,17 @@ def _get_language_model_options() -> list[dict[str, Any]]:
         for model_name in GOOGLE_GENERATIVE_AI_MODELS
     ]
 
-    return openai_options + anthropic_options + google_options
+    # Combine all options and deduplicate by provider+name
+    all_options = openai_options + anthropic_options + google_options
+    seen = set()
+    deduplicated = []
+    for option in all_options:
+        key = (option["provider"], option["name"])
+        if key not in seen:
+            seen.add(key)
+            deduplicated.append(option)
+    
+    return deduplicated
 
 
 # Compute model options once at module level
