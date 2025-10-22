@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,9 @@ import {
 } from "@/components/ui/select";
 import { usePublishFlow } from "@/controllers/API/queries/published-flows";
 import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
+import { validateFlowForPublish } from "@/utils/flowValidation";
+import type { AllNodeType, EdgeType } from "@/types/flow";
 
 interface PublishFlowModalProps {
   open: boolean;
@@ -33,11 +36,48 @@ export default function PublishFlowModal({
 }: PublishFlowModalProps) {
   const [version, setVersion] = useState("");
   const [category, setCategory] = useState("");
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const { mutate: publishFlow, isPending } = usePublishFlow();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const currentFlow = useFlowStore((state) => state.currentFlow);
+
+  // Run validation when modal opens
+  useEffect(() => {
+    if (open && currentFlow) {
+      const nodes = (currentFlow.data?.nodes ?? []) as AllNodeType[];
+      const edges = (currentFlow.data?.edges ?? []) as EdgeType[];
+      const errors = validateFlowForPublish(nodes, edges);
+      setValidationErrors(errors);
+    }
+  }, [open, currentFlow]);
 
   const handlePublish = () => {
+    // Validate flow before publishing
+    if (!currentFlow) {
+      setErrorData({
+        title: "Cannot publish flow",
+        list: ["Flow data not available"],
+      });
+      return;
+    }
+
+    const nodes = (currentFlow.data?.nodes ?? []) as AllNodeType[];
+    const edges = (currentFlow.data?.edges ?? []) as EdgeType[];
+    const errors = validateFlowForPublish(nodes, edges);
+
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      setErrorData({
+        title: "Cannot Publish Flow",
+        list: errors,
+      });
+      return;
+    }
+
+    // Validation passed - clear any previous errors and proceed with publish
+    setValidationErrors([]);
+
     publishFlow(
       {
         flowId,
@@ -102,15 +142,30 @@ export default function PublishFlowModal({
             </Select>
           </div>
 
-          <div className="rounded-lg bg-muted p-4 text-sm space-y-2">
-            <p className="font-medium">What happens when you publish?</p>
-            <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-              <li>A snapshot of your current flow will be created</li>
-              <li>Your flow will be visible to all users in the Marketplace</li>
-              <li>The description and tags from your flow will be used</li>
-              <li>To update the marketplace, you'll need to unpublish and re-publish</li>
-            </ul>
-          </div>
+          {validationErrors.length === 0 && (
+            <div className="rounded-lg bg-muted p-4 text-sm space-y-2">
+              <p className="font-medium">What happens when you publish?</p>
+              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                <li>Your flow will be visible to all users in the Marketplace</li>
+                <li>To update the marketplace, you'll need to re-publish</li>
+              </ul>
+            </div>
+          )}
+
+          {validationErrors.length > 0 && (
+            <div className="rounded-md bg-red-50 p-4 border border-red-200">
+              <h4 className="text-sm font-semibold text-red-800 mb-2">
+                ⚠️ Cannot Publish - Please Fix These Issues:
+              </h4>
+              <ul className="list-disc list-inside space-y-1">
+                {validationErrors.map((error, index) => (
+                  <li key={index} className="text-sm text-red-700">
+                    {error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-3">
@@ -121,7 +176,10 @@ export default function PublishFlowModal({
           >
             Cancel
           </Button>
-          <Button onClick={handlePublish} disabled={isPending}>
+          <Button
+            onClick={handlePublish}
+            disabled={isPending || validationErrors.length > 0}
+          >
             {isPending ? "Publishing..." : "Publish to Marketplace"}
           </Button>
         </div>
