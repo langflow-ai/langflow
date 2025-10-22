@@ -240,7 +240,7 @@ export function ParameterRenderComponent({
             helperText={templateData?.helper_text}
             helperMetadata={templateData?.helper_text_metadata}
             options={templateData?.options}
-            searchCategory={templateData?.searchCategory}
+            searchCategory={templateData?.search_category}
             limit={templateData?.limit}
           />
         );
@@ -259,7 +259,7 @@ export function ParameterRenderComponent({
             helperText={templateData?.helper_text}
             helperMetadata={templateData?.helper_text_metadata}
             options={templateData?.options}
-            searchCategory={templateData?.searchCategory}
+            searchCategory={templateData?.search_category}
             buttonMetadata={templateData?.button_metadata}
             connectionLink={link as string}
           />
