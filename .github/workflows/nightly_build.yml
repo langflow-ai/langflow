@@ -228,12 +228,12 @@ jobs:
 
   slack-notification:
     name: Send Slack Notification
-    needs: release-nightly-build
-    if: ${{ github.repository == 'langflow-ai/langflow' && always() }}
+    needs: [frontend-tests, backend-unit-tests, release-nightly-build]
+    if: ${{ github.repository == 'langflow-ai/langflow' && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Send failure notification to Slack
-        if: ${{ needs.release-nightly-build.result == 'failure' }}
+        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{
