@@ -38,7 +38,7 @@ class LanguageModelComponent(LCModelComponent):
                     "model_name_param": "model_name",
                     "api_key_param": "openai_api_key",
                     "reasoning_models": OPENAI_REASONING_MODEL_NAMES,
-                }
+                },
             }
             for model_name in OPENAI_CHAT_MODEL_NAMES
         ]
@@ -55,7 +55,7 @@ class LanguageModelComponent(LCModelComponent):
                     "model_class": ChatAnthropic,
                     "model_name_param": "model",
                     "api_key_param": "anthropic_api_key",
-                }
+                },
             }
             for model_name in ANTHROPIC_MODELS
         ]
@@ -72,7 +72,7 @@ class LanguageModelComponent(LCModelComponent):
                     "model_class": ChatGoogleGenerativeAIFixed,
                     "model_name_param": "model",
                     "api_key_param": "google_api_key",
-                }
+                },
             }
             for model_name in GOOGLE_GENERATIVE_AI_MODELS
         ]

@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from pydantic import BaseModel
 from sqlmodel import Field, Relationship, SQLModel
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 class CredentialBase(SQLModel):
     """Base credential model."""
-    
+
     name: str = Field(description="Name of the credential")
     provider: str = Field(description="Model provider name (e.g., 'OpenAI', 'Anthropic')")
     description: str | None = Field(default=None, description="Optional description")
@@ -26,18 +26,12 @@ class CredentialBase(SQLModel):
 
 class Credential(CredentialBase, table=True):  # type: ignore[call-arg]
     """Credential database model."""
-    
+
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True, unique=True)
     encrypted_value: str = Field(description="Encrypted credential value")
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        description="Creation time"
-    )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        description="Last update time"
-    )
-    
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Creation time")
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Last update time")
+
     # User relationship
     user_id: UUIDstr = Field(foreign_key="user.id", description="User ID")
     user: "User" = Relationship(back_populates="credentials")
@@ -45,13 +39,13 @@ class Credential(CredentialBase, table=True):  # type: ignore[call-arg]
 
 class CredentialCreate(CredentialBase):
     """Schema for creating a credential."""
-    
+
     value: str = Field(description="Plain text credential value")
 
 
 class CredentialRead(CredentialBase):
     """Schema for reading a credential (without encrypted value)."""
-    
+
     id: UUIDstr
     created_at: datetime
     updated_at: datetime
@@ -60,7 +54,7 @@ class CredentialRead(CredentialBase):
 
 class CredentialUpdate(BaseModel):
     """Schema for updating a credential."""
-    
+
     name: str | None = None
     description: str | None = None
     is_active: bool | None = None
