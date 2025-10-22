@@ -1,9 +1,9 @@
+import { useMemo } from "react";
 import { getNodeInputColors } from "@/CustomNodes/helpers/get-node-input-colors";
 import { getNodeInputColorsName } from "@/CustomNodes/helpers/get-node-input-colors-name";
 import { sortToolModeFields } from "@/CustomNodes/helpers/sort-tool-mode-field";
 import getFieldTitle from "@/CustomNodes/utils/get-field-title";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
-import { useMemo } from "react";
 import NodeInputField from "../NodeInputField";
 
 const RenderInputParameters = ({

@@ -20,6 +20,9 @@ ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
 
+# Set RUSTFLAGS for reqwest unstable features needed by apify-client v2.0.0
+ENV RUSTFLAGS='--cfg reqwest_unstable'
+
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \
@@ -33,13 +36,18 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy files first to avoid permission issues with bind mounts
+COPY ./uv.lock /app/uv.lock
+COPY ./README.md /app/README.md
+COPY ./pyproject.toml /app/pyproject.toml
+COPY ./src/backend/base/README.md /app/src/backend/base/README.md
+COPY ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
+COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
+COPY ./src/lfx/README.md /app/src/lfx/README.md
+COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
+
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=README.md,target=README.md \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
-    --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
-    --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
+    RUSTFLAGS='--cfg reqwest_unstable' \
     uv sync --frozen --no-install-project --no-editable --extra couchbase --extra cassio --extra local --extra clickhouse-connect --extra nv-ingest --extra postgresql
 
 COPY ./src /app/src
@@ -48,16 +56,14 @@ COPY src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
 RUN --mount=type=cache,target=/root/.npm \
     npm ci \
-    && npm run build \
+    && ESBUILD_BINARY_PATH="" NODE_OPTIONS="--max-old-space-size=12288" JOBS=1 npm run build \
     && cp -r build /app/src/backend/langflow/frontend \
     && rm -rf /tmp/src/frontend
 
 WORKDIR /app
-COPY ./pyproject.toml /app/pyproject.toml
-COPY ./uv.lock /app/uv.lock
-COPY ./README.md /app/README.md
 
 RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
     uv sync --frozen --no-editable --extra couchbase --extra cassio --extra local --extra clickhouse-connect --extra nv-ingest --extra postgresql
 
 ################################

@@ -1,11 +1,11 @@
-import {
+import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
-import { ChatInputType, ChatOutputType } from "../chat";
-import { FlowType } from "../flow";
+import type { ChatInputType, ChatOutputType } from "../chat";
+import type { FlowType } from "../flow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
 export type APIObjectType = { [key: string]: APIKindType };
@@ -43,6 +43,7 @@ export type APIClassType = {
   custom_fields?: CustomFieldsType;
   beta?: boolean;
   legacy?: boolean;
+  replacement?: string[];
   documentation: string;
   error?: string;
   official?: boolean;
@@ -321,6 +322,7 @@ export type FieldValidatorType =
   | "password";
 
 export type FieldParserType =
+  | "mcp_name_case"
   | "snake_case"
   | "camel_case"
   | "pascal_case"

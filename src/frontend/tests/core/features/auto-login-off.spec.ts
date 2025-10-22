@@ -1,10 +1,13 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 import { renameFlow } from "../../utils/rename-flow";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "when auto_login is false, admin can CRUD user's and should see just your own flows",
-  { tag: ["@release", "@api", "@database"] },
+  { tag: ["@release", "@api", "@database", "@mainpage"] },
   async ({ page }) => {
     await page.route("**/api/v1/auto_login", (route) => {
       route.fulfill({
@@ -140,12 +143,7 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
+    await adjustScreenView(page, { numberOfZoomOut: 1 });
 
     await renameFlow(page, { flowName: randomFlowName });
 
@@ -215,12 +213,7 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     await renameFlow(page, { flowName: secondRandomFlowName });
 

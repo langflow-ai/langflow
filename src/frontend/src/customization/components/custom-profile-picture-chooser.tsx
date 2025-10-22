@@ -1,5 +1,5 @@
 import ProfilePictureChooserComponent, {
-  ProfilePictureChooserComponentProps,
+  type ProfilePictureChooserComponentProps,
 } from "@/pages/SettingsPage/pages/GeneralPage/components/ProfilePictureForm/components/profilePictureChooserComponent";
 export function CustomProfilePictureChooserComponent({
   profilePictures,

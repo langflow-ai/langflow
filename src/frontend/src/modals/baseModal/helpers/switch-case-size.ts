@@ -93,6 +93,11 @@ export const switchCaseModalSize = (size: string) => {
       height = "min-h-[232px]";
       break;
 
+    case "auth":
+      minWidth = "min-w-[600px]";
+      height = "";
+      break;
+
     default:
       minWidth = "min-w-[80vw]";
       height = "h-[90vh]";

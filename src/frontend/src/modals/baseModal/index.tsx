@@ -1,6 +1,7 @@
-import { ReactNode, useEffect } from "react";
-
-import React from "react";
+import { DialogClose } from "@radix-ui/react-dialog";
+import * as Form from "@radix-ui/react-form";
+import React, { type ReactNode, useEffect } from "react";
+import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,16 +11,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-
 import {
   Dialog as Modal,
   DialogContent as ModalContent,
 } from "../../components/ui/dialog-with-no-close";
-
-import { DialogClose } from "@radix-ui/react-dialog";
-import * as Form from "@radix-ui/react-form";
-import { Button } from "../../components/ui/button";
-import { modalHeaderType } from "../../types/components";
+import type { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import { switchCaseModalSize } from "./helpers/switch-case-size";
 
@@ -109,14 +105,16 @@ const Footer: React.FC<{
   };
   close?: boolean;
   centered?: boolean;
-}> = ({ children, submit, close, centered }) => {
+  className?: string;
+}> = ({ children, submit, close, centered, className }) => {
   return (
     <div
-      className={
+      className={cn(
         centered
           ? "flex flex-shrink-0 justify-center"
-          : "flex flex-shrink-0 flex-row-reverse"
-      }
+          : "flex flex-shrink-0 flex-row-reverse",
+        className,
+      )}
     >
       {submit ? (
         <div className="flex w-full items-center justify-between">
@@ -189,7 +187,8 @@ interface BaseModalProps {
     | "sm-thin"
     | "smaller-h-full"
     | "medium-log"
-    | "x-large";
+    | "x-large"
+    | "auth";
   className?: string;
   disable?: boolean;
   onChangeOpenModal?: (open?: boolean) => void;
@@ -225,7 +224,7 @@ function BaseModal({
     (child) => (child as React.ReactElement).type === Footer,
   );
 
-  let { minWidth, height } = switchCaseModalSize(size);
+  const { minWidth, height } = switchCaseModalSize(size);
 
   useEffect(() => {
     if (onChangeOpenModal) {

@@ -1,21 +1,20 @@
-import {
-  useGetGlobalVariables,
-  usePatchGlobalVariables,
-  usePostGlobalVariables,
-} from "@/controllers/API/queries/variables";
-import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
-import { GlobalVariable } from "@/types/global_variables";
 import { useEffect, useState } from "react";
-
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
+import {
+  useGetGlobalVariables,
+  usePatchGlobalVariables,
+  usePostGlobalVariables,
+} from "@/controllers/API/queries/variables";
 import BaseModal from "@/modals/baseModal";
 import useAlertStore from "@/stores/alertStore";
+import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import { useTypesStore } from "@/stores/typesStore";
-import { ResponseErrorDetailAPI } from "@/types/api";
+import type { ResponseErrorDetailAPI } from "@/types/api";
+import type { GlobalVariable } from "@/types/global_variables";
 import InputComponent from "../parameterRenderComponent/components/inputComponent";
 import sortByName from "./utils/sort-by-name";
 
@@ -60,7 +59,7 @@ export default function GlobalVariableModal({
     if (globalVariables && componentFields.size > 0) {
       const unavailableFields = getUnavailableFields(globalVariables);
       const fields = Array.from(componentFields).filter(
-        (field) => !unavailableFields.hasOwnProperty(field.trim()),
+        (field) => !Object.hasOwn(unavailableFields, field.trim()),
       );
       setAvailableFields(
         sortByName(fields.concat(initialData?.default_fields ?? [])),
@@ -76,7 +75,7 @@ export default function GlobalVariableModal({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   function handleSaveVariable() {
-    let data: {
+    const data: {
       name: string;
       value: string;
       type?: string;
@@ -98,16 +97,20 @@ export default function GlobalVariableModal({
         setOpen(false);
 
         setSuccessData({
-          title: `Variable ${name} ${initialData ? "updated" : "created"} successfully`,
+          title: `Variable ${name} ${
+            initialData ? "updated" : "created"
+          } successfully`,
         });
       },
       onError: (error) => {
-        let responseError = error as ResponseErrorDetailAPI;
+        const responseError = error as ResponseErrorDetailAPI;
         setErrorData({
           title: `Error ${initialData ? "updating" : "creating"} variable`,
           list: [
             responseError?.response?.data?.detail ??
-              `An unexpected error occurred while ${initialData ? "updating a new" : "creating"} variable. Please try again.`,
+              `An unexpected error occurred while ${
+                initialData ? "updating a new" : "creating"
+              } variable. Please try again.`,
           ],
         });
       },
@@ -225,6 +228,7 @@ export default function GlobalVariableModal({
         submit={{
           label: `${initialData ? "Update" : "Save"} Variable`,
           dataTestId: "save-variable-btn",
+          disabled: !key || !value,
         }}
       />
     </BaseModal>

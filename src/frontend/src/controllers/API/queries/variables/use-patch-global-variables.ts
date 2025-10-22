@@ -1,5 +1,5 @@
-import { useMutationFunctionType } from "@/types/api";
-import { UseMutationResult } from "@tanstack/react-query";
+import type { UseMutationResult } from "@tanstack/react-query";
+import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -36,6 +36,7 @@ export const usePatchGlobalVariables: useMutationFunctionType<
       queryClient.refetchQueries({ queryKey: ["useGetGlobalVariables"] });
     },
     ...options,
+    retry: false,
   });
 
   return mutation;

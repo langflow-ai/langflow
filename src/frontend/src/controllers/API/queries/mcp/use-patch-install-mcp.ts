@@ -1,5 +1,5 @@
-import { useMutationFunctionType } from "@/types/api";
-import { UseMutationResult } from "@tanstack/react-query";
+import type { UseMutationResult } from "@tanstack/react-query";
+import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -49,6 +49,8 @@ export const usePatchInstallMCP: useMutationFunctionType<
     PatchInstallMCPBody
   > = mutate(["usePatchInstallMCP"], patchInstallMCP, {
     ...options,
+    retry: 0,
+
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({
         queryKey: ["useGetInstalledMCP", params.project_id],

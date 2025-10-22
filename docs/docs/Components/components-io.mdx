@@ -1,0 +1,186 @@
+---
+title: Input / Output
+slug: /components-io
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+Input and output components define where data enters and exits your flow, but they don't have identical functionality.
+
+Specifically, **Chat Input and Output** components are designed to facilitate conversational interactions where messages are exchanged in a cumulative dialogue.
+The data handled by these components includes the message text plus additional metadata like senders, session IDs, and timestamps.
+
+In contrast, **Text Input and Output** components are designed for simple string input and output that doesn't require the additional context and metadata associated with chat messages.
+The data handled by these components is pared down to basic text strings.
+
+## Chat Input and Output {#chat-io}
+
+:::warning
+**Chat Input and Output** components are required to chat with your flow in the **Playground**.
+For more information, see [Test flows in the Playground](/concepts-playground).
+:::
+
+**Chat Input and Output** components are designed to handle conversational interactions in Langflow.
+
+### Chat Input
+
+The **Chat Input** component accepts text and file input, such as a chat message or a file.
+This data is passed to other components as [`Message` data](/data-types) containing the provided input as well as associated chat metadata, such as the sender, session ID, timestamp, and file attachments.
+
+Initial input should _not_ be provided as a complete `Message` object because the **Chat Input** component constructs the `Message` object that is then passed to other components in the flow.
+
+#### Chat Input parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+|input_value|Input Text| Input parameter. The message text string to be passed as input. |
+|sender|Sender Type| Input parameter. Identifies the sender as either `User` or `Language Model`.|
+|sender_name|Sender Name| Input parameter. The name of the sender. If unspecified, defaults to `User` or `Language Model`. |
+|session_id|Session ID| Input parameter. The unique identifier for the chat session. If empty, the current session ID parameter is used.|
+|files|Files| Input parameter. The files to be sent with the message.|
+|background_color|Background Color| Input parameter. The background color of the icon.|
+|chat_icon|Icon| Input parameter. The icon of the message.|
+|should_store_message|Store Messages| Input parameter. Whether to store the message in chat history.|
+|text_color|Text Color| Input parameter. The text color of the name.|
+
+For information about the resulting `Message` object, including input parameters that are directly mapped to `Message` attributes, see [`Message` data](/data-types#message).
+
+<details>
+<summary>Message method for Chat Input</summary>
+
+The `ChatInput` class provides an asynchronous method to create and store a `Message` object based on the input parameters.
+The `Message` object is created in the `message_response` method of the `ChatInput` class using the `Message.create()` factory method.
+
+```python
+message = await Message.create(
+    text=self.input_value,
+    sender=self.sender,
+    sender_name=self.sender_name,
+    session_id=self.session_id,
+    files=self.files,
+    properties={
+        "background_color": background_color,
+        "text_color": text_color,
+        "icon": icon,
+    },
+)
+```
+
+</details>
+
+### Chat Output
+
+The **Chat Output** component ingests `Message`, `Data`, or `DataFrame` data from other components, transforms it into `Message` data if needed, and then emits the final output as a chat message.
+For information about these data types, see [Use Langflow data types](/data-types).
+
+In the **Playground**, chat output is limited to the parts of the `Message` object that are relevant to the chat interface, such as the text response, sender name, and file attachments.
+To see the metadata associated with a chat message, inspect the message logs in the **Playground**.
+
+When using the Langflow API, the API response includes the **Chat Output** `Message` object along with other response data from the flow run.
+Langflow API responses can be extremely verbose, so your applications must include code to extract relevant data from the response to return to the user.
+For an example, see the [Langflow quickstart](/get-started-quickstart).
+
+#### Chat Output parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+|input_value|Inputs| Input parameter. The message text string to be passed as output. |
+|should_store_message|Store Messages| Input parameter. Whether to store the message in chat history.|
+|sender|Sender Type| Input parameter. Identifies the sender as either `User` or `Language Model`.|
+|sender_name|Sender Name| Input parameter. The name of the sender. If unspecified, defaults to `User` or `Language Model`. |
+|session_id|Session ID| Input parameter. The unique identifier for the chat session. If empty, the current session ID parameter is used.|
+|data_template|Data Template| Input parameter. The template to convert [`Data` input](/data-types#data) to `text`. If empty, it is dynamically set to the `Data` object's `text` key.|
+|background_color|Background Color| Input parameter. The background color of the icon.|
+|chat_icon|Icon| Input parameter. The icon of the message.|
+|text_color|Text Color| Input parameter. The text color of the name.|
+|clean_data|Basic Clean Data| Input parameter. When enabled, [`DataFrame` input](/data-types#dataframe) is cleaned when converted to text. Cleaning removes empty rows, empty lines in cells, and multiple newlines.|
+
+For information about the resulting `Message` object, including input parameters that are directly mapped to `Message` attributes, see [`Message` data](/data-types#message).
+
+### Use Chat Input and Output components in a flow
+
+To use the **Chat Input** and **Chat Output** components in a flow, connect them to components that accept or emit [`Message` data](/data-types#message).
+
+For example, the following flow connects **Chat Input** and **Chat Output** to a **Language Model** component, creating a simple LLM-based chat flow.
+
+![Chat Input and Output components connected to an OpenAI component](/img/component-chat-io.png)
+
+:::tip
+For detailed examples of **Chat Input and Output** components in flows, see the following:
+
+* [Langflow quickstart](/get-started-quickstart): Create and run a basic agent flow.
+* **Basic Prompting** template: Create an LLM-based chat flow that accepts chat input as well as a prompt with additional instructions for the LLM. Many other Langflow templates also use **Chat Input and Output** components.
+* [Connect applications to agents](/agent-tutorial): Explore more advanced concepts around agent flows and prompting, including triggering agent flows from external applications.
+:::
+
+### Send chat input with the Langflow API
+
+You can use the Langflow API to run a flow by sending input to a **Chat Input** component:
+
+```bash
+curl --request POST \
+  --url "http://$LANGFLOW_SERVER_ADDRESS/api/v1/run/$FLOW_ID" \
+  --header "Content-Type: application/json" \
+  --header "x-api-key: $LANGFLOW_API_KEY" \
+  --data '{
+  "input_value": "What's the recommended way to install Docker on Mac M1?",
+  "output_type": "chat",
+  "input_type": "chat"
+}'
+```
+
+When triggering flows with the Langflow API, the payload must contain the values for the **Chat Input** component's input parameters, such as `input_value`.
+
+Not all parameters need to be specified in the request.
+For example, `session_id` uses the flow's default session ID if omitted.
+If you want to use a custom session ID, include `session_id` in your request:
+
+```bash
+curl --request POST \
+  --url "http://$LANGFLOW_SERVER_ADDRESS/api/v1/run/$FLOW_ID" \
+  --header "Content-Type: application/json" \
+  --header "x-api-key: $LANGFLOW_API_KEY" \
+  --data '{
+  "input_value": "Whats the recommended way to install Docker on Mac M1",
+  "session_id": "$USER_ID",
+  "output_type": "chat",
+  "input_type": "chat"
+}'
+```
+
+For more information, see [Trigger flows with the Langflow API](/concepts-publish).
+
+## Text Input and Output {#text-io}
+
+:::warning
+**Text Input and Output** components aren't supported in the **Playground**.
+Because the data isn't formatted as a chat message, the data doesn't appear in the **Playground**, and you can't chat with your flow in the **Playground**.
+
+If you want to chat with a flow in the **Playground**, you must use the [**Chat Input and Output** components](#chat-io).
+:::
+
+**Text Input and Output** components are designed for flows that ingest or emit simple text strings.
+These components don't support full conversational interactions.
+
+Passing chat-like metadata to a **Text Input and Output** component doesn't change the component's behavior; the result is still a simple text string.
+
+### Text Input
+
+The **Text Input** component accepts a text string input that is passed to other components as [`Message` data](/data-types) containing only the provided input text string in the `text` attribute.
+
+It accepts only **Text** (`input_value`), which is the text supplied as input to the component.
+This can be entered directly into the component or passed as `Message` data from other components.
+
+Initial input _shouldn't_ be provided as a complete `Message` object because the **Text Input** component constructs the `Message` object that is then passed to other components in the flow.
+
+### Text Output
+
+The **Text Output** component ingests [`Message` data](/data-types#message) from other components, emitting only the `text` attribute in a simplified `Message` object.
+
+It accepts only **Text** (`input_value`), which is the text to be ingested and output as a string.
+This can be entered directly into the component or passed as `Message` data from other components.

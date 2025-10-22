@@ -1,6 +1,7 @@
+import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import BaseModal from "@/modals/baseModal";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { CardData } from "@/types/templates/types";
+import type { CardData } from "@/types/templates/types";
 import memoryChatbot from "../../../../assets/temp-pat-1.png";
 import vectorRag from "../../../../assets/temp-pat-2.png";
 import multiAgent from "../../../../assets/temp-pat-3.png";
@@ -13,6 +14,10 @@ import TemplateGetStartedCardComponent from "../TemplateGetStartedCardComponent"
 export default function GetStartedComponent() {
   const examples = useFlowsManagerStore((state) => state.examples);
 
+  const filteredExamples = examples.filter((example) => {
+    return !(!ENABLE_KNOWLEDGE_BASES && example.name?.includes("Knowledge"));
+  });
+
   // Define the card data
   const cardData: CardData[] = [
     {
@@ -20,21 +25,25 @@ export default function GetStartedComponent() {
       bgHorizontalImage: memoryChatbotHorizontal,
       icon: "MessagesSquare",
       category: "prompting",
-      flow: examples.find((example) => example.name === "Basic Prompting"),
+      flow: filteredExamples.find(
+        (example) => example.name === "Basic Prompting",
+      ),
     },
     {
       bgImage: vectorRag,
       bgHorizontalImage: vectorRagHorizontal,
       icon: "Database",
       category: "RAG",
-      flow: examples.find((example) => example.name === "Vector Store RAG"),
+      flow: filteredExamples.find(
+        (example) => example.name === "Vector Store RAG",
+      ),
     },
     {
       bgImage: multiAgent,
       bgHorizontalImage: multiAgentHorizontal,
       icon: "Bot",
       category: "Agents",
-      flow: examples.find((example) => example.name === "Simple Agent"),
+      flow: filteredExamples.find((example) => example.name === "Simple Agent"),
     },
   ];
 

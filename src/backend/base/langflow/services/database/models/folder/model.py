@@ -2,7 +2,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import Text, UniqueConstraint
-from sqlmodel import Column, Field, Relationship, SQLModel
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.user.model import User
@@ -11,6 +11,11 @@ from langflow.services.database.models.user.model import User
 class FolderBase(SQLModel):
     name: str = Field(index=True)
     description: str | None = Field(default=None, sa_column=Column(Text))
+    auth_settings: dict | None = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+        description="Authentication settings for the folder/project",
+    )
 
 
 class Folder(FolderBase, table=True):  # type: ignore[call-arg]
@@ -53,3 +58,4 @@ class FolderUpdate(SQLModel):
     parent_id: UUID | None = None
     components: list[UUID] = Field(default_factory=list)
     flows: list[UUID] = Field(default_factory=list)
+    auth_settings: dict | None = None
