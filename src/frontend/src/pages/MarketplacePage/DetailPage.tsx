@@ -196,7 +196,7 @@ export default function MarketplaceDetailPage() {
                 </div>
               ) : flowLoaded ? (
                 <div className="h-[calc(100vh-200px)] w-full overflow-hidden rounded-lg border border-border dark:border-white/20">
-                  <FlowPage view={true} flowId={publishedFlowData?.flow_id} />
+                  <FlowPage view={true} readOnly={true} flowId={publishedFlowData?.flow_id} />
                 </div>
               ) : (
                 <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center rounded-lg border border-border dark:border-white/20 bg-card dark:bg-black dark:text-white">

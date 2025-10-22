@@ -21,11 +21,12 @@ import Page from "./components/PageComponent";
 
 interface FlowPageProps {
   view?: boolean;
+  readOnly?: boolean;
   flowId?: string;
   folderId?: string;
 }
 
-export default function FlowPage({ view, flowId: propFlowId, folderId: propFolderId }: FlowPageProps): JSX.Element {
+export default function FlowPage({ view, readOnly, flowId: propFlowId, folderId: propFolderId }: FlowPageProps): JSX.Element {
   const types = useTypesStore((state) => state.types);
 
   useGetTypes({
@@ -203,7 +204,7 @@ export default function FlowPage({ view, flowId: propFlowId, folderId: propFolde
               <FlowSearchProvider>
                 <main className="flex w-full overflow-hidden">
                   <div className="h-full w-full">
-                    <Page setIsLoading={setIsLoading} />
+                    <Page view={view} readOnly={readOnly} setIsLoading={setIsLoading} />
                   </div>
                 </main>
                 {!view && <FlowSidebarComponent isLoading={isLoading} />}

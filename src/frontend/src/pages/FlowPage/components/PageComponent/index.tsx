@@ -94,9 +94,11 @@ const edgeTypes = {
 
 export default function Page({
   view,
+  readOnly,
   setIsLoading,
 }: {
   view?: boolean;
+  readOnly?: boolean;
   setIsLoading: (isLoading: boolean) => void;
 }): JSX.Element {
   const uploadFlow = useUploadFlow();
@@ -719,7 +721,7 @@ export default function Page({
       {showCanvas ? (
         <>
           <div id="react-flow-id" className="h-full w-full bg-canvas relative">
-            {!view && (
+            {!view && !readOnly && (
               <>
                 <MemoizedLogCanvasControls />
                 <MemoizedCanvasControls
@@ -740,35 +742,38 @@ export default function Page({
             <ReactFlow<AllNodeType, EdgeType>
               nodes={nodes}
               edges={edges}
-              onNodesChange={onNodesChangeWithHelperLines}
-              onEdgesChange={onEdgesChange}
-              onConnect={isLocked ? undefined : onConnectMod}
+              onNodesChange={readOnly ? undefined : onNodesChangeWithHelperLines}
+              onEdgesChange={readOnly ? undefined : onEdgesChange}
+              onConnect={isLocked || readOnly ? undefined : onConnectMod}
               disableKeyboardA11y={true}
-              nodesFocusable={!isLocked}
-              edgesFocusable={!isLocked}
+              nodesFocusable={!isLocked && !readOnly}
+              edgesFocusable={!isLocked && !readOnly}
+              nodesDraggable={!readOnly}
+              nodesConnectable={!readOnly}
+              elementsSelectable={!readOnly}
               onInit={setReactFlowInstance}
               nodeTypes={nodeTypes}
-              onReconnect={isLocked ? undefined : onEdgeUpdate}
-              onReconnectStart={isLocked ? undefined : onEdgeUpdateStart}
-              onReconnectEnd={isLocked ? undefined : onEdgeUpdateEnd}
-              onNodeDrag={onNodeDrag}
-              onNodeDragStart={onNodeDragStart}
-              onSelectionDragStart={onSelectionDragStart}
+              onReconnect={isLocked || readOnly ? undefined : onEdgeUpdate}
+              onReconnectStart={isLocked || readOnly ? undefined : onEdgeUpdateStart}
+              onReconnectEnd={isLocked || readOnly ? undefined : onEdgeUpdateEnd}
+              onNodeDrag={readOnly ? undefined : onNodeDrag}
+              onNodeDragStart={readOnly ? undefined : onNodeDragStart}
+              onSelectionDragStart={readOnly ? undefined : onSelectionDragStart}
               elevateEdgesOnSelect={false}
-              onSelectionEnd={onSelectionEnd}
-              onSelectionStart={onSelectionStart}
+              onSelectionEnd={readOnly ? undefined : onSelectionEnd}
+              onSelectionStart={readOnly ? undefined : onSelectionStart}
               connectionRadius={30}
               edgeTypes={edgeTypes}
               connectionLineComponent={ConnectionLineComponent}
-              onDragOver={onDragOver}
-              onNodeDragStop={onNodeDragStop}
-              onDrop={onDrop}
-              onSelectionChange={onSelectionChange}
+              onDragOver={readOnly ? undefined : onDragOver}
+              onNodeDragStop={readOnly ? undefined : onNodeDragStop}
+              onDrop={readOnly ? undefined : onDrop}
+              onSelectionChange={readOnly ? undefined : onSelectionChange}
               deleteKeyCode={[]}
               fitView={isEmptyFlow.current ? false : true}
               fitViewOptions={fitViewOptions}
               className="theme-attribution"
-              tabIndex={isLocked ? -1 : undefined}
+              tabIndex={isLocked || readOnly ? -1 : undefined}
               minZoom={MIN_ZOOM}
               maxZoom={MAX_ZOOM}
               zoomOnScroll={!view}
@@ -776,9 +781,9 @@ export default function Page({
               panOnDrag={!view}
               panActivationKeyCode={""}
               proOptions={{ hideAttribution: true }}
-              onPaneClick={onPaneClick}
-              onEdgeClick={handleEdgeClick}
-              onKeyDown={handleKeyDown}
+              onPaneClick={readOnly ? undefined : onPaneClick}
+              onEdgeClick={readOnly ? undefined : handleEdgeClick}
+              onKeyDown={readOnly ? undefined : handleKeyDown}
             >
               <FlowBuildingComponent />
               <UpdateAllComponents />
