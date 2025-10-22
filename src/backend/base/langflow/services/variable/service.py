@@ -117,7 +117,9 @@ class DatabaseVariableService(VariableService, Service):
             elif variable.type == GENERIC_TYPE:
                 # Attempt legacy decrypt with fallback to plaintext
                 try:
-                    variable_read.value = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+                    variable_read.value = auth_utils.decrypt_api_key(
+                        variable.value, settings_service=self.settings_service
+                    )
                 except Exception as e:  # noqa: BLE001
                     logger.debug(
                         f"Decryption of {variable.type} failed for variable '{variable.name}': {e}. Assuming plaintext."

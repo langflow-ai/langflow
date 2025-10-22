@@ -84,7 +84,7 @@ def _get_language_model_options() -> list[dict[str, Any]]:
         if key not in seen:
             seen.add(key)
             deduplicated.append(option)
-    
+
     return deduplicated
 
 
