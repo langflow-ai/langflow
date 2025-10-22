@@ -1,9 +1,15 @@
 import asyncio
+import hashlib
 import importlib
+import inspect
 import json
+import os
 import pkgutil
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
+
+import orjson
 
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.utils import abuild_custom_components, create_component_template
@@ -31,16 +37,306 @@ class ComponentCache:
 component_cache = ComponentCache()
 
 
-async def import_langflow_components():
+def _parse_dev_mode() -> tuple[bool, list[str] | None]:
+    """Parse LFX_DEV to determine dev mode and which modules to load.
+
+    Development mode must be explicitly enabled via the LFX_DEV environment variable.
+    When enabled, components are always rebuilt dynamically to reflect code changes.
+    When disabled or not set, the prebuilt index is used for fast startup.
+
+    Supports two modes:
+    - Boolean mode: LFX_DEV=1/true/yes loads all modules dynamically
+    - List mode: LFX_DEV=mistral,openai,anthropic loads only specified modules
+
+    Returns:
+        Tuple of (dev_mode_enabled, module_list)
+        - If module_list is None, load all modules
+        - If module_list is a list, only load those specific modules
+    """
+    lfx_dev = os.getenv("LFX_DEV", "").strip()
+    if not lfx_dev:
+        return (False, None)
+
+    # Boolean mode: "1", "true", "yes" enables dev mode
+    if lfx_dev.lower() in {"1", "true", "yes"}:
+        return (True, None)  # Load all modules
+
+    # Boolean mode: "0", "false", "no" explicitly disables dev mode
+    if lfx_dev.lower() in {"0", "false", "no"}:
+        return (False, None)
+
+    # List mode: comma-separated values
+    modules = [m.strip().lower() for m in lfx_dev.split(",") if m.strip()]
+    if modules:
+        return (True, modules)
+
+    return (False, None)
+
+
+def _read_component_index(custom_path: str | None = None) -> dict | None:
+    """Read and validate the prebuilt component index.
+
+    Args:
+        custom_path: Optional custom path or URL to index file. If None, uses built-in index.
+
+    Returns:
+        The index dictionary if valid, None otherwise
+    """
+    try:
+        import lfx
+
+        # Determine index location
+        if custom_path:
+            # Check if it's a URL
+            if custom_path.startswith(("http://", "https://")):
+                # Fetch from URL
+                import httpx
+
+                try:
+                    response = httpx.get(custom_path, timeout=10.0)
+                    response.raise_for_status()
+                    blob = orjson.loads(response.content)
+                except httpx.HTTPError as e:
+                    logger.warning(f"Failed to fetch component index from {custom_path}: {e}")
+                    return None
+                except orjson.JSONDecodeError as e:
+                    logger.warning(f"Component index from {custom_path} is corrupted or invalid JSON: {e}")
+                    return None
+            else:
+                # Load from file path
+                index_path = Path(custom_path)
+                if not index_path.exists():
+                    logger.warning(f"Custom component index not found at {custom_path}")
+                    return None
+                try:
+                    blob = orjson.loads(index_path.read_bytes())
+                except orjson.JSONDecodeError as e:
+                    logger.warning(f"Component index at {custom_path} is corrupted or invalid JSON: {e}")
+                    return None
+        else:
+            # Use built-in index
+            pkg_dir = Path(inspect.getfile(lfx)).parent
+            index_path = pkg_dir / "_assets" / "component_index.json"
+
+            if not index_path.exists():
+                return None
+
+            try:
+                blob = orjson.loads(index_path.read_bytes())
+            except orjson.JSONDecodeError as e:
+                logger.warning(f"Built-in component index is corrupted or invalid JSON: {e}")
+                return None
+
+        # Integrity check: verify SHA256
+        tmp = dict(blob)
+        sha = tmp.pop("sha256", None)
+        if not sha:
+            logger.warning("Component index missing SHA256 hash - index may be tampered")
+            return None
+
+        # Use orjson for hash calculation to match build script
+        calc = hashlib.sha256(orjson.dumps(tmp, option=orjson.OPT_SORT_KEYS)).hexdigest()
+        if sha != calc:
+            logger.warning(
+                "Component index integrity check failed - SHA256 mismatch (file may be corrupted or tampered)"
+            )
+            return None
+
+        # Version check: ensure index matches installed langflow version
+        from importlib.metadata import version
+
+        installed_version = version("langflow")
+        if blob.get("version") != installed_version:
+            logger.debug(
+                f"Component index version mismatch: index={blob.get('version')}, installed={installed_version}"
+            )
+            return None
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Unexpected error reading component index: {type(e).__name__}: {e}")
+        return None
+    return blob
+
+
+def _get_cache_path() -> Path:
+    """Get the path for the cached component index in the user's cache directory."""
+    from platformdirs import user_cache_dir
+
+    cache_dir = Path(user_cache_dir("lfx", "langflow"))
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir / "component_index.json"
+
+
+def _save_generated_index(modules_dict: dict) -> None:
+    """Save a dynamically generated component index to cache for future use.
+
+    Args:
+        modules_dict: Dictionary of components by category
+    """
+    try:
+        cache_path = _get_cache_path()
+
+        # Convert modules_dict to entries format
+        entries = [[top_level, components] for top_level, components in modules_dict.items()]
+
+        # Calculate metadata
+        num_modules = len(modules_dict)
+        num_components = sum(len(components) for components in modules_dict.values())
+
+        # Get version
+        from importlib.metadata import version
+
+        langflow_version = version("langflow")
+
+        # Build index structure
+        index = {
+            "version": langflow_version,
+            "metadata": {
+                "num_modules": num_modules,
+                "num_components": num_components,
+            },
+            "entries": entries,
+        }
+
+        # Calculate hash
+        payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
+        index["sha256"] = hashlib.sha256(payload).hexdigest()
+
+        # Write to cache
+        json_bytes = orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2)
+        cache_path.write_bytes(json_bytes)
+
+        logger.debug(f"Saved generated component index to cache: {cache_path}")
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"Failed to save generated index to cache: {e}")
+
+
+async def _send_telemetry(
+    telemetry_service: Any,
+    index_source: str,
+    modules_dict: dict,
+    dev_mode: bool,  # noqa: FBT001
+    target_modules: list[str] | None,
+    start_time_ms: int,
+) -> None:
+    """Send telemetry about component index loading.
+
+    Args:
+        telemetry_service: Telemetry service instance (optional)
+        index_source: Source of the index ("builtin", "cache", or "dynamic")
+        modules_dict: Dictionary of loaded components
+        dev_mode: Whether dev mode is enabled
+        target_modules: List of filtered modules if any
+        start_time_ms: Start time in milliseconds
+    """
+    if not telemetry_service:
+        return
+
+    try:
+        # Calculate metrics
+        num_modules = len(modules_dict)
+        num_components = sum(len(components) for components in modules_dict.values())
+        load_time_ms = int(time.time() * 1000) - start_time_ms
+        filtered_modules = ",".join(target_modules) if target_modules else None
+
+        # Import the payload class dynamically to avoid circular imports
+        from langflow.services.telemetry.schema import ComponentIndexPayload
+
+        payload = ComponentIndexPayload(
+            index_source=index_source,
+            num_modules=num_modules,
+            num_components=num_components,
+            dev_mode=dev_mode,
+            filtered_modules=filtered_modules,
+            load_time_ms=load_time_ms,
+        )
+
+        await telemetry_service.log_component_index(payload)
+    except Exception as e:  # noqa: BLE001
+        # Don't fail component loading if telemetry fails
+        await logger.adebug(f"Failed to send component index telemetry: {e}")
+
+
+async def import_langflow_components(
+    settings_service: Optional["SettingsService"] = None, telemetry_service: Any | None = None
+):
     """Asynchronously discovers and loads all built-in Langflow components with module-level parallelization.
+
+    In production mode (non-dev), attempts to load components from a prebuilt static index for instant startup.
+    Falls back to dynamic module scanning if index is unavailable or invalid. When dynamic loading is used,
+    the generated index is cached for future use.
 
     Scans the `lfx.components` package and its submodules in parallel, instantiates classes that are subclasses
     of `Component` or `CustomComponent`, and generates their templates. Components are grouped by their
     top-level subpackage name.
 
+    Args:
+        settings_service: Optional settings service to get custom index path
+        telemetry_service: Optional telemetry service to log component loading metrics
+
     Returns:
         A dictionary with a "components" key mapping top-level package names to their component templates.
     """
+    # Start timer for telemetry
+    start_time_ms = int(time.time() * 1000)
+    index_source = None
+
+    # Track if we need to save the index after building
+    should_save_index = False
+
+    # Fast path: load from prebuilt index if not in dev mode
+    dev_mode_enabled, target_modules = _parse_dev_mode()
+    if not dev_mode_enabled:
+        # Get custom index path from settings if available
+        custom_index_path = None
+        if settings_service and settings_service.settings.components_index_path:
+            custom_index_path = settings_service.settings.components_index_path
+            await logger.adebug(f"Using custom component index: {custom_index_path}")
+
+        index = _read_component_index(custom_index_path)
+        if index and "entries" in index:
+            source = custom_index_path or "built-in index"
+            await logger.adebug(f"Loading components from {source}")
+            index_source = "builtin"
+            # Reconstruct modules_dict from index entries
+            modules_dict = {}
+            for top_level, components in index["entries"]:
+                if top_level not in modules_dict:
+                    modules_dict[top_level] = {}
+                modules_dict[top_level].update(components)
+            await logger.adebug(f"Loaded {len(modules_dict)} component categories from index")
+            await _send_telemetry(
+                telemetry_service, index_source, modules_dict, dev_mode_enabled, target_modules, start_time_ms
+            )
+            return {"components": modules_dict}
+
+        # Index failed to load in production - try cache before building
+        await logger.adebug("Prebuilt index not available, checking cache")
+        try:
+            cache_path = _get_cache_path()
+            if cache_path.exists():
+                await logger.adebug(f"Attempting to load from cache: {cache_path}")
+                index = _read_component_index(str(cache_path))
+                if index and "entries" in index:
+                    await logger.adebug("Loading components from cached index")
+                    index_source = "cache"
+                    modules_dict = {}
+                    for top_level, components in index["entries"]:
+                        if top_level not in modules_dict:
+                            modules_dict[top_level] = {}
+                        modules_dict[top_level].update(components)
+                    await logger.adebug(f"Loaded {len(modules_dict)} component categories from cache")
+                    await _send_telemetry(
+                        telemetry_service, index_source, modules_dict, dev_mode_enabled, target_modules, start_time_ms
+                    )
+                    return {"components": modules_dict}
+        except Exception as e:  # noqa: BLE001
+            await logger.adebug(f"Cache load failed: {e}")
+
+        # No cache available, will build and save
+        await logger.adebug("Falling back to dynamic loading")
+        should_save_index = True
+
+    # Fallback: dynamic loading (dev mode or index unavailable)
     modules_dict = {}
     try:
         import lfx.components as components_pkg
@@ -52,8 +348,21 @@ async def import_langflow_components():
     module_names = []
     for _, modname, _ in pkgutil.walk_packages(components_pkg.__path__, prefix=components_pkg.__name__ + "."):
         # Skip if the module is in the deactivated folder
-        if "deactivated" not in modname:
-            module_names.append(modname)
+        if "deactivated" in modname:
+            continue
+
+        # If specific modules requested, filter by top-level module name
+        if target_modules:
+            # Extract top-level: "lfx.components.mistral.xyz" -> "mistral"
+            parts = modname.split(".")
+            if len(parts) > MIN_MODULE_PARTS and parts[2].lower() not in target_modules:
+                continue
+
+        module_names.append(modname)
+
+    if target_modules:
+        await logger.adebug(f"LFX_DEV module filter active: loading only {target_modules}")
+        await logger.adebug(f"Found {len(module_names)} modules matching filter")
 
     if not module_names:
         return {"components": modules_dict}
@@ -81,6 +390,17 @@ async def import_langflow_components():
                     modules_dict[top_level] = {}
                 modules_dict[top_level].update(components)
 
+    # Save the generated index to cache if needed (production mode with missing index)
+    if should_save_index and modules_dict:
+        await logger.adebug("Saving generated component index to cache")
+        _save_generated_index(modules_dict)
+
+    # Send telemetry for dynamic loading
+    index_source = "dynamic"
+    await _send_telemetry(
+        telemetry_service, index_source, modules_dict, dev_mode_enabled, target_modules, start_time_ms
+    )
+
     return {"components": modules_dict}
 
 
@@ -100,8 +420,8 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
         # TODO: Surface these errors to the UI in a friendly manner
         logger.error(f"Failed to import module {modname}: {e}", exc_info=True)
         return None
-    # Extract the top-level subpackage name after "langflow.components."
-    # e.g., "langflow.components.Notion.add_content_to_page" -> "Notion"
+    # Extract the top-level subpackage name after "lfx.components."
+    # e.g., "lfx.components.Notion.add_content_to_page" -> "Notion"
     mod_parts = modname.split(".")
     if len(mod_parts) <= MIN_MODULE_PARTS:
         return None
@@ -184,6 +504,7 @@ async def _determine_loading_strategy(settings_service: "SettingsService") -> di
 
 async def get_and_cache_all_types_dict(
     settings_service: "SettingsService",
+    telemetry_service: Any | None = None,
 ):
     """Retrieves and caches the complete dictionary of component types and templates.
 
@@ -191,17 +512,24 @@ async def get_and_cache_all_types_dict(
     components and either fully loads all components or loads only their metadata, depending on the
     lazy loading setting. Merges built-in and custom components into the cache and returns the
     resulting dictionary.
+
+    Args:
+        settings_service: Settings service instance
+        telemetry_service: Optional telemetry service for tracking component loading metrics
     """
     if component_cache.all_types_dict is None:
         await logger.adebug("Building components cache")
 
-        langflow_components = await import_langflow_components()
+        langflow_components = await import_langflow_components(settings_service, telemetry_service)
         custom_components_dict = await _determine_loading_strategy(settings_service)
 
-        # merge the dicts
+        # Flatten custom dict if it has a "components" wrapper
+        custom_flat = custom_components_dict.get("components", custom_components_dict) or {}
+
+        # Merge built-in and custom components (no wrapper at cache level)
         component_cache.all_types_dict = {
             **langflow_components["components"],
-            **custom_components_dict,
+            **custom_flat,
         }
         component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
         await logger.adebug(f"Loaded {component_count} components")
