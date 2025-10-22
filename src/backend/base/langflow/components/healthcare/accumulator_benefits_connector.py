@@ -20,9 +20,7 @@ from langflow.schema.data import Data
 
 
 class AccumulatorBenefitsConnector(HealthcareConnectorBase):
-    """
-    HIPAA-compliant Accumulator Benefits Connector for comprehensive benefit
-    accumulator analysis and member cost calculation.
+    """HIPAA-compliant Accumulator Benefits Connector for comprehensive benefit accumulator analysis and member cost calculation.
 
     Features:
     - Deductible tracking (individual and family)

@@ -137,8 +137,10 @@ components:
         in: document_extractor
 
   document_extractor:
-    type: genesis:document_extraction_connector
-    config: {}
+    type: genesis:azure_document_intelligence
+    config:
+      model_type: prebuilt-document
+      extract_tables: true
     provides:
       - useAs: extracted_data
         in: document_manager
@@ -291,7 +293,7 @@ kpis:
             "genesis:accumulator_benefits_connector",
             "genesis:provider_network_connector",
             "genesis:quality_metrics_connector",
-            "genesis:document_extraction_connector",
+            "genesis:azure_document_intelligence",
             "genesis:document_management_connector",
             "genesis:medical_data_standardizer_connector",
             "genesis:speech_transcription_connector",

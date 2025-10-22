@@ -104,10 +104,6 @@ components:
   asTools: true
   config:
     clearinghouse: change_healthcare
-    hipaa_compliant: true
-    audit_logging: true
-    data_encryption: true
-    phi_handling: compliant
   provides:
   - useAs: tools
     in: trend-detector-agent
@@ -149,10 +145,6 @@ components:
   asTools: true
   config:
     metrics_system: hedis
-    hipaa_compliant: true
-    audit_logging: true
-    data_encryption: true
-    phi_handling: compliant
   provides:
   - useAs: tools
     in: trend-detector-agent
@@ -160,14 +152,18 @@ components:
 - id: population-segmentation-tool
   name: Population Trend Segmentation Engine
   kind: Tool
-  type: genesis:clinical_nlp_analyzer_connector
-  description: Advanced population segmentation engine that analyzes trends across demographic groups, risk categories, and
+  type: genesis:autonomize
+  description: Advanced clinical language model for population segmentation analysis across demographic groups, risk categories, and
     member populations
   asTools: true
   config:
-    nlp_service: aws_comprehend_medical
+    selected_model: "Clinical LLM"
+    confidence_threshold: 0.8
     hipaa_compliant: true
     audit_logging: true
+    encryption_at_rest: true
+    phi_detection: true
+    anonymization: true
     data_encryption: true
     phi_handling: compliant
     hipaa_baa_required: true

@@ -91,52 +91,37 @@ components:
   - useAs: input
     in: filing-agent
     description: Provide rate filing documents and analysis parameters for summarization processing
-- id: document-extraction-tool
-  name: HIPAA-Compliant Document Extraction Engine
+- id: document-intelligence-tool
+  name: Azure Document Intelligence Engine
   kind: Tool
-  type: genesis:document_extraction_connector
-  description: HIPAA-compliant document extraction tool specialized for healthcare and actuarial documents with advanced
-    OCR and structure recognition capabilities
+  type: genesis:azure_document_intelligence
+  description: Advanced document processing using Azure Document Intelligence for OCR, form extraction, and structured data extraction from healthcare and actuarial documents
   asTools: true
   config:
-    document_types:
-    - rate_filings
-    - actuarial_memoranda
-    - financial_statements
-    - regulatory_submissions
-    - compliance_reports
-    - pricing_analyses
-    extraction_modes:
-    - structured_data
-    - tables
-    - text_blocks
-    - financial_metrics
-    - actuarial_assumptions
-    - trend_data
-    - comparative_metrics
-    hipaa_compliant: true
-    audit_logging: true
-    confidence_threshold: 0.85
-    encryption_at_rest: true
-    access_controls: role_based
-    data_retention_policy: "7_years"
-    phi_detection: true
-    anonymization: true
+    model_type: prebuilt-document
+    extract_tables: true
+    include_confidence: true
+    use_multithreading: true
+    concurrency_multithreading: 2
   provides:
   - useAs: tools
     in: filing-agent
-    description: Enable HIPAA-compliant extraction of structured data from rate filing documents
+    description: Enable advanced document processing and structured data extraction from rate filing documents
 - id: clinical-nlp-analyzer
   name: Healthcare Clinical NLP Analyzer
   kind: Tool
-  type: genesis:clinical_nlp_analyzer_connector
-  description: Advanced clinical NLP engine for healthcare content analysis, entity extraction, and medical terminology
+  type: genesis:autonomize
+  description: Advanced clinical language model for healthcare content analysis, entity extraction, and medical terminology
     processing in rate filings
   asTools: true
   config:
-    nlp_service: azure_text_analytics
-    hipaa_compliant: true
+    selected_model: "Clinical LLM"
     confidence_threshold: 0.8
+    hipaa_compliant: true
+    audit_logging: true
+    encryption_at_rest: true
+    phi_detection: true
+    anonymization: true
   provides:
   - useAs: tools
     in: filing-agent
@@ -301,12 +286,6 @@ components:
   asTools: true
   config:
     terminology_system: icd10
-    hipaa_compliant: true
-    audit_logging: true
-    encryption_at_rest: true
-    phi_detection: true
-    anonymization: true
-    data_retention_policy: "7_years"
   provides:
   - useAs: tools
     in: filing-agent

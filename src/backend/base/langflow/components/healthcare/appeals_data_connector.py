@@ -10,12 +10,11 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from langflow.base.healthcare_connector_base import HealthcareConnectorBase
 from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, StrInput
 from langflow.schema.data import Data
 from langflow.schema.message import Message
-
-from langflow.base.healthcare_connector_base import HealthcareConnectorBase
 
 
 class AppealsDataConnector(HealthcareConnectorBase):

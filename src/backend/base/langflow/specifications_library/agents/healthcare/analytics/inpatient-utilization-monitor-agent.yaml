@@ -89,11 +89,17 @@ components:
 - id: clinical-nlp-analyzer
   name: Clinical NLP Analysis
   kind: Tool
-  type: genesis:clinical_nlp_analyzer_connector
-  description: Advanced clinical natural language processing for medical text analysis and insights
+  type: genesis:autonomize
+  description: Advanced clinical language model for medical text analysis and insights
   asTools: true
   config:
-    nlp_service: aws_comprehend_medical
+    selected_model: "Clinical LLM"
+    confidence_threshold: 0.8
+    hipaa_compliant: true
+    audit_logging: true
+    encryption_at_rest: true
+    phi_detection: true
+    anonymization: true
   provides:
   - useAs: tools
     in: utilization-agent

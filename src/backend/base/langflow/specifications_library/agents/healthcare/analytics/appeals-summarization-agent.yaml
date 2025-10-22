@@ -92,13 +92,17 @@ components:
 - id: clinical-nlp-analyzer
   name: Clinical NLP Analyzer
   kind: Tool
-  type: genesis:clinical_nlp_analyzer_connector
-  description: Advanced clinical NLP engine for healthcare appeals processing and medical terminology analysis
+  type: genesis:autonomize
+  description: Advanced clinical language model for healthcare appeals processing and medical terminology analysis
   asTools: true
   config:
-    nlp_service: "aws_comprehend_medical"
-    hipaa_compliant: true
+    selected_model: "Clinical LLM"
     confidence_threshold: 0.85
+    hipaa_compliant: true
+    audit_logging: true
+    encryption_at_rest: true
+    phi_detection: true
+    anonymization: true
   provides:
   - useAs: tools
     in: appeals-agent

@@ -6,16 +6,14 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
+from langflow.base.healthcare_connector_base import HealthcareConnectorBase
 from langflow.io import DropdownInput, MessageTextInput, Output
 from langflow.logging.logger import logger
 from langflow.schema.data import Data
 
-from langflow.base.healthcare_connector_base import HealthcareConnectorBase
-
 
 class ClaimsConnector(HealthcareConnectorBase):
-    """
-    Claims Healthcare Connector for comprehensive claims processing.
+    """Claims Healthcare Connector for comprehensive claims processing.
 
     Supports:
     - 837 EDI transaction submission (Professional, Institutional, Dental)

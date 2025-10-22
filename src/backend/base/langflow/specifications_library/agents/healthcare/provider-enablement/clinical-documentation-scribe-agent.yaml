@@ -89,29 +89,45 @@ components:
   name: Clinical Speech Transcription Service
   kind: Tool
   type: genesis:speech_transcription_connector
-  description: HIPAA-compliant speech-to-text service optimized for medical terminology, clinical vocabulary, and healthcare
-    provider speech patterns
+  description: HIPAA-compliant speech-to-text service using AssemblyAI optimized for medical terminology, clinical vocabulary, and healthcare provider speech patterns
   asTools: true
   config:
+    speaker_labels: true
+    auto_punctuation: true
+    auto_highlights: false
+    dual_channel: false
+    webhook_auth_header_name: ""
+    webhook_auth_header_value: ""
+    webhook_url: ""
+    word_boost: []
+    boost_param: default
+    redact_pii: true
+    redact_pii_audio: false
+    redact_pii_policies: [medical_process, medical_condition, injury, treatment, blood_type]
+    substitution_policy: entity_name
     test_mode: true
-    mock_mode: true
-    audit_logging: true
-    timeout_seconds: '30'
+    timeout_seconds: 30
   provides:
   - useAs: tools
     in: scribe-agent
-    description: Enable real-time speech transcription with medical terminology recognition
+    description: Enable real-time speech transcription with medical terminology recognition and HIPAA compliance
 - id: clinical-nlp-processor
   name: Clinical Language Processing Model
   kind: Tool
-  type: genesis:clinical_nlp_connector
-  description: Advanced clinical NLP model specialized for medical entity extraction, clinical reasoning, and structured note
+  type: genesis:autonomize
+  description: Advanced clinical language model specialized for medical entity extraction, clinical reasoning, and structured note
     generation from clinical conversations
   asTools: true
   config:
+    selected_model: "Clinical LLM"
+    confidence_threshold: 0.8
+    hipaa_compliant: true
+    audit_logging: true
+    encryption_at_rest: true
+    phi_detection: true
+    anonymization: true
     test_mode: true
     mock_mode: true
-    audit_logging: true
     timeout_seconds: '30'
     analysis_type: entity_extraction
     medical_specialty: general_medicine
@@ -129,13 +145,8 @@ components:
     clinical notes with proper versioning
   asTools: true
   config:
-    test_mode: true
-    mock_mode: true
-    audit_logging: true
-    timeout_seconds: '30'
-    record_type: comprehensive
-    include_clinical_notes: true
-    fhir_compatibility: true
+    ehr_system: epic
+    fhir_version: "R4"
   provides:
   - useAs: tools
     in: scribe-agent
@@ -148,50 +159,11 @@ components:
     accurate clinical documentation
   asTools: true
   config:
-    test_mode: true
-    mock_mode: true
-    audit_logging: true
-    timeout_seconds: '30'
+    terminology_system: umls
   provides:
   - useAs: tools
     in: scribe-agent
     description: Enable medical terminology validation and clinical code integration
-- id: note-template-tool
-  name: Clinical Note Template Engine
-  kind: Tool
-  type: genesis:agent
-  description: Configurable clinical note template engine supporting SOAP, HPI, Assessment & Plan, and specialty-specific
-    documentation formats
-  config:
-    agent_llm: Azure OpenAI
-    model_name: gpt-4
-    temperature: 0.1
-    max_tokens: 4000
-    handle_parsing_errors: true
-    max_iterations: 20
-    verbose: true
-  provides:
-  - useAs: tools
-    in: scribe-agent
-    description: Enable structured clinical note generation using standardized templates
-- id: quality-assurance-tool
-  name: Clinical Documentation QA
-  kind: Tool
-  type: genesis:agent
-  description: Quality assurance engine for clinical documentation completeness, accuracy verification, and compliance with
-    medical documentation standards
-  config:
-    agent_llm: Azure OpenAI
-    model_name: gpt-4
-    temperature: 0.1
-    max_tokens: 4000
-    handle_parsing_errors: true
-    max_iterations: 20
-    verbose: true
-  provides:
-  - useAs: tools
-    in: scribe-agent
-    description: Enable quality assurance and validation of generated clinical documentation
 - id: scribe-agent-prompt
   name: Clinical Documentation Scribe Instructions
   kind: Prompt

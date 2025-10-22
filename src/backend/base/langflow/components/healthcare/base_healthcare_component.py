@@ -1,5 +1,4 @@
-"""
-Base Healthcare Component - Foundation for all HIPAA-compliant healthcare components.
+"""Base Healthcare Component - Foundation for all HIPAA-compliant healthcare components.
 
 Part of AUTPE-6204: This base class provides automatic compliance detection,
 PHI handling, and standardized healthcare component interfaces.
@@ -14,15 +13,14 @@ from abc import ABC, abstractmethod
 
 from langflow.custom import Component
 from langflow.schema import Data, Message
-from langflow.io import StrInput, Output, MessageTextInput, DataInput
+from langflow.io import DataInput, Output, StrInput
 from langflow.template import Input
 
 logger = logging.getLogger(__name__)
 
 
 class BaseHealthcareComponent(Component, ABC):
-    """
-    Base class for all healthcare components in Langflow.
+    """Base class for all healthcare components in Langflow.
 
     Provides:
     - Automatic HIPAA compliance detection

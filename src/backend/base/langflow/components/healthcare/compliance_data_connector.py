@@ -14,9 +14,7 @@ from langflow.schema.data import Data
 
 
 class ComplianceDataConnector(HealthcareConnectorBase):
-    """
-    HIPAA-compliant Compliance Data Connector for regulatory compliance
-    monitoring, audit data management, and healthcare compliance tracking.
+    """HIPAA-compliant Compliance Data Connector for regulatory compliance monitoring, audit data management, and healthcare compliance tracking.
 
     Supports HIPAA, CMS, NCQA, and other healthcare regulatory requirements
     with comprehensive audit trail and compliance reporting capabilities.
@@ -27,7 +25,8 @@ class ComplianceDataConnector(HealthcareConnectorBase):
     icon: str = "Shield"
     name: str = "ComplianceDataConnector"
 
-    inputs = HealthcareConnectorBase.inputs + [
+    inputs = [
+        *HealthcareConnectorBase.inputs,
         DropdownInput(
             name="compliance_domain",
             display_name="Compliance Domain",
