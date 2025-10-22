@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -6143,6 +6143,7 @@ dependencies = [
     { name = "platformdirs" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "pyiter" },
     { name = "python-dotenv" },
     { name = "rich" },
     { name = "structlog" },
@@ -6190,6 +6191,7 @@ requires-dist = [
     { name = "platformdirs", specifier = ">=4.3.8,<5.0.0" },
     { name = "pydantic", specifier = ">=2.0.0,<3.0.0" },
     { name = "pydantic-settings", specifier = ">=2.10.1,<3.0.0" },
+    { name = "pyiter", specifier = ">=0.13.9" },
     { name = "python-dotenv", specifier = ">=1.0.0,<2.0.0" },
     { name = "rich", specifier = ">=13.0.0,<14.0.0" },
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
@@ -10101,6 +10103,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b0/77/a5b8c569bf593b0140bde72ea885a803b82086995367bf2037de0159d924/pygments-2.19.2.tar.gz", hash = "sha256:636cb2477cec7f8952536970bc533bc43743542f70392ae026374600add5b887", size = 4968631, upload-time = "2025-06-21T13:39:12.283Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/21/705964c7812476f378728bdf590ca4b771ec72385c533964653c68e86bdc/pygments-2.19.2-py3-none-any.whl", hash = "sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b", size = 1225217, upload-time = "2025-06-21T13:39:07.939Z" },
+]
+
+[[package]]
+name = "pyiter"
+version = "0.13.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8c/a2/0d280ead82f1b2f9dd3b369a5f4b7e18affb693190f26ec58f9c60c55788/pyiter-0.13.9.tar.gz", hash = "sha256:293f8b3535d956ab63bb7f3120ced573782022a1e195aa61b062d247f5fcc1b7", size = 38121, upload-time = "2025-07-23T04:38:45.728Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b3/81/b5176a13770217fb5e0ea18c8a7c1ffcf9a17a9c74fd0f9b1fc8028fa59c/pyiter-0.13.9-py3-none-any.whl", hash = "sha256:d0232bcf7c877e367221456a8417d0691f1705ded4c15ab4ea4fcdfb48267339", size = 51641, upload-time = "2025-07-23T04:38:44.234Z" },
 ]
 
 [[package]]
