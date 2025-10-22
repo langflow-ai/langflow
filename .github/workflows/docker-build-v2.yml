@@ -228,8 +228,8 @@ jobs:
         id: tags
         run: |
           version="${{ steps.version.outputs.version }}"
-          echo "docker_tags=langflowai/langflow:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
-          echo "ghcr_tags=ghcr.io/langflow-ai/langflow:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "docker_tags=${{ matrix.tags }}" >> $GITHUB_OUTPUT
+          echo "ghcr_tags=${{ matrix.tags }}" >> $GITHUB_OUTPUT
 
       - name: Docker cleanup
         run: |
@@ -257,7 +257,9 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
-          file: ./docker/build_and_push.Dockerfile
+          build-args: |
+              LANGFLOW_IMAGE=${{ matrix.langflow_image }}
+          file: ${{ matrix.dockerfile }}
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
@@ -269,7 +271,7 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
-          file: ./docker/build_and_push.Dockerfile
+          file: ${{ matrix.dockerfile }}
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
