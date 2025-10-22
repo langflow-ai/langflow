@@ -99,10 +99,12 @@ async def get_enabled_providers(
     if providers is None:
         providers = []
     variable_service = get_variable_service()
-    if not isinstance(variable_service, DatabaseVariableService):
-        msg = "Variable service is not an instance of DatabaseVariableService"
-        raise TypeError(msg)
     try:
+        if not isinstance(variable_service, DatabaseVariableService):
+            raise HTTPException(
+                status_code=500,
+                detail="Variable service is not an instance of DatabaseVariableService",
+            )
         # Get all LLM category variables for the user
         variables = await variable_service.get_by_category(
             user_id=current_user.id, category=CATEGORY_LLM, session=session
