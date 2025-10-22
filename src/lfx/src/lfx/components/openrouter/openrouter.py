@@ -23,8 +23,9 @@ class OpenRouterComponent(LCModelComponent):
         DropdownInput(
             name="model_name",
             display_name="Model",
-            options=["Loading..."],
-            value="Loading...",
+            options=[],
+            value="",
+            refresh_button=True,
             real_time_refresh=True,
             required=True,
         ),
@@ -62,14 +63,12 @@ class OpenRouterComponent(LCModelComponent):
             self.log(f"Error fetching models: {e}")
             return []
 
-    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:  # noqa: ARG002
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Update model options."""
         models = self.fetch_models()
         if models:
             build_config["model_name"]["options"] = [m["id"] for m in models]
             build_config["model_name"]["tooltips"] = {m["id"]: f"{m['name']} ({m['context']:,} tokens)" for m in models}
-            if build_config["model_name"]["value"] not in [m["id"] for m in models]:
-                build_config["model_name"]["value"] = models[0]["id"]
         else:
             build_config["model_name"]["options"] = ["Failed to load models"]
             build_config["model_name"]["value"] = "Failed to load models"
@@ -91,8 +90,8 @@ class OpenRouterComponent(LCModelComponent):
             "temperature": self.temperature if self.temperature is not None else 0.7,
         }
 
-        if self.max_tokens is not None:
-            kwargs["max_tokens"] = self.max_tokens
+        if self.max_tokens:
+            kwargs["max_tokens"] = int(self.max_tokens)
 
         headers = {}
         if self.site_url:
