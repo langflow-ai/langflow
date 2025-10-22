@@ -1,5 +1,3 @@
-from typing import Any
-
 import httpx
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
