@@ -153,11 +153,10 @@ class LanguageModelComponent(LCModelComponent):
             raise ValueError(msg)
 
         # Get model class and parameter names from metadata
-        model_class = MODEL_CLASSES[metadata.get("model_class")]
-        if not model_class:
+        model_class = MODEL_CLASSES.get(metadata.get("model_class"))
+        if model_class is None:
             msg = f"No model class defined for {model_name}"
             raise ValueError(msg)
-
         model_name_param = metadata.get("model_name_param", "model")
         api_key_param = metadata.get("api_key_param", "api_key")
 
