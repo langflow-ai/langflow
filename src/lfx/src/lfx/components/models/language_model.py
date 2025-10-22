@@ -151,7 +151,7 @@ class LanguageModelComponent(LCModelComponent):
         if not self.model or not isinstance(self.model, list) or len(self.model) == 0:
             msg = "A model selection is required"
             raise ValueError(msg)
-        
+
         model = self.model[0]
         temperature = self.temperature
         stream = self.stream
