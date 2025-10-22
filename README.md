@@ -28,11 +28,9 @@
 
 ## 🖥️  Download Langflow Desktop
 
-The easiest way to get started with Langflow.  
-Includes built-in dependency management and automatic updates.
+Langflow Desktop is the easiest way to get started. Includes dependency management and automatic updates.
 
-**[⬇ Download Langflow Desktop](https://www.langflow.org/desktop)**  
-Available for **Windows** and **macOS**.
+**[📥 Download Langflow Desktop](https://www.langflow.org/desktop)** (available for Windows and macOS)
 
 ---
 
