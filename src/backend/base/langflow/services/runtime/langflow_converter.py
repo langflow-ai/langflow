@@ -705,7 +705,7 @@ class LangflowConverter(RuntimeConverter):
         target_type = target_comp.get("type", "")
 
         # Check valid input sources
-        valid_input_types = ["genesis:chat_input", "genesis:prompt_template"]
+        valid_input_types = ["genesis:chat_input", "genesis:prompt"]
         if source_type not in valid_input_types:
             warnings.append(f"Unusual input source type: {source_type}")
 
@@ -727,8 +727,8 @@ class LangflowConverter(RuntimeConverter):
         target_type = target_comp.get("type", "")
 
         # Check valid prompt sources
-        if source_type != "genesis:prompt_template":
-            errors.append(f"System prompt must come from genesis:prompt_template, not {source_type}")
+        if source_type != "genesis:prompt":
+            errors.append(f"System prompt must come from genesis:prompt, not {source_type}")
 
         # Check valid prompt targets
         valid_target_types = ["genesis:agent", "genesis:crewai_agent"]

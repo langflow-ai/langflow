@@ -51,7 +51,7 @@ class TestComponentMappingService:
         return RuntimeAdapter(
             id=uuid4(),
             genesis_type="genesis:test_component",
-            runtime_type=RuntimeTypeEnum.LANGFLOW,
+            runtime_type=RuntimeTypeEnum.LANGFLOW.value,
             target_component="TestComponent",
             adapter_config={"key": "value"},
             version="1.0.0",
@@ -183,7 +183,7 @@ class TestComponentMappingService:
         """Test creating a runtime adapter."""
         adapter_data = RuntimeAdapterCreate(
             genesis_type="genesis:test_component",
-            runtime_type=RuntimeTypeEnum.LANGFLOW,
+            runtime_type=RuntimeTypeEnum.LANGFLOW.value,
             target_component="TestComponent",
         )
 
@@ -193,7 +193,7 @@ class TestComponentMappingService:
             result = await service.create_runtime_adapter(mock_session, adapter_data)
 
             assert result.genesis_type == "genesis:test_component"
-            assert result.runtime_type == RuntimeTypeEnum.LANGFLOW
+            assert result.runtime_type == RuntimeTypeEnum.LANGFLOW.value
             mock_create.assert_called_once_with(mock_session, adapter_data)
 
     @pytest.mark.asyncio
@@ -203,13 +203,13 @@ class TestComponentMappingService:
             mock_get.return_value = sample_adapter
 
             result = await service.get_runtime_adapter_for_genesis_type(
-                mock_session, "genesis:test_component", RuntimeTypeEnum.LANGFLOW
+                mock_session, "genesis:test_component", RuntimeTypeEnum.LANGFLOW.value
             )
 
             assert result.genesis_type == "genesis:test_component"
-            assert result.runtime_type == RuntimeTypeEnum.LANGFLOW
+            assert result.runtime_type == RuntimeTypeEnum.LANGFLOW.value
             mock_get.assert_called_once_with(
-                mock_session, "genesis:test_component", RuntimeTypeEnum.LANGFLOW, True
+                mock_session, "genesis:test_component", RuntimeTypeEnum.LANGFLOW.value, True
             )
 
     @pytest.mark.asyncio
@@ -218,7 +218,7 @@ class TestComponentMappingService:
         sample_adapter = RuntimeAdapter(
             id=uuid4(),
             genesis_type="genesis:test_component",
-            runtime_type=RuntimeTypeEnum.LANGFLOW,
+            runtime_type=RuntimeTypeEnum.LANGFLOW.value,
             target_component="TestComponent",
             version="1.0.0",
             active=True,
@@ -253,7 +253,7 @@ class TestComponentMappingService:
         healthcare_adapter = RuntimeAdapter(
             id=uuid4(),
             genesis_type="genesis:ehr_connector",
-            runtime_type=RuntimeTypeEnum.LANGFLOW,
+            runtime_type=RuntimeTypeEnum.LANGFLOW.value,
             target_component="EHRConnector",
             compliance_rules=None,  # Missing compliance rules
             version="1.0.0",
@@ -288,14 +288,14 @@ class TestComponentMappingService:
 
             assert result["mapping"].genesis_type == "genesis:test_component"
             assert len(result["adapters"]) == 1
-            assert RuntimeTypeEnum.LANGFLOW in result["supported_runtimes"]
+            assert RuntimeTypeEnum.LANGFLOW.value in result["supported_runtimes"]
 
     @pytest.mark.asyncio
     async def test_get_statistics(self, service, mock_session):
         """Test getting mapping statistics."""
         mapping_counts = {"tool": 5, "healthcare": 3, "agent": 2}
         adapter_counts = {"langflow": 8, "temporal": 2}
-        supported_runtimes = [RuntimeTypeEnum.LANGFLOW, RuntimeTypeEnum.TEMPORAL]
+        supported_runtimes = [RuntimeTypeEnum.LANGFLOW.value, RuntimeTypeEnum.TEMPORAL]
 
         with patch.multiple(
             'langflow.services.database.models.component_mapping.crud.ComponentMappingCRUD',

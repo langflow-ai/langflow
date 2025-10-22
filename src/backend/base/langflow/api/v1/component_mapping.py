@@ -8,7 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.v1.schemas import ComponentMappingResponse
 from langflow.services.component_mapping.service import ComponentMappingService
-from langflow.services.component_mapping.discovery_service import ComponentDiscoveryService
+from langflow.services.component_mapping.discovery import UnifiedComponentDiscovery
 from langflow.services.database.models.component_mapping import (
     ComponentMapping,
     ComponentMappingCreate,
@@ -28,7 +28,7 @@ from langflow.services.deps import get_db_service
 
 router = APIRouter(prefix="/component-mappings", tags=["Component Mappings"])
 component_mapping_service = ComponentMappingService()
-discovery_service = ComponentDiscoveryService()
+discovery_service = UnifiedComponentDiscovery()
 
 
 # Component Mapping Endpoints
@@ -336,7 +336,8 @@ async def discover_components(
 ):
     """Discover all available Langflow components and analyze mapping gaps."""
     try:
-        results = await discovery_service.discover_components(session)
+        # Use the unified discovery service
+        results = discovery_service.discover_all()
         return results
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -350,10 +351,35 @@ async def auto_create_mappings(
 ):
     """Automatically create mappings for discovered components."""
     try:
-        results = await discovery_service.auto_create_mappings(
-            session, component_names, genesis_type_prefix
-        )
-        return results
+        # Discover all components first
+        discovery_result = discovery_service.discover_all()
+
+        if not discovery_result.get("success"):
+            return {"success": False, "error": discovery_result.get("error", "Discovery failed")}
+
+        components = discovery_result.get("components", [])
+        created = []
+        errors = []
+
+        # Filter and create mappings for requested components
+        for comp in components:
+            if comp.component_name in component_names:
+                # Create the mapping using the component mapping service
+                try:
+                    mapping_data = comp.to_database_entry()
+                    mapping = await component_mapping_service.create_component_mapping(
+                        session, ComponentMappingCreate(**mapping_data)
+                    )
+                    created.append(comp.genesis_type)
+                except Exception as e:
+                    errors.append({"component": comp.component_name, "error": str(e)})
+
+        return {
+            "success": len(created) > 0,
+            "created": created,
+            "errors": errors,
+            "total_created": len(created)
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -365,9 +391,42 @@ async def update_schemas_from_discovery(
 ):
     """Update existing component mappings with latest schema information."""
     try:
-        results = await discovery_service.update_schemas_from_discovery(
-            session, force_update=force_update
-        )
-        return results
+        # Discover all components to get latest schema information
+        discovery_result = discovery_service.discover_all()
+
+        if not discovery_result.get("success"):
+            return {"success": False, "error": discovery_result.get("error", "Discovery failed")}
+
+        components = discovery_result.get("components", [])
+        updated = []
+        errors = []
+
+        # Update existing mappings with latest schema info
+        for comp in components:
+            try:
+                existing = await component_mapping_service.get_component_mapping_by_genesis_type(
+                    session, comp.genesis_type
+                )
+                if existing:
+                    # Update with latest introspection data
+                    update_data = ComponentMappingUpdate(
+                        introspection_data=comp.introspection_data,
+                        tool_capabilities=comp.to_database_entry().get("tool_capabilities"),
+                        runtime_introspection=comp.introspection_data
+                    )
+                    updated_mapping = await component_mapping_service.update_component_mapping(
+                        session, existing.id, update_data
+                    )
+                    if updated_mapping:
+                        updated.append(comp.genesis_type)
+            except Exception as e:
+                errors.append({"component": comp.genesis_type, "error": str(e)})
+
+        return {
+            "success": len(updated) > 0,
+            "updated": updated,
+            "errors": errors,
+            "total_updated": len(updated)
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

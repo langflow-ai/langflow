@@ -81,7 +81,7 @@ class TestAUTPE6180Integration:
         Test Acceptance Criteria 2: Complete Component Schema Coverage
 
         Requirements:
-        - Core Missing Schemas: genesis:prompt_template, genesis:chat_input, genesis:chat_output
+        - Core Missing Schemas: genesis:prompt, genesis:chat_input, genesis:chat_output
         - Comprehensive Coverage: Add schemas for remaining 84+ component types
         - Schema Integration: Link component schemas with database mappings
         - Validation Enhancement: Integrate schema validation with mapping lookup
@@ -95,12 +95,12 @@ class TestAUTPE6180Integration:
 
         # Test core missing schemas implementation
         core_schemas = get_core_missing_schemas()
-        assert "genesis:prompt_template" in core_schemas
+        assert "genesis:prompt" in core_schemas
         assert "genesis:chat_input" in core_schemas
         assert "genesis:chat_output" in core_schemas
 
         # Validate core schema structure
-        prompt_schema = core_schemas["genesis:prompt_template"]
+        prompt_schema = core_schemas["genesis:prompt"]
         assert prompt_schema["type"] == "object"
         assert "template" in prompt_schema["properties"]
         assert "template" in prompt_schema["required"]

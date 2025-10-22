@@ -32,12 +32,12 @@ def upgrade() -> None:
         # If folder table doesn't exist, skip this migration
         return
 
-    # Rename "My Projects" to "Starter Project" only for users who don't already have a "Starter Project" folder
+    # Rename "Starter Project" to "Starter Project" only for users who don't already have a "Starter Project" folder
     # This prevents unique constraint violations
     update_query = sa.text("""
         UPDATE folder
         SET name = 'Starter Project'
-        WHERE name = 'My Projects'
+        WHERE name = 'Starter Project'
         AND NOT EXISTS (
             SELECT 1 FROM folder f2
             WHERE f2.user_id = folder.user_id
@@ -59,16 +59,16 @@ def downgrade() -> None:
         # If folder table doesn't exist, skip this migration
         return
 
-    # Rename "Starter Project" back to "My Projects" only for users who don't already have a "My Projects" folder
+    # Rename "Starter Project" back to "Starter Project" only for users who don't already have a "Starter Project" folder
     # This prevents unique constraint violations
     update_query = sa.text("""
         UPDATE folder
-        SET name = 'My Projects'
+        SET name = 'Starter Project'
         WHERE name = 'Starter Project'
         AND NOT EXISTS (
             SELECT 1 FROM folder f2
             WHERE f2.user_id = folder.user_id
-            AND f2.name = 'My Projects'
+            AND f2.name = 'Starter Project'
         )
     """)
 

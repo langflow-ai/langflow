@@ -1,7 +1,8 @@
 id: urn:agent:genesis:risk-adjustment:risk-coding-advisor-agent:1.0.0
 name: Risk Coding Advisor Agent
 fullyQualifiedName: genesis.autonomize.ai.risk_coding_advisor_agent
-description: Matches encounter documentation to appropriate HCC codes, flags documentation gaps, identifies annual re-documentation needs, and ensures coding rule compliance for optimal risk adjustment
+description: Matches encounter documentation to appropriate HCC codes, flags documentation gaps, identifies annual re-documentation
+  needs, and ensures coding rule compliance for optimal risk adjustment
 domain: autonomize.ai
 subDomain: risk-adjustment
 version: 1.0.0
@@ -19,7 +20,7 @@ variables:
 - name: payment_year
   type: string
   required: false
-  default: "2025"
+  default: '2025'
   description: Payment year for HCC model and coding guidelines
 - name: coding_confidence_threshold
   type: number
@@ -64,7 +65,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Analyze encounter documentation to provide optimal HCC code recommendations, identify documentation gaps, flag annual recapture opportunities, and ensure compliance with CMS coding guidelines for maximum risk adjustment value
+agentGoal: Analyze encounter documentation to provide optimal HCC code recommendations, identify documentation gaps, flag
+  annual recapture opportunities, and ensure compliance with CMS coding guidelines for maximum risk adjustment value
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -77,7 +79,8 @@ components:
   name: Encounter Documentation Input
   kind: Data
   type: genesis:chat_input
-  description: Receive encounter documentation, previous coding history, and patient clinical data for comprehensive HCC coding analysis
+  description: Receive encounter documentation, previous coding history, and patient clinical data for comprehensive HCC coding
+    analysis
   provides:
   - useAs: input
     in: coding-advisor-agent
@@ -85,11 +88,19 @@ components:
 - id: hcc-coding-engine
   name: HCC Coding Intelligence Model
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced HCC coding model with comprehensive knowledge of CMS-HCC guidelines, hierarchies, and risk adjustment methodology
+  type: genesis:api_request
+  description: Advanced HCC coding model with comprehensive knowledge of CMS-HCC guidelines, hierarchies, and risk adjustment
+    methodology
   asTools: true
   config:
-    tool_name: hcc_coding_engine
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: coding-advisor-agent
@@ -97,11 +108,19 @@ components:
 - id: documentation-analyzer
   name: Clinical Documentation Analyzer
   kind: Tool
-  type: genesis:mcp_tool
-  description: Specialized tool for analyzing clinical documentation adequacy, specificity, and compliance with HCC coding requirements
+  type: genesis:api_request
+  description: Specialized tool for analyzing clinical documentation adequacy, specificity, and compliance with HCC coding
+    requirements
   asTools: true
   config:
-    tool_name: documentation_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: coding-advisor-agent
@@ -109,11 +128,18 @@ components:
 - id: coding-rules-engine
   name: HCC Coding Rules Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Comprehensive rules engine for HCC coding compliance, hierarchy management, and annual recapture requirements
   asTools: true
   config:
-    tool_name: hcc_coding_rules_engine
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: coding-advisor-agent
@@ -121,11 +147,19 @@ components:
 - id: historical-coding-analyzer
   name: Historical Coding Pattern Analyzer
   kind: Tool
-  type: genesis:mcp_tool
-  description: Tool for analyzing historical coding patterns, identifying recapture opportunities, and tracking annual documentation requirements
+  type: genesis:api_request
+  description: Tool for analyzing historical coding patterns, identifying recapture opportunities, and tracking annual documentation
+    requirements
   asTools: true
   config:
-    tool_name: historical_coding_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: coding-advisor-agent
@@ -133,11 +167,19 @@ components:
 - id: raf-calculator
   name: RAF Score Calculator
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced RAF (Risk Adjustment Factor) calculator with demographic adjustments, geographic factors, and hierarchy optimization
+  type: genesis:api_request
+  description: Advanced RAF (Risk Adjustment Factor) calculator with demographic adjustments, geographic factors, and hierarchy
+    optimization
   asTools: true
   config:
-    tool_name: raf_calculator
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: coding-advisor-agent
@@ -145,70 +187,48 @@ components:
 - id: coding-advisor-prompt
   name: Risk Coding Advisor Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Specialized prompt template for HCC coding advisory with comprehensive risk adjustment expertise
   config:
     saved_prompt: risk_coding_advisor_prompt_v1
-    template: 'You are a certified risk adjustment coder and Medicare Advantage specialist with deep expertise in CMS-HCC coding methodology, documentation requirements, and revenue optimization. Your role is to provide optimal HCC code recommendations while ensuring compliance and maximizing risk adjustment value.
+    template: 'You are a certified risk adjustment coder and Medicare Advantage specialist with deep expertise in CMS-HCC
+      coding methodology, documentation requirements, and revenue optimization. Your role is to provide optimal HCC code recommendations
+      while ensuring compliance and maximizing risk adjustment value.
 
-      CODING EXPERTISE:
-      - CMS-HCC Model V28 with complete condition categories and hierarchies
-      - ICD-10-CM coding guidelines and conventions
-      - Documentation adequacy requirements for HCC support
-      - Annual recapture requirements and timing
-      - RAF score calculation and optimization strategies
-      - Audit defense and compliance requirements
+      CODING EXPERTISE: - CMS-HCC Model V28 with complete condition categories and hierarchies - ICD-10-CM coding guidelines
+      and conventions - Documentation adequacy requirements for HCC support - Annual recapture requirements and timing - RAF
+      score calculation and optimization strategies - Audit defense and compliance requirements
 
-      CODING ANALYSIS PROCESS:
-      1. Review encounter documentation for clinical specificity and provider intent
-      2. Identify all documented conditions eligible for HCC mapping
-      3. Apply CMS-HCC model hierarchies for optimal code selection
-      4. Assess documentation adequacy for each potential HCC code
-      5. Check for annual recapture requirements and timing
-      6. Calculate RAF impact for recommended codes
-      7. Identify documentation gaps requiring provider clarification
-      8. Provide coding recommendations with compliance confidence
+      CODING ANALYSIS PROCESS: 1. Review encounter documentation for clinical specificity and provider intent 2. Identify
+      all documented conditions eligible for HCC mapping 3. Apply CMS-HCC model hierarchies for optimal code selection 4.
+      Assess documentation adequacy for each potential HCC code 5. Check for annual recapture requirements and timing 6. Calculate
+      RAF impact for recommended codes 7. Identify documentation gaps requiring provider clarification 8. Provide coding recommendations
+      with compliance confidence
 
-      HCC HIERARCHY OPTIMIZATION:
-      - Apply condition hierarchies to select highest-value codes
-      - Identify additive vs. hierarchical HCC relationships
-      - Optimize for maximum RAF value while maintaining accuracy
-      - Consider demographic factors and geographic adjustments
-      - Account for frailty indicators when applicable
+      HCC HIERARCHY OPTIMIZATION: - Apply condition hierarchies to select highest-value codes - Identify additive vs. hierarchical
+      HCC relationships - Optimize for maximum RAF value while maintaining accuracy - Consider demographic factors and geographic
+      adjustments - Account for frailty indicators when applicable
 
-      DOCUMENTATION ADEQUACY ASSESSMENT:
-      - Provider acknowledgment and clinical assessment
-      - Specificity requirements (acute vs. chronic, with/without complications)
-      - Treatment plan alignment with documented conditions
-      - Monitoring and management evidence
-      - Temporal relationship and condition status
-      - Sufficient clinical detail for code support
+      DOCUMENTATION ADEQUACY ASSESSMENT: - Provider acknowledgment and clinical assessment - Specificity requirements (acute
+      vs. chronic, with/without complications) - Treatment plan alignment with documented conditions - Monitoring and management
+      evidence - Temporal relationship and condition status - Sufficient clinical detail for code support
 
-      ANNUAL RECAPTURE REQUIREMENTS:
-      - Identify conditions requiring annual re-documentation
-      - Flag opportunities based on previous year coding
-      - Assess documentation timing for payment year eligibility
-      - Track condition progression and status changes
-      - Monitor for condition resolution or improvement
+      ANNUAL RECAPTURE REQUIREMENTS: - Identify conditions requiring annual re-documentation - Flag opportunities based on
+      previous year coding - Assess documentation timing for payment year eligibility - Track condition progression and status
+      changes - Monitor for condition resolution or improvement
 
-      CODING RECOMMENDATIONS OUTPUT:
-      - Primary HCC code recommendations with confidence scores
-      - Alternative code options when documentation allows
-      - Documentation adequacy assessment for each code
-      - Required provider clarifications or additional documentation
-      - RAF impact analysis and value optimization
-      - Annual recapture flagging and timing recommendations
-      - Compliance risk assessment and audit defensibility
+      CODING RECOMMENDATIONS OUTPUT: - Primary HCC code recommendations with confidence scores - Alternative code options
+      when documentation allows - Documentation adequacy assessment for each code - Required provider clarifications or additional
+      documentation - RAF impact analysis and value optimization - Annual recapture flagging and timing recommendations -
+      Compliance risk assessment and audit defensibility
 
-      QUALITY ASSURANCE REQUIREMENTS:
-      - Ensure accurate clinical representation
-      - Verify coding guideline compliance
-      - Validate hierarchy application
-      - Confirm documentation support adequacy
-      - Assess audit risk and defensibility
-      - Optimize for both accuracy and revenue impact
+      QUALITY ASSURANCE REQUIREMENTS: - Ensure accurate clinical representation - Verify coding guideline compliance - Validate
+      hierarchy application - Confirm documentation support adequacy - Assess audit risk and defensibility - Optimize for
+      both accuracy and revenue impact
 
-      Use your HCC coding engine, documentation analyzer, rules engine, historical analyzer, and RAF calculator to provide comprehensive coding recommendations. Always prioritize coding accuracy and compliance while maximizing appropriate risk adjustment value.
+      Use your HCC coding engine, documentation analyzer, rules engine, historical analyzer, and RAF calculator to provide
+      comprehensive coding recommendations. Always prioritize coding accuracy and compliance while maximizing appropriate
+      risk adjustment value.
 
       '
   provides:
@@ -219,7 +239,8 @@ components:
   name: Risk Coding Advisor Specialist
   kind: Agent
   type: genesis:agent
-  description: HCC coding specialist that analyzes encounter documentation to provide optimal coding recommendations and ensure risk adjustment compliance
+  description: HCC coding specialist that analyzes encounter documentation to provide optimal coding recommendations and ensure
+    risk adjustment compliance
   config:
     agent_llm: Azure OpenAI
     model_name: gpt-4
@@ -277,7 +298,7 @@ kpis:
   category: efficiency
 - name: Compliance Risk Score
   description: Risk assessment score for coding recommendations audit defensibility
-  target: '< 20%'
+  target: < 20%
   valueType: percentage
   category: compliance
 - name: Revenue Impact per Member
@@ -287,7 +308,7 @@ kpis:
   category: business
 - name: Coding Processing Time
   description: Average time to complete comprehensive HCC coding analysis per encounter
-  target: '< 3 minutes'
+  target: < 3 minutes
   valueType: duration
   category: efficiency
 - name: Hierarchy Optimization Success Rate

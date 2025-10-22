@@ -6,7 +6,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
-from sqlalchemy import Index, String, Text
+from sqlalchemy import Index, String, Text, Enum as SQLAlchemyEnum
 from sqlmodel import JSON, Column, Field, SQLModel
 
 
@@ -22,6 +22,8 @@ class RuntimeTypeEnum(str, Enum):
 
 class RuntimeAdapterBase(SQLModel):
     """Base model for runtime adapters."""
+
+    model_config = {"use_enum_values": True}
 
     genesis_type: str = Field(
         max_length=100,
@@ -117,6 +119,7 @@ class RuntimeAdapter(RuntimeAdapterBase, table=True):
     """Database table for runtime adapters."""
 
     __tablename__ = "runtime_adapters"
+    model_config = {"use_enum_values": True}
 
     id: UUID = Field(
         default_factory=uuid4,
@@ -127,6 +130,10 @@ class RuntimeAdapter(RuntimeAdapterBase, table=True):
         max_length=100,
         sa_column=Column(String(100), index=True, nullable=False),
         description="Genesis component type"
+    )
+    runtime_type: RuntimeTypeEnum = Field(
+        sa_column=Column(SQLAlchemyEnum(RuntimeTypeEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False),
+        description="Target runtime for this adapter"
     )
     target_component: str = Field(
         max_length=100,
@@ -160,17 +167,19 @@ class RuntimeAdapter(RuntimeAdapterBase, table=True):
 
 class RuntimeAdapterCreate(RuntimeAdapterBase):
     """Schema for creating runtime adapters."""
-    pass
+    model_config = {"use_enum_values": True}
 
 
 class RuntimeAdapterRead(RuntimeAdapterBase):
     """Schema for reading runtime adapters."""
+    model_config = {"use_enum_values": True}
 
     id: UUID
 
 
 class RuntimeAdapterUpdate(SQLModel):
     """Schema for updating runtime adapters."""
+    model_config = {"use_enum_values": True}
 
     target_component: Optional[str] = None
     adapter_config: Optional[dict] = None

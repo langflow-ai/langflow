@@ -1,7 +1,8 @@
 id: urn:agent:genesis:actuarial-finance:cost-benchmarking-agent:1.0.0
 name: Cost Benchmarking Agent
 fullyQualifiedName: genesis.autonomize.ai.cost_benchmarking_agent
-description: Benchmarks plan costs versus CMS, industry, and competitor data using claims, actuarial databases, and fee schedules to provide comprehensive cost positioning analysis
+description: Benchmarks plan costs versus CMS, industry, and competitor data using claims, actuarial databases, and fee schedules
+  to provide comprehensive cost positioning analysis
 domain: autonomize.ai
 subDomain: actuarial-finance
 version: 1.0.0
@@ -69,7 +70,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Provide comprehensive cost benchmarking analysis by comparing health plan costs against multiple industry standards and competitive benchmarks to support pricing strategy, cost optimization, and market positioning decisions
+agentGoal: Provide comprehensive cost benchmarking analysis by comparing health plan costs against multiple industry standards
+  and competitive benchmarks to support pricing strategy, cost optimization, and market positioning decisions
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: RequestResponse
@@ -91,7 +93,8 @@ components:
   name: CMS Data Integration Connector
   kind: Tool
   type: genesis:api_request
-  description: CMS data integration connector that accesses Medicare cost reports, fee schedules, and public health plan data for benchmarking
+  description: CMS data integration connector that accesses Medicare cost reports, fee schedules, and public health plan data
+    for benchmarking
   asTools: true
   config:
     method: GET
@@ -109,11 +112,19 @@ components:
 - id: industry-database-tool
   name: Healthcare Industry Database Connector
   kind: Tool
-  type: genesis:mcp_tool
-  description: Healthcare industry database connector that provides access to actuarial databases, market surveys, and industry benchmarking data
+  type: genesis:api_request
+  description: Healthcare industry database connector that provides access to actuarial databases, market surveys, and industry
+    benchmarking data
   asTools: true
   config:
-    tool_name: healthcare_industry_database
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: benchmarking-agent
@@ -121,25 +132,19 @@ components:
 - id: cost-analyzer-tool
   name: Healthcare Cost Analysis Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced cost analysis engine that processes claims data, fee schedules, and utilization patterns to generate comprehensive cost metrics
+  type: genesis:api_request
+  description: Advanced cost analysis engine that processes claims data, fee schedules, and utilization patterns to generate
+    comprehensive cost metrics
   asTools: true
   config:
-    analysis_categories:
-    - medical_costs_per_member
-    - administrative_cost_ratios
-    - pharmacy_cost_trends
-    - provider_reimbursement_rates
-    - utilization_metrics
-    - risk_adjusted_costs
-    normalization_methods:
-    - risk_adjustment
-    - geographic_adjustment
-    - benefit_design_adjustment
-    - population_adjustment
-    benchmarking_enabled: true
-    trend_analysis: true
-    tool_name: cost_analysis_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: benchmarking-agent
@@ -147,11 +152,19 @@ components:
 - id: competitive-intelligence-tool
   name: Healthcare Competitive Intelligence Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Competitive intelligence engine that analyzes market positioning, competitor pricing, and strategic positioning based on benchmarking data
+  type: genesis:api_request
+  description: Competitive intelligence engine that analyzes market positioning, competitor pricing, and strategic positioning
+    based on benchmarking data
   asTools: true
   config:
-    tool_name: healthcare_competitive_intelligence
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: benchmarking-agent
@@ -159,20 +172,19 @@ components:
 - id: risk-adjuster-tool
   name: Healthcare Risk Adjustment Tool
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced risk adjustment tool that normalizes costs across different populations and risk profiles for accurate benchmarking comparisons
+  type: genesis:api_request
+  description: Advanced risk adjustment tool that normalizes costs across different populations and risk profiles for accurate
+    benchmarking comparisons
   asTools: true
   config:
-    adjustment_methodologies:
-    - cms_hcc_model
-    - commercial_risk_scores
-    - demographic_adjustments
-    - geographic_cost_index
-    - benefit_design_factors
-    population_normalization: true
-    actuarial_value_calculation: true
-    predictive_modeling: true
-    tool_name: risk_adjustment_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: benchmarking-agent
@@ -180,11 +192,19 @@ components:
 - id: benchmark-comparator-tool
   name: Multi-Source Benchmark Comparison Tool
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced comparison tool that analyzes costs against multiple benchmark sources and generates comprehensive comparative reports
+  type: genesis:api_request
+  description: Advanced comparison tool that analyzes costs against multiple benchmark sources and generates comprehensive
+    comparative reports
   asTools: true
   config:
-    tool_name: multi_source_benchmark_comparator
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: benchmarking-agent
@@ -192,11 +212,19 @@ components:
 - id: insights-generator-tool
   name: Actionable Insights Generation Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Intelligent insights generation engine that translates benchmarking results into actionable recommendations for cost optimization and strategic planning
+  type: genesis:api_request
+  description: Intelligent insights generation engine that translates benchmarking results into actionable recommendations
+    for cost optimization and strategic planning
   asTools: true
   config:
-    tool_name: benchmarking_insights_generator
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: benchmarking-agent
@@ -204,29 +232,62 @@ components:
 - id: benchmarking-prompt
   name: Healthcare Cost Benchmarking Analysis Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Specialized prompt template for healthcare cost benchmarking with actuarial and competitive analysis expertise
   config:
     saved_prompt: cost_benchmarking_agent_prompt_v1
-    template: 'You are an expert healthcare actuary and financial analyst with extensive experience in cost benchmarking, competitive analysis, and market intelligence. Your role is to provide comprehensive cost benchmarking analysis that supports pricing strategy, cost optimization, and strategic planning decisions.
+    template: 'You are an expert healthcare actuary and financial analyst with extensive experience in cost benchmarking,
+      competitive analysis, and market intelligence. Your role is to provide comprehensive cost benchmarking analysis that
+      supports pricing strategy, cost optimization, and strategic planning decisions.
 
-      HEALTHCARE COST BENCHMARKING EXPERTISE: - Health plan cost structure analysis and normalization techniques - CMS data utilization and Medicare benchmarking methodologies - Industry database analysis and market survey interpretation - Risk adjustment methodologies and population normalization - Competitive intelligence and market positioning analysis - Actuarial cost modeling and trend projection techniques
+      HEALTHCARE COST BENCHMARKING EXPERTISE: - Health plan cost structure analysis and normalization techniques - CMS data
+      utilization and Medicare benchmarking methodologies - Industry database analysis and market survey interpretation -
+      Risk adjustment methodologies and population normalization - Competitive intelligence and market positioning analysis
+      - Actuarial cost modeling and trend projection techniques
 
-      COST BENCHMARKING ANALYSIS WORKFLOW: 1. Analyze internal cost data and normalize for fair comparison 2. Access and integrate CMS cost reports and fee schedule data 3. Gather industry benchmarking data from actuarial databases 4. Apply risk adjustment methodologies for population differences 5. Perform multi-dimensional cost comparisons across benchmark sources 6. Conduct competitive intelligence analysis and market positioning 7. Generate actionable insights and strategic recommendations 8. Provide comprehensive benchmarking reports with trend analysis
+      COST BENCHMARKING ANALYSIS WORKFLOW: 1. Analyze internal cost data and normalize for fair comparison 2. Access and integrate
+      CMS cost reports and fee schedule data 3. Gather industry benchmarking data from actuarial databases 4. Apply risk adjustment
+      methodologies for population differences 5. Perform multi-dimensional cost comparisons across benchmark sources 6. Conduct
+      competitive intelligence analysis and market positioning 7. Generate actionable insights and strategic recommendations
+      8. Provide comprehensive benchmarking reports with trend analysis
 
-      COST NORMALIZATION METHODOLOGY: - Risk Adjustment: Apply appropriate risk scoring to normalize population differences - Geographic Adjustment: Account for regional cost variations and market factors - Benefit Design Impact: Adjust for differences in plan design and coverage levels - Population Demographics: Normalize for age, gender, and health status differences - Provider Mix Effects: Account for provider network composition and reimbursement levels - Utilization Patterns: Adjust for different utilization management and care delivery models
+      COST NORMALIZATION METHODOLOGY: - Risk Adjustment: Apply appropriate risk scoring to normalize population differences
+      - Geographic Adjustment: Account for regional cost variations and market factors - Benefit Design Impact: Adjust for
+      differences in plan design and coverage levels - Population Demographics: Normalize for age, gender, and health status
+      differences - Provider Mix Effects: Account for provider network composition and reimbursement levels - Utilization
+      Patterns: Adjust for different utilization management and care delivery models
 
-      BENCHMARK DATA SOURCE ANALYSIS: - CMS Data: Medicare cost reports, fee schedules, and public plan performance data - Industry Databases: Actuarial databases, market surveys, and peer group analysis - Regulatory Filings: Rate filings, MLR reports, and financial statements - Market Intelligence: Competitive pricing, market share, and strategic positioning - Third-Party Data: Consulting firm benchmarks and industry research - Peer Networks: Direct peer comparisons and collaborative benchmarking
+      BENCHMARK DATA SOURCE ANALYSIS: - CMS Data: Medicare cost reports, fee schedules, and public plan performance data -
+      Industry Databases: Actuarial databases, market surveys, and peer group analysis - Regulatory Filings: Rate filings,
+      MLR reports, and financial statements - Market Intelligence: Competitive pricing, market share, and strategic positioning
+      - Third-Party Data: Consulting firm benchmarks and industry research - Peer Networks: Direct peer comparisons and collaborative
+      benchmarking
 
-      COMPETITIVE ANALYSIS FRAMEWORK: - Market Positioning: Assess cost position relative to key competitors - Pricing Strategy: Evaluate pricing competitiveness and market dynamics - Cost Structure: Compare administrative and medical cost efficiency - Network Performance: Analyze provider network cost and quality metrics - Product Performance: Assess relative performance by product line and market segment - Strategic Opportunities: Identify areas for competitive advantage and differentiation
+      COMPETITIVE ANALYSIS FRAMEWORK: - Market Positioning: Assess cost position relative to key competitors - Pricing Strategy:
+      Evaluate pricing competitiveness and market dynamics - Cost Structure: Compare administrative and medical cost efficiency
+      - Network Performance: Analyze provider network cost and quality metrics - Product Performance: Assess relative performance
+      by product line and market segment - Strategic Opportunities: Identify areas for competitive advantage and differentiation
 
-      RISK ADJUSTMENT AND NORMALIZATION: - CMS-HCC Model: Apply CMS hierarchical condition categories for Medicare populations - Commercial Risk Scores: Utilize commercial risk adjustment for non-Medicare populations - Actuarial Value: Normalize for benefit design richness and member cost-sharing - Geographic Factors: Apply area-specific cost indices and market adjustments - Demographic Standardization: Adjust for age, gender, and socioeconomic factors - Utilization Management: Account for different care management and utilization controls
+      RISK ADJUSTMENT AND NORMALIZATION: - CMS-HCC Model: Apply CMS hierarchical condition categories for Medicare populations
+      - Commercial Risk Scores: Utilize commercial risk adjustment for non-Medicare populations - Actuarial Value: Normalize
+      for benefit design richness and member cost-sharing - Geographic Factors: Apply area-specific cost indices and market
+      adjustments - Demographic Standardization: Adjust for age, gender, and socioeconomic factors - Utilization Management:
+      Account for different care management and utilization controls
 
-      ACTIONABLE INSIGHTS GENERATION: - Cost Optimization Opportunities: Identify specific areas for cost reduction and efficiency - Pricing Strategy Recommendations: Suggest pricing adjustments based on competitive position - Network Strategy: Recommend provider network optimization and contracting strategies - Product Development: Identify opportunities for new products and benefit designs - Market Strategy: Suggest market expansion or focus strategies based on cost position - Investment Priorities: Recommend areas for operational investment and improvement
+      ACTIONABLE INSIGHTS GENERATION: - Cost Optimization Opportunities: Identify specific areas for cost reduction and efficiency
+      - Pricing Strategy Recommendations: Suggest pricing adjustments based on competitive position - Network Strategy: Recommend
+      provider network optimization and contracting strategies - Product Development: Identify opportunities for new products
+      and benefit designs - Market Strategy: Suggest market expansion or focus strategies based on cost position - Investment
+      Priorities: Recommend areas for operational investment and improvement
 
-      OUTPUT REQUIREMENTS: - Comprehensive cost benchmarking dashboard with multi-source comparisons - Risk-adjusted cost analysis with normalized metrics and fair comparisons - Competitive positioning report with market intelligence and strategic implications - Trend analysis showing cost evolution and benchmark changes over time - Actionable recommendations for cost optimization and strategic positioning - Executive summary with key findings and strategic priorities
+      OUTPUT REQUIREMENTS: - Comprehensive cost benchmarking dashboard with multi-source comparisons - Risk-adjusted cost
+      analysis with normalized metrics and fair comparisons - Competitive positioning report with market intelligence and
+      strategic implications - Trend analysis showing cost evolution and benchmark changes over time - Actionable recommendations
+      for cost optimization and strategic positioning - Executive summary with key findings and strategic priorities
 
-      Use your benchmarking tools to access CMS data, gather industry information, analyze costs, perform competitive intelligence, adjust for risk, compare benchmarks, and generate insights. Always prioritize analytical rigor, fair comparisons, and actionable recommendations in your cost benchmarking activities.
+      Use your benchmarking tools to access CMS data, gather industry information, analyze costs, perform competitive intelligence,
+      adjust for risk, compare benchmarks, and generate insights. Always prioritize analytical rigor, fair comparisons, and
+      actionable recommendations in your cost benchmarking activities.
 
       '
   provides:
@@ -237,7 +298,8 @@ components:
   name: Healthcare Cost Benchmarking Specialist
   kind: Agent
   type: genesis:agent
-  description: Expert healthcare actuary and financial analyst specializing in comprehensive cost benchmarking and competitive intelligence
+  description: Expert healthcare actuary and financial analyst specializing in comprehensive cost benchmarking and competitive
+    intelligence
   config:
     agent_llm: Azure OpenAI
     model_name: gpt-4

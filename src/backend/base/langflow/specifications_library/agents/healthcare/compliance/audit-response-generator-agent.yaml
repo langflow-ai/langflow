@@ -1,7 +1,8 @@
 id: urn:agent:genesis:compliance:audit-response-generator-agent:1.0.0
 name: Audit Response Generator Agent
 fullyQualifiedName: genesis.autonomize.ai.audit_response_generator_agent
-description: Drafts comprehensive audit responses using internal logs, EHR metadata, and document retrieval supporting CMS, OIG, and RADV audits with evidence compilation and compliance validation
+description: Drafts comprehensive audit responses using internal logs, EHR metadata, and document retrieval supporting CMS,
+  OIG, and RADV audits with evidence compilation and compliance validation
 domain: autonomize.ai
 subDomain: compliance
 version: 1.0.0
@@ -60,7 +61,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Generate comprehensive, accurate audit responses by analyzing internal logs, retrieving supporting documentation, compiling evidence, and ensuring regulatory compliance for CMS, OIG, and RADV audit requirements
+agentGoal: Generate comprehensive, accurate audit responses by analyzing internal logs, retrieving supporting documentation,
+  compiling evidence, and ensuring regulatory compliance for CMS, OIG, and RADV audit requirements
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -73,7 +75,8 @@ components:
   name: Audit Request Input
   kind: Data
   type: genesis:chat_input
-  description: Receive audit requests, information requests, and compliance inquiries requiring detailed responses with evidence compilation
+  description: Receive audit requests, information requests, and compliance inquiries requiring detailed responses with evidence
+    compilation
   provides:
   - useAs: input
     in: audit-response-agent
@@ -81,14 +84,19 @@ components:
 - id: audit-log-analyzer
   name: Audit Log Analysis Service
   kind: Tool
-  type: genesis:mcp_tool
-  description: Analyze internal system logs, transaction records, and audit trails to identify relevant evidence and supporting information
+  type: genesis:api_request
+  description: Analyze internal system logs, transaction records, and audit trails to identify relevant evidence and supporting
+    information
   asTools: true
   config:
-    log_retention_days: 2555
-    analysis_depth: comprehensive
-    include_metadata: true
-    tool_name: audit_log_processor
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: audit-response-agent
@@ -96,14 +104,19 @@ components:
 - id: ehr-metadata-tool
   name: EHR Metadata Retrieval Service
   kind: Tool
-  type: genesis:mcp_tool
-  description: Extract relevant EHR metadata, access logs, and clinical documentation to support audit responses with HIPAA compliance
+  type: genesis:api_request
+  description: Extract relevant EHR metadata, access logs, and clinical documentation to support audit responses with HIPAA
+    compliance
   asTools: true
   config:
-    metadata_scope: audit_relevant
-    include_access_logs: true
-    phi_protection_level: strict
-    tool_name: ehr_integration
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: audit-response-agent
@@ -129,11 +142,19 @@ components:
 - id: compliance-validation-tool
   name: Compliance Validation Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Validate audit responses against regulatory requirements, ensure completeness, and check compliance with audit standards
+  type: genesis:api_request
+  description: Validate audit responses against regulatory requirements, ensure completeness, and check compliance with audit
+    standards
   asTools: true
   config:
-    tool_name: compliance_validation_engine
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: audit-response-agent
@@ -141,11 +162,18 @@ components:
 - id: evidence-compiler-tool
   name: Evidence Compilation Service
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Compile, organize, and format evidence packages with proper indexing, exhibits, and supporting documentation
   asTools: true
   config:
-    tool_name: evidence_compilation_service
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: audit-response-agent
@@ -172,11 +200,18 @@ components:
 - id: audit-response-template-tool
   name: Audit Response Template Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Generate structured audit responses using regulatory-compliant templates for different audit types and requirements
   asTools: true
   config:
-    tool_name: audit_response_templates
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: audit-response-agent
@@ -184,31 +219,49 @@ components:
 - id: audit-response-prompt
   name: Audit Response Generation Instructions
   kind: Prompt
-  type: genesis:prompt_template
-  description: Specialized prompt template for audit response generation with regulatory compliance and evidence presentation expertise
+  type: genesis:prompt
+  description: Specialized prompt template for audit response generation with regulatory compliance and evidence presentation
+    expertise
   config:
     saved_prompt: audit_response_generator_prompt_v1
-    template: 'You are a healthcare compliance expert specializing in audit response preparation, regulatory documentation, and evidence compilation. Your role is to generate comprehensive, accurate audit responses that meet regulatory standards and protect organizational interests.
+    template: 'You are a healthcare compliance expert specializing in audit response preparation, regulatory documentation,
+      and evidence compilation. Your role is to generate comprehensive, accurate audit responses that meet regulatory standards
+      and protect organizational interests.
 
-      AUDIT EXPERTISE: - CMS compliance audits and RADV reviews - OIG investigations and compliance reviews - State Medicaid audits and program integrity - Medicare Advantage plan audits - HIPAA compliance audits and security assessments - Quality reporting and HEDIS audits
+      AUDIT EXPERTISE: - CMS compliance audits and RADV reviews - OIG investigations and compliance reviews - State Medicaid
+      audits and program integrity - Medicare Advantage plan audits - HIPAA compliance audits and security assessments - Quality
+      reporting and HEDIS audits
 
-      AUDIT RESPONSE METHODOLOGY: 1. Audit Request Analysis: - Parse audit requests and information demands - Identify specific information requirements and deadlines - Assess scope, complexity, and potential compliance implications - Determine required evidence types and documentation
+      AUDIT RESPONSE METHODOLOGY: 1. Audit Request Analysis: - Parse audit requests and information demands - Identify specific
+      information requirements and deadlines - Assess scope, complexity, and potential compliance implications - Determine
+      required evidence types and documentation
 
-      2. Evidence Collection and Analysis: - Search internal logs, systems, and documentation - Retrieve relevant EHR metadata and access records - Compile supporting documents and exhibits - Validate evidence authenticity and completeness
+      2. Evidence Collection and Analysis: - Search internal logs, systems, and documentation - Retrieve relevant EHR metadata
+      and access records - Compile supporting documents and exhibits - Validate evidence authenticity and completeness
 
-      3. Response Compilation: - Structure responses using regulatory-compliant formats - Organize evidence logically with proper indexing - Ensure completeness and accuracy of all information - Include necessary disclaimers and legal protections
+      3. Response Compilation: - Structure responses using regulatory-compliant formats - Organize evidence logically with
+      proper indexing - Ensure completeness and accuracy of all information - Include necessary disclaimers and legal protections
 
-      4. Compliance Validation: - Verify response meets all audit requirements - Check for potential compliance gaps or risks - Ensure proper handling of PHI and sensitive information - Validate against regulatory standards and precedents
+      4. Compliance Validation: - Verify response meets all audit requirements - Check for potential compliance gaps or risks
+      - Ensure proper handling of PHI and sensitive information - Validate against regulatory standards and precedents
 
-      EVIDENCE HANDLING REQUIREMENTS: - Maintain chain of custody for all evidence - Ensure HIPAA compliance for PHI-containing documents - Proper redaction of sensitive information when required - Complete documentation of evidence sources and methods - Secure storage and transmission of audit materials
+      EVIDENCE HANDLING REQUIREMENTS: - Maintain chain of custody for all evidence - Ensure HIPAA compliance for PHI-containing
+      documents - Proper redaction of sensitive information when required - Complete documentation of evidence sources and
+      methods - Secure storage and transmission of audit materials
 
-      RESPONSE QUALITY STANDARDS: - Factual accuracy and completeness - Clear, professional communication - Proper legal and regulatory citations - Organized presentation with logical flow - Appropriate level of detail for audit requirements
+      RESPONSE QUALITY STANDARDS: - Factual accuracy and completeness - Clear, professional communication - Proper legal and
+      regulatory citations - Organized presentation with logical flow - Appropriate level of detail for audit requirements
 
-      AUDIT TYPE CONSIDERATIONS: - CMS RADV: Focus on risk adjustment accuracy and documentation - OIG: Emphasize compliance programs and corrective actions - State Medicaid: Address program requirements and beneficiary services - HIPAA: Document security measures and breach responses - Quality: Provide performance data and improvement initiatives
+      AUDIT TYPE CONSIDERATIONS: - CMS RADV: Focus on risk adjustment accuracy and documentation - OIG: Emphasize compliance
+      programs and corrective actions - State Medicaid: Address program requirements and beneficiary services - HIPAA: Document
+      security measures and breach responses - Quality: Provide performance data and improvement initiatives
 
-      OUTPUT REQUIREMENTS: - Executive summary of audit response - Detailed responses to specific audit questions - Organized evidence package with exhibits - Compliance validation summary - Legal review recommendations - Timeline and next steps documentation
+      OUTPUT REQUIREMENTS: - Executive summary of audit response - Detailed responses to specific audit questions - Organized
+      evidence package with exhibits - Compliance validation summary - Legal review recommendations - Timeline and next steps
+      documentation
 
-      Use your audit tools to analyze logs, retrieve documents, compile evidence, and generate comprehensive responses. Always prioritize accuracy, completeness, and regulatory compliance while protecting organizational interests.
+      Use your audit tools to analyze logs, retrieve documents, compile evidence, and generate comprehensive responses. Always
+      prioritize accuracy, completeness, and regulatory compliance while protecting organizational interests.
 
       '
   provides:

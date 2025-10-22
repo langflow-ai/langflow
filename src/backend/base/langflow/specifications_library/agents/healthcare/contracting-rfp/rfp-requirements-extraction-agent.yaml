@@ -1,7 +1,8 @@
 id: urn:agent:genesis:contracting-rfp:rfp-requirements-extraction-agent:1.0.0
 name: RFP Requirements Extraction Agent
 fullyQualifiedName: genesis.autonomize.ai.rfp_requirements_extraction_agent
-description: Extracts evaluation criteria, compliance requirements, and deadlines from complex RFP PDFs using layout-aware NLP and table parsing for healthcare contracting processes
+description: Extracts evaluation criteria, compliance requirements, and deadlines from complex RFP PDFs using layout-aware
+  NLP and table parsing for healthcare contracting processes
 domain: autonomize.ai
 subDomain: contracting-rfp
 version: 1.0.0
@@ -77,7 +78,9 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Extract and structure evaluation criteria, compliance requirements, and critical deadlines from complex healthcare RFP documents using advanced PDF processing and layout-aware NLP to ensure comprehensive requirement capture and compliance tracking
+agentGoal: Extract and structure evaluation criteria, compliance requirements, and critical deadlines from complex healthcare
+  RFP documents using advanced PDF processing and layout-aware NLP to ensure comprehensive requirement capture and compliance
+  tracking
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -98,11 +101,19 @@ components:
 - id: pdf-processor-tool
   name: Advanced PDF Processing Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Sophisticated PDF processing tool with layout-aware text extraction, table parsing, and document structure analysis for complex RFP documents
+  type: genesis:api_request
+  description: Sophisticated PDF processing tool with layout-aware text extraction, table parsing, and document structure
+    analysis for complex RFP documents
   asTools: true
   config:
-    tool_name: advanced_pdf_processor
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: rfp-extraction-agent
@@ -110,19 +121,19 @@ components:
 - id: nlp-classifier-tool
   name: RFP Section Classification Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Specialized NLP model for classifying RFP sections including evaluation criteria, compliance requirements, technical specifications, and deadline information
+  type: genesis:api_request
+  description: Specialized NLP model for classifying RFP sections including evaluation criteria, compliance requirements,
+    technical specifications, and deadline information
   asTools: true
   config:
-    confidence_threshold: 0.88
-    section_types:
-    - evaluation_criteria
-    - compliance_requirements
-    - technical_specifications
-    - submission_deadlines
-    - scoring_methodology
-    - vendor_qualifications
-    tool_name: document_classification_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: rfp-extraction-agent
@@ -130,11 +141,19 @@ components:
 - id: table-extraction-tool
   name: Healthcare RFP Table Parser
   kind: Tool
-  type: genesis:mcp_tool
-  description: Specialized table extraction tool optimized for healthcare RFP documents including scoring matrices, compliance checklists, and evaluation criteria tables
+  type: genesis:api_request
+  description: Specialized table extraction tool optimized for healthcare RFP documents including scoring matrices, compliance
+    checklists, and evaluation criteria tables
   asTools: true
   config:
-    tool_name: healthcare_rfp_table_parser
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: rfp-extraction-agent
@@ -142,11 +161,19 @@ components:
 - id: deadline-analyzer-tool
   name: RFP Deadline Analysis Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Intelligent deadline extraction and analysis tool that identifies submission dates, milestone deadlines, and time-sensitive requirements from RFP documents
+  type: genesis:api_request
+  description: Intelligent deadline extraction and analysis tool that identifies submission dates, milestone deadlines, and
+    time-sensitive requirements from RFP documents
   asTools: true
   config:
-    tool_name: rfp_deadline_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: rfp-extraction-agent
@@ -154,20 +181,19 @@ components:
 - id: compliance-mapper-tool
   name: Healthcare Compliance Requirements Mapper
   kind: Tool
-  type: genesis:mcp_tool
-  description: Healthcare-specific compliance requirement mapping tool that identifies HIPAA, accreditation, and regulatory requirements in RFP documents
+  type: genesis:api_request
+  description: Healthcare-specific compliance requirement mapping tool that identifies HIPAA, accreditation, and regulatory
+    requirements in RFP documents
   asTools: true
   config:
-    compliance_frameworks:
-    - hipaa
-    - hitech
-    - cms_regulations
-    - joint_commission
-    - aaahc
-    - ncqa
-    requirement_extraction: true
-    regulatory_mapping: true
-    tool_name: healthcare_compliance_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: rfp-extraction-agent
@@ -175,25 +201,44 @@ components:
 - id: rfp-extraction-prompt
   name: RFP Requirements Extraction Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Specialized prompt template for RFP requirements extraction with healthcare contracting expertise
   config:
     saved_prompt: rfp_extraction_agent_prompt_v1
-    template: 'You are an expert healthcare contracting analyst with extensive experience in RFP evaluation and compliance requirements. Your role is to extract and structure all critical requirements from healthcare RFP documents using advanced document processing and analysis techniques.
+    template: 'You are an expert healthcare contracting analyst with extensive experience in RFP evaluation and compliance
+      requirements. Your role is to extract and structure all critical requirements from healthcare RFP documents using advanced
+      document processing and analysis techniques.
 
-      RFP ANALYSIS EXPERTISE: - Healthcare contracting regulations and compliance requirements - RFP evaluation criteria and scoring methodologies - Vendor qualification requirements and assessment criteria - Technical specification analysis and requirement mapping - Deadline tracking and milestone identification - Risk assessment and compliance gap analysis
+      RFP ANALYSIS EXPERTISE: - Healthcare contracting regulations and compliance requirements - RFP evaluation criteria and
+      scoring methodologies - Vendor qualification requirements and assessment criteria - Technical specification analysis
+      and requirement mapping - Deadline tracking and milestone identification - Risk assessment and compliance gap analysis
 
-      DOCUMENT PROCESSING WORKFLOW: 1. Process PDF documents using layout-aware text extraction 2. Classify document sections and identify key requirement areas 3. Extract tables, scoring matrices, and structured data elements 4. Identify and catalog all evaluation criteria with weights 5. Map compliance requirements to healthcare regulatory frameworks 6. Extract all deadlines, milestones, and time-sensitive requirements 7. Structure findings into comprehensive requirement documentation
+      DOCUMENT PROCESSING WORKFLOW: 1. Process PDF documents using layout-aware text extraction 2. Classify document sections
+      and identify key requirement areas 3. Extract tables, scoring matrices, and structured data elements 4. Identify and
+      catalog all evaluation criteria with weights 5. Map compliance requirements to healthcare regulatory frameworks 6. Extract
+      all deadlines, milestones, and time-sensitive requirements 7. Structure findings into comprehensive requirement documentation
 
-      EXTRACTION CATEGORIES: - Evaluation Criteria: Scoring weights, assessment factors, selection criteria - Compliance Requirements: HIPAA, regulatory, accreditation, certification needs - Technical Specifications: System requirements, integration needs, performance criteria - Submission Deadlines: Proposal due dates, milestone deadlines, presentation schedules - Vendor Qualifications: Experience requirements, financial criteria, reference needs - Contract Terms: Pricing structure, payment terms, service level agreements
+      EXTRACTION CATEGORIES: - Evaluation Criteria: Scoring weights, assessment factors, selection criteria - Compliance Requirements:
+      HIPAA, regulatory, accreditation, certification needs - Technical Specifications: System requirements, integration needs,
+      performance criteria - Submission Deadlines: Proposal due dates, milestone deadlines, presentation schedules - Vendor
+      Qualifications: Experience requirements, financial criteria, reference needs - Contract Terms: Pricing structure, payment
+      terms, service level agreements
 
-      HEALTHCARE-SPECIFIC REQUIREMENTS: - HIPAA compliance and data security requirements - Clinical workflow integration specifications - Provider network and credentialing requirements - Claims processing and billing system integration - Quality reporting and performance measurement criteria - Regulatory compliance and audit requirements
+      HEALTHCARE-SPECIFIC REQUIREMENTS: - HIPAA compliance and data security requirements - Clinical workflow integration
+      specifications - Provider network and credentialing requirements - Claims processing and billing system integration
+      - Quality reporting and performance measurement criteria - Regulatory compliance and audit requirements
 
-      QUALITY ASSURANCE REQUIREMENTS: - Verify completeness of requirement extraction - Cross-reference compliance requirements with healthcare regulations - Validate deadline accuracy and feasibility - Check for hidden or implicit requirements - Ensure proper categorization and prioritization - Flag potential compliance gaps or risks
+      QUALITY ASSURANCE REQUIREMENTS: - Verify completeness of requirement extraction - Cross-reference compliance requirements
+      with healthcare regulations - Validate deadline accuracy and feasibility - Check for hidden or implicit requirements
+      - Ensure proper categorization and prioritization - Flag potential compliance gaps or risks
 
-      OUTPUT REQUIREMENTS: - Structured requirement documentation with clear categorization - Deadline timeline with critical path identification - Compliance requirement mapping with regulatory framework references - Evaluation criteria matrix with scoring weights and assessment factors - Risk assessment highlighting potential compliance or technical challenges - Comprehensive requirement checklist for proposal preparation
+      OUTPUT REQUIREMENTS: - Structured requirement documentation with clear categorization - Deadline timeline with critical
+      path identification - Compliance requirement mapping with regulatory framework references - Evaluation criteria matrix
+      with scoring weights and assessment factors - Risk assessment highlighting potential compliance or technical challenges
+      - Comprehensive requirement checklist for proposal preparation
 
-      Use your document processing tools to extract text, classify sections, parse tables, analyze deadlines, and map compliance requirements. Always prioritize accuracy, completeness, and healthcare regulatory compliance in your analysis.
+      Use your document processing tools to extract text, classify sections, parse tables, analyze deadlines, and map compliance
+      requirements. Always prioritize accuracy, completeness, and healthcare regulatory compliance in your analysis.
 
       '
   provides:
@@ -204,7 +249,8 @@ components:
   name: Healthcare RFP Requirements Extraction Specialist
   kind: Agent
   type: genesis:agent
-  description: Expert healthcare contracting analyst specializing in comprehensive RFP requirements extraction and compliance analysis
+  description: Expert healthcare contracting analyst specializing in comprehensive RFP requirements extraction and compliance
+    analysis
   config:
     agent_llm: Azure OpenAI
     model_name: gpt-4

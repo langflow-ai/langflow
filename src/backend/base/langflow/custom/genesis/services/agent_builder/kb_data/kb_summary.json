@@ -18,7 +18,7 @@
     "genesis:file_reader",
     "genesis:knowledge_hub_search",
     "$ref:document_processor",
-    "genesis:prompt_template",
+    "genesis:prompt",
     "genesis:chat_output",
     "$ref:eligibility_checker",
     "genesis:conversation_chain",

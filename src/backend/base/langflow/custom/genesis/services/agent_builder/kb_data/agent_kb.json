@@ -40,7 +40,7 @@
       },
       {
         "component_id": "main-agent-prompt",
-        "component_type": "genesis:prompt_template",
+        "component_type": "genesis:prompt",
         "name": "Agent Instructions",
         "description": "Prompt template for agent instructions",
         "purpose": "unknown",
@@ -185,7 +185,7 @@
     "component_types": [
       "genesis:mcp_tool",
       "genesis:agent",
-      "genesis:prompt_template",
+      "genesis:prompt",
       "genesis:chat_output",
       "genesis:chat_input"
     ],
@@ -222,7 +222,7 @@
       {
         "from_component": "main-agent-prompt",
         "to_component": "main-agent",
-        "from_type": "genesis:prompt_template",
+        "from_type": "genesis:prompt",
         "to_type": "genesis:agent",
         "from_category": "unknown",
         "to_category": "agent",
@@ -453,7 +453,7 @@
       },
       {
         "component_id": "main-agent-prompt",
-        "component_type": "genesis:prompt_template",
+        "component_type": "genesis:prompt",
         "name": "Agent Instructions",
         "description": "Prompt template for agent instructions",
         "purpose": "unknown",
@@ -595,7 +595,7 @@
     "component_types": [
       "genesis:agent",
       "genesis:knowledge_hub_search",
-      "genesis:prompt_template",
+      "genesis:prompt",
       "genesis:chat_output",
       "genesis:chat_input"
     ],
@@ -629,7 +629,7 @@
       {
         "from_component": "main-agent-prompt",
         "to_component": "main-agent",
-        "from_type": "genesis:prompt_template",
+        "from_type": "genesis:prompt",
         "to_type": "genesis:agent",
         "from_category": "unknown",
         "to_category": "agent",
@@ -866,7 +866,7 @@
       },
       {
         "component_id": "eligibility-agent-prompt",
-        "component_type": "genesis:prompt_template",
+        "component_type": "genesis:prompt",
         "name": "Agent Instructions",
         "description": "Prompt template for agent instructions",
         "purpose": "unknown",
@@ -1011,7 +1011,7 @@
     "component_types": [
       "genesis:mcp_tool",
       "genesis:agent",
-      "genesis:prompt_template",
+      "genesis:prompt",
       "genesis:chat_output",
       "genesis:chat_input"
     ],
@@ -1048,7 +1048,7 @@
       {
         "from_component": "eligibility-agent-prompt",
         "to_component": "eligibility-agent",
-        "from_type": "genesis:prompt_template",
+        "from_type": "genesis:prompt",
         "to_type": "genesis:agent",
         "from_category": "unknown",
         "to_category": "agent",
@@ -1120,7 +1120,7 @@
       },
       {
         "component_id": "provider-check-agent-prompt",
-        "component_type": "genesis:prompt_template",
+        "component_type": "genesis:prompt",
         "name": "Agent Instructions",
         "description": "Prompt template for agent instructions",
         "purpose": "unknown",
@@ -1265,7 +1265,7 @@
     "component_types": [
       "genesis:mcp_tool",
       "genesis:agent",
-      "genesis:prompt_template",
+      "genesis:prompt",
       "genesis:chat_output",
       "genesis:chat_input"
     ],
@@ -1302,7 +1302,7 @@
       {
         "from_component": "provider-check-agent-prompt",
         "to_component": "provider-check-agent",
-        "from_type": "genesis:prompt_template",
+        "from_type": "genesis:prompt",
         "to_type": "genesis:agent",
         "from_category": "unknown",
         "to_category": "agent",
@@ -1421,7 +1421,7 @@
       },
       {
         "component_id": "prompt-template",
-        "component_type": "genesis:prompt_template",
+        "component_type": "genesis:prompt",
         "name": "Summary Template",
         "description": "Structured template for consistent summaries",
         "purpose": "unknown",
@@ -1482,7 +1482,7 @@
     ],
     "component_types": [
       "genesis:agent",
-      "genesis:prompt_template",
+      "genesis:prompt",
       "genesis:chat_output",
       "genesis:chat_input"
     ],
@@ -1525,7 +1525,7 @@
       {
         "from_component": "prompt-template",
         "to_component": "summary-agent",
-        "from_type": "genesis:prompt_template",
+        "from_type": "genesis:prompt",
         "to_type": "genesis:agent",
         "from_category": "unknown",
         "to_category": "agent",
@@ -2178,7 +2178,7 @@
       },
       {
         "component_id": "extraction-agent-prompt",
-        "component_type": "genesis:prompt_template",
+        "component_type": "genesis:prompt",
         "name": "Agent Instructions",
         "description": "Prompt template for agent instructions",
         "purpose": "unknown",
@@ -2359,7 +2359,7 @@
       "genesis:mcp_tool",
       "genesis:form_recognizer",
       "genesis:agent",
-      "genesis:prompt_template",
+      "genesis:prompt",
       "genesis:chat_output",
       "genesis:chat_input"
     ],
@@ -2396,7 +2396,7 @@
       {
         "from_component": "extraction-agent-prompt",
         "to_component": "extraction-agent",
-        "from_type": "genesis:prompt_template",
+        "from_type": "genesis:prompt",
         "to_type": "genesis:agent",
         "from_category": "unknown",
         "to_category": "agent",
@@ -2703,7 +2703,7 @@
       },
       {
         "component_id": "accumulator-agent-prompt",
-        "component_type": "genesis:prompt_template",
+        "component_type": "genesis:prompt",
         "name": "Agent Instructions",
         "description": "Prompt template for agent instructions",
         "purpose": "unknown",
@@ -2924,7 +2924,7 @@
     "component_types": [
       "genesis:mcp_tool",
       "genesis:agent",
-      "genesis:prompt_template",
+      "genesis:prompt",
       "genesis:chat_output",
       "genesis:chat_input"
     ],
@@ -2961,7 +2961,7 @@
       {
         "from_component": "accumulator-agent-prompt",
         "to_component": "accumulator-agent",
-        "from_type": "genesis:prompt_template",
+        "from_type": "genesis:prompt",
         "to_type": "genesis:agent",
         "from_category": "unknown",
         "to_category": "agent",
@@ -3051,7 +3051,7 @@
       },
       {
         "component_id": "main-agent-prompt",
-        "component_type": "genesis:prompt_template",
+        "component_type": "genesis:prompt",
         "name": "Agent Instructions",
         "description": "Prompt template for agent instructions",
         "purpose": "unknown",
@@ -3193,7 +3193,7 @@
     "component_types": [
       "genesis:agent",
       "genesis:knowledge_hub_search",
-      "genesis:prompt_template",
+      "genesis:prompt",
       "genesis:chat_output",
       "genesis:chat_input"
     ],
@@ -3227,7 +3227,7 @@
       {
         "from_component": "main-agent-prompt",
         "to_component": "main-agent",
-        "from_type": "genesis:prompt_template",
+        "from_type": "genesis:prompt",
         "to_type": "genesis:agent",
         "from_category": "unknown",
         "to_category": "agent",
@@ -3299,7 +3299,7 @@
       },
       {
         "component_id": "guideline-check-agent-prompt",
-        "component_type": "genesis:prompt_template",
+        "component_type": "genesis:prompt",
         "name": "Agent Instructions",
         "description": "Prompt template for agent instructions",
         "purpose": "unknown",
@@ -3444,7 +3444,7 @@
     "component_types": [
       "genesis:mcp_tool",
       "genesis:agent",
-      "genesis:prompt_template",
+      "genesis:prompt",
       "genesis:chat_output",
       "genesis:chat_input"
     ],
@@ -3481,7 +3481,7 @@
       {
         "from_component": "guideline-check-agent-prompt",
         "to_component": "guideline-check-agent",
-        "from_type": "genesis:prompt_template",
+        "from_type": "genesis:prompt",
         "to_type": "genesis:agent",
         "from_category": "unknown",
         "to_category": "agent",
@@ -3556,7 +3556,7 @@
       },
       {
         "component_id": "validator-agent-prompt",
-        "component_type": "genesis:prompt_template",
+        "component_type": "genesis:prompt",
         "name": "Agent Instructions",
         "description": "Prompt template for agent instructions",
         "purpose": "unknown",
@@ -3767,7 +3767,7 @@
       "genesis:autonomize_model",
       "genesis:agent",
       "genesis:knowledge_hub_search",
-      "genesis:prompt_template",
+      "genesis:prompt",
       "genesis:chat_output",
       "genesis:chat_input"
     ],
@@ -3808,7 +3808,7 @@
       {
         "from_component": "validator-agent-prompt",
         "to_component": "validator-agent",
-        "from_type": "genesis:prompt_template",
+        "from_type": "genesis:prompt",
         "to_type": "genesis:agent",
         "from_category": "unknown",
         "to_category": "agent",
@@ -3949,7 +3949,7 @@
       },
       {
         "component_id": "tool-1",
-        "component_type": "genesis:prompt_template",
+        "component_type": "genesis:prompt",
         "name": "Prompt Template",
         "description": "Tool for q-set adjudication agent",
         "purpose": "unknown",
@@ -4010,7 +4010,7 @@
     ],
     "component_types": [
       "genesis:agent",
-      "genesis:prompt_template",
+      "genesis:prompt",
       "genesis:chat_output",
       "genesis:chat_input"
     ],
@@ -4053,7 +4053,7 @@
       {
         "from_component": "tool-1",
         "to_component": "main-agent",
-        "from_type": "genesis:prompt_template",
+        "from_type": "genesis:prompt",
         "to_type": "genesis:agent",
         "from_category": "unknown",
         "to_category": "agent",
@@ -4379,7 +4379,7 @@
       },
       {
         "component_id": "coordinator-agent-prompt",
-        "component_type": "genesis:prompt_template",
+        "component_type": "genesis:prompt",
         "name": "Agent Instructions",
         "description": "Prompt template for agent instructions",
         "purpose": "unknown",
@@ -4673,7 +4673,7 @@
     "component_types": [
       "genesis:agent",
       "$ref:document_processor",
-      "genesis:prompt_template",
+      "genesis:prompt",
       "genesis:chat_output",
       "$ref:eligibility_checker",
       "genesis:conversation_chain",
@@ -4711,7 +4711,7 @@
       {
         "from_component": "coordinator-agent-prompt",
         "to_component": "coordinator-agent",
-        "from_type": "genesis:prompt_template",
+        "from_type": "genesis:prompt",
         "to_type": "genesis:agent",
         "from_category": "unknown",
         "to_category": "agent",
@@ -4821,7 +4821,7 @@
       },
       {
         "component_id": "pa-agent-prompt",
-        "component_type": "genesis:prompt_template",
+        "component_type": "genesis:prompt",
         "name": "Agent Instructions",
         "description": "Prompt template for agent instructions",
         "purpose": "unknown",
@@ -5002,7 +5002,7 @@
       "genesis:mcp_tool",
       "genesis:agent",
       "genesis:knowledge_hub_search",
-      "genesis:prompt_template",
+      "genesis:prompt",
       "genesis:chat_output",
       "genesis:chat_input"
     ],
@@ -5039,7 +5039,7 @@
       {
         "from_component": "pa-agent-prompt",
         "to_component": "pa-agent",
-        "from_type": "genesis:prompt_template",
+        "from_type": "genesis:prompt",
         "to_type": "genesis:agent",
         "from_category": "unknown",
         "to_category": "agent",
@@ -5091,7 +5091,7 @@
     "components": [
       {
         "component_id": "eoc-prompt",
-        "component_type": "genesis:prompt_template",
+        "component_type": "genesis:prompt",
         "name": "Agent Instructions",
         "description": "Prompt template for agent instructions",
         "purpose": "unknown",
@@ -5304,7 +5304,7 @@
       "genesis:mcp_tool",
       "genesis:agent",
       "genesis:knowledge_hub_search",
-      "genesis:prompt_template",
+      "genesis:prompt",
       "genesis:chat_output",
       "genesis:chat_input"
     ],
@@ -5332,7 +5332,7 @@
       {
         "from_component": "eoc-prompt",
         "to_component": "eoc-agent",
-        "from_type": "genesis:prompt_template",
+        "from_type": "genesis:prompt",
         "to_type": "genesis:agent",
         "from_category": "unknown",
         "to_category": "agent",
@@ -5422,7 +5422,7 @@
       },
       {
         "component_id": "main-agent-prompt",
-        "component_type": "genesis:prompt_template",
+        "component_type": "genesis:prompt",
         "name": "Agent Instructions",
         "description": "Prompt template for agent instructions",
         "purpose": "unknown",
@@ -5603,7 +5603,7 @@
       "genesis:mcp_tool",
       "genesis:agent",
       "genesis:file_reader",
-      "genesis:prompt_template",
+      "genesis:prompt",
       "genesis:chat_output",
       "genesis:chat_input"
     ],
@@ -5640,7 +5640,7 @@
       {
         "from_component": "main-agent-prompt",
         "to_component": "main-agent",
-        "from_type": "genesis:prompt_template",
+        "from_type": "genesis:prompt",
         "to_type": "genesis:agent",
         "from_category": "unknown",
         "to_category": "agent",

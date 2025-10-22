@@ -25,12 +25,15 @@ class ComponentMappingCRUD:
     """CRUD operations for component mappings."""
 
     @staticmethod
-    async def create(session: AsyncSession, mapping_data: ComponentMappingCreate) -> ComponentMapping:
+    async def create(session: AsyncSession, mapping_data: ComponentMappingCreate, commit: bool = True) -> ComponentMapping:
         """Create a new component mapping."""
         mapping = ComponentMapping.model_validate(mapping_data.model_dump())
         session.add(mapping)
-        await session.commit()
-        await session.refresh(mapping)
+        if commit:
+            await session.commit()
+            await session.refresh(mapping)
+        else:
+            await session.flush()  # Flush to get the ID without committing
         return mapping
 
     @staticmethod
@@ -132,6 +135,7 @@ class ComponentMappingCRUD:
         session: AsyncSession,
         mapping_id: UUID,
         mapping_data: ComponentMappingUpdate,
+        commit: bool = True,
     ) -> Optional[ComponentMapping]:
         """Update a component mapping."""
         statement = select(ComponentMapping).where(ComponentMapping.id == mapping_id)
@@ -147,8 +151,11 @@ class ComponentMappingCRUD:
         for field, value in update_data.items():
             setattr(mapping, field, value)
 
-        await session.commit()
-        await session.refresh(mapping)
+        if commit:
+            await session.commit()
+            await session.refresh(mapping)
+        else:
+            await session.flush()
         return mapping
 
     @staticmethod
@@ -194,12 +201,15 @@ class RuntimeAdapterCRUD:
     """CRUD operations for runtime adapters."""
 
     @staticmethod
-    async def create(session: AsyncSession, adapter_data: RuntimeAdapterCreate) -> RuntimeAdapter:
+    async def create(session: AsyncSession, adapter_data: RuntimeAdapterCreate, commit: bool = True) -> RuntimeAdapter:
         """Create a new runtime adapter."""
         adapter = RuntimeAdapter.model_validate(adapter_data.model_dump())
         session.add(adapter)
-        await session.commit()
-        await session.refresh(adapter)
+        if commit:
+            await session.commit()
+            await session.refresh(adapter)
+        else:
+            await session.flush()
         return adapter
 
     @staticmethod
@@ -273,6 +283,7 @@ class RuntimeAdapterCRUD:
         session: AsyncSession,
         adapter_id: UUID,
         adapter_data: RuntimeAdapterUpdate,
+        commit: bool = True,
     ) -> Optional[RuntimeAdapter]:
         """Update a runtime adapter."""
         statement = select(RuntimeAdapter).where(RuntimeAdapter.id == adapter_id)
@@ -288,8 +299,11 @@ class RuntimeAdapterCRUD:
         for field, value in update_data.items():
             setattr(adapter, field, value)
 
-        await session.commit()
-        await session.refresh(adapter)
+        if commit:
+            await session.commit()
+            await session.refresh(adapter)
+        else:
+            await session.flush()
         return adapter
 
     @staticmethod

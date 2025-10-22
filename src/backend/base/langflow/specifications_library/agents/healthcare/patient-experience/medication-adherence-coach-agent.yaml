@@ -1,8 +1,8 @@
 id: urn:agent:genesis:patient-experience:medication-adherence-coach-agent:1.0.0
 name: Medication Adherence Coach Agent
 fullyQualifiedName: genesis.autonomize.ai.medication_adherence_coach_agent
-description: Multi-agent system that uses pharmacy claims, care plans, and refill
-  history to send targeted reminders and educational content for medication non-adherence
+description: Multi-agent system that uses pharmacy claims, care plans, and refill history to send targeted reminders and educational
+  content for medication non-adherence
 domain: autonomize.ai
 subDomain: patient-experience
 version: 1.0.0
@@ -43,8 +43,8 @@ tags:
 reusability:
   asTools: false
 kind: Multi Agent
-agentGoal: Improve medication adherence through personalized, data-driven interventions
-  and educational outreach for patients with chronic conditions
+agentGoal: Improve medication adherence through personalized, data-driven interventions and educational outreach for patients
+  with chronic conditions
 targetUser: external
 valueGeneration: ProcessAutomation
 interactionMode: Streaming
@@ -65,11 +65,18 @@ components:
 - id: pharmacy-claims-tool
   name: Pharmacy Claims Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access NCPDP pharmacy claims data for medication fill history
   asTools: true
   config:
-    tool_name: pharmacy_claims_ncpdp
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-collection-agent
@@ -77,11 +84,18 @@ components:
 - id: care-plans-tool
   name: Care Plans Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access EHR care plans and chronic condition management protocols
   asTools: true
   config:
-    tool_name: ehr_care_plans
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-collection-agent
@@ -89,11 +103,18 @@ components:
 - id: member-management-tool
   name: Member Management System
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access member demographics, preferences, and contact information
   asTools: true
   config:
-    tool_name: member_management_system
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-collection-agent
@@ -106,11 +127,9 @@ components:
   config:
     role: Data Collection Specialist
     goal: Gather comprehensive medication and patient data for adherence analysis
-    backstory: 'You are a healthcare data specialist focused on collecting comprehensive
-      medication adherence data.
+    backstory: 'You are a healthcare data specialist focused on collecting comprehensive medication adherence data.
 
-      Your expertise includes pharmacy claims analysis, care plan review, and member
-      data aggregation.
+      Your expertise includes pharmacy claims analysis, care plan review, and member data aggregation.
 
       You ensure data quality and completeness for accurate adherence assessment.
 
@@ -129,10 +148,8 @@ components:
   description: Analyze medication adherence patterns and identify at-risk patients
   config:
     role: Medication Adherence Analyst
-    goal: Identify non-adherent patients and assess risk levels using PDC calculations
-      and pattern analysis
-    backstory: 'You are a clinical pharmacist and data analyst specializing in medication
-      adherence.
+    goal: Identify non-adherent patients and assess risk levels using PDC calculations and pattern analysis
+    backstory: 'You are a clinical pharmacist and data analyst specializing in medication adherence.
 
       Your expertise includes PDC calculations, adherence gap analysis, and risk stratification.
 
@@ -153,16 +170,12 @@ components:
   description: Generate personalized adherence reminders and educational content
   config:
     role: Patient Communication Specialist
-    goal: Create personalized, effective communication strategies to improve medication
-      adherence
-    backstory: 'You are a patient engagement specialist with expertise in health communication
-      and behavior change.
+    goal: Create personalized, effective communication strategies to improve medication adherence
+    backstory: 'You are a patient engagement specialist with expertise in health communication and behavior change.
 
-      Your skills include personalized messaging, health literacy adaptation, and
-      multi-channel outreach.
+      Your skills include personalized messaging, health literacy adaptation, and multi-channel outreach.
 
-      You create compelling content that motivates patients to improve their medication
-      adherence.
+      You create compelling content that motivates patients to improve their medication adherence.
 
       '
     allow_delegation: false
@@ -179,10 +192,8 @@ components:
   description: Track adherence KPIs and generate performance reports
   config:
     role: Healthcare Analytics Specialist
-    goal: Monitor adherence improvement metrics and generate actionable insights for
-      care teams
-    backstory: 'You are a healthcare analytics expert specializing in medication adherence
-      outcomes.
+    goal: Monitor adherence improvement metrics and generate actionable insights for care teams
+    backstory: 'You are a healthcare analytics expert specializing in medication adherence outcomes.
 
       Your expertise includes KPI tracking, trend analysis, and performance reporting.
 

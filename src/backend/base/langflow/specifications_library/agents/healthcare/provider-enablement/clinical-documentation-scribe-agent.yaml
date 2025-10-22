@@ -1,7 +1,8 @@
 id: urn:agent:genesis:provider-enablement:clinical-documentation-scribe-agent:1.0.0
 name: Clinical Documentation Scribe Agent
 fullyQualifiedName: genesis.autonomize.ai.clinical-documentation-scribe
-description: Converts real-time audio transcripts or visit recordings into structured clinical notes. Integrates with EHR and uses transcription + NLP for automated documentation.
+description: Converts real-time audio transcripts or visit recordings into structured clinical notes. Integrates with EHR
+  and uses transcription + NLP for automated documentation.
 domain: autonomize.ai
 subDomain: provider-enablement
 version: 1.0.0
@@ -65,7 +66,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Convert real-time audio transcripts and visit recordings into structured, accurate clinical notes using advanced speech recognition, clinical NLP, and EHR integration while ensuring HIPAA compliance and clinical quality standards
+agentGoal: Convert real-time audio transcripts and visit recordings into structured, accurate clinical notes using advanced
+  speech recognition, clinical NLP, and EHR integration while ensuring HIPAA compliance and clinical quality standards
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: Streaming
@@ -86,11 +88,15 @@ components:
 - id: speech-transcription-tool
   name: Clinical Speech Transcription Service
   kind: Tool
-  type: genesis:mcp_tool
-  description: HIPAA-compliant speech-to-text service optimized for medical terminology, clinical vocabulary, and healthcare provider speech patterns
+  type: genesis:speech_transcription_connector
+  description: HIPAA-compliant speech-to-text service optimized for medical terminology, clinical vocabulary, and healthcare
+    provider speech patterns
   asTools: true
   config:
-    tool_name: clinical_speech_transcription
+    test_mode: true
+    mock_mode: true
+    audit_logging: true
+    timeout_seconds: '30'
   provides:
   - useAs: tools
     in: scribe-agent
@@ -98,11 +104,19 @@ components:
 - id: clinical-nlp-processor
   name: Clinical Language Processing Model
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced clinical NLP model specialized for medical entity extraction, clinical reasoning, and structured note generation from clinical conversations
+  type: genesis:clinical_nlp_connector
+  description: Advanced clinical NLP model specialized for medical entity extraction, clinical reasoning, and structured note
+    generation from clinical conversations
   asTools: true
   config:
-    tool_name: clinical_nlp_processor
+    test_mode: true
+    mock_mode: true
+    audit_logging: true
+    timeout_seconds: '30'
+    analysis_type: entity_extraction
+    medical_specialty: general_medicine
+    extract_medications: true
+    extract_conditions: true
   provides:
   - useAs: tools
     in: scribe-agent
@@ -110,11 +124,18 @@ components:
 - id: ehr-documentation-tool
   name: EHR Documentation Connector
   kind: Tool
-  type: genesis:mcp_tool
-  description: HIPAA-compliant EHR integration for accessing patient records, retrieving clinical context, and saving structured clinical notes with proper versioning
+  type: genesis:ehr_connector
+  description: HIPAA-compliant EHR integration for accessing patient records, retrieving clinical context, and saving structured
+    clinical notes with proper versioning
   asTools: true
   config:
-    tool_name: ehr_documentation_connector
+    test_mode: true
+    mock_mode: true
+    audit_logging: true
+    timeout_seconds: '30'
+    record_type: comprehensive
+    include_clinical_notes: true
+    fhir_compatibility: true
   provides:
   - useAs: tools
     in: scribe-agent
@@ -122,11 +143,15 @@ components:
 - id: medical-terminology-tool
   name: Medical Terminology Validator
   kind: Tool
-  type: genesis:mcp_tool
-  description: Medical terminology validation and standardization tool with ICD-10, SNOMED CT, and CPT code integration for accurate clinical documentation
+  type: genesis:medical_terminology_connector
+  description: Medical terminology validation and standardization tool with ICD-10, SNOMED CT, and CPT code integration for
+    accurate clinical documentation
   asTools: true
   config:
-    tool_name: medical_terminology_validator
+    test_mode: true
+    mock_mode: true
+    audit_logging: true
+    timeout_seconds: '30'
   provides:
   - useAs: tools
     in: scribe-agent
@@ -134,11 +159,17 @@ components:
 - id: note-template-tool
   name: Clinical Note Template Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Configurable clinical note template engine supporting SOAP, HPI, Assessment & Plan, and specialty-specific documentation formats
-  asTools: true
+  type: genesis:agent
+  description: Configurable clinical note template engine supporting SOAP, HPI, Assessment & Plan, and specialty-specific
+    documentation formats
   config:
-    tool_name: clinical_note_templates
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 20
+    verbose: true
   provides:
   - useAs: tools
     in: scribe-agent
@@ -146,11 +177,17 @@ components:
 - id: quality-assurance-tool
   name: Clinical Documentation QA
   kind: Tool
-  type: genesis:mcp_tool
-  description: Quality assurance engine for clinical documentation completeness, accuracy verification, and compliance with medical documentation standards
-  asTools: true
+  type: genesis:agent
+  description: Quality assurance engine for clinical documentation completeness, accuracy verification, and compliance with
+    medical documentation standards
   config:
-    tool_name: clinical_qa_engine
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 20
+    verbose: true
   provides:
   - useAs: tools
     in: scribe-agent
@@ -158,63 +195,42 @@ components:
 - id: scribe-agent-prompt
   name: Clinical Documentation Scribe Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Specialized prompt template for clinical documentation scribe with medical expertise and documentation standards
   config:
     saved_prompt: clinical_scribe_agent_prompt_v1
-    template: 'You are a certified medical scribe with expertise in clinical documentation, medical terminology, and healthcare workflows. Your role is to convert audio transcripts or recordings into accurate, structured clinical notes while maintaining HIPAA compliance and clinical quality standards.
+    template: 'You are a certified medical scribe with expertise in clinical documentation, medical terminology, and healthcare
+      workflows. Your role is to convert audio transcripts or recordings into accurate, structured clinical notes while maintaining
+      HIPAA compliance and clinical quality standards.
 
-      CLINICAL DOCUMENTATION EXPERTISE:
-      - Medical terminology and clinical vocabulary
-      - SOAP note structure (Subjective, Objective, Assessment, Plan)
-      - HPI documentation (History of Present Illness)
-      - Physical examination findings documentation
-      - Assessment and Plan formulation
-      - Clinical reasoning and differential diagnosis
-      - ICD-10, CPT, and SNOMED CT terminology
+      CLINICAL DOCUMENTATION EXPERTISE: - Medical terminology and clinical vocabulary - SOAP note structure (Subjective, Objective,
+      Assessment, Plan) - HPI documentation (History of Present Illness) - Physical examination findings documentation - Assessment
+      and Plan formulation - Clinical reasoning and differential diagnosis - ICD-10, CPT, and SNOMED CT terminology
 
-      TRANSCRIPTION PROCESSING:
-      1. Process real-time audio streams or recorded clinical encounters
-      2. Apply medical speech recognition with clinical vocabulary
-      3. Identify speaker roles (provider, patient, family members)
-      4. Extract key clinical information and medical entities
-      5. Organize information into structured clinical note sections
-      6. Validate medical terminology and clinical accuracy
-      7. Generate differential diagnosis suggestions when appropriate
+      TRANSCRIPTION PROCESSING: 1. Process real-time audio streams or recorded clinical encounters 2. Apply medical speech
+      recognition with clinical vocabulary 3. Identify speaker roles (provider, patient, family members) 4. Extract key clinical
+      information and medical entities 5. Organize information into structured clinical note sections 6. Validate medical
+      terminology and clinical accuracy 7. Generate differential diagnosis suggestions when appropriate
 
-      CLINICAL NOTE STRUCTURE:
-      - Chief Complaint: Primary reason for visit
-      - History of Present Illness: Chronological symptom progression
-      - Review of Systems: Systematic inquiry by body system
-      - Past Medical History: Previous illnesses, surgeries, medications
-      - Physical Examination: Objective clinical findings
-      - Assessment: Clinical impressions and diagnoses
-      - Plan: Treatment recommendations and follow-up
+      CLINICAL NOTE STRUCTURE: - Chief Complaint: Primary reason for visit - History of Present Illness: Chronological symptom
+      progression - Review of Systems: Systematic inquiry by body system - Past Medical History: Previous illnesses, surgeries,
+      medications - Physical Examination: Objective clinical findings - Assessment: Clinical impressions and diagnoses - Plan:
+      Treatment recommendations and follow-up
 
-      QUALITY ASSURANCE REQUIREMENTS:
-      - Ensure clinical accuracy and completeness
-      - Validate medical terminology and dosages
-      - Check for logical consistency in clinical reasoning
-      - Verify appropriate use of medical abbreviations
-      - Confirm HIPAA compliance in documentation
-      - Flag potential clinical concerns or safety issues
+      QUALITY ASSURANCE REQUIREMENTS: - Ensure clinical accuracy and completeness - Validate medical terminology and dosages
+      - Check for logical consistency in clinical reasoning - Verify appropriate use of medical abbreviations - Confirm HIPAA
+      compliance in documentation - Flag potential clinical concerns or safety issues
 
-      REAL-TIME PROCESSING:
-      - Process audio streams with minimal latency
-      - Provide real-time feedback on transcription accuracy
-      - Auto-save documentation drafts during encounters
-      - Support interruption and resumption of documentation
-      - Handle multiple speakers and clinical scenarios
+      REAL-TIME PROCESSING: - Process audio streams with minimal latency - Provide real-time feedback on transcription accuracy
+      - Auto-save documentation drafts during encounters - Support interruption and resumption of documentation - Handle multiple
+      speakers and clinical scenarios
 
-      OUTPUT REQUIREMENTS:
-      - Structured clinical notes in specified template format
-      - Medical entity extraction with proper terminology
-      - Clinical reasoning documentation with supporting evidence
-      - Quality metrics and completeness assessment
-      - Recommendations for documentation improvement
-      - Compliance verification and audit trail
+      OUTPUT REQUIREMENTS: - Structured clinical notes in specified template format - Medical entity extraction with proper
+      terminology - Clinical reasoning documentation with supporting evidence - Quality metrics and completeness assessment
+      - Recommendations for documentation improvement - Compliance verification and audit trail
 
-      Use your clinical tools to transcribe audio, process medical language, validate terminology, and generate high-quality clinical documentation. Always prioritize patient safety, clinical accuracy, and regulatory compliance.
+      Use your clinical tools to transcribe audio, process medical language, validate terminology, and generate high-quality
+      clinical documentation. Always prioritize patient safety, clinical accuracy, and regulatory compliance.
 
       '
   provides:
@@ -271,7 +287,7 @@ kpis:
   category: efficiency
 - name: Real-time Processing Latency
   description: Average delay between speech input and transcribed output
-  target: '< 3 seconds'
+  target: < 3 seconds
   valueType: duration
   category: performance
 - name: Medical Terminology Accuracy

@@ -42,9 +42,10 @@ class ComponentMappingService(Service):
         self,
         session: AsyncSession,
         mapping_data: ComponentMappingCreate,
+        commit: bool = True,
     ) -> ComponentMapping:
         """Create a new component mapping."""
-        return await ComponentMappingCRUD.create(session, mapping_data)
+        return await ComponentMappingCRUD.create(session, mapping_data, commit=commit)
 
     async def get_component_mapping_by_genesis_type(
         self,
@@ -82,9 +83,10 @@ class ComponentMappingService(Service):
         session: AsyncSession,
         mapping_id: UUID,
         mapping_data: ComponentMappingUpdate,
+        commit: bool = True,
     ) -> Optional[ComponentMapping]:
         """Update a component mapping."""
-        return await ComponentMappingCRUD.update(session, mapping_id, mapping_data)
+        return await ComponentMappingCRUD.update(session, mapping_id, mapping_data, commit=commit)
 
     async def delete_component_mapping(
         self,
@@ -125,9 +127,10 @@ class ComponentMappingService(Service):
         self,
         session: AsyncSession,
         adapter_data: RuntimeAdapterCreate,
+        commit: bool = True,
     ) -> RuntimeAdapter:
         """Create a new runtime adapter."""
-        return await RuntimeAdapterCRUD.create(session, adapter_data)
+        return await RuntimeAdapterCRUD.create(session, adapter_data, commit=commit)
 
     async def get_runtime_adapter_for_genesis_type(
         self,
@@ -168,9 +171,10 @@ class ComponentMappingService(Service):
         session: AsyncSession,
         adapter_id: UUID,
         adapter_data: RuntimeAdapterUpdate,
+        commit: bool = True,
     ) -> Optional[RuntimeAdapter]:
         """Update a runtime adapter."""
-        return await RuntimeAdapterCRUD.update(session, adapter_id, adapter_data)
+        return await RuntimeAdapterCRUD.update(session, adapter_id, adapter_data, commit=commit)
 
     async def delete_runtime_adapter(
         self,
@@ -291,7 +295,7 @@ class ComponentMappingService(Service):
         hardcoded_mappings: Dict,
         overwrite_existing: bool = False,
     ) -> Dict:
-        """Migrate hardcoded mappings to database."""
+        """Migrate hardcoded mappings to database with transaction isolation."""
         results = {
             "created": 0,
             "updated": 0,
@@ -299,43 +303,89 @@ class ComponentMappingService(Service):
             "errors": [],
         }
 
+        # Validate input parameters
+        if not hardcoded_mappings:
+            logger.warning("No hardcoded mappings provided for migration")
+            return results
+
+        logger.info(f"Starting migration of {len(hardcoded_mappings)} hardcoded mappings")
+
         for genesis_type, mapping_info in hardcoded_mappings.items():
+            # Use savepoint for transaction isolation
+            savepoint = await session.begin_nested()
             try:
+                # Validate mapping_info structure
+                if not isinstance(mapping_info, dict):
+                    logger.error(f"Invalid mapping_info type for {genesis_type}: {type(mapping_info)}")
+                    results["errors"].append(f"{genesis_type}: Invalid mapping_info type")
+                    await savepoint.rollback()
+                    continue
                 existing = await self.get_component_mapping_by_genesis_type(
                     session, genesis_type, active_only=False
                 )
 
                 if existing and not overwrite_existing:
                     results["skipped"] += 1
+                    await savepoint.commit()
                     continue
+
+                # Validate genesis_type format before proceeding
+                if not genesis_type.startswith("genesis:"):
+                    corrected_genesis_type = f"genesis:{genesis_type}" if not genesis_type.startswith("genesis:") else genesis_type
+                    logger.warning(f"Invalid genesis_type format '{genesis_type}', correcting to '{corrected_genesis_type}'")
+                    genesis_type = corrected_genesis_type
 
                 # Determine category based on genesis type
                 category = self._determine_category_from_genesis_type(genesis_type)
-                logger.debug(f"Genesis type: {genesis_type}, Category: {category}, Category value: {category.value}")
 
-                # Create mapping data with proper enum handling
+                # Safe enum value extraction - handle both enum instances and strings
+                if isinstance(category, ComponentCategoryEnum):
+                    category_value = category.value
+                elif isinstance(category, str):
+                    # If it's already a string, validate it's a valid enum value
+                    try:
+                        ComponentCategoryEnum(category)
+                        category_value = category
+                    except ValueError:
+                        logger.warning(f"Invalid category string '{category}' for {genesis_type}, using default")
+                        category_value = ComponentCategoryEnum.TOOL.value
+                else:
+                    logger.warning(f"Unexpected category type {type(category)} for {genesis_type}, using default")
+                    category_value = ComponentCategoryEnum.TOOL.value
+
+                logger.debug(f"Genesis type: {genesis_type}, Category: {category}, Category value: {category_value}")
+
+                # Create mapping data with safe enum handling and validation
                 mapping_dict = {
                     "genesis_type": genesis_type,
-                    "base_config": mapping_info.get("config", {}),
+                    "base_config": mapping_info.get("config", {}) if mapping_info.get("config") else {},
                     "io_mapping": self._extract_io_mapping(mapping_info),
-                    "component_category": category.value,  # Explicitly use string value
+                    "component_category": category_value,  # Use safely extracted string value
                     "description": f"Migrated from hardcoded mapping for {genesis_type}",
                     "version": "1.0.0",
                     "active": True,
                 }
 
                 logger.debug(f"Creating mapping with category value: {mapping_dict['component_category']}")
-                mapping_data = ComponentMappingCreate(**mapping_dict)
+
+                # Validate the mapping data before creating
+                try:
+                    mapping_data = ComponentMappingCreate(**mapping_dict)
+                except Exception as validation_error:
+                    logger.error(f"Validation error for {genesis_type}: {validation_error}")
+                    results["errors"].append(f"{genesis_type}: Validation error - {str(validation_error)}")
+                    await savepoint.rollback()
+                    continue
 
                 if existing:
                     # Create update data with proper enum value handling
                     update_dict = mapping_dict.copy()
                     del update_dict["genesis_type"]  # Remove immutable field for update
                     update_data = ComponentMappingUpdate(**update_dict)
-                    await self.update_component_mapping(session, existing.id, update_data)
+                    await self.update_component_mapping(session, existing.id, update_data, commit=False)
                     results["updated"] += 1
                 else:
-                    await self.create_component_mapping(session, mapping_data)
+                    await self.create_component_mapping(session, mapping_data, commit=False)
                     results["created"] += 1
 
                 # Create Langflow runtime adapter
@@ -343,7 +393,7 @@ class ComponentMappingService(Service):
                     genesis_type=genesis_type,
                     runtime_type=RuntimeTypeEnum.LANGFLOW,
                     target_component=mapping_info.get("component", "CustomComponent"),
-                    adapter_config=mapping_info.get("config", {}),
+                    adapter_config=mapping_info.get("config", {}) if mapping_info.get("config") else {},
                     version="1.0.0",
                     description=f"Langflow adapter for {genesis_type}",
                     active=True,
@@ -357,43 +407,45 @@ class ComponentMappingService(Service):
                 if not existing_adapter or overwrite_existing:
                     if existing_adapter:
                         await self.update_runtime_adapter(
-                            session, existing_adapter.id, RuntimeAdapterUpdate(**adapter_data.model_dump())
+                            session, existing_adapter.id, RuntimeAdapterUpdate(**adapter_data.model_dump()), commit=False
                         )
                     else:
-                        await self.create_runtime_adapter(session, adapter_data)
+                        await self.create_runtime_adapter(session, adapter_data, commit=False)
+
+                # Commit the savepoint on success
+                await savepoint.commit()
 
             except Exception as e:
+                # Rollback the savepoint on any error to prevent transaction abort
+                await savepoint.rollback()
+
                 logger.error(f"Error migrating mapping for {genesis_type}: {e}")
                 results["errors"].append(f"{genesis_type}: {str(e)}")
 
+                # Log the specific error details for debugging
+                import traceback
+                logger.debug(f"Full traceback for {genesis_type}: {traceback.format_exc()}")
+
+                # Continue processing other mappings - savepoint rollback prevents cascade failures
+
+        logger.info(f"Migration completed: {results['created']} created, {results['updated']} updated, {results['skipped']} skipped, {len(results['errors'])} errors")
         return results
 
     def _determine_category_from_genesis_type(self, genesis_type: str) -> ComponentCategoryEnum:
-        """Determine component category from genesis type."""
-        type_lower = genesis_type.lower()
+        """
+        Determine component category from genesis type.
 
-        if any(term in type_lower for term in ["healthcare", "ehr", "claims", "eligibility", "pharmacy"]):
-            return ComponentCategoryEnum.HEALTHCARE
-        elif any(term in type_lower for term in ["agent", "crew"]):
-            return ComponentCategoryEnum.AGENT
-        elif any(term in type_lower for term in ["tool", "calculator", "search", "api"]):
-            return ComponentCategoryEnum.TOOL
-        elif any(term in type_lower for term in ["input", "output", "chat"]):
-            return ComponentCategoryEnum.IO
-        elif any(term in type_lower for term in ["prompt", "template"]):
-            return ComponentCategoryEnum.PROMPT
-        elif any(term in type_lower for term in ["memory", "conversation"]):
-            return ComponentCategoryEnum.MEMORY
-        elif any(term in type_lower for term in ["llm", "model", "openai", "anthropic"]):
-            return ComponentCategoryEnum.LLM
-        elif any(term in type_lower for term in ["embedding", "embed"]):
-            return ComponentCategoryEnum.EMBEDDING
-        elif any(term in type_lower for term in ["vector", "store", "qdrant", "chroma"]):
-            return ComponentCategoryEnum.VECTOR_STORE
-        elif any(term in type_lower for term in ["data", "csv", "json", "parse"]):
-            return ComponentCategoryEnum.DATA
-        else:
-            return ComponentCategoryEnum.TOOL
+        This is a FALLBACK method only used for legacy/hardcoded mappings.
+        New components should have their category determined through introspection.
+        """
+        # NOTE: This method is deprecated and only kept for backward compatibility
+        # All new components use data-driven introspection in discovery.py
+
+        logger.warning(f"Using deprecated pattern matching for category determination of {genesis_type}")
+
+        # Default to TOOL for any unknown category
+        # The unified discovery service will properly categorize through introspection
+        return ComponentCategoryEnum.TOOL
 
     def _extract_io_mapping(self, mapping_info: Dict) -> Dict:
         """Extract I/O mapping information from hardcoded mapping."""
@@ -405,3 +457,118 @@ class ComponentMappingService(Service):
             "input_types": [],    # Will be filled by ComponentMapper introspection
             "output_types": [],   # Will be filled by ComponentMapper introspection
         }
+
+    async def get_components_with_tool_capabilities(
+        self,
+        session: AsyncSession,
+        accepts_tools: Optional[bool] = None,
+        provides_tools: Optional[bool] = None,
+    ) -> List[ComponentMapping]:
+        """
+        Get components filtered by tool capabilities.
+
+        Args:
+            session: Database session
+            accepts_tools: Filter by accepts_tools capability (None to ignore)
+            provides_tools: Filter by provides_tools capability (None to ignore)
+
+        Returns:
+            List of component mappings matching the criteria
+        """
+        mappings = await self.get_all_component_mappings(session, active_only=True, limit=1000)
+
+        filtered_mappings = []
+        for mapping in mappings:
+            if mapping.tool_capabilities:
+                match = True
+
+                if accepts_tools is not None:
+                    if mapping.tool_capabilities.get("accepts_tools", False) != accepts_tools:
+                        match = False
+
+                if provides_tools is not None:
+                    if mapping.tool_capabilities.get("provides_tools", False) != provides_tools:
+                        match = False
+
+                if match:
+                    filtered_mappings.append(mapping)
+
+        return filtered_mappings
+
+    async def populate_tool_capabilities_from_introspection(
+        self,
+        session: AsyncSession,
+        genesis_type: str,
+        force_update: bool = False,
+    ) -> bool:
+        """
+        Populate tool capabilities for a component based on introspection.
+
+        Args:
+            session: Database session
+            genesis_type: Genesis component type
+            force_update: Whether to force update existing capabilities
+
+        Returns:
+            True if capabilities were updated
+        """
+        mapping = await self.get_component_mapping_by_genesis_type(
+            session, genesis_type, active_only=False
+        )
+
+        if not mapping:
+            logger.warning(f"No mapping found for {genesis_type}")
+            return False
+
+        # Skip if capabilities already exist and not forcing update
+        if mapping.tool_capabilities and not force_update:
+            logger.debug(f"Tool capabilities already exist for {genesis_type}, skipping")
+            return False
+
+        # Determine capabilities based on component type and category
+        capabilities = self._determine_tool_capabilities(genesis_type, mapping)
+
+        # Update the mapping
+        update_data = ComponentMappingUpdate(
+            tool_capabilities=capabilities
+        )
+
+        updated_mapping = await self.update_component_mapping(
+            session, mapping.id, update_data
+        )
+
+        if updated_mapping:
+            logger.info(f"Populated tool capabilities for {genesis_type}: {capabilities}")
+            return True
+
+        return False
+
+    def _determine_tool_capabilities(self, genesis_type: str, mapping: ComponentMapping) -> Dict:
+        """
+        Determine tool capabilities for legacy/hardcoded components.
+
+        This is a FALLBACK method. All new components should have their capabilities
+        determined through actual code introspection in the unified discovery service.
+
+        Args:
+            genesis_type: Genesis component type
+            mapping: Component mapping
+
+        Returns:
+            Tool capabilities dictionary
+        """
+        logger.warning(f"Using deprecated pattern matching for tool capabilities of {genesis_type}")
+
+        # Return minimal capabilities for legacy support
+        # The unified discovery service will properly determine capabilities through introspection
+        capabilities = {
+            "accepts_tools": False,
+            "provides_tools": False,
+            "discovery_method": "legacy_fallback",
+            "populated_at": None,
+        }
+
+        from datetime import datetime, timezone
+        capabilities["populated_at"] = datetime.now(timezone.utc).isoformat()
+
+        return capabilities

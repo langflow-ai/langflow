@@ -57,7 +57,7 @@ specifications_library/
 | `genesis:chat_input` | User input | Accept requests, documents, data |
 | `genesis:chat_output` | Display results | Show processed outputs |
 | `genesis:agent` | LLM processing | Main agent logic and decision making |
-| `genesis:prompt_template` | Prompt management | Complex, reusable prompts |
+| `genesis:prompt` | Prompt management | Complex, reusable prompts |
 | `genesis:mcp_tool` | External APIs | Database queries, calculations, APIs |
 | `genesis:knowledge_hub_search` | Internal search | Policy lookup, guideline retrieval |
 

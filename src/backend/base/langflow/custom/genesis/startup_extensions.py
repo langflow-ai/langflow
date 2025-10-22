@@ -333,15 +333,22 @@ async def initialize_component_mapping_population(session=None) -> bool:
         else:
             result = await startup_service.populate_on_startup(session)
 
-        if result.get("status") == "completed":
-            logger.info("✅ Component mapping population completed successfully")
-            return True
-        elif result.get("status") == "skipped":
+        status = result.get("status")
+        logger.debug(f"DEBUG: Population result status: {status}")
+        # logger.debug(f"DEBUG: Full result: {result}")
+
+        if status == "completed":
+            stats = result.get("statistics", {})
+            logger.info(f"✅ Component mapping population completed successfully")
+            logger.info(f"   Created: {stats.get('total_mappings', 0)} mappings, {stats.get('total_discovered', 0)} discovered")
+        elif status == "skipped":
             logger.info("ℹ️ Component mapping population skipped (already populated)")
-            return True
+            logger.info(f"   Reason: {result.get('reason', 'Unknown')}")
         else:
             logger.warning(f"⚠️ Component mapping population failed: {result.get('error', 'Unknown error')}")
-            return False
+            logger.warning(f"   Status: {status}, Result: {result}")
+
+        return status in ("completed", "skipped")
 
     except Exception as e:
         logger.error(f"❌ Failed to initialize component mapping population: {e}")
@@ -455,6 +462,7 @@ def initialize_complete_schema_integration() -> bool:
     """Initialize complete schema integration for all component types."""
     try:
         from langflow.services.spec.complete_component_schemas import integrate_schemas_with_validation
+        from langflow.services.spec.dynamic_schema_generator import get_dynamic_schema_generator
 
         logger.info("🔧 Integrating complete component schema coverage...")
 
@@ -463,7 +471,16 @@ def initialize_complete_schema_integration() -> bool:
         if result.get("success"):
             added_count = result.get("added_count", 0)
             total_count = result.get("final_count", 0)
+            dynamic_enabled = result.get("dynamic_generation_enabled", False)
+
             logger.info(f"✅ Schema integration successful: {added_count} new schemas added, {total_count} total")
+
+            if dynamic_enabled:
+                logger.info("🔄 Dynamic schema generation enabled for discovered components")
+                # Initialize the generator to warm up the cache
+                generator = get_dynamic_schema_generator()
+                logger.debug(f"Dynamic schema generator initialized")
+
             return True
         else:
             error = result.get("error", "Unknown error")

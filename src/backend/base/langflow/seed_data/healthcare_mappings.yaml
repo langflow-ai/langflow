@@ -1,0 +1,275 @@
+# Healthcare Component Mappings Seed Data
+# Part of AUTPE-6204: Database-first component mapping approach
+# HIPAA-compliant healthcare component configurations
+
+healthcare_mappings:
+  - genesis_type: "genesis:ehr_connector"
+    display_name: "EHR Connector"
+    description: "HIPAA-compliant Electronic Health Record connector supporting FHIR R4 and HL7 standards"
+    category: "healthcare"
+    version: "1.0.0"
+    is_active: true
+    config:
+      ehr_system: "epic"
+      fhir_version: "R4"
+      authentication_type: "oauth2"
+      hipaa_compliance: true
+      audit_logging: true
+      encryption_enabled: true
+    io_mapping:
+      component: "EHRConnector"
+      dataType: "Data"
+      input_field: "patient_query"
+      output_field: "ehr_data"
+      input_types: ["str", "Message", "Data"]
+      output_types: ["Data"]
+    healthcare_metadata:
+      hipaa_compliant: true
+      phi_handling: true
+      encryption_required: true
+      audit_trail: true
+      medical_standards: ["FHIR R4", "HL7 v2.x"]
+      data_classification: "PHI"
+      compliance_frameworks: ["HIPAA", "HITECH"]
+      security_requirements:
+        encryption_at_rest: true
+        encryption_in_transit: true
+        access_logging: true
+        role_based_access: true
+        minimum_permissions: true
+      interoperability:
+        fhir_versions: ["R4", "STU3"]
+        hl7_versions: ["2.5", "2.6", "2.7"]
+        supported_resources:
+          - "Patient"
+          - "Observation"
+          - "Condition"
+          - "Medication"
+          - "Procedure"
+          - "Encounter"
+
+  - genesis_type: "genesis:claims_connector"
+    display_name: "Claims Connector"
+    description: "HIPAA-compliant claims processing connector supporting X12 EDI transactions"
+    category: "healthcare"
+    version: "1.0.0"
+    is_active: true
+    config:
+      clearinghouse: "change_healthcare"
+      edi_version: "5010"
+      test_mode: true
+      hipaa_compliance: true
+      audit_logging: true
+      encryption_enabled: true
+    io_mapping:
+      component: "ClaimsConnector"
+      dataType: "Data"
+      input_field: "claim_data"
+      output_field: "claim_response"
+      input_types: ["str", "Data"]
+      output_types: ["Data"]
+    healthcare_metadata:
+      hipaa_compliant: true
+      phi_handling: true
+      encryption_required: true
+      audit_trail: true
+      medical_standards: ["X12 EDI 5010", "ANSI ASC X12"]
+      data_classification: "PHI"
+      compliance_frameworks: ["HIPAA", "HITECH"]
+      transaction_types:
+        "837P": "Professional Claims"
+        "837I": "Institutional Claims"
+        "837D": "Dental Claims"
+        "835": "Electronic Remittance Advice"
+        "276": "Claims Status Inquiry"
+        "277": "Claims Status Response"
+
+  - genesis_type: "genesis:eligibility_connector"
+    display_name: "Eligibility Connector"
+    description: "HIPAA-compliant insurance eligibility verification connector"
+    category: "healthcare"
+    version: "1.0.0"
+    is_active: true
+    config:
+      eligibility_service: "availity"
+      real_time_mode: true
+      cache_duration_minutes: 15
+      hipaa_compliance: true
+      audit_logging: true
+    io_mapping:
+      component: "EligibilityConnector"
+      dataType: "Data"
+      input_field: "eligibility_request"
+      output_field: "eligibility_response"
+      input_types: ["str", "Data"]
+      output_types: ["Data"]
+    healthcare_metadata:
+      hipaa_compliant: true
+      phi_handling: true
+      encryption_required: true
+      audit_trail: true
+      medical_standards: ["X12 EDI 270/271"]
+      data_classification: "PHI"
+      compliance_frameworks: ["HIPAA", "HITECH"]
+      eligibility_checks:
+        real_time_verification: true
+        benefit_details: true
+        coverage_periods: true
+        copay_deductible: true
+        network_status: true
+
+  - genesis_type: "genesis:pharmacy_connector"
+    display_name: "Pharmacy Connector"
+    description: "HIPAA-compliant pharmacy and medication management connector"
+    category: "healthcare"
+    version: "1.0.0"
+    is_active: true
+    config:
+      pharmacy_network: "surescripts"
+      interaction_checking: true
+      formulary_checking: true
+      hipaa_compliance: true
+      audit_logging: true
+    io_mapping:
+      component: "PharmacyConnector"
+      dataType: "Data"
+      input_field: "prescription_data"
+      output_field: "pharmacy_response"
+      input_types: ["str", "Data"]
+      output_types: ["Data"]
+    healthcare_metadata:
+      hipaa_compliant: true
+      phi_handling: true
+      encryption_required: true
+      audit_trail: true
+      medical_standards: ["NCPDP SCRIPT", "RxNorm", "NDC"]
+      data_classification: "PHI"
+      compliance_frameworks: ["HIPAA", "HITECH", "DEA"]
+      pharmacy_features:
+        e_prescribing: true
+        drug_interactions: true
+        formulary_check: true
+        prior_authorization: true
+        medication_therapy_management: true
+
+  - genesis_type: "genesis:prior_authorization"
+    display_name: "Prior Authorization Tool"
+    description: "HIPAA-compliant prior authorization processing tool"
+    category: "healthcare"
+    version: "1.0.0"
+    is_active: true
+    config:
+      pa_service: "change_healthcare"
+      real_time_mode: true
+      hipaa_compliance: true
+      audit_logging: true
+    io_mapping:
+      component: "PriorAuthorizationTool"
+      dataType: "Data"
+      input_field: "pa_request"
+      output_field: "pa_response"
+      input_types: ["str", "Data"]
+      output_types: ["Data"]
+    healthcare_metadata:
+      hipaa_compliant: true
+      phi_handling: true
+      encryption_required: true
+      audit_trail: true
+      medical_standards: ["X12 EDI 278", "HL7 FHIR"]
+      data_classification: "PHI"
+      compliance_frameworks: ["HIPAA", "HITECH"]
+      prior_auth_features:
+        real_time_decisions: true
+        status_tracking: true
+        appeals_process: true
+        documentation_requirements: true
+
+  - genesis_type: "genesis:clinical_decision_support"
+    display_name: "Clinical Decision Support Tool"
+    description: "HIPAA-compliant clinical decision support tool with evidence-based recommendations"
+    category: "healthcare"
+    version: "1.0.0"
+    is_active: true
+    config:
+      cds_service: "epic_cds"
+      alert_level: "moderate"
+      hipaa_compliance: true
+      audit_logging: true
+    io_mapping:
+      component: "ClinicalDecisionSupportTool"
+      dataType: "Data"
+      input_field: "clinical_data"
+      output_field: "cds_recommendations"
+      input_types: ["str", "Data"]
+      output_types: ["Data"]
+    healthcare_metadata:
+      hipaa_compliant: true
+      phi_handling: true
+      encryption_required: true
+      audit_trail: true
+      medical_standards: ["HL7 CDS Hooks", "FHIR R4"]
+      data_classification: "PHI"
+      compliance_frameworks: ["HIPAA", "HITECH", "FDA"]
+      cds_features:
+        drug_interactions: true
+        allergy_alerts: true
+        dosage_guidance: true
+        clinical_guidelines: true
+        evidence_based_recommendations: true
+
+# Autonomize Clinical Models
+  - genesis_type: "genesis:rxnorm"
+    display_name: "RxNorm Code Model"
+    description: "Clinical model for RxNorm medication coding"
+    category: "healthcare"
+    version: "1.0.0"
+    is_active: true
+    config:
+      selected_model: "RxNorm Code"
+    io_mapping:
+      component: "AutonomizeModel"
+      dataType: "Data"
+      input_field: "search_query"
+      output_field: "prediction"
+
+  - genesis_type: "genesis:icd10"
+    display_name: "ICD-10 Code Model"
+    description: "Clinical model for ICD-10 diagnosis coding"
+    category: "healthcare"
+    version: "1.0.0"
+    is_active: true
+    config:
+      selected_model: "ICD-10 Code"
+    io_mapping:
+      component: "AutonomizeModel"
+      dataType: "Data"
+      input_field: "search_query"
+      output_field: "prediction"
+
+  - genesis_type: "genesis:cpt_code"
+    display_name: "CPT Code Model"
+    description: "Clinical model for CPT procedure coding"
+    category: "healthcare"
+    version: "1.0.0"
+    is_active: true
+    config:
+      selected_model: "CPT Code"
+    io_mapping:
+      component: "AutonomizeModel"
+      dataType: "Data"
+      input_field: "search_query"
+      output_field: "prediction"
+
+  - genesis_type: "genesis:clinical_llm"
+    display_name: "Clinical LLM"
+    description: "Clinical language model for medical text analysis"
+    category: "healthcare"
+    version: "1.0.0"
+    is_active: true
+    config:
+      selected_model: "Clinical LLM"
+    io_mapping:
+      component: "AutonomizeModel"
+      dataType: "Data"
+      input_field: "search_query"
+      output_field: "prediction"

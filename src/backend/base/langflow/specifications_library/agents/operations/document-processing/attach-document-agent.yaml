@@ -62,19 +62,32 @@ components:
 - id: main-agent-prompt
   name: Agent Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Prompt template for agent instructions
   config:
-    saved_prompt: attach_document_prompt_v1
-    template: 'You are a specialist agent. Attach original fax documents to case records
-      for audit compliance
+    saved_prompt: attach_document_prompt_v2
+    template: 'You are a HIPAA-compliant healthcare document management specialist. Your primary responsibility is to securely attach original fax documents to case records for audit compliance and downstream clinical workflows.
 
+      Core Capabilities:
+      - HIPAA-compliant document attachment with encryption
+      - Comprehensive audit trail generation
+      - Healthcare document type classification
+      - Integrity verification through content hashing
+      - Retention policy management (7-year default for healthcare)
 
-      Goal: Attach the original pharmacy fax document to the case file for audit and
-      downstream compliance workflows
+      Goal: Attach the original pharmacy fax document to the case file for audit and downstream compliance workflows while ensuring full HIPAA compliance and creating complete audit trails.
 
+      Instructions:
+      1. Validate case ID and document inputs
+      2. Classify document type (pharmacy_fax, authorization_request, etc.)
+      3. Use Document Management Agent to securely attach document
+      4. Ensure encryption is enabled for PHI protection
+      5. Generate comprehensive audit log entry
+      6. Verify document integrity with content hash
+      7. Confirm retention policy application
+      8. Return detailed attachment status and compliance verification
 
-      Provide accurate and efficient results.'
+      Always prioritize patient data security and regulatory compliance in all operations.'
   provides:
   - useAs: system_prompt
     in: main-agent
@@ -93,28 +106,6 @@ components:
   - useAs: input
     in: output
     description: Results
-- id: tool-1
-  name: Api Component
-  kind: Tool
-  type: genesis:mcp_tool
-  description: Tool for attach document agent via MCP
-  asTools: true
-  config:
-    tool_name: api_component
-  provides:
-  - useAs: tools
-    in: main-agent
-    description: Api Component tool
-- id: tool-2
-  name: File Reader
-  kind: Tool
-  type: genesis:file
-  description: Tool for attach document agent
-  asTools: true
-  provides:
-  - useAs: tools
-    in: main-agent
-    description: File Reader tool
 - id: output
   name: Results Output
   kind: Data
@@ -123,16 +114,29 @@ components:
   config:
     should_store_message: true
 outputs:
-- results
+- document_info
 - status
-- details
+- audit_log
+- compliance_verification
 kpis:
-- name: Audit Readiness
+- name: HIPAA Compliance Rate
   category: compliance
   valueType: percentage
   target: 100
   unit: '%'
-  description: Percentage of cases with attached documents
+  description: Percentage of documents attached with full HIPAA compliance
+- name: Audit Trail Completeness
+  category: compliance
+  valueType: percentage
+  target: 100
+  unit: '%'
+  description: Percentage of attachments with complete audit trails
+- name: Document Encryption Rate
+  category: compliance
+  valueType: percentage
+  target: 100
+  unit: '%'
+  description: Percentage of documents stored with encryption
 - name: Document Attachment Success
   category: quality
   valueType: percentage
@@ -145,12 +149,12 @@ kpis:
   target: 3000
   unit: ms
   description: Average time to upload documents
-- name: Retry Rate
-  category: performance
+- name: Content Integrity Verification
+  category: quality
   valueType: percentage
-  target: 5
+  target: 100
   unit: '%'
-  description: Percentage of uploads requiring retry
+  description: Percentage of documents with verified content hashes
 securityInfo:
   visibility: Private
   confidentiality: High

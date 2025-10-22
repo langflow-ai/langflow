@@ -91,7 +91,7 @@ components:
 - id: eligibility-agent-prompt
   name: Agent Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Prompt template for agent instructions
   config:
     saved_prompt: eligibility_checker_prompt_v1
@@ -126,10 +126,17 @@ components:
 - id: eligibility-lookup
   name: Eligibility Lookup Service
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Real-time eligibility verification service via MCP
   config:
-    tool_name: eligibility_check
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: eligibility-agent

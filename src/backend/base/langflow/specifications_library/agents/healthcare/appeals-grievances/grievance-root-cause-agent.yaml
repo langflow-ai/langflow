@@ -1,7 +1,8 @@
 id: urn:agent:genesis:appeals-grievances:grievance-root-cause-agent:1.0.0
 name: Grievance Root Cause Agent
 fullyQualifiedName: genesis.autonomize.ai.grievance-root-cause
-description: Analyzes grievances across time and regions, identifying recurring operational, benefit, or access issues from structured and free text data to enable systematic quality improvements and preventive interventions.
+description: Analyzes grievances across time and regions, identifying recurring operational, benefit, or access issues from
+  structured and free text data to enable systematic quality improvements and preventive interventions.
 domain: autonomize.ai
 subDomain: appeals-grievances
 version: 1.0.0
@@ -10,7 +11,6 @@ agentOwner: appeals-grievances@autonomize.ai
 agentOwnerDisplayName: Appeals & Grievances Team
 email: appeals-grievances@autonomize.ai
 status: ACTIVE
-
 variables:
 - name: analysis_time_window
   type: string
@@ -37,7 +37,6 @@ variables:
   required: false
   default: medium
   description: Sensitivity level for pattern detection (low, medium, high, maximum)
-
 tags:
 - root-cause-analysis
 - pattern-recognition
@@ -45,9 +44,9 @@ tags:
 - operational-analytics
 - geographic-analysis
 - healthcare-operations
-
 kind: Single Agent
-agentGoal: Identify recurring operational, benefit, and access issues across time periods and geographic regions by analyzing patterns in grievance data, enabling proactive quality improvements and systematic issue resolution
+agentGoal: Identify recurring operational, benefit, and access issues across time periods and geographic regions by analyzing
+  patterns in grievance data, enabling proactive quality improvements and systematic issue resolution
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: RequestResponse
@@ -55,7 +54,6 @@ runMode: Scheduled
 agencyLevel: LearningAgent
 toolsUse: true
 learningCapability: None
-
 components:
 - id: root-cause-input
   name: Grievance Data Analysis Input
@@ -66,40 +64,52 @@ components:
   - useAs: input
     in: root-cause-agent
     description: Provide grievance datasets and analysis parameters for pattern identification
-
 - id: grievance-data-warehouse
   name: Grievance Data Warehouse Connector
   kind: Tool
-  type: genesis:mcp_tool
-  description: HIPAA-compliant data warehouse connector for accessing historical grievance data, member demographics, and operational metrics
+  type: genesis:api_request
+  description: HIPAA-compliant data warehouse connector for accessing historical grievance data, member demographics, and
+    operational metrics
   asTools: true
   config:
-    tool_name: grievance_data_warehouse
-    description: HIPAA-compliant data warehouse connector for accessing historical grievance data, member demographics, and operational metrics with temporal and geographic analysis capabilities
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: root-cause-agent
     description: Enable comprehensive access to historical grievance and operational data
-
 - id: healthcare-pattern-analyzer
   name: Healthcare Pattern Analysis Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced machine learning engine specialized in healthcare pattern recognition, clustering analysis, and temporal trend detection
+  type: genesis:api_request
+  description: Advanced machine learning engine specialized in healthcare pattern recognition, clustering analysis, and temporal
+    trend detection
   asTools: true
   config:
-    tool_name: healthcare_pattern_analyzer
-    description: Advanced machine learning engine specialized in healthcare pattern recognition, clustering analysis, and temporal trend detection for grievance data
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: root-cause-agent
     description: Enable sophisticated pattern recognition and clustering analysis
-
 - id: operational-metrics-api
   name: Operational Metrics API
   kind: Tool
   type: genesis:api_request
-  description: Access operational performance metrics, staffing data, system outages, and process changes for correlation analysis
+  description: Access operational performance metrics, staffing data, system outages, and process changes for correlation
+    analysis
   asTools: true
   config:
     method: GET
@@ -114,7 +124,6 @@ components:
   - useAs: tools
     in: root-cause-agent
     description: Enable correlation analysis with operational performance data
-
 - id: geographic-analytics-api
   name: Geographic Analytics API
   kind: Tool
@@ -139,34 +148,45 @@ components:
   - useAs: tools
     in: root-cause-agent
     description: Enable geographic and demographic correlation analysis
-
 - id: nlp-text-analyzer
   name: Healthcare NLP Text Analyzer
   kind: Tool
-  type: genesis:mcp_tool
-  description: Natural language processing engine for analyzing unstructured grievance narratives and extracting semantic patterns
+  type: genesis:api_request
+  description: Natural language processing engine for analyzing unstructured grievance narratives and extracting semantic
+    patterns
   asTools: true
   config:
-    tool_name: healthcare_nlp_analyzer
-    description: Natural language processing engine for analyzing unstructured grievance narratives and extracting semantic patterns with medical terminology awareness
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: root-cause-agent
     description: Enable advanced text analysis and semantic pattern extraction
-
 - id: statistical-analysis-engine
   name: Statistical Analysis Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Advanced statistical analysis tool for correlation analysis, regression modeling, and significance testing
   asTools: true
   config:
-    tool_name: statistical_analysis_engine
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: root-cause-agent
     description: Enable comprehensive statistical analysis and hypothesis testing
-
 - id: quality-improvement-api
   name: Quality Improvement Tracking API
   kind: Tool
@@ -191,28 +211,62 @@ components:
   - useAs: tools
     in: root-cause-agent
     description: Enable submission of findings to quality improvement workflow
-
 - id: root-cause-agent
   name: Grievance Root Cause Analysis Agent
   kind: Agent
   type: genesis:agent
-  description: Intelligent agent specialized in identifying systematic patterns and root causes across grievance data using advanced analytics and machine learning
+  description: Intelligent agent specialized in identifying systematic patterns and root causes across grievance data using
+    advanced analytics and machine learning
   config:
-    system_message: "You are a healthcare quality improvement specialist with expertise in root cause analysis, pattern recognition, and systematic issue identification.\n\nYour primary responsibilities:\n1. Analyze grievances across time periods to identify recurring patterns\n2. Perform geographic analysis to identify regional systemic issues\n3. Correlate grievances with operational metrics and system changes\n4. Extract patterns from both structured data and free text narratives\n5. Identify root causes with statistical significance\n6. Recommend systematic interventions and quality improvements\n\nAvailable Tools:\n- grievance_data_warehouse: Historical grievance and operational data access\n- healthcare_pattern_analyzer: ML-powered pattern recognition and clustering\n- operational_metrics_api: Operational performance and incident correlation\n- geographic_analytics_api: Geographic and demographic pattern analysis\n- nlp_text_analyzer: Semantic analysis of grievance narratives\n- statistical_analysis_engine: Statistical significance and correlation testing\n- quality_improvement_api: Submit findings to QI tracking system\n\nRoot Cause Analysis Framework:\n\n1. OPERATIONAL ISSUES:\n   - Claims processing delays and errors\n   - Prior authorization bottlenecks\n   - Customer service accessibility problems\n   - System outages and technical issues\n   - Staffing shortages affecting service delivery\n   - Process inefficiencies and workflow problems\n\n2. BENEFIT DESIGN ISSUES:\n   - Coverage gaps and exclusions\n   - Formulary restrictions and limitations\n   - Network adequacy problems\n   - Cost-sharing burden and affordability\n   - Benefit complexity and member confusion\n   - Plan design misalignment with member needs\n\n3. ACCESS ISSUES:\n   - Provider availability and scheduling\n   - Geographic access barriers\n   - Specialty care referral delays\n   - Network provider capacity constraints\n   - Transportation and accessibility challenges\n   - Language and cultural barriers\n\n4. QUALITY OF CARE ISSUES:\n   - Provider performance inconsistencies\n   - Clinical care coordination problems\n   - Medical necessity determination variations\n   - Safety incidents and adverse events\n   - Communication and care coordination gaps\n\nAnalysis Methodologies:\n\n1. TEMPORAL PATTERN ANALYSIS:\n   - Trend identification over time periods\n   - Seasonal variation detection\n   - Correlation with policy or system changes\n   - Escalation pattern recognition\n\n2. GEOGRAPHIC PATTERN ANALYSIS:\n   - Regional clustering of similar issues\n   - Provider network correlation analysis\n   - Demographic and socioeconomic factor correlation\n   - State regulation impact assessment\n\n3. CORRELATION ANALYSIS:\n   - Operational metrics correlation\n   - System change impact analysis\n   - Staffing level correlation\n   - External factor influence (weather, events)\n\n4. TEXT PATTERN ANALYSIS:\n   - Topic modeling of grievance narratives\n   - Semantic clustering of similar complaints\n   - Entity extraction for specific issues\n   - Sentiment trend analysis over time\n\nStatistical Significance Requirements:\n- Minimum sample size: 5 occurrences\n- Confidence level: 75% or higher\n- Statistical significance: p-value < 0.05\n- Effect size consideration for practical significance\n\nFor each analysis, provide:\n1. Identified patterns with statistical confidence\n2. Root cause hypotheses with supporting evidence\n3. Geographic and temporal distribution analysis\n4. Correlation with operational and external factors\n5. Quantified impact assessment (volume, cost, member satisfaction)\n6. Recommended systematic interventions\n7. Preventive measures and process improvements\n8. Monitoring metrics for intervention effectiveness\n\nPrioritization Framework:\n- HIGH PRIORITY: High volume, high impact, clear root cause, actionable solution\n- MEDIUM PRIORITY: Moderate impact, emerging pattern, investigation needed\n- LOW PRIORITY: Low volume, limited impact, unclear causation\n\nAlways provide actionable insights with clear recommendations for systematic quality improvements and preventive interventions."
+    system_message: "You are a healthcare quality improvement specialist with expertise in root cause analysis, pattern recognition,\
+      \ and systematic issue identification.\n\nYour primary responsibilities:\n1. Analyze grievances across time periods\
+      \ to identify recurring patterns\n2. Perform geographic analysis to identify regional systemic issues\n3. Correlate\
+      \ grievances with operational metrics and system changes\n4. Extract patterns from both structured data and free text\
+      \ narratives\n5. Identify root causes with statistical significance\n6. Recommend systematic interventions and quality\
+      \ improvements\n\nAvailable Tools:\n- grievance_data_warehouse: Historical grievance and operational data access\n-\
+      \ healthcare_pattern_analyzer: ML-powered pattern recognition and clustering\n- operational_metrics_api: Operational\
+      \ performance and incident correlation\n- geographic_analytics_api: Geographic and demographic pattern analysis\n- nlp_text_analyzer:\
+      \ Semantic analysis of grievance narratives\n- statistical_analysis_engine: Statistical significance and correlation\
+      \ testing\n- quality_improvement_api: Submit findings to QI tracking system\n\nRoot Cause Analysis Framework:\n\n1.\
+      \ OPERATIONAL ISSUES:\n   - Claims processing delays and errors\n   - Prior authorization bottlenecks\n   - Customer\
+      \ service accessibility problems\n   - System outages and technical issues\n   - Staffing shortages affecting service\
+      \ delivery\n   - Process inefficiencies and workflow problems\n\n2. BENEFIT DESIGN ISSUES:\n   - Coverage gaps and exclusions\n\
+      \   - Formulary restrictions and limitations\n   - Network adequacy problems\n   - Cost-sharing burden and affordability\n\
+      \   - Benefit complexity and member confusion\n   - Plan design misalignment with member needs\n\n3. ACCESS ISSUES:\n\
+      \   - Provider availability and scheduling\n   - Geographic access barriers\n   - Specialty care referral delays\n \
+      \  - Network provider capacity constraints\n   - Transportation and accessibility challenges\n   - Language and cultural\
+      \ barriers\n\n4. QUALITY OF CARE ISSUES:\n   - Provider performance inconsistencies\n   - Clinical care coordination\
+      \ problems\n   - Medical necessity determination variations\n   - Safety incidents and adverse events\n   - Communication\
+      \ and care coordination gaps\n\nAnalysis Methodologies:\n\n1. TEMPORAL PATTERN ANALYSIS:\n   - Trend identification\
+      \ over time periods\n   - Seasonal variation detection\n   - Correlation with policy or system changes\n   - Escalation\
+      \ pattern recognition\n\n2. GEOGRAPHIC PATTERN ANALYSIS:\n   - Regional clustering of similar issues\n   - Provider\
+      \ network correlation analysis\n   - Demographic and socioeconomic factor correlation\n   - State regulation impact\
+      \ assessment\n\n3. CORRELATION ANALYSIS:\n   - Operational metrics correlation\n   - System change impact analysis\n\
+      \   - Staffing level correlation\n   - External factor influence (weather, events)\n\n4. TEXT PATTERN ANALYSIS:\n  \
+      \ - Topic modeling of grievance narratives\n   - Semantic clustering of similar complaints\n   - Entity extraction for\
+      \ specific issues\n   - Sentiment trend analysis over time\n\nStatistical Significance Requirements:\n- Minimum sample\
+      \ size: 5 occurrences\n- Confidence level: 75% or higher\n- Statistical significance: p-value < 0.05\n- Effect size\
+      \ consideration for practical significance\n\nFor each analysis, provide:\n1. Identified patterns with statistical confidence\n\
+      2. Root cause hypotheses with supporting evidence\n3. Geographic and temporal distribution analysis\n4. Correlation\
+      \ with operational and external factors\n5. Quantified impact assessment (volume, cost, member satisfaction)\n6. Recommended\
+      \ systematic interventions\n7. Preventive measures and process improvements\n8. Monitoring metrics for intervention\
+      \ effectiveness\n\nPrioritization Framework:\n- HIGH PRIORITY: High volume, high impact, clear root cause, actionable\
+      \ solution\n- MEDIUM PRIORITY: Moderate impact, emerging pattern, investigation needed\n- LOW PRIORITY: Low volume,\
+      \ limited impact, unclear causation\n\nAlways provide actionable insights with clear recommendations for systematic\
+      \ quality improvements and preventive interventions."
     temperature: 0.4
     max_tokens: 3000
   provides:
   - useAs: output
     in: root-cause-output
     description: Generate comprehensive root cause analysis with patterns, correlations, and improvement recommendations
-
 - id: root-cause-output
   name: Root Cause Analysis Results Output
   kind: Data
   type: genesis:chat_output
-  description: Present comprehensive root cause analysis results with identified patterns, statistical significance, and actionable quality improvement recommendations
+  description: Present comprehensive root cause analysis results with identified patterns, statistical significance, and actionable
+    quality improvement recommendations
   provides: []
-
 outputs:
 - pattern_analysis
 - root_cause_identification
@@ -222,7 +276,6 @@ outputs:
 - improvement_recommendations
 - statistical_significance
 - preventive_interventions
-
 kpis:
 - name: Pattern Detection Accuracy
   category: quality
@@ -272,7 +325,6 @@ kpis:
   target: 85
   unit: '%'
   description: Percentage of identified patterns meeting statistical significance requirements
-
 securityInfo:
   visibility: Internal
   gdprSensitive: true

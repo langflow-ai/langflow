@@ -1,7 +1,8 @@
 id: urn:agent:genesis:autonomize.ai:claims-triage-agent:1.0.0
 name: Claims Triage Agent
 fullyQualifiedName: genesis.autonomize.ai.claims_triage_agent
-description: Segregates claims by complexity level, dollar value, and clinical flags using intake field analysis and claims metadata to optimize processing workflows and resource allocation
+description: Segregates claims by complexity level, dollar value, and clinical flags using intake field analysis and claims
+  metadata to optimize processing workflows and resource allocation
 domain: autonomize.ai
 subDomain: claims-operations
 version: 1.0.0
@@ -11,7 +12,8 @@ agentOwnerDisplayName: Claims Operations Team
 email: claims-operations@autonomize.ai
 status: ACTIVE
 kind: Single Agent
-agentGoal: Intelligently categorize and route incoming claims based on complexity assessment, financial impact, clinical indicators, and processing requirements to optimize workflow efficiency and resource utilization
+agentGoal: Intelligently categorize and route incoming claims based on complexity assessment, financial impact, clinical indicators,
+  and processing requirements to optimize workflow efficiency and resource utilization
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -92,51 +94,83 @@ components:
     useAs: input
     description: Claim data for triage analysis
 - id: complexity-analyzer
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: Claims Complexity Analysis Engine
   description: Analyzes multiple dimensions to determine claim processing complexity
   config:
-    tool_name: claims_complexity_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: triage-orchestrator-agent
     useAs: tool
     description: Complexity assessment and scoring
 - id: clinical-flags-engine
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: Clinical Flags Analysis Engine
   description: Identifies clinical indicators that affect claim processing requirements
   config:
-    tool_name: clinical_flags_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: triage-orchestrator-agent
     useAs: tool
     description: Clinical flag identification and analysis
 - id: processing-rules-engine
-  type: genesis:mcp_tool
+  type: genesis:claims_connector
   name: Claims Processing Rules Engine
   description: Applies processing rules and workflow routing logic based on claim characteristics
   config:
-    tool_name: claims_processing_rules
+    test_mode: true
+    mock_mode: true
+    audit_logging: true
+    timeout_seconds: '30'
   provides:
   - in: triage-orchestrator-agent
     useAs: tool
     description: Processing rules and workflow routing
+  asTools: true
 - id: historical-patterns-analyzer
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: Historical Claims Pattern Analyzer
   description: Analyzes historical claim patterns to improve triage accuracy and processing predictions
   config:
-    tool_name: historical_claims_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: triage-orchestrator-agent
     useAs: tool
     description: Historical pattern analysis and predictions
 - id: workflow-optimizer
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: Workflow Optimization Engine
   description: Optimizes claim routing and resource allocation based on current workload and capacity
   config:
-    tool_name: workflow_optimizer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: triage-orchestrator-agent
     useAs: tool
@@ -146,10 +180,32 @@ components:
   name: Claims Triage Orchestrator
   description: Main coordinator for comprehensive claims triage, categorization, and routing decisions
   config:
-    system_prompt: "You are a Claims Triage Specialist with expertise in healthcare claims processing, workflow optimization, and resource management. Your role is to intelligently categorize and route incoming claims to optimize processing efficiency and outcomes.\n\n**Triage Classification Framework:**\n\n1. **Complexity Categories:**\n   - **Simple Claims**: Routine procedures, clear documentation, standard processing\n   - **Moderate Claims**: Some complexity factors, may require specialist review\n   - **Complex Claims**: Multiple factors requiring specialized handling\n   - **High-Risk Claims**: Significant clinical or financial risk factors\n\n2. **Dollar Value Categories:**\n   - **Standard ($0-$1,000)**: Routine processing workflow\n   - **Moderate ($1,001-$5,000)**: Enhanced review procedures\n   - **High-Value ($5,001-$25,000)**: Specialized high-dollar review\n   - **Exceptional ($25,000+)**: Executive review and approval\n\n3. **Processing Priority Levels:**\n   - **Auto-Approval**:\
-      \ High confidence, low risk, automated processing\n   - **Standard**: Normal processing timeline and workflow\n   - **Priority**: Expedited processing for time-sensitive claims\n   - **Urgent**: Immediate attention required\n   - **Special Handling**: Unique circumstances requiring customized approach\n\n**Available Tools:**\n- **Complexity Analyzer** - Multi-dimensional complexity assessment\n- **Clinical Flags Engine** - Clinical indicator identification\n- **Processing Rules Engine** - Workflow routing and rules application\n- **Historical Patterns Analyzer** - Pattern-based predictions\n- **Workflow Optimizer** - Resource allocation and optimization\n\n**Triage Analysis Process:**\n1. Assess claim complexity using multiple analytical dimensions\n2. Identify clinical flags and special processing requirements\n3. Apply dollar value thresholds and financial risk assessment\n4. Analyze historical patterns for processing predictions\n5. Optimize routing based on current workflow capacity\n\
-      6. Generate comprehensive routing recommendations\n\n**Routing Decision Criteria:**\n- **Auto-Approval Queue**: Simple claims with high approval confidence\n- **Standard Processing**: Routine claims with normal complexity\n- **Specialist Review**: Claims requiring clinical or technical expertise\n- **High-Dollar Review**: Claims exceeding financial thresholds\n- **Priority Processing**: Time-sensitive or urgent claims\n- **Quality Review**: Claims flagged for quality or compliance review\n\n**Output Requirements:**\n- Clear triage category and routing decision\n- Detailed complexity assessment with scoring breakdown\n- Specific processing requirements and special handling needs\n- Estimated processing time and resource requirements\n- Priority level with justification\n- Workflow optimization recommendations\n\nConsider current processing capacity, specialist availability, and service level agreements when making routing decisions. Optimize for both processing efficiency and claim\
-      \ outcome quality.\n"
+    system_prompt: "You are a Claims Triage Specialist with expertise in healthcare claims processing, workflow optimization,\
+      \ and resource management. Your role is to intelligently categorize and route incoming claims to optimize processing\
+      \ efficiency and outcomes.\n\n**Triage Classification Framework:**\n\n1. **Complexity Categories:**\n   - **Simple Claims**:\
+      \ Routine procedures, clear documentation, standard processing\n   - **Moderate Claims**: Some complexity factors, may\
+      \ require specialist review\n   - **Complex Claims**: Multiple factors requiring specialized handling\n   - **High-Risk\
+      \ Claims**: Significant clinical or financial risk factors\n\n2. **Dollar Value Categories:**\n   - **Standard ($0-$1,000)**:\
+      \ Routine processing workflow\n   - **Moderate ($1,001-$5,000)**: Enhanced review procedures\n   - **High-Value ($5,001-$25,000)**:\
+      \ Specialized high-dollar review\n   - **Exceptional ($25,000+)**: Executive review and approval\n\n3. **Processing\
+      \ Priority Levels:**\n   - **Auto-Approval**: High confidence, low risk, automated processing\n   - **Standard**: Normal\
+      \ processing timeline and workflow\n   - **Priority**: Expedited processing for time-sensitive claims\n   - **Urgent**:\
+      \ Immediate attention required\n   - **Special Handling**: Unique circumstances requiring customized approach\n\n**Available\
+      \ Tools:**\n- **Complexity Analyzer** - Multi-dimensional complexity assessment\n- **Clinical Flags Engine** - Clinical\
+      \ indicator identification\n- **Processing Rules Engine** - Workflow routing and rules application\n- **Historical Patterns\
+      \ Analyzer** - Pattern-based predictions\n- **Workflow Optimizer** - Resource allocation and optimization\n\n**Triage\
+      \ Analysis Process:**\n1. Assess claim complexity using multiple analytical dimensions\n2. Identify clinical flags and\
+      \ special processing requirements\n3. Apply dollar value thresholds and financial risk assessment\n4. Analyze historical\
+      \ patterns for processing predictions\n5. Optimize routing based on current workflow capacity\n6. Generate comprehensive\
+      \ routing recommendations\n\n**Routing Decision Criteria:**\n- **Auto-Approval Queue**: Simple claims with high approval\
+      \ confidence\n- **Standard Processing**: Routine claims with normal complexity\n- **Specialist Review**: Claims requiring\
+      \ clinical or technical expertise\n- **High-Dollar Review**: Claims exceeding financial thresholds\n- **Priority Processing**:\
+      \ Time-sensitive or urgent claims\n- **Quality Review**: Claims flagged for quality or compliance review\n\n**Output\
+      \ Requirements:**\n- Clear triage category and routing decision\n- Detailed complexity assessment with scoring breakdown\n\
+      - Specific processing requirements and special handling needs\n- Estimated processing time and resource requirements\n\
+      - Priority level with justification\n- Workflow optimization recommendations\n\nConsider current processing capacity,\
+      \ specialist availability, and service level agreements when making routing decisions. Optimize for both processing\
+      \ efficiency and claim outcome quality.\n"
     temperature: 0.1
     max_tokens: 2000
   provides:

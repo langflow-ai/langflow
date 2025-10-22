@@ -20,13 +20,13 @@ class TestRuntimeAdapterModel:
         # Valid data
         valid_data = RuntimeAdapterCreate(
             genesis_type="genesis:test_component",
-            runtime_type=RuntimeTypeEnum.LANGFLOW,
+            runtime_type=RuntimeTypeEnum.LANGFLOW.value,
             target_component="TestComponent",
             adapter_config={"key": "value"},
             version="1.0.0",
         )
         assert valid_data.genesis_type == "genesis:test_component"
-        assert valid_data.runtime_type == RuntimeTypeEnum.LANGFLOW
+        assert valid_data.runtime_type == RuntimeTypeEnum.LANGFLOW.value
         assert valid_data.target_component == "TestComponent"
 
     def test_genesis_type_validation(self):
@@ -35,7 +35,7 @@ class TestRuntimeAdapterModel:
         with pytest.raises(ValidationError) as exc_info:
             RuntimeAdapterCreate(
                 genesis_type="test_component",
-                runtime_type=RuntimeTypeEnum.LANGFLOW,
+                runtime_type=RuntimeTypeEnum.LANGFLOW.value,
                 target_component="TestComponent",
             )
         assert "Genesis type must start with 'genesis:'" in str(exc_info.value)
@@ -45,7 +45,7 @@ class TestRuntimeAdapterModel:
         # Valid target component
         data = RuntimeAdapterCreate(
             genesis_type="genesis:test",
-            runtime_type=RuntimeTypeEnum.LANGFLOW,
+            runtime_type=RuntimeTypeEnum.LANGFLOW.value,
             target_component="ValidComponent",
         )
         assert data.target_component == "ValidComponent"
@@ -54,7 +54,7 @@ class TestRuntimeAdapterModel:
         with pytest.raises(ValidationError) as exc_info:
             RuntimeAdapterCreate(
                 genesis_type="genesis:test",
-                runtime_type=RuntimeTypeEnum.LANGFLOW,
+                runtime_type=RuntimeTypeEnum.LANGFLOW.value,
                 target_component="",
             )
         assert "Target component name cannot be empty" in str(exc_info.value)
@@ -63,7 +63,7 @@ class TestRuntimeAdapterModel:
         with pytest.raises(ValidationError):
             RuntimeAdapterCreate(
                 genesis_type="genesis:test",
-                runtime_type=RuntimeTypeEnum.LANGFLOW,
+                runtime_type=RuntimeTypeEnum.LANGFLOW.value,
                 target_component="   ",
             )
 
@@ -71,7 +71,7 @@ class TestRuntimeAdapterModel:
         """Test runtime type enumeration."""
         # Test all valid runtime types
         valid_runtimes = [
-            RuntimeTypeEnum.LANGFLOW,
+            RuntimeTypeEnum.LANGFLOW.value,
             RuntimeTypeEnum.TEMPORAL,
             RuntimeTypeEnum.KAFKA,
             RuntimeTypeEnum.AIRFLOW,
@@ -93,7 +93,7 @@ class TestRuntimeAdapterModel:
         for version in valid_versions:
             data = RuntimeAdapterCreate(
                 genesis_type="genesis:test",
-                runtime_type=RuntimeTypeEnum.LANGFLOW,
+                runtime_type=RuntimeTypeEnum.LANGFLOW.value,
                 target_component="TestComponent",
                 version=version,
             )
@@ -105,7 +105,7 @@ class TestRuntimeAdapterModel:
             with pytest.raises(ValidationError):
                 RuntimeAdapterCreate(
                     genesis_type="genesis:test",
-                    runtime_type=RuntimeTypeEnum.LANGFLOW,
+                    runtime_type=RuntimeTypeEnum.LANGFLOW.value,
                     target_component="TestComponent",
                     version=version,
                 )
@@ -117,7 +117,7 @@ class TestRuntimeAdapterModel:
         for priority in valid_priorities:
             data = RuntimeAdapterCreate(
                 genesis_type="genesis:test",
-                runtime_type=RuntimeTypeEnum.LANGFLOW,
+                runtime_type=RuntimeTypeEnum.LANGFLOW.value,
                 target_component="TestComponent",
                 priority=priority,
             )
@@ -127,7 +127,7 @@ class TestRuntimeAdapterModel:
         with pytest.raises(ValidationError) as exc_info:
             RuntimeAdapterCreate(
                 genesis_type="genesis:test",
-                runtime_type=RuntimeTypeEnum.LANGFLOW,
+                runtime_type=RuntimeTypeEnum.LANGFLOW.value,
                 target_component="TestComponent",
                 priority=-1,
             )
@@ -144,7 +144,7 @@ class TestRuntimeAdapterModel:
 
         data = RuntimeAdapterCreate(
             genesis_type="genesis:test",
-            runtime_type=RuntimeTypeEnum.LANGFLOW,
+            runtime_type=RuntimeTypeEnum.LANGFLOW.value,
             target_component="TestComponent",
             adapter_config=valid_config,
         )
@@ -154,7 +154,7 @@ class TestRuntimeAdapterModel:
         with pytest.raises(ValidationError):
             RuntimeAdapterCreate(
                 genesis_type="genesis:test",
-                runtime_type=RuntimeTypeEnum.LANGFLOW,
+                runtime_type=RuntimeTypeEnum.LANGFLOW.value,
                 target_component="TestComponent",
                 adapter_config="not a dict",
             )
@@ -171,7 +171,7 @@ class TestRuntimeAdapterModel:
 
         data = RuntimeAdapterCreate(
             genesis_type="genesis:test",
-            runtime_type=RuntimeTypeEnum.LANGFLOW,
+            runtime_type=RuntimeTypeEnum.LANGFLOW.value,
             target_component="TestComponent",
             compliance_rules=valid_rules,
         )
@@ -204,7 +204,7 @@ class TestRuntimeAdapterModel:
 
         data = RuntimeAdapterCreate(
             genesis_type="genesis:ehr_connector",
-            runtime_type=RuntimeTypeEnum.LANGFLOW,
+            runtime_type=RuntimeTypeEnum.LANGFLOW.value,
             target_component="EHRConnector",
             adapter_config=healthcare_config,
             compliance_rules=compliance_rules,
@@ -240,7 +240,7 @@ class TestRuntimeAdapterModel:
         """Test default values for RuntimeAdapter fields."""
         data = RuntimeAdapterCreate(
             genesis_type="genesis:test",
-            runtime_type=RuntimeTypeEnum.LANGFLOW,
+            runtime_type=RuntimeTypeEnum.LANGFLOW.value,
             target_component="TestComponent",
         )
 
@@ -257,7 +257,7 @@ class TestRuntimeAdapterModel:
         # Create with current time
         adapter = RuntimeAdapter(
             genesis_type="genesis:test",
-            runtime_type=RuntimeTypeEnum.LANGFLOW,
+            runtime_type=RuntimeTypeEnum.LANGFLOW.value,
             target_component="TestComponent",
         )
 
@@ -272,7 +272,7 @@ class TestRuntimeAdapterModel:
         # Test whitespace trimming in validation
         data = RuntimeAdapterCreate(
             genesis_type="genesis:test",
-            runtime_type=RuntimeTypeEnum.LANGFLOW,
+            runtime_type=RuntimeTypeEnum.LANGFLOW.value,
             target_component="  TestComponent  ",
         )
         assert data.target_component == "TestComponent"

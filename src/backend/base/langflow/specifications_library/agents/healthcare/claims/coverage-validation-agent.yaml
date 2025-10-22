@@ -1,7 +1,8 @@
 id: urn:agent:genesis:autonomize.ai:coverage-validation-agent:1.0.0
 name: Coverage Validation Agent
 fullyQualifiedName: genesis.autonomize.ai.coverage_validation_agent
-description: Cross-checks coverage status, plan limits, and pre-authorization data against each claim to identify discrepancies and recommend appropriate actions for coverage compliance and payment optimization
+description: Cross-checks coverage status, plan limits, and pre-authorization data against each claim to identify discrepancies
+  and recommend appropriate actions for coverage compliance and payment optimization
 domain: autonomize.ai
 subDomain: claims-operations
 version: 1.0.0
@@ -11,7 +12,8 @@ agentOwnerDisplayName: Claims Operations Team
 email: claims-operations@autonomize.ai
 status: ACTIVE
 kind: Single Agent
-agentGoal: Ensure comprehensive coverage validation by verifying member eligibility, benefit limits, pre-authorization requirements, and plan-specific coverage rules to prevent payment errors and optimize claim validation accuracy
+agentGoal: Ensure comprehensive coverage validation by verifying member eligibility, benefit limits, pre-authorization requirements,
+  and plan-specific coverage rules to prevent payment errors and optimize claim validation accuracy
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -19,7 +21,6 @@ runMode: RealTime
 agencyLevel: ReflexiveAgent
 toolsUse: true
 learningCapability: None
-
 variables:
 - name: coverage_lookup_timeout
   type: number
@@ -41,50 +42,49 @@ variables:
   required: false
   default: 0.95
   description: Confidence threshold for automatic coverage denials
-
 tags:
-  - coverage-validation
-  - eligibility-verification
-  - benefit-limits
-  - prior-authorization
-  - plan-compliance
-  - payment-optimization
-
+- coverage-validation
+- eligibility-verification
+- benefit-limits
+- prior-authorization
+- plan-compliance
+- payment-optimization
 sampleInput:
   claim_data:
-    claim_id: "CLM-2024-007890"
-    member_id: "MBR654321098"
-    provider_npi: "7418529630"
-    service_date: "2024-01-25"
-    total_claim_amount: 3500.00
+    claim_id: CLM-2024-007890
+    member_id: MBR654321098
+    provider_npi: '7418529630'
+    service_date: '2024-01-25'
+    total_claim_amount: 3500.0
     service_lines:
-      - cpt_code: "29881"
-        description: "Arthroscopy, knee, surgical"
-        units: 1
-        charge_amount: 2800.00
-        modifier: "LT"
-      - cpt_code: "99213"
-        description: "Office visit, established patient"
-        units: 1
-        charge_amount: 175.00
-      - cpt_code: "73721"
-        description: "MRI knee without contrast"
-        units: 1
-        charge_amount: 525.00
-    diagnosis_codes: ["M23.221", "M25.561"]
+    - cpt_code: '29881'
+      description: Arthroscopy, knee, surgical
+      units: 1
+      charge_amount: 2800.0
+      modifier: LT
+    - cpt_code: '99213'
+      description: Office visit, established patient
+      units: 1
+      charge_amount: 175.0
+    - cpt_code: '73721'
+      description: MRI knee without contrast
+      units: 1
+      charge_amount: 525.0
+    diagnosis_codes:
+    - M23.221
+    - M25.561
     member_info:
-      plan_id: "PLAN_UHC_PPO_2024"
-      group_number: "GRP456789"
-      subscriber_id: "SUB987654321"
-      effective_date: "2024-01-01"
+      plan_id: PLAN_UHC_PPO_2024
+      group_number: GRP456789
+      subscriber_id: SUB987654321
+      effective_date: '2024-01-01'
       termination_date: null
     prior_authorizations:
-      - auth_number: "PA2024001234"
-        service_code: "29881"
-        approved_date: "2024-01-15"
-        expiration_date: "2024-03-15"
-        approved_amount: 3000.00
-
+    - auth_number: PA2024001234
+      service_code: '29881'
+      approved_date: '2024-01-15'
+      expiration_date: '2024-03-15'
+      approved_amount: 3000.0
 components:
 - id: coverage-validation-input
   type: genesis:chat_input
@@ -94,184 +94,168 @@ components:
   - in: coverage-validator-agent
     useAs: input
     description: Claim data for coverage validation analysis
-
 - id: eligibility-verifier
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: Real-Time Eligibility Verifier
   description: Connects to payer systems for real-time eligibility and benefit verification
   config:
-    tool_name: "realtime_eligibility_verifier"
-    description: "Real-time eligibility and benefit verification tool"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: coverage-validator-agent
     useAs: tool
     description: Real-time eligibility verification
-
 - id: benefits-analyzer
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: Benefits Analysis Engine
   description: Analyzes member benefits, calculates cost-sharing, and tracks benefit utilization
   config:
-    tool_name: "benefits_analysis_engine"
-    description: "Benefits analysis and cost-sharing calculation tool"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: coverage-validator-agent
     useAs: tool
     description: Benefit analysis and cost-sharing calculations
-
 - id: prior-auth-validator
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: Prior Authorization Validator
   description: Validates prior authorization status, requirements, and compliance
   config:
-    tool_name: "prior_authorization_validator"
-    description: "Prior authorization validation and compliance tool"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: coverage-validator-agent
     useAs: tool
     description: Prior authorization validation
-
 - id: plan-policy-engine
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: Plan Policy Engine
   description: Maintains and applies plan-specific coverage policies and benefit rules
   config:
-    tool_name: "plan_policy_engine"
-    description: "Plan policy application and coverage determination tool"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: coverage-validator-agent
     useAs: tool
     description: Plan policy application and coverage determination
-
 - id: coverage-database-connector
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: Coverage Database Connector
   description: Connects to comprehensive coverage and benefits database
   config:
-    tool_name: "coverage_database_service"
-    description: "Connects to comprehensive coverage and benefits database"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: coverage-validator-agent
     useAs: tool
     description: Coverage data access and management
-
 - id: coverage-validator-agent
   type: genesis:agent
   name: Coverage Validation Specialist
   description: Comprehensive coverage validation using multiple verification methods and policy engines
   config:
-    system_prompt: |
-      You are a Coverage Validation Specialist with expertise in health insurance benefits, eligibility verification, and claims payment optimization. Your role is to ensure comprehensive coverage validation for all claim services.
-
-      **Coverage Validation Framework:**
-
-      1. **Primary Validation Areas:**
-         - **Member Eligibility**: Active coverage verification and enrollment status
-         - **Service Coverage**: Benefit coverage for specific services and procedures
-         - **Prior Authorization**: Pre-approval requirements and compliance
-         - **Benefit Limits**: Annual, lifetime, and service-specific limits
-         - **Cost-Sharing**: Deductibles, copays, coinsurance calculations
-         - **Network Status**: Provider network participation verification
-
-      2. **Validation Process Hierarchy:**
-         - **Real-Time Verification**: Live payer system lookups (preferred)
-         - **Cached Data**: Recently verified benefit information
-         - **Historical Data**: Previous verification results and patterns
-         - **Manual Override**: Exception handling for special circumstances
-
-      3. **Available Tools:**
-         - **Eligibility Verifier** - Real-time payer system verification
-         - **Benefits Analyzer** - Cost-sharing and limit calculations
-         - **Prior Auth Validator** - Authorization requirement checking
-         - **Plan Policy Engine** - Coverage policy application
-         - **Coverage Database** - Historical and cached coverage data
-
-      **Validation Decision Logic:**
-      1. Verify member eligibility and active coverage status
-      2. Validate service coverage under plan benefits
-      3. Check prior authorization requirements and status
-      4. Calculate member cost-sharing responsibilities
-      5. Apply plan-specific coverage policies and limitations
-      6. Generate recommendations for claim processing
-
-      **Coverage Status Classifications:**
-      - **Fully Covered**: Service covered with verified authorization
-      - **Covered with Cost-Sharing**: Service covered with member responsibility
-      - **Partially Covered**: Some services covered, others excluded
-      - **Not Covered**: Service excluded or not a covered benefit
-      - **Pending Verification**: Coverage status requires additional verification
-
-      **Cost-Sharing Calculations:**
-      - **Deductible Application**: Apply to deductible accumulation
-      - **Copayment**: Fixed dollar amounts for specific services
-      - **Coinsurance**: Percentage-based cost sharing
-      - **Out-of-Pocket Maximum**: Track annual accumulation limits
-      - **Benefit Maximums**: Annual or lifetime service limits
-
-      **Validation Recommendations:**
-      - **Approve Full**: All services covered and authorized
-      - **Approve Partial**: Some services covered, others denied
-      - **Deny Claim**: No covered services or eligibility issues
-      - **Pend for Information**: Additional documentation required
-      - **Request Prior Auth**: Authorization required before payment
-
-      **Output Requirements:**
-      - Clear coverage status for each service line
-      - Detailed cost-sharing breakdown and calculations
-      - Prior authorization verification results
-      - Specific recommendations with supporting rationale
-      - Member appeal rights and next steps
-      - Utilization tracking and benefit accumulation updates
-
-      Always ensure accurate benefit application while maximizing appropriate member benefits and maintaining plan compliance.
+    system_prompt: "You are a Coverage Validation Specialist with expertise in health insurance benefits, eligibility verification,\
+      \ and claims payment optimization. Your role is to ensure comprehensive coverage validation for all claim services.\n\
+      \n**Coverage Validation Framework:**\n\n1. **Primary Validation Areas:**\n   - **Member Eligibility**: Active coverage\
+      \ verification and enrollment status\n   - **Service Coverage**: Benefit coverage for specific services and procedures\n\
+      \   - **Prior Authorization**: Pre-approval requirements and compliance\n   - **Benefit Limits**: Annual, lifetime,\
+      \ and service-specific limits\n   - **Cost-Sharing**: Deductibles, copays, coinsurance calculations\n   - **Network\
+      \ Status**: Provider network participation verification\n\n2. **Validation Process Hierarchy:**\n   - **Real-Time Verification**:\
+      \ Live payer system lookups (preferred)\n   - **Cached Data**: Recently verified benefit information\n   - **Historical\
+      \ Data**: Previous verification results and patterns\n   - **Manual Override**: Exception handling for special circumstances\n\
+      \n3. **Available Tools:**\n   - **Eligibility Verifier** - Real-time payer system verification\n   - **Benefits Analyzer**\
+      \ - Cost-sharing and limit calculations\n   - **Prior Auth Validator** - Authorization requirement checking\n   - **Plan\
+      \ Policy Engine** - Coverage policy application\n   - **Coverage Database** - Historical and cached coverage data\n\n\
+      **Validation Decision Logic:**\n1. Verify member eligibility and active coverage status\n2. Validate service coverage\
+      \ under plan benefits\n3. Check prior authorization requirements and status\n4. Calculate member cost-sharing responsibilities\n\
+      5. Apply plan-specific coverage policies and limitations\n6. Generate recommendations for claim processing\n\n**Coverage\
+      \ Status Classifications:**\n- **Fully Covered**: Service covered with verified authorization\n- **Covered with Cost-Sharing**:\
+      \ Service covered with member responsibility\n- **Partially Covered**: Some services covered, others excluded\n- **Not\
+      \ Covered**: Service excluded or not a covered benefit\n- **Pending Verification**: Coverage status requires additional\
+      \ verification\n\n**Cost-Sharing Calculations:**\n- **Deductible Application**: Apply to deductible accumulation\n-\
+      \ **Copayment**: Fixed dollar amounts for specific services\n- **Coinsurance**: Percentage-based cost sharing\n- **Out-of-Pocket\
+      \ Maximum**: Track annual accumulation limits\n- **Benefit Maximums**: Annual or lifetime service limits\n\n**Validation\
+      \ Recommendations:**\n- **Approve Full**: All services covered and authorized\n- **Approve Partial**: Some services\
+      \ covered, others denied\n- **Deny Claim**: No covered services or eligibility issues\n- **Pend for Information**: Additional\
+      \ documentation required\n- **Request Prior Auth**: Authorization required before payment\n\n**Output Requirements:**\n\
+      - Clear coverage status for each service line\n- Detailed cost-sharing breakdown and calculations\n- Prior authorization\
+      \ verification results\n- Specific recommendations with supporting rationale\n- Member appeal rights and next steps\n\
+      - Utilization tracking and benefit accumulation updates\n\nAlways ensure accurate benefit application while maximizing\
+      \ appropriate member benefits and maintaining plan compliance.\n"
     temperature: 0.1
     max_tokens: 2500
   provides:
   - in: coverage-validation-output
     useAs: input
     description: Send coverage validation results to output
-
 - id: coverage-validation-output
   type: genesis:chat_output
   name: Coverage Validation Results
   description: Display comprehensive coverage validation analysis and processing recommendations
-
 outputs:
-  - coverage_validation
-  - validation_status
-  - detailed_validation
-  - benefit_utilization
-  - member_responsibility
-  - recommendations
-
+- coverage_validation
+- validation_status
+- detailed_validation
+- benefit_utilization
+- member_responsibility
+- recommendations
 kpis:
 - name: validation_accuracy
   description: Percentage of correctly validated coverage determinations
-  target: ">99%"
+  target: '>99%'
   valueType: percentage
   category: quality
 - name: real_time_verification_rate
   description: Percentage of validations completed with real-time data
-  target: ">85%"
+  target: '>85%'
   valueType: percentage
   category: performance
 - name: cost_sharing_accuracy
   description: Accuracy of member cost-sharing calculations
-  target: ">99.5%"
+  target: '>99.5%'
   valueType: percentage
   category: quality
 - name: prior_auth_compliance
   description: Percentage of prior auth requirements properly verified
-  target: ">98%"
+  target: '>98%'
   valueType: percentage
   category: quality
 - name: validation_processing_time
   description: Average time to complete coverage validation
-  target: "<500ms"
+  target: <500ms
   valueType: duration
   category: performance
-  unit: "milliseconds"
-
+  unit: milliseconds
 securityInfo:
   visibility: Internal
   gdprSensitive: true

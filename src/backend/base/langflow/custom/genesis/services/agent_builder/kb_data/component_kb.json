@@ -34,9 +34,9 @@
     "usage_examples": [],
     "tags": []
   },
-  "genesis:prompt_template:unknown": {
+  "genesis:prompt:unknown": {
     "component_id": "main-agent-prompt",
-    "component_type": "genesis:prompt_template",
+    "component_type": "genesis:prompt",
     "name": "Agent Instructions",
     "description": "Prompt template for agent instructions",
     "purpose": "unknown",

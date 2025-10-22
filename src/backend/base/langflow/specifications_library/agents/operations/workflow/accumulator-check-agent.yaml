@@ -3,7 +3,7 @@ name: Accumulator Check Agent
 fullyQualifiedName: genesis.autonomize.ai.accumulator_check_agent
 description: Checks member's deductible, out-of-pocket maximums, and benefit utilization
 domain: autonomize.ai
-subDomain: benefit-validation
+subDomain: healthcare-benefit-validation
 version: 1.0.0
 environment: production
 agentOwner: benefit-validation@autonomize.ai
@@ -119,10 +119,12 @@ promptConfiguration:
 
     3. Review benefit utilization limits
 
-    4. Calculate member responsibility
+    4. Calculate member responsibility using HIPAA-compliant healthcare connectors
 
     5. Identify when limits will be met
 
+
+    Use specialized healthcare connectors for secure, compliant data access.
 
     Provide clear explanations of accumulator impacts on member costs.
 
@@ -140,7 +142,7 @@ components:
 - id: accumulator-agent-prompt
   name: Agent Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Prompt template for agent instructions
   config:
     saved_prompt: accumulator_check_prompt_v1
@@ -157,12 +159,14 @@ components:
       5. Identify when limits will be met
 
 
-      Use the QNXT Auth History tool to retrieve real claims data.
+      Use the Accumulator Benefits Model for comprehensive accumulator analysis and member cost calculation.
 
-      Use the Claims History API to analyze past utilization.
+      Use the Claims History Analysis Agent to analyze past utilization and claims data.
 
-      Use the Benefit Calculator to determine member costs.
+      Use the Eligibility Verification Agent for real-time benefit verification and cost estimation.
 
+
+      All tools are HIPAA-compliant and provide secure access to healthcare data.
 
       Provide clear explanations of accumulator impacts on member costs.
 
@@ -174,7 +178,9 @@ components:
 
       - Member''s estimated responsibility
 
-      - When deductibles/OOP max will be met'
+      - When deductibles/OOP max will be met
+
+      - HIPAA compliance confirmation'
   provides:
   - useAs: system_prompt
     in: accumulator-agent
@@ -196,42 +202,6 @@ components:
   - useAs: input
     in: accumulator-formatter
     description: Accumulator analysis results
-- id: qnxt-accumulator
-  name: QNXT Auth History
-  kind: Tool
-  type: genesis:mcp_tool
-  description: Retrieve claims and authorization history via MCP
-  asTools: true
-  config:
-    tool_name: qnext_auth_history
-  provides:
-  - useAs: tools
-    in: accumulator-agent
-    description: Real-time claims history
-- id: claims-history
-  name: Claims History API
-  kind: Tool
-  type: genesis:mcp_tool
-  description: Analyze claims history for accumulator impact via MCP
-  asTools: true
-  config:
-    tool_name: claims_history
-  provides:
-  - useAs: tools
-    in: accumulator-agent
-    description: Claims analysis tool
-- id: benefit-calculator
-  name: Member Responsibility Calculator
-  kind: Tool
-  type: genesis:mcp_tool
-  description: Calculate member responsibility based on accumulators via MCP
-  asTools: true
-  config:
-    tool_name: benefit_calculator
-  provides:
-  - useAs: tools
-    in: accumulator-agent
-    description: Cost calculation tool
 - id: accumulator-formatter
   name: Accumulator Report
   kind: Data

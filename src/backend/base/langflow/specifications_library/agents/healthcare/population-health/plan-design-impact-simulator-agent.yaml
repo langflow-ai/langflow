@@ -1,7 +1,8 @@
 id: urn:agent:genesis:population-health:plan-design-impact-simulator-agent:1.0.0
 name: Plan Design Impact Simulator Agent
 fullyQualifiedName: genesis.autonomize.ai.plan_design_impact_simulator_agent
-description: Multi-agent system that simulates future cost and utilization impacts of benefit design changes using claims history analysis, actuarial modeling, and utilization patterns to predict financial and clinical outcomes of plan modifications
+description: Multi-agent system that simulates future cost and utilization impacts of benefit design changes using claims
+  history analysis, actuarial modeling, and utilization patterns to predict financial and clinical outcomes of plan modifications
 domain: autonomize.ai
 subDomain: population-health
 version: 1.0.0
@@ -44,7 +45,10 @@ variables:
 - name: member_behavior_elasticity
   type: object
   required: false
-  default: {"copay": -0.15, "deductible": -0.25, "coinsurance": -0.18}
+  default:
+    copay: -0.15
+    deductible: -0.25
+    coinsurance: -0.18
   description: Price elasticity coefficients for different cost-sharing mechanisms
 - name: include_induced_demand
   type: boolean
@@ -64,7 +68,8 @@ tags:
 reusability:
   asTools: false
 kind: Multi Agent
-agentGoal: Provide comprehensive impact analysis and projections for health plan benefit design changes using advanced actuarial modeling and behavioral economics to optimize plan performance and member outcomes
+agentGoal: Provide comprehensive impact analysis and projections for health plan benefit design changes using advanced actuarial
+  modeling and behavioral economics to optimize plan performance and member outcomes
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: RequestResponse
@@ -85,12 +90,18 @@ components:
 - id: claims-data-tool
   name: Claims Data Analysis Tool
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access comprehensive claims data for historical utilization and cost analysis
   asTools: true
   config:
-    tool_name: claims_connector
-    description: "Access comprehensive claims data for historical utilization and cost analysis with financial metrics"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: baseline-agent
@@ -101,12 +112,18 @@ components:
 - id: actuarial-modeling-tool
   name: Actuarial Modeling Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Advanced actuarial modeling for benefit design impact projections
   asTools: true
   config:
-    tool_name: actuarial_model
-    description: "Advanced actuarial modeling for benefit design impact projections using Monte Carlo and risk adjustment"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: impact-modeling-agent
@@ -114,12 +131,18 @@ components:
 - id: behavioral-economics-tool
   name: Behavioral Economics Model
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Model member behavioral responses to benefit design changes
   asTools: true
   config:
-    tool_name: behavioral_economics_model
-    description: "Model member behavioral responses to benefit design changes using elasticity and demand response analysis"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: behavioral-agent
@@ -127,12 +150,18 @@ components:
 - id: network-impact-tool
   name: Provider Network Impact Tool
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze provider network design impacts on utilization and costs
   asTools: true
   config:
-    tool_name: network_impact_analyzer
-    description: "Analyze provider network changes, access impacts, and cost differentials for benefit design modifications"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: network-agent
@@ -140,12 +169,18 @@ components:
 - id: financial-projection-tool
   name: Financial Projection Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Generate comprehensive financial projections and sensitivity analysis
   asTools: true
   config:
-    tool_name: financial_projector
-    description: "Create detailed financial projections including cash flow, reserves, and risk corridors for plan design changes"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: financial-agent
@@ -153,12 +188,18 @@ components:
 - id: market-intelligence-tool
   name: Market Intelligence Tool
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Incorporate market trends and competitor analysis into projections
   asTools: true
   config:
-    tool_name: market_intelligence
-    description: "Analyze market trends, competitor plan designs, and regulatory environment impacts"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: market-agent
@@ -170,14 +211,16 @@ components:
   description: Analyze current plan performance and establish baseline metrics for impact simulation
   config:
     role: Actuarial Baseline Analyst
-    goal: Establish comprehensive baseline metrics for current plan performance including utilization patterns, cost trends, and member behavior to serve as foundation for impact simulation
+    goal: Establish comprehensive baseline metrics for current plan performance including utilization patterns, cost trends,
+      and member behavior to serve as foundation for impact simulation
     backstory: 'You are an actuarial baseline analyst specializing in health plan performance measurement and trend analysis.
 
       Your expertise includes claims data analysis, utilization trending, and risk adjustment methodologies.
 
       You excel at identifying seasonal patterns, anomalies, and underlying trends that affect plan performance projections.
 
-      You understand the importance of credible baselines for accurate impact simulation and the nuances of different member populations.
+      You understand the importance of credible baselines for accurate impact simulation and the nuances of different member
+      populations.
 
       '
     allow_delegation: false
@@ -194,10 +237,12 @@ components:
   description: Analyze historical utilization patterns and trends to inform simulation models
   config:
     role: Healthcare Utilization Analyst
-    goal: Analyze comprehensive utilization patterns, service mix trends, and care-seeking behaviors to understand how benefit design changes will impact service usage
+    goal: Analyze comprehensive utilization patterns, service mix trends, and care-seeking behaviors to understand how benefit
+      design changes will impact service usage
     backstory: 'You are a healthcare utilization analyst with expertise in medical economics and healthcare delivery patterns.
 
-      Your skills include analyzing complex utilization data, identifying service substitution patterns, and understanding provider-patient interactions.
+      Your skills include analyzing complex utilization data, identifying service substitution patterns, and understanding
+      provider-patient interactions.
 
       You excel at recognizing how different populations respond to incentive structures and access barriers.
 
@@ -218,12 +263,15 @@ components:
   description: Model member behavioral responses to proposed benefit design changes
   config:
     role: Behavioral Economics Specialist
-    goal: Model and predict member behavioral responses to benefit design changes using economic theory and empirical evidence to accurately project utilization shifts
+    goal: Model and predict member behavioral responses to benefit design changes using economic theory and empirical evidence
+      to accurately project utilization shifts
     backstory: 'You are a behavioral economics specialist with expertise in healthcare decision-making and consumer behavior.
 
-      Your skills include econometric modeling, price elasticity analysis, and understanding psychological factors in healthcare choices.
+      Your skills include econometric modeling, price elasticity analysis, and understanding psychological factors in healthcare
+      choices.
 
-      You excel at quantifying behavioral responses to financial incentives and predicting unintended consequences of benefit design changes.
+      You excel at quantifying behavioral responses to financial incentives and predicting unintended consequences of benefit
+      design changes.
 
       You understand the heterogeneity of member populations and how different demographics respond to cost-sharing mechanisms.
 
@@ -242,14 +290,16 @@ components:
   description: Develop comprehensive actuarial models to project financial and utilization impacts
   config:
     role: Senior Actuarial Modeler
-    goal: Develop sophisticated actuarial models that integrate baseline trends, behavioral responses, and external factors to project comprehensive impacts of benefit design changes
+    goal: Develop sophisticated actuarial models that integrate baseline trends, behavioral responses, and external factors
+      to project comprehensive impacts of benefit design changes
     backstory: 'You are a senior actuarial modeler specializing in health insurance product design and financial projections.
 
       Your expertise includes advanced statistical modeling, Monte Carlo simulation, and uncertainty quantification.
 
       You excel at integrating multiple data sources and modeling approaches to create robust, defensible projections.
 
-      You understand regulatory requirements, reserve adequacy, and the balance between accuracy and interpretability in actuarial models.
+      You understand regulatory requirements, reserve adequacy, and the balance between accuracy and interpretability in actuarial
+      models.
 
       '
     allow_delegation: false
@@ -266,7 +316,8 @@ components:
   description: Analyze provider network impacts and access implications of benefit design changes
   config:
     role: Provider Network Analyst
-    goal: Analyze how benefit design changes affect provider network utilization, access patterns, and care quality to ensure comprehensive impact assessment
+    goal: Analyze how benefit design changes affect provider network utilization, access patterns, and care quality to ensure
+      comprehensive impact assessment
     backstory: 'You are a provider network analyst with expertise in healthcare delivery systems and access analysis.
 
       Your skills include network adequacy assessment, provider contracting impacts, and care coordination analysis.
@@ -290,12 +341,14 @@ components:
   description: Generate comprehensive financial projections and perform sensitivity analysis
   config:
     role: Financial Projection Specialist
-    goal: Create detailed financial projections including revenue, expenses, margins, and cash flow impacts with comprehensive sensitivity analysis and risk assessment
+    goal: Create detailed financial projections including revenue, expenses, margins, and cash flow impacts with comprehensive
+      sensitivity analysis and risk assessment
     backstory: 'You are a financial projection specialist with expertise in health insurance financial modeling and risk management.
 
       Your skills include cash flow modeling, reserve calculations, and regulatory capital requirements.
 
-      You excel at translating actuarial projections into business-relevant financial metrics and understanding stakeholder reporting needs.
+      You excel at translating actuarial projections into business-relevant financial metrics and understanding stakeholder
+      reporting needs.
 
       You understand the importance of scenario planning and stress testing for robust financial management.
 
@@ -314,7 +367,8 @@ components:
   description: Incorporate market trends and competitive intelligence into impact projections
   config:
     role: Healthcare Market Intelligence Analyst
-    goal: Integrate market trends, competitive dynamics, and regulatory environment considerations into benefit design impact projections
+    goal: Integrate market trends, competitive dynamics, and regulatory environment considerations into benefit design impact
+      projections
     backstory: 'You are a healthcare market intelligence analyst with expertise in industry trends and competitive analysis.
 
       Your skills include market research, regulatory trend analysis, and understanding the broader healthcare ecosystem.
@@ -364,7 +418,8 @@ components:
   type: genesis:crewai_sequential_task
   description: Analyze historical utilization patterns and service mix trends
   config:
-    description: Conduct comprehensive analysis of utilization patterns to understand service usage trends and care-seeking behaviors
+    description: Conduct comprehensive analysis of utilization patterns to understand service usage trends and care-seeking
+      behaviors
     agent_id: utilization-agent
     expected_output: 'Utilization pattern analysis including:
 
@@ -550,7 +605,8 @@ components:
   name: Plan Design Impact Simulation Output
   kind: Data
   type: genesis:chat_output
-  description: Present comprehensive impact simulation results with financial projections, utilization impacts, and strategic recommendations
+  description: Present comprehensive impact simulation results with financial projections, utilization impacts, and strategic
+    recommendations
   provides: []
 outputs:
 - financial_projections
@@ -582,7 +638,7 @@ kpis:
   category: performance
   valueType: number
   target: 4.3
-  unit: '5-point scale'
+  unit: 5-point scale
   description: Stakeholder rating of decision support quality and actionability
 - name: Implementation Risk Assessment Accuracy
   category: quality
@@ -600,13 +656,13 @@ kpis:
   category: performance
   valueType: number
   target: 45
-  unit: 'minutes'
+  unit: minutes
   description: Average time to complete comprehensive impact simulation analysis
 - name: Behavioral Model Validation Score
   category: quality
   valueType: number
   target: 0.78
-  unit: 'R-squared'
+  unit: R-squared
   description: Explanatory power of behavioral response models for utilization changes
 securityInfo:
   visibility: Internal

@@ -1,9 +1,8 @@
 id: urn:agent:genesis:utilization-management:inpatient-utilization-monitor-agent:1.0.0
 name: Inpatient Utilization Monitor Agent
 fullyQualifiedName: genesis.autonomize.ai.inpatient_utilization_monitor_agent
-description: Analyzes inpatient records, vitals, and lab results to identify cases
-  no longer meeting medical necessity criteria. Supports level of care reviews and
-  optimizes resource utilization through data-driven clinical decision support.
+description: Analyzes inpatient records, vitals, and lab results to identify cases no longer meeting medical necessity criteria.
+  Supports level of care reviews and optimizes resource utilization through data-driven clinical decision support.
 domain: autonomize.ai
 subDomain: utilization-management
 version: 1.0.0
@@ -44,9 +43,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Identify inpatient cases no longer meeting medical necessity criteria and
-  support level of care reviews to optimize resource utilization while ensuring appropriate
-  patient care
+agentGoal: Identify inpatient cases no longer meeting medical necessity criteria and support level of care reviews to optimize
+  resource utilization while ensuring appropriate patient care
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -67,12 +65,18 @@ components:
 - id: his-integration
   name: Hospital Information System Integration
   kind: Tool
-  type: genesis:mcp_tool
-  description: Access comprehensive hospital information system data for patient records
-    and clinical information
+  type: genesis:api_request
+  description: Access comprehensive hospital information system data for patient records and clinical information
   asTools: true
   config:
-    tool_name: his_integration
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: utilization-agent
@@ -80,12 +84,18 @@ components:
 - id: ehr-clinical-data
   name: EHR Clinical Data Access
   kind: Tool
-  type: genesis:mcp_tool
-  description: Access electronic health record systems for detailed clinical information
-    and patient history
+  type: genesis:api_request
+  description: Access electronic health record systems for detailed clinical information and patient history
   asTools: true
   config:
-    tool_name: ehr_clinical_data
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: utilization-agent
@@ -93,12 +103,18 @@ components:
 - id: lis-integration
   name: Laboratory Information System Integration
   kind: Tool
-  type: genesis:mcp_tool
-  description: Access laboratory information systems for lab results and diagnostic
-    data analysis
+  type: genesis:api_request
+  description: Access laboratory information systems for lab results and diagnostic data analysis
   asTools: true
   config:
-    tool_name: lis_integration
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: utilization-agent
@@ -106,12 +122,18 @@ components:
 - id: vitals-monitoring-system
   name: Vitals Monitoring System Access
   kind: Tool
-  type: genesis:mcp_tool
-  description: Access patient monitoring systems for real-time and historical vital
-    signs data
+  type: genesis:api_request
+  description: Access patient monitoring systems for real-time and historical vital signs data
   asTools: true
   config:
-    tool_name: vitals_monitoring_system
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: utilization-agent
@@ -119,12 +141,18 @@ components:
 - id: medical-necessity-engine
   name: Medical Necessity Assessment Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced clinical decision support engine for medical necessity determination
-    and level of care assessment
+  type: genesis:api_request
+  description: Advanced clinical decision support engine for medical necessity determination and level of care assessment
   asTools: true
   config:
-    tool_name: medical_necessity_engine
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: utilization-agent
@@ -132,12 +160,18 @@ components:
 - id: healthcare-data-exchange
   name: Healthcare Data Exchange Platform
   kind: Tool
-  type: genesis:mcp_tool
-  description: Healthcare interoperability platform for accessing multi-source clinical
-    data and care coordination
+  type: genesis:api_request
+  description: Healthcare interoperability platform for accessing multi-source clinical data and care coordination
   asTools: true
   config:
-    tool_name: healthcare_data_exchange
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: utilization-agent
@@ -146,11 +180,10 @@ components:
   name: Inpatient Utilization Monitor Agent
   kind: Agent
   type: genesis:agent
-  description: Intelligent agent that analyzes inpatient data to identify cases no
-    longer meeting medical necessity and supports level of care optimization
+  description: Intelligent agent that analyzes inpatient data to identify cases no longer meeting medical necessity and supports
+    level of care optimization
   config:
-    system_message: 'You are a healthcare utilization management specialist with expertise
-      in medical necessity determination.
+    system_message: 'You are a healthcare utilization management specialist with expertise in medical necessity determination.
 
       Your role is to:
 
@@ -189,8 +222,7 @@ components:
   name: Utilization Review Output
   kind: Data
   type: genesis:chat_output
-  description: Present comprehensive utilization review results with medical necessity
-    assessment and care recommendations
+  description: Present comprehensive utilization review results with medical necessity assessment and care recommendations
   provides: []
 outputs:
 - medical_necessity_assessment
@@ -203,8 +235,7 @@ kpis:
   valueType: percentage
   target: 88
   unit: '%'
-  description: Accuracy of medical necessity determinations validated by clinical
-    review
+  description: Accuracy of medical necessity determinations validated by clinical review
 - name: Length of Stay Reduction
   category: efficiency
   valueType: percentage

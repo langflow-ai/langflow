@@ -1,9 +1,8 @@
 id: urn:agent:genesis:provider-enablement:compliance-documentation-check-agent:1.0.0
 name: Compliance Documentation Check Agent
 fullyQualifiedName: genesis.autonomize.ai.compliance_documentation_check_agent
-description: Audits provider notes for regulatory compliance using documentation standards,
-  prior audits, and template matching. Flags missing attestation elements and ensures
-  adherence to healthcare documentation requirements.
+description: Audits provider notes for regulatory compliance using documentation standards, prior audits, and template matching.
+  Flags missing attestation elements and ensures adherence to healthcare documentation requirements.
 domain: autonomize.ai
 subDomain: provider-enablement
 version: 1.0.0
@@ -44,9 +43,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Ensure all provider notes comply with regulatory standards by identifying
-  missing attestation elements, flagging non-compliance issues, and improving template
-  matching accuracy for comprehensive documentation audits
+agentGoal: Ensure all provider notes comply with regulatory standards by identifying missing attestation elements, flagging
+  non-compliance issues, and improving template matching accuracy for comprehensive documentation audits
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -67,11 +65,18 @@ components:
 - id: provider-notes-api
   name: Provider Notes API Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access provider clinical notes and documentation from EHR systems
   asTools: true
   config:
-    tool_name: provider_notes_api
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: compliance-agent
@@ -79,12 +84,18 @@ components:
 - id: audit-database-connector
   name: Prior Audits Database Connector
   kind: Tool
-  type: genesis:mcp_tool
-  description: Access historical audit data and compliance templates for comparison
-    analysis
+  type: genesis:api_request
+  description: Access historical audit data and compliance templates for comparison analysis
   asTools: true
   config:
-    tool_name: audit_database_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: compliance-agent
@@ -92,12 +103,18 @@ components:
 - id: compliance-nlp-processor
   name: Healthcare NLP Compliance Processor
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced NLP engine specialized for healthcare compliance analysis
-    and attestation element identification
+  type: genesis:api_request
+  description: Advanced NLP engine specialized for healthcare compliance analysis and attestation element identification
   asTools: true
   config:
-    tool_name: healthcare_compliance_nlp
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: compliance-agent
@@ -105,12 +122,18 @@ components:
 - id: template-matching-engine
   name: Template Matching Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Machine learning-powered template matching for compliance standards
-    verification
+  type: genesis:api_request
+  description: Machine learning-powered template matching for compliance standards verification
   asTools: true
   config:
-    tool_name: template_matching_engine
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: compliance-agent
@@ -119,8 +142,7 @@ components:
   name: Email Notification Service
   kind: Tool
   type: genesis:api_request
-  description: Email service for sending compliance audit reports and non-compliance
-    alerts
+  description: Email service for sending compliance audit reports and non-compliance alerts
   asTools: true
   config:
     method: POST
@@ -132,13 +154,13 @@ components:
       value: application/json
     body:
     - key: to
-      value: "{{recipient_email}}"
+      value: '{{recipient_email}}'
     - key: subject
-      value: "{{audit_subject}}"
+      value: '{{audit_subject}}'
     - key: html_content
-      value: "{{audit_report}}"
+      value: '{{audit_report}}'
     - key: from
-      value: "${EMAIL_SENDER_ADDRESS}"
+      value: ${EMAIL_SENDER_ADDRESS}
     timeout: 30
   provides:
   - useAs: tools
@@ -148,11 +170,10 @@ components:
   name: Compliance Documentation Check Agent
   kind: Agent
   type: genesis:agent
-  description: Intelligent agent that audits provider documentation for regulatory
-    compliance and identifies missing attestation elements
+  description: Intelligent agent that audits provider documentation for regulatory compliance and identifies missing attestation
+    elements
   config:
-    system_message: 'You are a healthcare compliance documentation auditor with expertise
-      in regulatory standards.
+    system_message: 'You are a healthcare compliance documentation auditor with expertise in regulatory standards.
 
       Your role is to:
 
@@ -167,8 +188,7 @@ components:
       5. Generate detailed audit reports with actionable recommendations
 
 
-      Use your NLP and template matching tools to ensure comprehensive compliance
-      analysis.
+      Use your NLP and template matching tools to ensure comprehensive compliance analysis.
 
       Focus on identifying specific attestation elements that are missing or incomplete.
 
@@ -183,8 +203,7 @@ components:
   name: Compliance Audit Output
   kind: Data
   type: genesis:chat_output
-  description: Present comprehensive compliance audit results with detailed findings
-    and recommendations
+  description: Present comprehensive compliance audit results with detailed findings and recommendations
   provides: []
 outputs:
 - audit_report

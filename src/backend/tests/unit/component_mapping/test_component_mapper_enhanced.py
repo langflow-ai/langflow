@@ -275,7 +275,7 @@ class TestComponentMapperIntegration:
         mock_adapter = RuntimeAdapter(
             id=uuid4(),
             genesis_type="genesis:test_component",
-            runtime_type=RuntimeTypeEnum.LANGFLOW,
+            runtime_type=RuntimeTypeEnum.LANGFLOW.value,
             target_component="TestComponent",
             adapter_config={"test": "config"},
             version="1.0.0",

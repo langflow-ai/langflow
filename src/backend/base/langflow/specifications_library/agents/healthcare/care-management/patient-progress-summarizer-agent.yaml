@@ -1,7 +1,8 @@
 id: urn:agent:genesis:care-management:patient-progress-summarizer-agent:1.0.0
 name: Patient Progress Summarizer Agent
 fullyQualifiedName: genesis.autonomize.ai.patient_progress_summarizer_agent
-description: Multi-agent system that pulls structured outcomes and narrative documentation to summarize recent events for complex patients in care management programs
+description: Multi-agent system that pulls structured outcomes and narrative documentation to summarize recent events for
+  complex patients in care management programs
 domain: autonomize.ai
 subDomain: care-management
 version: 1.0.0
@@ -53,7 +54,8 @@ tags:
 reusability:
   asTools: false
 kind: Multi Agent
-agentGoal: Generate comprehensive, actionable progress summaries for complex care management patients by analyzing structured outcomes and narrative documentation
+agentGoal: Generate comprehensive, actionable progress summaries for complex care management patients by analyzing structured
+  outcomes and narrative documentation
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: Batch
@@ -74,22 +76,18 @@ components:
 - id: ehr-outcomes-tool
   name: EHR Structured Outcomes Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access structured clinical outcomes, assessments, and quality measures
   asTools: true
   config:
-    data_elements:
-    - observations
-    - conditions
-    - procedures
-    - medications
-    - vital_signs
-    - lab_results
-    - functional_assessments
-    - quality_measures
-    include_trends: true
-    include_goal_progress: true
-    tool_name: ehr_integration
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-collection-agent
@@ -97,13 +95,18 @@ components:
 - id: clinical-documentation-tool
   name: Clinical Documentation Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access narrative clinical documentation including notes, assessments, and care plans
   asTools: true
   config:
-    include_care_team_notes: true
-    text_extraction: true
-    tool_name: ehr_integration
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-collection-agent
@@ -111,20 +114,18 @@ components:
 - id: care-management-records-tool
   name: Care Management Records System
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access care management program records, interventions, and patient interactions
   asTools: true
   config:
-    tool_name: care_management_records
-    record_types:
-    - case_notes
-    - intervention_tracking
-    - patient_interactions
-    - care_plan_updates
-    - goal_tracking
-    - barrier_assessments
-    include_outcomes: true
-    track_program_enrollment: true
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-collection-agent
@@ -132,19 +133,18 @@ components:
 - id: utilization-analytics-tool
   name: Healthcare Utilization Analytics
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze healthcare utilization patterns and cost trends
   asTools: true
   config:
-    data_sources:
-    - inpatient
-    - outpatient
-    - emergency_department
-    - pharmacy
-    - ancillary_services
-    trend_analysis: true
-    benchmark_comparisons: true
-    tool_name: claims_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: outcomes-analysis-agent
@@ -152,20 +152,18 @@ components:
 - id: clinical-nlp-model
   name: Clinical Natural Language Processing
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Advanced NLP for clinical text analysis and insight extraction
   asTools: true
   config:
-    analysis_types:
-    - sentiment_analysis
-    - entity_extraction
-    - outcome_identification
-    - clinical_reasoning
-    - trend_detection
-    medical_terminology: true
-    context_understanding: true
-    summary_generation: true
-    tool_name: clinical_nlp_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: narrative-analysis-agent
@@ -173,24 +171,18 @@ components:
 - id: outcomes-measurement-model
   name: Patient Outcomes Measurement Model
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Comprehensive patient outcomes assessment and progress tracking
   asTools: true
   config:
-    outcome_domains:
-    - clinical
-    - functional
-    - quality_of_life
-    - patient_reported
-    - care_satisfaction
-    measurement_frameworks:
-    - value_based_care
-    - triple_aim
-    - quadruple_aim
-    progress_tracking: true
-    goal_achievement: true
-    risk_adjustment: true
-    tool_name: outcomes_measurement_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: outcomes-analysis-agent
@@ -202,7 +194,8 @@ components:
   description: Collect comprehensive patient progress data from multiple healthcare sources
   config:
     role: Patient Progress Data Specialist
-    goal: Gather comprehensive patient progress data including structured outcomes, clinical documentation, and care management records
+    goal: Gather comprehensive patient progress data including structured outcomes, clinical documentation, and care management
+      records
     backstory: 'You are a patient progress data specialist with expertise in healthcare data integration and outcomes tracking.
 
       Your skills include clinical data collection, care management record analysis, and comprehensive progress monitoring.
@@ -274,7 +267,8 @@ components:
   description: Generate comprehensive, actionable progress summaries for care teams
   config:
     role: Clinical Summary Specialist
-    goal: Generate comprehensive, actionable progress summaries that effectively communicate patient status and recommendations to care teams
+    goal: Generate comprehensive, actionable progress summaries that effectively communicate patient status and recommendations
+      to care teams
     backstory: 'You are a clinical summary specialist with expertise in medical communication and care team coordination.
 
       Your skills include clinical writing, summary generation, and care team communication optimization.
@@ -297,7 +291,8 @@ components:
   type: genesis:crewai_sequential_task
   description: Collect comprehensive patient progress data from all relevant sources
   config:
-    description: Gather comprehensive patient progress data including structured outcomes, narrative documentation, and care management records
+    description: Gather comprehensive patient progress data including structured outcomes, narrative documentation, and care
+      management records
     agent_id: data-collection-agent
     expected_output: 'Comprehensive progress data package including:
 
@@ -351,7 +346,8 @@ components:
   type: genesis:crewai_sequential_task
   description: Analyze narrative documentation to extract insights and progress indicators
   config:
-    description: Analyze narrative clinical documentation to extract meaningful insights, care team observations, and progress indicators
+    description: Analyze narrative clinical documentation to extract meaningful insights, care team observations, and progress
+      indicators
     agent_id: narrative-analysis-agent
     expected_output: 'Narrative analysis report including:
 

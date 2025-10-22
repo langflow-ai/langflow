@@ -13,7 +13,7 @@ Genesis components are the building blocks of agent specifications. Each compone
 | [`genesis:chat_input`](#genesischat_input) | User input/data entry | Data | → Agents |
 | [`genesis:chat_output`](#genesischat_output) | Display results | Data | ← Agents |
 | [`genesis:agent`](#genesisagent) | LLM-powered processing | Agent | ↔ All types |
-| [`genesis:prompt_template`](#genesisprompt_template) | Prompt management | Prompt | → Agents |
+| [`genesis:prompt`](#genesisprompt_template) | Prompt management | Prompt | → Agents |
 | [`genesis:mcp_tool`](#genesismcp_tool) | External API/tool access | Tool | → Agents |
 | [`genesis:knowledge_hub_search`](#genesisknowledge_hub_search) | Internal knowledge search | Tool | → Agents |
 | [`genesis:ehr_connector`](#genesisehr_connector) | Electronic Health Record integration | Healthcare | → Agents |
@@ -358,7 +358,7 @@ provides: array              # Required: Output connections
 
 ---
 
-## `genesis:prompt_template`
+## `genesis:prompt`
 
 **Purpose**: Centralized prompt management and templating
 **Category**: Prompt
@@ -369,7 +369,7 @@ provides: array              # Required: Output connections
 ```yaml
 id: string                          # Required: Unique identifier
 name: string                        # Required: Display name
-type: "genesis:prompt_template"    # Required: Component type
+type: "genesis:prompt"    # Required: Component type
 description: string                # Required: Purpose description
 kind: "Prompt"                     # Optional: Component category
 config:                            # Required: Prompt configuration
@@ -403,7 +403,7 @@ provides: array                    # Required: Output connections
 #### Simple Prompt Template
 ```yaml
 - id: classification-prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   name: Classification Instructions
   description: Prompt for document classification
   config:
@@ -426,7 +426,7 @@ provides: array                    # Required: Output connections
 #### Complex Workflow Prompt
 ```yaml
 - id: workflow-prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   name: Multi-Step Workflow Instructions
   description: Complex workflow orchestration prompt
   config:
@@ -461,7 +461,7 @@ provides: array                    # Required: Output connections
 #### Versioned Prompt with Fallback
 ```yaml
 - id: analysis-prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   name: Analysis Instructions v2.1
   description: Updated analysis prompt with new requirements
   config:
@@ -951,7 +951,7 @@ system_prompt: |
 | User input | `genesis:chat_input` | Always required as entry point |
 | Display results | `genesis:chat_output` | Always required as exit point |
 | Text processing | `genesis:agent` | Core processing component |
-| Complex prompts | `genesis:prompt_template` | Use for reusable or complex prompts |
+| Complex prompts | `genesis:prompt` | Use for reusable or complex prompts |
 | External data | `genesis:mcp_tool` | For APIs, databases, calculations |
 | Internal search | `genesis:knowledge_hub_search` | For knowledge base access |
 

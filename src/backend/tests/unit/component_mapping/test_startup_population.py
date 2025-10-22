@@ -194,7 +194,7 @@ class TestStartupPopulationService:
         mock_mappings = [
             Mock(genesis_type="genesis:agent"),
             Mock(genesis_type="genesis:chat_input"),
-            Mock(genesis_type="genesis:prompt_template")
+            Mock(genesis_type="genesis:prompt")
         ]
 
         service.component_mapping_service.get_all_component_mappings = AsyncMock(

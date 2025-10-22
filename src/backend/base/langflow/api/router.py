@@ -15,6 +15,7 @@ from langflow.api.v1 import (
     login_router,
     mcp_projects_router,
     mcp_router,
+    models_router,
     monitor_router,
     openai_responses_router,
     projects_router,
@@ -53,6 +54,7 @@ router_v1.include_router(monitor_router)
 router_v1.include_router(folders_router)
 router_v1.include_router(projects_router)
 router_v1.include_router(agent_marketplace_router)
+router_v1.include_router(models_router)
 router_v1.include_router(spec_router)
 router_v1.include_router(starter_projects_router)
 router_v1.include_router(knowledge_bases_router)

@@ -1,7 +1,8 @@
 id: urn:agent:genesis:autonomize.ai:coordination-of-benefits-agent:1.0.0
 name: Coordination of Benefits Agent
 fullyQualifiedName: genesis.autonomize.ai.coordination_of_benefits_agent
-description: Confirms primary and secondary coverage via eligibility feeds, identifies incorrect billing sequences, and automatically adjusts claims according to COB rules to ensure proper coordination between multiple insurance plans
+description: Confirms primary and secondary coverage via eligibility feeds, identifies incorrect billing sequences, and automatically
+  adjusts claims according to COB rules to ensure proper coordination between multiple insurance plans
 domain: autonomize.ai
 subDomain: claims-operations
 version: 1.0.0
@@ -11,7 +12,8 @@ agentOwnerDisplayName: Claims Operations Team
 email: claims-operations@autonomize.ai
 status: ACTIVE
 kind: Single Agent
-agentGoal: Orchestrate coordination of benefits analysis by determining correct primary and secondary payer responsibilities, validating billing sequences, and ensuring compliant claims processing across multiple insurance coverages
+agentGoal: Orchestrate coordination of benefits analysis by determining correct primary and secondary payer responsibilities,
+  validating billing sequences, and ensuring compliant claims processing across multiple insurance coverages
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -75,42 +77,74 @@ components:
     useAs: input
     description: Claim data for COB analysis
 - id: eligibility-connector
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: Multi-Payer Eligibility Service
-  description: Connects to multiple payer eligibility systems for comprehensive coverage verification. Supports multiple payers (aetna, anthem, bcbs, cigna, humana, united_health) with real-time verification, historical coverage lookup, HIPAA compliance, and audit logging.
+  description: Connects to multiple payer eligibility systems for comprehensive coverage verification. Supports multiple payers
+    (aetna, anthem, bcbs, cigna, humana, united_health) with real-time verification, historical coverage lookup, HIPAA compliance,
+    and audit logging.
   config:
-    tool_name: multi_payer_eligibility_service
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: cob-orchestrator-agent
     useAs: tool
     description: Multi-payer eligibility verification
 - id: cob-rules-engine
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: COB Rules Engine
-  description: Applies industry-standard coordination of benefits rules and regulations including birthday rule, active employee rule, COBRA continuation rule, Medicare secondary payer, and workers compensation rule. CMS compliant with state-specific rules and auto-updates.
+  description: Applies industry-standard coordination of benefits rules and regulations including birthday rule, active employee
+    rule, COBRA continuation rule, Medicare secondary payer, and workers compensation rule. CMS compliant with state-specific
+    rules and auto-updates.
   config:
-    tool_name: cob_rules_engine
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: cob-orchestrator-agent
     useAs: tool
     description: COB rules application and analysis
 - id: claims-adjustment-processor
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: Claims Adjustment Processor
-  description: Processes claims adjustments and generates corrected billing sequences. Supports adjustment types including reverse, rebill, coordination, and offset with auto-adjustment capabilities, approval workflow, and audit trail.
+  description: Processes claims adjustments and generates corrected billing sequences. Supports adjustment types including
+    reverse, rebill, coordination, and offset with auto-adjustment capabilities, approval workflow, and audit trail.
   config:
-    tool_name: claims_adjustment_processor
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: cob-orchestrator-agent
     useAs: tool
     description: Claims adjustment processing
 - id: payer-database-connector
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: Payer Database Connector
   description: Connects to comprehensive payer database for plan information and COB history
   config:
-    tool_name: payer_database_service
-    description: Connects to comprehensive payer database for plan information and COB history
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: cob-orchestrator-agent
     useAs: tool
@@ -120,9 +154,27 @@ components:
   name: COB Orchestrator
   description: Main coordinator for comprehensive coordination of benefits analysis and processing
   config:
-    system_prompt: "You are a Coordination of Benefits (COB) Specialist with expertise in multi-payer insurance coordination and claims processing. Your role is to ensure accurate primary and secondary payer determination and proper billing sequence management.\n\n**COB Analysis Framework:**\n\n1. **Primary Payer Determination Rules:**\n   - **Birthday Rule**: For dependent children, parent with earlier birthday month/day\n   - **Active Employee Rule**: Active employee plan over retiree/COBRA plan\n   - **Non-Dependent Rule**: Individual's own plan is primary over spouse's plan\n   - **Medicare Secondary Payer**: Special rules for Medicare coordination\n   - **Workers' Compensation**: Always primary for work-related injuries\n\n2. **Coverage Verification Process:**\n   - Verify active coverage status for all identified plans\n   - Check coverage effective and termination dates\n   - Validate member eligibility and relationship status\n   - Confirm benefit levels and coverage types\n\n3.\
-      \ **Available Tools:**\n   - **Multi-Payer Eligibility Service** - Real-time coverage verification\n   - **COB Rules Engine** - Industry-standard COB rule application\n   - **Claims Adjustment Processor** - Automated adjustment processing\n   - **Payer Database Connector** - Historical COB data and plan information\n\n**Analysis Process:**\n1. Extract member demographics and current claim payer information\n2. Query all known payers for coverage verification\n3. Apply appropriate COB rules to determine payer priority\n4. Validate current billing sequence against COB determination\n5. Generate adjustment recommendations if sequence is incorrect\n6. Calculate estimated payment impacts for all payers\n\n**Decision Logic:**\n- If billing sequence is correct: Approve for processing\n- If sequence is incorrect with high confidence (>90%): Recommend automatic adjustment\n- If sequence is unclear: Flag for manual review with detailed analysis\n\n**Output Requirements:**\n- Clear primary and\
-      \ secondary payer identification\n- Detailed COB rules application explanation\n- Specific adjustment recommendations with financial impact\n- Processing timeline and member communication requirements\n- Compliance validation for state and federal regulations\n\nAlways ensure member benefits are maximized while maintaining accurate payer responsibility allocation. Consider special circumstances like Medicare, Medicaid, and workers' compensation coordination.\n"
+    system_prompt: "You are a Coordination of Benefits (COB) Specialist with expertise in multi-payer insurance coordination\
+      \ and claims processing. Your role is to ensure accurate primary and secondary payer determination and proper billing\
+      \ sequence management.\n\n**COB Analysis Framework:**\n\n1. **Primary Payer Determination Rules:**\n   - **Birthday\
+      \ Rule**: For dependent children, parent with earlier birthday month/day\n   - **Active Employee Rule**: Active employee\
+      \ plan over retiree/COBRA plan\n   - **Non-Dependent Rule**: Individual's own plan is primary over spouse's plan\n \
+      \  - **Medicare Secondary Payer**: Special rules for Medicare coordination\n   - **Workers' Compensation**: Always primary\
+      \ for work-related injuries\n\n2. **Coverage Verification Process:**\n   - Verify active coverage status for all identified\
+      \ plans\n   - Check coverage effective and termination dates\n   - Validate member eligibility and relationship status\n\
+      \   - Confirm benefit levels and coverage types\n\n3. **Available Tools:**\n   - **Multi-Payer Eligibility Service**\
+      \ - Real-time coverage verification\n   - **COB Rules Engine** - Industry-standard COB rule application\n   - **Claims\
+      \ Adjustment Processor** - Automated adjustment processing\n   - **Payer Database Connector** - Historical COB data\
+      \ and plan information\n\n**Analysis Process:**\n1. Extract member demographics and current claim payer information\n\
+      2. Query all known payers for coverage verification\n3. Apply appropriate COB rules to determine payer priority\n4.\
+      \ Validate current billing sequence against COB determination\n5. Generate adjustment recommendations if sequence is\
+      \ incorrect\n6. Calculate estimated payment impacts for all payers\n\n**Decision Logic:**\n- If billing sequence is\
+      \ correct: Approve for processing\n- If sequence is incorrect with high confidence (>90%): Recommend automatic adjustment\n\
+      - If sequence is unclear: Flag for manual review with detailed analysis\n\n**Output Requirements:**\n- Clear primary\
+      \ and secondary payer identification\n- Detailed COB rules application explanation\n- Specific adjustment recommendations\
+      \ with financial impact\n- Processing timeline and member communication requirements\n- Compliance validation for state\
+      \ and federal regulations\n\nAlways ensure member benefits are maximized while maintaining accurate payer responsibility\
+      \ allocation. Consider special circumstances like Medicare, Medicaid, and workers' compensation coordination.\n"
     temperature: 0.1
     max_tokens: 2500
   provides:

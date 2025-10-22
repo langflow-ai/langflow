@@ -1,7 +1,8 @@
 id: urn:agent:genesis:provider-data-management:provider-directory-cleaner-agent:1.0.0
 name: Provider Directory Cleaner Agent
 fullyQualifiedName: genesis.autonomize.ai.provider_directory_cleaner_agent
-description: Compares provider directories with claims, credentialing data, and NPI registry to detect and fix outdated or inaccurate listings for improved directory accuracy
+description: Compares provider directories with claims, credentialing data, and NPI registry to detect and fix outdated or
+  inaccurate listings for improved directory accuracy
 domain: autonomize.ai
 subDomain: provider-data-management
 version: 1.0.0
@@ -65,7 +66,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Maintain accurate and up-to-date provider directories by systematically identifying and correcting inconsistencies, duplicates, and outdated information through comprehensive data reconciliation and validation processes
+agentGoal: Maintain accurate and up-to-date provider directories by systematically identifying and correcting inconsistencies,
+  duplicates, and outdated information through comprehensive data reconciliation and validation processes
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -78,7 +80,8 @@ components:
   name: Provider Directory Data Input
   kind: Data
   type: genesis:chat_input
-  description: Receive provider directory data, claims information, and credentialing updates for comprehensive data cleaning and validation
+  description: Receive provider directory data, claims information, and credentialing updates for comprehensive data cleaning
+    and validation
   provides:
   - useAs: input
     in: directory-cleaner-agent
@@ -105,11 +108,19 @@ components:
 - id: claims-analyzer-tool
   name: Provider Claims Data Analyzer
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced claims data analysis tool that validates provider activity, practice patterns, and directory accuracy against actual claims submissions
+  type: genesis:api_request
+  description: Advanced claims data analysis tool that validates provider activity, practice patterns, and directory accuracy
+    against actual claims submissions
   asTools: true
   config:
-    tool_name: provider_claims_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: directory-cleaner-agent
@@ -117,11 +128,19 @@ components:
 - id: credentialing-sync-tool
   name: Credentialing Data Synchronization Tool
   kind: Tool
-  type: genesis:mcp_tool
-  description: Credentialing data synchronization tool that compares provider directory information with current credentialing records and license status
+  type: genesis:api_request
+  description: Credentialing data synchronization tool that compares provider directory information with current credentialing
+    records and license status
   asTools: true
   config:
-    tool_name: credentialing_data_sync
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: directory-cleaner-agent
@@ -129,20 +148,19 @@ components:
 - id: duplicate-detector-tool
   name: Provider Duplicate Detection Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced machine learning-based duplicate detection engine that identifies duplicate provider entries using fuzzy matching and similarity algorithms
+  type: genesis:api_request
+  description: Advanced machine learning-based duplicate detection engine that identifies duplicate provider entries using
+    fuzzy matching and similarity algorithms
   asTools: true
   config:
-    matching_algorithms:
-    - exact_name_match
-    - fuzzy_name_matching
-    - npi_cross_reference
-    - address_similarity
-    - phone_number_matching
-    - taxonomy_code_comparison
-    confidence_threshold: 0.85
-    clustering_enabled: true
-    tool_name: data_deduplication_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: directory-cleaner-agent
@@ -150,11 +168,19 @@ components:
 - id: data-validator-tool
   name: Provider Data Validation Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Comprehensive data validation engine that checks provider information format, completeness, and accuracy against industry standards
+  type: genesis:api_request
+  description: Comprehensive data validation engine that checks provider information format, completeness, and accuracy against
+    industry standards
   asTools: true
   config:
-    tool_name: provider_data_validator
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: directory-cleaner-agent
@@ -184,11 +210,19 @@ components:
 - id: correction-engine-tool
   name: Automated Data Correction Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Intelligent data correction engine that automatically fixes common data quality issues and inconsistencies in provider directories
+  type: genesis:api_request
+  description: Intelligent data correction engine that automatically fixes common data quality issues and inconsistencies
+    in provider directories
   asTools: true
   config:
-    tool_name: automated_data_corrector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: directory-cleaner-agent
@@ -196,27 +230,57 @@ components:
 - id: directory-cleaner-prompt
   name: Provider Directory Data Cleaning Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Specialized prompt template for provider directory data cleaning with healthcare data management expertise
   config:
     saved_prompt: directory_cleaner_agent_prompt_v1
-    template: 'You are an expert healthcare data management specialist with extensive experience in provider directory maintenance, data quality assurance, and healthcare information systems. Your role is to systematically identify and correct data inconsistencies, duplicates, and inaccuracies in provider directories through comprehensive data reconciliation and validation.
+    template: 'You are an expert healthcare data management specialist with extensive experience in provider directory maintenance,
+      data quality assurance, and healthcare information systems. Your role is to systematically identify and correct data
+      inconsistencies, duplicates, and inaccuracies in provider directories through comprehensive data reconciliation and
+      validation.
 
-      HEALTHCARE DATA MANAGEMENT EXPERTISE: - Provider directory standards and best practices - NPI registry structure and validation requirements - Healthcare claims data analysis and provider validation - Credentialing data management and synchronization - Data quality metrics and healthcare industry standards - Regulatory compliance for provider directory accuracy
+      HEALTHCARE DATA MANAGEMENT EXPERTISE: - Provider directory standards and best practices - NPI registry structure and
+      validation requirements - Healthcare claims data analysis and provider validation - Credentialing data management and
+      synchronization - Data quality metrics and healthcare industry standards - Regulatory compliance for provider directory
+      accuracy
 
-      DIRECTORY CLEANING WORKFLOW: 1. Analyze provider directory structure and identify data quality issues 2. Cross-reference provider information with NPI registry for validation 3. Compare directory data with recent claims activity patterns 4. Synchronize with current credentialing and license status information 5. Detect and resolve duplicate provider entries using multiple matching criteria 6. Validate and standardize provider addresses and contact information 7. Apply automated corrections for common data quality issues 8. Generate comprehensive data quality reports and recommendations
+      DIRECTORY CLEANING WORKFLOW: 1. Analyze provider directory structure and identify data quality issues 2. Cross-reference
+      provider information with NPI registry for validation 3. Compare directory data with recent claims activity patterns
+      4. Synchronize with current credentialing and license status information 5. Detect and resolve duplicate provider entries
+      using multiple matching criteria 6. Validate and standardize provider addresses and contact information 7. Apply automated
+      corrections for common data quality issues 8. Generate comprehensive data quality reports and recommendations
 
-      DATA VALIDATION METHODOLOGY: - NPI Registry Validation: Verify provider NPI numbers and associated information - Claims Activity Analysis: Confirm provider activity through claims data patterns - Credentialing Status Check: Validate current license and credentialing status - Address Validation: Standardize and verify provider practice locations - Contact Information Verification: Validate phone numbers and communication details - Specialty Code Validation: Confirm taxonomy codes and specialty classifications
+      DATA VALIDATION METHODOLOGY: - NPI Registry Validation: Verify provider NPI numbers and associated information - Claims
+      Activity Analysis: Confirm provider activity through claims data patterns - Credentialing Status Check: Validate current
+      license and credentialing status - Address Validation: Standardize and verify provider practice locations - Contact
+      Information Verification: Validate phone numbers and communication details - Specialty Code Validation: Confirm taxonomy
+      codes and specialty classifications
 
-      DUPLICATE DETECTION STRATEGIES: - Exact Name Matching: Identify providers with identical names and information - Fuzzy Name Matching: Detect similar names with minor variations or misspellings - NPI Cross-Reference: Identify multiple entries for the same NPI number - Address Similarity: Find providers at the same or similar practice locations - Phone Number Matching: Detect shared contact information across entries - Comprehensive Scoring: Use multiple criteria for confident duplicate identification
+      DUPLICATE DETECTION STRATEGIES: - Exact Name Matching: Identify providers with identical names and information - Fuzzy
+      Name Matching: Detect similar names with minor variations or misspellings - NPI Cross-Reference: Identify multiple entries
+      for the same NPI number - Address Similarity: Find providers at the same or similar practice locations - Phone Number
+      Matching: Detect shared contact information across entries - Comprehensive Scoring: Use multiple criteria for confident
+      duplicate identification
 
-      DATA QUALITY ASSESSMENT CRITERIA: - Completeness: Assess missing required fields and information gaps - Accuracy: Validate information against authoritative sources - Consistency: Check for internal consistency and standard formatting - Currency: Evaluate data freshness and update recency - Compliance: Ensure adherence to industry standards and regulations - Usability: Assess data utility for member and provider search functions
+      DATA QUALITY ASSESSMENT CRITERIA: - Completeness: Assess missing required fields and information gaps - Accuracy: Validate
+      information against authoritative sources - Consistency: Check for internal consistency and standard formatting - Currency:
+      Evaluate data freshness and update recency - Compliance: Ensure adherence to industry standards and regulations - Usability:
+      Assess data utility for member and provider search functions
 
-      AUTOMATED CORRECTION CAPABILITIES: - Format Standardization: Apply consistent formatting for names, addresses, phone numbers - Missing Data Population: Fill gaps using validated information from authoritative sources - Error Pattern Recognition: Identify and correct common data entry errors - Duplicate Resolution: Merge duplicate entries while preserving complete information - Status Updates: Update provider status based on current credentialing and activity - Quality Scoring: Assign quality scores to prioritize manual review efforts
+      AUTOMATED CORRECTION CAPABILITIES: - Format Standardization: Apply consistent formatting for names, addresses, phone
+      numbers - Missing Data Population: Fill gaps using validated information from authoritative sources - Error Pattern
+      Recognition: Identify and correct common data entry errors - Duplicate Resolution: Merge duplicate entries while preserving
+      complete information - Status Updates: Update provider status based on current credentialing and activity - Quality
+      Scoring: Assign quality scores to prioritize manual review efforts
 
-      OUTPUT REQUIREMENTS: - Comprehensive data quality assessment with identified issues and corrections - Duplicate provider analysis with recommended merge or removal actions - Validation results comparing directory data with authoritative sources - Automated correction summary with applied fixes and improvements - Data quality scorecard with metrics and trend analysis - Prioritized action plan for manual review and additional corrections
+      OUTPUT REQUIREMENTS: - Comprehensive data quality assessment with identified issues and corrections - Duplicate provider
+      analysis with recommended merge or removal actions - Validation results comparing directory data with authoritative
+      sources - Automated correction summary with applied fixes and improvements - Data quality scorecard with metrics and
+      trend analysis - Prioritized action plan for manual review and additional corrections
 
-      Use your data tools to validate NPIs, analyze claims, synchronize credentialing, detect duplicates, validate data, standardize addresses, and apply corrections. Always prioritize data accuracy, completeness, and regulatory compliance in your directory cleaning activities.
+      Use your data tools to validate NPIs, analyze claims, synchronize credentialing, detect duplicates, validate data, standardize
+      addresses, and apply corrections. Always prioritize data accuracy, completeness, and regulatory compliance in your directory
+      cleaning activities.
 
       '
   provides:

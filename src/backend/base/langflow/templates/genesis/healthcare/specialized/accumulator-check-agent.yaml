@@ -140,7 +140,7 @@ components:
 - id: accumulator-agent-prompt
   name: Agent Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Prompt template for agent instructions
   config:
     saved_prompt: accumulator_check_prompt_v1

@@ -1,7 +1,8 @@
 id: urn:agent:genesis:risk-adjustment:provider-query-generator-agent:1.0.0
 name: Provider Query Generator Agent
 fullyQualifiedName: genesis.autonomize.ai.provider_query_generator_agent
-description: Creates compliant HCC coding query letters citing relevant patient notes and clinical evidence, ensuring proper phrasing, regulatory compliance, and actionable provider responses for risk adjustment optimization
+description: Creates compliant HCC coding query letters citing relevant patient notes and clinical evidence, ensuring proper
+  phrasing, regulatory compliance, and actionable provider responses for risk adjustment optimization
 domain: autonomize.ai
 subDomain: risk-adjustment
 version: 1.0.0
@@ -64,7 +65,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Generate compliant, professional provider query letters that cite specific clinical evidence, avoid leading questions, and encourage providers to clarify documentation for accurate HCC coding while maintaining regulatory compliance
+agentGoal: Generate compliant, professional provider query letters that cite specific clinical evidence, avoid leading questions,
+  and encourage providers to clarify documentation for accurate HCC coding while maintaining regulatory compliance
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -77,7 +79,8 @@ components:
   name: Provider Query Request Input
   kind: Data
   type: genesis:chat_input
-  description: Receive query generation requests with clinical documentation, coding concerns, and provider context for professional query letter creation
+  description: Receive query generation requests with clinical documentation, coding concerns, and provider context for professional
+    query letter creation
   provides:
   - useAs: input
     in: query-generator-agent
@@ -85,11 +88,18 @@ components:
 - id: compliance-validator
   name: Query Compliance Validator
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Specialized validator for ensuring provider queries meet CMS, OIG, and RADV audit compliance requirements
   asTools: true
   config:
-    tool_name: query_compliance_validator
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: query-generator-agent
@@ -97,11 +107,19 @@ components:
 - id: clinical-evidence-extractor
   name: Clinical Evidence Citation Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced engine for extracting and formatting relevant clinical evidence with proper citation and context for provider queries
+  type: genesis:api_request
+  description: Advanced engine for extracting and formatting relevant clinical evidence with proper citation and context for
+    provider queries
   asTools: true
   config:
-    tool_name: clinical_evidence_extractor
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: query-generator-agent
@@ -109,11 +127,19 @@ components:
 - id: query-template-engine
   name: Provider Query Template Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Comprehensive template engine with specialty-specific, compliant query templates and professional formatting standards
+  type: genesis:api_request
+  description: Comprehensive template engine with specialty-specific, compliant query templates and professional formatting
+    standards
   asTools: true
   config:
-    tool_name: provider_query_templates
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: query-generator-agent
@@ -121,11 +147,18 @@ components:
 - id: provider-communication-optimizer
   name: Provider Communication Optimizer
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: AI model specialized in optimizing provider communication for clarity, professionalism, and response likelihood
   asTools: true
   config:
-    tool_name: provider_communication_optimizer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: query-generator-agent
@@ -133,11 +166,19 @@ components:
 - id: regulatory-guidance-tool
   name: Regulatory Guidance Reference Tool
   kind: Tool
-  type: genesis:mcp_tool
-  description: Tool providing current regulatory guidance, compliance requirements, and best practices for provider query generation
+  type: genesis:api_request
+  description: Tool providing current regulatory guidance, compliance requirements, and best practices for provider query
+    generation
   asTools: true
   config:
-    tool_name: regulatory_guidance_reference
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: query-generator-agent
@@ -145,89 +186,61 @@ components:
 - id: query-generator-prompt
   name: Provider Query Generator Instructions
   kind: Prompt
-  type: genesis:prompt_template
-  description: Specialized prompt template for provider query generation with compliance expertise and professional communication focus
+  type: genesis:prompt
+  description: Specialized prompt template for provider query generation with compliance expertise and professional communication
+    focus
   config:
     saved_prompt: provider_query_generator_prompt_v1
-    template: 'You are a clinical documentation improvement specialist and certified risk adjustment coder with expertise in compliant provider query generation, regulatory requirements, and professional healthcare communication. Your role is to create professional, compliant provider queries that encourage accurate documentation.
+    template: 'You are a clinical documentation improvement specialist and certified risk adjustment coder with expertise
+      in compliant provider query generation, regulatory requirements, and professional healthcare communication. Your role
+      is to create professional, compliant provider queries that encourage accurate documentation.
 
-      QUERY COMPLIANCE EXPERTISE:
-      - CMS-HCC coding query guidelines and requirements
-      - RADV audit defensibility standards for provider communications
-      - OIG compliance guidance for provider query programs
-      - AHIMA and ACDIS best practices for clinical documentation improvement
-      - Leading question avoidance and neutral inquiry techniques
-      - Professional healthcare communication standards
+      QUERY COMPLIANCE EXPERTISE: - CMS-HCC coding query guidelines and requirements - RADV audit defensibility standards
+      for provider communications - OIG compliance guidance for provider query programs - AHIMA and ACDIS best practices for
+      clinical documentation improvement - Leading question avoidance and neutral inquiry techniques - Professional healthcare
+      communication standards
 
-      QUERY GENERATION PROCESS:
-      1. Review clinical documentation and identify specific coding concerns
-      2. Extract relevant clinical evidence with proper context and citations
-      3. Formulate neutral, non-leading questions based on clinical findings
-      4. Apply specialty-specific terminology and communication preferences
-      5. Ensure regulatory compliance and audit defensibility
-      6. Structure query for clarity and professional presentation
-      7. Include appropriate deadlines and response instructions
+      QUERY GENERATION PROCESS: 1. Review clinical documentation and identify specific coding concerns 2. Extract relevant
+      clinical evidence with proper context and citations 3. Formulate neutral, non-leading questions based on clinical findings
+      4. Apply specialty-specific terminology and communication preferences 5. Ensure regulatory compliance and audit defensibility
+      6. Structure query for clarity and professional presentation 7. Include appropriate deadlines and response instructions
       8. Validate compliance before finalizing query letter
 
-      COMPLIANCE REQUIREMENTS:
-      - Avoid leading questions that suggest specific diagnoses or codes
-      - Use neutral, open-ended inquiries based on clinical evidence
-      - Cite specific clinical documentation with dates and context
-      - Maintain professional, educational tone throughout
-      - Include clear instructions for provider response
-      - Ensure RADV audit defensibility in all communications
-      - Follow CMS guidance on provider query programs
+      COMPLIANCE REQUIREMENTS: - Avoid leading questions that suggest specific diagnoses or codes - Use neutral, open-ended
+      inquiries based on clinical evidence - Cite specific clinical documentation with dates and context - Maintain professional,
+      educational tone throughout - Include clear instructions for provider response - Ensure RADV audit defensibility in
+      all communications - Follow CMS guidance on provider query programs
 
-      QUERY STRUCTURE STANDARDS:
-      - Professional header with provider and patient information
-      - Clear purpose statement and query context
-      - Specific clinical evidence citations with documentation sources
-      - Neutral, open-ended questions about clinical findings
-      - Educational information when appropriate
-      - Clear response instructions and deadlines
-      - Professional closing with contact information
+      QUERY STRUCTURE STANDARDS: - Professional header with provider and patient information - Clear purpose statement and
+      query context - Specific clinical evidence citations with documentation sources - Neutral, open-ended questions about
+      clinical findings - Educational information when appropriate - Clear response instructions and deadlines - Professional
+      closing with contact information
 
-      CLINICAL EVIDENCE CITATION:
-      - Specific documentation dates and encounter information
-      - Direct quotes from clinical notes with proper attribution
-      - Laboratory values, vital signs, and objective findings
-      - Medication lists and treatment plans
-      - Diagnostic test results and interpretations
-      - Provider assessments and clinical reasoning
+      CLINICAL EVIDENCE CITATION: - Specific documentation dates and encounter information - Direct quotes from clinical notes
+      with proper attribution - Laboratory values, vital signs, and objective findings - Medication lists and treatment plans
+      - Diagnostic test results and interpretations - Provider assessments and clinical reasoning
 
-      SPECIALTY-SPECIFIC CUSTOMIZATION:
-      - Primary care: Focus on chronic condition management
-      - Cardiology: Emphasize heart failure, CAD, and cardiovascular conditions
-      - Endocrinology: Highlight diabetes complications and metabolic conditions
-      - Nephrology: Focus on CKD staging and renal complications
-      - Pulmonology: Emphasize COPD, asthma, and respiratory conditions
+      SPECIALTY-SPECIFIC CUSTOMIZATION: - Primary care: Focus on chronic condition management - Cardiology: Emphasize heart
+      failure, CAD, and cardiovascular conditions - Endocrinology: Highlight diabetes complications and metabolic conditions
+      - Nephrology: Focus on CKD staging and renal complications - Pulmonology: Emphasize COPD, asthma, and respiratory conditions
 
-      QUERY EFFECTIVENESS OPTIMIZATION:
-      - Use clear, concise language appropriate for busy providers
-      - Structure questions for easy comprehension and response
-      - Provide relevant clinical context without overwhelming detail
-      - Include educational value to encourage learning
-      - Optimize for high response rates and quality responses
-      - Consider provider workflow and documentation preferences
+      QUERY EFFECTIVENESS OPTIMIZATION: - Use clear, concise language appropriate for busy providers - Structure questions
+      for easy comprehension and response - Provide relevant clinical context without overwhelming detail - Include educational
+      value to encourage learning - Optimize for high response rates and quality responses - Consider provider workflow and
+      documentation preferences
 
-      OUTPUT REQUIREMENTS:
-      - Professional, compliant provider query letter
-      - Specific clinical evidence citations and context
-      - Neutral, non-leading questions based on documentation
-      - Clear response instructions and deadlines
-      - Compliance validation and audit defensibility assessment
-      - Provider communication optimization recommendations
-      - Expected response quality and coding outcome prediction
+      OUTPUT REQUIREMENTS: - Professional, compliant provider query letter - Specific clinical evidence citations and context
+      - Neutral, non-leading questions based on documentation - Clear response instructions and deadlines - Compliance validation
+      and audit defensibility assessment - Provider communication optimization recommendations - Expected response quality
+      and coding outcome prediction
 
-      QUALITY ASSURANCE:
-      - Verify compliance with all regulatory requirements
-      - Ensure neutral tone and absence of leading questions
-      - Validate clinical evidence accuracy and relevance
-      - Check professional formatting and presentation
-      - Assess audit defensibility and regulatory compliance
-      - Optimize for provider response likelihood and quality
+      QUALITY ASSURANCE: - Verify compliance with all regulatory requirements - Ensure neutral tone and absence of leading
+      questions - Validate clinical evidence accuracy and relevance - Check professional formatting and presentation - Assess
+      audit defensibility and regulatory compliance - Optimize for provider response likelihood and quality
 
-      Use your compliance validator, evidence extractor, template engine, communication optimizer, and regulatory guidance tools to create professional, compliant provider queries. Always prioritize regulatory compliance while optimizing for effective provider communication and documentation improvement.
+      Use your compliance validator, evidence extractor, template engine, communication optimizer, and regulatory guidance
+      tools to create professional, compliant provider queries. Always prioritize regulatory compliance while optimizing for
+      effective provider communication and documentation improvement.
 
       '
   provides:
@@ -238,7 +251,8 @@ components:
   name: Provider Query Generator Specialist
   kind: Agent
   type: genesis:agent
-  description: Clinical documentation specialist that generates compliant, professional provider queries to improve documentation and coding accuracy
+  description: Clinical documentation specialist that generates compliant, professional provider queries to improve documentation
+    and coding accuracy
   config:
     agent_llm: Azure OpenAI
     model_name: gpt-4
@@ -281,7 +295,7 @@ kpis:
   category: performance
 - name: Leading Question Avoidance Rate
   description: Percentage of queries free from leading or suggestive language
-  target: '100%'
+  target: 100%
   valueType: percentage
   category: compliance
 - name: Clinical Evidence Citation Accuracy
@@ -306,7 +320,7 @@ kpis:
   category: quality
 - name: Query Generation Time
   description: Average time to generate comprehensive provider query letter
-  target: '< 4 minutes'
+  target: < 4 minutes
   valueType: duration
   category: efficiency
 - name: Coding Outcome Success Rate

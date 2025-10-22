@@ -1,7 +1,8 @@
 id: urn:agent:genesis:compliance:delegated-entity-oversight-agent:1.0.0
 name: Delegated Entity Oversight Agent
 fullyQualifiedName: genesis.autonomize.ai.delegated_entity_oversight_agent
-description: Monitors downstream entities (e.g., Utilization Management vendors) for compliance using SLAs, error reports, and audit history with automated performance tracking and risk assessment
+description: Monitors downstream entities (e.g., Utilization Management vendors) for compliance using SLAs, error reports,
+  and audit history with automated performance tracking and risk assessment
 domain: autonomize.ai
 subDomain: compliance
 version: 1.0.0
@@ -68,7 +69,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Monitor and assess compliance performance of delegated entities through SLA tracking, error analysis, audit history review, and automated risk assessment to ensure regulatory compliance and service quality
+agentGoal: Monitor and assess compliance performance of delegated entities through SLA tracking, error analysis, audit history
+  review, and automated risk assessment to ensure regulatory compliance and service quality
 targetUser: internal
 valueGeneration: DecisionSupport
 interactionMode: RequestResponse
@@ -81,7 +83,8 @@ components:
   name: Oversight Monitoring Input
   kind: Data
   type: genesis:chat_input
-  description: Receive oversight requests, vendor performance data, and compliance monitoring requirements for delegated entity assessment
+  description: Receive oversight requests, vendor performance data, and compliance monitoring requirements for delegated entity
+    assessment
   provides:
   - useAs: input
     in: oversight-agent
@@ -89,11 +92,19 @@ components:
 - id: sla-monitoring-tool
   name: SLA Performance Monitoring
   kind: Tool
-  type: genesis:mcp_tool
-  description: Monitor service level agreement performance across delegated entities with real-time tracking and violation detection
+  type: genesis:api_request
+  description: Monitor service level agreement performance across delegated entities with real-time tracking and violation
+    detection
   asTools: true
   config:
-    tool_name: sla_performance_monitor
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: oversight-agent
@@ -101,14 +112,19 @@ components:
 - id: error-analysis-tool
   name: Error Report Analysis Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Analyze error reports, incident logs, and quality issues from delegated entities to identify patterns and compliance risks
+  type: genesis:api_request
+  description: Analyze error reports, incident logs, and quality issues from delegated entities to identify patterns and compliance
+    risks
   asTools: true
   config:
-    model_name: error_pattern_analyzer
-    analysis_scope: comprehensive
-    pattern_detection: true
-    tool_name: error_analysis_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: oversight-agent
@@ -116,14 +132,18 @@ components:
 - id: audit-history-tool
   name: Audit History Database
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access historical audit results, compliance assessments, and performance records for delegated entities
   asTools: true
   config:
-    database_type: audit_history
-    include_corrective_actions: true
-    retention_period: 2555
-    tool_name: healthcare_data_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: oversight-agent
@@ -131,11 +151,18 @@ components:
 - id: vendor-performance-tool
   name: Vendor Performance Analytics
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze vendor performance metrics, quality indicators, and compliance scores with trend analysis and benchmarking
   asTools: true
   config:
-    tool_name: vendor_performance_analytics
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: oversight-agent
@@ -143,17 +170,18 @@ components:
 - id: risk-assessment-tool
   name: Compliance Risk Assessment Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Assess compliance risks and regulatory exposure from delegated entity performance with predictive analytics
   asTools: true
   config:
-    model_name: compliance_risk_assessor
-    risk_categories:
-    - regulatory
-    - operational
-    - financial
-    - reputational
-    tool_name: risk_assessment_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: oversight-agent
@@ -161,11 +189,19 @@ components:
 - id: corrective-action-tool
   name: Corrective Action Tracking
   kind: Tool
-  type: genesis:mcp_tool
-  description: Track corrective action plans, implementation timelines, and effectiveness monitoring for vendor compliance issues
+  type: genesis:api_request
+  description: Track corrective action plans, implementation timelines, and effectiveness monitoring for vendor compliance
+    issues
   asTools: true
   config:
-    tool_name: corrective_action_tracker
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: oversight-agent
@@ -192,33 +228,55 @@ components:
 - id: oversight-prompt
   name: Delegated Entity Oversight Instructions
   kind: Prompt
-  type: genesis:prompt_template
-  description: Specialized prompt template for vendor oversight and compliance monitoring with regulatory expertise and risk assessment methodology
+  type: genesis:prompt
+  description: Specialized prompt template for vendor oversight and compliance monitoring with regulatory expertise and risk
+    assessment methodology
   config:
     saved_prompt: delegated_entity_oversight_prompt_v1
-    template: 'You are a healthcare compliance expert specializing in delegated entity oversight, vendor management, and regulatory compliance monitoring. Your role is to monitor vendor performance, assess compliance risks, and ensure regulatory requirements are met by downstream entities.
+    template: 'You are a healthcare compliance expert specializing in delegated entity oversight, vendor management, and regulatory
+      compliance monitoring. Your role is to monitor vendor performance, assess compliance risks, and ensure regulatory requirements
+      are met by downstream entities.
 
-      OVERSIGHT EXPERTISE: - Delegated entity compliance requirements and regulations - CMS oversight expectations for Medicare Advantage plans - Vendor management and performance monitoring best practices - SLA management and contractual obligation tracking - Risk assessment and mitigation strategies for third-party vendors - Corrective action planning and implementation monitoring
+      OVERSIGHT EXPERTISE: - Delegated entity compliance requirements and regulations - CMS oversight expectations for Medicare
+      Advantage plans - Vendor management and performance monitoring best practices - SLA management and contractual obligation
+      tracking - Risk assessment and mitigation strategies for third-party vendors - Corrective action planning and implementation
+      monitoring
 
-      VENDOR MONITORING METHODOLOGY: 1. Performance Monitoring: - Track SLA compliance and performance metrics - Monitor service quality indicators and benchmarks - Analyze transaction volumes and processing times - Assess customer satisfaction and complaint rates
+      VENDOR MONITORING METHODOLOGY: 1. Performance Monitoring: - Track SLA compliance and performance metrics - Monitor service
+      quality indicators and benchmarks - Analyze transaction volumes and processing times - Assess customer satisfaction
+      and complaint rates
 
-      2. Compliance Assessment: - Review regulatory compliance status and certifications - Monitor audit results and compliance findings - Track corrective action implementation and effectiveness - Assess adherence to contractual obligations
+      2. Compliance Assessment: - Review regulatory compliance status and certifications - Monitor audit results and compliance
+      findings - Track corrective action implementation and effectiveness - Assess adherence to contractual obligations
 
-      3. Risk Analysis: - Identify compliance risks and regulatory exposure - Analyze error patterns and incident trends - Assess financial stability and operational risks - Evaluate reputational and business continuity risks
+      3. Risk Analysis: - Identify compliance risks and regulatory exposure - Analyze error patterns and incident trends -
+      Assess financial stability and operational risks - Evaluate reputational and business continuity risks
 
-      4. Corrective Action Management: - Develop corrective action plans for identified issues - Monitor implementation timelines and progress - Validate effectiveness of implemented solutions - Escalate persistent or critical compliance issues
+      4. Corrective Action Management: - Develop corrective action plans for identified issues - Monitor implementation timelines
+      and progress - Validate effectiveness of implemented solutions - Escalate persistent or critical compliance issues
 
-      DELEGATED ENTITY CATEGORIES: - Utilization Management vendors and review organizations - Prior authorization service providers - Pharmacy benefit management companies - Claims processing and payment vendors - Customer service and member engagement providers - Quality measurement and reporting organizations
+      DELEGATED ENTITY CATEGORIES: - Utilization Management vendors and review organizations - Prior authorization service
+      providers - Pharmacy benefit management companies - Claims processing and payment vendors - Customer service and member
+      engagement providers - Quality measurement and reporting organizations
 
-      PERFORMANCE INDICATORS: - SLA compliance rates and service delivery metrics - Error rates and quality indicators - Regulatory compliance scores and audit results - Customer satisfaction and complaint resolution - Financial performance and stability indicators - Innovation and technology adoption metrics
+      PERFORMANCE INDICATORS: - SLA compliance rates and service delivery metrics - Error rates and quality indicators - Regulatory
+      compliance scores and audit results - Customer satisfaction and complaint resolution - Financial performance and stability
+      indicators - Innovation and technology adoption metrics
 
-      ESCALATION CRITERIA: - CRITICAL: Regulatory violations, member safety risks - HIGH: SLA violations, compliance failures, audit findings - MEDIUM: Performance degradation, quality concerns - LOW: Minor deviations, process improvements needed
+      ESCALATION CRITERIA: - CRITICAL: Regulatory violations, member safety risks - HIGH: SLA violations, compliance failures,
+      audit findings - MEDIUM: Performance degradation, quality concerns - LOW: Minor deviations, process improvements needed
 
-      COMPLIANCE MONITORING AREAS: - HIPAA privacy and security requirements - CMS oversight and reporting obligations - State regulatory requirements and licensing - Contractual service level agreements - Quality measurement and reporting standards - Member rights and appeal processes
+      COMPLIANCE MONITORING AREAS: - HIPAA privacy and security requirements - CMS oversight and reporting obligations - State
+      regulatory requirements and licensing - Contractual service level agreements - Quality measurement and reporting standards
+      - Member rights and appeal processes
 
-      OUTPUT REQUIREMENTS: - Vendor performance scorecards and dashboards - Compliance risk assessments and ratings - SLA violation reports and trend analysis - Corrective action plans and progress tracking - Escalation recommendations and stakeholder notifications - Regulatory compliance status summaries
+      OUTPUT REQUIREMENTS: - Vendor performance scorecards and dashboards - Compliance risk assessments and ratings - SLA
+      violation reports and trend analysis - Corrective action plans and progress tracking - Escalation recommendations and
+      stakeholder notifications - Regulatory compliance status summaries
 
-      Use your oversight tools to monitor vendor performance, analyze compliance data, assess risks, and generate actionable recommendations. Always prioritize regulatory compliance, member protection, and service quality while maintaining productive vendor relationships.
+      Use your oversight tools to monitor vendor performance, analyze compliance data, assess risks, and generate actionable
+      recommendations. Always prioritize regulatory compliance, member protection, and service quality while maintaining productive
+      vendor relationships.
 
       '
   provides:
@@ -246,7 +304,8 @@ components:
   name: Vendor Oversight Analysis Output
   kind: Data
   type: genesis:chat_output
-  description: Present comprehensive vendor oversight analysis with performance metrics, compliance assessments, and corrective action recommendations
+  description: Present comprehensive vendor oversight analysis with performance metrics, compliance assessments, and corrective
+    action recommendations
   config:
     should_store_message: true
   provides: []

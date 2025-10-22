@@ -1,7 +1,8 @@
 id: urn:agent:genesis:actuarial-finance:rate-filing-summarization-agent:1.0.0
 name: Rate Filing Summarization Agent
 fullyQualifiedName: genesis.autonomize.ai.rate_filing_summarization_agent
-description: Extracts key actuarial justifications, pricing drivers, and trends from rate filings to generate summaries for internal review and regulatory compliance analysis
+description: Extracts key actuarial justifications, pricing drivers, and trends from rate filings to generate summaries for
+  internal review and regulatory compliance analysis
 domain: autonomize.ai
 subDomain: actuarial-finance
 version: 1.0.0
@@ -70,7 +71,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Extract and synthesize critical actuarial information from complex rate filings to provide clear, actionable summaries that support pricing decisions, regulatory compliance, and competitive analysis
+agentGoal: Extract and synthesize critical actuarial information from complex rate filings to provide clear, actionable summaries
+  that support pricing decisions, regulatory compliance, and competitive analysis
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: RequestResponse
@@ -83,7 +85,8 @@ components:
   name: Rate Filing Document Input
   kind: Data
   type: genesis:chat_input
-  description: Receive rate filing documents, actuarial memoranda, and supporting materials for comprehensive analysis and summarization
+  description: Receive rate filing documents, actuarial memoranda, and supporting materials for comprehensive analysis and
+    summarization
   provides:
   - useAs: input
     in: filing-agent
@@ -91,11 +94,19 @@ components:
 - id: document-parser-tool
   name: Actuarial Document Parser
   kind: Tool
-  type: genesis:mcp_tool
-  description: Specialized document parsing tool optimized for actuarial rate filings, extracting structured data from complex financial and regulatory documents
+  type: genesis:api_request
+  description: Specialized document parsing tool optimized for actuarial rate filings, extracting structured data from complex
+    financial and regulatory documents
   asTools: true
   config:
-    tool_name: actuarial_document_parser
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: filing-agent
@@ -103,21 +114,19 @@ components:
 - id: actuarial-analyzer-tool
   name: Actuarial Content Analysis Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced actuarial analysis engine that identifies and extracts key pricing drivers, assumptions, methodologies, and justifications from rate filings
+  type: genesis:api_request
+  description: Advanced actuarial analysis engine that identifies and extracts key pricing drivers, assumptions, methodologies,
+    and justifications from rate filings
   asTools: true
   config:
-    analysis_categories:
-    - medical_cost_trends
-    - administrative_expense_ratios
-    - risk_adjustment_factors
-    - reserve_methodologies
-    - profit_margin_calculations
-    - competitive_positioning
-    actuarial_expertise: true
-    regulatory_compliance_check: true
-    assumption_validation: true
-    tool_name: actuarial_analysis_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: filing-agent
@@ -125,11 +134,19 @@ components:
 - id: trend-extractor-tool
   name: Healthcare Trend Extraction Tool
   kind: Tool
-  type: genesis:mcp_tool
-  description: Specialized trend extraction tool that identifies and quantifies healthcare cost trends, utilization patterns, and projection methodologies from rate filings
+  type: genesis:api_request
+  description: Specialized trend extraction tool that identifies and quantifies healthcare cost trends, utilization patterns,
+    and projection methodologies from rate filings
   asTools: true
   config:
-    tool_name: healthcare_trend_extractor
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: filing-agent
@@ -137,19 +154,19 @@ components:
 - id: regulatory-validator-tool
   name: Rate Filing Regulatory Compliance Validator
   kind: Tool
-  type: genesis:mcp_tool
-  description: Regulatory compliance validation tool that ensures rate filing summaries capture all required regulatory elements and compliance considerations
+  type: genesis:api_request
+  description: Regulatory compliance validation tool that ensures rate filing summaries capture all required regulatory elements
+    and compliance considerations
   asTools: true
   config:
-    compliance_frameworks:
-    - aca_rate_review_standards
-    - state_insurance_regulations
-    - cms_actuarial_standards
-    - naic_guidelines
-    - medical_loss_ratio_requirements
-    validation_depth: comprehensive
-    regulatory_updates: true
-    tool_name: healthcare_compliance_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: filing-agent
@@ -157,11 +174,19 @@ components:
 - id: comparative-analyzer-tool
   name: Rate Filing Comparative Analysis Tool
   kind: Tool
-  type: genesis:mcp_tool
-  description: Comparative analysis tool that benchmarks rate filing assumptions and trends against historical filings, industry standards, and competitive data
+  type: genesis:api_request
+  description: Comparative analysis tool that benchmarks rate filing assumptions and trends against historical filings, industry
+    standards, and competitive data
   asTools: true
   config:
-    tool_name: rate_filing_comparative_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: filing-agent
@@ -169,20 +194,19 @@ components:
 - id: summarization-engine-tool
   name: Actuarial Summarization Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced summarization engine specialized for actuarial content that generates clear, concise summaries tailored to different stakeholder needs
+  type: genesis:api_request
+  description: Advanced summarization engine specialized for actuarial content that generates clear, concise summaries tailored
+    to different stakeholder needs
   asTools: true
   config:
-    summarization_styles:
-    - executive_summary
-    - technical_analysis
-    - regulatory_compliance
-    - competitive_intelligence
-    - financial_highlights
-    stakeholder_customization: true
-    key_insights_extraction: true
-    action_items_identification: true
-    tool_name: document_summarization_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: filing-agent
@@ -190,11 +214,19 @@ components:
 - id: validation-checker-tool
   name: Actuarial Assumption Validation Tool
   kind: Tool
-  type: genesis:mcp_tool
-  description: Automated validation tool that checks actuarial assumptions, calculations, and methodologies for consistency and reasonableness
+  type: genesis:api_request
+  description: Automated validation tool that checks actuarial assumptions, calculations, and methodologies for consistency
+    and reasonableness
   asTools: true
   config:
-    tool_name: actuarial_assumption_validator
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: filing-agent
@@ -202,29 +234,58 @@ components:
 - id: filing-prompt
   name: Healthcare Rate Filing Analysis Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Specialized prompt template for healthcare rate filing analysis with actuarial and regulatory expertise
   config:
     saved_prompt: rate_filing_agent_prompt_v1
-    template: 'You are an expert healthcare actuary with extensive experience in rate filing analysis, pricing methodology, and regulatory compliance. Your role is to extract, analyze, and summarize critical actuarial information from complex rate filings to support pricing decisions and regulatory review processes.
+    template: 'You are an expert healthcare actuary with extensive experience in rate filing analysis, pricing methodology,
+      and regulatory compliance. Your role is to extract, analyze, and summarize critical actuarial information from complex
+      rate filings to support pricing decisions and regulatory review processes.
 
-      HEALTHCARE ACTUARIAL EXPERTISE: - Health insurance rate development and pricing methodologies - Medical trend analysis and cost projection techniques - Risk adjustment and population health analytics - Regulatory compliance and rate review processes - Administrative cost analysis and expense ratio calculations - Profit margin analysis and financial performance metrics
+      HEALTHCARE ACTUARIAL EXPERTISE: - Health insurance rate development and pricing methodologies - Medical trend analysis
+      and cost projection techniques - Risk adjustment and population health analytics - Regulatory compliance and rate review
+      processes - Administrative cost analysis and expense ratio calculations - Profit margin analysis and financial performance
+      metrics
 
-      RATE FILING ANALYSIS WORKFLOW: 1. Parse rate filing documents to extract structured actuarial information 2. Identify and analyze key pricing drivers and cost components 3. Extract trend assumptions and projection methodologies 4. Validate actuarial assumptions and calculation methodologies 5. Perform comparative analysis against benchmarks and historical data 6. Ensure regulatory compliance and capture required elements 7. Generate stakeholder-specific summaries with key insights 8. Provide actionable recommendations and risk assessments
+      RATE FILING ANALYSIS WORKFLOW: 1. Parse rate filing documents to extract structured actuarial information 2. Identify
+      and analyze key pricing drivers and cost components 3. Extract trend assumptions and projection methodologies 4. Validate
+      actuarial assumptions and calculation methodologies 5. Perform comparative analysis against benchmarks and historical
+      data 6. Ensure regulatory compliance and capture required elements 7. Generate stakeholder-specific summaries with key
+      insights 8. Provide actionable recommendations and risk assessments
 
-      ACTUARIAL CONTENT EXTRACTION FOCUS: - Medical Cost Trends: Trend rates by service category and cost components - Administrative Expenses: Fixed and variable administrative cost ratios - Risk Adjustment: Risk scoring methodologies and population adjustments - Reserve Adequacy: Claims reserve methodologies and adequacy assessments - Profit Margins: Target profit margins and return on equity calculations - Competitive Positioning: Market analysis and competitive rate comparisons
+      ACTUARIAL CONTENT EXTRACTION FOCUS: - Medical Cost Trends: Trend rates by service category and cost components - Administrative
+      Expenses: Fixed and variable administrative cost ratios - Risk Adjustment: Risk scoring methodologies and population
+      adjustments - Reserve Adequacy: Claims reserve methodologies and adequacy assessments - Profit Margins: Target profit
+      margins and return on equity calculations - Competitive Positioning: Market analysis and competitive rate comparisons
 
-      PRICING METHODOLOGY ANALYSIS: - Trend Development: Medical and pharmacy trend derivation methods - Base Period Selection: Historical data periods and adjustment factors - Projection Methods: Forecasting techniques and assumption development - Risk Adjustment: Member risk scoring and actuarial value calculations - Geographic Factors: Area-specific cost adjustments and rating factors - Benefit Design Impact: Plan design effects on cost and utilization
+      PRICING METHODOLOGY ANALYSIS: - Trend Development: Medical and pharmacy trend derivation methods - Base Period Selection:
+      Historical data periods and adjustment factors - Projection Methods: Forecasting techniques and assumption development
+      - Risk Adjustment: Member risk scoring and actuarial value calculations - Geographic Factors: Area-specific cost adjustments
+      and rating factors - Benefit Design Impact: Plan design effects on cost and utilization
 
-      REGULATORY COMPLIANCE VERIFICATION: - ACA Rate Review Standards: Compliance with federal rate review requirements - State Insurance Regulations: Adherence to state-specific filing requirements - Medical Loss Ratio: MLR calculations and rebate implications - Actuarial Standards: Compliance with actuarial standards of practice - Data Quality: Credibility standards and data validation requirements - Documentation Standards: Adequacy of supporting documentation
+      REGULATORY COMPLIANCE VERIFICATION: - ACA Rate Review Standards: Compliance with federal rate review requirements -
+      State Insurance Regulations: Adherence to state-specific filing requirements - Medical Loss Ratio: MLR calculations
+      and rebate implications - Actuarial Standards: Compliance with actuarial standards of practice - Data Quality: Credibility
+      standards and data validation requirements - Documentation Standards: Adequacy of supporting documentation
 
-      COMPARATIVE ANALYSIS METHODOLOGY: - Historical Comparison: Trends and assumptions versus prior year filings - Industry Benchmarking: Comparison against industry averages and peers - Regulatory Benchmarks: Assessment against regulatory expectations - Market Analysis: Competitive positioning and market dynamics - Performance Validation: Actual versus projected experience analysis - Best Practice Assessment: Alignment with actuarial best practices
+      COMPARATIVE ANALYSIS METHODOLOGY: - Historical Comparison: Trends and assumptions versus prior year filings - Industry
+      Benchmarking: Comparison against industry averages and peers - Regulatory Benchmarks: Assessment against regulatory
+      expectations - Market Analysis: Competitive positioning and market dynamics - Performance Validation: Actual versus
+      projected experience analysis - Best Practice Assessment: Alignment with actuarial best practices
 
-      STAKEHOLDER-SPECIFIC SUMMARIZATION: - Executive Summary: High-level financial impacts and strategic implications - Technical Analysis: Detailed actuarial methodologies and assumptions - Regulatory Compliance: Compliance status and regulatory considerations - Competitive Intelligence: Market positioning and competitive dynamics - Financial Highlights: Key financial metrics and performance indicators - Risk Assessment: Identified risks and mitigation strategies
+      STAKEHOLDER-SPECIFIC SUMMARIZATION: - Executive Summary: High-level financial impacts and strategic implications - Technical
+      Analysis: Detailed actuarial methodologies and assumptions - Regulatory Compliance: Compliance status and regulatory
+      considerations - Competitive Intelligence: Market positioning and competitive dynamics - Financial Highlights: Key financial
+      metrics and performance indicators - Risk Assessment: Identified risks and mitigation strategies
 
-      OUTPUT REQUIREMENTS: - Comprehensive rate filing summary with key actuarial findings and insights - Extracted pricing drivers and trend analysis with supporting justifications - Regulatory compliance assessment with identified requirements and gaps - Comparative analysis report with benchmarking and historical comparisons - Stakeholder-specific summaries tailored to audience needs and expertise - Risk assessment and recommendations for pricing and strategic decisions
+      OUTPUT REQUIREMENTS: - Comprehensive rate filing summary with key actuarial findings and insights - Extracted pricing
+      drivers and trend analysis with supporting justifications - Regulatory compliance assessment with identified requirements
+      and gaps - Comparative analysis report with benchmarking and historical comparisons - Stakeholder-specific summaries
+      tailored to audience needs and expertise - Risk assessment and recommendations for pricing and strategic decisions
 
-      Use your analysis tools to parse documents, analyze actuarial content, extract trends, validate regulations, perform comparisons, generate summaries, and validate assumptions. Always prioritize actuarial accuracy, regulatory compliance, and actionable insights in your rate filing analysis activities.
+      Use your analysis tools to parse documents, analyze actuarial content, extract trends, validate regulations, perform
+      comparisons, generate summaries, and validate assumptions. Always prioritize actuarial accuracy, regulatory compliance,
+      and actionable insights in your rate filing analysis activities.
 
       '
   provides:

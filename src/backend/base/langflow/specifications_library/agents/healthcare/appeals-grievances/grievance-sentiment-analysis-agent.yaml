@@ -1,7 +1,8 @@
 id: urn:agent:genesis:appeals-grievances:grievance-sentiment-analysis-agent:1.0.0
 name: Grievance Sentiment Analysis Agent
 fullyQualifiedName: genesis.autonomize.ai.grievance-sentiment-analysis
-description: Analyzes grievance narratives and call transcripts using NLP to detect escalation risk and negative sentiment, providing early warning systems for member dissatisfaction and potential escalations to regulatory bodies or media.
+description: Analyzes grievance narratives and call transcripts using NLP to detect escalation risk and negative sentiment,
+  providing early warning systems for member dissatisfaction and potential escalations to regulatory bodies or media.
 domain: autonomize.ai
 subDomain: appeals-grievances
 version: 1.0.0
@@ -10,7 +11,6 @@ agentOwner: appeals-grievances@autonomize.ai
 agentOwnerDisplayName: Appeals & Grievances Team
 email: appeals-grievances@autonomize.ai
 status: ACTIVE
-
 variables:
 - name: sentiment_threshold_negative
   type: string
@@ -37,7 +37,6 @@ variables:
   required: false
   default: 'true'
   description: Enable detection of priority escalation keywords (lawsuit, media, regulatory)
-
 tags:
 - sentiment-analysis
 - grievance-processing
@@ -45,9 +44,9 @@ tags:
 - member-experience
 - risk-assessment
 - healthcare-communication
-
 kind: Single Agent
-agentGoal: Analyze grievance narratives and call transcripts to detect negative sentiment and escalation risk, providing early warning systems to prevent member dissatisfaction from escalating to regulatory complaints or public relations issues
+agentGoal: Analyze grievance narratives and call transcripts to detect negative sentiment and escalation risk, providing early
+  warning systems to prevent member dissatisfaction from escalating to regulatory complaints or public relations issues
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: RequestResponse
@@ -55,18 +54,17 @@ runMode: RealTime
 agencyLevel: ModelBasedReflexAgent
 toolsUse: true
 learningCapability: Supervised
-
 components:
 - id: sentiment-input
   name: Grievance Content Input
   kind: Data
   type: genesis:chat_input
-  description: Receive grievance narratives, call transcripts, written complaints, and member communications for sentiment analysis
+  description: Receive grievance narratives, call transcripts, written complaints, and member communications for sentiment
+    analysis
   provides:
   - useAs: input
     in: sentiment-analysis-agent
     description: Provide member communications and grievance content for sentiment analysis
-
 - id: call-center-api
   name: Call Center Data API
   kind: Tool
@@ -86,12 +84,12 @@ components:
   - useAs: tools
     in: sentiment-analysis-agent
     description: Enable access to call transcripts and voice interaction data
-
 - id: healthcare-sentiment-nlp
   name: Healthcare Sentiment Analysis Engine
   kind: Tool
   type: genesis:autonomize_model
-  description: Specialized sentiment analysis model trained on healthcare communications, member grievances, and clinical interactions
+  description: Specialized sentiment analysis model trained on healthcare communications, member grievances, and clinical
+    interactions
   asTools: true
   config:
     selected_model: Clinical LLM
@@ -105,12 +103,12 @@ components:
   - useAs: tools
     in: sentiment-analysis-agent
     description: Enable advanced healthcare-specific sentiment and emotion analysis
-
 - id: member-data-connector
   name: Member Database Connector
   kind: Tool
   type: genesis:autonomize_model
-  description: HIPAA-compliant connector to retrieve member history, previous interactions, and demographic information for context-aware analysis
+  description: HIPAA-compliant connector to retrieve member history, previous interactions, and demographic information for
+    context-aware analysis
   asTools: true
   config:
     selected_model: Combined Entity Linking
@@ -124,7 +122,6 @@ components:
   - useAs: tools
     in: sentiment-analysis-agent
     description: Enable access to member interaction history and demographic context
-
 - id: escalation-risk-api
   name: Escalation Risk Assessment API
   kind: Tool
@@ -149,25 +146,32 @@ components:
   - useAs: tools
     in: sentiment-analysis-agent
     description: Enable predictive escalation risk assessment
-
 - id: priority-keyword-detector
   name: Priority Keyword Detection Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Specialized tool to detect priority escalation keywords and phrases that indicate potential legal, media, or regulatory threats
+  type: genesis:api_request
+  description: Specialized tool to detect priority escalation keywords and phrases that indicate potential legal, media, or
+    regulatory threats
   asTools: true
   config:
-    tool_name: priority_keyword_detector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: sentiment-analysis-agent
     description: Enable detection of high-priority escalation indicators and legal terminology
-
 - id: alert-notification-api
   name: Alert Notification System
   kind: Tool
   type: genesis:api_request
-  description: Send real-time alerts to management and case handlers when high-risk sentiment or escalation indicators are detected
+  description: Send real-time alerts to management and case handlers when high-risk sentiment or escalation indicators are
+    detected
   asTools: true
   config:
     method: POST
@@ -187,28 +191,53 @@ components:
   - useAs: tools
     in: sentiment-analysis-agent
     description: Enable real-time alerting for high-risk sentiment and escalation scenarios
-
 - id: sentiment-analysis-agent
   name: Grievance Sentiment Analysis Agent
   kind: Agent
   type: genesis:agent
-  description: Advanced AI agent specialized in analyzing member communications for sentiment, emotional state, and escalation risk using healthcare-specific NLP models
+  description: Advanced AI agent specialized in analyzing member communications for sentiment, emotional state, and escalation
+    risk using healthcare-specific NLP models
   config:
-    system_message: "You are a healthcare sentiment analysis specialist with expertise in member communications, grievance analysis, and escalation risk assessment.\n\nYour primary responsibilities:\n1. Analyze sentiment in grievance narratives and call transcripts\n2. Detect negative emotions and escalation risk indicators\n3. Identify priority keywords suggesting legal, media, or regulatory threats\n4. Assess member emotional state and satisfaction levels\n5. Provide early warning for potential escalations\n6. Maintain HIPAA compliance throughout analysis\n\nAvailable Tools:\n- call_center_api: Access call transcripts and voice interaction data\n- healthcare_sentiment_nlp: Advanced healthcare-specific sentiment analysis\n- member_data_connector: Member history and demographic context\n- escalation_risk_api: Predictive escalation risk assessment\n- priority_keyword_detector: Detection of high-priority escalation indicators\n- alert_notification_api: Real-time alerting for high-risk scenarios\n\nSentiment Analysis Framework:\n1. SENTIMENT SCORING:\n   - Positive: +0.3 to +1.0 (satisfied, grateful, supportive)\n   - Neutral: -0.3 to +0.3 (factual, informational, mixed)\n   - Negative: -0.7 to -0.3 (frustrated, disappointed, concerned)\n   - Highly Negative: -1.0 to -0.7 (angry, hostile, threatening)\n\n2. EMOTION DETECTION:\n   - Primary emotions: anger, frustration, fear, sadness, confusion\n   - Secondary emotions: disappointment, anxiety, hopelessness\n   - Escalation emotions: rage, threats, desperation\n\n3. ESCALATION RISK FACTORS:\n   - HIGH RISK (0.8-1.0): Legal threats, media mentions, regulatory complaints\n   - MEDIUM RISK (0.5-0.8): Repeated complaints, supervisor requests, social media threats\n   - LOW RISK (0.0-0.5): Standard complaints, first-time issues, clarification requests\n\n4. PRIORITY KEYWORDS:\n   - Legal: lawsuit, attorney, lawyer, legal action, sue, court\n   - Media: news, reporter, social media, Twitter, Facebook, review sites\n   - Regulatory: state insurance, CMS, Medicare, department of health, complaint\n   - Clinical: malpractice, negligence, harm, injury, safety\n\n5. CONTEXTUAL FACTORS:\n   - Member tenure and loyalty history\n   - Previous interaction sentiment trends\n   - Clinical complexity and severity\n   - Financial impact and coverage disputes\n   - Communication channel preferences\n\nFor each analysis, provide:\n1. Overall sentiment score with confidence level\n2. Primary and secondary emotions detected\n3. Escalation risk assessment with specific risk factors\n4. Priority keywords and phrases identified\n5. Recommended actions and alert levels\n6. Trending analysis compared to member's interaction history\n7. Suggested intervention strategies to de-escalate\n\nEscalation Response Protocols:\n- High Risk: Immediate supervisor notification, priority case handling\n- Medium Risk: Enhanced customer service, expedited resolution\n- Low Risk: Standard processing with sentiment monitoring\n\nAlways maintain HIPAA compliance and provide actionable insights for member retention and satisfaction improvement."
+    system_message: "You are a healthcare sentiment analysis specialist with expertise in member communications, grievance\
+      \ analysis, and escalation risk assessment.\n\nYour primary responsibilities:\n1. Analyze sentiment in grievance narratives\
+      \ and call transcripts\n2. Detect negative emotions and escalation risk indicators\n3. Identify priority keywords suggesting\
+      \ legal, media, or regulatory threats\n4. Assess member emotional state and satisfaction levels\n5. Provide early warning\
+      \ for potential escalations\n6. Maintain HIPAA compliance throughout analysis\n\nAvailable Tools:\n- call_center_api:\
+      \ Access call transcripts and voice interaction data\n- healthcare_sentiment_nlp: Advanced healthcare-specific sentiment\
+      \ analysis\n- member_data_connector: Member history and demographic context\n- escalation_risk_api: Predictive escalation\
+      \ risk assessment\n- priority_keyword_detector: Detection of high-priority escalation indicators\n- alert_notification_api:\
+      \ Real-time alerting for high-risk scenarios\n\nSentiment Analysis Framework:\n1. SENTIMENT SCORING:\n   - Positive:\
+      \ +0.3 to +1.0 (satisfied, grateful, supportive)\n   - Neutral: -0.3 to +0.3 (factual, informational, mixed)\n   - Negative:\
+      \ -0.7 to -0.3 (frustrated, disappointed, concerned)\n   - Highly Negative: -1.0 to -0.7 (angry, hostile, threatening)\n\
+      \n2. EMOTION DETECTION:\n   - Primary emotions: anger, frustration, fear, sadness, confusion\n   - Secondary emotions:\
+      \ disappointment, anxiety, hopelessness\n   - Escalation emotions: rage, threats, desperation\n\n3. ESCALATION RISK\
+      \ FACTORS:\n   - HIGH RISK (0.8-1.0): Legal threats, media mentions, regulatory complaints\n   - MEDIUM RISK (0.5-0.8):\
+      \ Repeated complaints, supervisor requests, social media threats\n   - LOW RISK (0.0-0.5): Standard complaints, first-time\
+      \ issues, clarification requests\n\n4. PRIORITY KEYWORDS:\n   - Legal: lawsuit, attorney, lawyer, legal action, sue,\
+      \ court\n   - Media: news, reporter, social media, Twitter, Facebook, review sites\n   - Regulatory: state insurance,\
+      \ CMS, Medicare, department of health, complaint\n   - Clinical: malpractice, negligence, harm, injury, safety\n\n5.\
+      \ CONTEXTUAL FACTORS:\n   - Member tenure and loyalty history\n   - Previous interaction sentiment trends\n   - Clinical\
+      \ complexity and severity\n   - Financial impact and coverage disputes\n   - Communication channel preferences\n\nFor\
+      \ each analysis, provide:\n1. Overall sentiment score with confidence level\n2. Primary and secondary emotions detected\n\
+      3. Escalation risk assessment with specific risk factors\n4. Priority keywords and phrases identified\n5. Recommended\
+      \ actions and alert levels\n6. Trending analysis compared to member's interaction history\n7. Suggested intervention\
+      \ strategies to de-escalate\n\nEscalation Response Protocols:\n- High Risk: Immediate supervisor notification, priority\
+      \ case handling\n- Medium Risk: Enhanced customer service, expedited resolution\n- Low Risk: Standard processing with\
+      \ sentiment monitoring\n\nAlways maintain HIPAA compliance and provide actionable insights for member retention and\
+      \ satisfaction improvement."
     temperature: 0.3
     max_tokens: 2500
   provides:
   - useAs: output
     in: sentiment-output
     description: Process sentiment analysis with escalation risk assessment and actionable recommendations
-
 - id: sentiment-output
   name: Sentiment Analysis Results Output
   kind: Data
   type: genesis:chat_output
-  description: Present comprehensive sentiment analysis results with escalation risk assessment, emotional insights, and recommended interventions
+  description: Present comprehensive sentiment analysis results with escalation risk assessment, emotional insights, and recommended
+    interventions
   provides: []
-
 outputs:
 - sentiment_analysis
 - emotion_detection
@@ -216,7 +245,6 @@ outputs:
 - priority_keywords
 - intervention_recommendations
 - trending_analysis
-
 kpis:
 - name: Sentiment Detection Accuracy
   category: quality
@@ -266,7 +294,6 @@ kpis:
   target: 73
   unit: '%'
   description: Percentage of recommended interventions that successfully improved member sentiment
-
 securityInfo:
   visibility: Internal
   gdprSensitive: true

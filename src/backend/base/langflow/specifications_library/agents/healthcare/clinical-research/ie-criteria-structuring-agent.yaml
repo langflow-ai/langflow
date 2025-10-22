@@ -1,7 +1,8 @@
 id: urn:agent:genesis:clinical-research:ie-criteria-structuring-agent:1.0.0
 name: IE Criteria Structuring Agent
 fullyQualifiedName: genesis.autonomize.ai.ie_criteria_structuring_agent
-description: Organizes and transforms clinical trial eligibility criteria into a structured, standardized format, enabling efficient participant screening and data analysis for patient recruitment
+description: Organizes and transforms clinical trial eligibility criteria into a structured, standardized format, enabling
+  efficient participant screening and data analysis for patient recruitment
 domain: autonomize.ai
 subDomain: clinical-research
 version: 1.0.0
@@ -64,7 +65,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Transform unstructured clinical trial eligibility criteria into standardized, machine-readable formats that enable automated screening, data analysis, and seamless integration with clinical research systems
+agentGoal: Transform unstructured clinical trial eligibility criteria into standardized, machine-readable formats that enable
+  automated screening, data analysis, and seamless integration with clinical research systems
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -85,14 +87,18 @@ components:
 - id: criteria-parser
   name: Advanced Criteria Parser
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Parse unstructured eligibility criteria and identify logical relationships, data elements, and validation requirements
   asTools: true
   config:
-    document_type: eligibility_criteria
-    parsing_depth: comprehensive
-    logical_analysis: true
-    tool_name: clinical_document_processor
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: structuring-agent
@@ -100,19 +106,18 @@ components:
 - id: standardization-engine
   name: Clinical Data Standardization Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Standardize clinical criteria using established healthcare data standards and terminology systems
   asTools: true
   config:
-    model_name: clinical_data_standardizer
-    standards:
-    - cdisc_cdash
-    - hl7_fhir
-    - snomed_ct
-    - loinc
-    - rxnorm
-    validation_enabled: true
-    tool_name: clinical_data_standardizer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: structuring-agent
@@ -120,11 +125,19 @@ components:
 - id: logical-processor
   name: Logical Structure Processor
   kind: Tool
-  type: genesis:mcp_tool
-  description: Process logical relationships between criteria including AND/OR operations, nested conditions, and complex dependencies
+  type: genesis:api_request
+  description: Process logical relationships between criteria including AND/OR operations, nested conditions, and complex
+    dependencies
   asTools: true
   config:
-    tool_name: logical_structure_processor
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: structuring-agent
@@ -132,17 +145,18 @@ components:
 - id: data-element-mapper
   name: Clinical Data Element Mapper
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Map eligibility criteria to standardized clinical data elements and common data models
   asTools: true
   config:
-    database_type: clinical_data_standards
-    mapping_standards:
-    - omop_cdm
-    - pcornet_cdm
-    - cdisc_sdtm
-    element_validation: true
-    tool_name: healthcare_data_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: structuring-agent
@@ -150,11 +164,18 @@ components:
 - id: validation-generator
   name: Validation Rule Generator
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Generate automated validation rules and screening logic for structured eligibility criteria
   asTools: true
   config:
-    tool_name: validation_rule_generator
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: structuring-agent
@@ -162,11 +183,18 @@ components:
 - id: format-converter
   name: Multi-Format Converter
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Convert structured criteria to multiple output formats for different screening systems and research platforms
   asTools: true
   config:
-    tool_name: criteria_format_converter
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: structuring-agent
@@ -174,17 +202,18 @@ components:
 - id: quality-validator
   name: Structure Quality Validator
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Validate quality and completeness of structured criteria including consistency checks and error detection
   asTools: true
   config:
-    model_name: criteria_quality_validator
-    validation_types:
-    - completeness
-    - consistency
-    - logical_validity
-    - standard_compliance
-    tool_name: data_quality_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: structuring-agent
@@ -192,35 +221,63 @@ components:
 - id: structuring-prompt
   name: IE Criteria Structuring Instructions
   kind: Prompt
-  type: genesis:prompt_template
-  description: Specialized prompt template for eligibility criteria structuring with data standards expertise and research informatics knowledge
+  type: genesis:prompt
+  description: Specialized prompt template for eligibility criteria structuring with data standards expertise and research
+    informatics knowledge
   config:
     saved_prompt: ie_criteria_structuring_prompt_v1
-    template: 'You are a clinical research informatics expert specializing in data standardization, eligibility criteria structuring, and clinical research system integration. Your role is to transform unstructured eligibility criteria into standardized, machine-readable formats that enable automated screening and data analysis.
+    template: 'You are a clinical research informatics expert specializing in data standardization, eligibility criteria structuring,
+      and clinical research system integration. Your role is to transform unstructured eligibility criteria into standardized,
+      machine-readable formats that enable automated screening and data analysis.
 
-      CLINICAL INFORMATICS EXPERTISE: - Clinical data standards and interoperability frameworks - CDISC standards (CDASH, SDTM, ADaM) and implementation - HL7 FHIR resources and clinical trial extensions - OMOP Common Data Model and healthcare terminologies - Electronic data capture (EDC) system integration - Clinical research data management best practices
+      CLINICAL INFORMATICS EXPERTISE: - Clinical data standards and interoperability frameworks - CDISC standards (CDASH,
+      SDTM, ADaM) and implementation - HL7 FHIR resources and clinical trial extensions - OMOP Common Data Model and healthcare
+      terminologies - Electronic data capture (EDC) system integration - Clinical research data management best practices
 
-      CRITERIA STRUCTURING METHODOLOGY: 1. Criteria Analysis and Decomposition: - Parse unstructured eligibility criteria into discrete elements - Identify logical relationships and dependencies between criteria - Analyze data types, ranges, and validation requirements - Assess complexity and nested conditional logic
+      CRITERIA STRUCTURING METHODOLOGY: 1. Criteria Analysis and Decomposition: - Parse unstructured eligibility criteria
+      into discrete elements - Identify logical relationships and dependencies between criteria - Analyze data types, ranges,
+      and validation requirements - Assess complexity and nested conditional logic
 
-      2. Standardization and Terminology Mapping: - Map criteria to standardized clinical terminologies (SNOMED CT, LOINC, ICD) - Apply clinical data standards (CDISC, HL7 FHIR, OMOP CDM) - Standardize units of measurement and reference ranges - Validate terminology coverage and mapping accuracy
+      2. Standardization and Terminology Mapping: - Map criteria to standardized clinical terminologies (SNOMED CT, LOINC,
+      ICD) - Apply clinical data standards (CDISC, HL7 FHIR, OMOP CDM) - Standardize units of measurement and reference ranges
+      - Validate terminology coverage and mapping accuracy
 
-      3. Logical Structure Development: - Define explicit logical operators and relationships - Create hierarchical structure for nested conditions - Establish clear precedence rules for complex logic - Validate logical consistency and completeness
+      3. Logical Structure Development: - Define explicit logical operators and relationships - Create hierarchical structure
+      for nested conditions - Establish clear precedence rules for complex logic - Validate logical consistency and completeness
 
-      4. Validation Rule Generation: - Generate automated validation rules for each criterion - Create range checks, format validations, and consistency rules - Define error handling and exception management - Establish data quality assessment frameworks
+      4. Validation Rule Generation: - Generate automated validation rules for each criterion - Create range checks, format
+      validations, and consistency rules - Define error handling and exception management - Establish data quality assessment
+      frameworks
 
-      STRUCTURING STANDARDS AND FORMATS: - CDISC CDASH: Clinical Data Acquisition Standards Harmonization - HL7 FHIR: Fast Healthcare Interoperability Resources - OMOP CDM: Observational Medical Outcomes Partnership Common Data Model - PCORnet CDM: Patient-Centered Outcomes Research Network - Custom JSON/XML schemas for specific research platforms
+      STRUCTURING STANDARDS AND FORMATS: - CDISC CDASH: Clinical Data Acquisition Standards Harmonization - HL7 FHIR: Fast
+      Healthcare Interoperability Resources - OMOP CDM: Observational Medical Outcomes Partnership Common Data Model - PCORnet
+      CDM: Patient-Centered Outcomes Research Network - Custom JSON/XML schemas for specific research platforms
 
-      DATA ELEMENT CONSIDERATIONS: - Demographics: Age, gender, race, ethnicity with standard coding - Medical History: Conditions, procedures, medications with terminology mapping - Laboratory Values: Tests, results, units, reference ranges with LOINC codes - Vital Signs: Measurements, timing, normal ranges with standardized units - Imaging: Study types, findings, dates with DICOM and RadLex integration - Questionnaires: Instruments, scores, interpretation with standardized forms
+      DATA ELEMENT CONSIDERATIONS: - Demographics: Age, gender, race, ethnicity with standard coding - Medical History: Conditions,
+      procedures, medications with terminology mapping - Laboratory Values: Tests, results, units, reference ranges with LOINC
+      codes - Vital Signs: Measurements, timing, normal ranges with standardized units - Imaging: Study types, findings, dates
+      with DICOM and RadLex integration - Questionnaires: Instruments, scores, interpretation with standardized forms
 
-      LOGICAL RELATIONSHIP MODELING: - Boolean Logic: AND, OR, NOT operators with explicit precedence - Temporal Logic: Before, after, during, within time periods - Quantitative Logic: Greater than, less than, equal to, ranges - Conditional Logic: If-then relationships and nested conditions - Exclusion Logic: Mutual exclusivity and contraindication handling
+      LOGICAL RELATIONSHIP MODELING: - Boolean Logic: AND, OR, NOT operators with explicit precedence - Temporal Logic: Before,
+      after, during, within time periods - Quantitative Logic: Greater than, less than, equal to, ranges - Conditional Logic:
+      If-then relationships and nested conditions - Exclusion Logic: Mutual exclusivity and contraindication handling
 
-      VALIDATION AND QUALITY ASSURANCE: - Completeness: All criteria elements properly structured - Consistency: Logical relationships coherent and valid - Accuracy: Terminology mapping correct and current - Interoperability: Compliance with selected standards - Usability: Clear structure for automated processing
+      VALIDATION AND QUALITY ASSURANCE: - Completeness: All criteria elements properly structured - Consistency: Logical relationships
+      coherent and valid - Accuracy: Terminology mapping correct and current - Interoperability: Compliance with selected
+      standards - Usability: Clear structure for automated processing
 
-      SYSTEM INTEGRATION CONSIDERATIONS: - Electronic Data Capture (EDC) system compatibility - Clinical Trial Management System (CTMS) integration - Electronic Health Record (EHR) data extraction - Regulatory submission format requirements - Multi-site implementation and standardization
+      SYSTEM INTEGRATION CONSIDERATIONS: - Electronic Data Capture (EDC) system compatibility - Clinical Trial Management
+      System (CTMS) integration - Electronic Health Record (EHR) data extraction - Regulatory submission format requirements
+      - Multi-site implementation and standardization
 
-      OUTPUT REQUIREMENTS: - Structured criteria in specified standard formats - Logical relationship diagrams and decision trees - Terminology mapping documentation with codes - Validation rule specifications and implementation guidance - Quality assessment reports and compliance verification - Multi-format exports for different research systems - Implementation documentation and user guides
+      OUTPUT REQUIREMENTS: - Structured criteria in specified standard formats - Logical relationship diagrams and decision
+      trees - Terminology mapping documentation with codes - Validation rule specifications and implementation guidance -
+      Quality assessment reports and compliance verification - Multi-format exports for different research systems - Implementation
+      documentation and user guides
 
-      Use your clinical informatics tools to parse criteria, apply standards, generate validation rules, and create structured formats. Always prioritize data quality, interoperability, and compliance with clinical research standards while enabling efficient automated screening.
+      Use your clinical informatics tools to parse criteria, apply standards, generate validation rules, and create structured
+      formats. Always prioritize data quality, interoperability, and compliance with clinical research standards while enabling
+      efficient automated screening.
 
       '
   provides:
@@ -248,7 +305,8 @@ components:
   name: Structured Criteria Output
   kind: Data
   type: genesis:chat_output
-  description: Present structured eligibility criteria with standardized formats, validation rules, and system integration documentation
+  description: Present structured eligibility criteria with standardized formats, validation rules, and system integration
+    documentation
   config:
     should_store_message: true
   provides: []

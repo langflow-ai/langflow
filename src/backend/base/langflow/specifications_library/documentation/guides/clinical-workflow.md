@@ -26,7 +26,7 @@ components:
   - genesis:chat_input          # Clinical query or patient scenario
   - genesis:knowledge_hub_search # Clinical guidelines and literature
   - genesis:ehr_connector       # Patient clinical data
-  - genesis:prompt_template     # Clinical reasoning framework
+  - genesis:prompt     # Clinical reasoning framework
   - genesis:agent              # Clinical decision processing
   - genesis:chat_output         # Evidence-based recommendations
 ```
@@ -67,7 +67,7 @@ components:
         description: Send clinical query to decision agent
 
   - id: clinical-prompt
-    type: genesis:prompt_template
+    type: genesis:prompt
     name: Clinical Decision Support Instructions
     description: Evidence-based clinical reasoning framework
     config:
@@ -235,7 +235,7 @@ components:
     description: Accept treatment planning requests with patient context
 
   - id: comprehensive-prompt
-    type: genesis:prompt_template
+    type: genesis:prompt
     name: Treatment Planning Framework
     description: Comprehensive clinical treatment planning methodology
     config:
@@ -389,7 +389,7 @@ components:
 
 ```yaml
 - id: cardiology-prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   name: Cardiology Clinical Decision Support
   description: Specialized cardiovascular disease management framework
   config:
@@ -442,7 +442,7 @@ components:
 
 ```yaml
 - id: oncology-prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   name: Oncology Treatment Planning Framework
   description: Evidence-based cancer care and treatment planning
   config:
@@ -609,7 +609,7 @@ agentGoal: Provide rapid, evidence-based clinical decisions for emergency medici
 
 components:
   - id: emergency-prompt
-    type: genesis:prompt_template
+    type: genesis:prompt
     name: Emergency Medicine Framework
     description: Rapid clinical assessment and decision-making for emergency scenarios
     config:
@@ -669,7 +669,7 @@ agentGoal: Optimize chronic disease management through evidence-based care coord
 
 components:
   - id: chronic-care-prompt
-    type: genesis:prompt_template
+    type: genesis:prompt
     name: Chronic Care Management Framework
     description: Comprehensive chronic disease management methodology
     config:

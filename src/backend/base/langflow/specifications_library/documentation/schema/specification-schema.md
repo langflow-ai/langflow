@@ -154,7 +154,7 @@ config:
       description: Send processed results
 ```
 
-### 4. genesis:prompt_template
+### 4. genesis:prompt
 Prompt management component.
 
 **Configuration**:
@@ -168,7 +168,7 @@ config:
 
 ```yaml
 - id: agent-prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   name: Agent Instructions
   description: Prompt template for agent instructions
   config:

@@ -1,7 +1,8 @@
 id: urn:agent:genesis:provider-contracting:provider-negotiation-brief-generator-agent:1.0.0
 name: Provider Negotiation Brief Generator Agent
 fullyQualifiedName: genesis.autonomize.ai.provider_negotiation_brief_generator_agent
-description: Prepares comprehensive negotiation packets using provider performance data, cost analytics, and quality scores from claims and QARR/HEDIS data for strategic contract negotiations
+description: Prepares comprehensive negotiation packets using provider performance data, cost analytics, and quality scores
+  from claims and QARR/HEDIS data for strategic contract negotiations
 domain: autonomize.ai
 subDomain: provider-contracting
 version: 1.0.0
@@ -72,7 +73,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Generate comprehensive provider negotiation briefs by analyzing performance data, cost metrics, quality scores, and market positioning to support strategic contract negotiations and optimize provider relationships
+agentGoal: Generate comprehensive provider negotiation briefs by analyzing performance data, cost metrics, quality scores,
+  and market positioning to support strategic contract negotiations and optimize provider relationships
 targetUser: internal
 valueGeneration: DecisionSupport
 interactionMode: RequestResponse
@@ -93,19 +95,19 @@ components:
 - id: provider-performance-tool
   name: Provider Performance Analytics
   kind: Tool
-  type: genesis:mcp_tool
-  description: Analyze comprehensive provider performance including quality metrics, cost efficiency, patient outcomes, and satisfaction scores
+  type: genesis:api_request
+  description: Analyze comprehensive provider performance including quality metrics, cost efficiency, patient outcomes, and
+    satisfaction scores
   asTools: true
   config:
-    model_name: provider_performance_analyzer
-    performance_categories:
-    - quality
-    - cost
-    - access
-    - satisfaction
-    - compliance
-    benchmarking_enabled: true
-    tool_name: provider_performance_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: negotiation-agent
@@ -113,17 +115,18 @@ components:
 - id: cost-analytics-tool
   name: Provider Cost Analytics Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze provider cost structures, utilization patterns, and efficiency metrics with competitive benchmarking
   asTools: true
   config:
-    model_name: provider_cost_analyzer
-    cost_categories:
-    - unit_costs
-    - total_cost_of_care
-    - efficiency_ratios
-    - trend_analysis
-    tool_name: cost_analysis_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: negotiation-agent
@@ -131,17 +134,18 @@ components:
 - id: qarr-data-tool
   name: QARR Data Analysis Service
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access and analyze Quality Assurance Reporting Requirements (QARR) data for provider quality assessment
   asTools: true
   config:
-    database_type: qarr_quality_data
-    include_trends: true
-    quality_domains:
-    - clinical_quality
-    - patient_safety
-    - care_coordination
-    tool_name: healthcare_data_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: negotiation-agent
@@ -149,14 +153,18 @@ components:
 - id: hedis-performance-tool
   name: HEDIS Provider Performance
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze provider-specific HEDIS performance and contribution to plan quality ratings
   asTools: true
   config:
-    model_name: provider_hedis_analyzer
-    measure_attribution: provider_level
-    quality_impact_scoring: true
-    tool_name: hedis_analytics_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: negotiation-agent
@@ -164,11 +172,18 @@ components:
 - id: market-intelligence-tool
   name: Provider Market Intelligence
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze market positioning, competitive landscape, and strategic value of providers for negotiation leverage
   asTools: true
   config:
-    tool_name: provider_market_intelligence
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: negotiation-agent
@@ -176,11 +191,18 @@ components:
 - id: contract-analyzer
   name: Contract Terms Analysis Tool
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze current contract terms, identify optimization opportunities, and recommend negotiation strategies
   asTools: true
   config:
-    tool_name: contract_terms_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: negotiation-agent
@@ -188,17 +210,18 @@ components:
 - id: risk-assessment-tool
   name: Provider Risk Assessment Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Assess provider-related risks including financial stability, quality risks, and network disruption potential
   asTools: true
   config:
-    model_name: provider_risk_assessor
-    risk_categories:
-    - financial
-    - quality
-    - operational
-    - strategic
-    tool_name: risk_assessment_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: negotiation-agent
@@ -206,17 +229,18 @@ components:
 - id: vbc-modeler
   name: Value-Based Contract Modeler
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Model value-based contract options, risk-sharing arrangements, and performance incentive structures
   asTools: true
   config:
-    model_name: vbc_contract_modeler
-    contract_types:
-    - shared_savings
-    - capitation
-    - bundled_payments
-    - quality_bonuses
-    tool_name: vbc_modeling_engine
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: negotiation-agent
@@ -224,35 +248,64 @@ components:
 - id: negotiation-prompt
   name: Provider Negotiation Brief Instructions
   kind: Prompt
-  type: genesis:prompt_template
-  description: Specialized prompt template for provider negotiation brief generation with contracting expertise and strategic analysis
+  type: genesis:prompt
+  description: Specialized prompt template for provider negotiation brief generation with contracting expertise and strategic
+    analysis
   config:
     saved_prompt: provider_negotiation_brief_prompt_v1
-    template: 'You are a healthcare provider contracting expert specializing in negotiation strategy, provider performance analysis, and contract optimization. Your role is to generate comprehensive negotiation briefs that support strategic contract negotiations and optimize provider relationships.
+    template: 'You are a healthcare provider contracting expert specializing in negotiation strategy, provider performance
+      analysis, and contract optimization. Your role is to generate comprehensive negotiation briefs that support strategic
+      contract negotiations and optimize provider relationships.
 
-      PROVIDER CONTRACTING EXPERTISE: - Provider performance evaluation and benchmarking methodologies - Cost analysis and efficiency assessment techniques - Quality measurement and value-based contracting principles - Market intelligence and competitive positioning strategies - Risk assessment and contract optimization approaches - Negotiation tactics and relationship management best practices
+      PROVIDER CONTRACTING EXPERTISE: - Provider performance evaluation and benchmarking methodologies - Cost analysis and
+      efficiency assessment techniques - Quality measurement and value-based contracting principles - Market intelligence
+      and competitive positioning strategies - Risk assessment and contract optimization approaches - Negotiation tactics
+      and relationship management best practices
 
-      NEGOTIATION BRIEF METHODOLOGY: 1. Provider Performance Analysis: - Comprehensive performance evaluation across quality, cost, access, and satisfaction - Benchmarking against peer providers and top performers - Trend analysis and performance trajectory assessment - Identification of strengths, weaknesses, and improvement opportunities
+      NEGOTIATION BRIEF METHODOLOGY: 1. Provider Performance Analysis: - Comprehensive performance evaluation across quality,
+      cost, access, and satisfaction - Benchmarking against peer providers and top performers - Trend analysis and performance
+      trajectory assessment - Identification of strengths, weaknesses, and improvement opportunities
 
-      2. Cost and Financial Analysis: - Unit cost analysis and total cost of care assessment - Utilization pattern analysis and efficiency metrics - Cost trend evaluation and projection modeling - Competitive cost positioning and market rate analysis
+      2. Cost and Financial Analysis: - Unit cost analysis and total cost of care assessment - Utilization pattern analysis
+      and efficiency metrics - Cost trend evaluation and projection modeling - Competitive cost positioning and market rate
+      analysis
 
-      3. Quality and Outcomes Assessment: - HEDIS measure performance and quality contribution analysis - QARR data evaluation and clinical quality metrics - Patient satisfaction and experience scores - Safety indicators and risk-adjusted outcomes
+      3. Quality and Outcomes Assessment: - HEDIS measure performance and quality contribution analysis - QARR data evaluation
+      and clinical quality metrics - Patient satisfaction and experience scores - Safety indicators and risk-adjusted outcomes
 
-      4. Strategic Positioning and Market Intelligence: - Provider market position and competitive landscape analysis - Network adequacy and strategic value assessment - Member preference and provider reputation factors - Regulatory compliance and accreditation status
+      4. Strategic Positioning and Market Intelligence: - Provider market position and competitive landscape analysis - Network
+      adequacy and strategic value assessment - Member preference and provider reputation factors - Regulatory compliance
+      and accreditation status
 
-      NEGOTIATION STRATEGY COMPONENTS: - Performance-based reimbursement structures and incentives - Quality improvement initiatives and shared accountability - Network participation requirements and exclusivity provisions - Reporting and transparency obligations - Risk-sharing arrangements and value-based contract options - Term length and contract modification procedures
+      NEGOTIATION STRATEGY COMPONENTS: - Performance-based reimbursement structures and incentives - Quality improvement initiatives
+      and shared accountability - Network participation requirements and exclusivity provisions - Reporting and transparency
+      obligations - Risk-sharing arrangements and value-based contract options - Term length and contract modification procedures
 
-      CONTRACT OPTIMIZATION FOCUS AREAS: - Reimbursement rate competitiveness and sustainability - Quality incentive alignment with plan objectives - Administrative efficiency and reduced burden - Data sharing and performance transparency - Member experience and access improvements - Cost containment and utilization management
+      CONTRACT OPTIMIZATION FOCUS AREAS: - Reimbursement rate competitiveness and sustainability - Quality incentive alignment
+      with plan objectives - Administrative efficiency and reduced burden - Data sharing and performance transparency - Member
+      experience and access improvements - Cost containment and utilization management
 
-      RISK ASSESSMENT AND MITIGATION: - Financial stability and operational viability - Quality performance and patient safety risks - Network disruption and member access impacts - Regulatory compliance and legal considerations - Competitive response and market dynamics - Implementation feasibility and change management
+      RISK ASSESSMENT AND MITIGATION: - Financial stability and operational viability - Quality performance and patient safety
+      risks - Network disruption and member access impacts - Regulatory compliance and legal considerations - Competitive
+      response and market dynamics - Implementation feasibility and change management
 
-      VALUE-BASED CONTRACTING CONSIDERATIONS: - Shared savings programs and risk corridor design - Capitation models and total cost management - Bundled payment arrangements for specific services - Quality bonus programs and performance incentives - Population health management responsibilities - Data analytics and performance monitoring requirements
+      VALUE-BASED CONTRACTING CONSIDERATIONS: - Shared savings programs and risk corridor design - Capitation models and total
+      cost management - Bundled payment arrangements for specific services - Quality bonus programs and performance incentives
+      - Population health management responsibilities - Data analytics and performance monitoring requirements
 
-      NEGOTIATION BRIEF COMPONENTS: - Executive summary with key findings and recommendations - Provider performance scorecard with benchmarking - Cost analysis and financial positioning assessment - Quality performance evaluation and improvement opportunities - Market intelligence and strategic value proposition - Contract terms analysis and optimization recommendations - Risk assessment and mitigation strategies - Value-based contract options and modeling results
+      NEGOTIATION BRIEF COMPONENTS: - Executive summary with key findings and recommendations - Provider performance scorecard
+      with benchmarking - Cost analysis and financial positioning assessment - Quality performance evaluation and improvement
+      opportunities - Market intelligence and strategic value proposition - Contract terms analysis and optimization recommendations
+      - Risk assessment and mitigation strategies - Value-based contract options and modeling results
 
-      OUTPUT REQUIREMENTS: - Comprehensive provider profile with performance metrics - Competitive positioning analysis and market intelligence - Strategic negotiation recommendations and talking points - Contract terms optimization suggestions - Risk assessment summary and mitigation strategies - Value-based contract options and financial projections - Implementation timeline and success metrics
+      OUTPUT REQUIREMENTS: - Comprehensive provider profile with performance metrics - Competitive positioning analysis and
+      market intelligence - Strategic negotiation recommendations and talking points - Contract terms optimization suggestions
+      - Risk assessment summary and mitigation strategies - Value-based contract options and financial projections - Implementation
+      timeline and success metrics
 
-      Use your provider analytics tools to analyze performance data, assess costs and quality, evaluate market position, and generate strategic negotiation recommendations. Always focus on mutual value creation, sustainable partnerships, and optimal member outcomes.
+      Use your provider analytics tools to analyze performance data, assess costs and quality, evaluate market position, and
+      generate strategic negotiation recommendations. Always focus on mutual value creation, sustainable partnerships, and
+      optimal member outcomes.
 
       '
   provides:
@@ -280,7 +333,8 @@ components:
   name: Provider Negotiation Brief Output
   kind: Data
   type: genesis:chat_output
-  description: Present comprehensive provider negotiation briefs with performance analysis, strategic recommendations, and contract optimization guidance
+  description: Present comprehensive provider negotiation briefs with performance analysis, strategic recommendations, and
+    contract optimization guidance
   config:
     should_store_message: true
   provides: []

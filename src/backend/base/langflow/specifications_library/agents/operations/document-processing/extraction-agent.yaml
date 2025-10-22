@@ -92,7 +92,7 @@ components:
 - id: extraction-agent-prompt
   name: Agent Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Prompt template for agent instructions
   config:
     saved_prompt: extraction_prompt_v1
@@ -169,9 +169,9 @@ components:
       - Medical necessity justification
 
 
-      Use the Form Recognizer tool for complex document layouts.
+      Use the Document Extraction Model for HIPAA-compliant form and document processing.
 
-      Use the Data Transformer to standardize extracted data.
+      Use the Medical Data Standardizer to validate and standardize extracted healthcare data.
 
 
       Output as structured JSON with confidence scores for each field.
@@ -198,31 +198,30 @@ components:
   - useAs: input
     in: extraction-output
     description: Extracted structured data
-- id: form-recognizer
-  name: Form Recognizer
-  kind: Tool
-  type: genesis:mcp_tool
-  description: Extract data from forms and tables using Azure Form Recognizer
-  asTools: true
+- id: document-extraction-model
+  name: Document Extraction Model
+  kind: Model
+  type: genesis:autonomize_model
+  description: Clinical LLM for document extraction from healthcare forms and clinical documents
   config:
-    tool_name: azure_form_recognizer
-    api_key: "${AZURE_FORM_RECOGNIZER_API_KEY}"
+    selected_model: Clinical LLM
+    confidence_threshold: 0.8
   provides:
-  - useAs: tools
+  - useAs: input
     in: extraction-agent
-    description: Form extraction tool
-- id: data-transformer
-  name: Data Transformer
-  kind: Tool
-  type: genesis:mcp_tool
-  description: Transform and standardize extracted data via MCP
-  asTools: true
+    description: Clinical document extraction
+- id: medical-data-standardizer
+  name: Medical Data Standardizer
+  kind: Model
+  type: genesis:autonomize_model
+  description: Clinical note classifier for standardizing and validating extracted healthcare data
   config:
-    tool_name: data_transformer
+    selected_model: Clinical Note Classifier
+    confidence_threshold: 0.8
   provides:
-  - useAs: tools
+  - useAs: input
     in: extraction-agent
-    description: Data standardization tool
+    description: Medical data standardization and validation
 - id: extraction-output
   name: Extracted Data
   kind: Data
@@ -237,6 +236,10 @@ outputs:
 - clinical_info
 - extraction_confidence
 - missing_fields
+- standardized_data
+- validation_report
+- phi_detection_results
+- compliance_audit_log
 kpis:
 - name: Field Extraction Accuracy
   category: quality
@@ -262,6 +265,36 @@ kpis:
   target: 98
   unit: '%'
   description: Percentage of correctly validated NPI numbers
+- name: ICD-10 Code Validation Rate
+  category: quality
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Percentage of correctly validated ICD-10 diagnosis codes
+- name: CPT Code Validation Rate
+  category: quality
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Percentage of correctly validated CPT procedure codes
+- name: PHI Detection Accuracy
+  category: compliance
+  valueType: percentage
+  target: 99
+  unit: '%'
+  description: Accuracy of Protected Health Information detection
+- name: HIPAA Compliance Score
+  category: compliance
+  valueType: percentage
+  target: 100
+  unit: '%'
+  description: Overall HIPAA compliance adherence score
+- name: Data Standardization Success Rate
+  category: quality
+  valueType: percentage
+  target: 92
+  unit: '%'
+  description: Percentage of successfully standardized medical data fields
 securityInfo:
   visibility: Private
   confidentiality: High

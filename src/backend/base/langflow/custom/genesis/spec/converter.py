@@ -18,6 +18,10 @@ from .models import AgentSpec, Component
 from .mapper import ComponentMapper
 from .resolver import VariableResolver
 
+# Import for database-driven validation
+from langflow.services.component_mapping.capability_service import ComponentCapabilityService
+from langflow.services.deps import session_scope
+
 logger = logging.getLogger(__name__)
 
 
@@ -164,6 +168,43 @@ TOOL_NAME_TO_SERVER_MAPPING = {
         "server_name": "care_coordination_server",
         "tool_filter": "care_management_platforms",
         "description": "Care management and coordination platforms"
+    },
+
+    # HEDIS Quality Analytics Tools
+    "hedis_database": {
+        "server_name": "healthcare_analytics_server",
+        "tool_filter": "hedis_database",
+        "description": "HEDIS quality metrics database access"
+    },
+    "healthcare_data_connector": {
+        "server_name": "healthcare_analytics_server",
+        "tool_filter": "healthcare_data_connector",
+        "description": "Healthcare data integration and connector services"
+    },
+    "peer_plan_comparator": {
+        "server_name": "healthcare_analytics_server",
+        "tool_filter": "peer_plan_comparator",
+        "description": "Peer plan comparison and benchmarking"
+    },
+    "benchmark_analysis_model": {
+        "server_name": "healthcare_analytics_server",
+        "tool_filter": "benchmark_analysis_model",
+        "description": "HEDIS benchmark analysis and scoring model"
+    },
+    "trend_analysis_model": {
+        "server_name": "healthcare_analytics_server",
+        "tool_filter": "trend_analysis_model",
+        "description": "Healthcare trend analysis and forecasting model"
+    },
+    "intervention_recommendation_model": {
+        "server_name": "healthcare_analytics_server",
+        "tool_filter": "intervention_recommendation_model",
+        "description": "Healthcare intervention recommendation engine"
+    },
+    "competitive_intelligence_analyzer": {
+        "server_name": "healthcare_analytics_server",
+        "tool_filter": "competitive_intelligence_analyzer",
+        "description": "Healthcare competitive intelligence analysis"
     }
 }
 
@@ -182,10 +223,12 @@ class FlowConverter:
     """Converts agent specifications to AI Studio flows with corrected edge logic."""
 
     def __init__(self, mapper: Optional[ComponentMapper] = None,
-                 resolver: Optional[VariableResolver] = None):
+                 resolver: Optional[VariableResolver] = None,
+                 capability_service: Optional[ComponentCapabilityService] = None):
         """Initialize the flow converter."""
         self.mapper = mapper or ComponentMapper()
         self.resolver = resolver or VariableResolver()
+        self.capability_service = capability_service or ComponentCapabilityService()
 
     async def convert(self, spec_data: Dict[str, Any],
                      variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -206,11 +249,20 @@ class FlowConverter:
         if variables:
             self.resolver.variables.update(variables)
 
-        # Build nodes
-        nodes = await self._build_nodes(spec)
-
-        # Build edges using provides pattern
-        edges = await self._build_edges(spec, nodes)
+        # Try to use database session for dynamic validation, fallback to None for static validation
+        try:
+            async with session_scope() as session:
+                # Build nodes with database session
+                nodes = await self._build_nodes(spec, session)
+                # Build edges using provides pattern with dynamic validation
+                edges = await self._build_edges(spec, nodes, session)
+        except Exception as e:
+            logger.warning(f"Could not use database session for dynamic validation: {e}")
+            logger.info("Falling back to static validation")
+            # Build nodes with static validation (session=None)
+            nodes = await self._build_nodes(spec, None)
+            # Build edges using provides pattern with static validation
+            edges = await self._build_edges(spec, nodes, None)
 
         # Create flow structure
         flow = {
@@ -242,29 +294,47 @@ class FlowConverter:
 
         return flow
 
-    async def _build_nodes(self, spec: AgentSpec) -> List[Dict[str, Any]]:
+    async def _build_nodes(self, spec: AgentSpec, session = None) -> List[Dict[str, Any]]:
         """Build nodes from agent specification."""
         # Store spec for position calculation
         self._current_spec = spec
         nodes = []
 
         for i, component in enumerate(spec.components):
-            node = await self._build_node(component, i, spec)
+            node = await self._build_node(component, i, spec, session)
             if node:
                 nodes.append(node)
 
         return nodes
 
     async def _build_node(self, component: Component, index: int,
-                         spec: AgentSpec = None) -> Optional[Dict[str, Any]]:
+                         spec: AgentSpec = None, session = None) -> Optional[Dict[str, Any]]:
         """Build a single node from component specification."""
         logger.debug(f"Building node for component: {component.id} (type: {component.type})")
 
-        # Map component type
-        mapping = self.mapper.map_component(component.type)
-        component_type = mapping["component"]
+        # Map component type using database-first approach
+        if session:
+            mapping = await self.mapper.map_component_async(component.type, session)
+        else:
+            mapping = self.mapper.map_component(component.type)
+        component_type = mapping.get("component")
+
+        # CRITICAL FIX: Ensure component_type is never None
+        if not component_type:
+            logger.error(f"Mapper returned None component for {component.type}. Mapping: {mapping}")
+            component_type = "MCPToolsComponent"  # Safe fallback
+
         # Use dataType for edge creation if specified, otherwise use component_type
-        data_type = mapping.get("dataType", component_type)
+        data_type = mapping.get("dataType")
+        if not data_type:
+            data_type = component_type
+            logger.debug(f"No dataType in mapping for {component.type}, using component_type: {component_type}")
+
+        # CRITICAL FIX: Ensure data_type is never None
+        if not data_type:
+            logger.error(f"Both dataType and component_type are None for {component.type}. Mapping: {mapping}")
+            data_type = "MCPToolsComponent"  # Final fallback
+
         logger.debug(f"Mapped {component.type} → {component_type} (dataType: {data_type})")
 
         # Get component template (this would come from component registry in real implementation)
@@ -334,8 +404,8 @@ class FlowConverter:
                 else:
                     logger.info(f"  Component {component.id} already has tool output")
 
-                # Special handling for KnowledgeHubSearch and MCPTools - ensure they output Tool when used as tool
-                if "KnowledgeHubSearch" in data_type or "MCPTools" in data_type:
+                # Special handling for KnowledgeHubSearch and MCPToolsComponent - ensure they output Tool when used as tool
+                if "KnowledgeHubSearch" in data_type or "MCPToolsComponent" in data_type:
                     logger.info(f"  Special handling for {data_type} as tool")
                     # Make sure the tool output is primary
                     for output in node_data["outputs"]:
@@ -369,19 +439,27 @@ class FlowConverter:
 
         # Apply component configuration
         if component.config or mapping.get("config"):
-            self._apply_config_to_template(
-                node["data"]["node"].get("template", {}),
+            # Ensure template is always a dict, never None
+            template = node["data"]["node"].get("template") or {}
+            await self._apply_config_to_template(
+                template,
                 {**(mapping.get("config") or {}), **(component.config or {})},
-                component, spec
+                component, spec, session
             )
 
         return node
 
-    def _apply_config_to_template(self, template: Dict[str, Any],
+    async def _apply_config_to_template(self, template: Dict[str, Any],
                                  config: Dict[str, Any],
                                  component: Component = None,
-                                 spec: AgentSpec = None):
+                                 spec: AgentSpec = None,
+                                 session = None):
         """Apply component config values to the template."""
+        # Ensure template is never None to prevent "NoneType is not iterable" errors
+        if template is None:
+            logger.warning("Template is None, using empty dict")
+            template = {}
+
         # Make a copy to avoid modifying original
         config = dict(config)
 
@@ -411,9 +489,13 @@ class FlowConverter:
                 "max_tokens": "max_tokens",
                 "stream": "stream"
             },
-            "MCPTools": {
+            "MCPToolsComponent": {
                 "tool_name": "tool_names",
                 "description": "tool_description"
+            },
+            "PromptComponent": {
+                "saved_prompt": "template",
+                "template": "template"
             },
             "APIRequest": {
                 "method": "method",
@@ -427,7 +509,10 @@ class FlowConverter:
         # Get the component type from the component
         component_type = None
         if component:
-            mapping = self.mapper.map_component(component.type)
+            if session:
+                mapping = await self.mapper.map_component_async(component.type, session)
+            else:
+                mapping = self.mapper.map_component(component.type)
             component_type = mapping.get("component", "")
 
             # Apply field mappings based on component type
@@ -496,7 +581,8 @@ class FlowConverter:
             logger.warning(f"Could not map {len(unmapped_configs)} configs for {component.id}: {unmapped_configs}")
 
     async def _build_edges(self, spec: AgentSpec,
-                          nodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+                          nodes: List[Dict[str, Any]],
+                          session = None) -> List[Dict[str, Any]]:
         """Build edges from provides declarations with fixed logic."""
         logger.debug(f"Building edges for {len(nodes)} nodes")
         edges = []
@@ -519,8 +605,8 @@ class FlowConverter:
             # Process each provides declaration
             for provide in component.provides:
                 logger.debug(f"Creating edge: {source_id} → {provide.in_} (useAs: {provide.useAs})")
-                edge = self._create_edge_from_provides(
-                    source_id, provide, node_map, component
+                edge = await self._create_edge_from_provides(
+                    source_id, provide, node_map, component, session
                 )
                 if edge:
                     edges.append(edge)
@@ -531,9 +617,10 @@ class FlowConverter:
         logger.info(f"Created {len(edges)} edges from {len(spec.components)} components")
         return edges
 
-    def _create_edge_from_provides(self, source_id: str, provide: Any,
+    async def _create_edge_from_provides(self, source_id: str, provide: Any,
                                   node_map: Dict[str, Dict[str, Any]],
-                                  source_component: Component) -> Optional[Dict[str, Any]]:
+                                  source_component: Component,
+                                  session = None) -> Optional[Dict[str, Any]]:
         """Create an edge from provides declaration with FIXED logic."""
         # CRITICAL FIX: Handle Pydantic field alias correctly for "in" field
         # The field is named `in_` but aliased as `in` in YAML
@@ -562,6 +649,15 @@ class FlowConverter:
         # Get actual component types
         source_type = source_node["data"]["type"]
         target_type = target_node["data"]["type"]
+
+        # CRITICAL FIX: Defensive checks for None types
+        if source_type is None or source_type == "None":
+            logger.error(f"Source type is None for node {source_id}. Node data: {source_node['data']}")
+            source_type = "MCPToolsComponent"  # Safe fallback
+
+        if target_type is None or target_type == "None":
+            logger.error(f"Target type is None for node {target_id}. Node data: {target_node['data']}")
+            target_type = "Agent"  # Safe fallback for targets that should accept tools
 
         # FIXED: Determine output field with improved logic
         output_field = self._determine_output_field_fixed(
@@ -596,8 +692,8 @@ class FlowConverter:
 
         # CRITICAL FIX: Use different validation for tool connections
         if is_tool_connection:
-            validation_result = self._validate_tool_connection_capability(
-                source_type, target_type, source_component
+            validation_result = await self._validate_tool_connection_capability(
+                source_type, target_type, source_component, session
             )
             # For tool connections, override output types to indicate tool capability
             if validation_result:
@@ -681,13 +777,14 @@ class FlowConverter:
         if use_as in ["tool", "tools"]:
             # For MCP components, they provide tools but don't currently show Tool type
             # They need to connect as tools regardless of current tool_mode setting
-            if "MCP" in source_type:
+            if source_type and ("MCP" in source_type or "MCPToolsComponent" in source_type):
                 return "response"  # MCP components use response field
 
             # Look for Tool type output in the component's outputs
             if outputs:
                 for output in outputs:
-                    if "Tool" in output.get("types", []):
+                    output_types = output.get("types", []) or []
+                    if "Tool" in output_types:
                         return output.get("name", "component_as_tool")
 
             # For other components marked with asTools=true, use standard output
@@ -709,21 +806,25 @@ class FlowConverter:
                 return outputs[0].get("name", "output")
 
         # Component-specific defaults with AutonomizeModel support
-        if "ChatInput" in source_type:
+        if source_type and "ChatInput" in source_type:
             return "message"
-        elif "AutonomizeModel" in source_type:
+        elif source_type and "AutonomizeModel" in source_type:
             return "prediction"  # FIXED: AutonomizeModel outputs prediction
-        elif "Agent" in source_type:
+        elif source_type and "Agent" in source_type:
             return "response"
-        elif "Prompt" in source_type or "GenesisPrompt" in source_type:
+        elif source_type and ("Prompt" in source_type or "GenesisPrompt" in source_type):
             return "prompt"
-        elif "Memory" in source_type:
+        elif source_type and "Memory" in source_type:
             return "memory"
         else:
             return "output"
 
     def _map_use_as_to_field_fixed(self, use_as: str, target_type: str) -> str:
         """FIXED field mapping with AutonomizeModel support."""
+        # Handle None target_type
+        if target_type is None:
+            target_type = ""
+
         # Component-specific mappings
         if "AutonomizeModel" in target_type:
             if use_as in ["input", "query", "text"]:
@@ -773,18 +874,18 @@ class FlowConverter:
         outputs = self._get_component_outputs_fixed(node)
         for output in outputs:
             if output.get("name") == output_field:
-                types = output.get("types", [])
+                types = output.get("types", []) or []
                 if types:
                     return types
 
         # Component-specific defaults
-        if "AutonomizeModel" in source_type:
+        if source_type and "AutonomizeModel" in source_type:
             return ["Data"]  # FIXED: AutonomizeModel outputs Data
-        elif "ChatInput" in source_type or "ChatOutput" in source_type:
+        elif source_type and ("ChatInput" in source_type or "ChatOutput" in source_type):
             return ["Message"]
-        elif "Agent" in source_type:
+        elif source_type and "Agent" in source_type:
             return ["Message"]
-        elif "Prompt" in source_type:
+        elif source_type and "Prompt" in source_type:
             return ["Message"]
         elif "Tool" in output_field:
             return ["Tool"]
@@ -844,6 +945,9 @@ class FlowConverter:
                                           input_types: List[str],
                                           source_type: str, target_type: str) -> bool:
         """FIXED type compatibility validation with detailed logging."""
+        # Ensure types are never None to prevent "NoneType is not iterable" errors
+        output_types = output_types or []
+        input_types = input_types or []
         # Log validation attempt
         is_tool_validation = "Tool" in output_types or "Tool" in input_types
         if is_tool_validation:
@@ -928,8 +1032,8 @@ class FlowConverter:
 
         return False
 
-    def _validate_tool_connection_capability(self, source_type: str, target_type: str,
-                                           source_component: Component) -> bool:
+    async def _validate_tool_connection_capability(self, source_type: str, target_type: str,
+                                           source_component: Component, session = None) -> bool:
         """
         CRITICAL FIX: Validate if a component CAN be used as a tool.
 
@@ -939,46 +1043,75 @@ class FlowConverter:
         logger.debug(f"Validating tool capability: {source_type} -> {target_type}")
 
         # Target must be an agent that can accept tools
-        if not self._target_accepts_tools(target_type):
+        if not await self._target_accepts_tools(target_type, session):
             logger.warning(f"Target {target_type} cannot accept tools")
             return False
 
         # Check if source component has tool capability
-        if self._component_has_tool_capability(source_type, source_component):
+        if await self._component_has_tool_capability(source_type, source_component, session):
             logger.info(f"✅ {source_type} has tool capability")
             return True
 
         logger.warning(f"❌ {source_type} does not have tool capability")
         return False
 
-    def _target_accepts_tools(self, target_type: str) -> bool:
-        """Check if target component can accept tools."""
-        # Agents can accept tools
-        agent_types = ["Agent", "AutonomizeAgent", "CrewAIAgentComponent"]
-        return any(agent_type in target_type for agent_type in agent_types)
+    async def _target_accepts_tools(self, target_type: str, session = None) -> bool:
+        """Check if target component can accept tools using database-driven validation."""
+        # CRITICAL FIX: Handle None and invalid types gracefully
+        if not target_type or target_type == "None":
+            logger.warning(f"Target type is None or invalid: {repr(target_type)}")
+            return False
 
-    def _component_has_tool_capability(self, source_type: str, source_component: Component) -> bool:
+        # Use database-driven validation if session is available
+        if session is not None:
+            try:
+                result = await self.capability_service.component_accepts_tools(session, target_type)
+                logger.debug(f"Database validation: '{target_type}' accepts tools: {result}")
+                return result
+            except Exception as e:
+                logger.warning(f"Database validation failed for {target_type}, falling back to static: {e}")
+
+        # Fallback to static validation for backward compatibility
+        agent_types = ["Agent", "AutonomizeAgent", "CrewAIAgentComponent", "genesis:agent", "genesis:autonomize_model"]
+        result = any(agent_type in target_type for agent_type in agent_types)
+
+        logger.debug(f"Static fallback: Target type '{target_type}' accepts tools: {result}")
+        return result
+
+    async def _component_has_tool_capability(self, source_type: str, source_component: Component, session = None) -> bool:
         """
-        Check if component can be used as a tool.
+        Check if component can be used as a tool using database-driven validation.
 
         Components can be tools if:
         1. They have asTools: true in spec
         2. They are MCP components (dynamic tool capability)
         3. They are inherently tool components (knowledge search, etc.)
         4. They have tool mode support
+        5. Database indicates they can provide tools
         """
-        # Check spec configuration
+        # Check spec configuration first
         if hasattr(source_component, 'asTools') and source_component.asTools:
             logger.debug(f"Component has asTools=true")
             return True
 
+        # Use database-driven validation if session is available
+        if session is not None:
+            try:
+                result = await self.capability_service.component_provides_tools(session, source_type)
+                if result:
+                    logger.debug(f"Database validation: '{source_type}' provides tools: {result}")
+                    return result
+            except Exception as e:
+                logger.warning(f"Database validation failed for {source_type}, falling back to static: {e}")
+
+        # Fallback to static validation for backward compatibility
         # MCP components can become tools dynamically
-        if "MCP" in source_type:
+        if source_type and ("MCP" in source_type or "MCPToolsComponent" in source_type):
             logger.debug(f"MCP component has dynamic tool capability")
             return True
 
         # Knowledge search components are inherently tools
-        if "KnowledgeHubSearch" in source_type:
+        if source_type and "KnowledgeHubSearch" in source_type:
             logger.debug(f"Knowledge search component is inherently a tool")
             return True
 
@@ -989,7 +1122,7 @@ class FlowConverter:
             "DoclingInlineComponent", "SQLExecutor"
         ]
 
-        if any(tool_type in source_type for tool_type in tool_capable_types):
+        if source_type and any(tool_type in source_type for tool_type in tool_capable_types):
             logger.debug(f"Component type {source_type} is inherently tool-capable")
             return True
 
@@ -1167,7 +1300,7 @@ class FlowConverter:
 
         # Check provides declarations
         if component.provides:
-            return any(p.useAs in ["tool", "tools"] for p in component.provides)
+            return any(p.useAs in ["tool", "tools"] for p in (component.provides or []))
 
         return False
 

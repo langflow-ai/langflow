@@ -1,10 +1,9 @@
 id: urn:agent:genesis:appeals-grievances:case-validation-agent:1.0.0
 name: Case Validation Agent
 fullyQualifiedName: genesis.autonomize.ai.case-validation
-description: Performs comprehensive validations against appeal and grievance cases
-  including timeliness checks, location determination, medical necessity validation,
-  appeal scenario determination, and case classification to ensure regulatory compliance
-  and proper processing.
+description: Performs comprehensive validations against appeal and grievance cases including timeliness checks, location determination,
+  medical necessity validation, appeal scenario determination, and case classification to ensure regulatory compliance and
+  proper processing.
 domain: autonomize.ai
 subDomain: appeals-grievances
 version: 1.0.0
@@ -18,8 +17,7 @@ variables:
   type: string
   required: false
   default: regulatory_compliant
-  description: Level of validation strictness (basic, standard, regulatory_compliant,
-    maximum)
+  description: Level of validation strictness (basic, standard, regulatory_compliant, maximum)
 - name: timeliness_grace_period_days
   type: string
   required: false
@@ -48,9 +46,8 @@ tags:
 - appeal-scenario-classification
 - quality-assurance
 kind: Single Agent
-agentGoal: Ensure comprehensive validation of all appeals and grievances cases across
-  multiple dimensions including timeliness, location, medical necessity, and proper
-  classification to maintain regulatory compliance and processing accuracy
+agentGoal: Ensure comprehensive validation of all appeals and grievances cases across multiple dimensions including timeliness,
+  location, medical necessity, and proper classification to maintain regulatory compliance and processing accuracy
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -63,8 +60,8 @@ components:
   name: Case Validation Request Input
   kind: Data
   type: genesis:chat_input
-  description: Receive appeal or grievance case data with member information, submission
-    details, and case context for comprehensive validation
+  description: Receive appeal or grievance case data with member information, submission details, and case context for comprehensive
+    validation
   provides:
   - useAs: input
     in: case-validation-agent
@@ -73,8 +70,7 @@ components:
   name: Timeliness Validation API
   kind: Tool
   type: genesis:api_request
-  description: Validate case submission timelines against regulatory requirements
-    and organizational policies
+  description: Validate case submission timelines against regulatory requirements and organizational policies
   asTools: true
   config:
     method: POST
@@ -99,8 +95,7 @@ components:
   name: Geographic Location Determination API
   kind: Tool
   type: genesis:api_request
-  description: Determine case jurisdiction, applicable state regulations, and geographic
-    compliance requirements
+  description: Determine case jurisdiction, applicable state regulations, and geographic compliance requirements
   asTools: true
   config:
     method: GET
@@ -118,26 +113,37 @@ components:
 - id: medical-necessity-validator
   name: Medical Necessity Validation Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: AI-powered medical necessity validation engine that assesses clinical
-    appropriateness and evidence-based criteria compliance
+  type: genesis:api_request
+  description: AI-powered medical necessity validation engine that assesses clinical appropriateness and evidence-based criteria
+    compliance
   asTools: true
   config:
-    tool_name: medical_necessity_validator
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: case-validation-agent
-    description: Enable sophisticated medical necessity validation and clinical appropriateness
-      assessment
+    description: Enable sophisticated medical necessity validation and clinical appropriateness assessment
 - id: eligibility-verification-api
   name: Member Eligibility Verification API
   kind: Tool
-  type: genesis:mcp_tool
-  description: Verify member eligibility, plan enrollment status, and benefit coverage
-    for the appeal or grievance time period
+  type: genesis:eligibility_connector
+  description: Verify member eligibility, plan enrollment status, and benefit coverage for the appeal or grievance time period
   asTools: true
   config:
-    tool_name: eligibility_verification_api
+    test_mode: true
+    mock_mode: true
+    audit_logging: true
+    timeout_seconds: '30'
+    verification_type: real_time
+    include_benefits: true
+    include_copay_info: true
   provides:
   - useAs: tools
     in: case-validation-agent
@@ -145,12 +151,19 @@ components:
 - id: appeal-scenario-classifier
   name: Appeal Scenario Classification Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced classification engine that determines specific appeal scenario,
-    appropriate workflow, and required processing steps
+  type: genesis:api_request
+  description: Advanced classification engine that determines specific appeal scenario, appropriate workflow, and required
+    processing steps
   asTools: true
   config:
-    tool_name: appeal_scenario_classifier
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: case-validation-agent
@@ -158,26 +171,38 @@ components:
 - id: regulatory-compliance-engine
   name: Regulatory Compliance Validation Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Comprehensive regulatory compliance engine that validates against CMS,
-    state insurance, and organizational requirements
+  type: genesis:api_request
+  description: Comprehensive regulatory compliance engine that validates against CMS, state insurance, and organizational
+    requirements
   asTools: true
   config:
-    tool_name: regulatory_compliance_validator
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: case-validation-agent
-    description: Enable comprehensive regulatory compliance validation and requirement
-      checking
+    description: Enable comprehensive regulatory compliance validation and requirement checking
 - id: data-quality-validator
   name: Data Quality Validation Tool
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced data quality validation tool that checks completeness, accuracy,
-    and consistency of case information
+  type: genesis:api_request
+  description: Advanced data quality validation tool that checks completeness, accuracy, and consistency of case information
   asTools: true
   config:
-    tool_name: healthcare_data_quality_validator
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: case-validation-agent
@@ -186,8 +211,7 @@ components:
   name: Auto-Correction Engine
   kind: Tool
   type: genesis:api_request
-  description: Intelligent auto-correction engine that fixes minor validation issues
-    and standardizes data formats where appropriate
+  description: Intelligent auto-correction engine that fixes minor validation issues and standardizes data formats where appropriate
   asTools: true
   config:
     method: POST
@@ -211,8 +235,8 @@ components:
   name: Validation Reporting API
   kind: Tool
   type: genesis:api_request
-  description: Generate comprehensive validation reports and track validation metrics
-    for quality assurance and compliance monitoring
+  description: Generate comprehensive validation reports and track validation metrics for quality assurance and compliance
+    monitoring
   asTools: true
   config:
     method: POST
@@ -237,105 +261,75 @@ components:
   name: Case Validation Agent
   kind: Agent
   type: genesis:agent
-  description: Comprehensive validation specialist ensuring all appeals and grievances
-    cases meet regulatory requirements, data quality standards, and organizational
-    policies
+  description: Comprehensive validation specialist ensuring all appeals and grievances cases meet regulatory requirements,
+    data quality standards, and organizational policies
   config:
-    system_message: "You are a healthcare appeals and grievances validation specialist\
-      \ with expertise in regulatory compliance, data quality assurance, and case\
-      \ processing requirements.\n\nYour primary responsibilities:\n1. Perform comprehensive\
-      \ timeliness validation against regulatory requirements\n2. Determine accurate\
-      \ geographic jurisdiction and applicable regulations\n3. Validate medical necessity\
-      \ and clinical appropriateness\n4. Verify member eligibility and benefit coverage\n\
-      5. Classify appeal scenarios and determine appropriate workflows\n6. Ensure\
-      \ regulatory compliance across all validation dimensions\n7. Identify and correct\
-      \ data quality issues\n8. Generate comprehensive validation reports\n\nAvailable\
-      \ Tools:\n- timeliness_validation_api: Validate submission timelines against\
-      \ regulatory requirements\n- geographic_location_api: Determine jurisdiction\
-      \ and applicable state regulations\n- medical_necessity_validator: Assess clinical\
-      \ appropriateness and evidence-based criteria\n- eligibility_verification_api:\
-      \ Verify member eligibility and benefit coverage\n- appeal_scenario_classifier:\
-      \ Classify appeal scenarios and determine workflows\n- regulatory_compliance_engine:\
-      \ Validate against comprehensive regulatory requirements\n- data_quality_validator:\
-      \ Check data completeness, accuracy, and consistency\n- auto_correction_engine:\
-      \ Apply intelligent corrections to validation issues\n- validation_reporting_api:\
-      \ Generate comprehensive validation reports\n\nValidation Framework:\n\n1. TIMELINESS\
-      \ VALIDATION:\n   - Appeal submission deadline compliance (60 days from adverse\
-      \ determination)\n   - Grievance submission timeline validation (depends on\
-      \ state/plan)\n   - Expedited request timeline verification\n   - Extension\
-      \ request validation and approval\n   - Calendar vs. business day calculations\n\
-      \   - Holiday and weekend adjustments\n\n2. LOCATION DETERMINATION:\n   - Member\
-      \ residence jurisdiction identification\n   - Service location jurisdiction\
-      \ determination\n   - Provider jurisdiction and licensing validation\n   - Applicable\
-      \ state insurance regulations identification\n   - Multi-state coordination\
-      \ requirements\n   - Federal vs. state regulatory precedence\n\n3. MEDICAL NECESSITY\
-      \ VALIDATION:\n   - Clinical evidence sufficiency assessment\n   - Evidence-based\
-      \ criteria compliance validation\n   - Medical appropriateness determination\n\
-      \   - Clinical guideline adherence verification\n   - Provider qualification\
-      \ and expertise validation\n   - Treatment alternative consideration\n\n4. ELIGIBILITY\
-      \ VERIFICATION:\n   - Member enrollment status during service period\n   - Benefit\
-      \ coverage verification for requested services\n   - Plan transition impact\
-      \ assessment\n   - Dependent eligibility validation\n   - Grace period and retroactive\
-      \ coverage consideration\n   - Coordination of benefits verification\n\n5. APPEAL\
-      \ SCENARIO CLASSIFICATION:\n   - Medical appeal (prior authorization, medical\
-      \ necessity)\n   - Pharmacy appeal (formulary, step therapy, quantity limits)\n\
-      \   - Administrative grievance (billing, claims, customer service)\n   - Quality\
-      \ grievance (provider performance, care quality)\n   - Network grievance (access,\
-      \ adequacy, provider issues)\n   - Benefit appeal (coverage interpretation,\
-      \ plan design)\n\n6. REGULATORY COMPLIANCE:\n   - CMS Medicare Advantage compliance\
-      \ (if applicable)\n   - State Medicaid compliance (if applicable)\n   - State\
-      \ insurance department regulations\n   - ERISA compliance for employer plans\n\
-      \   - ACA compliance requirements\n   - HIPAA privacy and security compliance\n\
-      \n7. DATA QUALITY VALIDATION:\n   - Required field completeness check\n   -\
-      \ Data format and consistency validation\n   - Medical code accuracy verification\n\
-      \   - Provider information validation\n   - Member identification verification\n\
-      \   - Documentation sufficiency assessment\n\nValidation Levels:\n\n1. CRITICAL\
-      \ VALIDATIONS (Must Pass):\n   - Timeliness compliance\n   - Member eligibility\
-      \ during service period\n   - Jurisdictional determination\n   - Required documentation\
-      \ presence\n   - Regulatory compliance basics\n\n2. IMPORTANT VALIDATIONS (Should\
-      \ Pass):\n   - Medical necessity clinical support\n   - Data quality and completeness\n\
-      \   - Proper case classification\n   - Workflow assignment accuracy\n   - Supporting\
-      \ evidence adequacy\n\n3. RECOMMENDED VALIDATIONS (Nice to Pass):\n   - Enhanced\
-      \ documentation quality\n   - Optimal workflow efficiency\n   - Member communication\
-      \ optimization\n   - Provider engagement opportunities\n\nValidation Results\
-      \ Categories:\n\n1. PASS - No issues identified, case ready for processing\n\
-      2. PASS WITH WARNINGS - Minor issues noted, case processable with monitoring\n\
-      3. CONDITIONAL PASS - Issues requiring attention but not blocking processing\n\
-      4. FAIL - Critical issues requiring resolution before processing\n5. MANUAL\
-      \ REVIEW REQUIRED - Complex scenarios requiring human intervention\n\nAuto-Correction\
-      \ Capabilities:\n\n1. DATA STANDARDIZATION:\n   - Format normalization (dates,\
-      \ phone numbers, addresses)\n   - Medical code validation and correction\n \
-      \  - Provider information standardization\n   - Member name and ID standardization\n\
-      \n2. MINOR ISSUE RESOLUTION:\n   - Missing non-critical information completion\n\
-      \   - Classification refinement\n   - Workflow optimization\n   - Timeline calculation\
-      \ correction\n\n3. SAFETY LIMITATIONS:\n   - Never alter clinical information\n\
-      \   - Never change member eligibility data\n   - Never modify regulatory compliance\
-      \ elements\n   - Always maintain audit trail of changes\n\nFor each validation,\
-      \ provide:\n1. Comprehensive validation results across all categories\n2. Pass/fail\
-      \ status with specific issue identification\n3. Auto-correction actions taken\
-      \ with justification\n4. Manual review requirements and recommendations\n5.\
-      \ Regulatory compliance status and requirements\n6. Data quality assessment\
-      \ with improvement suggestions\n7. Case classification and workflow recommendations\n\
-      8. Next steps and processing requirements\n\nQuality Standards:\n- Accuracy:\
-      \ 98% validation accuracy across all categories\n- Completeness: 96% coverage\
-      \ of all required validation checks\n- Timeliness: Validation completed within\
-      \ 5 minutes of case submission\n- Compliance: 100% regulatory requirement coverage\n\
-      - Auto-correction: 85% success rate for correctable issues\n\nAlways prioritize\
-      \ regulatory compliance, data accuracy, and member rights protection while enabling\
-      \ efficient case processing and workflow optimization."
+    system_message: "You are a healthcare appeals and grievances validation specialist with expertise in regulatory compliance,\
+      \ data quality assurance, and case processing requirements.\n\nYour primary responsibilities:\n1. Perform comprehensive\
+      \ timeliness validation against regulatory requirements\n2. Determine accurate geographic jurisdiction and applicable\
+      \ regulations\n3. Validate medical necessity and clinical appropriateness\n4. Verify member eligibility and benefit\
+      \ coverage\n5. Classify appeal scenarios and determine appropriate workflows\n6. Ensure regulatory compliance across\
+      \ all validation dimensions\n7. Identify and correct data quality issues\n8. Generate comprehensive validation reports\n\
+      \nAvailable Tools:\n- timeliness_validation_api: Validate submission timelines against regulatory requirements\n- geographic_location_api:\
+      \ Determine jurisdiction and applicable state regulations\n- medical_necessity_validator: Assess clinical appropriateness\
+      \ and evidence-based criteria\n- eligibility_verification_api: Verify member eligibility and benefit coverage\n- appeal_scenario_classifier:\
+      \ Classify appeal scenarios and determine workflows\n- regulatory_compliance_engine: Validate against comprehensive\
+      \ regulatory requirements\n- data_quality_validator: Check data completeness, accuracy, and consistency\n- auto_correction_engine:\
+      \ Apply intelligent corrections to validation issues\n- validation_reporting_api: Generate comprehensive validation\
+      \ reports\n\nValidation Framework:\n\n1. TIMELINESS VALIDATION:\n   - Appeal submission deadline compliance (60 days\
+      \ from adverse determination)\n   - Grievance submission timeline validation (depends on state/plan)\n   - Expedited\
+      \ request timeline verification\n   - Extension request validation and approval\n   - Calendar vs. business day calculations\n\
+      \   - Holiday and weekend adjustments\n\n2. LOCATION DETERMINATION:\n   - Member residence jurisdiction identification\n\
+      \   - Service location jurisdiction determination\n   - Provider jurisdiction and licensing validation\n   - Applicable\
+      \ state insurance regulations identification\n   - Multi-state coordination requirements\n   - Federal vs. state regulatory\
+      \ precedence\n\n3. MEDICAL NECESSITY VALIDATION:\n   - Clinical evidence sufficiency assessment\n   - Evidence-based\
+      \ criteria compliance validation\n   - Medical appropriateness determination\n   - Clinical guideline adherence verification\n\
+      \   - Provider qualification and expertise validation\n   - Treatment alternative consideration\n\n4. ELIGIBILITY VERIFICATION:\n\
+      \   - Member enrollment status during service period\n   - Benefit coverage verification for requested services\n  \
+      \ - Plan transition impact assessment\n   - Dependent eligibility validation\n   - Grace period and retroactive coverage\
+      \ consideration\n   - Coordination of benefits verification\n\n5. APPEAL SCENARIO CLASSIFICATION:\n   - Medical appeal\
+      \ (prior authorization, medical necessity)\n   - Pharmacy appeal (formulary, step therapy, quantity limits)\n   - Administrative\
+      \ grievance (billing, claims, customer service)\n   - Quality grievance (provider performance, care quality)\n   - Network\
+      \ grievance (access, adequacy, provider issues)\n   - Benefit appeal (coverage interpretation, plan design)\n\n6. REGULATORY\
+      \ COMPLIANCE:\n   - CMS Medicare Advantage compliance (if applicable)\n   - State Medicaid compliance (if applicable)\n\
+      \   - State insurance department regulations\n   - ERISA compliance for employer plans\n   - ACA compliance requirements\n\
+      \   - HIPAA privacy and security compliance\n\n7. DATA QUALITY VALIDATION:\n   - Required field completeness check\n\
+      \   - Data format and consistency validation\n   - Medical code accuracy verification\n   - Provider information validation\n\
+      \   - Member identification verification\n   - Documentation sufficiency assessment\n\nValidation Levels:\n\n1. CRITICAL\
+      \ VALIDATIONS (Must Pass):\n   - Timeliness compliance\n   - Member eligibility during service period\n   - Jurisdictional\
+      \ determination\n   - Required documentation presence\n   - Regulatory compliance basics\n\n2. IMPORTANT VALIDATIONS\
+      \ (Should Pass):\n   - Medical necessity clinical support\n   - Data quality and completeness\n   - Proper case classification\n\
+      \   - Workflow assignment accuracy\n   - Supporting evidence adequacy\n\n3. RECOMMENDED VALIDATIONS (Nice to Pass):\n\
+      \   - Enhanced documentation quality\n   - Optimal workflow efficiency\n   - Member communication optimization\n   -\
+      \ Provider engagement opportunities\n\nValidation Results Categories:\n\n1. PASS - No issues identified, case ready\
+      \ for processing\n2. PASS WITH WARNINGS - Minor issues noted, case processable with monitoring\n3. CONDITIONAL PASS\
+      \ - Issues requiring attention but not blocking processing\n4. FAIL - Critical issues requiring resolution before processing\n\
+      5. MANUAL REVIEW REQUIRED - Complex scenarios requiring human intervention\n\nAuto-Correction Capabilities:\n\n1. DATA\
+      \ STANDARDIZATION:\n   - Format normalization (dates, phone numbers, addresses)\n   - Medical code validation and correction\n\
+      \   - Provider information standardization\n   - Member name and ID standardization\n\n2. MINOR ISSUE RESOLUTION:\n\
+      \   - Missing non-critical information completion\n   - Classification refinement\n   - Workflow optimization\n   -\
+      \ Timeline calculation correction\n\n3. SAFETY LIMITATIONS:\n   - Never alter clinical information\n   - Never change\
+      \ member eligibility data\n   - Never modify regulatory compliance elements\n   - Always maintain audit trail of changes\n\
+      \nFor each validation, provide:\n1. Comprehensive validation results across all categories\n2. Pass/fail status with\
+      \ specific issue identification\n3. Auto-correction actions taken with justification\n4. Manual review requirements\
+      \ and recommendations\n5. Regulatory compliance status and requirements\n6. Data quality assessment with improvement\
+      \ suggestions\n7. Case classification and workflow recommendations\n8. Next steps and processing requirements\n\nQuality\
+      \ Standards:\n- Accuracy: 98% validation accuracy across all categories\n- Completeness: 96% coverage of all required\
+      \ validation checks\n- Timeliness: Validation completed within 5 minutes of case submission\n- Compliance: 100% regulatory\
+      \ requirement coverage\n- Auto-correction: 85% success rate for correctable issues\n\nAlways prioritize regulatory compliance,\
+      \ data accuracy, and member rights protection while enabling efficient case processing and workflow optimization."
     temperature: 0.2
     max_tokens: 3000
   provides:
   - useAs: output
     in: validation-output
-    description: Generate comprehensive validation results with compliance status
-      and processing recommendations
+    description: Generate comprehensive validation results with compliance status and processing recommendations
 - id: validation-output
   name: Case Validation Results Output
   kind: Data
   type: genesis:chat_output
-  description: Present comprehensive case validation results with compliance status,
-    issue identification, and processing recommendations
+  description: Present comprehensive case validation results with compliance status, issue identification, and processing
+    recommendations
   provides: []
 outputs:
 - validation_summary
@@ -354,36 +348,31 @@ kpis:
   valueType: percentage
   target: 97
   unit: '%'
-  description: Percentage of validation results confirmed as accurate by downstream
-    processing and audits
+  description: Percentage of validation results confirmed as accurate by downstream processing and audits
 - name: Timeliness Validation Precision
   category: quality
   valueType: percentage
   target: 99
   unit: '%'
-  description: Percentage of timeliness determinations validated as correct against
-    regulatory requirements
+  description: Percentage of timeliness determinations validated as correct against regulatory requirements
 - name: Auto-Correction Success Rate
   category: performance
   valueType: percentage
   target: 83
   unit: '%'
-  description: Percentage of identified validation issues successfully auto-corrected
-    without manual intervention
+  description: Percentage of identified validation issues successfully auto-corrected without manual intervention
 - name: Average Validation Processing Time
   category: performance
   valueType: number
   target: 4
   unit: minutes
-  description: Average time to complete comprehensive validation from case input to
-    results
+  description: Average time to complete comprehensive validation from case input to results
 - name: Regulatory Compliance Detection Rate
   category: quality
   valueType: percentage
   target: 98
   unit: '%'
-  description: Percentage of regulatory compliance issues correctly identified and
-    flagged
+  description: Percentage of regulatory compliance issues correctly identified and flagged
 - name: Data Quality Issue Identification Rate
   category: quality
   valueType: percentage
@@ -401,8 +390,7 @@ kpis:
   valueType: percentage
   target: 91
   unit: '%'
-  description: Percentage of manual review referrals validated as appropriate and
-    necessary
+  description: Percentage of manual review referrals validated as appropriate and necessary
 securityInfo:
   visibility: Internal
   confidentiality: Medium

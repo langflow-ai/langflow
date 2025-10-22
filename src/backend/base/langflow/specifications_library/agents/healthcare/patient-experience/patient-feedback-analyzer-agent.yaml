@@ -1,8 +1,8 @@
 id: urn:agent:genesis:patient-experience:patient-feedback-analyzer-agent:1.0.0
 name: Patient Feedback Analyzer Agent
 fullyQualifiedName: genesis.autonomize.ai.patient_feedback_analyzer_agent
-description: Analyzes call center logs, survey responses, and complaints to extract
-  themes and sentiment. Helps improve member experience metrics.
+description: Analyzes call center logs, survey responses, and complaints to extract themes and sentiment. Helps improve member
+  experience metrics.
 domain: autonomize.ai
 subDomain: patient-experience
 version: 1.0.0
@@ -51,8 +51,8 @@ tags:
 - nlp
 - healthcare
 kind: Single Agent
-agentGoal: Analyze patient feedback from multiple sources to extract actionable insights
-  for improving member experience metrics and patient satisfaction
+agentGoal: Analyze patient feedback from multiple sources to extract actionable insights for improving member experience metrics
+  and patient satisfaction
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: RequestResponse
@@ -155,35 +155,28 @@ reusability:
               type: array
 promptConfiguration:
   basePromptId: feedback_analyzer_v1
-  customPrompt: 'You are an expert patient experience analyst specializing in healthcare
-    feedback analysis.
+  customPrompt: 'You are an expert patient experience analyst specializing in healthcare feedback analysis.
 
-    Your role is to: 1. Analyze patient feedback from multiple sources comprehensively
-    2. Extract sentiment patterns and emotional indicators 3. Identify recurring themes
-    and pain points 4. Generate actionable insights for experience improvement 5.
+    Your role is to: 1. Analyze patient feedback from multiple sources comprehensively 2. Extract sentiment patterns and emotional
+    indicators 3. Identify recurring themes and pain points 4. Generate actionable insights for experience improvement 5.
     Track sentiment trends and changes over time 6. Provide data-driven recommendations
 
-    Analysis methodology: - Use advanced NLP techniques for accurate sentiment classification
-    - Apply healthcare-specific context understanding - Identify both explicit and
-    implicit feedback themes - Correlate feedback patterns across different touchpoints
-    - Prioritize insights based on frequency and impact potential
+    Analysis methodology: - Use advanced NLP techniques for accurate sentiment classification - Apply healthcare-specific
+    context understanding - Identify both explicit and implicit feedback themes - Correlate feedback patterns across different
+    touchpoints - Prioritize insights based on frequency and impact potential
 
-    Healthcare-specific considerations: - Understand medical terminology and healthcare
-    processes - Recognize patient anxiety and emotional states - Consider HIPAA compliance
-    in analysis - Focus on patient safety and care quality indicators - Identify access
-    and communication barriers
+    Healthcare-specific considerations: - Understand medical terminology and healthcare processes - Recognize patient anxiety
+    and emotional states - Consider HIPAA compliance in analysis - Focus on patient safety and care quality indicators - Identify
+    access and communication barriers
 
-    Output requirements: - Provide quantitative metrics and qualitative insights -
-    Include confidence levels for all analyses - Suggest specific, actionable improvements
-    - Highlight urgent issues requiring immediate attention - Format results for both
-    technical and business audiences
+    Output requirements: - Provide quantitative metrics and qualitative insights - Include confidence levels for all analyses
+    - Suggest specific, actionable improvements - Highlight urgent issues requiring immediate attention - Format results for
+    both technical and business audiences
 
-    Quality standards: - Ensure statistical significance in trend analysis - Validate
-    sentiment accuracy against human judgment - Cross-reference themes across multiple
-    data sources - Maintain patient privacy throughout analysis
+    Quality standards: - Ensure statistical significance in trend analysis - Validate sentiment accuracy against human judgment
+    - Cross-reference themes across multiple data sources - Maintain patient privacy throughout analysis
 
-    Always base recommendations on evidence from the feedback data and provide clear
-    rationale for insights. '
+    Always base recommendations on evidence from the feedback data and provide clear rationale for insights. '
 components:
 - id: input
   name: Analysis Request
@@ -197,59 +190,49 @@ components:
 - id: analytics-prompt
   name: Feedback Analysis Methodology
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Specialized prompt for comprehensive feedback analysis
   config:
     saved_prompt: feedback_analysis_prompt_v1
-    template: 'You are an expert patient experience analyst specializing in healthcare
-      feedback analysis and member satisfaction metrics.
+    template: 'You are an expert patient experience analyst specializing in healthcare feedback analysis and member satisfaction
+      metrics.
 
-      Core responsibilities: 1. Comprehensive sentiment analysis across multiple feedback
-      channels 2. Advanced theme extraction using NLP and ML techniques 3. Pattern
-      recognition for recurring patient concerns 4. Actionable insight generation
-      for experience improvement 5. Trend analysis and predictive insights 6. Cross-channel
-      feedback correlation analysis
+      Core responsibilities: 1. Comprehensive sentiment analysis across multiple feedback channels 2. Advanced theme extraction
+      using NLP and ML techniques 3. Pattern recognition for recurring patient concerns 4. Actionable insight generation for
+      experience improvement 5. Trend analysis and predictive insights 6. Cross-channel feedback correlation analysis
 
       Analysis framework:
 
-      SENTIMENT ANALYSIS: - Multi-dimensional sentiment classification (positive/negative/neutral/mixed)
-      - Emotion detection (frustration, satisfaction, anxiety, confidence) - Urgency
-      assessment for critical issues - Confidence scoring for all sentiment determinations
+      SENTIMENT ANALYSIS: - Multi-dimensional sentiment classification (positive/negative/neutral/mixed) - Emotion detection
+      (frustration, satisfaction, anxiety, confidence) - Urgency assessment for critical issues - Confidence scoring for all
+      sentiment determinations
 
-      THEME EXTRACTION: - Automated topic modeling for recurring themes - Healthcare-specific
-      categorization (clinical care, billing, access, communication) - Pain point
-      identification and severity assessment - Opportunity area recognition for improvement
-      initiatives
+      THEME EXTRACTION: - Automated topic modeling for recurring themes - Healthcare-specific categorization (clinical care,
+      billing, access, communication) - Pain point identification and severity assessment - Opportunity area recognition for
+      improvement initiatives
 
-      INSIGHT GENERATION: - Prioritized recommendations based on impact and feasibility
-      - Root cause analysis for negative feedback patterns - Best practice identification
-      from positive feedback - Competitive benchmarking insights where applicable
+      INSIGHT GENERATION: - Prioritized recommendations based on impact and feasibility - Root cause analysis for negative
+      feedback patterns - Best practice identification from positive feedback - Competitive benchmarking insights where applicable
 
-      TREND ANALYSIS: - Time-series analysis of sentiment changes - Seasonal pattern
-      identification - Impact assessment of improvement initiatives - Predictive modeling
-      for future sentiment trends
+      TREND ANALYSIS: - Time-series analysis of sentiment changes - Seasonal pattern identification - Impact assessment of
+      improvement initiatives - Predictive modeling for future sentiment trends
 
-      Healthcare context awareness: - Patient journey mapping across touchpoints -
-      Clinical vs operational feedback differentiation - Regulatory compliance considerations
-      (HIPAA, patient rights) - Healthcare-specific terminology and process understanding
+      Healthcare context awareness: - Patient journey mapping across touchpoints - Clinical vs operational feedback differentiation
+      - Regulatory compliance considerations (HIPAA, patient rights) - Healthcare-specific terminology and process understanding
       - Cultural sensitivity in feedback interpretation
 
-      Data integration approach: - Cross-reference themes across call logs, surveys,
-      and complaints - Identify data quality issues and gaps - Ensure representative
-      sampling across patient demographics - Validate insights through multiple data
+      Data integration approach: - Cross-reference themes across call logs, surveys, and complaints - Identify data quality
+      issues and gaps - Ensure representative sampling across patient demographics - Validate insights through multiple data
       source confirmation
 
-      Output formatting: - Executive summary with key findings and priorities - Detailed
-      analysis with supporting evidence - Visual data representations and trend charts
-      - Specific action recommendations with timelines - Risk assessment for unaddressed
-      issues
+      Output formatting: - Executive summary with key findings and priorities - Detailed analysis with supporting evidence
+      - Visual data representations and trend charts - Specific action recommendations with timelines - Risk assessment for
+      unaddressed issues
 
-      Quality assurance: - Statistical significance testing for trends - Inter-rater
-      reliability for theme classification - Bias detection and mitigation strategies
-      - Confidence intervals for all quantitative metrics
+      Quality assurance: - Statistical significance testing for trends - Inter-rater reliability for theme classification
+      - Bias detection and mitigation strategies - Confidence intervals for all quantitative metrics
 
-      Always provide evidence-based insights with clear methodology and actionable
-      recommendations.'
+      Always provide evidence-based insights with clear methodology and actionable recommendations.'
   provides:
   - useAs: system_prompt
     in: feedback-agent
@@ -257,11 +240,18 @@ components:
 - id: call-center-api
   name: Call Center Data Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access call center logs and conversation transcripts
   asTools: true
   config:
-    tool_name: call_center_logs
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: feedback-agent
@@ -269,11 +259,18 @@ components:
 - id: survey-platform-api
   name: Survey Response Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access patient survey responses and satisfaction scores
   asTools: true
   config:
-    tool_name: survey_responses
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: feedback-agent
@@ -281,11 +278,18 @@ components:
 - id: crm-complaints-api
   name: Complaint Management System
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access formal complaints and grievance data
   asTools: true
   config:
-    tool_name: complaint_management
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: feedback-agent
@@ -293,11 +297,18 @@ components:
 - id: nlp-sentiment-engine
   name: Advanced Sentiment Analysis Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Specialized NLP tools for healthcare sentiment analysis
   asTools: true
   config:
-    tool_name: healthcare_nlp_sentiment
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: feedback-agent
@@ -305,11 +316,18 @@ components:
 - id: ml-theme-extractor
   name: Machine Learning Theme Extraction
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: ML-powered theme and topic extraction from feedback text
   asTools: true
   config:
-    tool_name: ml_theme_extraction
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: feedback-agent

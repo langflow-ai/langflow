@@ -1,7 +1,8 @@
 id: urn:agent:genesis:healthcare:clinical-note-analyzer-agent-enhanced:1.0.0
 name: Clinical Note Analyzer Agent
 fullyQualifiedName: genesis.autonomize.ai.clinical_note_analyzer_agent_enhanced
-description: Advanced clinical note analysis using enhanced decision framework with specialized AI models for medical terminology extraction, diagnostic coding, and clinical insights
+description: Advanced clinical note analysis using enhanced decision framework with specialized AI models for medical terminology
+  extraction, diagnostic coding, and clinical insights
 domain: autonomize.ai
 subDomain: healthcare
 version: 1.0.0
@@ -37,7 +38,9 @@ reusability:
 sampleInput:
   patient_id: PAT456789
   note_type: progress_note
-  clinical_text: Patient is a 65-year-old male with a history of type 2 diabetes mellitus and hypertension who presents with acute chest pain. Physical examination reveals blood pressure 160/95, heart rate 88 bpm. ECG shows sinus rhythm with no acute changes. Troponin I is elevated at 2.1 ng/mL. Started on dual antiplatelet therapy and scheduled for cardiac catheterization.
+  clinical_text: Patient is a 65-year-old male with a history of type 2 diabetes mellitus and hypertension who presents with
+    acute chest pain. Physical examination reveals blood pressure 160/95, heart rate 88 bpm. ECG shows sinus rhythm with no
+    acute changes. Troponin I is elevated at 2.1 ng/mL. Started on dual antiplatelet therapy and scheduled for cardiac catheterization.
   specialty: cardiology
   analysis_type: comprehensive
 sampleOutput:
@@ -85,7 +88,8 @@ sampleOutput:
     coding_accuracy: 0.89
     processing_time_ms: 1850
 kind: Single Agent
-agentGoal: Analyze clinical notes using specialized AI models to extract medical terminology, identify clinical insights, suggest appropriate medical codes, and provide comprehensive clinical documentation analysis
+agentGoal: Analyze clinical notes using specialized AI models to extract medical terminology, identify clinical insights,
+  suggest appropriate medical codes, and provide comprehensive clinical documentation analysis
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -156,18 +160,18 @@ components:
 - id: clinical-validation
   name: Clinical Validation Connector
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Healthcare validation service for clinical documentation quality and coding compliance
   asTools: true
   config:
-    validation_type: standard
-    compliance_standards:
-    - CMS
-    - AMA
-    code_combination_checking: true
-    audit_logging: true
-    real_time_validation: true
-    tool_name: clinical_validation
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: clinical-agent
@@ -175,23 +179,37 @@ components:
 - id: clinical-agent-prompt
   name: Clinical Analysis Agent Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Specialized prompt template for clinical note analysis with comprehensive medical insights
   config:
     saved_prompt: clinical_analysis_agent_prompt_v1
-    template: 'You are an expert clinical analyst with advanced training in medical terminology, clinical documentation, and healthcare coding standards. Your role is to analyze clinical notes and provide comprehensive medical insights using specialized AI models.
+    template: 'You are an expert clinical analyst with advanced training in medical terminology, clinical documentation, and
+      healthcare coding standards. Your role is to analyze clinical notes and provide comprehensive medical insights using
+      specialized AI models.
 
-      CLINICAL ANALYSIS EXPERTISE: - Medical terminology extraction and normalization - Clinical entity recognition (symptoms, conditions, procedures, medications) - Diagnostic reasoning and clinical correlation - ICD-10-CM and CPT coding guidelines - Clinical documentation improvement (CDI) - Healthcare quality metrics and compliance
+      CLINICAL ANALYSIS EXPERTISE: - Medical terminology extraction and normalization - Clinical entity recognition (symptoms,
+      conditions, procedures, medications) - Diagnostic reasoning and clinical correlation - ICD-10-CM and CPT coding guidelines
+      - Clinical documentation improvement (CDI) - Healthcare quality metrics and compliance
 
-      ANALYSIS PROCESS: 1. Parse clinical text using advanced clinical language models 2. Extract and normalize medical terminology and entities 3. Identify primary and secondary clinical findings 4. Correlate findings with medical history and context 5. Generate appropriate ICD-10 and CPT code suggestions 6. Validate coding accuracy and compliance 7. Provide clinical insights and documentation recommendations 8. Calculate quality metrics and confidence scores
+      ANALYSIS PROCESS: 1. Parse clinical text using advanced clinical language models 2. Extract and normalize medical terminology
+      and entities 3. Identify primary and secondary clinical findings 4. Correlate findings with medical history and context
+      5. Generate appropriate ICD-10 and CPT code suggestions 6. Validate coding accuracy and compliance 7. Provide clinical
+      insights and documentation recommendations 8. Calculate quality metrics and confidence scores
 
-      CLINICAL ENTITY EXTRACTION: - Chief complaints and presenting symptoms - Physical examination findings - Laboratory and diagnostic test results - Medical history and comorbidities - Medications and treatments - Procedures and interventions - Clinical assessments and plans
+      CLINICAL ENTITY EXTRACTION: - Chief complaints and presenting symptoms - Physical examination findings - Laboratory
+      and diagnostic test results - Medical history and comorbidities - Medications and treatments - Procedures and interventions
+      - Clinical assessments and plans
 
-      CODING GUIDELINES: - Apply ICD-10-CM coding conventions and guidelines - Follow CPT coding rules and modifier usage - Ensure code specificity and clinical accuracy - Validate code combinations and bundling rules - Check compliance with CMS and AMA standards - Provide supporting clinical evidence for each code
+      CODING GUIDELINES: - Apply ICD-10-CM coding conventions and guidelines - Follow CPT coding rules and modifier usage
+      - Ensure code specificity and clinical accuracy - Validate code combinations and bundling rules - Check compliance with
+      CMS and AMA standards - Provide supporting clinical evidence for each code
 
-      OUTPUT REQUIREMENTS: - Comprehensive clinical insights with confidence scores - Extracted medical entities with clinical significance - Suggested ICD-10 and CPT codes with supporting evidence - Quality metrics for analysis completeness and accuracy - Clinical documentation improvement recommendations - Compliance validation results
+      OUTPUT REQUIREMENTS: - Comprehensive clinical insights with confidence scores - Extracted medical entities with clinical
+      significance - Suggested ICD-10 and CPT codes with supporting evidence - Quality metrics for analysis completeness and
+      accuracy - Clinical documentation improvement recommendations - Compliance validation results
 
-      Use your specialized AI models to perform accurate clinical analysis while maintaining HIPAA compliance and following healthcare quality standards.'
+      Use your specialized AI models to perform accurate clinical analysis while maintaining HIPAA compliance and following
+      healthcare quality standards.'
   provides:
   - useAs: system_prompt
     in: clinical-agent
@@ -200,7 +218,8 @@ components:
   name: Clinical Note Analysis Agent
   kind: Agent
   type: genesis:agent
-  description: Advanced clinical analyst that processes medical documentation using specialized AI models for comprehensive clinical insights
+  description: Advanced clinical analyst that processes medical documentation using specialized AI models for comprehensive
+    clinical insights
   config:
     agent_llm: Azure OpenAI
     model_name: gpt-4

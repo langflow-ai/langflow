@@ -243,6 +243,22 @@ def get_store_service() -> StoreService:
     return get_service(ServiceType.STORE_SERVICE)
 
 
+def get_model_catalog_service():
+    """Retrieves the ModelCatalogService instance.
+
+    Returns:
+        ModelCatalogService: The model catalog service instance.
+    """
+    from langflow.services.model_catalog import ModelCatalogService
+
+    # Create singleton instance
+    if not hasattr(get_model_catalog_service, "_instance"):
+        get_model_catalog_service._instance = ModelCatalogService()
+        get_model_catalog_service._instance.initialize()
+
+    return get_model_catalog_service._instance
+
+
 def get_queue_service() -> JobQueueService:
     """Retrieves the QueueService instance from the service manager."""
     from langflow.services.job_queue.factory import JobQueueServiceFactory

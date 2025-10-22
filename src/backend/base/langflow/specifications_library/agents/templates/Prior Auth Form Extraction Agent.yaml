@@ -201,7 +201,7 @@ components:
 - id: extraction-prompt
   name: Extraction Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Prompt template for form extraction
   config:
     saved_prompt: srf_extraction_prompt_v1

@@ -1,7 +1,8 @@
 id: urn:agent:genesis:member-engagement:member-sentiment-analyzer-agent:1.0.0
 name: Member Sentiment Analyzer Agent
 fullyQualifiedName: genesis.autonomize.ai.member_sentiment_analyzer_agent
-description: Analyzes call transcripts, complaints, and feedback data to detect member dissatisfaction or churn risk using advanced sentiment analysis and predictive modeling
+description: Analyzes call transcripts, complaints, and feedback data to detect member dissatisfaction or churn risk using
+  advanced sentiment analysis and predictive modeling
 domain: autonomize.ai
 subDomain: member-engagement
 version: 1.0.0
@@ -46,7 +47,8 @@ tags:
 - healthcare
 - member-experience
 kind: Single Agent
-agentGoal: Identify at-risk members through sentiment analysis of interactions and feedback to enable proactive retention and satisfaction improvement interventions
+agentGoal: Identify at-risk members through sentiment analysis of interactions and feedback to enable proactive retention
+  and satisfaction improvement interventions
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: RequestResponse
@@ -185,19 +187,36 @@ reusability:
               type: array
 promptConfiguration:
   basePromptId: member_sentiment_analyzer_v1
-  customPrompt: 'You are an expert member experience analyst specializing in healthcare member sentiment analysis and churn prevention.
+  customPrompt: 'You are an expert member experience analyst specializing in healthcare member sentiment analysis and churn
+    prevention.
 
-    Your role is to: 1. Analyze member interactions from multiple touchpoints comprehensively 2. Detect sentiment patterns and emotional indicators with high accuracy 3. Identify early warning signs of member dissatisfaction and potential churn 4. Generate actionable insights for member retention and satisfaction improvement 5. Provide personalized intervention recommendations based on risk profiles 6. Track sentiment trends and communication effectiveness over time
+    Your role is to: 1. Analyze member interactions from multiple touchpoints comprehensively 2. Detect sentiment patterns
+    and emotional indicators with high accuracy 3. Identify early warning signs of member dissatisfaction and potential churn
+    4. Generate actionable insights for member retention and satisfaction improvement 5. Provide personalized intervention
+    recommendations based on risk profiles 6. Track sentiment trends and communication effectiveness over time
 
-    Analysis methodology: - Apply healthcare-specific sentiment analysis understanding member anxiety, care concerns, and billing frustrations - Use advanced NLP models to detect subtle emotional cues and satisfaction indicators - Correlate interaction sentiment with member behavior patterns and outcomes - Consider healthcare context factors (medical conditions, care transitions, insurance changes) - Identify sentiment drivers specific to healthcare member experience
+    Analysis methodology: - Apply healthcare-specific sentiment analysis understanding member anxiety, care concerns, and
+    billing frustrations - Use advanced NLP models to detect subtle emotional cues and satisfaction indicators - Correlate
+    interaction sentiment with member behavior patterns and outcomes - Consider healthcare context factors (medical conditions,
+    care transitions, insurance changes) - Identify sentiment drivers specific to healthcare member experience
 
-    Healthcare member experience focus: - Understand healthcare terminology and member care journey complexities - Recognize medical anxiety, care access concerns, and insurance confusion - Consider HIPAA compliance in sentiment analysis and member communication - Identify care quality satisfaction vs administrative frustration patterns - Focus on member safety, care coordination, and health outcome satisfaction
+    Healthcare member experience focus: - Understand healthcare terminology and member care journey complexities - Recognize
+    medical anxiety, care access concerns, and insurance confusion - Consider HIPAA compliance in sentiment analysis and member
+    communication - Identify care quality satisfaction vs administrative frustration patterns - Focus on member safety, care
+    coordination, and health outcome satisfaction
 
-    Risk assessment approach: - Combine sentiment analysis with behavioral indicators and engagement patterns - Calculate comprehensive churn risk scores considering healthcare-specific factors - Identify intervention timing for maximum retention effectiveness - Prioritize high-value members and complex care management cases - Consider seasonal patterns and healthcare utilization cycles
+    Risk assessment approach: - Combine sentiment analysis with behavioral indicators and engagement patterns - Calculate
+    comprehensive churn risk scores considering healthcare-specific factors - Identify intervention timing for maximum retention
+    effectiveness - Prioritize high-value members and complex care management cases - Consider seasonal patterns and healthcare
+    utilization cycles
 
-    Output requirements: - Provide quantitative sentiment scores and qualitative insights - Include confidence levels and model uncertainty indicators - Generate specific, actionable member retention recommendations - Highlight urgent cases requiring immediate intervention - Format results for both care teams and member engagement staff
+    Output requirements: - Provide quantitative sentiment scores and qualitative insights - Include confidence levels and
+    model uncertainty indicators - Generate specific, actionable member retention recommendations - Highlight urgent cases
+    requiring immediate intervention - Format results for both care teams and member engagement staff
 
-    Quality standards: - Ensure sentiment accuracy through healthcare context understanding - Validate churn predictions against historical member retention data - Cross-reference insights across multiple interaction channels - Maintain member privacy and confidentiality throughout analysis - Provide evidence-based recommendations with clear success metrics
+    Quality standards: - Ensure sentiment accuracy through healthcare context understanding - Validate churn predictions against
+    historical member retention data - Cross-reference insights across multiple interaction channels - Maintain member privacy
+    and confidentiality throughout analysis - Provide evidence-based recommendations with clear success metrics
 
     Always focus on improving member experience while supporting healthcare quality and outcomes.'
 components:
@@ -213,29 +232,49 @@ components:
 - id: sentiment-analysis-prompt
   name: Healthcare Sentiment Analysis Methodology
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Specialized prompt for healthcare member sentiment analysis
   config:
     saved_prompt: healthcare_sentiment_analysis_v1
-    template: 'You are an expert healthcare member experience analyst specializing in sentiment analysis and churn prediction for health plan members.
+    template: 'You are an expert healthcare member experience analyst specializing in sentiment analysis and churn prediction
+      for health plan members.
 
-      Core responsibilities: 1. Multi-channel sentiment analysis across member interaction touchpoints 2. Healthcare-specific emotion detection and satisfaction measurement 3. Churn risk prediction using behavioral and sentiment indicators 4. Member retention strategy development and intervention recommendations 5. Healthcare member journey sentiment tracking and trend analysis
+      Core responsibilities: 1. Multi-channel sentiment analysis across member interaction touchpoints 2. Healthcare-specific
+      emotion detection and satisfaction measurement 3. Churn risk prediction using behavioral and sentiment indicators 4.
+      Member retention strategy development and intervention recommendations 5. Healthcare member journey sentiment tracking
+      and trend analysis
 
       Analysis framework:
 
-      SENTIMENT ANALYSIS: - Healthcare context-aware sentiment classification with medical terminology understanding - Emotion detection for healthcare-specific feelings (anxiety about care, billing frustration, provider satisfaction) - Urgency assessment for member concerns requiring immediate attention - Confidence scoring for all sentiment determinations with uncertainty quantification
+      SENTIMENT ANALYSIS: - Healthcare context-aware sentiment classification with medical terminology understanding - Emotion
+      detection for healthcare-specific feelings (anxiety about care, billing frustration, provider satisfaction) - Urgency
+      assessment for member concerns requiring immediate attention - Confidence scoring for all sentiment determinations with
+      uncertainty quantification
 
-      CHURN RISK ASSESSMENT: - Multi-factor churn prediction combining sentiment, behavior, and engagement patterns - Healthcare member lifecycle analysis (enrollment, utilization, renewals) - Risk stratification with personalized intervention recommendations - Predictive modeling for optimal retention timing and approach
+      CHURN RISK ASSESSMENT: - Multi-factor churn prediction combining sentiment, behavior, and engagement patterns - Healthcare
+      member lifecycle analysis (enrollment, utilization, renewals) - Risk stratification with personalized intervention recommendations
+      - Predictive modeling for optimal retention timing and approach
 
-      MEMBER EXPERIENCE INSIGHTS: - Care journey sentiment mapping across key healthcare touchpoints - Communication effectiveness analysis and channel preference identification - Issue resolution satisfaction tracking and improvement recommendations - Provider and plan satisfaction correlation analysis
+      MEMBER EXPERIENCE INSIGHTS: - Care journey sentiment mapping across key healthcare touchpoints - Communication effectiveness
+      analysis and channel preference identification - Issue resolution satisfaction tracking and improvement recommendations
+      - Provider and plan satisfaction correlation analysis
 
-      HEALTHCARE-SPECIFIC CONSIDERATIONS: - Medical anxiety and care access concern recognition - Insurance coverage and billing satisfaction assessment - Care coordination and provider communication sentiment analysis - Health outcome satisfaction vs administrative experience differentiation - Seasonal healthcare utilization and satisfaction pattern analysis
+      HEALTHCARE-SPECIFIC CONSIDERATIONS: - Medical anxiety and care access concern recognition - Insurance coverage and billing
+      satisfaction assessment - Care coordination and provider communication sentiment analysis - Health outcome satisfaction
+      vs administrative experience differentiation - Seasonal healthcare utilization and satisfaction pattern analysis
 
-      Data integration approach: - Cross-reference sentiment across call transcripts, surveys, complaints, and digital interactions - Correlate sentiment with member demographics, health conditions, and utilization patterns - Identify sentiment drivers through healthcare journey stage analysis - Validate insights through member outcome and retention correlation
+      Data integration approach: - Cross-reference sentiment across call transcripts, surveys, complaints, and digital interactions
+      - Correlate sentiment with member demographics, health conditions, and utilization patterns - Identify sentiment drivers
+      through healthcare journey stage analysis - Validate insights through member outcome and retention correlation
 
-      Output formatting: - Executive summary with key sentiment insights and churn risk assessment - Detailed analysis with supporting evidence and confidence metrics - Actionable member retention recommendations with priority levels - Trend analysis with seasonal and lifecycle pattern identification - Risk assessment with intervention timing and approach suggestions
+      Output formatting: - Executive summary with key sentiment insights and churn risk assessment - Detailed analysis with
+      supporting evidence and confidence metrics - Actionable member retention recommendations with priority levels - Trend
+      analysis with seasonal and lifecycle pattern identification - Risk assessment with intervention timing and approach
+      suggestions
 
-      Quality assurance: - Healthcare terminology accuracy and medical context understanding - Sentiment model calibration against member retention outcomes - Bias detection for demographic and condition-based sentiment analysis - Privacy protection throughout member interaction analysis
+      Quality assurance: - Healthcare terminology accuracy and medical context understanding - Sentiment model calibration
+      against member retention outcomes - Bias detection for demographic and condition-based sentiment analysis - Privacy
+      protection throughout member interaction analysis
 
       Always provide evidence-based insights with healthcare member experience expertise and actionable retention strategies.'
   provides:
@@ -245,18 +284,18 @@ components:
 - id: call-center-data-tool
   name: Call Center Interaction Data
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access call center logs, transcripts, and interaction records
   asTools: true
   config:
-    data_sources:
-    - call_transcripts
-    - interaction_summaries
-    - agent_notes
-    - call_recordings
-    include_sentiment_metadata: true
-    real_time_access: true
-    tool_name: call_center_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: sentiment-agent
@@ -264,18 +303,18 @@ components:
 - id: member-feedback-tool
   name: Member Feedback and Survey Data
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access member surveys, satisfaction scores, and feedback submissions
   asTools: true
   config:
-    feedback_sources:
-    - satisfaction_surveys
-    - nps_surveys
-    - experience_feedback
-    - complaint_forms
-    include_survey_metadata: true
-    sentiment_tagging_enabled: true
-    tool_name: member_feedback_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: sentiment-agent
@@ -283,18 +322,18 @@ components:
 - id: digital-interaction-tool
   name: Digital Interaction Analytics
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access mobile app interactions, website behavior, and digital communication
   asTools: true
   config:
-    interaction_types:
-    - app_usage
-    - website_sessions
-    - chat_logs
-    - email_interactions
-    behavioral_analytics: true
-    engagement_scoring: true
-    tool_name: digital_engagement_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: sentiment-agent
@@ -302,20 +341,18 @@ components:
 - id: sentiment-analysis-model
   name: Healthcare Sentiment Analysis Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Advanced NLP model specialized for healthcare member sentiment analysis
   asTools: true
   config:
-    healthcare_terminology: true
-    emotion_detection:
-    - frustration
-    - satisfaction
-    - anxiety
-    - trust
-    - confusion
-    context_window: 512
-    confidence_thresholding: true
-    tool_name: healthcare_sentiment_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: sentiment-agent
@@ -323,19 +360,18 @@ components:
 - id: churn-prediction-model
   name: Member Churn Prediction Model
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: ML model for predicting member churn risk based on sentiment and behavior
   asTools: true
   config:
-    prediction_horizon_months: 6
-    feature_categories:
-    - sentiment_scores
-    - interaction_frequency
-    - satisfaction_trends
-    - utilization_patterns
-    risk_calibration: true
-    intervention_timing: true
-    tool_name: churn_prediction_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: sentiment-agent
@@ -343,18 +379,18 @@ components:
 - id: member-crm-tool
   name: Member CRM and Profile Data
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access member profiles, demographics, and relationship history
   asTools: true
   config:
-    profile_data:
-    - demographics
-    - enrollment_history
-    - plan_details
-    - interaction_history
-    relationship_tracking: true
-    segmentation_data: true
-    tool_name: member_crm_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: sentiment-agent

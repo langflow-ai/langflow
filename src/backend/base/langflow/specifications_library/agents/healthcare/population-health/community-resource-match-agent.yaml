@@ -1,7 +1,8 @@
 id: urn:agent:genesis:population-health:community-resource-match-agent:1.0.0
 name: Community Resource Match Agent
 fullyQualifiedName: genesis.autonomize.ai.community_resource_match_agent
-description: Multi-agent system that recommends local support services using social determinants of health (SDoH) data, zip code analysis, assessment forms, and publicly available resource directories to connect patients with community resources
+description: Multi-agent system that recommends local support services using social determinants of health (SDoH) data, zip
+  code analysis, assessment forms, and publicly available resource directories to connect patients with community resources
 domain: autonomize.ai
 subDomain: population-health
 version: 1.0.0
@@ -19,7 +20,12 @@ variables:
 - name: resource_priority_weights
   type: object
   required: false
-  default: {"food_security": 0.3, "housing": 0.25, "transportation": 0.2, "healthcare": 0.15, "employment": 0.1}
+  default:
+    food_security: 0.3
+    housing: 0.25
+    transportation: 0.2
+    healthcare: 0.15
+    employment: 0.1
   description: Priority weights for different types of community resources
 - name: match_confidence_threshold
   type: number
@@ -58,7 +64,8 @@ tags:
 reusability:
   asTools: false
 kind: Multi Agent
-agentGoal: Connect patients with appropriate community resources by analyzing social determinants of health needs, geographic accessibility, and resource availability to improve health outcomes and address social barriers
+agentGoal: Connect patients with appropriate community resources by analyzing social determinants of health needs, geographic
+  accessibility, and resource availability to improve health outcomes and address social barriers
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -79,12 +86,18 @@ components:
 - id: sdoh-assessment-tool
   name: Social Determinants Assessment Tool
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze and score social determinants of health needs from assessment data
   asTools: true
   config:
-    tool_name: sdoh_assessment_model
-    description: "Analyze and score social determinants of health needs from assessment data with standardized methodology"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: assessment-agent
@@ -92,12 +105,18 @@ components:
 - id: geographic-analysis-tool
   name: Geographic Analysis Tool
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze geographic data and accessibility patterns for resource locations
   asTools: true
   config:
-    tool_name: geographic_analyzer
-    description: "Analyze geographic accessibility, transportation patterns, and demographic data for resource matching"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: resource-discovery-agent
@@ -105,12 +124,18 @@ components:
 - id: resource-directory-tool
   name: Community Resource Directory Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access and search community resource directories and databases
   asTools: true
   config:
-    tool_name: community_resource_directory
-    description: "Search and retrieve community resource information from 211, local directories, and government databases"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: resource-discovery-agent
@@ -118,12 +143,18 @@ components:
 - id: resource-validation-tool
   name: Resource Validation Service
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Validate resource availability, contact information, and service eligibility
   asTools: true
   config:
-    tool_name: resource_validator
-    description: "Validate resource information currency, availability, and patient eligibility requirements"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: validation-agent
@@ -131,12 +162,18 @@ components:
 - id: transportation-analysis-tool
   name: Transportation Analysis Tool
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze transportation options and accessibility to recommended resources
   asTools: true
   config:
-    tool_name: transportation_analyzer
-    description: "Analyze public transit, driving, walking accessibility and costs for resource locations"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: matching-agent
@@ -148,10 +185,13 @@ components:
   description: Analyze patient social determinants of health assessment data and identify priority needs
   config:
     role: Social Determinants Assessment Specialist
-    goal: Analyze comprehensive SDoH assessment data to identify patient needs, risk factors, and priority areas for resource matching
-    backstory: 'You are a social determinants of health specialist with expertise in comprehensive needs assessment and risk stratification.
+    goal: Analyze comprehensive SDoH assessment data to identify patient needs, risk factors, and priority areas for resource
+      matching
+    backstory: 'You are a social determinants of health specialist with expertise in comprehensive needs assessment and risk
+      stratification.
 
-      Your skills include interpreting SDoH screening tools, identifying complex social needs, and understanding cultural and linguistic factors.
+      Your skills include interpreting SDoH screening tools, identifying complex social needs, and understanding cultural
+      and linguistic factors.
 
       You excel at prioritizing multiple social needs and understanding how they interconnect to impact health outcomes.
 
@@ -172,10 +212,12 @@ components:
   description: Search and identify relevant community resources based on patient needs and location
   config:
     role: Community Resource Specialist
-    goal: Discover and catalog relevant community resources that match patient social determinants of health needs and geographic location
+    goal: Discover and catalog relevant community resources that match patient social determinants of health needs and geographic
+      location
     backstory: 'You are a community resource specialist with extensive knowledge of local support services and social programs.
 
-      Your expertise includes navigating resource directories, understanding eligibility requirements, and knowledge of service capacity.
+      Your expertise includes navigating resource directories, understanding eligibility requirements, and knowledge of service
+      capacity.
 
       You understand the landscape of community-based organizations, government programs, and healthcare-related social services.
 
@@ -196,8 +238,10 @@ components:
   description: Validate resource information, availability, and patient eligibility
   config:
     role: Resource Validation Specialist
-    goal: Validate community resource information for accuracy, current availability, and patient eligibility to ensure reliable recommendations
-    backstory: 'You are a resource validation expert specializing in verifying community service information and eligibility requirements.
+    goal: Validate community resource information for accuracy, current availability, and patient eligibility to ensure reliable
+      recommendations
+    backstory: 'You are a resource validation expert specializing in verifying community service information and eligibility
+      requirements.
 
       Your skills include understanding complex eligibility criteria, insurance requirements, and service capacity limitations.
 
@@ -220,14 +264,16 @@ components:
   description: Match validated resources to patient needs and prioritize recommendations based on accessibility and impact
   config:
     role: Resource Matching Coordinator
-    goal: Match validated community resources to patient needs, prioritize recommendations, and provide actionable referral information with accessibility analysis
+    goal: Match validated community resources to patient needs, prioritize recommendations, and provide actionable referral
+      information with accessibility analysis
     backstory: 'You are a resource matching coordinator with expertise in connecting patients with appropriate community services.
 
       Your skills include understanding resource capacity, waitlists, application processes, and cultural sensitivity requirements.
 
       You excel at prioritizing multiple options based on patient preferences, urgency, and likelihood of successful connection.
 
-      You understand transportation barriers, scheduling constraints, and the importance of follow-up support for successful resource utilization.
+      You understand transportation barriers, scheduling constraints, and the importance of follow-up support for successful
+      resource utilization.
 
       '
     allow_delegation: false
@@ -244,10 +290,12 @@ components:
   description: Generate outreach recommendations and follow-up strategies for resource connections
   config:
     role: Community Outreach Coordinator
-    goal: Develop comprehensive outreach plans and follow-up strategies to ensure successful connection between patients and community resources
+    goal: Develop comprehensive outreach plans and follow-up strategies to ensure successful connection between patients and
+      community resources
     backstory: 'You are a community outreach coordinator specializing in patient engagement and resource connection strategies.
 
-      Your expertise includes understanding barriers to resource access, developing culturally appropriate outreach approaches, and creating sustainable follow-up plans.
+      Your expertise includes understanding barriers to resource access, developing culturally appropriate outreach approaches,
+      and creating sustainable follow-up plans.
 
       You excel at identifying potential obstacles and developing mitigation strategies for successful resource utilization.
 
@@ -267,7 +315,8 @@ components:
   type: genesis:crewai_sequential_task
   description: Analyze patient social determinants of health assessment data and identify priority needs
   config:
-    description: Comprehensively analyze patient SDoH assessment data to identify needs, risk levels, and priorities for resource matching
+    description: Comprehensively analyze patient SDoH assessment data to identify needs, risk levels, and priorities for resource
+      matching
     agent_id: assessment-agent
     expected_output: 'Comprehensive SDoH assessment analysis including:
 
@@ -294,7 +343,8 @@ components:
   type: genesis:crewai_sequential_task
   description: Discover and catalog relevant community resources based on patient needs and geographic location
   config:
-    description: Search comprehensive resource directories to identify potentially relevant community resources matching patient SDoH needs
+    description: Search comprehensive resource directories to identify potentially relevant community resources matching patient
+      SDoH needs
     agent_id: resource-discovery-agent
     expected_output: 'Community resource discovery report including:
 
@@ -350,7 +400,8 @@ components:
   config:
     description: Match validated community resources to specific patient needs and create prioritized, actionable recommendations
     agent_id: matching-agent
-    expected_output: 'Resource matching report with prioritized recommendations, accessibility analysis, and implementation timeline'
+    expected_output: Resource matching report with prioritized recommendations, accessibility analysis, and implementation
+      timeline
   provides:
   - useAs: data
     in: outreach-task
@@ -363,7 +414,7 @@ components:
   config:
     description: Create comprehensive outreach plans and follow-up strategies to maximize successful resource connections
     agent_id: outreach-agent
-    expected_output: 'Outreach plan with contact strategies, patient preparation requirements, and follow-up protocols'
+    expected_output: Outreach plan with contact strategies, patient preparation requirements, and follow-up protocols
   provides:
   - useAs: input
     in: resource-output
@@ -413,7 +464,7 @@ kpis:
   category: performance
   valueType: number
   target: 0.8
-  unit: 'accessibility score'
+  unit: accessibility score
   description: Average accessibility score for recommended resources based on transportation analysis
 - name: Resource Connection Rate
   category: performance
@@ -437,13 +488,13 @@ kpis:
   category: performance
   valueType: number
   target: 4.2
-  unit: '5-point scale'
+  unit: 5-point scale
   description: Average patient satisfaction with resource recommendations and outreach support
 - name: Average Time to Resource Connection
   category: performance
   valueType: number
   target: 14
-  unit: 'days'
+  unit: days
   description: Average time from recommendation to successful resource connection
 - name: Multi-Domain Resource Coverage
   category: quality

@@ -1,7 +1,8 @@
 id: urn:agent:genesis:compliance:cms-memo-summarization-agent:1.0.0
 name: CMS Memo Summarization Agent
 fullyQualifiedName: genesis.autonomize.ai.cms_memo_summarization_agent
-description: Ingests CMS HPMS memos, filters key operational changes, and produces stakeholder alerts with summary and impact callouts for regulatory compliance and operational planning
+description: Ingests CMS HPMS memos, filters key operational changes, and produces stakeholder alerts with summary and impact
+  callouts for regulatory compliance and operational planning
 domain: autonomize.ai
 subDomain: compliance
 version: 1.0.0
@@ -65,7 +66,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Process CMS HPMS memos to extract key operational changes, assess organizational impact, and generate targeted stakeholder alerts with actionable summaries for regulatory compliance and operational planning
+agentGoal: Process CMS HPMS memos to extract key operational changes, assess organizational impact, and generate targeted
+  stakeholder alerts with actionable summaries for regulatory compliance and operational planning
 targetUser: internal
 valueGeneration: DecisionSupport
 interactionMode: RequestResponse
@@ -86,11 +88,19 @@ components:
 - id: hpms-monitor-tool
   name: HPMS Memo Monitoring Service
   kind: Tool
-  type: genesis:mcp_tool
-  description: Monitor CMS HPMS portal for new memos, updates, and regulatory communications with automated retrieval and categorization
+  type: genesis:api_request
+  description: Monitor CMS HPMS portal for new memos, updates, and regulatory communications with automated retrieval and
+    categorization
   asTools: true
   config:
-    tool_name: hpms_memo_monitor
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: memo-agent
@@ -98,18 +108,19 @@ components:
 - id: cms-analysis-model
   name: CMS Content Analysis Model
   kind: Tool
-  type: genesis:mcp_tool
-  description: Specialized AI model for CMS memo analysis, regulatory interpretation, and operational impact assessment with healthcare expertise
+  type: genesis:api_request
+  description: Specialized AI model for CMS memo analysis, regulatory interpretation, and operational impact assessment with
+    healthcare expertise
   asTools: true
   config:
-    model_name: cms_memo_analyzer_v3
-    regulatory_expertise:
-    - medicare_advantage
-    - part_d
-    - quality_reporting
-    - stars_ratings
-    impact_assessment: true
-    tool_name: cms_content_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: memo-agent
@@ -117,11 +128,19 @@ components:
 - id: content-filtering-tool
   name: Operational Change Filter
   kind: Tool
-  type: genesis:mcp_tool
-  description: Filter memo content to identify operational changes, policy updates, and compliance requirements affecting organization
+  type: genesis:api_request
+  description: Filter memo content to identify operational changes, policy updates, and compliance requirements affecting
+    organization
   asTools: true
   config:
-    tool_name: operational_change_filter
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: memo-agent
@@ -129,18 +148,19 @@ components:
 - id: impact-analyzer-tool
   name: Organizational Impact Analyzer
   kind: Tool
-  type: genesis:mcp_tool
-  description: Assess organizational impact of CMS changes across departments, processes, and compliance requirements with severity scoring
+  type: genesis:api_request
+  description: Assess organizational impact of CMS changes across departments, processes, and compliance requirements with
+    severity scoring
   asTools: true
   config:
-    model_name: organizational_impact_analyzer
-    impact_categories:
-    - operational
-    - financial
-    - compliance
-    - quality
-    - member
-    tool_name: impact_assessment_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: memo-agent
@@ -148,11 +168,18 @@ components:
 - id: stakeholder-mapping-tool
   name: Stakeholder Mapping Service
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Map memo impacts to relevant stakeholders and determine appropriate notification channels and urgency levels
   asTools: true
   config:
-    tool_name: stakeholder_impact_mapper
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: memo-agent
@@ -160,14 +187,18 @@ components:
 - id: historical-context-tool
   name: Historical Context Database
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access historical CMS memos, related communications, and organizational responses for context and trend analysis
   asTools: true
   config:
-    database_type: cms_memo_archive
-    include_responses: true
-    retention_period: 1825
-    tool_name: healthcare_data_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: memo-agent
@@ -176,7 +207,8 @@ components:
   name: Stakeholder Alert Generation
   kind: Tool
   type: genesis:api_request
-  description: Generate and distribute targeted stakeholder alerts through appropriate communication channels based on urgency and impact
+  description: Generate and distribute targeted stakeholder alerts through appropriate communication channels based on urgency
+    and impact
   asTools: true
   config:
     method: POST
@@ -194,31 +226,53 @@ components:
 - id: memo-prompt
   name: CMS Memo Analysis Instructions
   kind: Prompt
-  type: genesis:prompt_template
-  description: Specialized prompt template for CMS memo analysis with regulatory expertise and stakeholder communication best practices
+  type: genesis:prompt
+  description: Specialized prompt template for CMS memo analysis with regulatory expertise and stakeholder communication best
+    practices
   config:
     saved_prompt: cms_memo_analyzer_prompt_v1
-    template: 'You are a healthcare regulatory expert specializing in CMS communications, HPMS memo analysis, and organizational impact assessment. Your role is to analyze CMS memos, extract key operational changes, and generate targeted stakeholder alerts with actionable insights.
+    template: 'You are a healthcare regulatory expert specializing in CMS communications, HPMS memo analysis, and organizational
+      impact assessment. Your role is to analyze CMS memos, extract key operational changes, and generate targeted stakeholder
+      alerts with actionable insights.
 
-      CMS REGULATORY EXPERTISE: - Medicare Advantage program requirements and updates - Part D prescription drug benefit regulations - Quality reporting and Stars ratings requirements - HEDIS and CAHPS measurement updates - Risk adjustment and payment policy changes - Compliance and audit requirements
+      CMS REGULATORY EXPERTISE: - Medicare Advantage program requirements and updates - Part D prescription drug benefit regulations
+      - Quality reporting and Stars ratings requirements - HEDIS and CAHPS measurement updates - Risk adjustment and payment
+      policy changes - Compliance and audit requirements
 
-      MEMO ANALYSIS METHODOLOGY: 1. Content Analysis: - Parse CMS memo structure and key sections - Identify policy changes, operational updates, and compliance requirements - Extract deadlines, effective dates, and implementation timelines - Categorize changes by functional area and impact severity
+      MEMO ANALYSIS METHODOLOGY: 1. Content Analysis: - Parse CMS memo structure and key sections - Identify policy changes,
+      operational updates, and compliance requirements - Extract deadlines, effective dates, and implementation timelines
+      - Categorize changes by functional area and impact severity
 
-      2. Operational Impact Assessment: - Assess impact on organizational processes and workflows - Identify affected departments and stakeholder groups - Evaluate implementation complexity and resource requirements - Determine compliance implications and risk factors
+      2. Operational Impact Assessment: - Assess impact on organizational processes and workflows - Identify affected departments
+      and stakeholder groups - Evaluate implementation complexity and resource requirements - Determine compliance implications
+      and risk factors
 
-      3. Stakeholder Mapping: - Map impacts to relevant organizational stakeholders - Determine appropriate communication channels and urgency levels - Identify required actions and responsible parties - Assess need for cross-functional coordination
+      3. Stakeholder Mapping: - Map impacts to relevant organizational stakeholders - Determine appropriate communication
+      channels and urgency levels - Identify required actions and responsible parties - Assess need for cross-functional coordination
 
-      4. Alert Generation: - Create targeted summaries for different stakeholder groups - Include actionable next steps and implementation guidance - Provide context and background for regulatory changes - Highlight critical deadlines and compliance requirements
+      4. Alert Generation: - Create targeted summaries for different stakeholder groups - Include actionable next steps and
+      implementation guidance - Provide context and background for regulatory changes - Highlight critical deadlines and compliance
+      requirements
 
-      MEMO CATEGORIES AND FOCUS AREAS: - Operational changes affecting day-to-day processes - Policy updates requiring system or process modifications - Compliance requirements with specific deadlines - Quality measurement and reporting updates - Payment and reimbursement policy changes - Member communication and engagement requirements
+      MEMO CATEGORIES AND FOCUS AREAS: - Operational changes affecting day-to-day processes - Policy updates requiring system
+      or process modifications - Compliance requirements with specific deadlines - Quality measurement and reporting updates
+      - Payment and reimbursement policy changes - Member communication and engagement requirements
 
-      STAKEHOLDER COMMUNICATION PRINCIPLES: - Tailor content to stakeholder role and responsibilities - Use clear, actionable language avoiding regulatory jargon - Highlight immediate actions required and deadlines - Provide sufficient context for informed decision-making - Include escalation paths for complex implementation issues
+      STAKEHOLDER COMMUNICATION PRINCIPLES: - Tailor content to stakeholder role and responsibilities - Use clear, actionable
+      language avoiding regulatory jargon - Highlight immediate actions required and deadlines - Provide sufficient context
+      for informed decision-making - Include escalation paths for complex implementation issues
 
-      URGENCY AND IMPACT CLASSIFICATION: - URGENT: Immediate action required, compliance deadlines imminent - HIGH: Significant operational changes, near-term deadlines - MEDIUM: Moderate process updates, reasonable implementation timelines - LOW: Minor adjustments, informational updates
+      URGENCY AND IMPACT CLASSIFICATION: - URGENT: Immediate action required, compliance deadlines imminent - HIGH: Significant
+      operational changes, near-term deadlines - MEDIUM: Moderate process updates, reasonable implementation timelines - LOW:
+      Minor adjustments, informational updates
 
-      OUTPUT REQUIREMENTS: - Executive summary highlighting key changes and impacts - Stakeholder-specific alerts with targeted action items - Implementation timeline with critical milestones - Compliance checklist and risk assessment - Historical context and related memo references - Resource requirements and coordination needs
+      OUTPUT REQUIREMENTS: - Executive summary highlighting key changes and impacts - Stakeholder-specific alerts with targeted
+      action items - Implementation timeline with critical milestones - Compliance checklist and risk assessment - Historical
+      context and related memo references - Resource requirements and coordination needs
 
-      Use your CMS analysis tools to monitor memos, assess impacts, map stakeholders, and generate comprehensive alerts. Always prioritize regulatory compliance, operational readiness, and stakeholder awareness while maintaining clear and actionable communications.
+      Use your CMS analysis tools to monitor memos, assess impacts, map stakeholders, and generate comprehensive alerts. Always
+      prioritize regulatory compliance, operational readiness, and stakeholder awareness while maintaining clear and actionable
+      communications.
 
       '
   provides:

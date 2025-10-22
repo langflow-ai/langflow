@@ -1,1098 +1,288 @@
-"""Component Mapper for Genesis to Langflow components."""
+"""
+Component Mapper for Genesis to Langflow components - AUTPE-6205 Simplified Version.
 
-from typing import Dict, Any, Optional, Tuple
+This mapper now primarily uses database-driven mappings with minimal hardcoded fallbacks.
+All component discovery is handled by the enhanced discovery service.
+"""
+
+from typing import Dict, Any, Optional
 import logging
-import copy
 
 logger = logging.getLogger(__name__)
 
-# Lazy import to avoid circular dependencies
-_component_schema_inspector = None
-_component_mapping_service = None
-
-# Import healthcare mappings
+# Import for database-driven mappings
 try:
-    from langflow.services.component_mapping.healthcare_mappings import get_healthcare_component_mappings
-    _healthcare_mappings_available = True
+    from langflow.services.component_mapping.service import ComponentMappingService
+    _database_mapping_available = True
 except ImportError as e:
-    logger.warning(f"Healthcare mappings not available: {e}")
-    _healthcare_mappings_available = False
+    logger.warning(f"Database mapping service not available: {e}")
+    _database_mapping_available = False
 
 
 class ComponentMapper:
-    """Maps Genesis specification types to AI Studio (Langflow) components."""
+    """Maps Genesis specification types to AI Studio (Langflow) components using database-first approach."""
 
     def __init__(self):
-        """Initialize component mapper with mappings."""
-        self._init_mappings()
-        self._use_real_introspection = True  # Flag to enable real component inspection
-        self._use_database_fallback = True  # Flag to enable database fallback
-        self._mapping_cache = {}  # Cache for database mappings
+        """Initialize component mapper with database-driven mappings."""
+        self._database_cache = {}  # Cache for database mappings
 
-    def _init_mappings(self):
-        """Initialize all component mappings."""
-        # Healthcare connectors - HIPAA-compliant medical system integrations
-        self.HEALTHCARE_MAPPINGS = self._load_healthcare_mappings()
+        # Initialize database service
+        self.component_mapping_service = ComponentMappingService() if _database_mapping_available else None
 
-        # AutonomizeModel variants - all clinical models unified
-        self.AUTONOMIZE_MODELS = {
-            "genesis:autonomize_model": {
-                "component": "AutonomizeModel",
-                "config": {"selected_model": "Clinical LLM"}  # Default model
-            },
-            "genesis:rxnorm": {
-                "component": "AutonomizeModel",
-                "config": {"selected_model": "RxNorm Code"}
-            },
-            "genesis:icd10": {
-                "component": "AutonomizeModel",
-                "config": {"selected_model": "ICD-10 Code"}
-            },
-            "genesis:cpt_code": {
-                "component": "AutonomizeModel",
-                "config": {"selected_model": "CPT Code"}
-            },
-            "genesis:cpt": {  # Alias
-                "component": "AutonomizeModel",
-                "config": {"selected_model": "CPT Code"}
-            },
-            "genesis:clinical_llm": {
-                "component": "AutonomizeModel",
-                "config": {"selected_model": "Clinical LLM"}
-            },
-            "genesis:clinical_note_classifier": {
-                "component": "AutonomizeModel",
-                "config": {"selected_model": "Clinical Note Classifier"}
-            },
-            "genesis:combined_entity_linking": {
-                "component": "AutonomizeModel",
-                "config": {"selected_model": "Combined Entity Linking"}
-            },
-            # Enhanced decision framework - new autonomize component types
-            "autonomize:icd10_code_model": {
-                "component": "AutonomizeModel",
-                "config": {"selected_model": "ICD-10 Code"},
-                "dataType": "AutonomizeModel"
-            },
-            "autonomize:cpt_code_model": {
-                "component": "AutonomizeModel",
-                "config": {"selected_model": "CPT Code"},
-                "dataType": "AutonomizeModel"
-            },
-            "autonomize:clinical_llm": {
-                "component": "AutonomizeModel",
-                "config": {"selected_model": "Clinical LLM"},
-                "dataType": "AutonomizeModel"
-            },
-            "autonomize:ehr_connector": {
-                "component": "EHRConnector",
-                "config": {
-                    "ehr_system": "epic",
-                    "fhir_version": "R4",
-                    "authentication_type": "oauth2",
-                    "hipaa_compliant": True,
-                    "audit_logging": True
-                },
-                "dataType": "Data"
-            }
-        }
+        # Minimal fallback mappings for critical components only
+        self._init_minimal_fallback_mappings()
 
-        # Healthcare validation and connector extensions
-        self.HEALTHCARE_VALIDATION_MAPPINGS = {
-            "genesis:healthcare_validation_connector": {
-                "component": "HealthcareValidationConnector",
-                "config": {
-                    "validation_type": "comprehensive",
-                    "compliance_standards": ["CMS", "NCCI", "AMA"],
-                    "code_combination_checking": True,
-                    "audit_logging": True,
-                    "hipaa_compliant": True
-                },
-                "dataType": "Data"
-            }
-        }
-
-        # MCP components
-        self.MCP_MAPPINGS = {
-            "genesis:mcp_tool": {
-                "component": "MCPTools",
-                "config": {
-                    # For backward compatibility with existing tool_name-only configurations
-                    # Provide a default command that enables STDIO mode detection
-                    "command": "echo '{\"tools\": [], \"capabilities\": {}}'",  # Default JSON response for compatibility
-                    "args": [],
-                    "env": {},
-                    "url": "",
-                    "headers": {},
-                    "timeout_seconds": 30,
-                    "sse_read_timeout_seconds": 30
-                },
-                "dataType": "MCPTools"
-            },
-            "genesis:mcp_sse_tool": {
-                "component": "MCPTools",
-                "config": {
-                    "connection_mode": "SSE",
-                    "url": "",
-                    "headers": {},
-                    "timeout_seconds": 30,
-                    "sse_read_timeout_seconds": 30
-                },
-                "dataType": "MCPTools"
-            },
-            "genesis:mcp_stdio_tool": {
-                "component": "MCPTools",
-                "config": {
-                    "connection_mode": "Stdio",
-                    "command": "",
-                    "args": [],
-                    "env": {}
-                },
-                "dataType": "MCPTools"
-            },
-            "genesis:mcp_client": {
-                "component": "MCPClient",
-                "config": {}
-            },
-            "genesis:mcp_server": {
-                "component": "MCPServer",
-                "config": {}
-            }
-        }
-
-        # Standard component mappings
-        self.STANDARD_MAPPINGS = {
-            # Agents and Language Models
-            "genesis:agent": {"component": "Agent", "config": {}},
-            "genesis:autonomize_agent": {"component": "Agent", "config": {}},  # Map to Agent since AutonomizeAgent may not exist
-            "genesis:language_model": {"component": "Agent", "config": {}},  # Map to Agent as it has LLM capabilities
-
-            # Input/Output Components
+    def _init_minimal_fallback_mappings(self):
+        """Initialize minimal fallback mappings for critical components only."""
+        # Only keep absolutely essential mappings that must work even without database
+        self.FALLBACK_MAPPINGS = {
+            # Core I/O components
             "genesis:chat_input": {"component": "ChatInput", "config": {}},
             "genesis:chat_output": {"component": "ChatOutput", "config": {}},
             "genesis:text_input": {"component": "TextInput", "config": {}},
             "genesis:text_output": {"component": "TextOutput", "config": {}},
-            "genesis:json_input": {"component": "CreateData", "config": {}},  # Map to existing CreateData
-            "genesis:json_output": {"component": "ParseData", "config": {}},
-            "genesis:file_input": {"component": "File", "config": {}},  # Map to File component
-            "genesis:file": {"component": "File", "config": {}},
-            "genesis:directory": {"component": "Directory", "config": {}},
-            "genesis:url": {"component": "URL", "config": {}},
-            "genesis:file_path": {"component": "FilePathComponent", "config": {}},
-            "genesis:blob_storage": {"component": "BlobStorageComponent", "config": {}},
 
-            # Prompts
+            # Core agent
+            "genesis:agent": {"component": "Agent", "config": {}},
+
+            # Core prompt
             "genesis:prompt": {"component": "PromptComponent", "config": {}},
-            "genesis:prompt_template": {"component": "PromptComponent", "config": {}, "dataType": "PromptComponent"},  # Use existing PromptComponent
-            "genesis:genesis_prompt": {"component": "GenesisPromptComponent", "config": {}, "dataType": "PromptComponent"},
-
-            # Memory
-            "genesis:memory": {"component": "Memory", "config": {}},
-            "genesis:conversation_memory": {"component": "ConversationChain", "config": {}},
-            "genesis:conversation_chain": {"component": "ConversationChain", "config": {}},
-
-            # Tools - Infrastructure components (keep) + MCP fallbacks for domain-specific ones
-            "genesis:knowledge_hub_search": {"component": "KnowledgeHubSearch", "config": {}, "dataType": "KnowledgeHubSearch"},
-            "genesis:calculator": {"component": "Calculator", "config": {}},
-
-            # API Components - Native HTTP request support with secure header handling
-            # Note: Headers support sensitive data like API keys, auth tokens, etc.
-            # Use environment variables or secure configuration for sensitive headers
-            "genesis:api_request": {
-                "component": "APIRequest",
-                "config": {
-                    "timeout": 30,
-                    "follow_redirects": True,
-                    "headers": [{"key": "Content-Type", "value": "application/json"}]
-                },
-                "dataType": "Data"
-            },
-            "genesis:http_request": {
-                "component": "APIRequest",
-                "config": {
-                    "timeout": 30,
-                    "follow_redirects": True,
-                    "headers": [{"key": "Content-Type", "value": "application/json"}]
-                },
-                "dataType": "Data"
-            },
-
-            # Domain-specific tools -> MCP Tools Component (simplified approach)
-            "genesis:encoder_pro": {"component": "MCPTools", "config": {"tool_name": "encoder_pro", "description": "Medical coding and validation tool"}, "dataType": "MCPTools"},
-            "genesis:pa_lookup": {"component": "MCPTools", "config": {"tool_name": "pa_lookup", "description": "Prior authorization lookup tool"}, "dataType": "MCPTools"},
-            "genesis:eligibility_component": {"component": "MCPTools", "config": {"tool_name": "eligibility_check", "description": "Member eligibility validation tool"}, "dataType": "MCPTools"},
-            "genesis:qnext_auth_history": {"component": "MCPTools", "config": {"tool_name": "qnext_auth_history", "description": "QNext authorization history tool"}, "dataType": "MCPTools"},
-            "genesis:api_component": {"component": "MCPTools", "config": {"tool_name": "api_component", "description": "Generic API integration tool"}, "dataType": "MCPTools"},
-            # Document Processing Components
-            "genesis:form_recognizer": {"component": "AzureDocumentIntelligenceComponent", "config": {}, "dataType": "AzureDocumentIntelligenceComponent"},
-            "genesis:document_intelligence": {"component": "AzureDocumentIntelligenceComponent", "config": {}, "dataType": "AzureDocumentIntelligenceComponent"},
-            "genesis:docling_inline": {"component": "DoclingInlineComponent", "config": {}},
-            "genesis:docling_remote": {"component": "DoclingRemoteComponent", "config": {}},
-            "genesis:chunk_docling": {"component": "ChunkDoclingDocumentComponent", "config": {}},
-            "genesis:export_docling": {"component": "ExportDoclingDocumentComponent", "config": {}},
-
-            # Data Processing Components
-            "genesis:data_transformer": {"component": "MCPTools", "config": {"tool_name": "data_transformer", "description": "Data transformation and standardization tool"}, "dataType": "MCPTools"},
-            "genesis:csv_to_data": {"component": "CSVToDataComponent", "config": {}},
-            "genesis:json_to_data": {"component": "JSONToDataComponent", "config": {}},
-            "genesis:parse_data": {"component": "ParseData", "config": {}},
-            "genesis:filter_data": {"component": "FilterData", "config": {}},
-            "genesis:merge_data": {"component": "MergeData", "config": {}},
-            "genesis:create_data": {"component": "CreateData", "config": {}},
-            "genesis:update_data": {"component": "UpdateData", "config": {}},
-            "genesis:select_data": {"component": "SelectData", "config": {}},
-
-            # Text Processing Components
-            "genesis:split_text": {"component": "SplitText", "config": {}},
-            "genesis:combine_text": {"component": "CombineText", "config": {}},
-            "genesis:regex": {"component": "RegexComponent", "config": {}},
-            "genesis:text_embedder": {"component": "TextEmbedder", "config": {}},
-
-            # Vector stores and Databases
-            "genesis:vector_store": {"component": "QdrantVectorStore", "config": {}},
-            "genesis:qdrant": {"component": "QdrantVectorStore", "config": {}},
-            "genesis:faiss": {"component": "FAISS", "config": {}},
-            "genesis:chroma": {"component": "Chroma", "config": {}},
-            "genesis:cassandra": {"component": "Cassandra", "config": {}},
-            "genesis:couchbase": {"component": "Couchbase", "config": {}},
-
-            # LLMs
-            "genesis:openai": {"component": "OpenAIModel", "config": {}},
-            "genesis:azure_openai": {"component": "AzureOpenAIModel", "config": {}},
-            "genesis:anthropic": {"component": "AnthropicModel", "config": {}},
-
-            # CrewAI
-            "genesis:crewai_agent": {"component": "CrewAIAgentComponent", "config": {}},
-            "genesis:crewai_sequential_task": {"component": "CrewAIAgentComponent", "config": {"task_type": "sequential"}},
-            "genesis:crewai_sequential_crew": {"component": "CrewAIAgentComponent", "config": {"crew_type": "sequential"}},
-            "genesis:crewai_hierarchical_crew": {"component": "CrewAIAgentComponent", "config": {"crew_type": "hierarchical"}},
-
-            # Web Search and External Data
-            "genesis:web_search": {"component": "WebSearchComponent", "config": {}},
-            "genesis:news_search": {"component": "NewsSearchComponent", "config": {}},
-            "genesis:wikipedia": {"component": "WikipediaComponent", "config": {}},
-            "genesis:arxiv": {"component": "ArxivComponent", "config": {}},
-            "genesis:bing_search": {"component": "BingSearchComponent", "config": {}},
-            "genesis:rss": {"component": "RSSComponent", "config": {}},
-            "genesis:webhook": {"component": "WebhookComponent", "config": {}},
-
-            # SQL and Databases
-            "genesis:sql_executor": {"component": "SQLExecutor", "config": {}},
-
-            # Helper Components
-            "genesis:id_generator": {"component": "IDGenerator", "config": {}},
-            "genesis:current_date": {"component": "CurrentDate", "config": {}},
-            "genesis:create_list": {"component": "CreateList", "config": {}},
-            "genesis:store_message": {"component": "StoreMessage", "config": {}},
-
-            # Embedding Components
-            "genesis:openai_embeddings": {"component": "OpenAIEmbeddings", "config": {}},
-            "genesis:azure_openai_embeddings": {"component": "AzureOpenAIEmbeddings", "config": {}},
-            "genesis:cohere_embeddings": {"component": "CohereEmbeddings", "config": {}},
-
-            # Integration Services
-            "genesis:notion": {"component": "NotionComponent", "config": {}},
-            "genesis:confluence": {"component": "ConfluenceComponent", "config": {}},
-            "genesis:google_drive": {"component": "GoogleDriveComponent", "config": {}},
-            "genesis:composio": {"component": "ComposioComponent", "config": {}}
         }
 
-    def _load_healthcare_mappings(self) -> Dict[str, Any]:
-        """Load healthcare connector mappings."""
-        if not _healthcare_mappings_available:
-            logger.warning("Healthcare mappings not available, returning empty dict")
-            return {}
+        # Empty dicts for backward compatibility (to be removed in future)
+        self.AUTONOMIZE_MODELS = {}
+        self.MCP_MAPPINGS = {}
+        self.STANDARD_MAPPINGS = {}
 
-        try:
-            healthcare_mappings = get_healthcare_component_mappings()
-            logger.info(f"Loaded {len(healthcare_mappings)} healthcare connector mappings")
-            return healthcare_mappings
-        except Exception as e:
-            logger.error(f"Error loading healthcare mappings: {e}")
-            return {}
-
-    def map_component(self, spec_type: str) -> Dict[str, Any]:
+    async def map_component_async(self, spec_type: str, session=None) -> Dict[str, Any]:
         """
-        Map a Genesis specification type to Langflow component.
+        Map a Genesis specification type to Langflow component using database-first approach.
 
         Args:
             spec_type: Component type from specification (e.g., "genesis:rxnorm")
+            session: Database session for async operations
 
         Returns:
             Dictionary with component name and configuration
         """
-        # Check Healthcare mappings first (highest priority for medical workflows)
-        if spec_type in self.HEALTHCARE_MAPPINGS:
-            return copy.deepcopy(self.HEALTHCARE_MAPPINGS[spec_type])
-
-        # Check Healthcare validation mappings
-        if spec_type in self.HEALTHCARE_VALIDATION_MAPPINGS:
-            return copy.deepcopy(self.HEALTHCARE_VALIDATION_MAPPINGS[spec_type])
-
-        # Check AutonomizeModel mappings
-        if spec_type in self.AUTONOMIZE_MODELS:
-            return copy.deepcopy(self.AUTONOMIZE_MODELS[spec_type])
-
-        # Check MCP mappings
-        if spec_type in self.MCP_MAPPINGS:
-            return copy.deepcopy(self.MCP_MAPPINGS[spec_type])
-
-        # Check standard mappings
-        if spec_type in self.STANDARD_MAPPINGS:
-            return copy.deepcopy(self.STANDARD_MAPPINGS[spec_type])
-
-        # Try database fallback if enabled
-        if self._use_database_fallback:
-            db_mapping = self._get_mapping_from_database(spec_type)
-            if db_mapping:
-                return db_mapping
-
-        # Try to handle unknown types intelligently
-        return self._handle_unknown_type(spec_type)
-
-    def _handle_unknown_type(self, spec_type: str) -> Dict[str, Any]:
-        """Handle unknown component types with intelligent fallbacks."""
-        # Remove genesis: prefix if present
-        base_type = spec_type.replace("genesis:", "") if spec_type.startswith("genesis:") else spec_type
-
-        # Pattern-based fallbacks
-        if "model" in base_type.lower() or "llm" in base_type.lower():
-            # Check if it's a clinical model
-            if any(term in base_type.lower() for term in ["clinical", "rxnorm", "icd", "cpt", "medical"]):
-                logger.warning(f"Unknown clinical model type '{spec_type}', using AutonomizeModel")
-                return {"component": "AutonomizeModel", "config": {}}
-            else:
-                logger.warning(f"Unknown LLM type '{spec_type}', using OpenAIModel")
-                return {"component": "OpenAIModel", "config": {}}
-
-        elif "agent" in base_type.lower():
-            logger.warning(f"Unknown agent type '{spec_type}', using Agent")
-            return {"component": "Agent", "config": {}}
-
-        elif "tool" in base_type.lower() or "component" in base_type.lower():
-            logger.warning(f"Unknown tool/component type '{spec_type}', using MCPTools as fallback")
-            return {"component": "MCPTools", "config": {}}
-
-        elif "memory" in base_type.lower():
-            logger.warning(f"Unknown memory type '{spec_type}', using Memory")
-            return {"component": "Memory", "config": {}}
-
-        elif "prompt" in base_type.lower():
-            logger.warning(f"Unknown prompt type '{spec_type}', using Prompt")
-            return {"component": "Prompt", "config": {}}
-
-        elif "input" in base_type.lower():
-            logger.warning(f"Unknown input type '{spec_type}', using ChatInput")
-            return {"component": "ChatInput", "config": {}}
-
-        elif "output" in base_type.lower():
-            logger.warning(f"Unknown output type '{spec_type}', using ChatOutput")
-            return {"component": "ChatOutput", "config": {}}
-
-        else:
-            # Default to MCPTools for complete unknowns - better than CustomComponent
-            logger.warning(f"Completely unknown type '{spec_type}', using MCPTools as fallback")
-            return {"component": "MCPTools", "config": {}}
-
-    def get_component_io_mapping(self, component_type: str = None) -> Dict[str, Any]:
-        """
-        Get input/output field mappings for component types.
-
-        Args:
-            component_type: Optional specific component type to get mapping for.
-                           If None, returns all mappings.
-
-        Returns:
-            Dictionary with component I/O mappings (enhanced with real introspection if available)
-        """
-        # Use enhanced method that includes real component introspection
-        all_mappings = self.get_component_io_mapping_enhanced()
-
-        if component_type:
-            return all_mappings.get(component_type, {
-                "input_field": "input_value",
-                "output_field": "output",
-                "output_types": ["Any"],
-                "input_types": ["any"]
-            })
-
-        return all_mappings
-
-    def is_tool_component(self, spec_type: str) -> bool:
-        """Check if a component type should be used as a tool."""
-        # Healthcare connectors are tools when used in tool mode
-        if spec_type in self.HEALTHCARE_MAPPINGS:
-            return True
-
-        # MCP components are always tools
-        if spec_type in self.MCP_MAPPINGS:
-            return True
-
-        # Check if it's a known tool type
-        tool_types = [
-            # Healthcare tools
-            "genesis:ehr_connector",
-            "genesis:claims_connector",
-            "genesis:eligibility_connector",
-            "genesis:pharmacy_connector",
-            "genesis:prior_authorization",
-            "genesis:clinical_decision_support",
-
-            # Core tools
-            "genesis:knowledge_hub_search",
-            "genesis:pa_lookup",
-            "genesis:eligibility_component",
-            "genesis:encoder_pro",
-            "genesis:calculator",
-            "genesis:api_component",
-            "genesis:mcp_tool",
-            "genesis:mcp_sse_tool",
-            "genesis:mcp_stdio_tool",
-
-            # Web and search tools
-            "genesis:web_search",
-            "genesis:news_search",
-            "genesis:wikipedia",
-            "genesis:arxiv",
-            "genesis:bing_search",
-
-            # API and integration tools
-            "genesis:api_request",
-            "genesis:http_request",
-            "genesis:webhook",
-
-            # Document processing tools
-            "genesis:form_recognizer",
-            "genesis:document_intelligence",
-            "genesis:docling_inline",
-            "genesis:docling_remote",
-
-            # Data tools
-            "genesis:sql_executor",
-            "genesis:csv_to_data",
-            "genesis:json_to_data"
-        ]
-
-        return spec_type in tool_types
-
-    def _get_component_schema_inspector(self):
-        """Get ComponentSchemaInspector instance with lazy loading."""
-        global _component_schema_inspector
-
-        if _component_schema_inspector is None:
+        # 1. Check database mappings first (primary source)
+        if self.component_mapping_service and session:
             try:
-                from langflow.services.spec.component_schema_inspector import ComponentSchemaInspector
-                _component_schema_inspector = ComponentSchemaInspector()
-            except ImportError as e:
-                logger.warning(f"Could not import ComponentSchemaInspector: {e}")
-                _component_schema_inspector = None
-
-        return _component_schema_inspector
-
-    def get_component_io_mapping_enhanced(self) -> Dict[str, Dict[str, Any]]:
-        """
-        Get enhanced I/O mappings using real component introspection.
-
-        Returns:
-            Dictionary mapping component names to their I/O information
-        """
-        if not self._use_real_introspection:
-            return self._get_hardcoded_io_mappings()
-
-        inspector = self._get_component_schema_inspector()
-        if inspector is None:
-            logger.warning("ComponentSchemaInspector not available, falling back to hardcoded mappings")
-            return self._get_hardcoded_io_mappings()
-
-        try:
-            # Get real component I/O mappings
-            real_mappings = inspector.get_component_io_mapping()
-
-            # Merge with hardcoded mappings (real mappings take precedence)
-            hardcoded_mappings = self._get_hardcoded_io_mappings()
-
-            # Start with hardcoded mappings as base
-            combined_mappings = hardcoded_mappings.copy()
-
-            # Update with real component data where available
-            for component_name, mapping_data in real_mappings.items():
-                if component_name in combined_mappings:
-                    # Merge real data with hardcoded data
-                    combined_mappings[component_name].update(mapping_data)
-                    logger.debug(f"Enhanced mapping for {component_name} with real component data")
-                else:
-                    # Add new component discovered through introspection
-                    combined_mappings[component_name] = mapping_data
-                    logger.info(f"Added new component mapping from introspection: {component_name}")
-
-            return combined_mappings
-
-        except Exception as e:
-            logger.error(f"Error during component introspection: {e}")
-            logger.warning("Falling back to hardcoded I/O mappings")
-            return self._get_hardcoded_io_mappings()
-
-    def _get_hardcoded_io_mappings(self) -> Dict[str, Dict[str, Any]]:
-        """Get the original hardcoded I/O mappings as fallback."""
-        io_mappings = {
-            # Healthcare Connector I/O Mappings
-            "EHRConnector": {
-                "input_field": "patient_query",
-                "output_field": "ehr_data",
-                "output_types": ["Data"],
-                "input_types": ["str", "Message", "Data"]
-            },
-            "ClaimsConnector": {
-                "input_field": "claim_data",
-                "output_field": "claim_response",
-                "output_types": ["Data"],
-                "input_types": ["str", "Data"]
-            },
-            "EligibilityConnector": {
-                "input_field": "eligibility_request",
-                "output_field": "eligibility_response",
-                "output_types": ["Data"],
-                "input_types": ["str", "Data"]
-            },
-            "PharmacyConnector": {
-                "input_field": "prescription_data",
-                "output_field": "pharmacy_response",
-                "output_types": ["Data"],
-                "input_types": ["str", "Data"]
-            },
-            "PriorAuthorizationTool": {
-                "input_field": "pa_request",
-                "output_field": "pa_response",
-                "output_types": ["Data"],
-                "input_types": ["str", "Data"]
-            },
-            "ClinicalDecisionSupportTool": {
-                "input_field": "clinical_data",
-                "output_field": "cds_recommendations",
-                "output_types": ["Data"],
-                "input_types": ["str", "Data"]
-            },
-            "AutonomizeModel": {
-                "input_field": "search_query",
-                "output_field": "prediction",
-                "output_types": ["Data"],
-                "input_types": ["str"]
-            },
-            "ChatInput": {
-                "input_field": None,
-                "output_field": "message",
-                "output_types": ["Message"],
-                "input_types": []
-            },
-            "ChatOutput": {
-                "input_field": "input_value",
-                "output_field": "message",
-                "output_types": ["Message"],
-                "input_types": ["Message", "str"]
-            },
-            "Agent": {
-                "input_field": "input_value",
-                "output_field": "response",
-                "output_types": ["Message"],
-                "input_types": ["Message", "str"]
-            },
-            "AutonomizeAgent": {
-                "input_field": "input_value",
-                "output_field": "response",
-                "output_types": ["Message"],
-                "input_types": ["Message", "str"]
-            },
-            "LanguageModelComponent": {
-                "input_field": "input_message",
-                "output_field": "message",
-                "output_types": ["Message"],
-                "input_types": ["Message"]
-            },
-            "Prompt": {
-                "input_field": "template",
-                "output_field": "prompt",
-                "output_types": ["Message"],
-                "input_types": ["str", "Text"]
-            },
-            "PromptComponent": {
-                "input_field": "template",
-                "output_field": "prompt",
-                "output_types": ["Message"],
-                "input_types": ["str", "Text"]
-            },
-            "GenesisPromptComponent": {
-                "input_field": "template",
-                "output_field": "prompt",
-                "output_types": ["Message"],
-                "input_types": ["str", "Text"]
-            },
-            "MCPTools": {
-                "input_field": None,
-                "output_field": "response",
-                "output_types": ["DataFrame"],
-                "input_types": []
-            },
-            "APIRequest": {
-                "input_field": "url_input",
-                "output_field": "data",
-                "output_types": ["Data"],
-                "input_types": ["str"]
-            },
-            "CustomComponent": {
-                "input_field": "input_value",
-                "output_field": "output",
-                "output_types": ["Any"],
-                "input_types": ["any"]
-            },
-            "Memory": {
-                "input_field": "input_value",
-                "output_field": "memory",
-                "output_types": ["Message"],
-                "input_types": ["Message", "str"]
-            },
-            "OpenAIModel": {
-                "input_field": "input_value",
-                "output_field": "text_output",
-                "output_types": ["Message"],
-                "input_types": ["Message", "str"]
-            },
-            "AzureOpenAIModel": {
-                "input_field": "input_value",
-                "output_field": "text_output",
-                "output_types": ["Message"],
-                "input_types": ["Message", "str"]
-            },
-            "KnowledgeHubSearch": {
-                "input_field": "search_query",
-                "output_field": "query_results",
-                "output_types": ["Data"],
-                "input_types": ["str", "Message"]
-            },
-            "EncoderProTool": {
-                "input_field": "default_service_code",
-                "output_field": "component_as_tool",
-                "output_types": ["Tool"],
-                "input_types": ["str", "Data"]
-            },
-            "FileComponent": {
-                "input_field": "file_path",
-                "output_field": "data",
-                "output_types": ["Data"],
-                "input_types": ["str"]
-            },
-            "File": {
-                "input_field": "path",
-                "output_field": "data",
-                "output_types": ["Document"],
-                "input_types": ["str"]
-            },
-            "Directory": {
-                "input_field": "path",
-                "output_field": "data",
-                "output_types": ["Data"],
-                "input_types": ["str"]
-            },
-            "URL": {
-                "input_field": "url",
-                "output_field": "data",
-                "output_types": ["Data"],
-                "input_types": ["str"]
-            },
-            "CSVToDataComponent": {
-                "input_field": "csv_file",
-                "output_field": "data",
-                "output_types": ["Data"],
-                "input_types": ["str", "Document"]
-            },
-            "JSONToDataComponent": {
-                "input_field": "json_string",
-                "output_field": "data",
-                "output_types": ["Data"],
-                "input_types": ["str", "Data"]
-            },
-            "DoclingInlineComponent": {
-                "input_field": "file_path",
-                "output_field": "document",
-                "output_types": ["Document"],
-                "input_types": ["str"]
-            },
-            "WebSearchComponent": {
-                "input_field": "query",
-                "output_field": "results",
-                "output_types": ["Data"],
-                "input_types": ["str", "Message"]
-            },
-            "SQLExecutor": {
-                "input_field": "query",
-                "output_field": "results",
-                "output_types": ["Data"],
-                "input_types": ["str"]
-            },
-            "CrewAIAgentComponent": {
-                "input_field": "input_value",
-                "output_field": "response",
-                "output_types": ["Message"],
-                "input_types": ["Message", "str"]
-            }
-        }
-
-        return io_mappings
-
-    def get_available_components(self) -> Dict[str, Dict[str, Dict[str, Any]]]:
-        """
-        Get all available components organized by category.
-
-        Returns:
-            Dictionary with categories and their component mappings
-        """
-        inspector = self._get_component_schema_inspector()
-
-        result = {
-            "genesis_mapped": {},  # Genesis spec types mapped to components
-            "discovered_components": {}  # Components discovered through introspection
-        }
-
-        # Add all genesis mappings
-        all_mappings = {
-            **self.HEALTHCARE_MAPPINGS,
-            **self.HEALTHCARE_VALIDATION_MAPPINGS,
-            **self.AUTONOMIZE_MODELS,
-            **self.MCP_MAPPINGS,
-            **self.STANDARD_MAPPINGS
-        }
-        for genesis_type, mapping in all_mappings.items():
-            result["genesis_mapped"][genesis_type] = mapping
-
-        # Add discovered components if inspector available
-        if inspector:
-            try:
-                schemas = inspector.get_all_schemas()
-                for component_name, schema in schemas.items():
-                    result["discovered_components"][component_name] = {
-                        "name": schema.name,
-                        "class_name": schema.class_name,
-                        "module_path": schema.module_path,
-                        "description": schema.description,
-                        "display_name": schema.display_name,
-                        "input_types": schema.input_types,
-                        "output_types": schema.output_types,
-                        "inputs": schema.inputs,
-                        "outputs": schema.outputs,
-                        "base_classes": schema.base_classes
-                    }
+                db_mapping = await self.get_mapping_from_database_async(session, spec_type)
+                if db_mapping:
+                    # Cache the result
+                    self._database_cache[spec_type] = db_mapping
+                    logger.info(f"✓ Found database mapping for {spec_type}")
+                    return db_mapping
             except Exception as e:
-                logger.warning(f"Could not get discovered components: {e}")
+                logger.warning(f"Error getting database mapping for {spec_type}: {e}")
 
-        return result
+        # 2. Check cache
+        if spec_type in self._database_cache:
+            return self._database_cache[spec_type]
 
+        # 3. Fallback to minimal mappings
+        if spec_type in self.FALLBACK_MAPPINGS:
+            logger.info(f"Using fallback mapping for {spec_type}")
+            return self.FALLBACK_MAPPINGS[spec_type]
 
-    def _validate_connection_hardcoded(self, source_component: str, target_component: str,
-                                     source_output: str, target_input: str) -> Dict[str, Any]:
-        """Fallback validation using hardcoded I/O mappings."""
-        hardcoded_mappings = self._get_hardcoded_io_mappings()
-
-        source_io = hardcoded_mappings.get(source_component, {})
-        target_io = hardcoded_mappings.get(target_component, {})
-
-        # Check output field exists
-        if source_io.get("output_field") != source_output:
-            return {
-                "valid": False,
-                "error": f"Output field {source_output} not found in {source_component}"
-            }
-
-        # Check input field exists
-        if target_io.get("input_field") != target_input:
-            return {
-                "valid": False,
-                "error": f"Input field {target_input} not found in {target_component}"
-            }
-
-        # Check type compatibility
-        source_types = source_io.get("output_types", [])
-        target_types = target_io.get("input_types", [])
-
-        # Basic compatibility check
-        compatible = (
-            any(otype in target_types for otype in source_types) or
-            "any" in target_types or
-            "Any" in target_types
-        )
-
+        # 4. Return generic unknown component
+        logger.warning(f"No mapping found for {spec_type}, using generic component")
         return {
-            "valid": compatible,
-            "source_types": source_types,
-            "target_types": target_types,
-            "error": None if compatible else f"Type mismatch: {source_types} -> {target_types}"
+            "component": "Component",
+            "config": {},
+            "warning": f"No mapping found for {spec_type}"
         }
 
-    def enable_real_introspection(self, enabled: bool = True):
-        """Enable or disable real component introspection."""
-        self._use_real_introspection = enabled
-        logger.info(f"Real component introspection {'enabled' if enabled else 'disabled'}")
-
-    def enable_database_fallback(self, enabled: bool = True):
-        """Enable or disable database fallback for component mappings."""
-        self._use_database_fallback = enabled
-        logger.info(f"Database fallback {'enabled' if enabled else 'disabled'}")
-
-    def _get_component_mapping_service(self):
-        """Get ComponentMappingService instance with lazy loading."""
-        global _component_mapping_service
-
-        if _component_mapping_service is None:
-            try:
-                from langflow.services.component_mapping.service import ComponentMappingService
-                _component_mapping_service = ComponentMappingService()
-            except ImportError as e:
-                logger.warning(f"Could not import ComponentMappingService: {e}")
-                _component_mapping_service = None
-
-        return _component_mapping_service
-
-    def _get_mapping_from_database(self, spec_type: str) -> Optional[Dict[str, Any]]:
+    def map_component(self, spec_type: str) -> Dict[str, Any]:
         """
-        Get component mapping from database (sync fallback).
+        Synchronous wrapper for component mapping.
 
         Args:
-            spec_type: Genesis component type
+            spec_type: Component type from specification
 
         Returns:
-            Component mapping dictionary or None if not found
+            Dictionary with component name and configuration
         """
-        try:
-            # For synchronous access, we'll implement a cache-based approach
-            # The cache will be populated by async operations
-            cache_key = f"mapping_cache_{spec_type}"
+        # Check cache first
+        if spec_type in self._database_cache:
+            return self._database_cache[spec_type]
 
-            # Check if we have a cached mapping
-            if hasattr(self, '_mapping_cache') and cache_key in self._mapping_cache:
-                cached_mapping = self._mapping_cache[cache_key]
-                logger.debug(f"Found cached database mapping for {spec_type}")
-                return cached_mapping
+        # Check fallback mappings
+        if spec_type in self.FALLBACK_MAPPINGS:
+            return self.FALLBACK_MAPPINGS[spec_type]
 
-            # If no cache available, return None and suggest async lookup
-            logger.debug(f"No cached database mapping for {spec_type}, use async methods for database access")
-            return None
+        # Return generic
+        logger.warning(f"Sync mapping: No mapping found for {spec_type}")
+        return {
+            "component": "Component",
+            "config": {},
+            "warning": f"No mapping found for {spec_type}"
+        }
 
-        except Exception as e:
-            logger.error(f"Error getting mapping from database for {spec_type}: {e}")
-            return None
-
-    async def get_mapping_from_database_async(self, session, spec_type: str) -> Optional[Dict[str, Any]]:
+    async def get_mapping_from_database_async(self, session, genesis_type: str) -> Optional[Dict[str, Any]]:
         """
-        Get component mapping from database asynchronously.
+        Get component mapping from database.
 
         Args:
             session: Database session
-            spec_type: Genesis component type
+            genesis_type: Genesis component type
 
         Returns:
-            Component mapping dictionary or None if not found
+            Mapping dictionary or None
         """
-        try:
-            service = self._get_component_mapping_service()
-            if not service:
-                return None
+        if not self.component_mapping_service:
+            return None
 
-            mapping = await service.get_component_mapping_by_genesis_type(session, spec_type)
+        try:
+            # Get the component mapping from database
+            mapping = await self.component_mapping_service.get_component_mapping_by_genesis_type(
+                session, genesis_type, active_only=True
+            )
+
             if not mapping:
                 return None
 
-            # Convert database mapping to the expected format
-            result = {
-                "component": None,  # Will be determined from runtime adapter
-                "config": mapping.base_config or {},
-                "dataType": None,   # Will be determined from io_mapping
-            }
-
-            # Extract component and dataType from io_mapping if available
-            if mapping.io_mapping:
-                result["component"] = mapping.io_mapping.get("component")
-                result["dataType"] = mapping.io_mapping.get("dataType")
-
-            logger.info(f"Found database mapping for {spec_type}: {result}")
-            return result
-
-        except Exception as e:
-            logger.error(f"Error getting mapping from database for {spec_type}: {e}")
-            return None
-
-    async def get_runtime_adapter_async(self, session, spec_type: str, runtime_type: str = "langflow") -> Optional[Dict[str, Any]]:
-        """
-        Get runtime adapter from database asynchronously.
-
-        Args:
-            session: Database session
-            spec_type: Genesis component type
-            runtime_type: Target runtime type
-
-        Returns:
-            Runtime adapter configuration or None if not found
-        """
-        try:
-            service = self._get_component_mapping_service()
-            if not service:
-                return None
-
-            from langflow.services.database.models.component_mapping.runtime_adapter import RuntimeTypeEnum
-
-            # Convert string to enum
-            try:
-                runtime_enum = RuntimeTypeEnum(runtime_type.lower())
-            except ValueError:
-                logger.warning(f"Unsupported runtime type: {runtime_type}")
-                return None
-
-            adapter = await service.get_runtime_adapter_for_genesis_type(
-                session, spec_type, runtime_enum
+            # Get the runtime adapter for Langflow
+            adapter = await self.component_mapping_service.get_runtime_adapter_for_genesis_type(
+                session, genesis_type, runtime_type="langflow"
             )
 
-            if not adapter:
-                return None
-
-            result = {
-                "target_component": adapter.target_component,
-                "adapter_config": adapter.adapter_config or {},
-                "version": adapter.version,
-                "priority": adapter.priority,
-            }
-
-            logger.info(f"Found runtime adapter for {spec_type} on {runtime_type}: {result}")
-            return result
+            if adapter:
+                return {
+                    "component": adapter.target_component,
+                    "config": adapter.adapter_config or mapping.base_config or {},
+                    "dataType": mapping.io_mapping.get("dataType") if mapping.io_mapping else None
+                }
+            else:
+                # Fallback to basic mapping info
+                return {
+                    "component": mapping.io_mapping.get("component") if mapping.io_mapping else "Component",
+                    "config": mapping.base_config or {},
+                    "dataType": mapping.io_mapping.get("dataType") if mapping.io_mapping else None
+                }
 
         except Exception as e:
-            logger.error(f"Error getting runtime adapter for {spec_type}: {e}")
+            logger.error(f"Error getting database mapping for {genesis_type}: {e}")
             return None
 
-    async def migrate_hardcoded_mappings_to_database(self, session) -> Dict:
+    async def populate_database_cache(self, session=None) -> int:
         """
-        Migrate all hardcoded mappings to database.
+        Populate the database cache with all available mappings.
 
         Args:
             session: Database session
 
         Returns:
-            Migration results dictionary
+            Number of mappings cached
         """
+        if not self.component_mapping_service or not session:
+            logger.warning("Cannot populate database cache - service or session unavailable")
+            return 0
+
         try:
-            service = self._get_component_mapping_service()
-            if not service:
-                return {"error": "ComponentMappingService not available"}
-
-            # Combine all hardcoded mappings
-            all_mappings = {
-                **self.HEALTHCARE_MAPPINGS,
-                **self.AUTONOMIZE_MODELS,
-                **self.MCP_MAPPINGS,
-                **self.STANDARD_MAPPINGS,
-            }
-
-            results = await service.migrate_hardcoded_mappings(
-                session, all_mappings, overwrite_existing=False
+            # Get all component mappings from database
+            mappings = await self.component_mapping_service.get_all_component_mappings(
+                session, active_only=True, limit=10000
             )
 
-            logger.info(f"Migration completed: {results}")
-            return results
+            cached_count = 0
+            for mapping in mappings:
+                try:
+                    # Get runtime adapter
+                    adapter = await self.component_mapping_service.get_runtime_adapter_for_genesis_type(
+                        session, mapping.genesis_type, runtime_type="langflow"
+                    )
+
+                    if adapter:
+                        mapping_dict = {
+                            "component": adapter.target_component,
+                            "config": adapter.adapter_config or mapping.base_config or {},
+                            "dataType": mapping.io_mapping.get("dataType") if mapping.io_mapping else None
+                        }
+                    else:
+                        mapping_dict = {
+                            "component": mapping.io_mapping.get("component") if mapping.io_mapping else "Component",
+                            "config": mapping.base_config or {},
+                            "dataType": mapping.io_mapping.get("dataType") if mapping.io_mapping else None
+                        }
+
+                    self._database_cache[mapping.genesis_type] = mapping_dict
+                    cached_count += 1
+
+                except Exception as e:
+                    logger.debug(f"Error caching mapping for {mapping.genesis_type}: {e}")
+
+            logger.info(f"✅ Populated database cache with {cached_count} mappings")
+            return cached_count
 
         except Exception as e:
-            logger.error(f"Error migrating hardcoded mappings: {e}")
-            return {"error": str(e)}
+            logger.error(f"Error populating database cache: {e}")
+            return 0
 
-    def populate_mapping_cache(self, mappings: Dict[str, Dict[str, Any]]):
+    def get_all_mappings(self) -> Dict[str, Dict[str, Any]]:
         """
-        Populate the mapping cache with database mappings.
+        Get all available mappings (database cache + fallbacks).
 
-        Args:
-            mappings: Dictionary of genesis_type -> mapping_data
+        Returns:
+            Dictionary of all mappings
         """
-        for genesis_type, mapping_data in mappings.items():
-            cache_key = f"mapping_cache_{genesis_type}"
-            self._mapping_cache[cache_key] = mapping_data
-            logger.debug(f"Cached mapping for {genesis_type}")
+        all_mappings = {}
 
-    def clear_mapping_cache(self):
-        """Clear the mapping cache."""
-        self._mapping_cache.clear()
-        logger.info("Mapping cache cleared")
+        # Add database cache
+        all_mappings.update(self._database_cache)
+
+        # Add fallback mappings
+        all_mappings.update(self.FALLBACK_MAPPINGS)
+
+        return all_mappings
+
+    def clear_cache(self):
+        """Clear the database cache."""
+        self._database_cache.clear()
+        logger.info("Database cache cleared")
+
+    def get_mapping_statistics(self) -> Dict[str, int]:
+        """Get statistics about available mappings."""
+        return {
+            "database_cached": len(self._database_cache),
+            "fallback_mappings": len(self.FALLBACK_MAPPINGS),
+            "total": len(self._database_cache) + len(self.FALLBACK_MAPPINGS)
+        }
 
     def get_cache_status(self) -> Dict[str, Any]:
-        """Get status of the mapping cache."""
+        """Get cache status for database mappings."""
         return {
-            "cache_enabled": self._use_database_fallback,
-            "cached_mappings": len(self._mapping_cache),
-            "cached_types": list(self._mapping_cache.keys()),
+            "cached_mappings": len(self._database_cache),
+            "cached_types": list(self._database_cache.keys()),
+            "fallback_mappings": len(self.FALLBACK_MAPPINGS),
+            "has_database_service": self.component_mapping_service is not None
         }
 
     async def refresh_cache_from_database(self, session) -> Dict[str, Any]:
-        """
-        Refresh the mapping cache from database.
-
-        Args:
-            session: Database session
-
-        Returns:
-            Refresh results
-        """
+        """Refresh cache from database."""
         try:
-            service = self._get_component_mapping_service()
-            if not service:
-                return {"error": "ComponentMappingService not available"}
-
-            # Get all active mappings from database
-            mappings = await service.get_all_component_mappings(session, active_only=True)
-
-            # Clear existing cache
-            self.clear_mapping_cache()
-
-            # Populate cache with database mappings
-            database_mappings = {}
-            for mapping in mappings:
-                if mapping.io_mapping:
-                    genesis_type = mapping.genesis_type
-                    mapping_data = {
-                        "component": mapping.io_mapping.get("component"),
-                        "config": mapping.base_config or {},
-                        "dataType": mapping.io_mapping.get("dataType"),
-                    }
-                    database_mappings[genesis_type] = mapping_data
-
-            self.populate_mapping_cache(database_mappings)
-
-            logger.info(f"Refreshed mapping cache with {len(database_mappings)} mappings from database")
+            refreshed = await self.populate_database_cache(session)
             return {
-                "refreshed": len(database_mappings),
-                "cached_types": list(database_mappings.keys()),
-                "status": "success",
+                "success": True,
+                "refreshed": refreshed,
+                "total_cached": len(self._database_cache)
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "total_cached": len(self._database_cache)
             }
 
-        except Exception as e:
-            logger.error(f"Error refreshing mapping cache: {e}")
-            return {"error": str(e)}
+    def _get_mapping_from_database(self, genesis_type: str) -> Optional[Dict[str, Any]]:
+        """Get mapping from database cache."""
+        return self._database_cache.get(genesis_type)
 
-    def get_mapping_source(self, spec_type: str) -> str:
-        """
-        Determine the source of a mapping for debugging.
-
-        Args:
-            spec_type: Genesis component type
-
-        Returns:
-            Source of the mapping (hardcoded, database, unknown)
-        """
-        # Check hardcoded mappings first
-        if spec_type in self.HEALTHCARE_MAPPINGS:
-            return "hardcoded_healthcare"
-        elif spec_type in self.AUTONOMIZE_MODELS:
-            return "hardcoded_autonomize"
-        elif spec_type in self.MCP_MAPPINGS:
-            return "hardcoded_mcp"
-        elif spec_type in self.STANDARD_MAPPINGS:
-            return "hardcoded_standard"
-
-        # Check cache (database)
-        cache_key = f"mapping_cache_{spec_type}"
-        if hasattr(self, '_mapping_cache') and cache_key in self._mapping_cache:
-            return "database_cached"
-
-        return "unknown"
+    def get_available_components(self) -> Dict[str, Any]:
+        """Get available components from cache and fallbacks."""
+        return {
+            "discovered_components": self._database_cache,
+            "fallback_components": self.FALLBACK_MAPPINGS,
+            "total_components": len(self._database_cache) + len(self.FALLBACK_MAPPINGS)
+        }

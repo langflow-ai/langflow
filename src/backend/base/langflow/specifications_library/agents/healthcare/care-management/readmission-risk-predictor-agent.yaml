@@ -1,7 +1,8 @@
 id: urn:agent:genesis:care-management:readmission-risk-predictor-agent:1.0.0
 name: Readmission Risk Predictor Agent
 fullyQualifiedName: genesis.autonomize.ai.readmission_risk_predictor_agent
-description: Multi-agent system that uses post-discharge data, prior utilization patterns, and comorbidity indexes to predict 30-day readmission risks and flag high-risk patients for intervention
+description: Multi-agent system that uses post-discharge data, prior utilization patterns, and comorbidity indexes to predict
+  30-day readmission risks and flag high-risk patients for intervention
 domain: autonomize.ai
 subDomain: care-management
 version: 1.0.0
@@ -58,7 +59,8 @@ tags:
 reusability:
   asTools: false
 kind: Multi Agent
-agentGoal: Predict 30-day readmission risk for discharged patients and enable proactive interventions to prevent avoidable readmissions
+agentGoal: Predict 30-day readmission risk for discharged patients and enable proactive interventions to prevent avoidable
+  readmissions
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: RealTime
@@ -79,21 +81,18 @@ components:
 - id: ehr-discharge-tool
   name: EHR Discharge Data Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access discharge summaries, length of stay, and clinical condition data
   asTools: true
   config:
-    data_elements:
-    - discharge_summary
-    - length_of_stay
-    - discharge_diagnoses
-    - procedures
-    - medications
-    - vital_signs
-    - lab_results
-    include_severity_indicators: true
-    include_complications: true
-    tool_name: ehr_integration
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-collection-agent
@@ -101,18 +100,18 @@ components:
 - id: utilization-history-tool
   name: Healthcare Utilization History
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access historical utilization patterns including previous admissions and ED visits
   asTools: true
   config:
-    data_sources:
-    - inpatient_claims
-    - emergency_department
-    - observation_stays
-    - skilled_nursing
-    include_readmission_history: true
-    include_ed_patterns: true
-    tool_name: claims_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-collection-agent
@@ -120,19 +119,18 @@ components:
 - id: comorbidity-assessment-tool
   name: Comorbidity Assessment Model
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Calculate comprehensive comorbidity scores and risk factors
   asTools: true
   config:
-    scoring_methods:
-    - charlson
-    - elixhauser
-    - cms_hcc
-    include_severity_adjustments: true
-    calculate_frailty_index: true
-    assess_polypharmacy: true
-    mental_health_indicators: true
-    tool_name: comorbidity_assessment_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: risk-modeling-agent
@@ -140,21 +138,18 @@ components:
 - id: readmission-prediction-model
   name: Readmission Risk Prediction Model
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Advanced ML model for 30-day readmission risk prediction
   asTools: true
   config:
-    prediction_horizon: 30
-    feature_categories:
-    - clinical
-    - demographic
-    - utilization
-    - social
-    - discharge_factors
-    include_confidence_intervals: true
-    calibrated_probabilities: true
-    explain_predictions: true
-    tool_name: readmission_prediction_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: risk-modeling-agent
@@ -162,18 +157,18 @@ components:
 - id: post-discharge-monitoring-tool
   name: Post-Discharge Monitoring System
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Monitor post-discharge care activities and compliance indicators
   asTools: true
   config:
-    tool_name: post_discharge_monitoring
-    monitoring_elements:
-    - follow_up_appointments
-    - medication_fills
-    - home_health_visits
-    - patient_contacts
-    - care_plan_adherence
-    real_time_tracking: true
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: monitoring-agent
@@ -233,7 +228,8 @@ components:
   description: Monitor post-discharge care activities and update risk assessments based on real-time data
   config:
     role: Post-Discharge Care Coordinator
-    goal: Monitor post-discharge care activities and adjust readmission risk assessments based on patient compliance and care engagement
+    goal: Monitor post-discharge care activities and adjust readmission risk assessments based on patient compliance and care
+      engagement
     backstory: 'You are a post-discharge care coordinator with expertise in transition care management and patient monitoring.
 
       Your skills include care coordination, patient engagement tracking, and risk reassessment based on post-discharge activities.

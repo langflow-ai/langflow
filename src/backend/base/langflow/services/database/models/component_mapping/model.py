@@ -6,7 +6,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
-from sqlalchemy import Index, String, Text, text
+from sqlalchemy import DateTime, Index, String, Text, text
 from sqlmodel import JSON, Column, Field, SQLModel
 
 
@@ -51,6 +51,26 @@ class ComponentMappingBase(SQLModel):
         default=None,
         description="HIPAA compliance, medical standards, and healthcare-specific metadata"
     )
+    tool_capabilities: Optional[dict] = Field(
+        default=None,
+        description="Tool capability metadata including accepts_tools and provides_tools flags"
+    )
+    runtime_introspection: Optional[dict] = Field(
+        default=None,
+        description="Dynamic capability data discovered at runtime"
+    )
+    variants: Optional[dict] = Field(
+        default=None,
+        description="Model variants consolidated into single mapping"
+    )
+    introspection_data: Optional[dict] = Field(
+        default=None,
+        description="Detailed introspection metadata from component discovery"
+    )
+    introspected_at: Optional[datetime] = Field(
+        default=None,
+        description="When this component was last introspected"
+    )
     description: Optional[str] = Field(
         default=None,
         description="Human-readable description of the component"
@@ -92,7 +112,7 @@ class ComponentMappingBase(SQLModel):
             raise ValueError("Version must follow semantic versioning format (e.g., '1.0.0')")
         return v
 
-    @field_validator("healthcare_metadata", "base_config", "io_mapping")
+    @field_validator("healthcare_metadata", "base_config", "io_mapping", "tool_capabilities", "runtime_introspection")
     @classmethod
     def validate_json_fields(cls, v):
         """Validate JSON fields are properly formatted."""
@@ -139,6 +159,31 @@ class ComponentMapping(ComponentMappingBase, table=True):
         sa_column=Column(JSON, nullable=True),
         description="Healthcare compliance metadata"
     )
+    tool_capabilities: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+        description="Tool capability metadata"
+    )
+    runtime_introspection: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+        description="Runtime introspection data"
+    )
+    variants: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+        description="Model variants consolidated into single mapping"
+    )
+    introspection_data: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+        description="Detailed introspection metadata"
+    )
+    introspected_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime, nullable=True),
+        description="When component was introspected"
+    )
     description: Optional[str] = Field(
         default=None,
         sa_column=Column(Text, nullable=True),
@@ -151,6 +196,8 @@ class ComponentMapping(ComponentMappingBase, table=True):
         Index("idx_category_active", "component_category", "active"),
         Index("idx_version_active", "version", "active"),
         Index("idx_created_at", "created_at"),
+        # Note: JSON columns require GIN indexes for efficient querying, not btree
+        # If JSON querying is needed, create GIN indexes in a separate migration
     )
 
 
@@ -172,6 +219,8 @@ class ComponentMappingUpdate(SQLModel):
     io_mapping: Optional[dict] = None
     component_category: Optional[str] = None
     healthcare_metadata: Optional[dict] = None
+    tool_capabilities: Optional[dict] = None
+    runtime_introspection: Optional[dict] = None
     description: Optional[str] = None
     version: Optional[str] = None
     active: Optional[bool] = None

@@ -124,7 +124,7 @@ components:
 - id: prompt-template
   name: Summary Template
   kind: Tool
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Structured template for consistent summaries
   asTools: true
   config:

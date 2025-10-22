@@ -142,6 +142,22 @@ class SpecValidatorTool(Component):
                             warnings.append(f"Component type '{comp_type}' should start with 'genesis:' prefix")
                             suggestions.append(f"Update component type to 'genesis:{comp_type}'")
 
+                        # **NEW: MCP Tool Detection and Warning**
+                        if comp_type == "genesis:mcp_tool":
+                            errors.append(f"Component '{component.get('id', f'index-{i}')}' uses deprecated 'genesis:mcp_tool' type")
+                            suggestions.append(f"Replace 'genesis:mcp_tool' with appropriate healthcare connector:")
+                            suggestions.append("  - Use 'genesis:ehr_connector' for EHR/patient data")
+                            suggestions.append("  - Use 'genesis:eligibility_connector' for insurance eligibility")
+                            suggestions.append("  - Use 'genesis:clinical_nlp_connector' for medical text analysis")
+                            suggestions.append("  - Use 'genesis:quality_metrics_connector' for HEDIS/quality data")
+                            suggestions.append("  - Use 'genesis:pharmacy_benefits_connector' for PBM/formulary")
+                            suggestions.append("  - Use 'genesis:provider_network_connector' for provider directories")
+                            suggestions.append("  - Use 'genesis:compliance_data_connector' for regulatory compliance")
+                            suggestions.append("  - Use 'genesis:speech_transcription_connector' for clinical speech-to-text")
+                            suggestions.append("  - Use 'genesis:medical_terminology_connector' for medical coding")
+                            suggestions.append("  - Use 'genesis:api_request' for simple HTTP API integrations")
+                            suggestions.append("  - Create specialized healthcare agents for complex workflows")
+
         # Additional metadata validation
         if self.validation_mode == "comprehensive":
             # Check for recommended fields
@@ -154,6 +170,9 @@ class SpecValidatorTool(Component):
             # Check provides relationships if present
             if "provides" in spec_data:
                 self._validate_provides(spec_data, errors, warnings, suggestions)
+
+            # **NEW: Comprehensive MCP Tool Analysis**
+            self._analyze_mcp_usage(spec_data, errors, warnings, suggestions)
 
         # Determine overall validity
         valid = len(errors) == 0
@@ -188,6 +207,95 @@ class SpecValidatorTool(Component):
                             errors.append(f"Provides relationship references non-existent component: {comp_id}")
                             suggestions.append(f"Ensure component '{comp_id}' exists or fix the reference")
 
+    def _analyze_mcp_usage(self, spec_data: Dict[str, Any],
+                          errors: List[str], warnings: List[str],
+                          suggestions: List[str]) -> None:
+        """Analyze and provide guidance on MCP tool usage patterns."""
+        components = spec_data.get("components", [])
+        mcp_tools_found = []
+
+        # Collect all MCP tools and their configurations
+        for component in components:
+            if component.get("type") == "genesis:mcp_tool":
+                tool_config = component.get("config", {})
+                tool_name = tool_config.get("tool_name", "unknown")
+                mcp_tools_found.append({
+                    "id": component.get("id"),
+                    "name": component.get("name"),
+                    "tool_name": tool_name,
+                    "description": component.get("description", "")
+                })
+
+        if mcp_tools_found:
+            # Add comprehensive guidance for each MCP tool found
+            warnings.append(f"Found {len(mcp_tools_found)} MCP tool(s) that should be replaced with healthcare connectors")
+            suggestions.append("=== MCP TOOL REPLACEMENT GUIDE ===")
+
+            for tool in mcp_tools_found:
+                suggestions.append(f"")
+                suggestions.append(f"Component '{tool['id']}' (tool: {tool['tool_name']}):")
+                replacement = self._get_mcp_replacement_suggestion(tool['tool_name'], tool['description'])
+                suggestions.append(f"  → {replacement}")
+
+            # Add general replacement strategy
+            suggestions.append("")
+            suggestions.append("=== ENHANCED DECISION FRAMEWORK ===")
+            suggestions.append("Priority 1: Autonomize Models (Clinical LLM, Medical Coding)")
+            suggestions.append("Priority 2: Healthcare Connectors (PREFERRED)")
+            suggestions.append("Priority 3: API Requests (for simple HTTP integrations)")
+            suggestions.append("Priority 4: Specialized Agents (for complex workflows)")
+            suggestions.append("")
+            suggestions.append("All healthcare connectors include:")
+            suggestions.append("  ✓ HIPAA compliance and audit logging")
+            suggestions.append("  ✓ Comprehensive mock data for development")
+            suggestions.append("  ✓ Healthcare-specific error handling")
+            suggestions.append("  ✓ PHI protection and security controls")
+
+    def _get_mcp_replacement_suggestion(self, tool_name: str, description: str) -> str:
+        """Get specific replacement suggestion based on MCP tool name and description."""
+        tool_name_lower = tool_name.lower()
+        desc_lower = description.lower()
+
+        # Healthcare data access tools
+        if any(keyword in tool_name_lower for keyword in ["ehr", "patient", "medical_record", "clinical_data"]):
+            return "Replace with 'genesis:ehr_connector' for HIPAA-compliant EHR integration"
+        elif any(keyword in tool_name_lower for keyword in ["eligibility", "insurance", "coverage", "benefits"]):
+            return "Replace with 'genesis:eligibility_connector' for insurance eligibility verification"
+        elif any(keyword in tool_name_lower for keyword in ["claims", "adjudication", "claim_processing"]):
+            return "Replace with 'genesis:claims_connector' for claims processing workflows"
+        elif any(keyword in tool_name_lower for keyword in ["pharmacy", "drug", "medication", "formulary", "pbm"]):
+            return "Replace with 'genesis:pharmacy_benefits_connector' for PBM and formulary operations"
+        elif any(keyword in tool_name_lower for keyword in ["provider", "network", "directory", "npi"]):
+            return "Replace with 'genesis:provider_network_connector' for provider directory services"
+        elif any(keyword in tool_name_lower for keyword in ["hedis", "quality", "measure", "benchmark"]):
+            return "Replace with 'genesis:quality_metrics_connector' for HEDIS and quality analytics"
+        elif any(keyword in tool_name_lower for keyword in ["appeals", "grievance", "case_management"]):
+            return "Replace with 'genesis:appeals_data_connector' for appeals and grievances"
+        elif any(keyword in tool_name_lower for keyword in ["compliance", "audit", "regulatory", "hipaa"]):
+            return "Replace with 'genesis:compliance_data_connector' for regulatory compliance"
+
+        # AI/NLP processing tools
+        elif any(keyword in tool_name_lower for keyword in ["nlp", "clinical_nlp", "text_analysis", "entity_extraction"]):
+            return "Replace with 'genesis:clinical_nlp_connector' for medical text analysis"
+        elif any(keyword in tool_name_lower for keyword in ["speech", "transcription", "audio", "voice"]):
+            return "Replace with 'genesis:speech_transcription_connector' for clinical speech-to-text"
+        elif any(keyword in tool_name_lower for keyword in ["terminology", "coding", "icd", "cpt", "snomed"]):
+            return "Replace with 'genesis:medical_terminology_connector' for medical coding validation"
+
+        # Check description for additional context
+        elif any(keyword in desc_lower for keyword in ["ehr", "electronic health", "patient record"]):
+            return "Replace with 'genesis:ehr_connector' based on description context"
+        elif any(keyword in desc_lower for keyword in ["insurance", "eligibility", "coverage"]):
+            return "Replace with 'genesis:eligibility_connector' based on description context"
+        elif any(keyword in desc_lower for keyword in ["quality", "hedis", "measure"]):
+            return "Replace with 'genesis:quality_metrics_connector' based on description context"
+
+        # Default recommendations
+        elif "api" in tool_name_lower or "http" in tool_name_lower:
+            return "Replace with 'genesis:api_request' for simple HTTP API integration"
+        else:
+            return "Replace with appropriate healthcare connector or create specialized agent with custom prompt"
+
     def _generate_suggestions(self, errors: List[str], spec_data: Dict[str, Any]) -> List[str]:
         """Generate helpful suggestions based on validation errors."""
         suggestions = []
@@ -200,5 +308,7 @@ class SpecValidatorTool(Component):
                 suggestions.append("Check component type spelling and ensure it starts with 'genesis:'")
             elif "provides" in error.lower():
                 suggestions.append("Verify all component IDs in 'provides' relationships exist")
+            elif "mcp_tool" in error.lower():
+                suggestions.append("Use the Enhanced Decision Framework to select appropriate replacement components")
 
         return suggestions

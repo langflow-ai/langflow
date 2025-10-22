@@ -8,11 +8,14 @@ import logging
 from langflow.custom.genesis.spec import FlowConverter, ComponentMapper, VariableResolver
 from .validation_schemas import GENESIS_SPEC_SCHEMA, get_component_config_schema
 from .semantic_validator import SemanticValidator
+from .dynamic_schema_generator import DynamicSchemaGenerator
 from langflow.services.runtime import converter_factory, RuntimeType, ValidationOptions
 from langflow.services.spec.component_template_service import component_template_service
+from langflow.services.component_mapping.service import ComponentMappingService
 from langflow.services.database.models.flow import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
+from langflow.services.database.models.component_mapping import ComponentMapping
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from datetime import datetime, timezone
@@ -25,15 +28,22 @@ class SpecService:
     """Business logic service for agent specification operations."""
 
     def __init__(self):
-        """Initialize the service."""
+        """Initialize the service with enhanced database-driven component discovery."""
         self.mapper = ComponentMapper()
         self.converter = FlowConverter(self.mapper)
         self.resolver = VariableResolver()
         self._validation_cache = {}  # Cache for validation results
 
+        # Initialize database-driven services (AUTPE-6207)
+        self.component_mapping_service = ComponentMappingService()
+        self.dynamic_schema_generator = DynamicSchemaGenerator()
+        self._database_components_cache = {}  # Cache for database component mappings
+        self._last_cache_refresh = None
+
     async def convert_spec_to_flow(self, spec_yaml: str,
                                   variables: Optional[Dict[str, Any]] = None,
-                                  tweaks: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                                  tweaks: Optional[Dict[str, Any]] = None,
+                                  session: Optional[AsyncSession] = None) -> Dict[str, Any]:
         """
         Convert YAML specification to Langflow JSON.
 
@@ -41,6 +51,7 @@ class SpecService:
             spec_yaml: YAML specification string
             variables: Runtime variables for resolution
             tweaks: Component field tweaks to apply
+            session: Optional database session for cache population
 
         Returns:
             Flow JSON structure
@@ -59,6 +70,14 @@ class SpecService:
             if not validation["valid"]:
                 raise ValueError(f"Invalid specification: {validation['errors']}")
 
+            # Populate database cache before conversion (AC2: Cache Population Before Conversion)
+            # Enhanced with AUTPE-6207 database-driven component discovery
+            await self._ensure_database_cache_populated(session)
+
+            # Refresh mapper's database cache if we have a session
+            if session:
+                await self._refresh_mapper_database_cache(session)
+
             # Convert to flow
             flow = await self.converter.convert(spec_dict, variables)
 
@@ -70,6 +89,14 @@ class SpecService:
 
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML format: {e}")
+        except TypeError as e:
+            if "argument of type 'NoneType' is not iterable" in str(e):
+                import traceback
+                logger.error(f"NoneType is not iterable error with traceback: {traceback.format_exc()}")
+                raise ValueError(f"NoneType error in conversion: {e}")
+            else:
+                logger.error(f"Type error converting specification: {e}")
+                raise
         except Exception as e:
             logger.error(f"Error converting specification: {e}")
             raise ValueError(f"Conversion failed: {e}")
@@ -97,21 +124,22 @@ class SpecService:
         Raises:
             ValueError: If specification is invalid or creation fails
         """
-        # Convert to flow
-        flow_data = await self.convert_spec_to_flow(spec_yaml, variables, tweaks)
+        # Convert to flow (pass session for cache population)
+        flow_data = await self.convert_spec_to_flow(spec_yaml, variables, tweaks, session)
 
         # Create flow in database using real Langflow database logic
         flow_id = await self._save_flow_to_database(flow_data, name, session, user_id, folder_id)
 
         return flow_id
 
-    async def validate_spec(self, spec_yaml: str, detailed: bool = True) -> Dict[str, Any]:
+    async def validate_spec(self, spec_yaml: str, detailed: bool = True, session: Optional[AsyncSession] = None) -> Dict[str, Any]:
         """
         Comprehensive specification validation with JSON Schema and semantic validation.
 
         Args:
             spec_yaml: YAML specification string
             detailed: Whether to perform detailed semantic validation
+            session: Optional database session for enhanced validation
 
         Returns:
             Comprehensive validation result with errors, warnings, and suggestions
@@ -135,7 +163,8 @@ class SpecService:
             structure_validation = self._validate_spec_structure(spec_dict)
 
             # Phase 3: Component Existence and Basic Validation
-            available_components = await self.get_all_available_components()
+            # Enhanced with database-driven component discovery (AUTPE-6207)
+            available_components = await self.get_all_available_components_with_database(session)
             component_validation = await self._validate_components_enhanced(
                 spec_dict.get("components", []),
                 available_components
@@ -504,12 +533,13 @@ class SpecService:
             "help": "Please check the documentation or contact support"
         })
 
-    async def validate_spec_quick(self, spec_yaml: str) -> Dict[str, Any]:
+    async def validate_spec_quick(self, spec_yaml: str, session: Optional[AsyncSession] = None) -> Dict[str, Any]:
         """
         Perform quick validation for real-time feedback (faster, less comprehensive).
 
         Args:
             spec_yaml: YAML specification string
+            session: Optional database session for component validation
 
         Returns:
             Quick validation results
@@ -1101,6 +1131,8 @@ class SpecService:
             # Create mock Component objects for FlowConverter validation
             source_component = Component(
                 id=source_comp.get("id", ""),
+                name=source_comp.get("name", source_comp.get("id", "")),
+                kind=source_comp.get("kind", "Tool"),
                 type=source_type,
                 config=source_comp.get("config", {}),
                 asTools=source_comp.get("asTools", False)
@@ -1108,6 +1140,8 @@ class SpecService:
 
             target_component = Component(
                 id=target_comp.get("id", ""),
+                name=target_comp.get("name", target_comp.get("id", "")),
+                kind=target_comp.get("kind", "Agent"),
                 type=target_type,
                 config=target_comp.get("config", {}),
                 asTools=target_comp.get("asTools", False)
@@ -1963,3 +1997,258 @@ class SpecService:
                 lines.append("")
 
         return "\n".join(lines)
+
+    async def _ensure_database_cache_populated(self, session: Optional[AsyncSession] = None):
+        """
+        Ensure database mapping cache is populated before flow conversion.
+
+        This method implements AC2: Cache Population Before Conversion.
+
+        Args:
+            session: Optional database session for cache refresh
+        """
+        try:
+            if session is not None:
+                # Check if cache needs refreshing
+                cache_status = self.mapper.get_cache_status()
+
+                # Refresh cache if it's empty or we have a session available
+                if cache_status["cached_mappings"] == 0:
+                    logger.info("Database mapping cache is empty, refreshing from database")
+                    refresh_result = await self.mapper.refresh_cache_from_database(session)
+
+                    if "error" in refresh_result:
+                        logger.warning(f"Failed to refresh database cache: {refresh_result['error']}")
+                        logger.info("Proceeding with hardcoded mappings as fallback")
+                    else:
+                        logger.info(f"Successfully refreshed cache with {refresh_result['refreshed']} mappings")
+                else:
+                    logger.debug(f"Database cache already populated with {cache_status['cached_mappings']} mappings")
+            else:
+                logger.debug("No database session provided, using existing cache or hardcoded mappings")
+
+        except Exception as e:
+            # AC3: Graceful Fallback to Hardcoded Mappings
+            logger.warning(f"Error populating database cache: {e}")
+            logger.info("Gracefully falling back to hardcoded mappings")
+            # Continue without raising exception to ensure conversion still works
+
+    async def _refresh_mapper_database_cache(self, session: AsyncSession):
+        """
+        Refresh ComponentMapper's database cache with latest mappings.
+        AUTPE-6207: Integration with database-driven component discovery.
+
+        Args:
+            session: Database session for fetching mappings
+        """
+        try:
+            if not self.component_mapping_service:
+                logger.debug("ComponentMappingService not available, skipping cache refresh")
+                return
+
+            # Get all active component mappings from database
+            mappings = await self.component_mapping_service.get_all_component_mappings(
+                session, active_only=True, limit=1000
+            )
+
+            if mappings:
+                # Update mapper's database cache
+                for mapping in mappings:
+                    genesis_type = mapping.genesis_type
+                    langflow_component = mapping.langflow_component
+
+                    # Create mapping structure
+                    mapping_dict = {
+                        "component": langflow_component,
+                        "config": mapping.default_config or {},
+                        "category": mapping.category,
+                        "database_id": str(mapping.id)
+                    }
+
+                    # Update mapper's cache
+                    self.mapper._database_cache[genesis_type] = mapping_dict
+
+                logger.info(f"Refreshed mapper cache with {len(mappings)} database mappings")
+
+            # Also cache in our local service for quick access
+            self._database_components_cache = {
+                m.genesis_type: m for m in mappings
+            }
+            self._last_cache_refresh = datetime.now(timezone.utc)
+
+        except Exception as e:
+            logger.warning(f"Error refreshing mapper database cache: {e}")
+            # Continue without raising to maintain resilience
+
+    async def get_all_available_components_with_database(self, session: Optional[AsyncSession] = None) -> Dict[str, Any]:
+        """
+        Get all available components with enhanced database-driven discovery.
+        AUTPE-6207: Integrates database mappings with dynamic discovery.
+
+        Args:
+            session: Optional database session for fetching mappings
+
+        Returns:
+            Dictionary with comprehensive component information
+        """
+        try:
+            # Start with base implementation
+            result = await self.get_all_available_components()
+
+            if session and self.component_mapping_service:
+                # Enhance with database mappings
+                db_mappings = await self.component_mapping_service.get_all_component_mappings(
+                    session, active_only=True, limit=1000
+                )
+
+                # Add database mappings to result
+                database_mapped = {}
+                for mapping in db_mappings:
+                    database_mapped[mapping.genesis_type] = {
+                        "description": mapping.description or f"Component {mapping.genesis_type}",
+                        "config": mapping.base_config or {},
+                        "category": mapping.component_category,
+                        "io_mapping": mapping.io_mapping or {},
+                        "healthcare_metadata": mapping.healthcare_metadata,
+                        "tool_capabilities": mapping.tool_capabilities,
+                        "active": mapping.active,
+                        "version": mapping.version,
+                        "created_at": mapping.created_at.isoformat() if mapping.created_at else None
+                    }
+
+                # Merge database mappings with existing mappings
+                result["database_mapped"] = database_mapped
+                result["genesis_mapped"].update(database_mapped)
+
+                # Update discovery stats
+                if "discovery_stats" in result:
+                    result["discovery_stats"]["database_mappings"] = len(database_mapped)
+                    result["discovery_stats"]["total_mapped"] = len(result["genesis_mapped"])
+
+                # Add healthcare-specific mappings
+                healthcare_mappings = [m for m in db_mappings if m.component_category == "healthcare"]
+                result["healthcare_components"] = {
+                    m.genesis_type: {
+                        "description": m.description or f"Healthcare component {m.genesis_type}",
+                        "category": m.component_category,
+                        "healthcare_metadata": m.healthcare_metadata
+                    } for m in healthcare_mappings
+                }
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Error getting components with database: {e}")
+            # Fall back to base implementation
+            return await self.get_all_available_components()
+
+    async def validate_component_with_dynamic_schema(self,
+                                                    component: Dict[str, Any],
+                                                    session: Optional[AsyncSession] = None) -> Dict[str, Any]:
+        """
+        Validate a component using dynamically generated schema.
+        AUTPE-6207: Dynamic schema generation for discovered components.
+
+        Args:
+            component: Component to validate
+            session: Optional database session
+
+        Returns:
+            Validation result
+        """
+        errors = []
+        warnings = []
+
+        try:
+            comp_type = component.get("type", "")
+
+            # Get component mapping from database if available
+            component_mapping = None
+            if session and self.component_mapping_service and comp_type.startswith("genesis:"):
+                component_mapping = await self.component_mapping_service.get_component_mapping_by_genesis_type(
+                    session, comp_type
+                )
+
+            # Generate or retrieve schema
+            if component_mapping:
+                # Use database-driven schema information
+                schema = self.dynamic_schema_generator.generate_schema_from_introspection(
+                    genesis_type=comp_type,
+                    component_category=component_mapping.category,
+                    base_config=component_mapping.default_config
+                )
+            else:
+                # Try to get schema from complete_component_schemas
+                from .complete_component_schemas import get_enhanced_component_schema
+                schema = get_enhanced_component_schema(comp_type)
+
+                if not schema:
+                    # Generate dynamic schema as fallback
+                    schema = self.dynamic_schema_generator.generate_schema_from_introspection(
+                        genesis_type=comp_type,
+                        component_category=self._infer_category(comp_type)
+                    )
+
+            # Validate component config against schema
+            if schema and "config" in component:
+                import jsonschema
+                try:
+                    jsonschema.validate(component["config"], schema)
+                except jsonschema.ValidationError as e:
+                    errors.append({
+                        "code": "SCHEMA_VALIDATION_ERROR",
+                        "message": f"Component '{component.get('id', comp_type)}' config validation failed: {e.message}",
+                        "component_id": component.get("id"),
+                        "severity": "error"
+                    })
+                except Exception as e:
+                    warnings.append({
+                        "code": "SCHEMA_VALIDATION_WARNING",
+                        "message": f"Could not validate component '{component.get('id', comp_type)}': {e}",
+                        "component_id": component.get("id"),
+                        "severity": "warning"
+                    })
+
+            return {"errors": errors, "warnings": warnings}
+
+        except Exception as e:
+            logger.error(f"Error in dynamic schema validation: {e}")
+            return {
+                "errors": [{
+                    "code": "VALIDATION_ERROR",
+                    "message": f"Failed to validate component: {e}",
+                    "severity": "error"
+                }],
+                "warnings": []
+            }
+
+    def _infer_category(self, comp_type: str) -> str:
+        """
+        Infer component category from type name.
+
+        Args:
+            comp_type: Component type string
+
+        Returns:
+            Inferred category
+        """
+        comp_lower = comp_type.lower()
+
+        if "agent" in comp_lower:
+            return "agent"
+        elif "model" in comp_lower or "llm" in comp_lower:
+            return "model"
+        elif "tool" in comp_lower or "mcp" in comp_lower:
+            return "tool"
+        elif "input" in comp_lower or "output" in comp_lower:
+            return "io"
+        elif "prompt" in comp_lower:
+            return "prompt"
+        elif any(term in comp_lower for term in ["health", "medical", "clinical", "patient"]):
+            return "healthcare"
+        elif "api" in comp_lower:
+            return "integration"
+        elif "data" in comp_lower or "process" in comp_lower:
+            return "processing"
+        else:
+            return "general"
