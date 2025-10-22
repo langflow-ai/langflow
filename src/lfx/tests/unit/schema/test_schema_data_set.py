@@ -1,6 +1,5 @@
 import pandas as pd
 import pytest
-
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 
