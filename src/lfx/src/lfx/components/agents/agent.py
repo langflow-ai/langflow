@@ -51,9 +51,6 @@ class AgentComponent(ToolCallingAgentComponent):
             for input_field in MODEL_PROVIDERS_DICT["OpenAI"]["inputs"]
             if not (hasattr(input_field, "name") and input_field.name == "json_mode")
         ]
-    if "IBM watsonx.ai" in MODEL_PROVIDERS_DICT:
-        watsonx_inputs_filtered = list(MODEL_PROVIDERS_DICT["IBM watsonx.ai"]["inputs"])
-        print(watsonx_inputs_filtered)
     else:
         openai_inputs_filtered = []
 
