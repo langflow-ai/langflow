@@ -91,7 +91,7 @@ Langflow is completely open source and you can deploy it to all major deployment
 
 Star Langflow on GitHub to be instantly notified of new releases.
 
-![Star Langflow](./docs/static/img/star-langflow.gif)
+![Star Langflow](https://github.com/user-attachments/assets/03168b17-a11d-4b2a-b0f7-c1cce69e5a2c)
 
 ## 👋 Contribute
 
