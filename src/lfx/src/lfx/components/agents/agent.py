@@ -21,7 +21,7 @@ from lfx.custom.custom_component.component import get_component_toolkit
 from lfx.custom.utils import update_component_build_config
 from lfx.helpers.base_model import build_model_from_schema
 from lfx.inputs.inputs import BoolInput
-from lfx.io import DropdownInput, IntInput, MultilineInput, Output, TableInput
+from lfx.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, TableInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
@@ -84,6 +84,13 @@ class AgentComponent(ToolCallingAgentComponent):
             info="System Prompt: Initial instructions and context provided to guide the agent's behavior.",
             value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
             advanced=False,
+        ),
+        MessageTextInput(
+            name="context_id",
+            display_name="Context ID",
+            info="The context ID of the chat. Adds an extra layer to the local memory.",
+            value="",
+            advanced=True,
         ),
         IntInput(
             name="n_messages",
@@ -154,7 +161,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 },
             ],
         ),
-        *LCToolsAgentComponent._base_inputs,
+        *LCToolsAgentComponent.get_base_inputs(),
         # removed memory inputs from agent component
         # *memory_inputs,
         BoolInput(
@@ -408,6 +415,7 @@ class AgentComponent(ToolCallingAgentComponent):
             await MemoryComponent(**self.get_base_args())
             .set(
                 session_id=self.graph.session_id,
+                context_id=self.context_id,
                 order="Ascending",
                 n_messages=self.n_messages,
             )

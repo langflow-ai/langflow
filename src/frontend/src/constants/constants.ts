@@ -1,7 +1,7 @@
 // src/constants/constants.ts
 
-import { customDefaultShortcuts } from "@/customization/constants";
 import custom from "../customization/config-constants";
+import { customDefaultShortcuts } from "../customization/constants";
 import type { languageMap } from "../types/components";
 
 /**
@@ -852,8 +852,8 @@ export const LANGFLOW_REFRESH_TOKEN = "refresh_token_lf";
 
 export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS = 60 * 60 - 60 * 60 * 0.1;
 export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV =
-  Number(process.env?.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60) -
-  Number(process.env?.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60) * 0.1;
+  Number(import.meta.env?.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60) -
+  Number(import.meta.env?.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60) * 0.1;
 export const TEXT_FIELD_TYPES: string[] = ["str", "SecretStr"];
 export const NODE_WIDTH = 384;
 export const NODE_HEIGHT = NODE_WIDTH * 3;
@@ -920,8 +920,8 @@ export const POLLING_MESSAGES = {
 export const BUILD_POLLING_INTERVAL = 25;
 
 export const IS_AUTO_LOGIN =
-  !process?.env?.LANGFLOW_AUTO_LOGIN ||
-  String(process?.env?.LANGFLOW_AUTO_LOGIN)?.toLowerCase() !== "false";
+  !import.meta.env?.LANGFLOW_AUTO_LOGIN ||
+  String(import.meta.env?.LANGFLOW_AUTO_LOGIN)?.toLowerCase() !== "false";
 
 export const AUTO_LOGIN_RETRY_DELAY = 2000;
 export const AUTO_LOGIN_MAX_RETRY_DELAY = 60000;
