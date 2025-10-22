@@ -85,7 +85,7 @@ def _get_ollama_inputs_and_fields():
     try:
         from lfx.components.ollama.ollama import ChatOllamaComponent
 
-        ollama_inputs = get_filtered_inputs(ChatOllamaComponent)
+        ollama_inputs = get_filtered_inputs(ChatOllamaComponent,provider_name="Ollama")
     except ImportError as e:
         msg = "Ollama is not installed. Please install it with `pip install langchain-ollama`."
         raise ImportError(msg) from e
@@ -356,6 +356,6 @@ MODEL_DYNAMIC_UPDATE_FIELDS = ["api_key", "model", "tool_model_enabled", "base_u
 
 MODELS_METADATA = {name: {"icon": prov["icon"]} for name, prov in ACTIVE_MODEL_PROVIDERS_DICT.items()}
 
-MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "OpenAI","IBM watsonx.ai"]
+MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "OpenAI","IBM watsonx.ai","Ollama"]
 
 MODEL_OPTIONS_METADATA = [MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA]
