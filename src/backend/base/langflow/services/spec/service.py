@@ -1149,9 +1149,12 @@ class SpecService:
 
             # UNIFIED VALIDATION: Tool connections use FlowConverter's tool logic
             if use_as == "tools":
-                is_valid = self.converter._validate_tool_connection_capability(
-                    source_type, target_type, source_component
-                )
+                # Note: _validate_tool_connection_capability is async, but we're in sync context
+                # For now, use basic validation logic to avoid the RuntimeWarning
+                # TODO: Make this validation path async or create sync alternative
+
+                # Basic tool validation logic (temporary fix)
+                is_valid = self._validate_tool_connection_sync(source_type, target_type, source_component)
 
                 if not is_valid:
                     errors.append(
@@ -1204,7 +1207,49 @@ class SpecService:
 
         return {"errors": errors, "warnings": warnings}
 
+    def _validate_tool_connection_sync(self, source_type: str, target_type: str, source_component) -> bool:
+        """
+        Synchronous tool connection validation to avoid async/await issues.
 
+        This is a simplified version of the async _validate_tool_connection_capability
+        that provides basic validation without database queries.
+        """
+        try:
+            # Basic tool capability validation
+            # Check if source component can be used as a tool
+
+            # MCP tools are deprecated - should not be used
+            if source_type == "genesis:mcp_tool":
+                return False
+
+            # Healthcare connectors typically can be used as tools
+            if "connector" in source_type:
+                return True
+
+            # API requests can typically be used as tools
+            if source_type == "genesis:api_request":
+                return True
+
+            # Agents typically can accept tools
+            if target_type == "genesis:agent":
+                return True
+
+            # For other cases, use basic heuristics
+            # Most genesis components can be used as tools unless specifically excluded
+            excluded_tool_types = [
+                "genesis:chat_input",
+                "genesis:chat_output",
+                "genesis:agent"  # agents don't typically serve as tools
+            ]
+
+            if source_type in excluded_tool_types:
+                return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error in sync tool validation: {e}")
+            return False
 
     def _determine_output_field(self, component_name: str, use_as: str) -> str:
         """

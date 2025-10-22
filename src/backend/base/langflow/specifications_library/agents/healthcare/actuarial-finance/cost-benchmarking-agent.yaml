@@ -42,7 +42,7 @@ variables:
   default: 36
   description: Number of months for historical trending and cost evolution analysis
 - name: outlier_detection_sensitivity
-  type: float
+  type: number
   required: false
   default: 2.0
   description: Standard deviation threshold for identifying cost outliers in benchmarking analysis
@@ -78,7 +78,7 @@ interactionMode: RequestResponse
 runMode: RealTime
 agencyLevel: KnowledgeDrivenWorkflow
 toolsUse: true
-learningCapability: Supervised
+learningCapability: None
 components:
 - id: benchmarking-input
   name: Cost Benchmarking Data Input
@@ -92,143 +92,91 @@ components:
 - id: cms-data-connector
   name: CMS Data Integration Connector
   kind: Tool
-  type: genesis:api_request
-  description: CMS data integration connector that accesses Medicare cost reports, fee schedules, and public health plan data
-    for benchmarking
+  type: genesis:compliance_data_connector
+  description: HIPAA-compliant CMS data integration connector that accesses Medicare cost reports, fee schedules, and public health plan data for actuarial benchmarking
   asTools: true
   config:
-    method: GET
-    url_input: https://api.cms.gov/v1/data/cost-reports
-    headers:
-    - key: Authorization
-      value: Bearer ${CMS_API_TOKEN}
-    - key: Content-Type
-      value: application/json
-    timeout: 45
+    data_source: cms_cost_reports
+    api_endpoint: https://api.cms.gov/v1/data/cost-reports
+    authentication_method: oauth2
   provides:
   - useAs: tools
     in: benchmarking-agent
-    description: Enable access to comprehensive CMS cost and utilization data for benchmarking
+    description: Enable HIPAA-compliant access to comprehensive CMS cost and utilization data for benchmarking
 - id: industry-database-tool
   name: Healthcare Industry Database Connector
   kind: Tool
-  type: genesis:api_request
-  description: Healthcare industry database connector that provides access to actuarial databases, market surveys, and industry
-    benchmarking data
+  type: genesis:quality_metrics_connector
+  description: HIPAA-compliant healthcare industry database connector that provides access to actuarial databases, HEDIS metrics, market surveys, and industry benchmarking data
   asTools: true
   config:
-    method: POST
-    headers:
-    - key: Content-Type
-      value: application/json
-    - key: Authorization
-      value: ${API_KEY}
-    timeout: 30
-    body: []
+    metrics_system: hedis
   provides:
   - useAs: tools
     in: benchmarking-agent
-    description: Enable access to comprehensive industry benchmarking and market data
+    description: Enable HIPAA-compliant access to comprehensive industry benchmarking and quality metrics data
 - id: cost-analyzer-tool
   name: Healthcare Cost Analysis Engine
   kind: Tool
-  type: genesis:api_request
-  description: Advanced cost analysis engine that processes claims data, fee schedules, and utilization patterns to generate
-    comprehensive cost metrics
+  type: genesis:claims_connector
+  description: HIPAA-compliant advanced cost analysis engine that processes claims data, fee schedules, and utilization patterns to generate comprehensive cost metrics
   asTools: true
   config:
-    method: POST
-    headers:
-    - key: Content-Type
-      value: application/json
-    - key: Authorization
-      value: ${API_KEY}
-    timeout: 30
-    body: []
+    clearinghouse: change_healthcare
   provides:
   - useAs: tools
     in: benchmarking-agent
-    description: Enable comprehensive cost analysis and normalization for fair benchmarking
+    description: Enable HIPAA-compliant comprehensive cost analysis and normalization for fair benchmarking
 - id: competitive-intelligence-tool
   name: Healthcare Competitive Intelligence Engine
   kind: Tool
-  type: genesis:api_request
-  description: Competitive intelligence engine that analyzes market positioning, competitor pricing, and strategic positioning
-    based on benchmarking data
+  type: genesis:provider_network_connector
+  description: HIPAA-compliant competitive intelligence engine that analyzes market positioning, competitor pricing, and strategic positioning based on benchmarking data
   asTools: true
-  config:
-    method: POST
-    headers:
-    - key: Content-Type
-      value: application/json
-    - key: Authorization
-      value: ${API_KEY}
-    timeout: 30
-    body: []
+  config: {}
   provides:
   - useAs: tools
     in: benchmarking-agent
-    description: Enable comprehensive competitive analysis and market intelligence generation
+    description: Enable HIPAA-compliant comprehensive competitive analysis and market intelligence generation
 - id: risk-adjuster-tool
   name: Healthcare Risk Adjustment Tool
-  kind: Tool
-  type: genesis:api_request
-  description: Advanced risk adjustment tool that normalizes costs across different populations and risk profiles for accurate
-    benchmarking comparisons
+  kind: Model
+  type: genesis:autonomize
+  description: Advanced HIPAA-compliant risk adjustment model that normalizes costs across different populations and risk profiles for accurate benchmarking comparisons
   asTools: true
   config:
-    method: POST
-    headers:
-    - key: Content-Type
-      value: application/json
-    - key: Authorization
-      value: ${API_KEY}
-    timeout: 30
-    body: []
+    selected_model: "Clinical LLM"
+    confidence_threshold: 0.8
   provides:
   - useAs: tools
     in: benchmarking-agent
-    description: Enable sophisticated risk adjustment for fair cost comparisons
+    description: Enable sophisticated HIPAA-compliant risk adjustment for fair cost comparisons
 - id: benchmark-comparator-tool
   name: Multi-Source Benchmark Comparison Tool
   kind: Tool
-  type: genesis:api_request
-  description: Advanced comparison tool that analyzes costs against multiple benchmark sources and generates comprehensive
-    comparative reports
+  type: genesis:medical_data_standardizer_connector
+  description: HIPAA-compliant advanced comparison tool that analyzes costs against multiple benchmark sources and generates comprehensive comparative reports
   asTools: true
   config:
-    method: POST
-    headers:
-    - key: Content-Type
-      value: application/json
-    - key: Authorization
-      value: ${API_KEY}
-    timeout: 30
-    body: []
+    standardization_type: cost_benchmarking
+    output_format: comparative_analysis
   provides:
   - useAs: tools
     in: benchmarking-agent
-    description: Enable comprehensive comparison across multiple benchmarking data sources
+    description: Enable HIPAA-compliant comprehensive comparison across multiple benchmarking data sources
 - id: insights-generator-tool
   name: Actionable Insights Generation Engine
-  kind: Tool
-  type: genesis:api_request
-  description: Intelligent insights generation engine that translates benchmarking results into actionable recommendations
-    for cost optimization and strategic planning
+  kind: Model
+  type: genesis:autonomize
+  description: HIPAA-compliant intelligent insights generation engine that translates benchmarking results into actionable recommendations for cost optimization and strategic planning
   asTools: true
   config:
-    method: POST
-    headers:
-    - key: Content-Type
-      value: application/json
-    - key: Authorization
-      value: ${API_KEY}
-    timeout: 30
-    body: []
+    selected_model: "Clinical LLM"
+    confidence_threshold: 0.8
   provides:
   - useAs: tools
     in: benchmarking-agent
-    description: Enable generation of actionable insights and strategic recommendations
+    description: Enable HIPAA-compliant generation of actionable insights and strategic recommendations
 - id: benchmarking-prompt
   name: Healthcare Cost Benchmarking Analysis Instructions
   kind: Prompt
@@ -333,52 +281,46 @@ kpis:
 - name: Benchmarking Data Coverage
   description: Percentage of relevant benchmark sources successfully accessed and analyzed
   target: '> 95%'
-  measurement: percentage
-  category: Coverage
+  category: performance
   valueType: percentage
 - name: Risk Adjustment Accuracy
   description: Accuracy of risk adjustment methodologies for fair cost comparisons
   target: '> 93%'
-  measurement: percentage
-  category: Analytical Accuracy
+  category: quality
   valueType: percentage
 - name: Competitive Intelligence Completeness
   description: Completeness of competitive analysis and market positioning assessment
   target: '> 90%'
-  measurement: percentage
-  category: Analysis Depth
+  category: quality
   valueType: percentage
 - name: Cost Normalization Effectiveness
   description: Effectiveness of cost normalization for valid cross-population comparisons
   target: '> 92%'
-  measurement: percentage
-  category: Quality
+  category: quality
   valueType: percentage
 - name: Actionable Insights Quality
   description: Quality and actionability of generated recommendations and strategic insights
   target: '> 4.4/5'
-  measurement: score
-  category: Value Generation
+  category: quality
   valueType: percentage
 - name: Benchmarking Processing Efficiency
   description: Average time to complete comprehensive cost benchmarking analysis
   target: < 60 minutes
-  measurement: time
-  category: Efficiency
-  valueType: percentage
+  category: efficiency
+  valueType: duration
 - name: Data Source Integration Success Rate
   description: Success rate for integrating and harmonizing data from multiple benchmark sources
   target: '> 96%'
-  measurement: percentage
-  category: Integration
+  category: technical
   valueType: percentage
 - name: Strategic Recommendation Adoption Rate
   description: Rate of strategic recommendations adopted by decision makers
   target: '> 75%'
-  measurement: percentage
-  category: Business Impact
+  category: business
   valueType: percentage
 securityInfo:
   visibility: Internal
-  confidentiality: Medium
+  confidentiality: High
   gdprSensitive: false
+  hipaaCompliant: true
+  dataClassification: phi

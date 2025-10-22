@@ -286,3 +286,227 @@ class ComponentMapper:
             "fallback_components": self.FALLBACK_MAPPINGS,
             "total_components": len(self._database_cache) + len(self.FALLBACK_MAPPINGS)
         }
+
+    def get_component_io_mapping(self, component_type: str = None) -> Dict[str, Any]:
+        """
+        Get input/output field mappings for component types from database.
+
+        This method dynamically retrieves I/O mapping information from the database
+        to support connection validation and field mapping in specifications.
+
+        Args:
+            component_type: Optional specific component type to get mapping for
+
+        Returns:
+            Dictionary with component I/O mappings from database:
+            - If component_type provided: mapping for that specific component
+            - If no component_type: all available I/O mappings from database cache
+        """
+        # Default mapping for unknown components
+        default_mapping = {
+            "input_field": "input_value",
+            "output_field": "output",
+            "input_types": ["Any"],
+            "output_types": ["Any"]
+        }
+
+        if component_type:
+            # Check database cache first
+            if component_type in self._database_cache:
+                db_mapping = self._database_cache[component_type]
+                io_mapping = db_mapping.get("config", {}).get("io_mapping", {})
+
+                if io_mapping:
+                    return io_mapping
+
+                # Fallback: derive from dataType if available
+                data_type = db_mapping.get("dataType")
+                if data_type:
+                    return self._derive_io_mapping_from_datatype(data_type)
+
+            # Check fallback mappings only for critical components
+            if component_type in self.FALLBACK_MAPPINGS:
+                fallback = self.FALLBACK_MAPPINGS[component_type]
+                io_mapping = fallback.get("config", {}).get("io_mapping", {})
+                if io_mapping:
+                    return io_mapping
+
+            # Return default for unknown components
+            logger.debug(f"No I/O mapping found for {component_type}, using default")
+            return default_mapping
+
+        # Return all I/O mappings from database cache
+        all_mappings = {}
+
+        # Extract I/O mappings from database cache
+        for genesis_type, mapping_data in self._database_cache.items():
+            io_mapping = mapping_data.get("config", {}).get("io_mapping", {})
+            if io_mapping:
+                all_mappings[genesis_type] = io_mapping
+            else:
+                # Derive from dataType if available
+                data_type = mapping_data.get("dataType")
+                if data_type:
+                    all_mappings[genesis_type] = self._derive_io_mapping_from_datatype(data_type)
+                else:
+                    all_mappings[genesis_type] = default_mapping
+
+        return all_mappings
+
+    def is_tool_component(self, spec_type: str) -> bool:
+        """
+        Check if a component type should be used as a tool using database-driven approach.
+
+        This method determines whether a Genesis specification component type
+        can be used as a tool by agents or other components based on database information.
+
+        Args:
+            spec_type: Genesis component type (e.g., "genesis:rxnorm")
+
+        Returns:
+            True if component can be used as a tool, False otherwise
+        """
+        if not spec_type:
+            return False
+
+        # Primary: Check database cache for explicit tool capability
+        if spec_type in self._database_cache:
+            db_mapping = self._database_cache[spec_type]
+
+            # Check explicit dataType marking in database
+            data_type = db_mapping.get("dataType")
+            if data_type == "tool":
+                logger.debug(f"✓ {spec_type} marked as tool in database")
+                return True
+            elif data_type in ["input", "output", "agent", "prompt"]:
+                logger.debug(f"✗ {spec_type} marked as {data_type} in database")
+                return False
+
+            # Check component configuration for tool indicators
+            config = db_mapping.get("config", {})
+            if config.get("asTools") is True:
+                logger.debug(f"✓ {spec_type} has asTools=true in database config")
+                return True
+
+            # Check component category in database
+            component_category = config.get("component_category")
+            if component_category in ["healthcare", "connector", "api", "tool"]:
+                logger.debug(f"✓ {spec_type} in tool category '{component_category}'")
+                return True
+
+            # Get target component name and check capability
+            component_name = db_mapping.get("component", "")
+            if component_name and self._is_component_tool_capable_from_db(component_name, db_mapping):
+                return True
+
+        # Secondary: Check minimal fallback mappings only for critical components
+        if spec_type in self.FALLBACK_MAPPINGS:
+            fallback_mapping = self.FALLBACK_MAPPINGS[spec_type]
+            component_name = fallback_mapping.get("component", "")
+            # Only basic check for fallback
+            if "tool" in component_name.lower() or "api" in component_name.lower():
+                return True
+
+        # Tertiary: Database-informed pattern detection
+        logger.debug(f"Using pattern detection for {spec_type}")
+        return self._detect_tool_capability_by_pattern(spec_type)
+
+    def _derive_io_mapping_from_datatype(self, data_type: str) -> Dict[str, Any]:
+        """Derive I/O mapping from component dataType."""
+        type_mappings = {
+            "input": {
+                "input_field": None,
+                "output_field": "output",
+                "input_types": [],
+                "output_types": ["str", "Any"]
+            },
+            "output": {
+                "input_field": "input_value",
+                "output_field": "output",
+                "input_types": ["Any"],
+                "output_types": ["str"]
+            },
+            "tool": {
+                "input_field": "input_value",
+                "output_field": "output",
+                "input_types": ["Any"],
+                "output_types": ["Any"]
+            },
+            "agent": {
+                "input_field": "input_value",
+                "output_field": "response",
+                "input_types": ["str", "Message", "Any"],
+                "output_types": ["str", "Message"]
+            }
+        }
+        return type_mappings.get(data_type, {
+            "input_field": "input_value",
+            "output_field": "output",
+            "input_types": ["Any"],
+            "output_types": ["Any"]
+        })
+
+    def _is_component_tool_capable_from_db(self, component_name: str, db_mapping: Dict[str, Any]) -> bool:
+        """Check if a component is tool-capable using database information."""
+        if not component_name:
+            return False
+
+        # Check explicit config flags from database
+        config = db_mapping.get("config", {})
+        if config.get("is_tool") is True:
+            return True
+        if config.get("is_tool") is False:
+            return False
+
+        # Check component category from database
+        category = config.get("component_category", "").lower()
+        if category in ["healthcare", "connector", "api", "tool", "utility"]:
+            return True
+        if category in ["input", "output", "agent", "prompt"]:
+            return False
+
+        # Fallback to name pattern check
+        component_lower = component_name.lower()
+        tool_indicators = [
+            "tool", "api", "request", "search", "calculator", "connector",
+            "mcp", "function", "custom", "autonomize", "model"
+        ]
+        non_tool_indicators = [
+            "input", "output", "chat", "text", "agent", "prompt"
+        ]
+
+        if any(indicator in component_lower for indicator in non_tool_indicators):
+            return False
+        if any(indicator in component_lower for indicator in tool_indicators):
+            return True
+        return False
+
+    def _detect_tool_capability_by_pattern(self, spec_type: str) -> bool:
+        """Detect tool capability based on Genesis type patterns."""
+        if not spec_type.startswith("genesis:"):
+            return False
+
+        base_type = spec_type.replace("genesis:", "").lower()
+
+        # Known tool patterns in Genesis types
+        tool_patterns = [
+            "tool", "connector", "api", "search", "calculator", "mcp",
+            "encoder", "lookup", "eligibility", "rxnorm", "icd", "cpt",
+            "claims", "prior_auth", "pa_lookup", "autonomize"
+        ]
+
+        # Known non-tool patterns
+        non_tool_patterns = [
+            "input", "output", "chat", "text", "agent", "prompt", "crew"
+        ]
+
+        # Check non-tool patterns first (higher precedence)
+        if any(pattern in base_type for pattern in non_tool_patterns):
+            return False
+
+        # Check tool patterns
+        if any(pattern in base_type for pattern in tool_patterns):
+            return True
+
+        # Default to False for unknown patterns
+        return False
