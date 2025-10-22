@@ -202,7 +202,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             "chunk_size": int(self.chunk_size) if self.chunk_size else None,
             "request_timeout": float(self.request_timeout) if self.request_timeout else None,
             "max_retries": int(self.max_retries) if self.max_retries else None,
-            "show_progress_bar": self.show_progress_bar,
+            "show_progress_bar": self.show_progress_bar if hasattr(self, 'show_progress_bar') else None,
             "model_kwargs": self.model_kwargs,
         }
 

@@ -146,7 +146,7 @@ class KubernetesSecretService(VariableService, Service):
         user_id: UUID | str,
         name: str,
         value: str,
-        category: str = CATEGORY_GLOBAL,
+        category: str | None = CATEGORY_GLOBAL,
         *,
         default_fields: list[str],
         type_: str,
