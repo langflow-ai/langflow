@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING
 
 import pytest
-
 from lfx.components.helpers.memory import MemoryComponent
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph.graph.base import Graph
@@ -36,7 +35,10 @@ AI: """
     )
     openai_component = OpenAIModelComponent(_id="openai")
     openai_component.set(
-        input_value=prompt_component.build_prompt, max_tokens=100, temperature=0.1, api_key="test_api_key"
+        input_value=prompt_component.build_prompt,
+        max_tokens=100,
+        temperature=0.1,
+        api_key="test_api_key",  # pragma: allowlist secret
     )
     openai_component.get_output("text_output").value = "Mock response"
 
