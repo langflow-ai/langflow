@@ -25,28 +25,28 @@ class LanguageModelComponent(LCModelComponent):
         """Return a list of available model providers."""
         # TODO: Use the CRUD endpoints to fetch available providers dynamically
         return [
-                   {
-                        "name": "gpt-4",
-                        "icon": "OpenAI",
-                        "category": "OpenAI",
-                        "provider": "OpenAI",
-                        "metadata": {"context_length": 8192}
-                    },
-                    {
-                        "name": "claude-3-opus",
-                        "icon": "Anthropic",
-                        "category": "Anthropic",
-                        "provider": "Anthropic",
-                        "metadata": {"context_length": 200000}
-                    },
-                    {
-                        "name": "gemini-pro",
-                        "icon": "GoogleGenerativeAI",
-                        "category": "Google",
-                        "provider": "Google",
-                        "metadata": {"context_length": 32768}
-                    },
-                ]
+            {
+                "name": "gpt-4",
+                "icon": "OpenAI",
+                "category": "OpenAI",
+                "provider": "OpenAI",
+                "metadata": {"context_length": 8192},
+            },
+            {
+                "name": "claude-3-opus",
+                "icon": "Anthropic",
+                "category": "Anthropic",
+                "provider": "Anthropic",
+                "metadata": {"context_length": 200000},
+            },
+            {
+                "name": "gemini-pro",
+                "icon": "GoogleGenerativeAI",
+                "category": "Google",
+                "provider": "Google",
+                "metadata": {"context_length": 32768},
+            },
+        ]
 
     inputs = [
         ModelInput(
