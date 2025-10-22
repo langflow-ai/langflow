@@ -310,10 +310,23 @@ directory = "coverage"
 
 
 [tool.ruff]
+target-version = "py310"
 exclude = ["src/backend/base/langflow/alembic/*", "src/frontend/tests/assets/*", "src/lfx/src/lfx/_assets/component_index.json"]
 line-length = 120
 
 [tool.ruff.lint]
+flake8-annotations.mypy-init-return = true
+flake8-bugbear.extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.File",
+    "fastapi.Query",
+    "typer.Option",
+]
+flake8-type-checking.runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "typing.TypedDict",  # Needed by fastapi
+    "typing_extensions.TypedDict",  # Needed by fastapi
+]
 pydocstyle.convention = "google"
 select = ["ALL"]
 ignore = [
