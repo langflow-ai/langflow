@@ -2,7 +2,6 @@ import base64
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
-
 from lfx.schema.data import Data
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 

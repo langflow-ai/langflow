@@ -369,13 +369,12 @@ class TracingService(Service):
             yield self
             return
         trace_id = trace_name
-        if component._vertex:
-            trace_id = component._vertex.id
+        vertex = component.get_vertex()
+        if vertex:
+            trace_id = vertex.id
         trace_type = component.trace_type
         inputs = self._cleanup_inputs(inputs)
-        component_trace_context = ComponentTraceContext(
-            trace_id, trace_name, trace_type, component._vertex, inputs, metadata
-        )
+        component_trace_context = ComponentTraceContext(trace_id, trace_name, trace_type, vertex, inputs, metadata)
         component_context_var.set(component_trace_context)
         trace_context = trace_context_var.get()
         if trace_context is None:

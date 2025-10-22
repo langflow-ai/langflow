@@ -4,11 +4,12 @@ from typing import TYPE_CHECKING, NamedTuple, Protocol
 
 from typing_extensions import NotRequired, TypedDict
 
+from lfx.graph.edge.schema import EdgeData
+from lfx.graph.vertex.schema import NodeData
+
 if TYPE_CHECKING:
-    from lfx.graph.edge.schema import EdgeData
     from lfx.graph.schema import ResultData
     from lfx.graph.vertex.base import Vertex
-    from lfx.graph.vertex.schema import NodeData
     from lfx.schema.log import LoggableType
 
 

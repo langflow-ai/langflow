@@ -1,6 +1,7 @@
 import contextlib
 import json
 from io import BytesIO
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
@@ -18,6 +19,8 @@ from langflow.api.v2.files import (
 )
 from langflow.logging import logger
 from langflow.services.deps import get_settings_service, get_shared_component_cache_service, get_storage_service
+from langflow.services.settings.service import SettingsService
+from langflow.services.storage.service import StorageService
 
 router = APIRouter(tags=["MCP"], prefix="/mcp")
 
@@ -26,8 +29,8 @@ async def upload_server_config(
     server_config: dict,
     current_user: CurrentActiveUser,
     session: DbSession,
-    storage_service=Depends(get_storage_service),
-    settings_service=Depends(get_settings_service),
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
     content_str = json.dumps(server_config)
     content_bytes = content_str.encode("utf-8")  # Convert to bytes
@@ -48,8 +51,8 @@ async def upload_server_config(
 async def get_server_list(
     current_user: CurrentActiveUser,
     session: DbSession,
-    storage_service=Depends(get_storage_service),
-    settings_service=Depends(get_settings_service),
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
     # Backwards compatibilty with old format file name
     mcp_file = await get_mcp_file(current_user)
@@ -111,8 +114,8 @@ async def get_server(
     server_name: str,
     current_user: CurrentActiveUser,
     session: DbSession,
-    storage_service=Depends(get_storage_service),
-    settings_service=Depends(get_settings_service),
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
     server_list: dict | None = None,
 ):
     """Get a specific server configuration."""
@@ -130,8 +133,8 @@ async def get_server(
 async def get_servers(
     current_user: CurrentActiveUser,
     session: DbSession,
-    storage_service=Depends(get_storage_service),
-    settings_service=Depends(get_settings_service),
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
     *,
     action_count: bool | None = None,
 ):
@@ -208,8 +211,8 @@ async def get_server_endpoint(
     server_name: str,
     current_user: CurrentActiveUser,
     session: DbSession,
-    storage_service=Depends(get_storage_service),
-    settings_service=Depends(get_settings_service),
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
     """Get a specific server."""
     return await get_server(server_name, current_user, session, storage_service, settings_service)
@@ -220,8 +223,8 @@ async def update_server(
     server_config: dict,
     current_user: CurrentActiveUser,
     session: DbSession,
-    storage_service=Depends(get_storage_service),
-    settings_service=Depends(get_settings_service),
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
     *,
     check_existing: bool = False,
     delete: bool = False,
@@ -278,8 +281,8 @@ async def add_server(
     server_config: dict,
     current_user: CurrentActiveUser,
     session: DbSession,
-    storage_service=Depends(get_storage_service),
-    settings_service=Depends(get_settings_service),
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
     return await update_server(
         server_name,
@@ -298,8 +301,8 @@ async def update_server_endpoint(
     server_config: dict,
     current_user: CurrentActiveUser,
     session: DbSession,
-    storage_service=Depends(get_storage_service),
-    settings_service=Depends(get_settings_service),
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
     return await update_server(
         server_name,
@@ -316,8 +319,8 @@ async def delete_server(
     server_name: str,
     current_user: CurrentActiveUser,
     session: DbSession,
-    storage_service=Depends(get_storage_service),
-    settings_service=Depends(get_settings_service),
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
     return await update_server(
         server_name,

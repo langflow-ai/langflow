@@ -5,7 +5,6 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
-
 from lfx.custom.custom_component.component import Component
 from lfx.events.event_manager import EventManager
 from lfx.schema.content_block import ContentBlock

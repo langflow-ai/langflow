@@ -6,7 +6,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from lfx.cli.script_loader import (
     _load_module_from_script,
     _validate_graph_instance,

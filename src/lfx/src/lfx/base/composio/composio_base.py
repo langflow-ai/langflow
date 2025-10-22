@@ -284,6 +284,21 @@ class ComposioBaseComponent(Component):
     # Track all auth field names discovered across all toolkits
     _all_auth_field_names: set[str] = set()
 
+    @classmethod
+    def get_actions_cache(cls) -> dict[str, dict[str, Any]]:
+        """Get the class-level actions cache."""
+        return cls._actions_cache
+
+    @classmethod
+    def get_action_schema_cache(cls) -> dict[str, dict[str, Any]]:
+        """Get the class-level action schema cache."""
+        return cls._action_schema_cache
+
+    @classmethod
+    def get_all_auth_field_names(cls) -> set[str]:
+        """Get all auth field names discovered across toolkits."""
+        return cls._all_auth_field_names
+
     outputs = [
         Output(name="dataFrame", display_name="DataFrame", method="as_dataframe"),
     ]
@@ -403,11 +418,11 @@ class ComposioBaseComponent(Component):
 
         # Try to load from the class-level cache
         toolkit_slug = self.app_name.lower()
-        if toolkit_slug in self.__class__._actions_cache:
+        if toolkit_slug in self.__class__.get_actions_cache():
             # Deep-copy so that any mutation on this instance does not affect the
             # cached master copy.
-            self._actions_data = copy.deepcopy(self.__class__._actions_cache[toolkit_slug])
-            self._action_schemas = copy.deepcopy(self.__class__._action_schema_cache.get(toolkit_slug, {}))
+            self._actions_data = copy.deepcopy(self.__class__.get_actions_cache()[toolkit_slug])
+            self._action_schemas = copy.deepcopy(self.__class__.get_action_schema_cache().get(toolkit_slug, {}))
             logger.debug(f"Loaded actions for {toolkit_slug} from in-process cache")
             return
 
@@ -630,8 +645,8 @@ class ComposioBaseComponent(Component):
 
             # Cache actions for this toolkit so subsequent component instances
             # can reuse them without hitting the Composio API again.
-            self.__class__._actions_cache[toolkit_slug] = copy.deepcopy(self._actions_data)
-            self.__class__._action_schema_cache[toolkit_slug] = copy.deepcopy(self._action_schemas)
+            self.__class__.get_actions_cache()[toolkit_slug] = copy.deepcopy(self._actions_data)
+            self.__class__.get_action_schema_cache()[toolkit_slug] = copy.deepcopy(self._action_schemas)
 
         except ValueError as e:
             logger.debug(f"Could not populate Composio actions for {self.app_name}: {e}")
@@ -1313,7 +1328,7 @@ class ComposioBaseComponent(Component):
 
         self._auth_dynamic_fields.add(name)
         # Also add to class-level cache for better tracking
-        self.__class__._all_auth_field_names.add(name)
+        self.__class__.get_all_auth_field_names().add(name)
 
     def _render_custom_auth_fields(self, build_config: dict, schema: dict[str, Any], mode: str) -> None:
         """Render fields for custom auth based on schema auth_config_details sections."""
@@ -1378,7 +1393,7 @@ class ComposioBaseComponent(Component):
                         if name:
                             names.add(name)
                             # Add to class-level cache for tracking all discovered auth fields
-                            self.__class__._all_auth_field_names.add(name)
+                            self.__class__.get_all_auth_field_names().add(name)
         # Only use names discovered from the toolkit schema; do not add aliases
         return names
 
@@ -1443,7 +1458,7 @@ class ComposioBaseComponent(Component):
         # Check if we need to populate actions - but also check cache availability
         actions_available = bool(self._actions_data)
         toolkit_slug = getattr(self, "app_name", "").lower()
-        cached_actions_available = toolkit_slug in self.__class__._actions_cache
+        cached_actions_available = toolkit_slug in self.__class__.get_actions_cache()
 
         should_populate = False
 
@@ -2623,7 +2638,7 @@ class ComposioBaseComponent(Component):
         # Add all dynamic auth fields to protected set
         protected.update(self._auth_dynamic_fields)
         # Also protect any auth fields discovered across all instances
-        protected.update(self.__class__._all_auth_field_names)
+        protected.update(self.__class__.get_all_auth_field_names())
 
         for key, cfg in list(build_config.items()):
             if key in protected:

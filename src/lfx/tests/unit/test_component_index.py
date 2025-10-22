@@ -6,7 +6,6 @@ from unittest.mock import Mock, patch
 
 import orjson
 import pytest
-
 from lfx.interface.components import (
     _get_cache_path,
     _parse_dev_mode,

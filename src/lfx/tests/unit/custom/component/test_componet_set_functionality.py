@@ -1,5 +1,4 @@
 import pytest
-
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import MessageTextInput, StrInput
 

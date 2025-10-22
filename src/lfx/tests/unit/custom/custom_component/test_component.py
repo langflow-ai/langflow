@@ -2,7 +2,6 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.custom.custom_component.component import Component
 from lfx.custom.custom_component.custom_component import CustomComponent
