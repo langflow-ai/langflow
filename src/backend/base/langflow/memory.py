@@ -144,7 +144,7 @@ async def aadd_messages(messages: Message | list[Message], flow_id: str | UUID |
     try:
         messages_models = [MessageTable.from_message(msg, flow_id=flow_id) for msg in messages]
         async with session_scope() as session:
-            messages_models = await aadd_messagetables(messages_models, session)
+            messages_models = await add_messagetables(messages_models, session)
         return [await Message.create(**message.model_dump()) for message in messages_models]
     except Exception as e:
         await logger.aexception(e)
@@ -181,7 +181,7 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
         return [MessageRead.model_validate(message, from_attributes=True) for message in updated_messages]
 
 
-async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession):
+async def add_messagetables(messages: list[MessageTable], session: AsyncSession):
     try:
         try:
             for message in messages:
