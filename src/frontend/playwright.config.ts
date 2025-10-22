@@ -109,6 +109,8 @@ export default defineConfig({
       env: {
         LANGFLOW_DATABASE_URL: "sqlite:///./temp",
         LANGFLOW_AUTO_LOGIN: "true",
+        LANGFLOW_DEACTIVATE_TRACING: "true",
+        DO_NOT_TRACK: "true",
       },
       stdout: "ignore",
 
