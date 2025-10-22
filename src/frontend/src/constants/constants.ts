@@ -980,12 +980,9 @@ export const UUID_PARSING_ERROR = "uuid_parsing";
 
 import { CATEGORY_GLOBAL, CATEGORY_SETTINGS, CATEGORY_LLM } from "@/constants/constants";
 
- export const VARIABLE_CATEGORY = {
--  GLOBAL: "Global",
--  CREDENTIAL: "Credential",
--  LLM: "LLM",
+export const VARIABLE_CATEGORY = {
   GLOBAL: CATEGORY_GLOBAL,
   SETTINGS: CATEGORY_SETTINGS,
   LLM: CATEGORY_LLM,
   CREDENTIAL: "Credential", // UI-only; do not send to backend
- } as const;
+} as const;
