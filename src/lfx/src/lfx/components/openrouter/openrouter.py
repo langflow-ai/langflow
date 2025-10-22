@@ -91,7 +91,7 @@ class OpenRouterComponent(LCModelComponent):
             "temperature": self.temperature if self.temperature is not None else 0.7,
         }
 
-        if self.max_tokens:
+        if self.max_tokens is not None:
             kwargs["max_tokens"] = self.max_tokens
 
         headers = {}
