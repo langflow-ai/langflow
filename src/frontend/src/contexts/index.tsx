@@ -3,6 +3,7 @@ import { CustomWrapper } from "@/customization/custom-wrapper";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactFlowProvider } from "@xyflow/react";
 import { ReactNode } from "react";
+import { AuthBroadcastListener } from "@/components/AuthBroadcastListener";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { ApiInterceptor } from "../controllers/API/api";
 import { AuthProvider } from "./authContext";
@@ -18,6 +19,7 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
               {IS_CLERK_AUTH && <ClerkAuthAdapter />}
+              <AuthBroadcastListener />
               <TooltipProvider skipDelayDuration={0}>
                 <ReactFlowProvider>
                   <ApiInterceptor />

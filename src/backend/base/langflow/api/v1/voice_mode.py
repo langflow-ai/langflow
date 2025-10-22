@@ -33,6 +33,7 @@ from langflow.services.auth.utils import get_current_user_for_websocket
 from langflow.services.database.models import MessageTable, User
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_variable_service, session_scope
+from langflow.services.deps_websocket import WEBSOCKET_ORG_DEPENDENCIES
 from langflow.utils.voice_utils import (
     BYTES_PER_24K_FRAME,
     VAD_SAMPLE_RATE_16K,
@@ -686,7 +687,7 @@ class FunctionCall:
 
 
 # --- WebSocket Endpoints for Flow-as-Tool ---
-@router.websocket("/ws/flow_as_tool/{flow_id}")
+@router.websocket("/ws/flow_as_tool/{flow_id}", dependencies=WEBSOCKET_ORG_DEPENDENCIES)
 async def flow_as_tool_websocket_no_session(
     client_websocket: WebSocket,
     flow_id: str,
@@ -703,7 +704,7 @@ async def flow_as_tool_websocket_no_session(
     )
 
 
-@router.websocket("/ws/flow_as_tool/{flow_id}/{session_id}")
+@router.websocket("/ws/flow_as_tool/{flow_id}/{session_id}", dependencies=WEBSOCKET_ORG_DEPENDENCIES)
 async def flow_as_tool_websocket(
     client_websocket: WebSocket,
     flow_id: str,
@@ -1114,7 +1115,7 @@ async def flow_as_tool_websocket(
             vad_task.cancel()
 
 
-@router.websocket("/ws/flow_tts/{flow_id}")
+@router.websocket("/ws/flow_tts/{flow_id}", dependencies=WEBSOCKET_ORG_DEPENDENCIES)
 async def flow_tts_websocket_no_session(
     client_websocket: WebSocket,
     flow_id: str,
@@ -1131,7 +1132,7 @@ async def flow_tts_websocket_no_session(
     )
 
 
-@router.websocket("/ws/flow_tts/{flow_id}/{session_id}")
+@router.websocket("/ws/flow_tts/{flow_id}/{session_id}", dependencies=WEBSOCKET_ORG_DEPENDENCIES)
 async def flow_tts_websocket(
     client_websocket: WebSocket,
     flow_id: str,

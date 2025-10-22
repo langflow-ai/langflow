@@ -9,10 +9,7 @@ import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { isEndpointNameValid } from "@/utils/utils";
-import "ace-builds/src-noconflict/ext-language_tools";
-import "ace-builds/src-noconflict/mode-python";
-import "ace-builds/src-noconflict/theme-github";
-import "ace-builds/src-noconflict/theme-twilight";
+import { lazyLoadAce } from "@/utils/lazyLoadAce";
 import { cloneDeep } from "lodash";
 import { ChangeEvent, ReactNode, useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -54,6 +51,7 @@ export default function ApiModal({
   const [endpointName, setEndpointName] = useState(flowEndpointName ?? "");
   const [validEndpointName, setValidEndpointName] = useState(true);
 
+  useEffect(() => {if (open) { lazyLoadAce(); }}, [open]);
   const handleEndpointNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { value } = event.target;
     // Validate the endpoint name

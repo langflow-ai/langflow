@@ -1,18 +1,43 @@
-import { ReactNode, useContext, useEffect, useRef } from "react";
+import { lazy, ReactNode, useContext, useEffect, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "@/contexts/authContext";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { useLogout as useLogoutMutation } from "@/controllers/API/queries/auth";
-import { ClerkProvider, useAuth, useClerk, useUser } from "@clerk/clerk-react";
+import { ClerkProvider, useAuth, useClerk, useOrganization, useUser } from "@clerk/clerk-react";
 import { Users } from "@/types/api";
 import { LANGFLOW_ACCESS_TOKEN, LANGFLOW_REFRESH_TOKEN } from "@/constants/constants";
 import { Cookies } from "react-cookie";
+import OrganizationPage from "./OrganizationPage";
+import authStore from "@/stores/authStore";
+import {
+  getStoredActiveOrgId as readStoredActiveOrgId,
+  setStoredActiveOrgId as persistActiveOrgId,
+} from "./activeOrgStorage";
 
 export const IS_CLERK_AUTH =
   String(import.meta.env.VITE_CLERK_AUTH_ENABLED).toLowerCase() === "true";
 
 export const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || "";
 export const CLERK_DUMMY_PASSWORD = "clerk_dummy_password";
+export {
+  ACTIVE_ORG_STORAGE_KEY,
+  getStoredActiveOrgId,
+  setStoredActiveOrgId,
+} from "./activeOrgStorage";
+
+export function getClerkHealthResponse(
+  setHealthCheckTimeout: (timeout: string | null) => void,
+) {
+  setHealthCheckTimeout(null);
+  return {
+    status: "ok",
+    chat: "ok",
+    db: "ok",
+    folder: "ok",
+    variables: "ok",
+  } as const;
+}
 
 export enum HttpStatusCode {
   UNAUTHORIZED = 401,
@@ -21,33 +46,74 @@ export enum HttpStatusCode {
   INTERNAL_SERVER_ERROR = 500
 }
 
+
+export async function createOrganisation(token: string) {
+  await api.post(
+    getURL("CREATE_ORGANISATION"),
+    {},
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  console.log("[createOrganisation] Organization created via API");
+}
+
 // Backend synchronization helpers
-export async function ensureLangflowUser(token: string, username: string): Promise<{
+export async function ensureLangflowUser(
+  token: string, 
+  username: string,
+  maxRetries: number = 2
+): Promise<{
   justCreated: boolean;
   user: Users | null;
 }> {
-
-  try {
-    const whoAmIRes = await api.get<Users>(`${getURL("USERS")}/whoami`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const user = whoAmIRes.data;
-    console.debug(`[ensureLangflowUser] user exists: ${username}`);
-    return { justCreated: false, user };
-  } catch (err: any) {
-    const status = err?.response?.status;
-    console.warn(`[ensureLangflowUser] whoami failed (${status})`);
-    if (status === HttpStatusCode.UNAUTHORIZED) {
-      console.debug("[ensureLangflowUser] trying to create user...");
-      const createRes = await api.post(
-        `${getURL("USERS")}/`,
-        { username, password: CLERK_DUMMY_PASSWORD },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      return { justCreated: true, user: null };
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      // Try to fetch existing user
+      const whoAmIRes = await api.get<Users>(`${getURL("USERS")}/whoami`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const user = whoAmIRes.data;
+      console.debug(`[ensureLangflowUser] user exists: ${username}`);
+      return { justCreated: false, user };
+      
+    } catch (err: any) {
+      const status = err?.response?.status;
+      console.warn(`[ensureLangflowUser] whoami failed (${status}), attempt ${attempt + 1}/${maxRetries + 1}`);
+      
+      if (status === HttpStatusCode.UNAUTHORIZED) {
+        try {
+          // User doesn't exist → create it
+          console.debug("[ensureLangflowUser] trying to create user...");
+          await api.post(
+            `${getURL("USERS")}/`,
+            { username, password: CLERK_DUMMY_PASSWORD },
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+          console.log(`✅ [ensureLangflowUser] User created successfully: ${username}`);
+          return { justCreated: true, user: null };
+          
+        } catch (createErr: any) {
+          // Handle race condition: User created by another tab
+          if (createErr?.response?.status === 400 && 
+              createErr?.response?.data?.detail?.includes("username is unavailable")) {
+            console.debug("[ensureLangflowUser] User created by another tab, retrying whoami...");
+            
+            // Retry whoami to get the user
+            if (attempt < maxRetries) {
+              await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
+              continue; // Retry from top
+            } else {
+              console.warn("[ensureLangflowUser] Max retries exceeded after race condition");
+            }
+          }
+          throw createErr; // Re-throw other errors
+        }
+      }
+      
+      throw err; // Re-throw non-401 errors
     }
-    throw err;
   }
+  
+  throw new Error("[ensureLangflowUser] Max retries exceeded");
 }
 
 export async function backendLogin(username: string,token:string) {
@@ -64,81 +130,232 @@ export async function backendLogin(username: string,token:string) {
       },
     },
   );
+  console.debug(`[backendLogin] Login response for ${username}`);
   return res.data;
 }
 
-// Component that syncs Clerk session with backend
+function useIsOrgSelected(): boolean {
+  const storeFlag = authStore((s) => s.isOrgSelected);
+  const sessionFlag = sessionStorage.getItem("isOrgSelected") === "true";
+  return storeFlag || sessionFlag;
+}
+
 export function ClerkAuthAdapter() {
-  const { getToken, isSignedIn, sessionId } = useAuth();
+  const { getToken, isSignedIn } = useAuth();
   const { user } = useUser();
-  const { login } = useContext(AuthContext);
-  const { mutateAsync: logout } = useLogout();
-  const prevSession = useRef<string | null>(null);
-  const justLoggedIn = useRef(false);
   const clerk = useClerk();
+  const { login } = useContext(AuthContext);
   const cookie = new Cookies();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { organization, isLoaded: isOrgLoaded } = useOrganization();
+  const prevTokenRef = useRef<string | null>(null);
+  const autoJoinAttemptedRef = useRef(false);
 
+  const isOrgSelected = useIsOrgSelected();
+  const currentPath = location.pathname;
+
+  const isAtRoot = currentPath === "/";
+  const isAtLogin = currentPath === "/login";
+  const activeOrgId = readStoredActiveOrgId();
+
+  console.log("[ClerkAuthAdapter] Render", {
+    isSignedIn,
+    isOrgSelected,
+    currentPath,
+    activeOrgId,
+  });
+
+  // ✅ Redirect to /organization if signed in but org not selected
   useEffect(() => {
-    const syncToken = async () => {
-      if (!isSignedIn || sessionId === prevSession.current) return;
+    if (
+      IS_CLERK_AUTH &&
+      isSignedIn &&
+      isOrgLoaded &&
+      !isOrgSelected &&
+      !organization?.id &&
+      (isAtRoot || isAtLogin)
+    ) {
+      console.log("[ClerkAuthAdapter] Redirecting to /organization (no org selected)");
+      navigate("/organization", { replace: true });
+    }
+  }, [isSignedIn, isOrgLoaded, organization?.id, currentPath, navigate, isOrgSelected]);
 
-      prevSession.current = sessionId;
+  // Auto-join the active Clerk organization in fresh tabs with auto-recovery
+  useEffect(() => {
+    if (!IS_CLERK_AUTH) {
+      return;
+    }
 
-      const token = await getToken();
-      if (!token) {
-        console.warn("[ClerkAuthAdapter] No Clerk token available");
-        return;
-      }
-      const username =
-        user?.username ||
-        user?.primaryEmailAddress?.emailAddress ||
-        user?.id ||
-        "clerk_user";
+    if (autoJoinAttemptedRef.current) {
+      return;
+    }
 
+    if (!isSignedIn || !isOrgLoaded || isOrgSelected || !organization?.id) {
+      return;
+    }
+
+    const activeOrgId = readStoredActiveOrgId();
+
+    if (!activeOrgId || activeOrgId !== organization.id) {
+      return;
+    }
+
+    const targetOrgId = organization.id;
+    autoJoinAttemptedRef.current = true;
+
+    (async () => {
       try {
-        await ensureLangflowUser(token, username);
-        const { refresh_token } = await backendLogin(username, token);
-        login(token, "login", refresh_token);
-        justLoggedIn.current = true;
-        console.debug("[ClerkAuthAdapter] login complete");
-      } catch (err) {
-        if (!justLoggedIn.current) {
-          console.error("[ClerkAuthAdapter] syncToken error:", err);
-          await logout();
-        } else {
-          console.warn("[ClerkAuthAdapter] Skipping logout due to recent login");
+        const token = await getToken();
+
+        if (!token) {
+          console.warn("[ClerkAuthAdapter] Unable to fetch Clerk token for auto-join");
+          autoJoinAttemptedRef.current = false;
+          return;
         }
+
+        const refreshToken = cookie.get(LANGFLOW_REFRESH_TOKEN);
+
+        try {
+          // Try normal login flow
+          login(token, "login", refreshToken);
+          sessionStorage.setItem("isOrgSelected", "true");
+          authStore.getState().setIsOrgSelected(true);
+          persistActiveOrgId(targetOrgId);
+          console.debug("[ClerkAuthAdapter] Auto-joined organization", organization?.id);
+          
+        } catch (loginError: any) {
+          // Check if backend session is lost (Docker restart scenario)
+          if (loginError?.response?.status === 401 || loginError?.response?.status === 403) {
+            console.warn("🔄 [ClerkAuthAdapter] Backend session lost, attempting auto-recovery...");
+            
+            try {
+              // Step 1: Ensure user exists (with retry for race conditions)
+              const username = user?.primaryEmailAddress?.emailAddress || user?.id || "clerk_user";
+              console.log(`[AutoRecovery] Step 1: Ensuring user exists - ${username}`);
+              
+              const { justCreated: userCreated } = await ensureLangflowUser(token, username, 2);
+              
+              if (userCreated) {
+                console.log("✅ [AutoRecovery] User created successfully");
+              } else {
+                console.log("✅ [AutoRecovery] User already exists");
+              }
+              
+              // Step 2: Login to backend (creates new session)
+              console.log("[AutoRecovery] Step 2: Creating backend session...");
+              const loginRes = await backendLogin(username, token);
+              const newRefreshToken = loginRes.refresh_token;
+              console.log("✅ [AutoRecovery] Backend session created");
+              
+              // Step 3: Ensure organization exists
+              console.log("[AutoRecovery] Step 3: Ensuring organization exists...");
+              try {
+                await createOrganisation(token);
+                console.log("✅ [AutoRecovery] Organization created/verified");
+              } catch (orgErr: any) {
+                // Organization might already exist - check if it's a recoverable error
+                if (orgErr?.response?.status === 400 || orgErr?.response?.status === 200) {
+                  console.log("✅ [AutoRecovery] Organization already exists");
+                } else {
+                  console.warn("⚠️ [AutoRecovery] Organization creation failed (non-critical):", orgErr?.message);
+                  // Continue anyway - org might exist
+                }
+              }
+              
+              // Step 4: Update local auth state
+              console.log("[AutoRecovery] Step 4: Updating local auth state...");
+              login(token, "login", newRefreshToken);
+              sessionStorage.setItem("isOrgSelected", "true");
+              authStore.getState().setIsOrgSelected(true);
+              persistActiveOrgId(targetOrgId);
+              
+              console.log("✅ [AutoRecovery] Session recovered successfully!");
+              
+            } catch (recoveryError) {
+              console.error("❌ [AutoRecovery] Failed to recover session:", recoveryError);
+              autoJoinAttemptedRef.current = false;
+              throw recoveryError;
+            }
+          } else {
+            // Other login errors - re-throw
+            throw loginError;
+          }
+        }
+      } catch (error) {
+        console.error("[ClerkAuthAdapter] Auto-join/recovery failed", error);
+        autoJoinAttemptedRef.current = false;
       }
-    };
+    })();
+  }, [isSignedIn, isOrgLoaded, isOrgSelected, organization?.id, user, getToken]);
 
-    syncToken();
-  }, [isSignedIn, sessionId, getToken, user, login, logout]);
+  // Redirect away from entry routes once the organization is hydrated
+  // NOTE: "/" (root) is excluded - authenticated users can stay on landing page
+  useEffect(() => {
+    if (!IS_CLERK_AUTH) {
+      return;
+    }
 
-const prevTokenRef = useRef<string | null>(null);
-useEffect(() => {
+    if (!isSignedIn || !isOrgLoaded || !isOrgSelected) {
+      return;
+    }
+
+    const activeOrgId = readStoredActiveOrgId();
+
+    if (!activeOrgId || activeOrgId !== organization?.id) {
+      return;
+    }
+
+    const shouldRedirect =
+      currentPath === "/login" || currentPath === "/organization";
+
+    if (!shouldRedirect) {
+      return;
+    }
+
+    console.debug(
+      "[ClerkAuthAdapter] Redirecting initialized tab to /flows",
+      currentPath,
+    );
+    navigate("/flows", { replace: true });
+  }, [
+    currentPath,
+    isSignedIn,
+    isOrgLoaded,
+    isOrgSelected,
+    organization?.id,
+    navigate,
+  ]);
+
+
+  // ✅ Clerk token listener: backend sync ONLY after org is selected
+  useEffect(() => {
     const unsubscribe = clerk.addListener(async ({ session }) => {
       console.debug("[ClerkAuthAdapter] Token update event received");
       const token = await session?.getToken();
-      if (!token) return;
-      const current = cookie.get(LANGFLOW_ACCESS_TOKEN);
-      if (prevTokenRef.current === null) {
-        // Ignore the initial event triggered on sign-in.
-        prevTokenRef.current = token;
+      const orgSelected = sessionStorage.getItem("isOrgSelected") === "true";
+
+      if (!orgSelected) {
+        console.debug("[ClerkAuthAdapter] Skipping backend sync (org not selected)");
+        prevTokenRef.current = token ?? null;
         return;
       }
-      console.debug("[ClerkAuthAdapter] Is Token Same:", token === current);
-      if (token !== prevTokenRef.current) {
+
+      const prevToken = prevTokenRef.current;
+      const currentRefreshToken = cookie.get(LANGFLOW_REFRESH_TOKEN);
+
+      if (prevToken === null) {
+        prevTokenRef.current = token ?? null;
+        return;
+      }
+      console.debug("[ClerkAuthAdapter] Is Token Same:", token === currentRefreshToken);
+      if (token && token !== prevToken) {
         prevTokenRef.current = token;
-        const current = cookie.get(LANGFLOW_ACCESS_TOKEN);
-        if (token !== current) {
-          const currentRefreshToken = cookie.get(LANGFLOW_REFRESH_TOKEN);
-          login(token,"login",currentRefreshToken)
-        }
+        login(token, "login", currentRefreshToken);
       }
     });
-    return () => {
-      unsubscribe?.();
-    };
+
+    return () => unsubscribe?.();
   }, [clerk]);
 
   return null;
@@ -214,5 +431,3 @@ export const mockClerkMutation = {
   data: undefined,
   error: null,
 } as any;
-
-

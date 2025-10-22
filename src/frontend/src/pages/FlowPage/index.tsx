@@ -14,6 +14,7 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "./components/PageComponent";
 import { FlowSidebarComponent } from "./components/flowSidebarComponent";
+import { WorkspaceLoadingPage } from "../WorkspaceLoadingPage";
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const types = useTypesStore((state) => state.types);
@@ -170,6 +171,11 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           </div>
         )}
       </div>
+      {(!currentFlow) && (
+        <div className="fixed inset-0 flex items-center justify-center">
+          <WorkspaceLoadingPage overlay={Boolean(currentFlow)} />
+        </div>
+      )}
       {blocker.state === "blocked" && (
         <>
           {!isBuilding && currentSavedFlow && (

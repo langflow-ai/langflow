@@ -41,6 +41,14 @@ export default defineConfig(({ mode }) => {
     base: BASENAME || "",
     build: {
       outDir: "build",
+      rollupOptions: {
+        output: {
+          // Add hash to filenames for cache busting
+          entryFileNames: `assets/[name].[hash].js`,
+          chunkFileNames: `assets/[name].[hash].js`,
+          assetFileNames: `assets/[name].[hash].[ext]`
+        }
+      }
     },
     define: {
       "process.env.BACKEND_URL": JSON.stringify(

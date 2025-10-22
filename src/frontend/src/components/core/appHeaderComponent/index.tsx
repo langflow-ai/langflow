@@ -2,6 +2,7 @@ import AlertDropdown from "@/alerts/alertDropDown";
 import DataStaxLogo from "@/assets/DataStaxLogo.svg?react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import OrganizationDisplay from "@/components/common/organizationDisplay";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -56,13 +57,13 @@ export default function AppHeader(): JSX.Element {
     >
       {/* Left Section */}
       <div
-        className={`z-30 flex items-center gap-2`}
+        className={`z-30 flex items-center gap-2 shrink-0`}
         data-testid="header_left_section_wrapper"
       >
         <Button
           unstyled
-          onClick={() => navigate("/")}
-          className="mr-1 flex h-8 w-8 items-center"
+          onClick={() => navigate("flows")}
+          className="mr-1 flex h-8 w-8 items-center shrink-0"
           data-testid="icon-ChevronLeft"
         >
           {ENABLE_DATASTAX_LANGFLOW ? (
@@ -71,6 +72,8 @@ export default function AppHeader(): JSX.Element {
             <LangflowLogo className="h-6 w-6" />
           )}
         </Button>
+        {/* Display organization name when Clerk auth is enabled */}
+        <OrganizationDisplay />
         {ENABLE_DATASTAX_LANGFLOW && (
           <>
             <CustomOrgSelector />
@@ -80,13 +83,13 @@ export default function AppHeader(): JSX.Element {
       </div>
 
       {/* Middle Section */}
-      <div className="absolute left-1/2 w-full flex-1 -translate-x-1/2">
+      <div className="flex-1 flex justify-center px-4 min-w-0 overflow-hidden">
         <FlowMenu />
       </div>
 
       {/* Right Section */}
       <div
-        className={`relative left-3 z-30 flex items-center gap-3`}
+        className={`z-30 flex items-center gap-3 shrink-0`}
         data-testid="header_right_section_wrapper"
       >
         <>

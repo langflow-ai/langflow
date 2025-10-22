@@ -9,6 +9,7 @@ import "./App.css";
 import "./style/applies.css";
 
 // @ts-ignore
+
 import AppWithProvider from "./clerk/auth";
 import CustomApp from "./customization/custom-App";
 

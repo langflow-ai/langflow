@@ -31,7 +31,7 @@ async def add_user(
     """Add a new user to the database."""
     new_user = User.model_validate(user, from_attributes=True)
     try:
-        await process_new_user_with_clerk(user, new_user)
+        await process_new_user_with_clerk(new_user)
         new_user.password = get_password_hash(user.password)
         new_user.is_active = get_settings_service().auth_settings.NEW_USER_IS_ACTIVE
         session.add(new_user)

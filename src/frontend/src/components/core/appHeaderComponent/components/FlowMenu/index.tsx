@@ -24,6 +24,7 @@ import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
+import "./flowMenuResponsive.css";
 
 export const MenuBar = memo((): JSX.Element => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -136,6 +137,7 @@ export const MenuBar = memo((): JSX.Element => {
               <span
                 ref={measureRef}
                 className="w-fit max-w-[35vw] truncate whitespace-pre text-mmd font-semibold sm:max-w-full sm:text-sm"
+                data-tooltip={currentFlowName || "Untitled Flow"}
                 aria-hidden="true"
                 data-testid="flow_name"
               >

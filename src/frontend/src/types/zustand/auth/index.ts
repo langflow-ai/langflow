@@ -1,6 +1,8 @@
 import { Users } from "@/types/api";
 
 export interface AuthStoreType {
+  setIsOrgSelected(arg0: boolean): unknown;
+  isOrgSelected: any;
   isAdmin: boolean;
   isAuthenticated: boolean;
   accessToken: string | null;

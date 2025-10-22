@@ -5,9 +5,9 @@ from loguru import logger
 from pydantic import BaseModel
 from sqlmodel import select
 
-from langflow.api.utils import DbSession
 from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_chat_service
+from langflow.services.deps_no_org import DbNoOrgSession
 
 health_check_router = APIRouter(tags=["Health Check"])
 
@@ -38,7 +38,7 @@ async def health():
 # It's a reliable health check for a langflow instance
 @health_check_router.get("/health_check")
 async def health_check(
-    session: DbSession,
+    session: DbNoOrgSession,
 ) -> HealthResponse:
     response = HealthResponse()
     # use a fixed valid UUId that UUID collision is very unlikely

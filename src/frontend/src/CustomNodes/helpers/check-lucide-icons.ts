@@ -1,8 +1,9 @@
 import { categoryIcons } from "@/utils/styleUtils";
-import * as lucideIcons from "lucide-react";
-import dynamicIconImports from "lucide-react/dynamicIconImports";
+const lucideIconsPromise=import("lucide-react");
+const dynamicIconImportsPromise = import("lucide-react/dynamicIconImports").then((mod)=>mod.default);
 
-export const checkLucideIcons = (iconName: string): boolean => {
+export const checkLucideIcons =async (iconName: string):Promise<boolean> => {
+  const [lucideIcons, dynamicIconImports] = await Promise.all([lucideIconsPromise, dynamicIconImportsPromise]);
   return (
     !!lucideIcons[iconName] ||
     !!dynamicIconImports[iconName] ||

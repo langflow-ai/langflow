@@ -8,6 +8,7 @@ import {
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
+import { authBroadcast } from "@/utils/auth-broadcast";
 import { Cookies } from "react-cookie";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -36,15 +37,17 @@ export const useLogout: useMutationFunctionType<undefined, void> = (
 
   const mutation = mutate(["useLogout"], logoutUser, {
     onSuccess: () => {
+      // Broadcast logout to other tabs BEFORE local cleanup
+      authBroadcast.broadcastLogout();
+
       logout();
 
       useFlowStore.getState().resetFlowState();
       useFlowsManagerStore.getState().resetStore();
       useFolderStore.getState().resetStore();
 
-      queryClient.invalidateQueries({ queryKey: ["useGetRefreshFlowsQuery"] });
-      queryClient.invalidateQueries({ queryKey: ["useGetFolders"] });
-      queryClient.invalidateQueries({ queryKey: ["useGetFolder"] });
+      queryClient.cancelQueries();
+      queryClient.clear();
     },
     onError: (error) => {
       console.error(error);

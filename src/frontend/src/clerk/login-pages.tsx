@@ -1,14 +1,46 @@
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { SignIn, SignUp as ClerkSignUp, useAuth, useUser , useClerk, SignedOut} from "@clerk/clerk-react";
 import { lazy, useEffect, useState } from "react";
-import { ensureLangflowUser, useLogout } from "./auth";
+import { useLogout } from "./auth";
 import { IS_CLERK_AUTH } from "@/clerk/auth";
+import useAuthStore from "@/stores/authStore";
+
 // Clerk login page component
 export function ClerkLoginPage() {
+  const { isSignedIn } = useAuth();
+  const { signOut } = useClerk();
+  const navigate = useCustomNavigate();
+  const [processed, setProcessed] = useState(false);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  useEffect(() => {
+    // Handle stale Clerk session when local auth is cleared
+    if (isSignedIn && !isAuthenticated) {
+      console.warn("[ClerkLoginPage] Detected stale Clerk session - cleaning up...");
+      signOut()
+        .then(() => {
+          console.log("[ClerkLoginPage] Stale session cleared successfully");
+        })
+        .catch((err) => {
+          console.error("[ClerkLoginPage] Failed to clear stale session:", err);
+          // Force reload to clear everything
+          window.location.reload();
+        });
+      return;
+    }
+
+    if (isSignedIn && isAuthenticated && !processed) {
+      setProcessed(true);
+      navigate("/organization");
+    }
+  }, [isSignedIn, isAuthenticated, navigate, processed, signOut]);
+
   return (
     <SignedOut>
       <div style={centeredStyle}>
-        <SignIn/>
+        <SignIn
+          afterSignInUrl="/organization"
+          redirectUrl="/organization"
+        />
       </div>
     </SignedOut>
   );
@@ -16,35 +48,20 @@ export function ClerkLoginPage() {
 
 // Clerk sign-up page component
 export function ClerkSignUpPage() {
-  const { isSignedIn, getToken } = useAuth();
+  const { isSignedIn } = useAuth();
   const { user } = useUser();
   const navigate = useCustomNavigate();
   const [processed, setProcessed] = useState(false);
-  const { mutateAsync: logout } = useLogout();
-  const { signOut } = useClerk();
 
   useEffect(() => {
     async function handleSignup() {
       if (isSignedIn && user && !processed) {
-        console.debug("[ClerkSignUpPage] User is signed in, processing sign up...");
         setProcessed(true);
-        const token = await getToken();
-        if (token) {
-          const username =
-            user.username || user.primaryEmailAddress?.emailAddress || user.id;
-          console.debug(`[ClerkSignUpPage] Creating Langflow user for: ${username}`);
-          await ensureLangflowUser(token, username);
-        } else {
-          console.warn("[ClerkSignUpPage] No token received from Clerk.");
-        }
-        console.debug("[ClerkSignUpPage] Signing out user after sign up.");
-        await logout();
-        console.debug("[ClerkSignUpPage] Redirecting to /login after sign up.");
-        navigate("/login");
+        navigate("/organization");
       }
     }
     handleSignup();
-  }, [isSignedIn, user, getToken, logout, navigate, processed]);
+  }, [isSignedIn, user, navigate, processed]);
 
   return (
     <SignedOut>
@@ -52,7 +69,8 @@ export function ClerkSignUpPage() {
         <ClerkSignUp
           path="/sign-up"
           routing="path"
-          afterSignUpUrl="/login"
+          afterSignUpUrl="/organization"
+          redirectUrl="/organization"
         />
       </div>
     </SignedOut>
@@ -62,6 +80,7 @@ export function ClerkSignUpPage() {
 // Original pages
 import OriginalLoginPage from "../pages/LoginPage";
 import OriginalSignUp from "../pages/SignUpPage";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 const OriginalLoginAdminPage = lazy(() => import("../pages/AdminPage/LoginPage"));
 
 export const LoginPage = IS_CLERK_AUTH ? ClerkLoginPage : OriginalLoginPage;
@@ -74,3 +93,4 @@ const centeredStyle: React.CSSProperties = {
   alignItems: "center",
   minHeight: "100vh",
 };
+
