@@ -58,11 +58,11 @@ class OpenRouterComponent(LCModelComponent):
                 ],
                 key=lambda x: x["name"],
             )
-        except Exception as e:
+        except (httpx.RequestError, httpx.HTTPStatusError) as e:
             self.log(f"Error fetching models: {e}")
             return []
 
-    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:  # noqa: ARG002
         """Update model options."""
         models = self.fetch_models()
         if models:
@@ -78,9 +78,11 @@ class OpenRouterComponent(LCModelComponent):
     def build_model(self) -> LanguageModel:
         """Build the OpenRouter model."""
         if not self.api_key:
-            raise ValueError("API key is required")
+            msg = "API key is required"
+            raise ValueError(msg)
         if not self.model_name or self.model_name == "Loading...":
-            raise ValueError("Please select a model")
+            msg = "Please select a model"
+            raise ValueError(msg)
 
         kwargs = {
             "model": self.model_name,
