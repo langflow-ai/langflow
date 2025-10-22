@@ -11,6 +11,10 @@ agentOwner: utilization-management@autonomize.ai
 agentOwnerDisplayName: Utilization Management Team
 email: utilization-management@autonomize.ai
 status: ACTIVE
+securityInfo:
+  hipaaCompliant: true
+reusability:
+  asTools: false
 variables:
 - name: summarization_length
   type: string
@@ -68,83 +72,63 @@ components:
   - useAs: input
     in: appeals-agent
     description: Provide appeal context and processing parameters
-- id: appeal-letters-api
-  name: Appeal Letters API Access
-  kind: Tool
-  type: genesis:api_request
-  description: Access member and provider appeal letters from appeals management systems
-  asTools: true
-  config:
-    method: POST
-    headers:
-    - key: Content-Type
-      value: application/json
-    - key: Authorization
-      value: ${API_KEY}
-    timeout: 30
-    body: []
-  provides:
-  - useAs: tools
-    in: appeals-agent
-    description: Enable access to appeal letters and supporting documents
 - id: appeals-data-connector
   name: Appeals Data Connector
   kind: Tool
-  type: genesis:api_request
-  description: HIPAA-compliant appeals data connector providing unified access to denial reasons, policies, and evidence databases
-    for utilization management workflows
+  type: genesis:appeals_data_connector
+  description: HIPAA-compliant appeals data connector providing unified access to appeal letters, denial reasons, policies, and evidence databases
   asTools: true
   config:
-    method: POST
-    headers:
-    - key: Content-Type
-      value: application/json
-    - key: Authorization
-      value: ${API_KEY}
-    timeout: 30
-    body: []
+    hipaa_compliant: true
+    audit_logging: true
+    encryption_enabled: true
+    access_mode: read_write
+    data_retention_days: 2555
+    mock_data_enabled: true
   provides:
   - useAs: tools
     in: appeals-agent
-    description: Enable comprehensive access to denial reasons, policies, and evidence for intelligent linking
-- id: healthcare-nlp-engine
-  name: Healthcare NLP Processing Engine
+    description: Enable comprehensive access to appeals data with HIPAA compliance
+- id: clinical-nlp-analyzer
+  name: Clinical NLP Analyzer
   kind: Tool
-  type: genesis:api_request
-  description: Advanced NLP engine specialized for healthcare appeals processing and medical terminology analysis
+  type: genesis:clinical_nlp_analyzer_connector
+  description: Advanced clinical NLP engine for healthcare appeals processing and medical terminology analysis
   asTools: true
   config:
-    method: POST
-    headers:
-    - key: Content-Type
-      value: application/json
-    - key: Authorization
-      value: ${API_KEY}
-    timeout: 30
-    body: []
+    nlp_service: "aws_comprehend_medical"
+    hipaa_compliant: true
+    confidence_threshold: 0.85
   provides:
   - useAs: tools
     in: appeals-agent
-    description: Enable advanced NLP processing for appeals analysis
-- id: intelligent-linking-engine
-  name: Intelligent Linking Engine
+    description: Enable advanced clinical NLP processing for appeals analysis
+- id: clinical-llm-model
+  name: Clinical LLM Model
   kind: Tool
-  type: genesis:api_request
-  description: Machine learning engine for intelligent linking between appeals, denials, policies, and evidence
+  type: genesis:autonomize
+  description: Clinical LLM model for entity extraction and medical text analysis
   asTools: true
   config:
-    method: POST
-    headers:
-    - key: Content-Type
-      value: application/json
-    - key: Authorization
-      value: ${API_KEY}
-    timeout: 30
-    body: []
+    selected_model: "autonomize-clinical-llm"
+    confidence_threshold: 0.8
   provides:
   - useAs: tools
     in: appeals-agent
-    description: Enable intelligent linking capabilities
+    description: Enable clinical entity extraction and medical text analysis
+- id: entity-linking-model
+  name: Combined Entity Linking Model
+  kind: Tool
+  type: genesis:autonomize
+  description: Combined entity linking model for intelligent linking between appeals, denials, policies, and evidence
+  asTools: true
+  config:
+    selected_model: "autonomize-combined-entity-linking"
+    confidence_threshold: 0.8
+  provides:
+  - useAs: tools
+    in: appeals-agent
+    description: Enable intelligent entity linking and vocabulary mapping
 - id: appeals-agent
   name: Appeals Summarization Agent
   kind: Agent
@@ -169,13 +153,13 @@ components:
 
       Available Tools:
 
-      - appeal_letters_api: Access member and provider appeal letters
+      - appeals_data_connector: HIPAA-compliant unified access to appeal letters, denial reasons, policies, and evidence data
 
-      - appeals_data_connector: HIPAA-compliant unified access to denial reasons, policies, and evidence data
+      - clinical_nlp_analyzer: Advanced clinical NLP engine for medical terminology analysis and entity extraction
 
-      - healthcare_appeals_nlp: Advanced NLP engine for medical terminology analysis
+      - clinical_llm_model: Clinical LLM model for advanced medical text analysis and entity extraction
 
-      - intelligent_linking_engine: ML engine for intelligent linking between appeals, denials, policies, and evidence
+      - entity_linking_model: Combined entity linking model for intelligent linking between appeals, denials, policies, and evidence
 
 
       Use the appeals_data_connector to:
