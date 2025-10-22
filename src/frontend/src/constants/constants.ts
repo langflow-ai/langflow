@@ -976,9 +976,14 @@ export const DESKTOP_URL = "https://www.langflow.org/desktop";
 export const BUG_REPORT_URL = "https://github.com/langflow-ai/langflow/issues";
 
 export const UUID_PARSING_ERROR = "uuid_parsing";
+
 // File: src/frontend/src/constants/providerConstants.ts
 
-import { CATEGORY_GLOBAL, CATEGORY_SETTINGS, CATEGORY_LLM } from "@/constants/constants";
+import {
+  CATEGORY_GLOBAL,
+  CATEGORY_LLM,
+  CATEGORY_SETTINGS,
+} from "@/constants/constants";
 
 export const VARIABLE_CATEGORY = {
   GLOBAL: CATEGORY_GLOBAL,

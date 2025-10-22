@@ -36,7 +36,9 @@ export const useGetModelProviders: useQueryFunctionType<
 
       return providersData.map((providerInfo) => {
         const normalized =
-          providerInfo.provider === "Google" ? "Google Generative AI" : providerInfo.provider;
+          providerInfo.provider === "Google"
+            ? "Google Generative AI"
+            : providerInfo.provider;
         const variableName = PROVIDER_VARIABLE_MAPPING[normalized];
         const is_enabled = variableName
           ? globalVariableNames.has(variableName)

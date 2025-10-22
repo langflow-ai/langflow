@@ -1,11 +1,11 @@
 import type { UseMutationResult } from "@tanstack/react-query";
-import type { useMutationFunctionType } from "@/types/api";
 import { VALID_CATEGORIES } from "@/constants/constants";
+import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-type VariableCategory = typeof VALID_CATEGORIES[number];
+type VariableCategory = (typeof VALID_CATEGORIES)[number];
 
 interface PostGlobalVariablesParams {
   name: string;

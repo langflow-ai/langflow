@@ -55,12 +55,14 @@ export default function ModelInputComponent({
   helperText,
 }: BaseInputProps<any> & ModelInputComponentType): JSX.Element {
   const [open, setOpen] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(() => {
-    if (value && Array.isArray(value) && value.length > 0) {
-      return value[0].provider || value[0].category || null;
-    }
-    return null;
-  });
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(
+    () => {
+      if (value && Array.isArray(value) && value.length > 0) {
+        return value[0].provider || value[0].category || null;
+      }
+      return null;
+    },
+  );
   const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(
     () => {
       if (value && Array.isArray(value) && value.length > 0) {
@@ -170,7 +172,9 @@ export default function ModelInputComponent({
         ];
 
         handleOnNewValue({ value: newValue });
-        setSelectedProvider(selectedOption.provider || selectedOption.category || null);
+        setSelectedProvider(
+          selectedOption.provider || selectedOption.category || null,
+        );
         setSelectedModel(selectedOption);
       } catch (error) {
         setErrorData({ title: "Error selecting model" });
