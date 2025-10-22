@@ -466,7 +466,8 @@
                   "Anthropic",
                   "Google Generative AI",
                   "OpenAI",
-                  "IBM watsonx.ai"
+                  "IBM watsonx.ai",
+                  "Ollama"
                 ],
                 "options_metadata": [
                   {
@@ -1194,7 +1195,8 @@
                   "Anthropic",
                   "Google Generative AI",
                   "OpenAI",
-                  "IBM watsonx.ai"
+                  "IBM watsonx.ai",
+                  "Ollama"
                 ],
                 "options_metadata": [
                   {
@@ -2693,7 +2695,8 @@
                   "Anthropic",
                   "Google Generative AI",
                   "OpenAI",
-                  "IBM watsonx.ai"
+                  "IBM watsonx.ai",
+                  "Ollama"
                 ],
                 "options_metadata": [
                   {

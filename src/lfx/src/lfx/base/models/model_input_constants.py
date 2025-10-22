@@ -5,8 +5,6 @@ from lfx.inputs.inputs import InputTypes, SecretStrInput
 from lfx.template.field.base import Input
 
 
-
-
 class ModelProvidersDict(TypedDict):
     fields: dict
     inputs: list[InputTypes]
@@ -45,7 +43,7 @@ def process_inputs(component_data: Input,provider_name: str = None):
         component_data.advanced = True
         component_data.value = True
     elif component_data.name in {"temperature", "base_url"}:
-        if provider_name not in ["IBM watsonx.ai"]:
+        if provider_name not in ["IBM watsonx.ai","Ollama"]:
             component_data = set_advanced_true(component_data)
     elif component_data.name == "model_name":
         if provider_name not in ["IBM watsonx.ai"]:
@@ -81,6 +79,17 @@ def add_combobox_true(component_input):
 
 def create_input_fields_dict(inputs: list[Input], prefix: str) -> dict[str, Input]:
     return {f"{prefix}{input_.name}": input_.to_dict() for input_ in inputs}
+
+
+def _get_ollama_inputs_and_fields():
+    try:
+        from lfx.components.ollama.ollama import ChatOllamaComponent
+
+        ollama_inputs = get_filtered_inputs(ChatOllamaComponent)
+    except ImportError as e:
+        msg = "Ollama is not installed. Please install it with `pip install langchain-ollama`."
+        raise ImportError(msg) from e
+    return ollama_inputs, create_input_fields_dict(ollama_inputs, "")
 
 def _get_watsonx_inputs_and_fields():
     try:
@@ -315,6 +324,20 @@ try:
         "prefix": "",
         "component_class": WatsonxAIComponent(),
         "icon": WatsonxAIComponent.icon,
+        "is_active": True,
+    }
+except ImportError:
+    pass
+
+try:
+    from lfx.components.ollama.ollama import ChatOllamaComponent
+    ollama_inputs, ollama_fields = _get_ollama_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Ollama"] = {
+        "fields": ollama_fields,
+        "inputs": ollama_inputs,
+        "prefix": "",
+        "component_class": ChatOllamaComponent(),
+        "icon": ChatOllamaComponent.icon,
         "is_active": True,
     }
 except ImportError:
