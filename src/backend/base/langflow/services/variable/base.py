@@ -94,6 +94,7 @@ class VariableService(Service):
         default_fields: list[str],
         type_: str,
         session: AsyncSession,
+        category: str | None = None,
     ) -> Variable:
         """Create a variable.
 
@@ -104,6 +105,7 @@ class VariableService(Service):
             default_fields: The default fields of the variable.
             type_: The type of the variable.
             session: The database session.
+            category: The category of the variable.
 
         Returns:
             The created variable.

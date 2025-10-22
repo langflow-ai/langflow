@@ -3,13 +3,13 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query
-
-from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.base.models.unified_models import (
+from lfx.base.models.unified_models import (
     get_model_provider_variable_mapping,
     get_model_providers,
     get_unified_models_detailed,
 )
+
+from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.service import DatabaseVariableService
 
@@ -92,7 +92,8 @@ async def get_enabled_providers(
     providers: Annotated[list[str] | None, Query()] = None,
 ):
     """Get enabled providers for the current user."""
-    from langflow.base.models.unified_models import get_model_provider_variable_mapping
+    from lfx.base.models.unified_models import get_model_provider_variable_mapping
+
     from langflow.services.variable.constants import CATEGORY_LLM
 
     if providers is None:
@@ -133,7 +134,10 @@ async def get_enabled_providers(
         if providers:
             # Filter enabled_providers and provider_status by requested providers
             filtered_enabled = [p for p in result["enabled_providers"] if p in providers]
-            filtered_status = {p: v for p, v in result["provider_status"].items() if p in providers}
+            provider_status_dict = result.get("provider_status", {})
+            if not isinstance(provider_status_dict, dict):
+                provider_status_dict = {}
+            filtered_status = {p: v for p, v in provider_status_dict.items() if p in providers}
             return {
                 "enabled_providers": filtered_enabled,
                 "provider_status": filtered_status,
