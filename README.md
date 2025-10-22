@@ -26,13 +26,12 @@
 - **Observability** with LangSmith, LangFuse and other integrations.
 - **Enterprise-ready** security and scalability.
 
-## 🖥️  Download Langflow Desktop
+## 🖥️  Langflow Desktop
 
-Langflow Desktop is the easiest way to get started. Includes dependency management and automatic updates.
+Langflow Desktop is the easiest way to get started. It includes dependency management and automatic updates.
 
-**[📥 Download Langflow Desktop](https://www.langflow.org/desktop)** (available for Windows and macOS)
+[📥 Download Langflow Desktop](https://www.langflow.org/desktop) (available for Windows and macOS).
 
----
 
 ## ⚡️ Quickstart
 
@@ -61,17 +60,20 @@ That's it! You're ready to build with Langflow 🎉
 
 ## 📦 Other install options
 
-**Run from source** - If you've cloned this repository or want to contribute:
+### Run from source
+If you've cloned this repository or want to contribute:
 ```shell
 make run_cli
 ```
 See [DEVELOPMENT.md](./DEVELOPMENT.md) for full development setup.
 
-**Docker** - Start a Langflow container with default settings:
+### Docker
+Start a Langflow container with default settings:
 ```shell
 docker run -p 7860:7860 langflowai/langflow:latest
 ```
 Then access Langflow at http://localhost:7860/. For configuration options, see the [Docker deployment guide](https://docs.langflow.org/deployment-docker).
+
 
 > [!CAUTION]
 > - Langflow versions 1.6.0 through 1.6.3 have a critical bug where `.env` files are not read, potentially causing security vulnerabilities. **DO NOT** upgrade to these versions if you use `.env` files for configuration. Instead, upgrade to 1.6.4, which includes a fix for this bug.
@@ -83,7 +85,7 @@ Then access Langflow at http://localhost:7860/. For configuration options, see t
 
 ## 🚀 Deployment
 
-Langflow is completely open source and you can deploy it to all major deployment clouds. To learn how to use Docker to deploy Langflow, see the [Docker deployment guide](https://docs.langflow.org/deployment-docker).
+Langflow is completely open source and you can deploy it to all major deployment clouds. To learn how to deploy Langflow, see our [Langflow deployment guides](https://docs.langflow.org/deployment-overview).
 
 ## ⭐ Stay up-to-date
 
