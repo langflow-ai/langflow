@@ -1,7 +1,7 @@
 // src/constants/constants.ts
 
-import { customDefaultShortcuts } from "@/customization/constants";
 import custom from "../customization/config-constants";
+import { customDefaultShortcuts } from "../customization/constants";
 import type { languageMap } from "../types/components";
 
 /**
