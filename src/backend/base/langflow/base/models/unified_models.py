@@ -1,8 +1,8 @@
 from functools import lru_cache
 
-from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
-from langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS_DETAILED
-from langflow.base.models.openai_constants import OPENAI_MODELS_DETAILED
+from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
+from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS_DETAILED
+from lfx.base.models.openai_constants import OPENAI_MODELS_DETAILED
 
 
 @lru_cache(maxsize=1)
