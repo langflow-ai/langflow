@@ -97,9 +97,9 @@ components:
         in: clinical_nlp
 
   clinical_nlp:
-    type: genesis:clinical_nlp_analyzer_connector
+    type: genesis:autonomize
     config:
-      nlp_service: aws_comprehend_medical
+      selected_model: "Clinical LLM"
     provides:
       - useAs: nlp_results
         in: terminology_service
@@ -146,7 +146,7 @@ components:
         in: document_manager
 
   document_manager:
-    type: genesis:document_management_connector
+    type: genesis:blob_storage
     config: {}
     provides:
       - useAs: document_data
@@ -160,7 +160,7 @@ components:
         in: speech_service
 
   speech_service:
-    type: genesis:speech_transcription_connector
+    type: genesis:assemblyai_start_transcript
     config: {}
     provides:
       - useAs: transcription_data
@@ -288,18 +288,17 @@ kpis:
             "genesis:claims_connector",
             "genesis:eligibility_connector",
             "genesis:pharmacy_connector",
-            "genesis:clinical_nlp_analyzer_connector",
+            "genesis:autonomize",
             "genesis:medical_terminology_connector",
             "genesis:accumulator_benefits_connector",
             "genesis:provider_network_connector",
             "genesis:quality_metrics_connector",
             "genesis:azure_document_intelligence",
-            "genesis:document_management_connector",
+            "genesis:blob_storage",
             "genesis:medical_data_standardizer_connector",
-            "genesis:speech_transcription_connector",
+            "genesis:assemblyai_start_transcript",
             "genesis:compliance_data_connector",
-            "genesis:pharmacy_benefits_connector",
-            "genesis:clinical_nlp_connector"
+            "genesis:pharmacy_benefits_connector"
         ]
 
         for connector_type in healthcare_connectors:

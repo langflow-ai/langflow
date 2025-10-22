@@ -80,7 +80,7 @@ components:
             "genesis:ehr_connector",
             "genesis:claims_connector",
             "genesis:eligibility_connector",
-            "genesis:clinical_nlp_analyzer_connector"
+            "genesis:autonomize"
         ]):
             mapping = Mock(spec=ComponentMapping)
             mapping.id = f"mapping-{i}"
@@ -210,18 +210,16 @@ components:
             "genesis:claims_connector",
             "genesis:eligibility_connector",
             "genesis:pharmacy_connector",
-            "genesis:clinical_nlp_analyzer_connector",
+            "genesis:autonomize",
             "genesis:medical_terminology_connector",
             "genesis:accumulator_benefits_connector",
             "genesis:provider_network_connector",
             "genesis:quality_metrics_connector",
             "genesis:azure_document_intelligence",
-            "genesis:document_management_connector",
+            "genesis:assemblyai_start_transcript",
             "genesis:medical_data_standardizer_connector",
-            "genesis:speech_transcription_connector",
             "genesis:compliance_data_connector",
-            "genesis:pharmacy_benefits_connector",
-            "genesis:clinical_nlp_connector"
+            "genesis:pharmacy_benefits_connector"
         ]
 
         for connector_type in healthcare_connectors:

@@ -275,36 +275,6 @@ HEALTHCARE_COMPONENT_SCHEMAS = {
     },
 
     # Additional healthcare connectors discovered dynamically
-    "genesis:clinical_nlp_analyzer_connector": {
-        "type": "object",
-        "properties": {
-            "nlp_service": {
-                "type": "string",
-                "enum": ["aws_comprehend_medical", "azure_text_analytics", "google_healthcare"],
-                "description": "Clinical NLP service provider"
-            },
-            "entity_types": {
-                "type": "array",
-                "items": {
-                    "type": "string",
-                    "enum": ["medication", "diagnosis", "procedure", "anatomy", "test_result"]
-                },
-                "description": "Entity types to extract"
-            },
-            "confidence_threshold": {
-                "type": "number",
-                "minimum": 0,
-                "maximum": 1,
-                "default": 0.8
-            },
-            "hipaa_compliant": {
-                "type": "boolean",
-                "default": True
-            }
-        },
-        "required": ["nlp_service"],
-        "additionalProperties": False
-    },
 
     "genesis:medical_terminology_connector": {
         "type": "object",

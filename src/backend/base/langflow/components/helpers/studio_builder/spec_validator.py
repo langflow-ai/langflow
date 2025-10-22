@@ -148,12 +148,12 @@ class SpecValidatorTool(Component):
                             suggestions.append(f"Replace 'genesis:mcp_tool' with appropriate healthcare connector:")
                             suggestions.append("  - Use 'genesis:ehr_connector' for EHR/patient data")
                             suggestions.append("  - Use 'genesis:eligibility_connector' for insurance eligibility")
-                            suggestions.append("  - Use 'genesis:clinical_nlp_connector' for medical text analysis")
+                            suggestions.append("  - Use 'genesis:autonomize' with Clinical LLM for medical text analysis")
                             suggestions.append("  - Use 'genesis:quality_metrics_connector' for HEDIS/quality data")
                             suggestions.append("  - Use 'genesis:pharmacy_benefits_connector' for PBM/formulary")
                             suggestions.append("  - Use 'genesis:provider_network_connector' for provider directories")
                             suggestions.append("  - Use 'genesis:compliance_data_connector' for regulatory compliance")
-                            suggestions.append("  - Use 'genesis:speech_transcription_connector' for clinical speech-to-text")
+                            suggestions.append("  - Use 'genesis:assemblyai_start_transcript' for clinical speech-to-text")
                             suggestions.append("  - Use 'genesis:medical_terminology_connector' for medical coding")
                             suggestions.append("  - Use 'genesis:api_request' for simple HTTP API integrations")
                             suggestions.append("  - Create specialized healthcare agents for complex workflows")
@@ -276,9 +276,9 @@ class SpecValidatorTool(Component):
 
         # AI/NLP processing tools
         elif any(keyword in tool_name_lower for keyword in ["nlp", "clinical_nlp", "text_analysis", "entity_extraction"]):
-            return "Replace with 'genesis:clinical_nlp_connector' for medical text analysis"
+            return "Replace with 'genesis:autonomize' using Clinical LLM for medical text analysis"
         elif any(keyword in tool_name_lower for keyword in ["speech", "transcription", "audio", "voice"]):
-            return "Replace with 'genesis:speech_transcription_connector' for clinical speech-to-text"
+            return "Replace with 'genesis:assemblyai_start_transcript' for clinical speech-to-text"
         elif any(keyword in tool_name_lower for keyword in ["terminology", "coding", "icd", "cpt", "snomed"]):
             return "Replace with 'genesis:medical_terminology_connector' for medical coding validation"
 

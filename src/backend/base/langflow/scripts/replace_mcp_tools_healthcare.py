@@ -70,14 +70,14 @@ class MCPToolReplacer:
             'audit_trail': 'genesis:compliance_data_connector',
             'hipaa_compliance': 'genesis:compliance_data_connector',
 
-            # AI/NLP processing tools → Healthcare Connectors
-            'clinical_nlp_processor': 'genesis:clinical_nlp_connector',
-            'medical_entity_extraction': 'genesis:clinical_nlp_connector',
-            'clinical_text_analysis': 'genesis:clinical_nlp_connector',
+            # AI/NLP processing tools → Autonomize Models
+            'clinical_nlp_processor': 'genesis:autonomize',
+            'medical_entity_extraction': 'genesis:autonomize',
+            'clinical_text_analysis': 'genesis:autonomize',
 
-            'clinical_speech_transcription': 'genesis:speech_transcription_connector',
-            'medical_dictation': 'genesis:speech_transcription_connector',
-            'audio_transcription': 'genesis:speech_transcription_connector',
+            'clinical_speech_transcription': 'genesis:assemblyai_start_transcript',
+            'medical_dictation': 'genesis:assemblyai_start_transcript',
+            'audio_transcription': 'genesis:assemblyai_start_transcript',
 
             'medical_terminology_validator': 'genesis:medical_terminology_connector',
             'icd_10_lookup': 'genesis:medical_terminology_connector',
@@ -163,12 +163,15 @@ class MCPToolReplacer:
                 'benchmark_type': 'national_percentile',
                 'include_trends': True
             })
-        elif 'clinical_nlp_connector' in connector_type:
+        elif 'autonomize' in connector_type:
             config.update({
-                'analysis_type': 'entity_extraction',
-                'medical_specialty': 'general_medicine',
-                'extract_medications': True,
-                'extract_conditions': True
+                'selected_model': 'Clinical LLM',
+                'confidence_threshold': 0.8,
+                'hipaa_compliant': True,
+                'audit_logging': True,
+                'encryption_at_rest': True,
+                'phi_detection': True,
+                'anonymization': True
             })
 
         return config
