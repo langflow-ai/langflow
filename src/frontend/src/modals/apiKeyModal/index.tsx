@@ -1,6 +1,13 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
+import { Input } from "@/components/ui/input";
+import {
+  PROVIDER_VARIABLE_MAPPING,
+  VARIABLE_CATEGORY,
+} from "@/constants/providerConstants";
+import { usePostGlobalVariables } from "@/controllers/API/queries/variables";
 import { COPIED_NOTICE_ALERT } from "../../constants/alerts_constants";
 import useAlertStore from "../../stores/alertStore";
 import BaseModal from "../baseModal";
@@ -23,7 +30,10 @@ export default function ApiKeyModal({
   const [showKey, setShowKey] = useState(false);
   const [textCopied, setTextCopied] = useState(true);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const queryClient = useQueryClient();
+  const { mutate: createGlobalVariable, isPending } = usePostGlobalVariables();
 
   useEffect(() => {
     if (open) {
@@ -37,31 +47,54 @@ export default function ApiKeyModal({
     setApiKeyValue("");
   };
 
-  const handleCopyClick = async () => {
-    if (apiKeyValue) {
-      await navigator.clipboard.writeText(apiKeyValue);
-      inputRef?.current?.focus();
-      inputRef?.current?.select();
-      setSuccessData({
-        title: COPIED_NOTICE_ALERT,
-      });
-      setTextCopied(false);
-
-      setTimeout(() => {
-        setTextCopied(true);
-      }, 3000);
-    }
-  };
-
   const handleSubmitForm = () => {
     if (showKey) {
       // If we're showing the key, close the modal
       onClose();
     } else {
-      // If we're in the form stage, save the API key and show it
+      // If we're in the form stage, save the API key
       if (apiKeyValue.trim()) {
-        setShowKey(true);
-        onSave?.(apiKeyValue);
+        const variableName = PROVIDER_VARIABLE_MAPPING[provider];
+
+        if (!variableName) {
+          setErrorData({
+            title: "Invalid Provider",
+            list: [`Provider "${provider}" is not supported.`],
+          });
+          return;
+        }
+
+        createGlobalVariable(
+          {
+            name: variableName,
+            value: apiKeyValue,
+            type: VARIABLE_CATEGORY.CREDENTIAL,
+            category: VARIABLE_CATEGORY.GLOBAL,
+            default_fields: [],
+          },
+          {
+            onSuccess: () => {
+              setSuccessData({
+                title: `${provider} API Key Saved`,
+              });
+              // Invalidate model providers cache to refresh the list
+              queryClient.invalidateQueries({
+                queryKey: ["useGetModelProviders"],
+              });
+              onSave?.(apiKeyValue);
+              onClose();
+            },
+            onError: (error: any) => {
+              setErrorData({
+                title: "Error Saving API Key",
+                list: [
+                  error?.response?.data?.detail ||
+                    "An unexpected error occurred while saving the API key. Please try again.",
+                ],
+              });
+            },
+          },
+        );
       }
     }
   };
@@ -97,14 +130,13 @@ export default function ApiKeyModal({
             <label className="text-sm font-medium text-foreground">
               {`${provider} API Key`} *
             </label>
-            <InputComponent
+            <Input
               value={apiKeyValue}
-              onChange={setApiKeyValue}
+              onChange={(e) => setApiKeyValue(e.target.value)}
               placeholder={"Enter your API key"}
-              password={true}
-              editNode={false}
-              required={true}
-              autoFocus={true}
+              type="password"
+              required
+              autoFocus
             />
           </div>
         </div>

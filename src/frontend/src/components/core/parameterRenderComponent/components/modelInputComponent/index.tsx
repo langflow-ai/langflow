@@ -23,7 +23,6 @@ import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import type { BaseInputProps } from "../../types";
 
 export type ModelInputComponentType = {
-  model_type: "language" | "embedding";
   options: {
     name: string;
     icon: string;
@@ -33,9 +32,6 @@ export type ModelInputComponentType = {
   }[];
   placeholder: string;
   providers?: string[];
-  temperature?: number;
-  max_tokens?: number;
-  limit?: number;
 };
 
 export type SelectedModel = {
@@ -84,6 +80,8 @@ export default function ModelInputComponent({
       return options || [];
     }
   }, [options, searchTerm]);
+
+  console.log({ filteredOptions, options });
 
   // Group options by category
   const groupedOptions = useMemo(() => {
@@ -257,6 +255,7 @@ export default function ModelInputComponent({
       <CommandList className="max-h-[300px]">
         {groupedOptions.map(([category, categoryOptions]) => {
           const visibleOptions = categoryOptions;
+          console.log({ category, categoryOptions, groupedOptions });
 
           if (visibleOptions.length === 0) return null;
 
@@ -264,11 +263,14 @@ export default function ModelInputComponent({
             <CommandGroup className="p-0 overflow-y-auto" key={`${category}`}>
               <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center">
                 {category}
-                <div className="ml-2 text-xs text-accent-emerald-foreground">
-                  Enabled
-                </div>
+                {false && (
+                  <div className="ml-2 text-xs text-accent-emerald-foreground">
+                    Enabled
+                  </div>
+                )}
               </div>
               {visibleOptions.map((option) => {
+                console.log(option);
                 // Validate option before rendering
                 if (!option || !option.name) {
                   return null;

@@ -17,6 +17,8 @@ const Providers = ({ type }: { type: "enabled" | "available" }) => {
   const [openApiKeyDialog, setOpenApiKeyDialog] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
 
+  console.log(providersData);
+
   // Filter providers based on enabled status
   const filteredProviders: Provider[] = providersData
     .filter((provider) => {
@@ -103,7 +105,6 @@ const Providers = ({ type }: { type: "enabled" | "available" }) => {
         open={openApiKeyDialog}
         onClose={() => setOpenApiKeyDialog(false)}
         provider={selectedProvider || "Provider"}
-        onSave={() => {}}
       />
     </>
   );

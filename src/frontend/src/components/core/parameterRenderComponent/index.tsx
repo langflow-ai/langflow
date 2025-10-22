@@ -54,6 +54,7 @@ export function ParameterRenderComponent({
   isToolMode?: boolean;
   nodeInformationMetadata?: NodeInfoType;
 }) {
+  console.log(templateData);
   const id = (
     templateData.type +
     "_" +
@@ -233,21 +234,6 @@ export function ParameterRenderComponent({
           />
         );
       case "sortableList":
-        // Handle ModelInput special case if model_type is present
-        if (templateData?.model_type) {
-          return (
-            <ModelInputComponent
-              {...baseInputProps}
-              model_type={templateData.model_type}
-              options={templateData?.options || []}
-              placeholder={templateData?.placeholder || "Select a Model"}
-              temperature={templateData?.temperature}
-              max_tokens={templateData?.max_tokens}
-              limit={templateData?.limit}
-              providers={templateData?.providers}
-            />
-          );
-        }
         return (
           <SortableListComponent
             {...baseInputProps}
@@ -311,12 +297,8 @@ export function ParameterRenderComponent({
         return (
           <ModelInputComponent
             {...baseInputProps}
-            model_type={templateData.model_type || "language"}
             options={templateData?.options || []}
             placeholder={templateData?.placeholder || "Select a Model"}
-            temperature={templateData?.temperature}
-            max_tokens={templateData?.max_tokens}
-            limit={templateData?.limit}
             providers={templateData?.providers}
           />
         );

@@ -1,7 +1,9 @@
+import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
 import { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { useGetGlobalVariables } from "../variables";
 
 export interface ModelProviderInfo {
   provider: string;
@@ -21,6 +23,7 @@ export const useGetModelProviders: useQueryFunctionType<
   ModelProviderWithStatus[]
 > = (options) => {
   const { query } = UseRequestProcessor();
+  const { data: globalVariables = [] } = useGetGlobalVariables();
 
   const getModelProvidersFn = async (): Promise<ModelProviderWithStatus[]> => {
     try {
@@ -29,28 +32,36 @@ export const useGetModelProviders: useQueryFunctionType<
       const providersData = response.data;
       console.log(providersData);
 
-      // TODO: In the future, we should check for API keys or other configuration
-      // to determine if a provider is enabled. For now, we'll use a simple heuristic
-      // based on well-known providers
-      const enabledProviders = [""];
+      // Check which providers are enabled by looking for their API keys in global variables
+      const globalVariableNames = new Set(globalVariables.map((v) => v.name));
 
-      return providersData.map((providerInfo) => ({
-        ...providerInfo,
-        is_enabled: enabledProviders.includes(providerInfo.provider),
-        // Map provider names to icon names - this should match the icon names in your icon system
-        icon: getProviderIcon(providerInfo.provider),
-      }));
+      return providersData.map((providerInfo) => {
+        const variableName = PROVIDER_VARIABLE_MAPPING[providerInfo.provider];
+        const is_enabled = variableName
+          ? globalVariableNames.has(variableName)
+          : false;
+
+        return {
+          ...providerInfo,
+          is_enabled,
+          icon: getProviderIcon(providerInfo.provider),
+        };
+      });
     } catch (error) {
       console.error("Error fetching model providers:", error);
       return [];
     }
   };
 
-  const queryResult = query(["useGetModelProviders"], getModelProvidersFn, {
-    refetchOnWindowFocus: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    ...options,
-  });
+  const queryResult = query(
+    ["useGetModelProviders", globalVariables],
+    getModelProvidersFn,
+    {
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      ...options,
+    },
+  );
 
   return queryResult;
 };
