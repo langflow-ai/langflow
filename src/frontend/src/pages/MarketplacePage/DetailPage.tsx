@@ -17,6 +17,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import FlowPage from "../FlowPage";
+import PlaygroundTab from "./components/PlaygroundTab";
 
 export default function MarketplaceDetailPage() {
   const { publishedFlowId } = useParams<{ publishedFlowId: string }>();
@@ -151,6 +152,12 @@ export default function MarketplaceDetailPage() {
                 >
                   Specification
                 </TabsTrigger>
+                <TabsTrigger
+                  value="playground"
+                  className="px-3 py-2 text-sm dark:text-white"
+                >
+                  Playground
+                </TabsTrigger>
               </TabsList>
 
               {/* Edit Button */}
@@ -256,6 +263,12 @@ export default function MarketplaceDetailPage() {
                     </SyntaxHighlighter>
                   )}
                 </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="playground" className="mt-4 w-full">
+              <div className="h-[calc(100vh-200px)] w-full overflow-hidden rounded-lg border border-border dark:border-white/20">
+                <PlaygroundTab publishedFlowData={publishedFlowData} />
               </div>
             </TabsContent>
           </Tabs>
