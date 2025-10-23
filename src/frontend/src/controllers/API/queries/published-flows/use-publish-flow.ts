@@ -6,7 +6,7 @@ export interface PublishFlowPayload {
   marketplace_flow_name: string;
   target_folder_id?: string;
   version?: string;
-  category?: string;
+  tags?: string[];
 }
 
 export const usePublishFlow = () => {

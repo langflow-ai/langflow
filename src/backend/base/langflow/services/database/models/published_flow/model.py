@@ -80,7 +80,7 @@ class PublishedFlowCreate(SQLModel):
     marketplace_flow_name: str
     target_folder_id: UUID | None = None
     version: str | None = None
-    category: str | None = None
+    tags: list[str] | None = None
 
 
 class PublishedFlowRead(PublishedFlowBase):

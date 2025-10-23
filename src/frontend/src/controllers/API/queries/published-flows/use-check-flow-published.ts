@@ -10,7 +10,7 @@ export interface PublishCheckResponse {
   // Additional data for pre-filling re-publish modal
   marketplace_flow_name?: string | null;
   version?: string | null;
-  category?: string | null;
+  tags?: string[] | null;
 }
 
 export const useCheckFlowPublished = (flowId: string | undefined) => {

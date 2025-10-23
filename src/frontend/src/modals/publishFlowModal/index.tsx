@@ -8,19 +8,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { usePublishFlow, type PublishCheckResponse } from "@/controllers/API/queries/published-flows";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { validateFlowForPublish } from "@/utils/flowValidation";
 import type { AllNodeType, EdgeType } from "@/types/flow";
+import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
 
 interface PublishFlowModalProps {
   open: boolean;
@@ -39,7 +34,7 @@ export default function PublishFlowModal({
 }: PublishFlowModalProps) {
   const [marketplaceName, setMarketplaceName] = useState(flowName);
   const [version, setVersion] = useState("");
-  const [category, setCategory] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const { mutate: publishFlow, isPending } = usePublishFlow();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -56,12 +51,12 @@ export default function PublishFlowModal({
         // Re-publish: Pre-fill with existing published data
         setMarketplaceName(existingPublishedData.marketplace_flow_name || flowName);
         setVersion(existingPublishedData.version || "");
-        setCategory(existingPublishedData.category || "");
+        setTags(existingPublishedData.tags || []);
       } else {
         // First-time publish: Use defaults
         setMarketplaceName(flowName);
         setVersion("");
-        setCategory("");
+        setTags([]);
       }
     }
   }, [open, existingPublishedData, flowName]);
@@ -117,7 +112,7 @@ export default function PublishFlowModal({
         payload: {
           marketplace_flow_name: marketplaceName,
           version: version || undefined,
-          category: category || undefined,
+          tags: tags.length > 0 ? tags : undefined,
         },
       },
       {
@@ -128,7 +123,7 @@ export default function PublishFlowModal({
           setOpen(false);
           setMarketplaceName("");
           setVersion("");
-          setCategory("");
+          setTags([]);
         },
         onError: (error: any) => {
           setErrorData({
@@ -180,19 +175,16 @@ export default function PublishFlowModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category (Optional)</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger id="category">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Healthcare">Healthcare</SelectItem>
-                <SelectItem value="Finance">Finance</SelectItem>
-                <SelectItem value="Education">Education</SelectItem>
-                <SelectItem value="General">General</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="tags">Tags (Optional)</Label>
+            <MultiSelect
+              options={MARKETPLACE_TAGS}
+              selected={tags}
+              onChange={setTags}
+              placeholder="Select tags..."
+            />
+            <p className="text-xs text-muted-foreground">
+              Select one or more tags to categorize your flow
+            </p>
           </div>
 
           {validationErrors.length === 0 && (

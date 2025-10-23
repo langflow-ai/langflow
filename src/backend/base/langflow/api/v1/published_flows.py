@@ -90,11 +90,10 @@ async def publish_flow(
         cloned_flow.tags = original_flow.tags
         cloned_flow.icon = original_flow.icon
 
-        # Update published_flow record (copy description/tags for pagination)
+        # Update published_flow record (copy description for pagination, tags from payload)
         existing.version = payload.version
-        existing.category = payload.category
+        existing.tags = payload.tags  # User-selected tags from publish modal
         existing.description = original_flow.description  # Denormalized
-        existing.tags = original_flow.tags  # Denormalized
         existing.published_at = datetime.now(timezone.utc)
         existing.updated_at = datetime.now(timezone.utc)
         existing.status = PublishStatusEnum.PUBLISHED
@@ -124,7 +123,7 @@ async def publish_flow(
         marketplace_flow_name=payload.marketplace_flow_name,
     )
 
-    # Create published_flow record (with denormalized description/tags)
+    # Create published_flow record (with denormalized description, tags from payload)
     published_flow = PublishedFlow(
         flow_id=cloned_flow.id,  # Points to clone
         flow_cloned_from=flow_id,  # Points to original
@@ -132,9 +131,8 @@ async def publish_flow(
         published_by=current_user.id,
         status=PublishStatusEnum.PUBLISHED,
         version=payload.version,
-        category=payload.category,
+        tags=payload.tags,  # User-selected tags from publish modal
         description=original_flow.description,  # Denormalized for pagination
-        tags=original_flow.tags,  # Denormalized for pagination
         published_at=datetime.now(timezone.utc),
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
@@ -312,7 +310,7 @@ async def check_flow_published(
             # Additional data for pre-filling modal on re-publish
             "marketplace_flow_name": cloned_flow.name,
             "version": published_flow.version,
-            "category": published_flow.category,
+            "tags": published_flow.tags,
         }
 
     return {

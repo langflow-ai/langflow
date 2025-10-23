@@ -13,6 +13,7 @@ import MarketplaceFlowCard from "./components/MarketplaceFlowCard";
 import { useGetAllPublishedFlows } from "@/controllers/API/queries/published-flows";
 import ListSkeleton from "../MainPage/components/listSkeleton";
 import { debounce } from "lodash";
+import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
 
 export default function MarketplacePage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -94,21 +95,11 @@ export default function MarketplacePage() {
                   <SelectItem value="all" className="dark:text-white">
                     All Categories
                   </SelectItem>
-                  <SelectItem value="Healthcare" className="dark:text-white">
-                    Healthcare
-                  </SelectItem>
-                  <SelectItem value="Finance" className="dark:text-white">
-                    Finance
-                  </SelectItem>
-                  <SelectItem value="Education" className="dark:text-white">
-                    Education
-                  </SelectItem>
-                  <SelectItem value="General" className="dark:text-white">
-                    General
-                  </SelectItem>
-                  <SelectItem value="Other" className="dark:text-white">
-                    Other
-                  </SelectItem>
+                  {MARKETPLACE_TAGS.map((tag) => (
+                    <SelectItem key={tag} value={tag} className="dark:text-white">
+                      {tag}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
