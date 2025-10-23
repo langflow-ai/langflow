@@ -21,6 +21,7 @@ from .input_mixin import (
     LinkMixin,
     ListableInputMixin,
     MetadataTraceMixin,
+    ModelInputMixin,
     MultilineMixin,
     QueryMixin,
     RangeMixin,
@@ -120,6 +121,10 @@ class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeM
 
 class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.CODE
+
+
+class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
+    field_type: SerializableFieldTypes = FieldTypes.MODEL
 
 
 # Applying mixins to a specific input type
@@ -675,6 +680,7 @@ InputTypes: TypeAlias = (
     | HandleInput
     | IntInput
     | McpInput
+    | ModelInput
     | MultilineInput
     | MultilineSecretInput
     | NestedDictInput

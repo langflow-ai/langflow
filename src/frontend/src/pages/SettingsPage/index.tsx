@@ -39,6 +39,16 @@ export default function SettingsPage(): JSX.Element {
 
   sidebarNavItems.push(
     {
+      title: "Model Providers",
+      href: "/settings/model-providers",
+      icon: (
+        <ForwardedIconComponent
+          name="BrainCircuit"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
+    {
       title: "MCP Servers",
       href: "/settings/mcp-servers",
       icon: (
