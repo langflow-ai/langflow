@@ -75,6 +75,7 @@ class MCPComposerService(Service):
         self._active_start_tasks: dict[
             str, asyncio.Task
         ] = {}  # Track active start tasks to cancel them when new request arrives
+        self._port_to_project: dict[int, str] = {}  # Track which project is using which port
 
     def _is_port_available(self, port: int) -> bool:
         """Check if a port is available by trying to bind to it."""
@@ -147,6 +148,21 @@ class MCPComposerService(Service):
         except Exception as e:  # noqa: BLE001
             await logger.aerror(f"Error finding/killing process on port {port}: {e}")
             return False
+
+    def _is_port_used_by_another_project(self, port: int, current_project_id: str) -> tuple[bool, str | None]:
+        """Check if a port is being used by another project.
+
+        Args:
+            port: The port to check
+            current_project_id: The current project ID
+
+        Returns:
+            Tuple of (is_used_by_other, other_project_id)
+        """
+        other_project_id = self._port_to_project.get(port)
+        if other_project_id and other_project_id != current_project_id:
+            return True, other_project_id
+        return False, None
 
     async def start(self):
         """Check if the MCP Composer service is enabled."""
@@ -223,6 +239,12 @@ class MCPComposerService(Service):
                 await logger.adebug(f"MCP Composer process for project {project_id} was already terminated")
             except Exception as e:  # noqa: BLE001
                 await logger.aerror(f"Error stopping MCP Composer for project {project_id}: {e}")
+
+        # Clean up port tracking
+        port = composer_info.get("port")
+        if port and self._port_to_project.get(port) == project_id:
+            del self._port_to_project[port]
+            await logger.adebug(f"Released port {port} from project {project_id}")
 
         # Remove from tracking
         del self.project_composers[project_id]
@@ -614,6 +636,16 @@ class MCPComposerService(Service):
                 no_host_error_msg = "No OAuth host provided"
                 raise MCPComposerConfigError(no_host_error_msg, project_id)
 
+            # Check if another project is using this port
+            is_used_by_other, other_project_id = self._is_port_used_by_another_project(project_port, project_id)
+            if is_used_by_other:
+                port_conflict_msg = (
+                    f"Port {project_port} is already in use by project {other_project_id}. "
+                    f"Please choose a different port or stop the other project's MCP Composer first."
+                )
+                await logger.aerror(port_conflict_msg)
+                raise MCPComposerPortError(port_conflict_msg)
+
             if project_id in self.project_composers:
                 composer_info = self.project_composers[project_id]
                 process = composer_info.get("process")
@@ -664,6 +696,11 @@ class MCPComposerService(Service):
                             f"Starting MCP Composer for project {project_id} (attempt {retry_attempt}/{max_retries})"
                         )
 
+                        # Re-check port availability before each attempt to prevent race conditions
+                        if retry_attempt > 1:
+                            await logger.adebug(f"Re-checking port {project_port} availability before retry...")
+                            await self._ensure_port_available(project_port)
+
                         process = await self._start_project_composer_process(
                             project_id,
                             project_host,
@@ -691,7 +728,7 @@ class MCPComposerService(Service):
                             await asyncio.sleep(2)
 
                     else:
-                        # Success! Store the composer info
+                        # Success! Store the composer info and register the port
                         self.project_composers[project_id] = {
                             "process": process,
                             "host": project_host,
@@ -699,6 +736,7 @@ class MCPComposerService(Service):
                             "sse_url": sse_url,
                             "auth_config": auth_config,
                         }
+                        self._port_to_project[project_port] = project_id
 
                         await logger.adebug(
                             f"MCP Composer started for project {project_id} on port {project_port} "

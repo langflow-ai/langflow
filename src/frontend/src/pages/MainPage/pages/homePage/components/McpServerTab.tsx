@@ -251,16 +251,26 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       auth_settings: authSettings,
     };
 
+    // Set waiting state for OAuth before making the request
     if (authSettings.auth_type === "oauth") {
       setIsWaitingForComposer(true);
     }
 
     patchFlowsMCP(requestData, {
       onSuccess: () => {
+        // Invalidate the MCP project data to refresh auth settings
+        queryClient.invalidateQueries({
+          queryKey: ["flows-mcp", { projectId }],
+        });
+
         if (authSettings.auth_type === "oauth") {
+          // Also invalidate composer URL to fetch new OAuth server info
           queryClient.invalidateQueries({
             queryKey: ["project-composer-url", projectId],
           });
+        } else {
+          // Clear waiting state if not OAuth
+          setIsWaitingForComposer(false);
         }
       },
       onError: () => {
