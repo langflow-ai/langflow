@@ -529,7 +529,6 @@ class BaseFileComponent(Component, ABC):
             # that don't exist on the local filesystem. We defer validation until file processing.
             # For local storage, validate the file exists immediately to fail fast.
             if settings.storage_type == "s3":
-                print(f"FRAZIER _ TEST - FILE PATH: {path_str}")
                 resolved_files.append(
                     BaseFileComponent.BaseFile(data, Path(path_str), delete_after_processing=delete_after_processing)
                 )

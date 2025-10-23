@@ -18,7 +18,11 @@ from langflow.logging.logger import logger
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_db_service, get_session, get_settings_service
+from langflow.services.deps import (
+    get_session,
+    get_settings_service,
+    session_scope,
+)
 from langflow.services.settings.service import SettingsService
 
 if TYPE_CHECKING:
@@ -48,7 +52,8 @@ async def api_key_security(
     settings_service = get_settings_service()
     result: ApiKey | User | None
 
-    async with get_db_service().with_session() as db:
+    # Use write session since check_key() updates usage tracking
+    async with session_scope() as db:
         if settings_service.auth_settings.AUTO_LOGIN:
             # Get the first user
             if not settings_service.auth_settings.SUPERUSER:
@@ -93,7 +98,8 @@ async def ws_api_key_security(
     api_key: str | None,
 ) -> UserRead:
     settings = get_settings_service()
-    async with get_db_service().with_session() as db:
+    # Use write session since check_key() updates usage tracking
+    async with session_scope() as db:
         if settings.auth_settings.AUTO_LOGIN:
             if not settings.auth_settings.SUPERUSER:
                 # internal server misconfiguration
@@ -301,11 +307,11 @@ async def create_super_user(
 
         db.add(super_user)
         try:
-            await db.commit()
+            await db.flush()
             await db.refresh(super_user)
         except IntegrityError:
             # Race condition - another worker created the user
-            await db.rollback()
+            # Don't rollback - let the caller's session_scope() handle it
             super_user = await get_user_by_username(db, username)
             if not super_user:
                 raise  # Re-raise if it's not a race condition

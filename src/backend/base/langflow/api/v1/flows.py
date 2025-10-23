@@ -160,10 +160,13 @@ async def create_flow(
 ):
     try:
         db_flow = await _new_flow(session=session, flow=flow, user_id=current_user.id)
-        await session.commit()
+        await session.flush()
         await session.refresh(db_flow)
 
         await _save_flow_to_fs(db_flow)
+
+        # Convert to FlowRead while session is still active to avoid detached instance errors
+        flow_read = FlowRead.model_validate(db_flow, from_attributes=True)
 
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
@@ -180,7 +183,7 @@ async def create_flow(
         if isinstance(e, HTTPException):
             raise
         raise HTTPException(status_code=500, detail=str(e)) from e
-    return db_flow
+    return flow_read
 
 
 @router.get("/", response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader], status_code=200)
@@ -358,7 +361,7 @@ async def update_flow(
                 db_flow.folder_id = default_folder.id
 
         session.add(db_flow)
-        await session.commit()
+        await session.flush()
         await session.refresh(db_flow)
 
         await _save_flow_to_fs(db_flow)
@@ -398,7 +401,6 @@ async def delete_flow(
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
     await cascade_delete_flow(session, flow.id)
-    await session.commit()
     return {"message": "Flow deleted successfully"}
 
 
@@ -416,10 +418,12 @@ async def create_flows(
         db_flow = Flow.model_validate(flow, from_attributes=True)
         session.add(db_flow)
         db_flows.append(db_flow)
-    await session.commit()
+    await session.flush()
     for db_flow in db_flows:
         await session.refresh(db_flow)
-    return db_flows
+    # Convert to FlowRead while session is still active to avoid detached instance errors
+    flow_reads = [FlowRead.model_validate(db_flow, from_attributes=True) for db_flow in db_flows]
+    return flow_reads
 
 
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)
@@ -444,7 +448,7 @@ async def upload_file(
         response_list.append(response)
 
     try:
-        await session.commit()
+        await session.flush()
         for db_flow in response_list:
             await session.refresh(db_flow)
             await _save_flow_to_fs(db_flow)

@@ -692,7 +692,6 @@ async def delete_starter_projects(session, folder_id) -> None:
     flows = await get_all_flows_similar_to_project(session, folder_id)
     for flow in flows:
         await session.delete(flow)
-    await session.commit()
 
 
 async def folder_exists(session, folder_name):
@@ -706,7 +705,7 @@ async def get_or_create_starter_folder(session):
         new_folder = FolderCreate(name=STARTER_FOLDER_NAME, description=STARTER_FOLDER_DESCRIPTION)
         db_folder = Folder.model_validate(new_folder, from_attributes=True)
         session.add(db_folder)
-        await session.commit()
+        await session.flush()
         await session.refresh(db_folder)
         return db_folder
     stmt = select(Folder).where(Folder.name == STARTER_FOLDER_NAME)
@@ -1036,27 +1035,27 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
     Returns:
         UUID: The ID of the default folder.
     """
+
     stmt = select(Folder).where(Folder.user_id == user_id, Folder.name == DEFAULT_FOLDER_NAME)
     result = await session.exec(stmt)
     folder = result.first()
     if folder:
-        return FolderRead.model_validate(folder, from_attributes=True)
+        return FolderRead.model_validate(folder, from_attributes=True).model_dump()
 
     try:
         folder_obj = Folder(user_id=user_id, name=DEFAULT_FOLDER_NAME)
         session.add(folder_obj)
-        await session.commit()
+        await session.flush()
         await session.refresh(folder_obj)
     except sa.exc.IntegrityError as e:
         # Another worker may have created the folder concurrently.
-        await session.rollback()
         result = await session.exec(stmt)
         folder = result.first()
         if folder:
-            return FolderRead.model_validate(folder, from_attributes=True)
+            return FolderRead.model_validate(folder, from_attributes=True).model_dump()
         msg = "Failed to get or create default folder"
         raise ValueError(msg) from e
-    return FolderRead.model_validate(folder_obj, from_attributes=True)
+    return FolderRead.model_validate(folder_obj, from_attributes=True).model_dump()
 
 
 async def sync_flows_from_fs():
@@ -1082,7 +1081,7 @@ async def sync_flows_from_fs():
                                                 setattr(flow, field_name, new_value)
                                         if folder_id := update_data.get("folder_id"):
                                             flow.folder_id = UUID(folder_id)
-                                        await session.commit()
+                                        await session.flush()
                                         await session.refresh(flow)
                                     except Exception:  # noqa: BLE001
                                         await logger.aexception(

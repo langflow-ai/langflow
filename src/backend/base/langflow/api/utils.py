@@ -19,7 +19,7 @@ from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.deps import get_session, session_scope
+from langflow.services.deps import get_session, get_session_with_commit
 from langflow.services.store.utils import get_lf_version_from_pypi
 
 if TYPE_CHECKING:
@@ -34,7 +34,10 @@ MIN_PAGE_SIZE = 1
 
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
 CurrentActiveMCPUser = Annotated[User, Depends(get_current_active_user_mcp)]
-DbSession = Annotated[AsyncSession, Depends(get_session)]
+# DbSession with auto-commit for write operations
+DbSession = Annotated[AsyncSession, Depends(get_session_with_commit)]
+# DbSessionReadOnly for read-only operations (no auto-commit, reduces lock contention)
+DbSessionReadOnly = Annotated[AsyncSession, Depends(get_session)]
 
 
 class EventDeliveryType(str, Enum):

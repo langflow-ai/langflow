@@ -51,7 +51,7 @@ async def files_created_api_key(files_client, files_active_user):  # noqa: ARG00
 @pytest.fixture(name="files_active_user")
 async def files_active_user(files_client):  # noqa: ARG001
     db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with db_manager._with_session() as session:
         user = User(
             username="files_active_user",
             password=get_password_hash("testpassword"),
@@ -69,7 +69,7 @@ async def files_active_user(files_client):  # noqa: ARG001
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    async with db_manager.with_session() as session:
+    async with db_manager._with_session() as session:
         user = await session.get(User, user.id, options=[selectinload(User.flows)])
         await _delete_transactions_and_vertex_builds(session, user.flows)
         await session.delete(user)
@@ -577,7 +577,7 @@ async def s3_files_created_api_key(s3_files_client, s3_files_active_user):  # no
 @pytest.fixture(name="s3_files_active_user")
 async def s3_files_active_user(s3_files_client):  # noqa: ARG001
     db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with db_manager._with_session() as session:
         user = User(
             username="s3_files_active_user",
             password=get_password_hash("testpassword"),
@@ -595,7 +595,7 @@ async def s3_files_active_user(s3_files_client):  # noqa: ARG001
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    async with db_manager.with_session() as session:
+    async with db_manager._with_session() as session:
         user = await session.get(User, user.id, options=[selectinload(User.flows)])
         await _delete_transactions_and_vertex_builds(session, user.flows)
         await session.delete(user)

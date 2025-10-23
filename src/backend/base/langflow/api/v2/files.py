@@ -195,7 +195,7 @@ async def upload_user_file(
         session.add(new_file)
 
         try:
-            await session.commit()
+            await session.flush()
             await session.refresh(new_file)
         except Exception as db_err:
             # Database insert failed - clean up the uploaded file to avoid orphaned files
@@ -268,7 +268,7 @@ async def load_sample_files(current_user: CurrentActiveUser, session: DbSession,
 
         session.add(sample_file)
 
-        await session.commit()
+        await session.flush()
         await session.refresh(sample_file)
 
 
@@ -342,9 +342,6 @@ async def delete_files_batch(
             # Always delete from database regardless of storage deletion result
             await session.delete(file)
 
-        # Delete all files from the database
-        await session.commit()  # Commit deletion
-
         # If there were storage failures, include them in the response
         if storage_failures:
             await logger.awarning(
@@ -352,7 +349,6 @@ async def delete_files_batch(
             )
 
     except Exception as e:
-        await session.rollback()  # Rollback on failure
         raise HTTPException(status_code=500, detail=f"Error deleting files: {e}") from e
 
     return {"message": f"{len(files)} files deleted successfully"}
@@ -527,7 +523,7 @@ async def edit_file_name(
 
         # Update the file name
         file.name = name
-        await session.commit()
+        session.add(file)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error editing file: {e}") from e
 
@@ -570,7 +566,6 @@ async def delete_file(
 
         # Delete from the database (this should always succeed if we got this far)
         await session.delete(file_to_delete)
-        await session.commit()
 
         return {"detail": f"File {file_to_delete.name} deleted successfully"}
 
@@ -624,9 +619,6 @@ async def delete_all_files(
             # Always delete from database regardless of storage deletion result
             await session.delete(file)
 
-        # Delete all files from the database
-        await session.commit()  # Commit deletion
-
         # If there were storage failures, include them in the response
         if storage_failures:
             await logger.awarning(
@@ -634,7 +626,6 @@ async def delete_all_files(
             )
 
     except Exception as e:
-        await session.rollback()  # Rollback on failure
         raise HTTPException(status_code=500, detail=f"Error deleting files: {e}") from e
 
     return {"message": "All files deleted successfully"}
