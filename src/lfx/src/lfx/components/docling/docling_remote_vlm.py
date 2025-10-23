@@ -63,7 +63,7 @@ class DoclingRemoteVLMComponent(BaseFileComponent):
     ]
 
     inputs = [
-        *BaseFileComponent._base_inputs,
+        *BaseFileComponent.get_base_inputs(),
         DropdownInput(
             name="provider",
             display_name="Provider",
@@ -133,7 +133,7 @@ class DoclingRemoteVLMComponent(BaseFileComponent):
         StrInput(name="vlm_prompt", display_name="Prompt", info="Prompt for VLM.", required=False),
     ]
 
-    outputs = [*BaseFileComponent._base_outputs]
+    outputs = [*BaseFileComponent.get_base_outputs()]
 
     @staticmethod
     def fetch_models(base_url: str) -> list[str]:
@@ -148,7 +148,7 @@ class DoclingRemoteVLMComponent(BaseFileComponent):
             return sorted(models)
         except (requests.RequestException, requests.HTTPError, requests.Timeout, ConnectionError, ValueError):
             logger.exception("Error fetching models. Using default models.")
-            return WatsonxAIComponent._default_models
+            return WatsonxAIComponent._default_models  # noqa: SLF001
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         """Update shown fields based on chosen provider."""
