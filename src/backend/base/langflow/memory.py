@@ -11,7 +11,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.logging.logger import logger
 from langflow.schema.message import Message
-from langflow.services.database.models.message.model import MessageRead, MessageTable
+from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import session_scope
 from langflow.utils.async_helpers import run_until_complete
 
