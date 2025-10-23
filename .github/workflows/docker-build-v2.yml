@@ -539,9 +539,9 @@ jobs:
 
   create-manifest:
     name: Create Multi-Arch Manifest
-    needs: [build-base, build-main, build-main-ep, build-main-all]
+    needs: [build-base, build-main-backend, build-main-frontend, build-main-ep, build-main-all]
     runs-on: ubuntu-latest
-    if: ${{ always() && inputs.push_to_registry && (needs.build-base.result == 'success' || needs.build-main.result == 'success' || needs.build-main-ep.result == 'success' || needs.build-main-all.result == 'success') }}
+    if: ${{ always() && inputs.push_to_registry && (needs.build-base.result == 'success' || needs.build-main-backend.result == 'success' || needs.build-main-frontend.result == 'success' || needs.build-main-ep.result == 'success' || needs.build-main-all.result == 'success') }}
     steps:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
