@@ -11,7 +11,11 @@ const getEnvVar = (key: string, defaultValue: any = undefined) => {
   if (typeof process !== "undefined" && process.env) {
     return process.env[key] ?? defaultValue;
   }
-  return defaultValue;
+  try {
+    return new Function(`return import.meta.env?.${key}`)() ?? defaultValue;
+  } catch {
+    return defaultValue;
+  }
 };
 
 /**
