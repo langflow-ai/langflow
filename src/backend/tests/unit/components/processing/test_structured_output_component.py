@@ -1096,7 +1096,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
                 mock_prompt.return_value.__or__.return_value = mock_chain
 
                 with patch("lfx.components.processing.structured_output.logger"):
-                    with pytest.raises(ValueError, match=r"Model does not support tool calling.*fallback with_structured_output also failed") as exc_info:
+                    with pytest.raises(ValueError, match="trustcall failed") as exc_info:
                         component.build_structured_output_base()
 
                     error_msg = str(exc_info.value)
@@ -1222,7 +1222,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
                 mock_prompt.return_value.__or__.return_value = mock_chain
 
                 with patch("lfx.components.processing.structured_output.logger"):
-                    with pytest.raises(ValueError) as exc_info:
+                    with pytest.raises(ValueError, match="trustcall failed") as exc_info:
                         component.build_structured_output_base()
 
                     error_msg = str(exc_info.value)
