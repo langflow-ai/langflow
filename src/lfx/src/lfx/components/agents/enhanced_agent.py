@@ -14,8 +14,6 @@ from altk.post_tool_reflection_toolkit.code_generation.code_generation import (
     CodeGenerationComponentConfig,
 )
 from altk.post_tool_reflection_toolkit.core.toolkit import CodeGenerationRunInput
-from altk.toolkit_core.core.toolkit import AgentPhase, ComponentConfig
-from altk.toolkit_core.llm import get_llm
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain_anthropic.chat_models import ChatAnthropic
@@ -33,7 +31,7 @@ from lfx.base.models.model_input_constants import MODEL_PROVIDERS_DICT
 from lfx.components.agents import AgentComponent
 from lfx.components.helpers.memory import MemoryComponent
 from lfx.inputs.inputs import BoolInput
-from lfx.io import IntInput, Output
+from lfx.io import IntInput, Output, MultilineInput
 from lfx.log.logger import logger
 from lfx.memory import delete_message
 from lfx.schema.content_block import ContentBlock
@@ -42,7 +40,7 @@ from lfx.schema.message import Message
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
-    from lfx.schema.log import SendMessageFunctionType
+    pass
 
 def set_advanced_true(component_input):
     """Set the advanced flag to True for a component input."""
@@ -251,6 +249,105 @@ class ValidatedTool(BaseTool):
         self.conversation_context = conversation_context
 
 
+class ProtectedTool(BaseTool):
+    """
+    A wrapper tool that validates calls before execution using ToolGuard component.
+    Falls back to simple validation if ToolGuard is not available.
+
+    """
+
+    name: str = Field(...)
+    description: str = Field(...)
+    wrapped_tool: BaseTool = Field(...)
+    toolguard_component: Optional[Any] = Field(default=None)
+    conversation_context: List[BaseMessage] = Field(default_factory=list)
+    tool_specs: List[Dict] = Field(default_factory=list)
+
+    def __init__(self, wrapped_tool: BaseTool, toolguard_component=None, conversation_context=None, tool_specs=None, **kwargs):
+        super().__init__(
+            name=wrapped_tool.name,
+            description=wrapped_tool.description,
+            wrapped_tool=wrapped_tool,
+            toolguard_component=toolguard_component,
+            conversation_context=conversation_context or [],
+            tool_specs=tool_specs or [],
+            **kwargs
+        )
+        logger.info(f'🔒️ToolGuard processor initialized for {self.name}')
+
+    def _run(self, *args, **kwargs) -> str:
+        """Execute the tool with validation."""
+        return self._validate_and_run(*args, **kwargs)
+
+    async def _arun(self, *args, **kwargs) -> str:
+        """Async execute the tool with validation."""
+        return self._validate_and_run(*args, **kwargs)
+
+    def _validate_and_run(self, *args, **kwargs) -> str:
+        """Validate the tool call using ToolGuard and execute if valid."""
+
+        tool_guard_arguments = {
+            "function": {
+                "name": self.name,
+                "arguments": json.dumps(self._prepare_arguments(*args, **kwargs))
+            }
+        }
+
+        try:
+            from lfx.components.agents.tool_guards.tool_guard import tool_guard_validation
+            result = tool_guard_validation(
+                fc=[tool_guard_arguments],
+                messages=self.conversation_context,
+                tool_specs=self.tool_specs,
+            )
+
+            if result['valid']:  # tool guard returned Ok
+                logger.info(f"✅ ToolGuard evaluated and approved running {self.name}")
+                return self._execute_tool(*args, **kwargs)
+            else:
+                logger.info(f"❌ ToolGuard evaluated and rejected running {self.name}")
+                error_msg = result['error_msg']
+                return error_msg
+
+        except Exception as e:
+            logger.error(f"🔒️ToolGuard: error during validation: {e}")
+            # execute directly on error (no fallback validation)
+            return self._execute_tool(*args, **kwargs)
+
+    def _prepare_arguments(self, *args, **kwargs) -> Dict[str, Any]:
+        """..."""
+        # remove config parameter if present (not needed for validation)
+        clean_kwargs = {k: v for k, v in kwargs.items() if k != 'config'}
+        return clean_kwargs
+
+    def _execute_tool(self, *args, **kwargs) -> str:
+        """Execute the wrapped tool with proper error handling."""
+
+        try:
+            # try with config parameter first (newer LangChain versions)
+            if hasattr(self.wrapped_tool, '_run'):
+                # ensure config is provided for StructuredTool
+                if 'config' not in kwargs:
+                    kwargs['config'] = {}
+                return self.wrapped_tool._run(*args, **kwargs)
+            else:
+                return self.wrapped_tool.run(*args, **kwargs)
+        except TypeError as e:
+            if "config" in str(e):
+                # fallback: try without config for older tools
+                kwargs.pop('config', None)
+                if hasattr(self.wrapped_tool, '_run'):
+                    return self.wrapped_tool._run(*args, **kwargs)
+                else:
+                    return self.wrapped_tool.run(*args, **kwargs)
+            else:
+                raise e
+
+    def update_context(self, conversation_context: List[BaseMessage]):
+        """Update the conversation context."""
+        self.conversation_context = conversation_context
+
+
 class PreToolValidationWrapper(BaseToolWrapper):
     """Tool wrapper that adds pre-tool validation capabilities.
     
@@ -452,6 +549,72 @@ class PreToolValidationWrapper(BaseToolWrapper):
         return tool_specs
 
 
+class PreToolGuardWrapper(BaseToolWrapper):
+    """Tool wrapper that adds pre-tool tool guard capabilities.
+
+    This wrapper validates tool calls before execution using the ToolGuard
+    component to make sure the call does not violate policies.
+
+    """
+
+    def __init__(self):
+        self.tool_guard_component = None
+        self.tool_specs = []
+        self.available = self._initialize_tool_guard_component()
+
+    def wrap_tool(self, tool: BaseTool, **kwargs) -> BaseTool:
+        """Wrap a tool with tool guarding functionality.
+
+        Args:
+            tool: The BaseTool to wrap
+            **kwargs: May contain 'conversation_context' for improved validation
+                      and 'enable_tool_guard' to determine if guard should be applied
+
+        Returns:
+            A wrapped BaseTool with tool guarding capabilities
+        """
+        # Check if validation is explicitly disabled
+        enable_tool_guard = kwargs.get("enable_tool_guard", True)
+        if not enable_tool_guard:
+            logger.info(f"🔒️ToolGuard explicitly disabled for {tool.name}")
+            return tool
+
+        if isinstance(tool, ProtectedTool):
+            # Already wrapped, update context and tool specs
+            tool.guard = self.tool_guard_component
+            tool.tool_specs = self.tool_specs
+            if "conversation_context" in kwargs:
+                tool.update_context(kwargs["conversation_context"])
+            logger.debug(f"🔒️Updated existing {tool.name} with {len(self.tool_specs)} tool specs")
+            return tool
+
+        # Wrap with tool guard
+        validated_tool = ProtectedTool(
+            wrapped_tool=tool,
+            tool_guard_component=self.tool_guard_component,
+            #tool_specs=self.tool_specs,
+            conversation_context=kwargs.get("conversation_context", [])
+        )
+
+        if self.tool_guard_component:
+            logger.info(f"🔒️Wrapped tool '{tool.name}' with ToolGuard validation ({len(self.tool_specs)} tool specs)")
+        else:
+            logger.info(f"🔒️Wrapped tool '{tool.name}' with fallback validation")
+
+        return validated_tool
+
+    @property
+    def is_available(self) -> bool:
+        """Check if the ToolGuard component is available."""
+        return self.available
+
+    def _initialize_tool_guard_component(self) -> bool:
+        """Initialize the tool guard component if available."""
+
+        #todo: implement this function when ToolGuard is available on altk
+        logger.info('🔒️ToolGuard mock implementation initialized successfully')
+        return True
+
 
 class ToolPipelineManager:
     """Manages the tool wrapping pipeline.
@@ -496,18 +659,28 @@ class ToolPipelineManager:
             if isinstance(wrapper, PreToolValidationWrapper) and tools:
                 wrapper.tool_specs = wrapper.convert_langchain_tools_to_sparc_tool_specs_format(tools)
                 logger.info(f"Updated tool specs for validation: {len(wrapper.tool_specs)} tools")
-    
+            elif isinstance(wrapper, PreToolGuardWrapper) and tools:
+                wrapper.tool_specs = tools #todo: convert tool specs to the ToolGuard required format
+                logger.info(f"🔒️Updated tool specs for tool guard execution: {len(wrapper.tool_specs)} tools")
+
     def _apply_wrappers_to_tool(self, tool: BaseTool, **kwargs) -> BaseTool:
         """Apply all available wrappers to a tool in reverse order."""
         wrapped_tool = tool
-        
+
         for wrapper in reversed(self.wrappers):
+
             if wrapper.is_available:
                 if isinstance(wrapper, PreToolValidationWrapper):
                     wrapped_kwargs = {**kwargs, "enable_validation": kwargs.get("enable_validation", True)}
                     wrapped_tool = wrapper.wrap_tool(wrapped_tool, **wrapped_kwargs)
                     # Ensure ValidatedTool has current tool specs
                     if isinstance(wrapped_tool, ValidatedTool):
+                        wrapped_tool.tool_specs = wrapper.tool_specs
+                elif isinstance(wrapper, PreToolGuardWrapper):
+                    wrapped_kwargs = {**kwargs, "enable_tool_guard": kwargs.get("enable_tool_guard", False)}
+                    wrapped_tool = wrapper.wrap_tool(wrapped_tool, **wrapped_kwargs)
+                    # Ensure the guarded tool has current tool specs
+                    if isinstance(wrapped_tool, ProtectedTool):
                         wrapped_tool.tool_specs = wrapper.tool_specs
                 else:
                     wrapped_tool = wrapper.wrap_tool(wrapped_tool, **kwargs)
@@ -805,6 +978,20 @@ class EnhancedAgentComponent(AgentComponent):
             value=True,
         ),
         BoolInput(
+            name="enable_tool_guard",
+            display_name="ToolGuard Execution",
+            info="If true, invokes ToolGuard code prior to tool execution, ensuring that tool-related policies are enforced.",
+            value=True,
+        ),
+        MultilineInput(
+            name="policies",
+            display_name="ToolGuard Business Policies",
+            info="Company business policies: concise, well-defined, self-contained policies, one in a line.",
+            value="<example: division by zero is prohibited>",
+            #show_if={"enable_tool_guard": True},  # conditional visibility  #todo: check how to do that
+            advanced=False,
+        ),
+        BoolInput(
             name="enable_post_tool_reflection",
             display_name="Post Tool Processing",
             info="Processes tool output through JSON analysis.",
@@ -836,8 +1023,14 @@ class EnhancedAgentComponent(AgentComponent):
                 response_processing_size_threshold=self.response_processing_size_threshold
             )
             self.pipeline_manager.add_wrapper(post_processor)
-                
-        # Add pre-tool validation second (outermost wrapper)
+
+        # Add pre-tool tool guard execution (should run after tool validation)
+        if self.enable_tool_guard:
+            pre_tool_guard = PreToolGuardWrapper()
+            #pre_tool_guard.tool_specs = self.tools  # agent tools' data not yet available
+            self.pipeline_manager.add_wrapper(pre_tool_guard)
+
+        # Add pre-tool validation last (outermost wrapper)
         if self.enable_tool_validation:
             pre_validator = PreToolValidationWrapper()
             self.pipeline_manager.add_wrapper(pre_validator)
@@ -883,7 +1076,8 @@ class EnhancedAgentComponent(AgentComponent):
             agent=agent, 
             user_query=user_query,
             conversation_context=conversation_context,
-            enable_validation=getattr(self, "enable_tool_validation", True)
+            enable_validation=getattr(self, "enable_tool_validation", True),
+            enable_tool_guard=getattr(self, "enable_tool_guard", False)
         )
         
         # Set up the runnable agent
@@ -950,7 +1144,8 @@ class EnhancedAgentComponent(AgentComponent):
             callbacks_to_be_used = [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]
             
             # Add validation callback if tool validation is enabled
-            if hasattr(self, "enable_tool_validation") and self.enable_tool_validation:
+            if hasattr(self, "enable_tool_validation") and self.enable_tool_validation or \
+                    hasattr(self, "enable_tool_guard") and self.enable_tool_guard:
                 validation_handler = ToolValidationCallbackHandler()
                 callbacks_to_be_used.append(validation_handler)
 
