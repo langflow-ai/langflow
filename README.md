@@ -42,7 +42,7 @@ Requires Python 3.10–3.13 and [uv](https://docs.astral.sh/uv/getting-started/i
 #### Install
 
 ```shell
-$ uv pip install langflow -U
+uv pip install langflow -U
 ```
 
 Installs the latest Langflow package.
@@ -50,7 +50,7 @@ Installs the latest Langflow package.
 #### Run
 
 ```shell
-$ uv run langflow run
+uv run langflow run
 ```
 
 Starts the Langflow server at http://127.0.0.1:7860.
