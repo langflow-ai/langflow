@@ -31,6 +31,7 @@ export async function adjustScreenView(
     }
   }
   if (fitViewButton > 0) {
-    await page.getByTestId("canvas_controls_dropdown").click();
+    // Click outside the dropdown to close it by clicking on the body
+    await page.locator("body").click();
   }
 }

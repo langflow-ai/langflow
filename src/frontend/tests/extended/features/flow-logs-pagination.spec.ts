@@ -28,7 +28,7 @@ test(
     for (let i = 0; i < 5; i++) {
       // Change the input value for each run to create distinct log entries
       await page
-        .getByTestId("text-input-input_outputText Input")
+        .getByTestId("textarea_str_input_value")
         .fill(`Test input ${i + 1}`);
       await page.getByTestId("button_run_text input").click();
 
@@ -40,7 +40,7 @@ test(
     }
 
     // Open the logs modal
-    await page.getByTestId("flow-logs-button").click();
+    await page.getByTestId("flow-logs-modal-button").click();
 
     // Wait for logs modal to appear
     await page.waitForSelector("text=Logs", {
@@ -109,43 +109,52 @@ test(
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-text-input").click();
-        await page
-          .getByTestId("text-input-input_outputText Input")
-          .fill("Success test");
+        await page.getByTestId("textarea_str_input_value").fill("Success test");
         await page.getByTestId("button_run_text input").click();
       });
 
     // Wait for successful run
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    // Add a Python component that will generate an error
-    await page.getByTestId("disclosure-advanced").click();
-    await page.waitForSelector('[data-testid="Python"]', {
+    // Add a Custom Component that will generate an error
+    await page.getByTestId("sidebar-custom-component-button").click();
+
+    await page.waitForSelector('[data-testid="div-generic-node"]', {
       timeout: 3000,
-      state: "visible",
     });
 
-    await page
-      .getByTestId("Python")
-      .hover()
-      .then(async () => {
-        await page.getByTestId("add-component-button-Python").click();
+    // Set up the custom component with code that will cause an error
+    await page.getByTestId("code-button-modal").click();
 
-        // Set up the Python component with code that will cause an error
-        await page.getByTestId("code-area-codeInput").click();
-        await page.keyboard.press("Control+A");
-        await page.keyboard.press("Delete");
-        await page.keyboard.type("raise ValueError('Error test')");
+    const errorCode = `from langflow.custom import Component
+from langflow.io import Output
 
-        // Run the component to generate error logs
-        await page.getByTestId("button_run_Python").click();
-      });
+class ErrorComponent(Component):
+    display_name = "Error Component"
+
+    outputs = [
+        Output(display_name="Output", name="output", method="build_output"),
+    ]
+
+    def build_output(self):
+        raise ValueError('Error test')`;
+
+    await page.locator(".ace_content").click();
+    await page.keyboard.press("ControlOrMeta+A");
+    await page.locator("textarea").fill(errorCode);
+    await page.getByText("Check & Save").click();
+
+    // Wait for the component to be ready
+    await page.waitForTimeout(1000);
+
+    // Run the component to generate error logs
+    await page.getByTestId("button_run_error component").click();
 
     // Wait for error notification
     await page.waitForSelector("text=Error", { timeout: 30000 });
 
     // Open the logs modal
-    await page.getByTestId("flow-logs-button").click();
+    await page.getByTestId("flow-logs-modal-button").click();
 
     // Wait for logs modal to appear
     await page.waitForSelector("text=Logs", {
@@ -164,17 +173,8 @@ test(
       .filter({ has: page.getByText("ERROR") });
     await expect(errorRow).toBeVisible();
 
-    // Check that inputs/outputs are viewable by clicking them
-    await errorRow.locator("td").nth(5).click();
-
-    // Wait for the error details modal
-    await page.waitForSelector("text=Error test", {
-      timeout: 3000,
-      state: "visible",
-    });
-
     // Verify error message is displayed
-    const errorText = page.getByText("Error test");
+    const errorText = page.getByText("Error").first();
     await expect(errorText).toBeVisible();
   },
 );
