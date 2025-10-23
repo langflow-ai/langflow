@@ -75,7 +75,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0 # Fetch all history - required for tags (?) 
+          fetch-depth: 0 # Fetch all history - required for tags (?)
       - name: Validate that input is a tag, not a branch
         run: |
           # Check if the input exists as a tag
@@ -128,7 +128,6 @@ jobs:
       run-all-tests: true
       runs-on: ubuntu-latest
     secrets: inherit
-
 
   build-base:
     name: Build Langflow Base
@@ -450,14 +449,26 @@ jobs:
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
-  call_docker_build_main:
-    name: Call Docker Build Workflow for Langflow
+  call_docker_build_main_backend:
+    name: Call Docker Build Workflow for Langflow Backend
     if: ${{ inputs.build_docker_main }}
     needs: [ci]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
-      release_type: main
+      release_type: main-backend
+      pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
+    secrets: inherit
+
+  call_docker_build_main_frontend:
+    name: Call Docker Build Workflow for Langflow Frontend
+    if: ${{ inputs.build_docker_main }}
+    needs: [ci]
+    uses: ./.github/workflows/docker-build-v2.yml
+    with:
+      ref: ${{ inputs.release_tag }}
+      release_type: main-frontend
       pre_release: ${{ inputs.pre_release }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
