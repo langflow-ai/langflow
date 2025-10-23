@@ -1,18 +1,23 @@
 """FastMCP server for Langflow Agentic tools.
 
-This module exposes template search functions as MCP tools using FastMCP decorators.
+This module exposes template search and creation functions as MCP tools using FastMCP decorators.
 """
 
 from typing import Any
+from uuid import UUID
 
 from mcp.server.fastmcp import FastMCP
 
+from langflow.agentic.utils.template_create import (
+    create_flow_from_template_and_get_link,
+)
 from langflow.agentic.utils.template_search import (
     get_all_tags,
     get_template_by_id,
     get_templates_count,
     list_templates,
 )
+from langflow.services.deps import session_scope
 
 # Initialize FastMCP server
 mcp = FastMCP("langflow-agentic")
@@ -114,6 +119,31 @@ def count_templates() -> int:
     """
     return get_templates_count()
 
+
+# Flow creation from template
+@mcp.tool()
+async def create_flow_from_template(
+    template_id: str,
+    user_id: str,
+    folder_id: str | None = None,
+) -> dict[str, Any]:
+    """Create a new flow from a starter template and return its id and UI link.
+
+    Args:
+        template_id: ID field inside the starter template JSON file.
+        user_id: UUID string of the owner user.
+        folder_id: Optional target folder UUID; default folder is used if omitted.
+
+    Returns:
+        Dict with keys: {"id": str, "link": str}
+    """
+    async with session_scope() as session:
+        return await create_flow_from_template_and_get_link(
+            session=session,
+            user_id=UUID(user_id),
+            template_id=template_id,
+            target_folder_id=UUID(folder_id) if folder_id else None,
+        )
 
 # Entry point for running the server
 if __name__ == "__main__":
