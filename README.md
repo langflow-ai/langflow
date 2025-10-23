@@ -46,7 +46,7 @@ From a fresh directory, run:
 uv pip install langflow -U
 ```
 
-This installs the latest Langflow package.
+The latest Langflow package is installed.
 
 #### Run
 
