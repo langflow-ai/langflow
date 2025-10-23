@@ -15,6 +15,7 @@ const LogCanvasControls = () => {
           variant="primary"
           size="sm"
           className="flex items-center !gap-1.5"
+          data-testid="flow-logs-modal-button"
         >
           <ForwardedIconComponent name="Terminal" className="text-primary" />
           <span className="text-mmd font-normal">Logs</span>
