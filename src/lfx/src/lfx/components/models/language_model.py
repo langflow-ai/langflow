@@ -1,6 +1,8 @@
 from typing import Any
 
 from langchain_anthropic import ChatAnthropic
+from langchain_ibm import ChatWatsonx
+from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
@@ -18,11 +20,13 @@ MODEL_CLASSES = {
     "ChatOpenAI": ChatOpenAI,
     "ChatAnthropic": ChatAnthropic,
     "ChatGoogleGenerativeAIFixed": ChatGoogleGenerativeAIFixed,
+    "ChatOllama": ChatOllama,
+    "ChatWatsonx": ChatWatsonx,
 }
 
 
 def _get_language_model_options() -> list[dict[str, Any]]:
-    """Return a list of available model providers with their configuration."""
+    """Return a list of available language model providers with their configuration."""
     # OpenAI models
     openai_options = [
         {
@@ -31,7 +35,7 @@ def _get_language_model_options() -> list[dict[str, Any]]:
             "category": "OpenAI",
             "provider": "OpenAI",
             "metadata": {
-                "context_length": 128000,  # Default, can be model-specific if needed
+                "context_length": 128000,
                 "model_class": "ChatOpenAI",
                 "model_name_param": "model",
                 "api_key_param": "api_key",
@@ -49,7 +53,7 @@ def _get_language_model_options() -> list[dict[str, Any]]:
             "category": "Anthropic",
             "provider": "Anthropic",
             "metadata": {
-                "context_length": 200000,  # Default for Anthropic
+                "context_length": 200000,
                 "model_class": "ChatAnthropic",
                 "model_name_param": "model",
                 "api_key_param": "api_key",
@@ -66,7 +70,7 @@ def _get_language_model_options() -> list[dict[str, Any]]:
             "category": "Google",
             "provider": "Google",
             "metadata": {
-                "context_length": 32768,  # Default for Google
+                "context_length": 32768,
                 "model_class": "ChatGoogleGenerativeAIFixed",
                 "model_name_param": "model",
                 "api_key_param": "google_api_key",
@@ -75,18 +79,48 @@ def _get_language_model_options() -> list[dict[str, Any]]:
         for model_name in GOOGLE_GENERATIVE_AI_MODELS
     ]
 
+    # Ollama models (local)
+    ollama_options = [
+        {
+            "name": "ChatOllama",
+            "icon": "Ollama",
+            "category": "Ollama",
+            "provider": "Ollama",
+            "metadata": {
+                "context_length": 8192,  # Varies by model
+                "model_class": "ChatOllama",
+                "model_name_param": "model",
+                "base_url_param": "base_url",
+            },
+        }
+    ]
+
+    # WatsonX models
+    watsonx_options = [
+        {
+            "name": "ChatWatsonx",
+            "icon": "WatsonxAI",
+            "category": "IBM WatsonX",
+            "provider": "IBM WatsonX",
+            "metadata": {
+                "context_length": 8192,  # Varies by model
+                "model_class": "ChatWatsonx",
+                "model_name_param": "model_id",
+                "api_key_param": "apikey",
+                "url_param": "url",
+                "project_id_param": "project_id",
+            },
+        }
+    ]
+
     # Combine all options and deduplicate by provider+name
-    all_options = openai_options + anthropic_options + google_options
-    seen = set()
-    deduplicated = []
-    for option in all_options:
-        key = (option["provider"], option["name"])
-        if key not in seen:
-            seen.add(key)
-            deduplicated.append(option)
-
-    return deduplicated
-
+    return (
+        openai_options
+        + anthropic_options
+        + google_options
+        + ollama_options
+        + watsonx_options
+    )
 
 # Compute model options once at module level
 _MODEL_OPTIONS = _get_language_model_options()

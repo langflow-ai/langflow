@@ -1,6 +1,8 @@
 from typing import Any
 
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_ibm import WatsonxEmbeddings
+from langchain_ollama import OllamaEmbeddings
 from langchain_openai import OpenAIEmbeddings
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
@@ -20,11 +22,13 @@ from lfx.io import (
 EMBEDDING_CLASSES = {
     "GoogleGenerativeAIEmbeddings": GoogleGenerativeAIEmbeddings,
     "OpenAIEmbeddings": OpenAIEmbeddings,
+    "OllamaEmbeddings": OllamaEmbeddings,
+    "WatsonxEmbeddings": WatsonxEmbeddings,
 }
 
 
 def _get_embedding_model_options() -> list[dict[str, Any]]:
-    """Return a list of available model providers with their configuration."""
+    """Return a list of available embedding model providers with their configuration."""
     openai_options = [
         {
             "name": model_name,
@@ -67,7 +71,46 @@ def _get_embedding_model_options() -> list[dict[str, Any]]:
         }
     ]
 
-    return openai_options + google_options
+    ollama_options = [
+        {
+            "name": "OllamaEmbeddings",
+            "icon": "Ollama",
+            "category": "Ollama",
+            "provider": "Ollama",
+            "metadata": {
+                "embedding_class": "OllamaEmbeddings",
+                "param_mapping": {
+                    "model": "model",
+                    "base_url": "base_url",
+                    "num_ctx": "num_ctx",
+                    "request_timeout": "request_timeout",
+                    "model_kwargs": "model_kwargs",
+                },
+            },
+        }
+    ]
+
+    watsonx_options = [
+        {
+            "name": "WatsonxEmbeddings",
+            "icon": "WatsonxAI",
+            "category": "IBM WatsonX",
+            "provider": "IBM WatsonX",
+            "metadata": {
+                "embedding_class": "WatsonxEmbeddings",
+                "param_mapping": {
+                    "model_id": "model_id",
+                    "url": "url",
+                    "api_key": "apikey",
+                    "project_id": "project_id",
+                    "space_id": "space_id",
+                    "request_timeout": "request_timeout",
+                },
+            },
+        }
+    ]
+
+    return openai_options + google_options + ollama_options + watsonx_options
 
 
 # Compute model options once at module level
