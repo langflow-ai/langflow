@@ -207,7 +207,7 @@ class AgentComponent(ToolCallingAgentComponent):
             if not self.input_value or not str(self.input_value).strip():
                 msg = "Message cannot be empty. Please provide a valid message."
                 raise ValueError(msg)
-            
+
             llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
             # Set up and run agent
             self.set(

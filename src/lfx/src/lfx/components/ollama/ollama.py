@@ -148,12 +148,12 @@ class ChatOllamaComponent(LCModelComponent):
         if not self.model_name or not str(self.model_name).strip():
             msg = "Model name cannot be empty. Please select a model from the dropdown or enter a valid model name."
             raise ValueError(msg)
-        
+
         # Validate that base_url is not empty
         if not self.base_url or not str(self.base_url).strip():
             msg = "Base URL cannot be empty. Please provide a valid Ollama base URL (e.g., http://localhost:11434)."
             raise ValueError(msg)
-        
+
         # Mapping mirostat settings to their corresponding values
         mirostat_options = {"Mirostat": 1, "Mirostat 2.0": 2}
 
@@ -360,11 +360,11 @@ class ChatOllamaComponent(LCModelComponent):
 
     async def check_model_supports_mirostat(self, base_url_value: str, model_name: str) -> bool:
         """Check if a specific model supports mirostat parameter.
-        
+
         Args:
             base_url_value (str): The base URL of the Ollama API.
             model_name (str): The name of the model to check.
-            
+
         Returns:
             bool: True if the model supports mirostat, False otherwise.
         """
@@ -373,9 +373,9 @@ class ChatOllamaComponent(LCModelComponent):
             if not base_url.endswith("/"):
                 base_url = base_url + "/"
             base_url = transform_localhost_url(base_url)
-            
+
             show_url = urljoin(base_url, "api/show")
-            
+
             async with httpx.AsyncClient() as client:
                 payload = {"model": model_name}
                 show_response = await client.post(show_url, json=payload)
@@ -383,13 +383,13 @@ class ChatOllamaComponent(LCModelComponent):
                 json_data = show_response.json()
                 if asyncio.iscoroutine(json_data):
                     json_data = await json_data
-                
+
                 # Check if the model has parameter information
                 parameters = json_data.get("parameters", {})
                 # Some models might not have detailed parameter info, so we'll be conservative
                 # and assume they support mirostat unless we know otherwise
                 return True
-                
+
         except (httpx.RequestError, ValueError) as e:
             await logger.awarning(f"Could not check mirostat support for model {model_name}: {e}")
             # If we can't check, assume it supports mirostat to avoid breaking functionality

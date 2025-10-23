@@ -228,12 +228,11 @@ class LCAgentComponent(Component):
             if "validation error" in error_details.lower():
                 logger.error(f"Agent validation error: {error_details}")
                 raise ValueError(f"Agent validation failed: {error_details}") from e
-            elif "connection" in error_details.lower() or "timeout" in error_details.lower():
+            if "connection" in error_details.lower() or "timeout" in error_details.lower():
                 logger.error(f"Agent connection error: {error_details}")
                 raise ConnectionError(f"Agent connection failed: {error_details}") from e
-            else:
-                logger.error(f"Unexpected agent error: {error_details}")
-                raise
+            logger.error(f"Unexpected agent error: {error_details}")
+            raise
 
         self.status = result
         return result
