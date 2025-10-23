@@ -931,6 +931,9 @@ export const POLLING_MESSAGES = {
   STREAMING_NOT_SUPPORTED: "Streaming not supported",
 } as const;
 
+export const DEFAULT_SESSION_NAME = "Default session";
+export const NEW_SESSION_NAME = "New chat";
+
 export const BUILD_POLLING_INTERVAL = 25;
 
 export const IS_AUTO_LOGIN =

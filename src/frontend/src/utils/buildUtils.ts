@@ -1,6 +1,5 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { AxiosError } from "axios";
-import { flushSync } from "react-dom";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   BUILD_POLLING_INTERVAL,
@@ -12,7 +11,6 @@ import {
   customCancelBuildUrl,
   customEventsUrl,
 } from "@/customization/utils/custom-buildUtils";
-import { useMessagesStore } from "@/stores/messagesStore";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
@@ -20,6 +18,7 @@ import useFlowStore from "../stores/flowStore";
 import type { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import type { VertexLayerElementType } from "../types/zustand/flow";
+import { removeMessages, updateMessage } from "./messageUtils";
 import { isStringArray, tryParseJson } from "./utils";
 
 type BuildVerticesParams = {
@@ -164,6 +163,8 @@ const MIN_VISUAL_BUILD_TIME_MS = 300;
 
 async function pollBuildEvents(
   url: string,
+  flowId: string,
+  session: string,
   buildResults: Array<boolean>,
   verticesStartTimeMs: Map<string, number>,
   callbacks: {
@@ -227,6 +228,8 @@ async function pollBuildEvents(
       const result = await onEvent(
         event.event,
         event.data,
+        flowId,
+        session,
         buildResults,
         verticesStartTimeMs,
         callbacks,
@@ -334,14 +337,22 @@ export async function buildFlowVertices({
         onData: async (event) => {
           const type = event["event"];
           const data = event["data"];
-          return await onEvent(type, data, buildResults, verticesStartTimeMs, {
-            onBuildStart,
-            onBuildUpdate,
-            onBuildComplete,
-            onBuildError,
-            onGetOrderSuccess,
-            onValidateNodes,
-          });
+          return await onEvent(
+            type,
+            data,
+            flowId,
+            session ?? "",
+            buildResults,
+            verticesStartTimeMs,
+            {
+              onBuildStart,
+              onBuildUpdate,
+              onBuildComplete,
+              onBuildError,
+              onGetOrderSuccess,
+              onValidateNodes,
+            },
+          );
         },
         onError: (statusCode) => {
           if (statusCode === 404) {
@@ -414,14 +425,22 @@ export async function buildFlowVertices({
         onData: async (event) => {
           const type = event["event"];
           const data = event["data"];
-          return await onEvent(type, data, buildResults, verticesStartTimeMs, {
-            onBuildStart,
-            onBuildUpdate,
-            onBuildComplete,
-            onBuildError,
-            onGetOrderSuccess,
-            onValidateNodes,
-          });
+          return await onEvent(
+            type,
+            data,
+            flowId,
+            session ?? "",
+            buildResults,
+            verticesStartTimeMs,
+            {
+              onBuildStart,
+              onBuildUpdate,
+              onBuildComplete,
+              onBuildError,
+              onGetOrderSuccess,
+              onValidateNodes,
+            },
+          );
         },
         onError: (statusCode) => {
           if (statusCode === 404) {
@@ -451,6 +470,8 @@ export async function buildFlowVertices({
       };
       return await pollBuildEvents(
         eventsUrl,
+        flowId,
+        session ?? "",
         buildResults,
         verticesStartTimeMs,
         callbacks,
@@ -490,6 +511,8 @@ export async function buildFlowVertices({
 async function onEvent(
   type: string,
   data: any,
+  flowId: string,
+  session: string,
   buildResults: boolean[],
   verticesStartTimeMs: Map<string, number>,
   callbacks: {
@@ -611,20 +634,11 @@ async function onEvent(
     }
     case "add_message": {
       // Add a message to the messages store.
-      useMessagesStore.getState().addMessage(data);
-      return true;
-    }
-    case "token": {
-      // Use flushSync with a timeout to avoid React batching issues.
-      setTimeout(() => {
-        flushSync(() => {
-          useMessagesStore.getState().updateMessageText(data.id, data.chunk);
-        });
-      }, 10);
+      updateMessage(data);
       return true;
     }
     case "remove_message": {
-      useMessagesStore.getState().removeMessage(data);
+      removeMessages([data.id], session, flowId);
       return true;
     }
     case "end": {
@@ -635,7 +649,7 @@ async function onEvent(
     }
     case "error": {
       if (data?.category === "error") {
-        useMessagesStore.getState().addMessage(data);
+        updateMessage(data);
         // Use a falsy check to correctly determine if the source ID is missing.
         if (!data?.properties?.source?.id) {
           onBuildError && onBuildError("Error Building Flow", [data.text]);

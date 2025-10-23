@@ -16,6 +16,7 @@ import type {
   FlowType,
   NodeDataType,
 } from "../flow/index";
+import type { Message } from "../messages";
 export type InputComponentType = {
   name?: string;
   autoFocus?: boolean;
@@ -539,17 +540,7 @@ export type ChatInputType = {
   setFiles: (
     files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
   ) => void;
-  inputRef: {
-    current: any;
-  };
   noInput: boolean;
-  sendMessage: ({
-    repeat,
-    files,
-  }: {
-    repeat: number;
-    files?: string[];
-  }) => Promise<void>;
   playgroundPage: boolean;
 };
 
@@ -632,15 +623,14 @@ export type codeAreaModalPropsType = {
 };
 
 export type chatMessagePropsType = {
-  chat: ChatMessageType;
+  chat: Message;
   lastMessage: boolean;
-  updateChat: (
-    chat: ChatMessageType,
-    message: string,
-    stream_url?: string,
-  ) => void;
   closeChat?: () => void;
   playgroundPage?: boolean;
+};
+
+export type errorMessagePropsType = {
+  chat: Message;
 };
 
 export type genericModalPropsType = {
@@ -716,6 +706,10 @@ export type newFlowModalPropsType = {
   setOpen: (open: boolean) => void;
 };
 
+export type PlaygroundModalPropsType = {
+  playgroundPage?: boolean;
+};
+
 export type IOModalPropsType = {
   children: JSX.Element;
   open: boolean;
@@ -723,8 +717,6 @@ export type IOModalPropsType = {
   disable?: boolean;
   isPlayground?: boolean;
   cleanOnClose?: boolean;
-  canvasOpen?: boolean;
-  playgroundPage?: boolean;
 };
 
 export type buttonBoxPropsType = {
@@ -829,21 +821,6 @@ export type IOFieldViewProps = {
 };
 
 export type UndrawCardComponentProps = { flow: FlowType };
-
-export type chatViewProps = {
-  sidebarOpen: boolean;
-  sendMessage: ({
-    repeat,
-    files,
-  }: {
-    repeat: number;
-    files?: string[];
-  }) => Promise<void>;
-  visibleSession?: string;
-  focusChat?: string;
-  closeChat?: () => void;
-  playgroundPage?: boolean;
-};
 
 export type IOFileInputProps = {
   field: InputFieldType;
