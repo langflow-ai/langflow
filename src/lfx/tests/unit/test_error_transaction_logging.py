@@ -6,7 +6,6 @@ Tests the specific error logging enhancements we added to transaction handling.
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.utils import log_transaction
 
