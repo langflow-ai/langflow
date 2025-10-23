@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 
     from langflow.services.tracing.schema import Log
 
+from threading import Lock
+
 
 class LangFuseTracer(BaseTracer):
     flow_id: str
@@ -153,12 +155,24 @@ class LangFuseTracer(BaseTracer):
         self.trace.update(**serialize(content_update))
 
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
+        """Get langchain callback for tracing.
+
+        Note: Langfuse callbacks have an architectural issue with agent tool execution.
+        The callback's internal run tracking doesn't properly handle agent tool calls
+        because the agent's run_id is cleaned up before tools execute. We wrap the
+        callback to auto-create missing parent spans on-demand.
+        """
         if not self._ready:
             return None
 
-        # get callback from parent span
-        stateful_client = self.spans[next(reversed(self.spans))] if len(self.spans) > 0 else self.trace
-        return stateful_client.get_langchain_handler()
+        # Get the base callback
+        if len(self.spans) > 0:
+            current_span = self.spans[next(reversed(self.spans))]
+            base_callback = current_span.get_langchain_handler()
+        else:
+            base_callback = self.trace.get_langchain_handler()
+
+        return _wrap_lc_cb(base_callback)
 
     @staticmethod
     def _get_config() -> dict:
@@ -168,3 +182,23 @@ class LangFuseTracer(BaseTracer):
         if secret_key and public_key and host:
             return {"secret_key": secret_key, "public_key": public_key, "host": host}
         return {}
+
+
+def _wrap_lc_cb(base_callback):
+    """Create a callback wrapper that ensures parent runs exist for tool execution."""
+    instance_lock = Lock()
+
+    class LangchainCBWrapper(type(base_callback)):
+        def on_tool_start(self, serialized, input_str, *, run_id, parent_run_id=None, **kwargs):
+            if parent_run_id and parent_run_id not in self.runs:
+                with instance_lock:
+                    if parent_run_id not in self.runs:
+                        logger.debug("Langfuse: Auto-creating missing parent span")
+                        self.runs[parent_run_id] = self.trace.span(
+                            name="Agent Execution", metadata={"auto_created": True}
+                        )
+            return super().on_tool_start(serialized, input_str, run_id=run_id, parent_run_id=parent_run_id, **kwargs)
+
+    wrapped = LangchainCBWrapper.__new__(LangchainCBWrapper)
+    wrapped.__dict__.update(base_callback.__dict__)
+    return wrapped
