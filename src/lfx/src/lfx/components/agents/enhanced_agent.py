@@ -6,7 +6,7 @@ import json
 import os
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, TYPE_CHECKING, cast
+from typing import Any, Dict, List, Optional, TYPE_CHECKING, cast, Callable
 
 import ast
 from altk.post_tool_reflection_toolkit.code_generation.code_generation import (
@@ -261,7 +261,7 @@ class ProtectedTool(BaseTool):
     wrapped_tool: BaseTool = Field(...)
     toolguard_component: Optional[Any] = Field(default=None)
     conversation_context: List[BaseMessage] = Field(default_factory=list)
-    tool_specs: List[Dict] = Field(default_factory=list)
+    tool_specs: List[Callable] = Field(default_factory=list)
 
     def __init__(self, wrapped_tool: BaseTool, toolguard_component=None, conversation_context=None, tool_specs=None, **kwargs):
         super().__init__(
@@ -592,7 +592,7 @@ class PreToolGuardWrapper(BaseToolWrapper):
         validated_tool = ProtectedTool(
             wrapped_tool=tool,
             tool_guard_component=self.tool_guard_component,
-            #tool_specs=self.tool_specs,
+            tool_specs=self.tool_specs,
             conversation_context=kwargs.get("conversation_context", [])
         )
 
@@ -660,7 +660,9 @@ class ToolPipelineManager:
                 wrapper.tool_specs = wrapper.convert_langchain_tools_to_sparc_tool_specs_format(tools)
                 logger.info(f"Updated tool specs for validation: {len(wrapper.tool_specs)} tools")
             elif isinstance(wrapper, PreToolGuardWrapper) and tools:
-                wrapper.tool_specs = tools #todo: convert tool specs to the ToolGuard required format
+                wrapper.tool_specs = tools
+                #if willing to have a list of json-like tool definitions
+                #wrapper.tool_specs = PreToolValidationWrapper.convert_langchain_tools_to_sparc_tool_specs_format(tools)
                 logger.info(f"🔒️Updated tool specs for tool guard execution: {len(wrapper.tool_specs)} tools")
 
     def _apply_wrappers_to_tool(self, tool: BaseTool, **kwargs) -> BaseTool:
