@@ -227,19 +227,18 @@ class ChatOllamaComponent(LCModelComponent):
                     f"Please check the model parameters and try again."
                 )
                 raise ValueError(msg) from e
-            elif "connection" in error_details.lower() or "timeout" in error_details.lower():
+            if "connection" in error_details.lower() or "timeout" in error_details.lower():
                 msg = (
                     f"Unable to connect to the Ollama API: {error_details}. "
                     f"Please verify the base URL ({self.base_url}), ensure Ollama is running, "
                     f"and that the model '{self.model_name}' is pulled."
                 )
                 raise ConnectionError(msg) from e
-            else:
-                msg = (
-                    f"Unable to initialize Ollama model: {error_details}. "
-                    f"Please verify the base URL, ensure the relevant Ollama model is pulled, and try again."
-                )
-                raise ValueError(msg) from e
+            msg = (
+                f"Unable to initialize Ollama model: {error_details}. "
+                f"Please verify the base URL, ensure the relevant Ollama model is pulled, and try again."
+            )
+            raise ValueError(msg) from e
 
         return output
 
@@ -359,4 +358,3 @@ class ChatOllamaComponent(LCModelComponent):
             raise ValueError(msg) from e
 
         return model_ids
-
