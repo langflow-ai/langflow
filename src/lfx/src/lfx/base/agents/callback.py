@@ -28,7 +28,7 @@ class AgentAsyncHandler(AsyncCallbackHandler):
             return
         self.log_function(
             {
-                "type": "chain_start",
+                "type": "on_chain_start",
                 "serialized": serialized,
                 "inputs": inputs,
                 "run_id": run_id,
@@ -38,6 +38,27 @@ class AgentAsyncHandler(AsyncCallbackHandler):
                 **kwargs,
             },
             name="Chain Start",
+        )
+
+    async def on_chain_end(
+        self,
+        outputs: dict[str, Any],
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        **kwargs: Any,
+    ) -> None:
+        if self.log_function is None:
+            return
+        self.log_function(
+            {
+                "type": "on_chain_end",
+                "outputs": outputs,
+                "run_id": run_id,
+                "parent_run_id": parent_run_id,
+                **kwargs,
+            },
+            name="Chain End",
         )
 
     async def on_tool_start(
@@ -56,7 +77,7 @@ class AgentAsyncHandler(AsyncCallbackHandler):
             return
         self.log_function(
             {
-                "type": "tool_start",
+                "type": "on_tool_start",
                 "serialized": serialized,
                 "input_str": input_str,
                 "run_id": run_id,
@@ -74,13 +95,34 @@ class AgentAsyncHandler(AsyncCallbackHandler):
             return
         self.log_function(
             {
-                "type": "tool_end",
+                "type": "on_tool_end",
                 "output": output,
                 "run_id": run_id,
                 "parent_run_id": parent_run_id,
                 **kwargs,
             },
             name="Tool End",
+        )
+
+    async def on_tool_error(
+        self,
+        error: BaseException,
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        **kwargs: Any,
+    ) -> None:
+        if self.log_function is None:
+            return
+        self.log_function(
+            {
+                "type": "on_tool_error",
+                "error": str(error),
+                "run_id": run_id,
+                "parent_run_id": parent_run_id,
+                **kwargs,
+            },
+            name="Tool Error",
         )
 
     async def on_agent_action(
