@@ -1991,6 +1991,7 @@
                 "dialog_inputs": {},
                 "display_name": "Model Provider",
                 "dynamic": false,
+                "external_options": {},
                 "info": "Select the embedding model provider",
                 "name": "provider",
                 "options": [

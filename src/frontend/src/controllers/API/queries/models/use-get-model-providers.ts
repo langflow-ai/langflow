@@ -30,13 +30,16 @@ export const useGetModelProviders: useQueryFunctionType<
       // Fetch the models with provider information
       const response = await api.get<ModelProviderInfo[]>(getURL("MODELS"));
       const providersData = response.data;
-      console.log(providersData);
 
       // Check which providers are enabled by looking for their API keys in global variables
       const globalVariableNames = new Set(globalVariables.map((v) => v.name));
 
       return providersData.map((providerInfo) => {
-        const variableName = PROVIDER_VARIABLE_MAPPING[providerInfo.provider];
+        const normalized =
+          providerInfo.provider === "Google"
+            ? "Google Generative AI"
+            : providerInfo.provider;
+        const variableName = PROVIDER_VARIABLE_MAPPING[normalized];
         const is_enabled = variableName
           ? globalVariableNames.has(variableName)
           : false;

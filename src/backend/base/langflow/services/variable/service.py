@@ -110,17 +110,24 @@ class DatabaseVariableService(VariableService, Service):
 
         variables_read: list[VariableRead] = []
         for variable in variables:
-            value = None
-            if variable.type == GENERIC_TYPE:
+            variable_read = VariableRead.model_validate(variable, from_attributes=True)
+            if variable.type == CREDENTIAL_TYPE:
+                # Do not expose credential values
+                variable_read.value = None
+            elif variable.type == GENERIC_TYPE:
+                # Attempt legacy decrypt with fallback to plaintext
                 try:
-                    value = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+                    variable_read.value = auth_utils.decrypt_api_key(
+                        variable.value, settings_service=self.settings_service
+                    )
                 except Exception as e:  # noqa: BLE001
                     logger.debug(
                         f"Decryption of {variable.type} failed for variable '{variable.name}': {e}. Assuming plaintext."
                     )
-                    value = variable.value
-            variable_read = VariableRead.model_validate(variable, from_attributes=True)
-            variable_read.value = value
+                    variable_read.value = variable.value
+            else:
+                # For other types, set to None
+                variable_read.value = None
             variables_read.append(variable_read)
         return variables_read
 
@@ -205,7 +212,7 @@ class DatabaseVariableService(VariableService, Service):
         user_id: UUID | str,
         name: str,
         value: str,
-        category: str = CATEGORY_GLOBAL,
+        category: str | None = CATEGORY_GLOBAL,
         *,
         default_fields: Sequence[str] = (),
         type_: str = CREDENTIAL_TYPE,

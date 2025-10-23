@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from lfx.components.models.embedding_model import EmbeddingModelComponent
 
 from tests.base import ComponentTestBaseWithClient
@@ -16,8 +15,26 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
     @pytest.fixture
     def default_kwargs(self):
         return {
-            "provider": "OpenAI",
-            "model": "text-embedding-3-small",
+            "model": [
+                {
+                    "name": "text-embedding-3-small",
+                    "provider": "OpenAI",
+                    "metadata": {
+                        "embedding_class": "OpenAIEmbeddings",
+                        "param_mapping": {
+                            "model": "model",
+                            "api_key": "api_key",
+                            "api_base": "base_url",
+                            "dimensions": "dimensions",
+                            "chunk_size": "chunk_size",
+                            "request_timeout": "request_timeout",
+                            "max_retries": "max_retries",
+                            "show_progress_bar": "show_progress_bar",
+                            "model_kwargs": "model_kwargs",
+                        },
+                    },
+                }
+            ],
             "api_key": "test-api-key",
             "chunk_size": 1000,
             "max_retries": 3,
@@ -27,63 +44,117 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
     @pytest.fixture
     def file_names_mapping(self):
         """Return the file names mapping for version-specific files."""
+        return []
 
-    async def test_update_build_config_openai(self, component_class, default_kwargs):
-        component = component_class(**default_kwargs)
-        build_config = {
-            "model": {"options": [], "value": ""},
-            "api_key": {"display_name": "API Key"},
-            "api_base": {"display_name": "API Base URL"},
-        }
-        updated_config = component.update_build_config(build_config, "OpenAI", "provider")
-        assert updated_config["model"]["options"] == OPENAI_EMBEDDING_MODEL_NAMES
-        assert updated_config["model"]["value"] == OPENAI_EMBEDDING_MODEL_NAMES[0]
-        assert updated_config["api_key"]["display_name"] == "OpenAI API Key"
-        assert updated_config["api_base"]["display_name"] == "OpenAI API Base URL"
-
-    @patch("lfx.components.models.embedding_model.OpenAIEmbeddings")
-    async def test_build_embeddings_openai(self, mock_openai_embeddings, component_class, default_kwargs):
+    @patch("lfx.components.models.embedding_model.EMBEDDING_CLASSES")
+    async def test_build_embeddings_openai(self, mock_embedding_classes, component_class, default_kwargs):
         # Setup mock
+        mock_openai_class = MagicMock()
         mock_instance = MagicMock()
-        mock_openai_embeddings.return_value = mock_instance
+        mock_openai_class.return_value = mock_instance
+        mock_embedding_classes.get.return_value = mock_openai_class
 
         # Create and configure the component
         component = component_class(**default_kwargs)
-        component.provider = "OpenAI"
-        component.model = "text-embedding-3-small"
         component.api_key = "test-key"
         component.chunk_size = 1000
         component.max_retries = 3
         component.show_progress_bar = False
+        component.api_base = None
+        component.dimensions = None
+        component.request_timeout = None
+        component.model_kwargs = None
 
         # Build the embeddings
         embeddings = component.build_embeddings()
 
+        # Verify the embedding class getter was called
+        mock_embedding_classes.get.assert_called_once_with("OpenAIEmbeddings")
+
         # Verify the OpenAIEmbeddings was called with the correct parameters
-        mock_openai_embeddings.assert_called_once_with(
+        mock_openai_class.assert_called_once_with(
             model="text-embedding-3-small",
-            dimensions=None,
-            base_url=None,
             api_key="test-key",
             chunk_size=1000,
             max_retries=3,
-            timeout=None,
             show_progress_bar=False,
-            model_kwargs={},
         )
         assert embeddings == mock_instance
 
     async def test_build_embeddings_openai_missing_api_key(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
-        component.provider = "OpenAI"
         component.api_key = None
 
-        with pytest.raises(ValueError, match="OpenAI API key is required when using OpenAI provider"):
+        with pytest.raises(ValueError, match="OpenAI API key is required"):
             component.build_embeddings()
 
-    async def test_build_embeddings_unknown_provider(self, component_class, default_kwargs):
+    async def test_build_embeddings_invalid_model_format(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
-        component.provider = "Unknown"
+        component.model = None
 
-        with pytest.raises(ValueError, match="Unknown provider: Unknown"):
+        with pytest.raises(ValueError, match="Model must be a non-empty list"):
             component.build_embeddings()
+
+    async def test_build_embeddings_unknown_embedding_class(self, component_class, default_kwargs):
+        component = component_class(**default_kwargs)
+        component.model = [
+            {
+                "name": "unknown-model",
+                "provider": "Unknown",
+                "metadata": {
+                    "embedding_class": "UnknownEmbeddingClass",
+                    "param_mapping": {},
+                },
+            }
+        ]
+
+        with pytest.raises(ValueError, match="Unknown embedding class: UnknownEmbeddingClass"):
+            component.build_embeddings()
+
+    @patch("lfx.components.models.embedding_model.EMBEDDING_CLASSES")
+    async def test_build_embeddings_google(self, mock_embedding_classes, component_class):
+        # Setup mock
+        mock_google_class = MagicMock()
+        mock_instance = MagicMock()
+        mock_google_class.return_value = mock_instance
+        mock_embedding_classes.get.return_value = mock_google_class
+
+        # Create component with Google configuration
+        component = component_class(
+            model=[
+                {
+                    "name": "embedding-001",
+                    "provider": "Google",
+                    "metadata": {
+                        "embedding_class": "GoogleGenerativeAIEmbeddings",
+                        "param_mapping": {
+                            "model": "model",
+                            "api_key": "google_api_key",
+                            "request_timeout": "request_options",
+                            "model_kwargs": "client_options",
+                        },
+                    },
+                }
+            ],
+            api_key="test-google-key",
+        )
+        component.api_base = None
+        component.dimensions = None
+        component.chunk_size = None
+        component.request_timeout = None
+        component.max_retries = None
+        component.show_progress_bar = None
+        component.model_kwargs = None
+
+        # Build the embeddings
+        embeddings = component.build_embeddings()
+
+        # Verify the embedding class getter was called
+        mock_embedding_classes.get.assert_called_once_with("GoogleGenerativeAIEmbeddings")
+
+        # Verify the GoogleGenerativeAIEmbeddings was called with the correct parameters
+        mock_google_class.assert_called_once_with(
+            model="embedding-001",
+            google_api_key="test-google-key",
+        )
+        assert embeddings == mock_instance

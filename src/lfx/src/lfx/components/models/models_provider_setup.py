@@ -84,17 +84,17 @@ class ModelsProviderSetupComponent(LCModelComponent):
 
         if provider == "OpenAI":
             return ChatOpenAI(
-                model_name=model_name,
+                model=model_name,
+                api_key=self.api_key,
                 temperature=temperature,
                 max_tokens=self.max_tokens,
-                openai_api_key=self.api_key,
             )
         if provider == "Anthropic":
             return ChatAnthropic(
                 model=model_name,
+                api_key=self.api_key,
                 temperature=temperature,
                 max_tokens=self.max_tokens,
-                anthropic_api_key=self.api_key,
             )
         msg = f"Unsupported provider: {provider}"
         raise ValueError(msg)

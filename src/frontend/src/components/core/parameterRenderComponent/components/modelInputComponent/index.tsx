@@ -1,5 +1,5 @@
 import Fuse from "fuse.js";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +24,7 @@ import type { BaseInputProps } from "../../types";
 
 export type ModelInputComponentType = {
   options: {
+    id?: string;
     name: string;
     icon: string;
     category: string;
@@ -35,6 +36,7 @@ export type ModelInputComponentType = {
 };
 
 export type SelectedModel = {
+  id?: string;
   name: string;
   icon: string;
   category: string;
@@ -53,13 +55,36 @@ export default function ModelInputComponent({
   helperText,
 }: BaseInputProps<any> & ModelInputComponentType): JSX.Element {
   const [open, setOpen] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(
+    () => {
+      if (value && Array.isArray(value) && value.length > 0) {
+        return value[0].provider || value[0].category || null;
+      }
+      return null;
+    },
+  );
   const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(
-    null,
+    () => {
+      if (value && Array.isArray(value) && value.length > 0) {
+        return value[0];
+      }
+      return null;
+    },
   );
   const [openApiKeyDialog, setOpenApiKeyDialog] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Sync local state when value prop changes
+  useEffect(() => {
+    if (value && Array.isArray(value) && value.length > 0) {
+      setSelectedModel(value[0]);
+      setSelectedProvider(value[0].provider || value[0].category || null);
+    } else {
+      setSelectedModel(null);
+      setSelectedProvider(null);
+    }
+  }, [value]);
   const refButton = useRef<HTMLButtonElement>(null);
   const isLoading = false;
   const { setErrorData } = useAlertStore();
@@ -127,9 +152,16 @@ export default function ModelInputComponent({
           (option) => option.name === modelName,
         );
 
+        // Guard against missing selectedOption
+        if (!selectedOption) {
+          setErrorData({ title: "Model not found" });
+          return;
+        }
+
         // Update the value as an array with the selected model
         const newValue = [
           {
+            ...(selectedOption.id && { id: selectedOption.id }),
             name: selectedOption.name,
             icon: selectedOption.icon || "Bot",
             category: selectedOption.category || "Other",
@@ -140,13 +172,15 @@ export default function ModelInputComponent({
         ];
 
         handleOnNewValue({ value: newValue });
-        setSelectedProvider(selectedOption.provider || selectedOption.category);
+        setSelectedProvider(
+          selectedOption.provider || selectedOption.category || null,
+        );
         setSelectedModel(selectedOption);
       } catch (error) {
         setErrorData({ title: "Error selecting model" });
       }
     },
-    [options, handleOnNewValue],
+    [options, handleOnNewValue, setErrorData],
   );
 
   const handleApiKeyChange = useCallback((newApiKey: string) => {

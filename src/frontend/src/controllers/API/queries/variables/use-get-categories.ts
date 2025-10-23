@@ -46,9 +46,8 @@ export const useGetCategoryVariable: useQueryFunctionType<
 
     try {
       const { data }: { data: GlobalVariable[] } = await api.get(
-        `${getURL("VARIABLES")}/category/${category.toLowerCase()}`,
+        `${getURL("VARIABLES")}/category/${category}`,
       );
-
       const variable = data.find((v) => v.name === variableName);
 
       return variable ?? DEFAULT_VARIABLE_RESPONSE;

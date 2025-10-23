@@ -60,6 +60,7 @@ export function StrRenderComponent({
         display_name={display_name}
         id={`input-${name}`}
         isToolMode={isToolMode}
+        allowCustomValue={true}
       />
     );
   }

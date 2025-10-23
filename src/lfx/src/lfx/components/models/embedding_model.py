@@ -1,5 +1,6 @@
 from typing import Any
 
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_openai import OpenAIEmbeddings
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
@@ -8,13 +9,70 @@ from lfx.field_typing import Embeddings
 from lfx.io import (
     BoolInput,
     DictInput,
-    DropdownInput,
     FloatInput,
     IntInput,
     MessageTextInput,
+    ModelInput,
     SecretStrInput,
 )
-from lfx.schema.dotdict import dotdict
+
+# Mapping of class names to actual class objects
+EMBEDDING_CLASSES = {
+    "GoogleGenerativeAIEmbeddings": GoogleGenerativeAIEmbeddings,
+    "OpenAIEmbeddings": OpenAIEmbeddings,
+}
+
+
+def _get_embedding_model_options() -> list[dict[str, Any]]:
+    """Return a list of available model providers with their configuration."""
+    openai_options = [
+        {
+            "name": model_name,
+            "icon": "OpenAI",
+            "category": "OpenAI",
+            "provider": "OpenAI",
+            "metadata": {
+                "embedding_class": "OpenAIEmbeddings",
+                "param_mapping": {
+                    "model": "model",
+                    "api_key": "api_key",
+                    "api_base": "base_url",
+                    "dimensions": "dimensions",
+                    "chunk_size": "chunk_size",
+                    "request_timeout": "request_timeout",
+                    "max_retries": "max_retries",
+                    "show_progress_bar": "show_progress_bar",
+                    "model_kwargs": "model_kwargs",
+                },
+            },
+        }
+        for model_name in OPENAI_EMBEDDING_MODEL_NAMES
+    ]
+
+    google_options = [
+        {
+            "name": "GoogleGenerativeAIEmbeddings",
+            "icon": "GoogleGenerativeAI",
+            "category": "Google",
+            "provider": "Google",
+            "metadata": {
+                "embedding_class": "GoogleGenerativeAIEmbeddings",
+                "param_mapping": {
+                    "model": "model",
+                    "api_key": "google_api_key",
+                    "request_timeout": "request_options",
+                    "model_kwargs": "client_options",
+                },
+            },
+        }
+    ]
+
+    return openai_options + google_options
+
+
+# Compute model options once at module level
+_MODEL_OPTIONS = _get_embedding_model_options()
+_PROVIDERS = [option["provider"] for option in _MODEL_OPTIONS]
 
 
 class EmbeddingModelComponent(LCEmbeddingsModel):
@@ -26,25 +84,17 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
     category = "models"
 
     inputs = [
-        DropdownInput(
-            name="provider",
-            display_name="Model Provider",
-            options=["OpenAI"],
-            value="OpenAI",
-            info="Select the embedding model provider",
-            real_time_refresh=True,
-            options_metadata=[{"icon": "OpenAI"}],
-        ),
-        DropdownInput(
+        ModelInput(
             name="model",
-            display_name="Model Name",
-            options=OPENAI_EMBEDDING_MODEL_NAMES,
-            value=OPENAI_EMBEDDING_MODEL_NAMES[0],
-            info="Select the embedding model to use",
+            display_name="Embedding Model",
+            model_options=_MODEL_OPTIONS,
+            providers=_PROVIDERS,
+            info="Select your model provider",
+            real_time_refresh=True,
         ),
         SecretStrInput(
             name="api_key",
-            display_name="OpenAI API Key",
+            display_name="API Key",
             info="Model Provider API key",
             required=True,
             show=True,
@@ -63,10 +113,28 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             "Only supported by certain models.",
             advanced=True,
         ),
-        IntInput(name="chunk_size", display_name="Chunk Size", advanced=True, value=1000),
-        FloatInput(name="request_timeout", display_name="Request Timeout", advanced=True),
-        IntInput(name="max_retries", display_name="Max Retries", advanced=True, value=3),
-        BoolInput(name="show_progress_bar", display_name="Show Progress Bar", advanced=True),
+        IntInput(
+            name="chunk_size",
+            display_name="Chunk Size",
+            advanced=True,
+            value=1000,
+        ),
+        FloatInput(
+            name="request_timeout",
+            display_name="Request Timeout",
+            advanced=True,
+        ),
+        IntInput(
+            name="max_retries",
+            display_name="Max Retries",
+            advanced=True,
+            value=3,
+        ),
+        BoolInput(
+            name="show_progress_bar",
+            display_name="Show Progress Bar",
+            advanced=True,
+        ),
         DictInput(
             name="model_kwargs",
             display_name="Model Kwargs",
@@ -76,39 +144,79 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
     ]
 
     def build_embeddings(self) -> Embeddings:
-        provider = self.provider
-        model = self.model
-        api_key = self.api_key
-        api_base = self.api_base
-        dimensions = self.dimensions
-        chunk_size = self.chunk_size
-        request_timeout = self.request_timeout
-        max_retries = self.max_retries
-        show_progress_bar = self.show_progress_bar
-        model_kwargs = self.model_kwargs or {}
+        """Build and return an embeddings instance based on the selected model."""
+        # Safely extract model configuration
+        if not self.model or not isinstance(self.model, list):
+            msg = "Model must be a non-empty list"
+            raise ValueError(msg)
 
-        if provider == "OpenAI":
-            if not api_key:
-                msg = "OpenAI API key is required when using OpenAI provider"
-                raise ValueError(msg)
-            return OpenAIEmbeddings(
-                model=model,
-                dimensions=dimensions or None,
-                base_url=api_base or None,
-                api_key=api_key,
-                chunk_size=chunk_size,
-                max_retries=max_retries,
-                timeout=request_timeout or None,
-                show_progress_bar=show_progress_bar,
-                model_kwargs=model_kwargs,
-            )
-        msg = f"Unknown provider: {provider}"
-        raise ValueError(msg)
+        model = self.model[0]
+        model_name = model.get("name")
+        provider = model.get("provider")
+        metadata = model.get("metadata", {})
 
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
-        if field_name == "provider" and field_value == "OpenAI":
-            build_config["model"]["options"] = OPENAI_EMBEDDING_MODEL_NAMES
-            build_config["model"]["value"] = OPENAI_EMBEDDING_MODEL_NAMES[0]
-            build_config["api_key"]["display_name"] = "OpenAI API Key"
-            build_config["api_base"]["display_name"] = "OpenAI API Base URL"
-        return build_config
+        # Validate required fields
+        if not self.api_key:
+            msg = f"{provider} API key is required"
+            raise ValueError(msg)
+
+        if not model_name:
+            msg = "Model name is required"
+            raise ValueError(msg)
+
+        # Get embedding class
+        embedding_class_name = metadata.get("embedding_class")
+        if not embedding_class_name:
+            msg = f"No embedding class defined in metadata for {model_name}"
+            raise ValueError(msg)
+
+        embedding_class = EMBEDDING_CLASSES.get(embedding_class_name)
+        if not embedding_class:
+            msg = f"Unknown embedding class: {embedding_class_name}"
+            raise ValueError(msg)
+
+        # Build kwargs using parameter mapping
+        kwargs = self._build_kwargs(model, metadata)
+
+        return embedding_class(**kwargs)
+
+    def _build_kwargs(self, model: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
+        """Build kwargs dictionary using parameter mapping."""
+        param_mapping = metadata.get("param_mapping", {})
+        if not param_mapping:
+            msg = "Parameter mapping not found in metadata"
+            raise ValueError(msg)
+
+        kwargs = {}
+
+        # Required parameters
+        if "model" in param_mapping:
+            kwargs[param_mapping["model"]] = model.get("name")
+        if "api_key" in param_mapping:
+            kwargs[param_mapping["api_key"]] = self.api_key
+
+        # Optional parameters with their values
+        optional_params = {
+            "api_base": self.api_base,
+            "dimensions": int(self.dimensions) if self.dimensions else None,
+            "chunk_size": int(self.chunk_size) if self.chunk_size else None,
+            "request_timeout": float(self.request_timeout) if self.request_timeout else None,
+            "max_retries": int(self.max_retries) if self.max_retries else None,
+            "show_progress_bar": self.show_progress_bar if hasattr(self, "show_progress_bar") else None,
+            "model_kwargs": self.model_kwargs,
+        }
+
+        # Add optional parameters if they have values and are mapped
+        for param_name, param_value in optional_params.items():
+            if param_value is not None and param_name in param_mapping:
+                # Special handling for request_timeout with Google provider
+                if param_name == "request_timeout":
+                    provider = model.get("provider")
+                    if provider == "Google" and isinstance(param_value, (int, float)):
+                        kwargs[param_mapping[param_name]] = {"timeout": param_value}
+                    else:
+                        kwargs[param_mapping[param_name]] = param_value
+                else:
+                    kwargs[param_mapping[param_name]] = param_value
+
+        return kwargs
