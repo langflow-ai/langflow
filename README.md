@@ -54,7 +54,7 @@ The latest Langflow package is installed.
 uv run langflow run
 ```
 
-Langflow will start at http://127.0.0.1:7860.
+Langflow starts at http://127.0.0.1:7860.
 
 That's it! You're ready to build with Langflow 🎉
 
