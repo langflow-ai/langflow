@@ -24,7 +24,7 @@
 
 ## ✨ Highlight features
 
-- **Visual builder interface** to quickly get started and iterate .
+- **Visual builder interface** to quickly get started and iterate.
 - **Source code access** lets you customize any component using Python.
 - **Interactive playground** to immediately test and refine your flows with step-by-step control.
 - **Multi-agent orchestration** with conversation management and retrieval.
@@ -68,7 +68,7 @@ If you're contributing or running from source, see [DEVELOPMENT.md](./DEVELOPMEN
 
 ## 📦 Deployment
 
-Langflow is completely open source and you can deploy it to all major deployment clouds. To learn how to use Docker to deploy Langflow, see the [Docker deployment guide](https://docs.langflow.org/deployment-docker).
+Langflow is completely open source, and you can deploy it to all major clouds. To learn how to use Docker to deploy Langflow, see the [Docker deployment guide](https://docs.langflow.org/deployment-docker).
 
 ## ⭐ Stay up-to-date
 
