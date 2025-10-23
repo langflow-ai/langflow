@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
@@ -15,19 +14,13 @@ import {
 } from "@/controllers/API/queries/published-flows";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useDarkStore } from "@/stores/darkStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import FlowPage from "../FlowPage";
+import PublishedFlowPage from "../PublishedFlowPage";
 import PlaygroundTab from "./components/PlaygroundTab";
 
 export default function MarketplaceDetailPage() {
   const { publishedFlowId } = useParams<{ publishedFlowId: string }>();
   const dark = useDarkStore((state) => state.dark);
   const navigate = useCustomNavigate();
-  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
-
-  const [flowLoaded, setFlowLoaded] = useState(false);
-  const [isLoadingFlow, setIsLoadingFlow] = useState(false);
-  const [flowError, setFlowError] = useState<string | null>(null);
 
   // Fetch published flow details
   const { data: publishedFlowData, isLoading: isLoadingPublishedFlow } =
@@ -101,33 +94,6 @@ export default function MarketplaceDetailPage() {
       ? jsonToYaml(spec)
       : "# No specification available";
 
-  // Load flow data into FlowsManagerStore for visualization
-  useEffect(() => {
-    if (publishedFlowData?.flow_data) {
-      setIsLoadingFlow(true);
-      setFlowError(null);
-
-      try {
-        // Create a mock flow object from the snapshot data
-        const flowFromSnapshot = {
-          id: publishedFlowData.flow_id,
-          name: publishedFlowData.flow_name || "Published Flow",
-          description: publishedFlowData.description || "",
-          data: publishedFlowData.flow_data,
-          is_component: false,
-        };
-
-        setCurrentFlow(flowFromSnapshot as any);
-        setFlowLoaded(true);
-        setIsLoadingFlow(false);
-      } catch (error: any) {
-        console.error("Failed to load flow from snapshot:", error);
-        setFlowError(error?.message || "Failed to load flow");
-        setIsLoadingFlow(false);
-      }
-    }
-  }, [publishedFlowData, setCurrentFlow]);
-
   return (
     <PageLayout
       title={title}
@@ -177,45 +143,24 @@ export default function MarketplaceDetailPage() {
             </div>
 
             <TabsContent value="flow" className="mt-4 w-full">
-              {isLoadingPublishedFlow || isLoadingFlow ? (
+              {isLoadingPublishedFlow ? (
                 <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center rounded-lg border border-border dark:border-white/20 bg-card dark:bg-black dark:text-white">
                   <div className="flex flex-col items-center gap-3">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                     <p className="text-sm text-muted-foreground dark:text-white/70">
-                      Loading flow visualization...
+                      Loading flow...
                     </p>
                   </div>
                 </div>
-              ) : flowError ? (
-                <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center rounded-lg border border-border dark:border-white/20 bg-card dark:bg-black dark:text-white">
-                  <div className="flex max-w-[640px] flex-col items-center gap-3 text-center">
-                    <ForwardedIconComponent
-                      name="AlertTriangle"
-                      className="h-6 w-6 text-red-500"
-                    />
-                    <p className="text-sm font-medium text-foreground dark:text-white">
-                      Failed to load flow
-                    </p>
-                    <p className="text-xs text-muted-foreground dark:text-white/70">
-                      {flowError}
-                    </p>
-                  </div>
-                </div>
-              ) : flowLoaded ? (
+              ) : publishedFlowId ? (
                 <div className="h-[calc(100vh-200px)] w-full overflow-hidden rounded-lg border border-border dark:border-white/20">
-                  <FlowPage view={true} readOnly={true} flowId={publishedFlowData?.flow_id} />
+                  <PublishedFlowPage publishedFlowId={publishedFlowId} />
                 </div>
               ) : (
                 <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center rounded-lg border border-border dark:border-white/20 bg-card dark:bg-black dark:text-white">
-                  <div className="flex max-w-[640px] flex-col items-center gap-3 text-center">
-                    <ForwardedIconComponent
-                      name="GitBranch"
-                      className="h-6 w-6"
-                    />
-                    <p className="text-sm text-muted-foreground dark:text-white/70">
-                      Flow visualization will appear here when available.
-                    </p>
-                  </div>
+                  <p className="text-sm text-muted-foreground dark:text-white/70">
+                    No published flow found
+                  </p>
                 </div>
               )}
             </TabsContent>
