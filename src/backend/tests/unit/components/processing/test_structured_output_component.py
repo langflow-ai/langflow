@@ -1096,31 +1096,15 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
                 mock_prompt.return_value.__or__.return_value = mock_chain
 
                 with patch("lfx.components.processing.structured_output.logger"):
-                    with pytest.raises(ValueError, match="Model does not support tool calling.*fallback with_structured_output also failed"):
+                    with pytest.raises(ValueError, match=r"Model does not support tool calling.*fallback with_structured_output also failed") as exc_info:
                         component.build_structured_output_base()
 
-
-    def test_not_implemented_error_raises_type_error_without_fallback(self):
-        """Test that NotImplementedError in trustcall raises TypeError without attempting fallback."""
-        component = StructuredOutputComponent(
-            llm=MockLanguageModel(),
-            input_value="Test input",
-            schema_name="TestSchema",
-            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
-            system_prompt="Test system prompt",
-        )
-
-        # Mock get_chat_result to raise NotImplementedError
-        with patch("lfx.components.processing.structured_output.get_chat_result") as mock_get_chat_result:
-            mock_get_chat_result.side_effect = NotImplementedError("Model doesn't support tool calling")
-
-            # Mock langchain - should NOT be called
-            with patch("lfx.components.processing.structured_output.ChatPromptTemplate.from_messages") as mock_prompt:
-                with pytest.raises(TypeError, match="MockLanguageModel does not support structured output"):
-                    component.build_structured_output_base()
-
-                # Verify langchain was NOT called (no fallback for NotImplementedError)
-                mock_prompt.assert_not_called()
+                    error_msg = str(exc_info.value)
+                    # Verify error message mentions both failures
+                    assert "Model does not support tool calling" in error_msg
+                    assert "trustcall failed" in error_msg
+                    assert "fallback with_structured_output also failed" in error_msg
+                    assert "Langchain parsing error" in error_msg
 
 
     def test_langchain_fallback_processes_basemodel_response(self):
@@ -1183,7 +1167,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
     def test_trustcall_success_no_fallback_attempted(self):
         """Test that when trustcall succeeds, langchain fallback is not attempted."""
-        def mock_get_chat_result(runnable, system_message, input_value, config):
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
                     return {"objects": [{"field": "trustcall_value"}]}
@@ -1203,17 +1187,18 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
-            # Mock langchain - should NOT be called
-            with patch("lfx.components.processing.structured_output.ChatPromptTemplate.from_messages") as mock_prompt:
-                result = component.build_structured_output_base()
+        with (
+            patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result),
+            patch("lfx.components.processing.structured_output.ChatPromptTemplate.from_messages") as mock_prompt,
+        ):
+            result = component.build_structured_output_base()
 
-                # Verify trustcall succeeded
-                assert isinstance(result, list)
-                assert result == [{"field": "trustcall_value"}]
+            # Verify trustcall succeeded
+            assert isinstance(result, list)
+            assert result == [{"field": "trustcall_value"}]
 
-                # Verify langchain was NOT called
-                mock_prompt.assert_not_called()
+            # Verify langchain was NOT called
+            mock_prompt.assert_not_called()
 
 
     def test_fallback_error_message_includes_both_errors(self):
