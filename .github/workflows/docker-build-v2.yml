@@ -275,6 +275,8 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          build-args: |
+              LANGFLOW_IMAGE=${{ matrix.langflow_image }}
           file: ${{ matrix.dockerfile }}
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}

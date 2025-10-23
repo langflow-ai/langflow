@@ -1,9 +1,8 @@
 # syntax=docker/dockerfile:1
 # Keep this syntax directive! It's used to enable Docker BuildKit
 
-ARG LANGFLOW_IMAGE=ghcr.io/langflow-ai/langflow:latest
+ARG LANGFLOW_IMAGE
 FROM ${LANGFLOW_IMAGE}
-ENV LANGFLOW_IMAGE=${LANGFLOW_IMAGE}
 
 
 RUN rm -rf /app/.venv/langflow/frontend
