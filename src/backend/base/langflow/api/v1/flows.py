@@ -160,7 +160,7 @@ async def create_flow(
 ):
     try:
         db_flow = await _new_flow(session=session, flow=flow, user_id=current_user.id)
-        await session.commit()
+        await session.flush()
         await session.refresh(db_flow)
 
         await _save_flow_to_fs(db_flow)
@@ -358,7 +358,7 @@ async def update_flow(
                 db_flow.folder_id = default_folder.id
 
         session.add(db_flow)
-        await session.commit()
+        await session.flush()
         await session.refresh(db_flow)
 
         await _save_flow_to_fs(db_flow)
@@ -398,7 +398,6 @@ async def delete_flow(
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
     await cascade_delete_flow(session, flow.id)
-    await session.commit()
     return {"message": "Flow deleted successfully"}
 
 
@@ -416,7 +415,7 @@ async def create_flows(
         db_flow = Flow.model_validate(flow, from_attributes=True)
         session.add(db_flow)
         db_flows.append(db_flow)
-    await session.commit()
+    await session.flush()
     for db_flow in db_flows:
         await session.refresh(db_flow)
     return db_flows
@@ -444,7 +443,7 @@ async def upload_file(
         response_list.append(response)
 
     try:
-        await session.commit()
+        await session.flush()
         for db_flow in response_list:
             await session.refresh(db_flow)
             await _save_flow_to_fs(db_flow)

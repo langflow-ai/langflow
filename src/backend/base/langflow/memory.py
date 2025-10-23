@@ -141,7 +141,7 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
                 if msg.flow_id and isinstance(msg.flow_id, str):
                     msg.flow_id = UUID(msg.flow_id)
                 session.add(msg)
-                await session.commit()
+                await session.flush()
                 await session.refresh(msg)
                 updated_messages.append(msg)
             else:
@@ -156,12 +156,10 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
         try:
             for message in messages:
                 session.add(message)
-            await session.commit()
             # This is a hack.
             # We are doing this because build_public_tmp causes the CancelledError to be raised
             # while build_flow does not.
         except asyncio.CancelledError:
-            await session.rollback()
             return await aadd_messagetables(messages, session)
         for message in messages:
             await session.refresh(message)
@@ -219,7 +217,6 @@ async def delete_message(id_: str) -> None:
         message = await session.get(MessageTable, id_)
         if message:
             await session.delete(message)
-            await session.commit()
 
 
 def store_message(

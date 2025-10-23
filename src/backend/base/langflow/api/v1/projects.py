@@ -89,7 +89,7 @@ async def create_project(
             )
 
         session.add(new_project)
-        await session.commit()
+        await session.flush()
         await session.refresh(new_project)
 
         if project.components_list:
@@ -97,14 +97,12 @@ async def create_project(
                 update(Flow).where(Flow.id.in_(project.components_list)).values(folder_id=new_project.id)  # type: ignore[attr-defined]
             )
             await session.exec(update_statement_components)
-            await session.commit()
 
         if project.flows_list:
             update_statement_flows = (
                 update(Flow).where(Flow.id.in_(project.flows_list)).values(folder_id=new_project.id)  # type: ignore[attr-defined]
             )
             await session.exec(update_statement_flows)
-            await session.commit()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -246,7 +244,7 @@ async def update_project(
             existing_project.parent_id = project.parent_id
 
         session.add(existing_project)
-        await session.commit()
+        await session.flush()
         await session.refresh(existing_project)
 
         # Start MCP Composer if auth changed to OAuth
@@ -282,14 +280,12 @@ async def update_project(
                 update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_project.id)  # type: ignore[attr-defined]
             )
             await session.exec(update_statement_my_collection)
-            await session.commit()
 
         if concat_project_components:
             update_statement_components = (
                 update(Flow).where(Flow.id.in_(concat_project_components)).values(folder_id=existing_project.id)  # type: ignore[attr-defined]
             )
             await session.exec(update_statement_components)
-            await session.commit()
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -335,7 +331,6 @@ async def delete_project(
 
     try:
         await session.delete(project)
-        await session.commit()
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -428,7 +423,7 @@ async def upload_file(
         )
 
     session.add(new_project)
-    await session.commit()
+    await session.flush()
     await session.refresh(new_project)
     del data["folder_name"]
     del data["folder_description"]

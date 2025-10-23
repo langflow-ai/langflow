@@ -24,15 +24,17 @@ def set_socketio_server(socketio_server) -> None:
 
 async def get_vertices(sio, sid, flow_id, chat_service) -> None:
     try:
-        session = await anext(get_session())
-        stmt = select(Flow).where(Flow.id == flow_id)
-        flow: Flow = (await session.exec(stmt)).first()
-        if not flow or not flow.data:
-            await sio.emit("error", data="Invalid flow ID", to=sid)
-            return
+        from langflow.services.deps import session_scope
 
-        graph = Graph.from_payload(flow.data)
-        chat_service.set_cache(flow_id, graph)
+        async with session_scope() as session:
+            stmt = select(Flow).where(Flow.id == flow_id)
+            flow: Flow = (await session.exec(stmt)).first()
+            if not flow or not flow.data:
+                await sio.emit("error", data="Invalid flow ID", to=sid)
+                return
+
+            graph = Graph.from_payload(flow.data)
+            chat_service.set_cache(flow_id, graph)
         vertices = layered_topological_sort(
             set(graph.get_vertex_ids()),
             graph.in_degree_map,
