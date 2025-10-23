@@ -144,9 +144,9 @@ class StructuredOutputComponent(Component):
             objects=(
                 list[output_model_],
                 Field(
-                    description=f"A list of {schema_name}.", # type: ignore[valid-type]
-                    min_length=1 # help ensure non-empty output
-                    ),
+                    description=f"A list of {schema_name}.",  # type: ignore[valid-type]
+                    min_length=1,  # help ensure non-empty output
+                ),
             ),
         )
         # Tracing config
@@ -212,12 +212,12 @@ class StructuredOutputComponent(Component):
                 runnable=llm_with_structured_output,
                 system_message=self.system_prompt,
                 input_value=self.input_value,
-                config=config_dict
-                )
-        except Exception as e: # noqa: BLE001
+                config=config_dict,
+            )
+        except Exception as e:  # noqa: BLE001
             logger.warning(f"Trustcall extraction failed, falling back to Langchain: {e}")
             return None
-        return result or None # langchain fallback is used if error occurs or the result is empty
+        return result or None  # langchain fallback is used if error occurs or the result is empty
 
     def _extract_output_with_langchain(self, schema: BaseModel, config_dict: dict) -> list[BaseModel] | None:
         try:

@@ -1072,8 +1072,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
                     # Verify warning was logged
                     mock_logger.warning.assert_called_once()
-                    assert "Trustcall extraction failed, falling back to Langchain" in str(mock_logger.warning.call_args)
-
+                    assert "Trustcall extraction failed, falling back to Langchain" in str(
+                        mock_logger.warning.call_args
+                    )
 
     def test_fallback_both_methods_fail_raises_value_error(self):
         """Test that when both trustcall and langchain fail, a ValueError is raised."""
@@ -1106,7 +1107,6 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
                     assert "fallback with_structured_output also failed" in error_msg
                     assert "Langchain parsing error" in error_msg
 
-
     def test_langchain_fallback_processes_basemodel_response(self):
         """Test that langchain fallback correctly processes BaseModel responses."""
         component = StructuredOutputComponent(
@@ -1137,7 +1137,6 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
                     assert isinstance(result, list)
                     assert result == [{"field": "test_value"}]
 
-
     def test_langchain_fallback_processes_dict_response(self):
         """Test that langchain fallback correctly processes dict responses without BaseModel conversion."""
         component = StructuredOutputComponent(
@@ -1164,9 +1163,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
                     # When langchain returns dict, it's returned as-is (no "objects" extraction)
                     assert result == {"field": "dict_value"}
 
-
     def test_trustcall_success_no_fallback_attempted(self):
         """Test that when trustcall succeeds, langchain fallback is not attempted."""
+
         def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
@@ -1199,7 +1198,6 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
             # Verify langchain was NOT called
             mock_prompt.assert_not_called()
-
 
     def test_fallback_error_message_includes_both_errors(self):
         """Test that the error message when both methods fail includes context about both failures."""
