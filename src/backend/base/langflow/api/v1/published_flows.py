@@ -5,7 +5,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import func, or_
+from sqlalchemy import cast, func, or_, Text
 from sqlalchemy.orm import joinedload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -97,6 +97,9 @@ async def publish_flow(
         existing.version = payload.version
         existing.tags = payload.tags  # User-selected tags from publish modal
         existing.description = original_flow.description  # Denormalized
+        existing.flow_name = cloned_flow.name  # Denormalized
+        existing.flow_icon = cloned_flow.icon  # Denormalized
+        existing.published_by_username = current_user.username  # Denormalized
         existing.published_at = datetime.now(timezone.utc)
         existing.updated_at = datetime.now(timezone.utc)
         existing.status = PublishStatusEnum.PUBLISHED
@@ -110,12 +113,8 @@ async def publish_flow(
 
         logger.info(f"Re-published flow '{original_flow.name}' (ID: {flow_id}) to marketplace")
 
-        # Return response
+        # Return response (denormalized fields already in PublishedFlow)
         result_data = PublishedFlowRead.model_validate(existing, from_attributes=True)
-        result_data.flow_name = cloned_flow.name
-        result_data.flow_icon = cloned_flow.icon
-        result_data.published_by_username = current_user.username
-
         return result_data
 
     # NEW PUBLISH: Clone flow and create published_flow record
@@ -141,6 +140,9 @@ async def publish_flow(
         version=payload.version,
         tags=payload.tags,  # User-selected tags from publish modal
         description=original_flow.description,  # Denormalized for pagination
+        flow_name=cloned_flow.name,  # Denormalized
+        flow_icon=cloned_flow.icon,  # Denormalized
+        published_by_username=current_user.username,  # Denormalized
         published_at=datetime.now(timezone.utc),
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
@@ -153,12 +155,8 @@ async def publish_flow(
 
     logger.info(f"Published flow '{original_flow.name}' (ID: {flow_id}) to marketplace")
 
-    # Return response
+    # Return response (denormalized fields already in PublishedFlow)
     result_data = PublishedFlowRead.model_validate(published_flow, from_attributes=True)
-    result_data.flow_name = cloned_flow.name
-    result_data.flow_icon = cloned_flow.icon
-    result_data.published_by_username = current_user.username
-
     return result_data
 
 
@@ -202,26 +200,21 @@ async def list_all_published_flows(
     search: str | None = Query(None, description="Search in flow name and description"),
     category: str | None = Query(None, description="Filter by category"),
     tags: str | None = Query(None, description="Filter by tags (comma-separated)"),
-    sort_by: str = Query("published_at", regex="^(published_at|name)$", description="Sort by field"),
+    sort_by: str = Query("published_at", regex="^(published_at|name|date)$", description="Sort by field"),
     order: str = Query("desc", regex="^(asc|desc)$", description="Sort order"),
 ):
     """
     List ALL published flows from all users (for marketplace).
     Public endpoint - no authentication required.
-    Returns paginated list with flow and publisher information.
+    Returns paginated list with denormalized flow and publisher information.
     """
-    # Base query with joins
-    query = (
-        select(PublishedFlow, Flow, User)
-        .join(Flow, PublishedFlow.flow_id == Flow.id)
-        .join(User, PublishedFlow.published_by == User.id)
-        .where(PublishedFlow.status == PublishStatusEnum.PUBLISHED)
-    )
+    # Base query - no joins needed, all data is denormalized
+    query = select(PublishedFlow).where(PublishedFlow.status == PublishStatusEnum.PUBLISHED)
 
-    # Apply search filter
+    # Apply search filter on denormalized flow_name and description
     if search:
         search_pattern = f"%{search}%"
-        query = query.where(or_(Flow.name.ilike(search_pattern), PublishedFlow.description.ilike(search_pattern)))
+        query = query.where(or_(PublishedFlow.flow_name.ilike(search_pattern), PublishedFlow.description.ilike(search_pattern)))
 
     # Apply category filter
     if category:
@@ -231,38 +224,35 @@ async def list_all_published_flows(
     if tags:
         tag_list = [tag.strip() for tag in tags.split(",")]
         for tag in tag_list:
-            # Use contains for JSON array - works with both PostgreSQL and SQLite
-            query = query.where(PublishedFlow.tags.contains([tag]))
+            # Cast JSON to text and check if tag is in the stringified array
+            # Works with both PostgreSQL and SQLite
+            query = query.where(cast(PublishedFlow.tags, Text).contains(f'"{tag}"'))
 
-    # Count total before pagination
-    count_query = select(func.count()).select_from(
-        select(PublishedFlow.id)
-        .join(Flow, PublishedFlow.flow_id == Flow.id)
-        .join(User, PublishedFlow.published_by == User.id)
-        .where(PublishedFlow.status == PublishStatusEnum.PUBLISHED)
-    )
+    # Count total with same filters - simple query, no joins
+    count_query = select(func.count(PublishedFlow.id)).where(PublishedFlow.status == PublishStatusEnum.PUBLISHED)
 
     # Apply same filters to count query
     if search:
         search_pattern = f"%{search}%"
         count_query = count_query.where(
-            or_(Flow.name.ilike(search_pattern), PublishedFlow.description.ilike(search_pattern))
+            or_(PublishedFlow.flow_name.ilike(search_pattern), PublishedFlow.description.ilike(search_pattern))
         )
     if category:
         count_query = count_query.where(PublishedFlow.category == category)
     if tags:
         tag_list = [tag.strip() for tag in tags.split(",")]
         for tag in tag_list:
-            count_query = count_query.where(PublishedFlow.tags.contains([tag]))
+            # Cast JSON to text and check if tag is in the stringified array
+            count_query = count_query.where(cast(PublishedFlow.tags, Text).contains(f'"{tag}"'))
 
     total_result = await session.exec(count_query)
     total = total_result.one()
 
-    # Apply sorting
-    if sort_by == "published_at":
+    # Apply sorting on denormalized fields
+    if sort_by == "published_at" or sort_by == "date":
         order_col = PublishedFlow.published_at
     else:  # name
-        order_col = Flow.name
+        order_col = PublishedFlow.flow_name
 
     if order == "desc":
         query = query.order_by(order_col.desc())
@@ -277,14 +267,8 @@ async def list_all_published_flows(
     results = await session.exec(query)
     rows = results.all()
 
-    # Format response
-    items = []
-    for published_flow, flow, user in rows:
-        item = PublishedFlowRead.model_validate(published_flow, from_attributes=True)
-        item.flow_name = flow.name
-        item.flow_icon = flow.icon if flow.icon else None
-        item.published_by_username = user.username
-        items.append(item)
+    # Format response - all fields already denormalized in PublishedFlow
+    items = [PublishedFlowRead.model_validate(published_flow, from_attributes=True) for published_flow in rows]
 
     pages = (total + limit - 1) // limit if limit > 0 else 0
 

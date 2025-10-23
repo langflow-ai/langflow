@@ -45,6 +45,10 @@ class PublishedFlowBase(SQLModel):
     flow_cloned_from: UUID | None = Field(default=None, nullable=True)
     published_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     unpublished_at: datetime | None = Field(default=None, nullable=True)
+    # Denormalized fields for performance (avoid joins)
+    flow_name: str | None = Field(default=None, nullable=True, max_length=255)
+    flow_icon: str | None = Field(default=None, nullable=True, max_length=255)
+    published_by_username: str | None = Field(default=None, nullable=True, max_length=255)
 
 
 class PublishedFlow(PublishedFlowBase, table=True):  # type: ignore[call-arg]
