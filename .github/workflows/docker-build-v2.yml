@@ -140,7 +140,7 @@ jobs:
 
   build-main-backend:
     name: Build Main Backend Package
-    if: ${{ inputs.release_type == 'main' }}
+    if: ${{ inputs.release_type == 'main-backend' }}
     strategy:
       matrix:
         component: [docker-backend, ghcr-backend]
@@ -254,7 +254,7 @@ jobs:
 
   build-main-frontend:
     name: Build Main Frontend Package
-    if: ${{ inputs.release_type == 'main' }}
+    if: ${{ inputs.release_type == 'main-frontend' }}
     strategy:
       matrix:
         component: [docker-frontend, ghcr-frontend]

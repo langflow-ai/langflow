@@ -446,14 +446,26 @@ jobs:
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
-  call_docker_build_main:
-    name: Call Docker Build Workflow for Langflow
+  call_docker_build_main_backend:
+    name: Call Docker Backend Build Workflow for Langflow
     if: ${{ inputs.build_docker_main }}
     needs: [ci]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
-      release_type: main
+      release_type: main-backend
+      pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
+    secrets: inherit
+
+  call_docker_build_main:
+    name: Call Docker Frontend Build Workflow for Langflow
+    if: ${{ inputs.build_docker_main }}
+    needs: [ci]
+    uses: ./.github/workflows/docker-build-v2.yml
+    with:
+      ref: ${{ inputs.release_tag }}
+      release_type: main-frontend
       pre_release: ${{ inputs.pre_release }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
