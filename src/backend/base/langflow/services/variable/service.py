@@ -51,8 +51,7 @@ class DatabaseVariableService(VariableService, Service):
                     # If session got rolled back during query, stop processing
                     if not session.is_active:
                         await logger.awarning(
-                            f"Session rolled back during {var_name} query. "
-                            "Stopping variable initialization."
+                            f"Session rolled back during {var_name} query. Stopping variable initialization."
                         )
                         break
                     continue
@@ -75,8 +74,7 @@ class DatabaseVariableService(VariableService, Service):
                     # If session got rolled back due to error, stop processing
                     if not session.is_active:
                         await logger.awarning(
-                            f"Session rolled back after error processing {var_name}. "
-                            "Stopping variable initialization."
+                            f"Session rolled back after error processing {var_name}. Stopping variable initialization."
                         )
                         break
 

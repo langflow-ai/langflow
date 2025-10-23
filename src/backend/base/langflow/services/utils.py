@@ -34,14 +34,14 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
     user = result.first()
     print(f"FRAZIER - get_or_create_super_user: user: {user}")
     if user and user.is_superuser:
-        print(f"FRAZIER - get_or_create_super_user: user is superuser")
+        print("FRAZIER - get_or_create_super_user: user is superuser")
         return None  # Superuser already exists
 
     if user and is_default:
-        print(f"FRAZIER - get_or_create_super_user: user is default")
+        print("FRAZIER - get_or_create_super_user: user is default")
         if user.is_superuser:
             if verify_password(password, user.password):
-                print(f"FRAZIER - get_or_create_super_user: user password is correct")
+                print("FRAZIER - get_or_create_super_user: user password is correct")
                 return None
             # Superuser exists but password is incorrect
             # which means that the user has changed the
@@ -54,27 +54,27 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
                 "This means that the user has changed the "
                 "base superuser credentials."
             )
-            print(f"FRAZIER - get_or_create_super_user: user password is incorrect")
+            print("FRAZIER - get_or_create_super_user: user password is incorrect")
             return None
         logger.debug("User with superuser credentials exists but is not a superuser.")
-        print(f"FRAZIER - get_or_create_super_user: user does not exist")
+        print("FRAZIER - get_or_create_super_user: user does not exist")
         return None
 
     if user:
         if verify_password(password, user.password):
-            print(f"FRAZIER - get_or_create_super_user: user password is correct")
+            print("FRAZIER - get_or_create_super_user: user password is correct")
             msg = "User with superuser credentials exists but is not a superuser."
             raise ValueError(msg)
         msg = "Incorrect superuser credentials"
-        print(f"FRAZIER - get_or_create_super_user: user password is incorrect")
+        print("FRAZIER - get_or_create_super_user: user password is incorrect")
         raise ValueError(msg)
 
     if is_default:
         logger.debug("Creating default superuser.")
-        print(f"FRAZIER - get_or_create_super_user: creating default superuser")
+        print("FRAZIER - get_or_create_super_user: creating default superuser")
     else:
         logger.debug("Creating superuser.")
-        print(f"FRAZIER - get_or_create_super_user: creating superuser")
+        print("FRAZIER - get_or_create_super_user: creating superuser")
     return await create_super_user(username, password, db=session)
 
 

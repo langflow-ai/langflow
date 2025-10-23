@@ -48,7 +48,6 @@ async def update_user(user_db: User | None, user: UserUpdate, db: AsyncSession) 
         await db.flush()
     except IntegrityError as e:
         # Let caller's session_scope() handle rollback
-        pass
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     return user_db

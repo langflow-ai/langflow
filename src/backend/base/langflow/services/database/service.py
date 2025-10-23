@@ -13,7 +13,7 @@ import anyio
 import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
-from sqlalchemy import event, exc, inspect
+from sqlalchemy import event, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError

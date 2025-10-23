@@ -18,7 +18,11 @@ from langflow.logging.logger import logger
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_db_service, get_session, get_settings_service, session_scope, session_scope_readonly
+from langflow.services.deps import (
+    get_session,
+    get_settings_service,
+    session_scope,
+)
 from langflow.services.settings.service import SettingsService
 
 if TYPE_CHECKING:

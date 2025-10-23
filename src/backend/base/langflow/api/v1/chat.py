@@ -43,7 +43,6 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import (
     get_chat_service,
     get_queue_service,
-    get_session,
     get_telemetry_service,
     session_scope,
 )
