@@ -447,7 +447,7 @@ jobs:
     secrets: inherit
 
   call_docker_build_main_backend:
-    name: Call Docker Backend Build Workflow for Langflow
+    name: Call Docker Build Workflow for Langflow Backend
     if: ${{ inputs.build_docker_main }}
     needs: [ci]
     uses: ./.github/workflows/docker-build-v2.yml
@@ -458,8 +458,8 @@ jobs:
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
-  call_docker_build_main:
-    name: Call Docker Frontend Build Workflow for Langflow
+  call_docker_build_main_frontend:
+    name: Call Docker Build Workflow for Langflow Frontend
     if: ${{ inputs.build_docker_main }}
     needs: [ci]
     uses: ./.github/workflows/docker-build-v2.yml
