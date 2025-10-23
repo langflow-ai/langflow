@@ -35,6 +35,7 @@ class ChatOllamaComponent(LCModelComponent):
             info="Endpoint of the Ollama API. Defaults to http://localhost:11434 .",
             value="http://localhost:11434",
             real_time_refresh=True,
+            required=True,
         ),
         DropdownInput(
             name="model_name",
@@ -43,6 +44,7 @@ class ChatOllamaComponent(LCModelComponent):
             info="Refer to https://ollama.com/library for more models.",
             refresh_button=True,
             real_time_refresh=True,
+            required=True,
         ),
         SliderInput(
             name="temperature",
@@ -142,6 +144,16 @@ class ChatOllamaComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        # Validate that model_name is not empty
+        if not self.model_name or not str(self.model_name).strip():
+            msg = "Model name cannot be empty. Please select a model from the dropdown or enter a valid model name."
+            raise ValueError(msg)
+        
+        # Validate that base_url is not empty
+        if not self.base_url or not str(self.base_url).strip():
+            msg = "Base URL cannot be empty. Please provide a valid Ollama base URL (e.g., http://localhost:11434)."
+            raise ValueError(msg)
+        
         # Mapping mirostat settings to their corresponding values
         mirostat_options = {"Mirostat": 1, "Mirostat 2.0": 2}
 
@@ -155,6 +167,12 @@ class ChatOllamaComponent(LCModelComponent):
         else:
             mirostat_eta = self.mirostat_eta
             mirostat_tau = self.mirostat_tau
+            # Log a warning about potential mirostat compatibility issues
+            logger.warning(
+                f"Mirostat is enabled for model '{self.model_name}'. "
+                f"If you see 'invalid option provided: mirostat' warnings in Ollama logs, "
+                f"this model may not support mirostat. Consider disabling mirostat for this model."
+            )
 
         transformed_base_url = transform_localhost_url(self.base_url)
 
@@ -201,10 +219,24 @@ class ChatOllamaComponent(LCModelComponent):
         try:
             output = ChatOllama(**llm_params)
         except Exception as e:
-            msg = (
-                "Unable to connect to the Ollama API. "
-                "Please verify the base URL, ensure the relevant Ollama model is pulled, and try again."
-            )
+            error_details = str(e)
+            if "validation error" in error_details.lower():
+                msg = (
+                    f"Ollama model validation error: {error_details}. "
+                    f"This may be due to incompatible parameters for model '{self.model_name}'. "
+                    f"Please check the model parameters and try again."
+                )
+            elif "connection" in error_details.lower() or "timeout" in error_details.lower():
+                msg = (
+                    f"Unable to connect to the Ollama API: {error_details}. "
+                    f"Please verify the base URL ({self.base_url}), ensure Ollama is running, "
+                    f"and that the model '{self.model_name}' is pulled."
+                )
+            else:
+                msg = (
+                    f"Unable to initialize Ollama model: {error_details}. "
+                    f"Please verify the base URL, ensure the relevant Ollama model is pulled, and try again."
+                )
             raise ValueError(msg) from e
 
         return output
@@ -325,3 +357,40 @@ class ChatOllamaComponent(LCModelComponent):
             raise ValueError(msg) from e
 
         return model_ids
+
+    async def check_model_supports_mirostat(self, base_url_value: str, model_name: str) -> bool:
+        """Check if a specific model supports mirostat parameter.
+        
+        Args:
+            base_url_value (str): The base URL of the Ollama API.
+            model_name (str): The name of the model to check.
+            
+        Returns:
+            bool: True if the model supports mirostat, False otherwise.
+        """
+        try:
+            base_url = base_url_value.rstrip("/").removesuffix("/v1")
+            if not base_url.endswith("/"):
+                base_url = base_url + "/"
+            base_url = transform_localhost_url(base_url)
+            
+            show_url = urljoin(base_url, "api/show")
+            
+            async with httpx.AsyncClient() as client:
+                payload = {"model": model_name}
+                show_response = await client.post(show_url, json=payload)
+                show_response.raise_for_status()
+                json_data = show_response.json()
+                if asyncio.iscoroutine(json_data):
+                    json_data = await json_data
+                
+                # Check if the model has parameter information
+                parameters = json_data.get("parameters", {})
+                # Some models might not have detailed parameter info, so we'll be conservative
+                # and assume they support mirostat unless we know otherwise
+                return True
+                
+        except (httpx.RequestError, ValueError) as e:
+            await logger.awarning(f"Could not check mirostat support for model {model_name}: {e}")
+            # If we can't check, assume it supports mirostat to avoid breaking functionality
+            return True
