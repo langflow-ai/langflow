@@ -103,10 +103,13 @@ async def create_project(
                 update(Flow).where(Flow.id.in_(project.flows_list)).values(folder_id=new_project.id)  # type: ignore[attr-defined]
             )
             await session.exec(update_statement_flows)
+
+        # Convert to FolderRead while session is still active to avoid detached instance errors
+        folder_read = FolderRead.model_validate(new_project, from_attributes=True)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    return new_project
+    return folder_read
 
 
 @router.get("/", response_model=list[FolderRead], status_code=200)
@@ -124,7 +127,9 @@ async def read_projects(
             )
         ).all()
         projects = [project for project in projects if project.name != STARTER_FOLDER_NAME]
-        return sorted(projects, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
+        # Convert to FolderRead while session is still active to avoid detached instance errors
+        folder_reads = [FolderRead.model_validate(project, from_attributes=True) for project in projects]
+        return sorted(folder_reads, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -287,10 +292,12 @@ async def update_project(
             )
             await session.exec(update_statement_components)
 
+        # Convert to FolderRead while session is still active to avoid detached instance errors
+        folder_read = FolderRead.model_validate(existing_project, from_attributes=True)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    return existing_project
+    return folder_read
 
 
 @router.delete("/{project_id}", status_code=204)

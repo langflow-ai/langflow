@@ -385,7 +385,7 @@ class DatabaseService(Service):
 
     async def run_migrations(self, *, fix=False) -> None:
         should_initialize_alembic = False
-        async with self._with_session() as session:
+        async with session_scope() as session:
             # If the table does not exist it throws an error
             # so we need to catch it
             try:

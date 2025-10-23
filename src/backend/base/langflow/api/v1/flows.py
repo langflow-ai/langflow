@@ -165,6 +165,9 @@ async def create_flow(
 
         await _save_flow_to_fs(db_flow)
 
+        # Convert to FlowRead while session is still active to avoid detached instance errors
+        flow_read = FlowRead.model_validate(db_flow, from_attributes=True)
+
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
@@ -180,7 +183,7 @@ async def create_flow(
         if isinstance(e, HTTPException):
             raise
         raise HTTPException(status_code=500, detail=str(e)) from e
-    return db_flow
+    return flow_read
 
 
 @router.get("/", response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader], status_code=200)
@@ -418,7 +421,9 @@ async def create_flows(
     await session.flush()
     for db_flow in db_flows:
         await session.refresh(db_flow)
-    return db_flows
+    # Convert to FlowRead while session is still active to avoid detached instance errors
+    flow_reads = [FlowRead.model_validate(db_flow, from_attributes=True) for db_flow in db_flows]
+    return flow_reads
 
 
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)

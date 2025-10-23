@@ -85,7 +85,6 @@ class AuthSettings(BaseSettings):
         # When AUTO_LOGIN is enabled, force superuser to use default values.
         if info.data.get("AUTO_LOGIN"):
             logger.debug("Auto login is enabled, forcing superuser to use default values")
-            print(f"FRAZIER - validate_superuser: {info.field_name}, value: {value}")
             if info.field_name == "SUPERUSER":
                 if value != DEFAULT_SUPERUSER:
                     logger.debug("Resetting superuser to default value")

@@ -997,6 +997,7 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
                     except Exception:  # noqa: BLE001
                         await logger.aexception(f"Error while creating starter project {project_name}")
                     successfully_created_projects += 1
+                    print(f"FRAZIER - create_or_update_starter_projects: successfully_created_projects: {successfully_created_projects}")
                 await logger.adebug(f"Successfully created {successfully_created_projects} starter projects")
 
 

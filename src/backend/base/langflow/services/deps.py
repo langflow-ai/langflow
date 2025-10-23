@@ -182,25 +182,9 @@ async def get_session_with_commit() -> AsyncGenerator[AsyncSession, None]:
         Exception: If an error occurs during the session scope.
 
     """
-    from sqlalchemy.exc import InvalidRequestError
-
-    db_service = get_db_service()
-    async with db_service._with_session() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception as e:
-            print(f"FRAZIER - Error during session scope: {e}")
-            await logger.aexception("An error occurred during the session scope.")
-            # Only rollback if session is still in a valid state
-            if session.is_active:
-                try:
-                    await session.rollback()
-                except InvalidRequestError:
-                    # Session was already rolled back by SQLAlchemy
-                    pass
-            raise
-        # No explicit close needed - _with_session() handles it
+    # Reuse session_scope to avoid code duplication
+    async with session_scope() as session:
+        yield session
 
 
 @asynccontextmanager
@@ -228,8 +212,8 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
             yield session
             await session.commit()
         except Exception as e:
-            print(f"FRAZIER - Error during session scope: {e}")
-            await logger.aexception("An error occurred during the session scope.")
+            await logger.adebug(f"Error during session scope: {e}")
+            await logger.aexception("An error occurred during the session scope.", exc_info=True)
             # Only rollback if session is still in a valid state
             if session.is_active:
                 try:
