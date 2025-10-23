@@ -38,6 +38,9 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
 
   async function getAutoLoginFn(): Promise<null> {
     try {
+      if (!IS_AUTO_LOGIN) {
+        return null;
+      }
       const response = await api.get<Users>(`${getURL("AUTOLOGIN")}`);
       const user = response.data;
       if (user && user["access_token"]) {
