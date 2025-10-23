@@ -108,11 +108,11 @@ async def _run_async_migrations() -> None:
     # SQLite doesn't support this parameter, so only add it for PostgreSQL
     config_section = config.get_section(config.config_ini_section, {})
     db_url = config_section.get("sqlalchemy.url", "")
-    
+
     connect_args = {}
     if "postgresql" in db_url:
         connect_args["prepare_threshold"] = None
-    
+
     connectable = async_engine_from_config(
         config_section,
         prefix="sqlalchemy.",
