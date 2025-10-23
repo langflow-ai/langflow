@@ -343,11 +343,17 @@ export async function buildFlowVertices({
             onValidateNodes,
           });
         },
-        onError: (statusCode) => {
+        onError: (statusCode, statusText) => {
           if (statusCode === 404) {
             throw new Error("Flow not found");
           }
-          throw new Error("Error processing build events");
+          if (statusCode >= 500) {
+            onBuildError!("Server Error", [
+              `Server error (${statusCode}): ${statusText || "Internal server error"}. Please check the server logs for more details.`,
+            ]);
+            return;
+          }
+          throw new Error(`Error processing build events: ${statusCode} ${statusText || ""}`);
         },
         onNetworkError: (error: Error) => {
           if (error.name === "AbortError") {
@@ -423,11 +429,17 @@ export async function buildFlowVertices({
             onValidateNodes,
           });
         },
-        onError: (statusCode) => {
+        onError: (statusCode, statusText) => {
           if (statusCode === 404) {
             throw new Error("Build job not found");
           }
-          throw new Error("Error processing build events");
+          if (statusCode >= 500) {
+            onBuildError!("Server Error", [
+              `Server error (${statusCode}): ${statusText || "Internal server error"}. Please check the server logs for more details.`,
+            ]);
+            return;
+          }
+          throw new Error(`Error processing build events: ${statusCode} ${statusText || ""}`);
         },
         onNetworkError: (error: Error) => {
           if (error.name === "AbortError") {

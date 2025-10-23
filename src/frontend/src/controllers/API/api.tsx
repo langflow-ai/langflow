@@ -270,7 +270,7 @@ export type StreamingRequestParams = {
   url: string;
   onData: (event: object) => Promise<boolean>;
   body?: object;
-  onError?: (statusCode: number) => void;
+  onError?: (statusCode: number, statusText?: string) => void;
   onNetworkError?: (error: Error) => void;
   buildController: AbortController;
   eventDeliveryConfig?: EventDeliveryType;
@@ -316,7 +316,7 @@ async function performStreamingRequest({
     const response = await fetch(url, params);
     if (!response.ok) {
       if (onError) {
-        onError(response.status);
+        onError(response.status, response.statusText);
       } else {
         throw new Error("Error in streaming request.");
       }
