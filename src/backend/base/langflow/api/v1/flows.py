@@ -141,6 +141,7 @@ async def clone_flow_for_marketplace(
     target_folder_id: UUID,
     user_id: UUID,
     marketplace_flow_name: str,
+    tags: list[str] | None = None,
 ) -> Flow:
     """
     Clone a flow for marketplace publication.
@@ -154,6 +155,8 @@ async def clone_flow_for_marketplace(
         target_folder_id: Folder where the clone should be placed
         user_id: User ID who owns the flow
         marketplace_flow_name: Name for the cloned flow
+        tags: Optional tags for the cloned flow (marketplace tags from publish modal).
+              If None, copies tags from original flow.
 
     Returns:
         The cloned Flow object with a new ID
@@ -176,7 +179,7 @@ async def clone_flow_for_marketplace(
         user_id=user_id,
         folder_id=target_folder_id,
         icon=original_flow.icon,
-        tags=original_flow.tags,
+        tags=tags if tags is not None else original_flow.tags,  # Use marketplace tags if provided
         locked=True,  # Prevent direct editing
         is_component=original_flow.is_component,
     )

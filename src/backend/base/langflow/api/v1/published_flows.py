@@ -82,13 +82,16 @@ async def publish_flow(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Cloned flow not found"
             )
 
-        # Update clone's data from original
+        # Update clone's data from original (and tags from payload)
         import copy
 
         cloned_flow.data = copy.deepcopy(original_flow.data) if original_flow.data else {}
         cloned_flow.description = original_flow.description
-        cloned_flow.tags = original_flow.tags
+        cloned_flow.tags = payload.tags  # Use marketplace tags from publish modal
         cloned_flow.icon = original_flow.icon
+
+        # Also update original flow's tags
+        original_flow.tags = payload.tags
 
         # Update published_flow record (copy description for pagination, tags from payload)
         existing.version = payload.version
@@ -100,6 +103,7 @@ async def publish_flow(
 
         session.add(cloned_flow)
         session.add(existing)
+        session.add(original_flow)  # Save original flow tags
         await session.commit()
         await session.refresh(existing)
         await session.refresh(cloned_flow)
@@ -121,7 +125,11 @@ async def publish_flow(
         target_folder_id=target_folder_id,
         user_id=current_user.id,
         marketplace_flow_name=payload.marketplace_flow_name,
+        tags=payload.tags,  # Pass marketplace tags to clone
     )
+
+    # Update original flow's tags to match marketplace tags
+    original_flow.tags = payload.tags
 
     # Create published_flow record (with denormalized description, tags from payload)
     published_flow = PublishedFlow(
@@ -139,6 +147,7 @@ async def publish_flow(
     )
 
     session.add(published_flow)
+    session.add(original_flow)  # Save original flow tags
     await session.commit()
     await session.refresh(published_flow)
 
