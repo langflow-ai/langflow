@@ -17,6 +17,7 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
   autoLogin: null,
   apiKey: cookies.get(LANGFLOW_API_TOKEN),
   authenticationErrorCount: 0,
+  isGeneratingApiKey: false,
 
   setIsAdmin: (isAdmin) => set({ isAdmin }),
   setIsAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
@@ -26,6 +27,23 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
   setApiKey: (apiKey) => set({ apiKey }),
   setAuthenticationErrorCount: (authenticationErrorCount) =>
     set({ authenticationErrorCount }),
+
+  setIsGeneratingApiKey: (isGeneratingApiKey) => set({ isGeneratingApiKey }),
+  generateApiKey: async (name?: string) => {
+    try {
+      set({ isGeneratingApiKey: true });
+      // dynamic import to avoid a hard cyclic dependency while keeping proper ESM imports
+      const mod = await import("@/controllers/API");
+      const res = await mod.createApiKey(name ?? "MCP Server");
+      if (res?.api_key) {
+        set({ apiKey: res.api_key });
+      }
+    } catch (e) {
+      console.error("Error generating API key:", e);
+    } finally {
+      set({ isGeneratingApiKey: false });
+    }
+  },
 
   logout: async () => {
     get().setIsAuthenticated(false);
