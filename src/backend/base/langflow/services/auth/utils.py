@@ -294,7 +294,6 @@ async def create_super_user(
     password: str,
     db: AsyncSession,
 ) -> User:
-    print(f"FRAZIER - create_super_user: username: {username}")
     super_user = await get_user_by_username(db, username)
 
     if not super_user:
@@ -319,7 +318,6 @@ async def create_super_user(
         except Exception:  # noqa: BLE001
             logger.debug("Error creating superuser.", exc_info=True)
 
-    print(f"FRAZIER - create_super_user: super_user: {super_user}")
     return super_user
 
 

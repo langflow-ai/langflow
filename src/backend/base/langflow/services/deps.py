@@ -212,7 +212,7 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
             yield session
             await session.commit()
         except Exception as e:
-            await logger.adebug(f"Error during session scope: {e}")
+            await logger.adebug(f"An error occurred during the session scope: {e}")
             await logger.aexception("An error occurred during the session scope.", exc_info=True)
             # Only rollback if session is still in a valid state
             if session.is_active:

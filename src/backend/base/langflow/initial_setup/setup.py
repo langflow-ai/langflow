@@ -997,9 +997,6 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
                     except Exception:  # noqa: BLE001
                         await logger.aexception(f"Error while creating starter project {project_name}")
                     successfully_created_projects += 1
-                    print(
-                        f"FRAZIER - create_or_update_starter_projects: successfully_created_projects: {successfully_created_projects}"
-                    )
                 await logger.adebug(f"Successfully created {successfully_created_projects} starter projects")
 
 
@@ -1038,11 +1035,12 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
     Returns:
         UUID: The ID of the default folder.
     """
+
     stmt = select(Folder).where(Folder.user_id == user_id, Folder.name == DEFAULT_FOLDER_NAME)
     result = await session.exec(stmt)
     folder = result.first()
     if folder:
-        return FolderRead.model_validate(folder, from_attributes=True)
+        return FolderRead.model_validate(folder, from_attributes=True).model_dump()
 
     try:
         folder_obj = Folder(user_id=user_id, name=DEFAULT_FOLDER_NAME)
@@ -1054,10 +1052,10 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
         result = await session.exec(stmt)
         folder = result.first()
         if folder:
-            return FolderRead.model_validate(folder, from_attributes=True)
+            return FolderRead.model_validate(folder, from_attributes=True).model_dump()
         msg = "Failed to get or create default folder"
         raise ValueError(msg) from e
-    return FolderRead.model_validate(folder_obj, from_attributes=True)
+    return FolderRead.model_validate(folder_obj, from_attributes=True).model_dump()
 
 
 async def sync_flows_from_fs():

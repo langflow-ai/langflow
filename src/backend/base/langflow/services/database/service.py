@@ -325,7 +325,6 @@ class DatabaseService(Service):
         return True
 
     async def check_schema_health(self) -> None:
-        # Use engine.begin() for proper async connection management with NullPool
         async with self.engine.begin() as conn:
             await conn.run_sync(self._check_schema_health)
 
@@ -489,7 +488,6 @@ class DatabaseService(Service):
         await self.create_db_and_tables()
 
     async def create_db_and_tables(self) -> None:
-        # Use engine.begin() for proper async connection management with NullPool
         async with self.engine.begin() as conn:
             await conn.run_sync(self._create_db_and_tables)
 
