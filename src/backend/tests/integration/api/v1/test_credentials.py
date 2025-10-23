@@ -1,14 +1,13 @@
 """Integration tests for credential API endpoints."""
 
-import pytest
 from datetime import datetime, timezone
-from uuid import UUID, uuid4
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
+from uuid import uuid4
 
+import pytest
 from fastapi import status
 from httpx import AsyncClient
-
-from langflow.services.database.models.credential.model import Credential, CredentialCreate, CredentialUpdate
+from langflow.services.database.models.credential.model import Credential
 
 
 @pytest.fixture
@@ -61,10 +60,10 @@ class TestCreateCredentialEndpoint:
         """Test successful credential creation."""
         # Setup mock
         mock_create.return_value = sample_credential
-        
+
         # Execute
         response = await client.post("/api/v1/credentials/", json=sample_credential_data)
-        
+
         # Verify
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
@@ -83,7 +82,7 @@ class TestCreateCredentialEndpoint:
             "name": "",  # Empty name
             "provider": "OpenAI",
         }
-        
+
         response = await client.post("/api/v1/credentials/", json=invalid_data)
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -94,7 +93,7 @@ class TestCreateCredentialEndpoint:
         """Test credential creation with server error."""
         # Setup mock to raise exception
         mock_create.side_effect = Exception("Database error")
-        
+
         response = await client.post("/api/v1/credentials/", json=sample_credential_data)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Failed to create credential" in response.json()["detail"]
@@ -104,16 +103,14 @@ class TestGetCredentialsEndpoint:
     """Test GET /api/v1/credentials/ endpoint."""
 
     @patch("langflow.api.v1.credentials.get_credentials_by_user")
-    async def test_get_credentials_success(
-        self, mock_get, client: AsyncClient, active_user, sample_credential
-    ):
+    async def test_get_credentials_success(self, mock_get, client: AsyncClient, active_user, sample_credential):
         """Test successful credential retrieval."""
         # Setup mock
         mock_get.return_value = [sample_credential]
-        
+
         # Execute
         response = await client.get("/api/v1/credentials/")
-        
+
         # Verify
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -128,10 +125,10 @@ class TestGetCredentialsEndpoint:
         """Test credential retrieval with provider filter."""
         # Setup mock
         mock_get.return_value = [sample_credential]
-        
+
         # Execute with provider filter
         response = await client.get("/api/v1/credentials/?provider=OpenAI")
-        
+
         # Verify
         assert response.status_code == status.HTTP_200_OK
         mock_get.assert_called_once()
@@ -140,13 +137,11 @@ class TestGetCredentialsEndpoint:
         assert call_args[1]["provider"] == "OpenAI"
 
     @patch("langflow.api.v1.credentials.get_credentials_by_user")
-    async def test_get_credentials_server_error(
-        self, mock_get, client: AsyncClient, active_user
-    ):
+    async def test_get_credentials_server_error(self, mock_get, client: AsyncClient, active_user):
         """Test credential retrieval with server error."""
         # Setup mock to raise exception
         mock_get.side_effect = Exception("Database error")
-        
+
         response = await client.get("/api/v1/credentials/")
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         assert "Failed to retrieve credentials" in response.json()["detail"]
@@ -156,16 +151,14 @@ class TestGetCredentialByIdEndpoint:
     """Test GET /api/v1/credentials/{credential_id} endpoint."""
 
     @patch("langflow.api.v1.credentials.get_credential_by_id")
-    async def test_get_credential_by_id_success(
-        self, mock_get, client: AsyncClient, active_user, sample_credential
-    ):
+    async def test_get_credential_by_id_success(self, mock_get, client: AsyncClient, active_user, sample_credential):
         """Test successful credential retrieval by ID."""
         # Setup mock
         mock_get.return_value = sample_credential
-        
+
         # Execute
         response = await client.get(f"/api/v1/credentials/{sample_credential.id}")
-        
+
         # Verify
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -174,16 +167,14 @@ class TestGetCredentialByIdEndpoint:
         assert data["provider"] == sample_credential.provider
 
     @patch("langflow.api.v1.credentials.get_credential_by_id")
-    async def test_get_credential_by_id_not_found(
-        self, mock_get, client: AsyncClient, active_user
-    ):
+    async def test_get_credential_by_id_not_found(self, mock_get, client: AsyncClient, active_user):
         """Test credential retrieval by ID not found."""
         # Setup mock
         mock_get.return_value = None
-        
+
         # Execute
         response = await client.get(f"/api/v1/credentials/{uuid4()}")
-        
+
         # Verify
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert "Credential not found" in response.json()["detail"]
@@ -195,7 +186,7 @@ class TestGetCredentialByIdEndpoint:
         """Test credential retrieval by ID with server error."""
         # Setup mock to raise exception
         mock_get.side_effect = Exception("Database error")
-        
+
         response = await client.get(f"/api/v1/credentials/{sample_credential.id}")
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         assert "Failed to retrieve credential" in response.json()["detail"]
@@ -217,10 +208,10 @@ class TestUpdateCredentialEndpoint:
             is_active=sample_credential_update_data["is_active"],
         )
         mock_update.return_value = updated_credential
-        
+
         # Execute
         response = await client.put(f"/api/v1/credentials/{sample_credential.id}", json=sample_credential_update_data)
-        
+
         # Verify
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -235,8 +226,9 @@ class TestUpdateCredentialEndpoint:
         """Test credential update not found."""
         # Setup mock to raise HTTPException
         from fastapi import HTTPException
+
         mock_update.side_effect = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Credential not found")
-        
+
         response = await client.put(f"/api/v1/credentials/{uuid4()}", json=sample_credential_update_data)
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -247,7 +239,7 @@ class TestUpdateCredentialEndpoint:
         """Test credential update with server error."""
         # Setup mock to raise exception
         mock_update.side_effect = Exception("Database error")
-        
+
         response = await client.put(f"/api/v1/credentials/{sample_credential.id}", json=sample_credential_update_data)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Failed to update credential" in response.json()["detail"]
@@ -257,30 +249,27 @@ class TestDeleteCredentialEndpoint:
     """Test DELETE /api/v1/credentials/{credential_id} endpoint."""
 
     @patch("langflow.api.v1.credentials.delete_credential")
-    async def test_delete_credential_success(
-        self, mock_delete, client: AsyncClient, active_user, sample_credential
-    ):
+    async def test_delete_credential_success(self, mock_delete, client: AsyncClient, active_user, sample_credential):
         """Test successful credential deletion."""
         # Setup mock
         mock_delete.return_value = None
-        
+
         # Execute
         response = await client.delete(f"/api/v1/credentials/{sample_credential.id}")
-        
+
         # Verify
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["detail"] == "Credential deleted successfully"
 
     @patch("langflow.api.v1.credentials.delete_credential")
-    async def test_delete_credential_not_found(
-        self, mock_delete, client: AsyncClient, active_user
-    ):
+    async def test_delete_credential_not_found(self, mock_delete, client: AsyncClient, active_user):
         """Test credential deletion not found."""
         # Setup mock to raise HTTPException
         from fastapi import HTTPException
+
         mock_delete.side_effect = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Credential not found")
-        
+
         response = await client.delete(f"/api/v1/credentials/{uuid4()}")
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -291,7 +280,7 @@ class TestDeleteCredentialEndpoint:
         """Test credential deletion with server error."""
         # Setup mock to raise exception
         mock_delete.side_effect = Exception("Database error")
-        
+
         response = await client.delete(f"/api/v1/credentials/{sample_credential.id}")
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Failed to delete credential" in response.json()["detail"]
@@ -307,10 +296,10 @@ class TestCredentialSecurity:
         """Test that credential values are not exposed in API responses."""
         # Setup mock
         mock_create.return_value = sample_credential
-        
+
         # Execute
         response = await client.post("/api/v1/credentials/", json=sample_credential_data)
-        
+
         # Verify
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
@@ -320,16 +309,14 @@ class TestCredentialSecurity:
         assert "sk-" not in str(data)
 
     @patch("langflow.api.v1.credentials.get_credentials_by_user")
-    async def test_credential_list_security(
-        self, mock_get, client: AsyncClient, active_user, sample_credential
-    ):
+    async def test_credential_list_security(self, mock_get, client: AsyncClient, active_user, sample_credential):
         """Test that credential lists don't expose sensitive data."""
         # Setup mock
         mock_get.return_value = [sample_credential]
-        
+
         # Execute
         response = await client.get("/api/v1/credentials/")
-        
+
         # Verify
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -351,7 +338,7 @@ class TestCredentialValidation:
             "provider": "OpenAI",
             "value": "sk-test123",
         }
-        
+
         response = await client.post("/api/v1/credentials/", json=invalid_data)
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -362,7 +349,7 @@ class TestCredentialValidation:
             "provider": "",  # Empty provider
             "value": "sk-test123",
         }
-        
+
         response = await client.post("/api/v1/credentials/", json=invalid_data)
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -372,7 +359,7 @@ class TestCredentialValidation:
         update_data = {
             "description": "Updated description only",
         }
-        
+
         # Mock the update function
         with patch("langflow.api.v1.credentials.update_credential") as mock_update:
             mock_update.return_value = Credential(
@@ -383,6 +370,6 @@ class TestCredentialValidation:
                 encrypted_value="encrypted",
                 user_id=active_user.id,
             )
-            
+
             response = await client.put(f"/api/v1/credentials/{uuid4()}", json=update_data)
             assert response.status_code == status.HTTP_200_OK
