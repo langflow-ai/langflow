@@ -57,8 +57,13 @@ const useUploadFile = ({
         filesIds.push(res.path);
       }
       return filesIds;
-    } catch (e) {
-      throw e;
+    } catch (e: any) {
+      // Extract the detailed error message from axios response if available
+      const errorMessage =
+        e?.response?.data?.detail ||
+        e?.message ||
+        "An error occurred while uploading the file";
+      throw new Error(errorMessage);
     }
   };
 

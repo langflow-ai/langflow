@@ -622,7 +622,7 @@ async def test_read_only_starter_projects(client: AsyncClient, logged_in_headers
 async def test_sqlite_pragmas():
     db_service = get_db_service()
 
-    async with db_service.with_session() as session:
+    async with db_service._with_session() as session:
         assert (await session.exec(text("PRAGMA journal_mode;"))).scalar() == "wal"
         assert (await session.exec(text("PRAGMA synchronous;"))).scalar() == 1
 

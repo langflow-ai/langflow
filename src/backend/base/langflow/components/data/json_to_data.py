@@ -6,6 +6,7 @@ from json_repair import repair_json
 from langflow.custom.custom_component.component import Component
 from langflow.io import FileInput, MessageTextInput, MultilineInput, Output
 from langflow.schema.data import Data
+from langflow.utils.async_helpers import run_until_complete
 
 
 class JSONToDataComponent(Component):
@@ -51,14 +52,27 @@ class JSONToDataComponent(Component):
 
         try:
             if self.json_file:
+                # Use storage-aware reading for uploaded files
+                from langflow.base.data.storage_utils import read_file_bytes
+                from langflow.services.deps import get_settings_service
+
                 resolved_path = self.resolve_path(self.json_file)
-                file_path = Path(resolved_path)
-                if file_path.suffix.lower() != ".json":
+
+                if not resolved_path.lower().endswith(".json"):
                     self.status = "The provided file must be a JSON file."
                 else:
-                    json_data = file_path.read_text(encoding="utf-8")
+                    # Read bytes using storage-aware function
+                    settings = get_settings_service().settings
+                    if settings.storage_type == "s3":
+                        # For S3, run async read in sync context using Langflow's helper
+                        json_bytes = run_until_complete(read_file_bytes(resolved_path))
+                        json_data = json_bytes.decode("utf-8")
+                    else:
+                        # For local, read directly
+                        json_data = Path(resolved_path).read_text(encoding="utf-8")
 
             elif self.json_path:
+                # Direct file path provided by user (always local)
                 file_path = Path(self.json_path)
                 if file_path.suffix.lower() != ".json":
                     self.status = "The provided file must be a JSON file."

@@ -43,7 +43,6 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import (
     get_chat_service,
     get_queue_service,
-    get_session,
     get_telemetry_service,
     session_scope,
 )
@@ -286,11 +285,14 @@ async def build_vertex(
         if isinstance(cache, CacheMiss):
             # If there's no cache
             await logger.awarning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
-            graph = await build_graph_from_db(
-                flow_id=flow_id,
-                session=await anext(get_session()),
-                chat_service=chat_service,
-            )
+            from langflow.services.deps import session_scope
+
+            async with session_scope() as session:
+                graph = await build_graph_from_db(
+                    flow_id=flow_id,
+                    session=session,
+                    chat_service=chat_service,
+                )
         else:
             graph = cache.get("result")
             await graph.initialize_run()

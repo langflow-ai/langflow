@@ -20,7 +20,7 @@ async def create_default_folder_if_it_doesnt_exist(session: AsyncSession, user_i
             description=DEFAULT_FOLDER_DESCRIPTION,
         )
         session.add(folder)
-        await session.commit()
+        await session.flush()
         await session.refresh(folder)
         await session.exec(
             update(Flow)
@@ -32,7 +32,6 @@ async def create_default_folder_if_it_doesnt_exist(session: AsyncSession, user_i
             )
             .values(folder_id=folder.id)
         )
-        await session.commit()
     return folder
 
 

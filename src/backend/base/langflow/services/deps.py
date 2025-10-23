@@ -153,23 +153,27 @@ def get_db_service() -> DatabaseService:
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    """Retrieves an async session from the database service.
+    """Retrieves an async session from the database service for read-only operations.
+
+    This is used for endpoints that only read data and don't need to commit.
+    No auto-commit or rollback - the session is simply closed after use.
 
     Yields:
         AsyncSession: An async session object.
 
     """
-    async with get_db_service().with_session() as session:
+    async with get_db_service()._with_session() as session:
         yield session
 
 
-@asynccontextmanager
-async def session_scope() -> AsyncGenerator[AsyncSession, None]:
-    """Context manager for managing an async session scope.
+async def get_session_with_commit() -> AsyncGenerator[AsyncSession, None]:
+    """Dependency for managing an async session with auto-commit/rollback for write operations.
 
-    This context manager is used to manage an async session scope for database operations.
+    This is used as a FastAPI dependency (with Depends()) for endpoints that modify data.
     It ensures that the session is properly committed if no exceptions occur,
     and rolled back if an exception is raised.
+
+    Use get_session() for read-only operations to avoid unnecessary commits and locks.
 
     Yields:
         AsyncSession: The async session object.
@@ -178,15 +182,65 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         Exception: If an error occurs during the session scope.
 
     """
+    # Reuse session_scope to avoid code duplication
+    async with session_scope() as session:
+        yield session
+
+
+@asynccontextmanager
+async def session_scope() -> AsyncGenerator[AsyncSession, None]:
+    """Context manager for managing an async session scope with auto-commit for write operations.
+
+    This is used with `async with session_scope() as session:` for direct session management.
+    It ensures that the session is properly committed if no exceptions occur,
+    and rolled back if an exception is raised.
+
+    Use session_scope_readonly() for read-only operations to avoid unnecessary commits and locks.
+
+    Yields:
+        AsyncSession: The async session object.
+
+    Raises:
+        Exception: If an error occurs during the session scope.
+
+    """
+    from sqlalchemy.exc import InvalidRequestError
+
     db_service = get_db_service()
-    async with db_service.with_session() as session:
+    async with db_service._with_session() as session:
         try:
             yield session
             await session.commit()
-        except Exception:
-            await logger.aexception("An error occurred during the session scope.")
-            await session.rollback()
+        except Exception as e:
+            await logger.adebug(f"An error occurred during the session scope: {e}")
+            await logger.aexception("An error occurred during the session scope.", exc_info=True)
+            # Only rollback if session is still in a valid state
+            if session.is_active:
+                try:
+                    await session.rollback()
+                except InvalidRequestError:
+                    # Session was already rolled back by SQLAlchemy
+                    pass
             raise
+        # No explicit close needed - _with_session() handles it
+
+
+@asynccontextmanager
+async def session_scope_readonly() -> AsyncGenerator[AsyncSession, None]:
+    """Context manager for managing a read-only async session scope.
+
+    This is used with `async with session_scope_readonly() as session:` for direct session management
+    when only reading data. No auto-commit or rollback - the session is simply closed after use.
+
+    Yields:
+        AsyncSession: The async session object.
+
+    """
+    db_service = get_db_service()
+    async with db_service._with_session() as session:
+        yield session
+        # No commit - read-only
+        # No explicit close needed - _with_session() handles it
 
 
 def get_cache_service() -> CacheService | AsyncBaseCacheService:

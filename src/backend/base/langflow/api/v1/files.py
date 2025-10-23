@@ -130,14 +130,20 @@ async def download_profile_picture(
     folder_name: str,
     file_name: str,
 ):
+    """Download a profile picture.
+    Profile pictures are system files bundled with the package, served from the installation directory.
+    """
     try:
-        storage_service = get_storage_service()
+        # Profile pictures are in the package installation directory
+        package_dir = Path(__file__).parent.parent.parent / "initial_setup" / "profile_pictures"
+        file_path = package_dir / folder_name / file_name
+
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="Profile picture not found")
+
         extension = file_name.split(".")[-1]
-        config_dir = storage_service.settings_service.settings.config_dir
-        config_path = Path(config_dir)  # type: ignore[arg-type]
-        folder_path = config_path / "profile_pictures" / folder_name
         content_type = build_content_type_from_extension(extension)
-        file_content = await storage_service.get_file(flow_id=folder_path, file_name=file_name)  # type: ignore[arg-type]
+        file_content = file_path.read_bytes()
         return StreamingResponse(BytesIO(file_content), media_type=content_type)
 
     except Exception as e:
@@ -146,16 +152,19 @@ async def download_profile_picture(
 
 @router.get("/profile_pictures/list")
 async def list_profile_pictures():
+    """List available profile pictures.
+    Profile pictures are system files bundled with the package, served from the installation directory.
+    """
     try:
-        storage_service = get_storage_service()
-        config_dir = storage_service.settings_service.settings.config_dir
-        config_path = Path(config_dir)  # type: ignore[arg-type]
+        # Profile pictures are in the package installation directory
+        package_dir = Path(__file__).parent.parent.parent / "initial_setup" / "profile_pictures"
 
-        people_path = config_path / "profile_pictures/People"
-        space_path = config_path / "profile_pictures/Space"
+        people_path = package_dir / "People"
+        space_path = package_dir / "Space"
 
-        people = await storage_service.list_files(flow_id=people_path)  # type: ignore[arg-type]
-        space = await storage_service.list_files(flow_id=space_path)  # type: ignore[arg-type]
+        # List files from package directory - these are bundled with the container
+        people = [f.name for f in people_path.iterdir() if f.is_file()] if people_path.exists() else []
+        space = [f.name for f in space_path.iterdir() if f.is_file()] if space_path.exists() else []
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

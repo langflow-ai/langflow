@@ -11,7 +11,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.logging.logger import logger
 from langflow.schema.message import Message
-from langflow.services.database.models.message.model import MessageRead, MessageTable
+from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import session_scope
 from langflow.utils.async_helpers import run_until_complete
 
@@ -120,8 +120,9 @@ async def aadd_messages(messages: Message | list[Message], flow_id: str | UUID |
     try:
         messages_models = [MessageTable.from_message(msg, flow_id=flow_id) for msg in messages]
         async with session_scope() as session:
-            messages_models = await aadd_messagetables(messages_models, session)
-        return [await Message.create(**message.model_dump()) for message in messages_models]
+            # aadd_messagetables now returns dicts to avoid detached instance errors
+            message_dicts = await aadd_messagetables(messages_models, session)
+        return [await Message.create(**msg_dict) for msg_dict in message_dicts]
     except Exception as e:
         await logger.aexception(e)
         raise
@@ -141,14 +142,17 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
                 if msg.flow_id and isinstance(msg.flow_id, str):
                     msg.flow_id = UUID(msg.flow_id)
                 session.add(msg)
-                await session.commit()
+                await session.flush()
                 await session.refresh(msg)
                 updated_messages.append(msg)
             else:
                 error_message = f"Message with id {message.id} not found"
                 await logger.awarning(error_message)
                 raise ValueError(error_message)
-        return [MessageRead.model_validate(message, from_attributes=True) for message in updated_messages]
+        # Extract data as dicts BEFORE session closes to avoid detached instance errors
+        # Use model_dump() directly to avoid triggering lazy loads via model_validate
+        message_dicts = [message.model_dump() for message in updated_messages]
+    return [await Message.create(**msg_dict) for msg_dict in message_dicts]
 
 
 async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession):
@@ -156,12 +160,13 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
         try:
             for message in messages:
                 session.add(message)
-            await session.commit()
+            # Flush to write to DB before we can refresh
+            await session.flush()
             # This is a hack.
             # We are doing this because build_public_tmp causes the CancelledError to be raised
             # while build_flow does not.
         except asyncio.CancelledError:
-            await session.rollback()
+            await logger.awarning("DEBUG LOG: aadd_messagetables: CancelledError. Recursively calling aadd_messagetables")
             return await aadd_messagetables(messages, session)
         for message in messages:
             await session.refresh(message)
@@ -180,7 +185,9 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
         msg.category = msg.category or ""
         new_messages.append(msg)
 
-    return [MessageRead.model_validate(message, from_attributes=True) for message in new_messages]
+    # Convert directly to dicts to avoid accessing lazy-loaded attributes
+    # This prevents detached instance errors when accessed after session closes
+    return [msg.model_dump() for msg in new_messages]
 
 
 def delete_messages(session_id: str) -> None:
@@ -219,7 +226,6 @@ async def delete_message(id_: str) -> None:
         message = await session.get(MessageTable, id_)
         if message:
             await session.delete(message)
-            await session.commit()
 
 
 def store_message(
