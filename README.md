@@ -29,9 +29,9 @@
 ## 🖥️  Langflow Desktop
 
 Langflow Desktop is the easiest way to get started. It includes dependency management and automatic updates.
+Available for Windows and macOS.
 
-[📥 Download Langflow Desktop](https://www.langflow.org/desktop) (available for Windows and macOS).
-
+[📥 Download Langflow Desktop](https://www.langflow.org/desktop)
 
 ## ⚡️ Quickstart
 
@@ -48,32 +48,34 @@ uv pip install langflow -U
 
 The latest Langflow package is installed.
 For more information, see [Install and run the Langflow OSS Python package](https://docs.langflow.org/get-started-installation#install-and-run-the-langflow-oss-python-package).
+
 #### Run
 
+To start Langflow, run:
 ```shell
 uv run langflow run
 ```
 
 Langflow starts at http://127.0.0.1:7860.
 
-That's it! You're ready to build with Langflow 🎉
+That's it! You're ready to build with Langflow! 🎉
 
 ## 📦 Other install options
 
 ### Run from source
-If you've cloned this repository or want to contribute:
+If you've cloned this repository and want to contribute, run this command from the repository root:
 ```shell
 make run_cli
 ```
-See [DEVELOPMENT.md](./DEVELOPMENT.md) for full development setup.
+For more information, see [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 ### Docker
 Start a Langflow container with default settings:
 ```shell
 docker run -p 7860:7860 langflowai/langflow:latest
 ```
-Then access Langflow at http://localhost:7860/. For configuration options, see the [Docker deployment guide](https://docs.langflow.org/deployment-docker).
-
+Langflow is available at http://localhost:7860/.
+For configuration options, see the [Docker deployment guide](https://docs.langflow.org/deployment-docker).
 
 > [!CAUTION]
 > - Langflow versions 1.6.0 through 1.6.3 have a critical bug where `.env` files are not read, potentially causing security vulnerabilities. **DO NOT** upgrade to these versions if you use `.env` files for configuration. Instead, upgrade to 1.6.4, which includes a fix for this bug.
