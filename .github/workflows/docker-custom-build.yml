@@ -31,7 +31,7 @@ jobs:
       - name: Run smoke tests
         run: |
           uv sync --dev
-          uv run pytest src/backend/tests/unit/test_endpoints.py -v --tb=short
+          uv run pytest src/backend/tests/unit/test_endpoints.py -v --tb=short -m "not api_key_required and not benchmark"
 
   # Step 2: Build & push Docker (ONLY if tests pass)
   build-and-push:
