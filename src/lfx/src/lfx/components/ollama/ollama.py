@@ -35,6 +35,7 @@ class ChatOllamaComponent(LCModelComponent):
             info="Endpoint of the Ollama API. Defaults to http://localhost:11434 .",
             value="http://localhost:11434",
             real_time_refresh=True,
+            required=True,
         ),
         DropdownInput(
             name="model_name",
@@ -43,6 +44,7 @@ class ChatOllamaComponent(LCModelComponent):
             info="Refer to https://ollama.com/library for more models.",
             refresh_button=True,
             real_time_refresh=True,
+            required=True,
         ),
         SliderInput(
             name="temperature",
@@ -142,6 +144,16 @@ class ChatOllamaComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        # Validate that model_name is not empty
+        if not self.model_name or not str(self.model_name).strip():
+            msg = "Model name cannot be empty. Please select a model from the dropdown or enter a valid model name."
+            raise ValueError(msg)
+
+        # Validate that base_url is not empty
+        if not self.base_url or not str(self.base_url).strip():
+            msg = "Base URL cannot be empty. Please provide a valid Ollama base URL (e.g., http://localhost:11434)."
+            raise ValueError(msg)
+
         # Mapping mirostat settings to their corresponding values
         mirostat_options = {"Mirostat": 1, "Mirostat 2.0": 2}
 
@@ -155,6 +167,12 @@ class ChatOllamaComponent(LCModelComponent):
         else:
             mirostat_eta = self.mirostat_eta
             mirostat_tau = self.mirostat_tau
+            # Log a warning about potential mirostat compatibility issues
+            logger.warning(
+                f"Mirostat is enabled for model '{self.model_name}'. "
+                f"If you see 'invalid option provided: mirostat' warnings in Ollama logs, "
+                f"this model may not support mirostat. Consider disabling mirostat for this model."
+            )
 
         transformed_base_url = transform_localhost_url(self.base_url)
 
@@ -201,9 +219,24 @@ class ChatOllamaComponent(LCModelComponent):
         try:
             output = ChatOllama(**llm_params)
         except Exception as e:
+            error_details = str(e)
+            if "validation error" in error_details.lower():
+                msg = (
+                    f"Ollama model validation error: {error_details}. "
+                    f"This may be due to incompatible parameters for model '{self.model_name}'. "
+                    f"Please check the model parameters and try again."
+                )
+                raise ValueError(msg) from e
+            if "connection" in error_details.lower() or "timeout" in error_details.lower():
+                msg = (
+                    f"Unable to connect to the Ollama API: {error_details}. "
+                    f"Please verify the base URL ({self.base_url}), ensure Ollama is running, "
+                    f"and that the model '{self.model_name}' is pulled."
+                )
+                raise ConnectionError(msg) from e
             msg = (
-                "Unable to connect to the Ollama API. "
-                "Please verify the base URL, ensure the relevant Ollama model is pulled, and try again."
+                f"Unable to initialize Ollama model: {error_details}. "
+                f"Please verify the base URL, ensure the relevant Ollama model is pulled, and try again."
             )
             raise ValueError(msg) from e
 
