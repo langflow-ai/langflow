@@ -7,9 +7,6 @@ import {
 import { customDefaultShortcuts } from "../customization/constants";
 import type { languageMap } from "../types/components";
 
-// Helper to safely access environment variables in both browser and Node.js
-// In browser (Vite), these are replaced at build time via vite.config.mts define
-// In tests (Node.js), we use process.env
 const getEnvVar = (key: string, defaultValue: any = undefined) => {
   if (typeof process !== "undefined" && process.env) {
     return process.env[key] ?? defaultValue;
