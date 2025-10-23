@@ -16,7 +16,7 @@ export function normalizeTimeString(input) {
   // Check for seconds
   if (patterns.seconds.test(cleanInput)) {
     const [, seconds] = cleanInput.match(patterns.seconds);
-    return `${parseFloat(seconds)}s`;
+    return `${Number(seconds).toFixed(1)}s`;
   }
 
   // Check for milliseconds
