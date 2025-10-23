@@ -19,7 +19,7 @@ class DataConditionalRouterComponent(Component):
             name="data_input",
             display_name="Data Input",
             info="The Data object or list of Data objects to process",
-            is_list=True,
+            list=True,
         ),
         MessageTextInput(
             name="key_name",
