@@ -113,14 +113,8 @@ def _get_language_model_options() -> list[dict[str, Any]]:
         }
     ]
 
-    # Combine all options and deduplicate by provider+name
-    return (
-        openai_options
-        + anthropic_options
-        + google_options
-        + ollama_options
-        + watsonx_options
-    )
+    # Combine all options and return
+    return openai_options + anthropic_options + google_options + ollama_options + watsonx_options
 
 # Compute model options once at module level
 _MODEL_OPTIONS = _get_language_model_options()
