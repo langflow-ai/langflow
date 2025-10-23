@@ -188,6 +188,7 @@ export default function PublishDropdown() {
         setOpen={setOpenPublishFlowModal}
         flowId={flowId ?? ""}
         flowName={flowName ?? ""}
+        existingPublishedData={publishCheck}
       />
     </>
   );

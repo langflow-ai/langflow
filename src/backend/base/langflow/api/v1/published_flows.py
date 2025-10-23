@@ -291,21 +291,28 @@ async def check_flow_published(
 ):
     """
     Check if a flow is published (by original flow ID).
-    Returns publication status and both published flow ID and cloned flow ID if published.
+    Returns publication status, IDs, and metadata for pre-filling re-publish modal.
     """
-    # Query by flow_cloned_from (original flow ID)
-    query = select(PublishedFlow).where(
-        PublishedFlow.flow_cloned_from == flow_id, PublishedFlow.status == PublishStatusEnum.PUBLISHED
+    # Query by flow_cloned_from (original flow ID) and join with Flow to get cloned flow name
+    query = (
+        select(PublishedFlow, Flow)
+        .join(Flow, PublishedFlow.flow_id == Flow.id)
+        .where(PublishedFlow.flow_cloned_from == flow_id, PublishedFlow.status == PublishStatusEnum.PUBLISHED)
     )
     result = await session.exec(query)
-    published_flow = result.first()
+    row = result.first()
 
-    if published_flow:
+    if row:
+        published_flow, cloned_flow = row
         return {
             "is_published": True,
             "published_flow_id": str(published_flow.id),
             "cloned_flow_id": str(published_flow.flow_id),
             "published_at": published_flow.published_at.isoformat(),
+            # Additional data for pre-filling modal on re-publish
+            "marketplace_flow_name": cloned_flow.name,
+            "version": published_flow.version,
+            "category": published_flow.category,
         }
 
     return {

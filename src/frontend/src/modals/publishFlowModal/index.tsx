@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { usePublishFlow } from "@/controllers/API/queries/published-flows";
+import { usePublishFlow, type PublishCheckResponse } from "@/controllers/API/queries/published-flows";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -27,6 +27,7 @@ interface PublishFlowModalProps {
   setOpen: (open: boolean) => void;
   flowId: string;
   flowName: string;
+  existingPublishedData?: PublishCheckResponse;
 }
 
 export default function PublishFlowModal({
@@ -34,6 +35,7 @@ export default function PublishFlowModal({
   setOpen,
   flowId,
   flowName,
+  existingPublishedData,
 }: PublishFlowModalProps) {
   const [marketplaceName, setMarketplaceName] = useState(flowName);
   const [version, setVersion] = useState("");
@@ -47,12 +49,22 @@ export default function PublishFlowModal({
     (state) => state.currentFlow
   );
 
-  // Update marketplace name when flow name changes
+  // Pre-fill form fields when modal opens
   useEffect(() => {
     if (open) {
-      setMarketplaceName(flowName);
+      if (existingPublishedData?.is_published) {
+        // Re-publish: Pre-fill with existing published data
+        setMarketplaceName(existingPublishedData.marketplace_flow_name || flowName);
+        setVersion(existingPublishedData.version || "");
+        setCategory(existingPublishedData.category || "");
+      } else {
+        // First-time publish: Use defaults
+        setMarketplaceName(flowName);
+        setVersion("");
+        setCategory("");
+      }
     }
-  }, [open, flowName]);
+  }, [open, existingPublishedData, flowName]);
 
   // Run validation when modal opens
   useEffect(() => {
