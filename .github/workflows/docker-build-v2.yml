@@ -252,10 +252,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
 
-      - name: Debug matrix and inputs
-        run: |
-          echo "REF=${{ inputs.ref }}"
-          echo "LANGFLOW_IMAGE=${{ matrix.langflow_image }}"
       - name: Build and push to Docker Hub
         uses: docker/build-push-action@v6
         with:
