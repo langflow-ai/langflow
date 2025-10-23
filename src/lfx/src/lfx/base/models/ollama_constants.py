@@ -9,6 +9,7 @@ OLLAMA_EMBEDDING_MODELS = [
     "paraphrase-multilingual",
     "granite-embedding",
     "jina-embeddings-v2-base-en",
+    "qwen3-embedding",
 ]
 # https://ollama.com/search?c=tools
 OLLAMA_TOOL_MODELS_BASE = [
