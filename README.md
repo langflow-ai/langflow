@@ -47,7 +47,7 @@ uv pip install langflow -U
 ```
 
 The latest Langflow package is installed.
-
+For more information, see [Install and run the Langflow OSS Python package](https://docs.langflow.org/get-started-installation#install-and-run-the-langflow-oss-python-package).
 #### Run
 
 ```shell
