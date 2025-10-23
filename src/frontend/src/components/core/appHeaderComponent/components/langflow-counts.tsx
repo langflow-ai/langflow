@@ -23,7 +23,7 @@ export const LangflowCounts = () => {
         >
           <LuBotMessageSquare className="h-4 w-4" />
           <span className="text-xs font-semibold">
-            {"Use AI to Build AI"}
+            {"🚀 AI Builder Test"}
           </span>
         </div>
       </ShadTooltip>

@@ -1,0 +1,66 @@
+name: Docker Build & Push (Minimal)
+
+on:
+  push:
+    branches:
+      - feature/add-ai-chat-button-and-toggle  # Change to 'main' for production
+    paths:
+      - 'src/**'
+      - 'docker_example/**'
+      - '.dockerignore'
+      - 'pyproject.toml'
+      - 'uv.lock'
+  workflow_dispatch:
+
+env:
+  DOCKER_IMAGE: dlaiosa/xc475-graceful
+  DOCKER_TAG: dev-latest  # Change to 'latest' for production
+
+jobs:
+  # Step 1: Run smoke tests first
+  smoke-test:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.10"
+      
+      - name: Run smoke tests
+        run: |
+          uv sync --dev
+          uv run pytest src/backend/tests/unit/test_endpoints.py -v --tb=short
+
+  # Step 2: Build & push Docker (ONLY if tests pass)
+  build-and-push:
+    name: Build & Push Docker
+    needs: smoke-test  # ← Won't run if smoke-test fails!
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      
+      - uses: docker/setup-buildx-action@v3
+      
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker_example/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
+            ${{ env.DOCKER_IMAGE }}:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Success
+        run: |
+          echo "✅ Image pushed successfully!"
+          echo "Image: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
+          echo "Railway will auto-deploy if watching this image!"
