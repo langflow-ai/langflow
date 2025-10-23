@@ -39,12 +39,15 @@ export default function FlowPage({ view, readOnly, flowId: propFlowId, folderId:
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Skip change tracking for read-only/view mode
   const changesNotSaved =
+    !view && !readOnly &&
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
     (currentFlow?.data?.nodes?.length ?? 0) > 0;
 
   const isBuilding = useFlowStore((state) => state.isBuilding);
-  const blocker = useBlocker(changesNotSaved || isBuilding);
+  // Don't block navigation in view/read-only mode
+  const blocker = useBlocker(view || readOnly ? false : (changesNotSaved || isBuilding));
 
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
   const { id: paramId } = useParams();
@@ -117,6 +120,9 @@ export default function FlowPage({ view, readOnly, flowId: propFlowId, folderId:
   };
 
   useEffect(() => {
+    // Skip beforeunload warning in view/read-only mode
+    if (view || readOnly) return;
+
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (changesNotSaved || isBuilding) {
         event.preventDefault();
@@ -129,7 +135,7 @@ export default function FlowPage({ view, readOnly, flowId: propFlowId, folderId:
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [changesNotSaved, isBuilding]);
+  }, [changesNotSaved, isBuilding, view, readOnly]);
 
   // Set flow tab id
   useEffect(() => {
@@ -186,6 +192,9 @@ export default function FlowPage({ view, readOnly, flowId: propFlowId, folderId:
   }, [id]);
 
   useEffect(() => {
+    // Skip auto-save in view/read-only mode
+    if (view || readOnly) return;
+
     if (
       blocker.state === "blocked" &&
       autoSaving &&
@@ -198,9 +207,12 @@ export default function FlowPage({ view, readOnly, flowId: propFlowId, folderId:
       }
       handleSave();
     }
-  }, [blocker.state, isBuilding]);
+  }, [blocker.state, isBuilding, view, readOnly]);
 
   useEffect(() => {
+    // Skip blocker logic in view/read-only mode
+    if (view || readOnly) return;
+
     if (blocker.state === "blocked") {
       if (isBuilding) {
         stopBuilding();
@@ -208,7 +220,7 @@ export default function FlowPage({ view, readOnly, flowId: propFlowId, folderId:
         blocker.proceed && blocker.proceed();
       }
     }
-  }, [blocker.state, isBuilding]);
+  }, [blocker.state, isBuilding, view, readOnly]);
 
   const getFlowToAddToCanvas = async (id: string) => {
     try {
@@ -251,7 +263,7 @@ export default function FlowPage({ view, readOnly, flowId: propFlowId, folderId:
           </div>
         )}
       </div>
-      {blocker.state === "blocked" && (
+      {!view && !readOnly && blocker.state === "blocked" && (
         <>
           {!isBuilding && currentSavedFlow && (
             <SaveChangesModal

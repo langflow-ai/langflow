@@ -89,6 +89,107 @@ async def _save_flow_to_fs(flow: Flow) -> None:
             raise
 
 
+async def _get_unique_flow_name(
+    session: AsyncSession,
+    base_name: str,
+    user_id: UUID,
+    folder_id: UUID,
+) -> str:
+    """
+    Check if name exists in folder and append (1), (2), etc. if it does.
+
+    Args:
+        session: Database session
+        base_name: The desired flow name
+        user_id: User ID who owns the flow
+        folder_id: Folder ID where the flow will be created
+
+    Returns:
+        A unique flow name in the specified folder
+    """
+    existing_result = await session.exec(
+        select(Flow).where(
+            Flow.name == base_name,
+            Flow.user_id == user_id,
+            Flow.folder_id == folder_id,
+        )
+    )
+    existing = existing_result.first()
+
+    if not existing:
+        return base_name
+
+    # Find next available number
+    counter = 1
+    while True:
+        new_name = f"{base_name} ({counter})"
+        exists_result = await session.exec(
+            select(Flow).where(
+                Flow.name == new_name,
+                Flow.user_id == user_id,
+                Flow.folder_id == folder_id,
+            )
+        )
+        if not exists_result.first():
+            return new_name
+        counter += 1
+
+
+async def clone_flow_for_marketplace(
+    session: AsyncSession,
+    original_flow: Flow,
+    target_folder_id: UUID,
+    user_id: UUID,
+    marketplace_flow_name: str,
+) -> Flow:
+    """
+    Clone a flow for marketplace publication.
+
+    Creates a deep copy of the flow with a new ID and places it in the target folder.
+    The cloned flow is marked as locked to prevent direct editing.
+
+    Args:
+        session: Database session
+        original_flow: The flow to clone
+        target_folder_id: Folder where the clone should be placed
+        user_id: User ID who owns the flow
+        marketplace_flow_name: Name for the cloned flow
+
+    Returns:
+        The cloned Flow object with a new ID
+    """
+    import copy
+
+    # Deep copy flow data
+    cloned_data = copy.deepcopy(original_flow.data) if original_flow.data else {}
+
+    # Handle duplicate names in target folder
+    final_name = await _get_unique_flow_name(
+        session, marketplace_flow_name, user_id, target_folder_id
+    )
+
+    # Create cloned flow
+    cloned_flow = Flow(
+        name=final_name,
+        description=original_flow.description,
+        data=cloned_data,
+        user_id=user_id,
+        folder_id=target_folder_id,
+        icon=original_flow.icon,
+        tags=original_flow.tags,
+        locked=True,  # Prevent direct editing
+        is_component=original_flow.is_component,
+    )
+
+    session.add(cloned_flow)
+    await session.commit()
+    await session.refresh(cloned_flow)
+
+    logger.info(f"Cloned flow '{original_flow.name}' to '{final_name}' for marketplace")
+
+    return cloned_flow
+
+
 async def _resolve_project_folder(
     *,
     session: AsyncSession,

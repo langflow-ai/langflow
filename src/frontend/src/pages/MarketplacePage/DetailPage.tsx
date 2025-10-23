@@ -14,7 +14,7 @@ import {
 } from "@/controllers/API/queries/published-flows";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useDarkStore } from "@/stores/darkStore";
-import PublishedFlowPage from "../PublishedFlowPage";
+import FlowPage from "../FlowPage";
 import PlaygroundTab from "./components/PlaygroundTab";
 
 export default function MarketplaceDetailPage() {
@@ -33,10 +33,10 @@ export default function MarketplaceDetailPage() {
   const title = publishedFlowData?.flow_name || "Published Flow";
   const description = publishedFlowData?.description || "";
 
-  // Handle Edit button click - navigate to the actual flow (not the snapshot)
+  // Handle Edit button click - navigate to the original flow (not the clone)
   const handleEditClick = () => {
-    if (publishedFlowData?.flow_id) {
-      navigate(`/flow/${publishedFlowData.flow_id}/`);
+    if (publishedFlowData?.flow_cloned_from) {
+      navigate(`/flow/${publishedFlowData.flow_cloned_from}/`);
     }
   };
 
@@ -126,8 +126,8 @@ export default function MarketplaceDetailPage() {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Edit Button */}
-              {publishedFlowData?.flow_id && (
+              {/* Edit Button - only show if flow_cloned_from exists */}
+              {publishedFlowData?.flow_cloned_from && (
                 <Button
                   onClick={handleEditClick}
                   size="sm"
@@ -137,7 +137,7 @@ export default function MarketplaceDetailPage() {
                     name="Pencil"
                     className="h-4 w-4 shrink-0"
                   />
-                  Edit
+                  Edit Original Flow
                 </Button>
               )}
             </div>
@@ -152,9 +152,13 @@ export default function MarketplaceDetailPage() {
                     </p>
                   </div>
                 </div>
-              ) : publishedFlowId ? (
+              ) : publishedFlowData?.flow_id ? (
                 <div className="h-[calc(100vh-200px)] w-full overflow-hidden rounded-lg border border-border dark:border-white/20">
-                  <PublishedFlowPage publishedFlowId={publishedFlowId} />
+                  <FlowPage
+                    flowId={publishedFlowData.flow_id}
+                    view={true}
+                    readOnly={true}
+                  />
                 </div>
               ) : (
                 <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center rounded-lg border border-border dark:border-white/20 bg-card dark:bg-black dark:text-white">

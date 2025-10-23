@@ -11,7 +11,9 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.v1.flows import clone_flow_for_marketplace
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.published_flow.model import (
     PublishedFlow,
     PublishedFlowCreate,
@@ -20,6 +22,7 @@ from langflow.services.database.models.published_flow.model import (
 )
 from langflow.services.database.models.user.model import User
 from langflow.services.auth.permissions import can_edit_flow, get_user_roles_from_request
+from langflow.logging import logger
 
 router = APIRouter(prefix="/published-flows", tags=["Published Flows"])
 
@@ -33,66 +36,105 @@ async def publish_flow(
     current_user: CurrentActiveUser,
 ):
     """
-    Publish a flow to marketplace.
-    Creates a snapshot of the flow data at the time of publishing.
+    Publish a flow to marketplace by cloning it.
+
+    - First publish: Creates clone in target folder + published_flow record
+    - Re-publish: Updates existing clone with new data from original
     """
-    # Fetch flow without user restriction to check permissions properly
-    flow_query = select(Flow).where(Flow.id == flow_id)
-    result = await session.exec(flow_query)
-    flow = result.first()
+    # 1. Fetch original flow
+    original_flow = await session.get(Flow, flow_id)
+    if not original_flow:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
-    if not flow:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found"
-        )
-
-    # Check if user has permission to publish this flow
+    # 2. Check permissions
     user_roles = get_user_roles_from_request(request)
-    if not can_edit_flow(current_user, flow, user_roles):
+    if not can_edit_flow(current_user, original_flow, user_roles):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to publish this flow"
+            detail="You don't have permission to publish this flow",
         )
 
-    # Check if already published
-    existing_query = select(PublishedFlow).where(PublishedFlow.flow_id == flow_id)
-    existing_result = await session.exec(existing_query)
+    # 3. Determine target folder (use payload if provided, otherwise use original flow's folder)
+    target_folder_id = payload.target_folder_id if payload.target_folder_id else original_flow.folder_id
+
+    if not target_folder_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Flow must belong to a folder to be published"
+        )
+
+    target_folder = await session.get(Folder, target_folder_id)
+    if not target_folder or target_folder.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid target folder")
+
+    # 4. Check if already published (by flow_cloned_from)
+    existing_result = await session.exec(
+        select(PublishedFlow).where(PublishedFlow.flow_cloned_from == flow_id)
+    )
     existing = existing_result.first()
 
     if existing:
-        # Update existing published flow with new snapshot
-        existing.version = payload.version
-        existing.description = flow.description
-        existing.tags = flow.tags if flow.tags else None
-        existing.category = payload.category
-        existing.flow_data = flow.data  # New snapshot
-        existing.published_at = datetime.now(timezone.utc)  # Update timestamp
-        existing.updated_at = datetime.now(timezone.utc)
-        existing.status = PublishStatusEnum.PUBLISHED  # Ensure published
+        # RE-PUBLISH: Update existing clone
+        cloned_flow = await session.get(Flow, existing.flow_id)
 
+        if not cloned_flow:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Cloned flow not found"
+            )
+
+        # Update clone's data from original
+        import copy
+
+        cloned_flow.data = copy.deepcopy(original_flow.data) if original_flow.data else {}
+        cloned_flow.description = original_flow.description
+        cloned_flow.tags = original_flow.tags
+        cloned_flow.icon = original_flow.icon
+
+        # Update published_flow record (copy description/tags for pagination)
+        existing.version = payload.version
+        existing.category = payload.category
+        existing.description = original_flow.description  # Denormalized
+        existing.tags = original_flow.tags  # Denormalized
+        existing.published_at = datetime.now(timezone.utc)
+        existing.updated_at = datetime.now(timezone.utc)
+        existing.status = PublishStatusEnum.PUBLISHED
+
+        session.add(cloned_flow)
         session.add(existing)
         await session.commit()
         await session.refresh(existing)
+        await session.refresh(cloned_flow)
 
-        # Return updated record
+        logger.info(f"Re-published flow '{original_flow.name}' (ID: {flow_id}) to marketplace")
+
+        # Return response
         result_data = PublishedFlowRead.model_validate(existing, from_attributes=True)
-        result_data.flow_name = flow.name
-        result_data.flow_icon = flow.icon if flow.icon else None
+        result_data.flow_name = cloned_flow.name
+        result_data.flow_icon = cloned_flow.icon
         result_data.published_by_username = current_user.username
 
         return result_data
 
-    # Create new published flow record with snapshot
+    # NEW PUBLISH: Clone flow and create published_flow record
+    cloned_flow = await clone_flow_for_marketplace(
+        session=session,
+        original_flow=original_flow,
+        target_folder_id=target_folder_id,
+        user_id=current_user.id,
+        marketplace_flow_name=payload.marketplace_flow_name,
+    )
+
+    # Create published_flow record (with denormalized description/tags)
     published_flow = PublishedFlow(
-        flow_id=flow_id,
+        flow_id=cloned_flow.id,  # Points to clone
+        flow_cloned_from=flow_id,  # Points to original
         user_id=current_user.id,
         published_by=current_user.id,
         status=PublishStatusEnum.PUBLISHED,
         version=payload.version,
-        description=flow.description,  # Copy from flow
-        tags=flow.tags if flow.tags else None,  # Copy from flow
         category=payload.category,
-        flow_data=flow.data,  # Snapshot of flow data
+        description=original_flow.description,  # Denormalized for pagination
+        tags=original_flow.tags,  # Denormalized for pagination
         published_at=datetime.now(timezone.utc),
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
@@ -102,10 +144,12 @@ async def publish_flow(
     await session.commit()
     await session.refresh(published_flow)
 
-    # Return with flow details
+    logger.info(f"Published flow '{original_flow.name}' (ID: {flow_id}) to marketplace")
+
+    # Return response
     result_data = PublishedFlowRead.model_validate(published_flow, from_attributes=True)
-    result_data.flow_name = flow.name
-    result_data.flow_icon = flow.icon
+    result_data.flow_name = cloned_flow.name
+    result_data.flow_icon = cloned_flow.icon
     result_data.published_by_username = current_user.username
 
     return result_data
@@ -118,7 +162,10 @@ async def unpublish_flow(
     current_user: CurrentActiveUser,
 ):
     """Unpublish a flow (soft delete - changes status to UNPUBLISHED)."""
-    query = select(PublishedFlow).where(PublishedFlow.flow_id == flow_id, PublishedFlow.user_id == current_user.id)
+    # Query by flow_cloned_from instead of flow_id
+    query = select(PublishedFlow).where(
+        PublishedFlow.flow_cloned_from == flow_id, PublishedFlow.user_id == current_user.id
+    )
     result = await session.exec(query)
     published_flow = result.first()
 
@@ -134,6 +181,8 @@ async def unpublish_flow(
 
     session.add(published_flow)
     await session.commit()
+
+    logger.info(f"Unpublished flow ID: {flow_id}")
 
     return {"message": "Flow unpublished successfully"}
 
@@ -241,11 +290,12 @@ async def check_flow_published(
     session: DbSession,
 ):
     """
-    Check if a flow is published (public endpoint).
-    Returns publication status and published flow ID if published.
+    Check if a flow is published (by original flow ID).
+    Returns publication status and both published flow ID and cloned flow ID if published.
     """
+    # Query by flow_cloned_from (original flow ID)
     query = select(PublishedFlow).where(
-        PublishedFlow.flow_id == flow_id, PublishedFlow.status == PublishStatusEnum.PUBLISHED
+        PublishedFlow.flow_cloned_from == flow_id, PublishedFlow.status == PublishStatusEnum.PUBLISHED
     )
     result = await session.exec(query)
     published_flow = result.first()
@@ -254,10 +304,16 @@ async def check_flow_published(
         return {
             "is_published": True,
             "published_flow_id": str(published_flow.id),
+            "cloned_flow_id": str(published_flow.flow_id),
             "published_at": published_flow.published_at.isoformat(),
         }
 
-    return {"is_published": False, "published_flow_id": None, "published_at": None}
+    return {
+        "is_published": False,
+        "published_flow_id": None,
+        "cloned_flow_id": None,
+        "published_at": None,
+    }
 
 
 @router.get("/{published_flow_id}", response_model=PublishedFlowRead, status_code=status.HTTP_200_OK)
@@ -287,6 +343,7 @@ async def get_published_flow(
     item.flow_name = flow.name
     item.flow_icon = flow.icon if flow.icon else None
     item.published_by_username = user.username
+    item.flow_data = flow.data if flow.data else {}  # Include flow data from cloned flow
 
     return item
 
@@ -298,7 +355,7 @@ async def get_published_flow_spec(
 ):
     """
     Get Genesis specification for a published flow (public endpoint).
-    Converts the flow_data snapshot to Genesis specification format.
+    Converts the flow data from the cloned flow to Genesis specification format.
     """
     query = select(PublishedFlow, Flow).join(Flow, PublishedFlow.flow_id == Flow.id).where(
         PublishedFlow.id == published_flow_id
@@ -311,6 +368,9 @@ async def get_published_flow_spec(
 
     published_flow, flow = row
 
+    if not flow or not flow.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cloned flow data not found")
+
     try:
         # Import FlowToSpecConverter
         from langflow.services.runtime.flow_to_spec_converter import FlowToSpecConverter
@@ -318,9 +378,9 @@ async def get_published_flow_spec(
         # Initialize converter
         converter = FlowToSpecConverter()
 
-        # Convert flow_data to Genesis specification
+        # Convert flow data from the cloned flow (not from published_flow.flow_data which no longer exists)
         spec = converter.convert_flow_to_spec(
-            flow_data=published_flow.flow_data,
+            flow_data=flow.data,  # Use flow table data instead
             preserve_variables=True,
             include_metadata=False,
             name_override=flow.name,

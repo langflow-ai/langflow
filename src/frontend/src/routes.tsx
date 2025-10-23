@@ -41,7 +41,6 @@ import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage"
 import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
-import ViewPage from "./pages/ViewPage";
 import ConversationPage from "./pages/AgentBuilderPage/ConversationPage";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
@@ -190,7 +189,6 @@ const router = createBrowserRouter(
                   <Route path="folder/:folderId/" element={<FlowPage />} />
                   <Route path="" element={<FlowPage />} />
                 </Route>
-                <Route path="view" element={<ViewPage />} />
               </Route>
             </Route>
           </Route>

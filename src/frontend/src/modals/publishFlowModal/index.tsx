@@ -18,6 +18,7 @@ import {
 import { usePublishFlow } from "@/controllers/API/queries/published-flows";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { validateFlowForPublish } from "@/utils/flowValidation";
 import type { AllNodeType, EdgeType } from "@/types/flow";
 
@@ -34,6 +35,7 @@ export default function PublishFlowModal({
   flowId,
   flowName,
 }: PublishFlowModalProps) {
+  const [marketplaceName, setMarketplaceName] = useState(flowName);
   const [version, setVersion] = useState("");
   const [category, setCategory] = useState("");
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -41,6 +43,16 @@ export default function PublishFlowModal({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
+  const currentFlowManager = useFlowsManagerStore(
+    (state) => state.currentFlow
+  );
+
+  // Update marketplace name when flow name changes
+  useEffect(() => {
+    if (open) {
+      setMarketplaceName(flowName);
+    }
+  }, [open, flowName]);
 
   // Run validation when modal opens
   useEffect(() => {
@@ -53,6 +65,15 @@ export default function PublishFlowModal({
   }, [open, currentFlow]);
 
   const handlePublish = () => {
+    // Validate required fields
+    if (!marketplaceName.trim()) {
+      setErrorData({
+        title: "Cannot publish flow",
+        list: ["Marketplace flow name is required"],
+      });
+      return;
+    }
+
     // Validate flow before publishing
     if (!currentFlow) {
       setErrorData({
@@ -82,6 +103,7 @@ export default function PublishFlowModal({
       {
         flowId,
         payload: {
+          marketplace_flow_name: marketplaceName,
           version: version || undefined,
           category: category || undefined,
         },
@@ -92,13 +114,16 @@ export default function PublishFlowModal({
             title: "Flow published successfully!",
           });
           setOpen(false);
+          setMarketplaceName("");
           setVersion("");
           setCategory("");
         },
         onError: (error: any) => {
           setErrorData({
             title: "Failed to publish flow",
-            list: [error?.response?.data?.detail || error.message || "Unknown error"],
+            list: [
+              error?.response?.data?.detail || error.message || "Unknown error",
+            ],
           });
         },
       }
@@ -113,6 +138,22 @@ export default function PublishFlowModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="marketplace-name">
+              Marketplace Flow Name <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="marketplace-name"
+              placeholder={flowName}
+              value={marketplaceName}
+              onChange={(e) => setMarketplaceName(e.target.value)}
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Name for the cloned flow in the marketplace
+            </p>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="version">Version (Optional)</Label>
             <Input

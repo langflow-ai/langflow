@@ -42,7 +42,7 @@ class PublishedFlowBase(SQLModel):
     description: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     tags: list[str] | None = Field(default=None, sa_column=Column(JSON, nullable=True))
     category: str | None = Field(default=None, nullable=True, max_length=100, index=True)
-    flow_data: dict | None = Field(default=None, sa_column=Column(JSON, nullable=False))
+    flow_cloned_from: UUID | None = Field(default=None, nullable=True)
     published_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     unpublished_at: datetime | None = Field(default=None, nullable=True)
 
@@ -54,13 +54,16 @@ class PublishedFlow(PublishedFlowBase, table=True):  # type: ignore[call-arg]
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     flow_id: UUID = Field(foreign_key="flow.id", nullable=False, index=True)
+    flow_cloned_from: UUID | None = Field(default=None, foreign_key="flow.id", nullable=True, index=True)
     user_id: UUID = Field(foreign_key="user.id", nullable=False, index=True)
     published_by: UUID = Field(foreign_key="user.id", nullable=False)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Relationships
-    flow: Optional["Flow"] = Relationship()
+    flow: Optional["Flow"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "PublishedFlow.flow_id"}
+    )
     user: Optional["User"] = Relationship(
         sa_relationship_kwargs={"foreign_keys": "PublishedFlow.user_id", "lazy": "joined"}
     )
@@ -68,12 +71,14 @@ class PublishedFlow(PublishedFlowBase, table=True):  # type: ignore[call-arg]
         sa_relationship_kwargs={"foreign_keys": "PublishedFlow.published_by", "lazy": "joined"}
     )
 
-    __table_args__ = (UniqueConstraint("flow_id", name="uq_published_flow_flow_id"),)
+    __table_args__ = (UniqueConstraint("flow_cloned_from", name="uq_published_flow_cloned_from"),)
 
 
 class PublishedFlowCreate(SQLModel):
     """Schema for creating a published flow."""
 
+    marketplace_flow_name: str
+    target_folder_id: UUID | None = None
     version: str | None = None
     category: str | None = None
 
@@ -83,6 +88,7 @@ class PublishedFlowRead(PublishedFlowBase):
 
     id: UUID
     flow_id: UUID
+    flow_cloned_from: UUID | None = None
     user_id: UUID
     published_by: UUID
     created_at: datetime
@@ -91,6 +97,7 @@ class PublishedFlowRead(PublishedFlowBase):
     flow_name: str | None = None
     flow_icon: str | None = None
     published_by_username: str | None = None
+    flow_data: dict | None = None  # Flow data from cloned flow for visualization
 
 
 class PublishedFlowUpdate(SQLModel):
