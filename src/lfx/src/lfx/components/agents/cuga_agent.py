@@ -185,7 +185,7 @@ class CugaComponent(ToolCallingAgentComponent):
                 },
             ],
         ),
-        *LCToolsAgentComponent._base_inputs,
+        *LCToolsAgentComponent.get_base_inputs(),
         BoolInput(
             name="add_current_date_tool",
             display_name="Current Date",
@@ -254,14 +254,32 @@ class CugaComponent(ToolCallingAgentComponent):
         }
         logger.debug(f"LLM MODEL TYPE: {type(llm)}")
         if current_input:
-            os.environ["DYNACONF_ADVANCED_FEATURES__REGISTRY"] = "false"
-            if self.browser_enabled:
-                logger.info("browser_enabled is true, setting env to hybrid")
-                os.environ["DYNACONF_ADVANCED_FEATURES__MODE"] = "hybrid"
-                os.environ["DYNACONF_ADVANCED_FEATURES__USE_VISION"] = "false"
-            else:
-                logger.info("browser_enabled is false, setting env to api")
-                os.environ["DYNACONF_ADVANCED_FEATURES__MODE"] = "api"
+            try:
+                from cuga.config import settings as cuga_settings
+
+                logger.info("Updating cuga settings programmatically")
+                cuga_settings.set("advanced_features.registry", False)  # noqa: FBT003
+
+                if self.browser_enabled:
+                    logger.info("browser_enabled is true, setting mode to hybrid")
+                    cuga_settings.set("advanced_features.mode", "hybrid")
+                    cuga_settings.set("advanced_features.use_vision", False)  # noqa: FBT003
+                else:
+                    logger.info("browser_enabled is false, setting mode to api")
+                    cuga_settings.set("advanced_features.mode", "api")
+
+                logger.info(f"Cuga settings updated - MODE: {cuga_settings.get('advanced_features.mode')}")
+            except (ImportError, AttributeError) as e:
+                logger.warning(f"Could not update cuga settings: {e}")
+                os.environ["DYNACONF_ADVANCED_FEATURES__REGISTRY"] = "false"
+                if self.browser_enabled:
+                    logger.info("browser_enabled is true, setting env to hybrid")
+                    os.environ["DYNACONF_ADVANCED_FEATURES__MODE"] = "hybrid"
+                    os.environ["DYNACONF_ADVANCED_FEATURES__USE_VISION"] = "false"
+                else:
+                    logger.info("browser_enabled is false, setting env to api")
+                    os.environ["DYNACONF_ADVANCED_FEATURES__MODE"] = "api"
+
             from cuga.backend.activity_tracker.tracker import ActivityTracker
             from cuga.backend.cuga_graph.utils.agent_loop import StreamEvent
             from cuga.backend.cuga_graph.utils.controller import (
