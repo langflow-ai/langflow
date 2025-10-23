@@ -96,6 +96,9 @@ export default function MarketplaceFlowCard({
           <h3 className="mb-1 truncate text-base font-semibold text-foreground" title={name}>
             {name}
           </h3>
+          {/* <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {tags.length > 0 && <span className="truncate" title={tags[0]}>{tags[0]}</span>}
+          </div> */}
         </div>
 
         <div className="flex items-center gap-2">
@@ -142,7 +145,7 @@ export default function MarketplaceFlowCard({
 
       {/* Tags - Show only first tag */}
       {tags.length > 0 && (
-        <div className="mt-auto flex flex-wrap items-center gap-2">
+        <div className="flex max-w-[240px] flex-wrap gap-1">
           <Badge
             variant="secondary"
             size="xq"
