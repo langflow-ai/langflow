@@ -642,8 +642,6 @@ class Vertex:
         *,
         fallback_to_env_vars=False,
     ) -> None:
-        from lfx.graph.utils import log_transaction
-
         try:
             result = await initialize.loading.get_instance_results(
                 custom_component=custom_component,
@@ -661,10 +659,8 @@ class Vertex:
             await logger.aexception(exc)
             msg = f"Error building Component {self.display_name}: \n\n{exc}"
 
-            # Log transaction with error status at the component level
-            flow_id = self.graph.flow_id
-            if flow_id:
-                await log_transaction(flow_id=str(flow_id), source=self, status="error", target=None, error=exc)
+            # Error logging is handled by the build() method's exception handler
+            # to avoid duplicate transaction logs
 
             raise ComponentBuildError(msg, tb) from exc
 
@@ -778,6 +774,14 @@ class Vertex:
                         self.steps_ran.append(step)
 
                 self.finalize_build()
+
+                # Log successful transaction for standalone/terminal components
+                # If there's no requester, this is a standalone build that won't have
+                # get_result() called on it, so we need to log the success here
+                # If there is a requester, get_result() will be called and will log the transaction
+                flow_id = self.graph.flow_id
+                if flow_id and requester is None:
+                    await log_transaction(flow_id=str(flow_id), source=self, status="success", target=None, error=None)
             except Exception as exc:
                 # Log transaction with error status
                 flow_id = self.graph.flow_id
