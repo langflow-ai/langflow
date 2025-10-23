@@ -311,6 +311,8 @@ export async function buildFlowVertices({
   if (session) {
     inputs["session"] = session;
   }
+  // Add client timestamp for accurate duration tracking
+  inputs["client_request_time"] = Date.now();
   if (Object.keys(inputs).length > 0) {
     postData["inputs"] = inputs;
   }
