@@ -353,7 +353,9 @@ export async function buildFlowVertices({
             ]);
             return;
           }
-          throw new Error(`Error processing build events: ${statusCode} ${statusText || ""}`);
+          throw new Error(
+            `Error processing build events: ${statusCode} ${statusText || ""}`,
+          );
         },
         onNetworkError: (error: Error) => {
           if (error.name === "AbortError") {
@@ -439,7 +441,9 @@ export async function buildFlowVertices({
             ]);
             return;
           }
-          throw new Error(`Error processing build events: ${statusCode} ${statusText || ""}`);
+          throw new Error(
+            `Error processing build events: ${statusCode} ${statusText || ""}`,
+          );
         },
         onNetworkError: (error: Error) => {
           if (error.name === "AbortError") {
