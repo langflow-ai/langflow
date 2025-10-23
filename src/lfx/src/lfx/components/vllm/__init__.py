@@ -5,14 +5,17 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from lfx.components.vllm.vllm import vLLMComponent
+    from lfx.components.vllm.vllm import VllmComponent
+    from lfx.components.vllm.vllm_embeddings import VllmEmbeddingsComponent
 
 _dynamic_imports = {
-    "vLLMComponent": "vllm",
+    "VllmComponent": "vllm",
+    "VllmEmbeddingsComponent": "vllm_embeddings",
 }
 
 __all__ = [
-    "vLLMComponent",
+    "VllmComponent",
+    "VllmEmbeddingsComponent",
 ]
 
 
