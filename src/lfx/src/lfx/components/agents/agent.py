@@ -201,11 +201,30 @@ class AgentComponent(ToolCallingAgentComponent):
             self.tools.append(current_date_tool)
         return llm_model, self.chat_history, self.tools
 
+    def _has_image_content(self) -> bool:
+        """Check if the input contains image content."""
+        if not self.input_value:
+            return False
+        
+        # Check if input_value has to_lc_message method and contains images
+        if hasattr(self.input_value, "to_lc_message") and callable(self.input_value.to_lc_message):
+            try:
+                lc_message = self.input_value.to_lc_message()
+                if hasattr(lc_message, "content") and isinstance(lc_message.content, list):
+                    return any(item.get("type") == "image" for item in lc_message.content)
+            except Exception:
+                pass
+        
+        return False
+
     async def message_response(self) -> Message:
         try:
-            # Validate input is not empty
-            if not self.input_value or not str(self.input_value).strip():
-                msg = "Message cannot be empty. Please provide a valid message."
+            # Validate input is not empty - allow image-only inputs
+            text_content = str(self.input_value).strip() if self.input_value else ""
+            has_images = self._has_image_content()
+            
+            if not text_content and not has_images:
+                msg = "Message cannot be empty. Please provide a valid message or image."
                 raise ValueError(msg)
 
             llm_model, self.chat_history, self.tools = await self.get_agent_requirements()

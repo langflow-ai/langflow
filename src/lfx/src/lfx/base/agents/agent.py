@@ -225,13 +225,16 @@ class LCAgentComponent(Component):
         except Exception as e:
             # Log or handle any other exceptions with more context
             error_details = str(e)
-            if "validation error" in error_details.lower():
-                logger.error(f"Agent validation error: {error_details}")
-                raise ValueError(f"Agent validation failed: {error_details}") from e
-            if "connection" in error_details.lower() or "timeout" in error_details.lower():
-                logger.error(f"Agent connection error: {error_details}")
-                raise ConnectionError(f"Agent connection failed: {error_details}") from e
-            logger.error(f"Unexpected agent error: {error_details}")
+            lower = error_details.lower()
+            if "validation error" in lower:
+                logger.error("Agent validation error: %s", error_details)
+                msg = "Agent validation failed"
+                raise ValueError(msg) from e
+            if "connection" in lower or "timeout" in lower:
+                logger.error("Agent connection error: %s", error_details)
+                msg = "Agent connection failed"
+                raise ConnectionError(msg) from e
+            logger.error("Unexpected agent error: %s", error_details)
             raise
 
         self.status = result

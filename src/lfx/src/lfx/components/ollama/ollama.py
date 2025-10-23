@@ -226,18 +226,20 @@ class ChatOllamaComponent(LCModelComponent):
                     f"This may be due to incompatible parameters for model '{self.model_name}'. "
                     f"Please check the model parameters and try again."
                 )
+                raise ValueError(msg) from e
             elif "connection" in error_details.lower() or "timeout" in error_details.lower():
                 msg = (
                     f"Unable to connect to the Ollama API: {error_details}. "
                     f"Please verify the base URL ({self.base_url}), ensure Ollama is running, "
                     f"and that the model '{self.model_name}' is pulled."
                 )
+                raise ConnectionError(msg) from e
             else:
                 msg = (
                     f"Unable to initialize Ollama model: {error_details}. "
                     f"Please verify the base URL, ensure the relevant Ollama model is pulled, and try again."
                 )
-            raise ValueError(msg) from e
+                raise ValueError(msg) from e
 
         return output
 
@@ -358,39 +360,3 @@ class ChatOllamaComponent(LCModelComponent):
 
         return model_ids
 
-    async def check_model_supports_mirostat(self, base_url_value: str, model_name: str) -> bool:
-        """Check if a specific model supports mirostat parameter.
-
-        Args:
-            base_url_value (str): The base URL of the Ollama API.
-            model_name (str): The name of the model to check.
-
-        Returns:
-            bool: True if the model supports mirostat, False otherwise.
-        """
-        try:
-            base_url = base_url_value.rstrip("/").removesuffix("/v1")
-            if not base_url.endswith("/"):
-                base_url = base_url + "/"
-            base_url = transform_localhost_url(base_url)
-
-            show_url = urljoin(base_url, "api/show")
-
-            async with httpx.AsyncClient() as client:
-                payload = {"model": model_name}
-                show_response = await client.post(show_url, json=payload)
-                show_response.raise_for_status()
-                json_data = show_response.json()
-                if asyncio.iscoroutine(json_data):
-                    json_data = await json_data
-
-                # Check if the model has parameter information
-                parameters = json_data.get("parameters", {})
-                # Some models might not have detailed parameter info, so we'll be conservative
-                # and assume they support mirostat unless we know otherwise
-                return True
-
-        except (httpx.RequestError, ValueError) as e:
-            await logger.awarning(f"Could not check mirostat support for model {model_name}: {e}")
-            # If we can't check, assume it supports mirostat to avoid breaking functionality
-            return True
