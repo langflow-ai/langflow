@@ -11,7 +11,7 @@ from uuid import UUID
 import orjson
 from aiofile import async_open
 from anyio import Path
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
@@ -35,6 +35,7 @@ from langflow.services.database.models.flow.model import (
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder, FolderCreate
+from langflow.services.auth.permissions import can_delete_flow, can_edit_flow, can_view_flow, get_user_roles_from_request
 from langflow.services.deps import get_settings_service
 from langflow.utils.compression import compress_response
 
@@ -387,14 +388,27 @@ async def _read_flow(
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
 async def read_flow(
     *,
+    request: Request,
     session: DbSession,
     flow_id: UUID,
     current_user: CurrentActiveUser,
 ):
     """Read a flow."""
-    if user_flow := await _read_flow(session, flow_id, current_user.id):
-        return user_flow
-    raise HTTPException(status_code=404, detail="Flow not found")
+    # Fetch flow without user restriction to check permissions properly
+    stmt = select(Flow).where(Flow.id == flow_id)
+    db_flow = (await session.exec(stmt)).first()
+
+    if not db_flow:
+        raise HTTPException(status_code=404, detail="Flow not found")
+
+    # Check if user has permission to view this flow
+    user_roles = get_user_roles_from_request(request)
+
+    if not can_view_flow(current_user, db_flow, user_roles):
+        # Return 404 instead of 403 for security (don't reveal flow exists)
+        raise HTTPException(status_code=404, detail="Flow not found")
+
+    return db_flow
 
 
 @router.get("/public_flow/{flow_id}", response_model=FlowRead, status_code=200)
@@ -415,6 +429,7 @@ async def read_public_flow(
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
 async def update_flow(
     *,
+    request: Request,
     session: DbSession,
     flow_id: UUID,
     flow: FlowUpdate,
@@ -423,14 +438,21 @@ async def update_flow(
     """Update a flow."""
     settings_service = get_settings_service()
     try:
-        db_flow = await _read_flow(
-            session=session,
-            flow_id=flow_id,
-            user_id=current_user.id,
-        )
+        # Fetch flow without user restriction to check permissions properly
+        stmt = select(Flow).where(Flow.id == flow_id)
+        db_flow = (await session.exec(stmt)).first()
 
         if not db_flow:
             raise HTTPException(status_code=404, detail="Flow not found")
+
+        # Check if user has permission to edit this flow
+        user_roles = get_user_roles_from_request(request)
+
+        if not can_edit_flow(current_user, db_flow, user_roles):
+            raise HTTPException(
+                status_code=403,
+                detail="You don't have permission to edit this flow"
+            )
 
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
@@ -483,18 +505,28 @@ async def update_flow(
 @router.delete("/{flow_id}", status_code=200)
 async def delete_flow(
     *,
+    request: Request,
     session: DbSession,
     flow_id: UUID,
     current_user: CurrentActiveUser,
 ):
     """Delete a flow."""
-    flow = await _read_flow(
-        session=session,
-        flow_id=flow_id,
-        user_id=current_user.id,
-    )
+    # Fetch flow without user restriction to check permissions properly
+    stmt = select(Flow).where(Flow.id == flow_id)
+    flow = (await session.exec(stmt)).first()
+
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
+
+    # Check if user has permission to delete this flow
+    user_roles = get_user_roles_from_request(request)
+
+    if not can_delete_flow(current_user, flow, user_roles):
+        raise HTTPException(
+            status_code=403,
+            detail="You don't have permission to delete this flow"
+        )
+
     await cascade_delete_flow(session, flow.id)
     await session.commit()
     return {"message": "Flow deleted successfully"}

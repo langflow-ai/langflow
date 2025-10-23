@@ -29,6 +29,7 @@ class LangflowUser:
         self.email = user_data.get("email", "")
         self.is_active = user_data.get("is_active", True)
         self.is_superuser = user_data.get("is_admin", False)
+        self.roles = user_data.get("roles", [])
         # Store original data for compatibility
         self._user_data = user_data
 
@@ -40,6 +41,7 @@ class LangflowUser:
             "email": self.email,
             "is_active": self.is_active,
             "is_superuser": self.is_superuser,
+            "roles": self.roles,
         }
 
 
@@ -85,18 +87,23 @@ class AuthMiddleware(BaseHTTPMiddleware):
             if not user_id:
                 raise ValueError("Missing 'sub' claim in JWT")
 
+            # Extract roles from resource_access.account.roles
+            account_roles = payload.get("resource_access", {}).get("account", {}).get("roles", [])
+
             return {
                 "id": user_id,
                 "username": payload.get("preferred_username", payload.get("email", f"user_{user_id}")),
                 "email": payload.get("email", ""),
                 "is_active": True,  # Trust BFF validation
                 "is_admin": payload.get("is_admin", False),
+                "roles": account_roles,
                 "user_data": {
                     "id": user_id,
                     "username": payload.get("preferred_username", payload.get("email", f"user_{user_id}")),
                     "email": payload.get("email", ""),
                     "is_active": True,
                     "is_admin": payload.get("is_admin", False),
+                    "roles": account_roles,
                 }
             }
         except Exception as e:

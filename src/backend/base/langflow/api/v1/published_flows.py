@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, or_
 from sqlalchemy.orm import joinedload
 from sqlmodel import select
@@ -19,6 +19,7 @@ from langflow.services.database.models.published_flow.model import (
     PublishStatusEnum,
 )
 from langflow.services.database.models.user.model import User
+from langflow.services.auth.permissions import can_edit_flow, get_user_roles_from_request
 
 router = APIRouter(prefix="/published-flows", tags=["Published Flows"])
 
@@ -27,6 +28,7 @@ router = APIRouter(prefix="/published-flows", tags=["Published Flows"])
 async def publish_flow(
     flow_id: UUID,
     payload: PublishedFlowCreate,
+    request: Request,
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
@@ -34,14 +36,22 @@ async def publish_flow(
     Publish a flow to marketplace.
     Creates a snapshot of the flow data at the time of publishing.
     """
-    # Check if flow exists and belongs to user
-    flow_query = select(Flow).where(Flow.id == flow_id, Flow.user_id == current_user.id)
+    # Fetch flow without user restriction to check permissions properly
+    flow_query = select(Flow).where(Flow.id == flow_id)
     result = await session.exec(flow_query)
     flow = result.first()
 
     if not flow:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found or you don't have permission to publish it"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found"
+        )
+
+    # Check if user has permission to publish this flow
+    user_roles = get_user_roles_from_request(request)
+    if not can_edit_flow(current_user, flow, user_roles):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to publish this flow"
         )
 
     # Check if already published

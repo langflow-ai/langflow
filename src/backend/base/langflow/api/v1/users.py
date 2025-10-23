@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
@@ -51,6 +51,24 @@ async def read_current_user(
 ) -> User:
     """Retrieve the current user's data."""
     return current_user
+
+
+@router.get("/my-roles", response_model=dict)
+async def get_my_roles(
+    request: Request,
+    current_user: CurrentActiveUser,
+) -> dict:
+    """Test endpoint: Get current user's Keycloak roles from JWT token."""
+    from langflow.services.auth.permissions import get_user_roles_from_request
+
+    user_roles = get_user_roles_from_request(request)
+
+    return {
+        "user_id": str(current_user.id),
+        "username": current_user.username,
+        "roles": user_roles,
+        "has_manage_account": "manage-account" in user_roles
+    }
 
 
 @router.get("/", dependencies=[Depends(get_current_active_superuser)])
