@@ -147,7 +147,7 @@ export default function PublishFlowModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-hidden">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Publish the Agent to MarketPlace</DialogTitle>
         </DialogHeader>
