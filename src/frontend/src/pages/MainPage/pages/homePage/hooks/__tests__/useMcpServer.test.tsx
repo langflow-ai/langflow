@@ -1,10 +1,3 @@
-/**
- * Tests for useMcpServer hook
- * Note: The hook uses complex React Query dependencies and stores.
- * Core business logic (data transformation, JSON building) is tested in mcpServerUtils.test.ts
- * Component integration is tested in McpServerTab.test.tsx
- */
-
 import {
   extractInstalledClientNames,
   mapFlowsToTools,
