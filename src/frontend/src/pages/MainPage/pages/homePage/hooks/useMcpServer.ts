@@ -75,12 +75,8 @@ export const useMcpServer = ({
     loadingMCP: [],
     authModalOpen: false,
   });
-  // auth store selectors (migrated from local state)
+  // auth store selectors
   const apiKeyFromStore = useAuthStore((st) => st.apiKey);
-  const generateApiKeyFromStore = useAuthStore((st) => st.generateApiKey);
-  const isGeneratingApiKeyFromStore = useAuthStore(
-    (st) => st.isGeneratingApiKey ?? false,
-  );
   const isAutoLoginFromStore = useAuthStore((st) => st.autoLogin);
 
   const flowsMCPData = useMemo(() => mapFlowsToTools(flows), [flows]);
@@ -102,9 +98,23 @@ export const useMcpServer = ({
   );
 
   const generateApiKey = useCallback(async () => {
-    if (generateApiKeyFromStore)
-      await generateApiKeyFromStore(`MCP Server ${folderName ?? ""}`);
-  }, [generateApiKeyFromStore, folderName]);
+    try {
+      setS((prev) => ({ ...prev, isGeneratingApiKey: true }));
+      const { createApiKey } = await import("@/controllers/API");
+      const res = await createApiKey(`MCP Server ${folderName ?? ""}`);
+      if (res?.api_key) {
+        setS((prev) => ({ ...prev, apiKey: res.api_key }));
+      }
+    } catch (e) {
+      console.error("Error generating API key:", e);
+      setErrorData({
+        title: "Error generating API key",
+        list: [(e as Error).message],
+      });
+    } finally {
+      setS((prev) => ({ ...prev, isGeneratingApiKey: false }));
+    }
+  }, [folderName, setErrorData]);
 
   const copyToClipboard = useCallback((payload: string) => {
     navigator.clipboard?.writeText(payload).then(
@@ -258,9 +268,9 @@ export const useMcpServer = ({
     installedMCPData,
     availableMap,
     isInstalling,
-    // api key & ui (prefer auth store values)
+    // api key & ui
     apiKey: apiKeyFromStore ?? s.apiKey,
-    isGeneratingApiKey: isGeneratingApiKeyFromStore ?? s.isGeneratingApiKey,
+    isGeneratingApiKey: s.isGeneratingApiKey,
     generateApiKey,
     isCopied: s.isCopied,
     copyToClipboard,

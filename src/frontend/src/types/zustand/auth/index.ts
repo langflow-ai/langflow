@@ -8,7 +8,6 @@ export interface AuthStoreType {
   autoLogin: boolean | null;
   apiKey: string | null;
   authenticationErrorCount: number;
-  isGeneratingApiKey?: boolean;
 
   setIsAdmin: (isAdmin: boolean) => void;
   setIsAuthenticated: (isAuthenticated: boolean) => void;
@@ -17,10 +16,7 @@ export interface AuthStoreType {
   setAutoLogin: (autoLogin: boolean) => void;
   setApiKey: (apiKey: string | null) => void;
   setAuthenticationErrorCount: (authenticationErrorCount: number) => void;
-  setIsGeneratingApiKey?: (isGeneratingApiKey: boolean) => void;
-  generateApiKey?: (name?: string) => Promise<void>;
   logout: () => Promise<void>;
-  //TODO: remove comments if not used?
   // setUserData: (userData: Users | null) => void;
   // setIsAdmin: (isAdmin: boolean) => void;
   // setApiKey: (apiKey: string | null) => void;
