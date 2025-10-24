@@ -10,7 +10,6 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 import anyio
-import openai
 import orjson
 import pytest
 from asgi_lifespan import LifespanManager
@@ -40,6 +39,8 @@ from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
 from tests.api_keys import get_openai_api_key
+
+from .shared_hooks import skip_on_openai_quota_error
 
 load_dotenv()
 
@@ -809,13 +810,5 @@ async def get_starter_project(client, active_user):  # noqa: ARG001
         await session.commit()
 
 
-def pytest_runtest_call(item):
-    """Skip tests automatically if an OpenAI API insufficient quota error occurs."""
-    try:
-        item.runtest()
-    except openai.RateLimitError as e:
-        message = str(e)
-        if "insufficient_quota" in message or e.status_code == 429:
-            pytest.skip(f"Skipped due to OpenAI insufficient quota error: {message}")
-        else:
-            raise
+def pytest_runtest_call(item: pytest.Item):
+    skip_on_openai_quota_error(item)
