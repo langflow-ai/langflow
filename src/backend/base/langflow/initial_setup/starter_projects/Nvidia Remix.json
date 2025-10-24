@@ -1804,15 +1804,15 @@
                   },
                   {
                     "name": "langchain_ollama",
-                    "version": "0.2.1"
+                    "version": null
                   },
                   {
                     "name": "langchain_community",
-                    "version": "0.3.21"
+                    "version": null
                   },
                   {
                     "name": "langchain_ibm",
-                    "version": "0.3.19"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 5

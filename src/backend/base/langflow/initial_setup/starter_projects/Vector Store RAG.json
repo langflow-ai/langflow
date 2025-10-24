@@ -3486,10 +3486,6 @@
                     "version": null
                   },
                   {
-                    "name": "langchain_astradb",
-                    "version": null
-                  },
-                  {
                     "name": "langchain_core",
                     "version": null
                   },
@@ -3499,7 +3495,7 @@
                   },
                   {
                     "name": "langchain_astradb",
-                    "version": "0.6.1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 4
@@ -4303,10 +4299,6 @@
                     "version": null
                   },
                   {
-                    "name": "langchain_astradb",
-                    "version": null
-                  },
-                  {
                     "name": "langchain_core",
                     "version": null
                   },
@@ -4316,7 +4308,7 @@
                   },
                   {
                     "name": "langchain_astradb",
-                    "version": "0.6.1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 4
