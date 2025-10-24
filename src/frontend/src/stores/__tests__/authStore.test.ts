@@ -46,10 +46,12 @@ jest.mock(
 );
 
 // Mock API controller
+const mockCreateApiKey = jest.fn();
 jest.mock("@/controllers/API", () => ({
-  createApiKey: jest.fn(),
+  createApiKey: mockCreateApiKey,
 }));
 
+import * as API from "@/controllers/API";
 import useAuthStore from "../authStore";
 
 describe("useAuthStore", () => {
@@ -497,6 +499,10 @@ describe("useAuthStore", () => {
   });
 
   describe("generateApiKey function", () => {
+    beforeEach(() => {
+      mockCreateApiKey.mockClear();
+    });
+
     it("should update isGeneratingApiKey state", () => {
       const { result } = renderHook(() => useAuthStore());
 
@@ -513,17 +519,90 @@ describe("useAuthStore", () => {
       expect(result.current.isGeneratingApiKey).toBe(false);
     });
 
-    it("should have generateApiKey function defined", () => {
+    it("should successfully generate API key with default name", async () => {
       const { result } = renderHook(() => useAuthStore());
+      const mockApiKey = "test-generated-api-key"; // pragma: allowlist secret
 
-      expect(result.current.generateApiKey).toBeDefined();
-      expect(typeof result.current.generateApiKey).toBe("function");
+      mockCreateApiKey.mockResolvedValue({
+        api_key: mockApiKey,
+      });
+
+      await act(async () => {
+        await result.current.generateApiKey?.();
+      });
+
+      expect(mockCreateApiKey).toHaveBeenCalledWith("MCP Server");
+      expect(result.current.apiKey).toBe(mockApiKey);
+      expect(result.current.isGeneratingApiKey).toBe(false);
     });
 
-    it("should initialize isGeneratingApiKey as undefined or false", () => {
+    it("should successfully generate API key with custom name", async () => {
+      const { result } = renderHook(() => useAuthStore());
+      const mockApiKey = "custom-api-key"; // pragma: allowlist secret
+      const customName = "Custom MCP Server";
+
+      mockCreateApiKey.mockResolvedValue({
+        api_key: mockApiKey,
+      });
+
+      await act(async () => {
+        await result.current.generateApiKey?.(customName);
+      });
+
+      expect(mockCreateApiKey).toHaveBeenCalledWith(customName);
+      expect(result.current.apiKey).toBe(mockApiKey);
+      expect(result.current.isGeneratingApiKey).toBe(false);
+    });
+
+    it("should handle API error gracefully", async () => {
+      const { result } = renderHook(() => useAuthStore());
+      const consoleErrorSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      mockCreateApiKey.mockRejectedValue(new Error("API Error"));
+
+      await act(async () => {
+        await result.current.generateApiKey?.();
+      });
+
+      expect(result.current.isGeneratingApiKey).toBe(false);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "Error generating API key:",
+        expect.any(Error),
+      );
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("should handle missing api_key in response", async () => {
+      const { result } = renderHook(() => useAuthStore());
+      const initialApiKey = result.current.apiKey;
+
+      mockCreateApiKey.mockResolvedValue({});
+
+      await act(async () => {
+        await result.current.generateApiKey?.();
+      });
+
+      expect(result.current.apiKey).toBe(initialApiKey);
+      expect(result.current.isGeneratingApiKey).toBe(false);
+    });
+
+    it("should set isGeneratingApiKey to true during API call and false after completion", async () => {
       const { result } = renderHook(() => useAuthStore());
 
+      mockCreateApiKey.mockResolvedValue({ api_key: "test-key" }); // pragma: allowlist secret
+
       expect(result.current.isGeneratingApiKey).toBeFalsy();
+
+      const promise = act(async () => {
+        await result.current.generateApiKey?.();
+      });
+
+      await promise;
+
+      expect(result.current.isGeneratingApiKey).toBe(false);
     });
   });
 });
