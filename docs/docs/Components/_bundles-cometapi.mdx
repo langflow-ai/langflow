@@ -1,0 +1,58 @@
+---
+title: CometAPI
+slug: /bundles-cometapi
+description: Use CometAPI models in Langflow to generate text or output a Language Model for downstream Components.
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **CometAPI** bundle.
+
+For more information about CometAPI features and functionality used by CometAPI components, see the [CometAPI documentation](https://www.cometapi.com/).
+
+## CometAPI text generation
+
+This component generates text using CometAPI's language models through the CometAPI OpenAI-compatible endpoints.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a CometAPI model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
+
+For more information, see [Language model components](/components-models).
+
+### CometAPI parameters
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your CometAPI API Key for authentication. |
+| model_name | String | Input parameter. The id of the CometAPI model to use. The component automatically fetches the latest available models from CometAPI when you provide a valid API key. For information about supported models, see the [CometAPI documentation](https://www.cometapi.com/). |
+| input_value | String | Input parameter. The input text to send to the model. |
+| system_message | String | Input parameter. A system message that helps set the behavior of the assistant. |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.1. |
+| seed | Integer | Input parameter. The seed controls the reproducibility of the job (advanced). |
+| model_kwargs | Dict | Input parameter. Additional keyword arguments to pass to the model (advanced). |
+| json_mode | Boolean | Input parameter. If True, it will output JSON regardless of passing a schema (advanced). |
+| stream | Boolean | Input parameter. Whether to stream the response. Default: false. |
+| output_parser | OutputParser | Input parameter. The parser to use to parse the output of the model (advanced). |
+| model | LanguageModel | Output parameter. An instance of ChatOpenAI configured with CometAPI parameters. |
+
+## Use CometAPI in a flow
+
+1. Sign up for a [CometAPI account](https://www.cometapi.com/).
+2. Obtain your API key from the CometAPI dashboard.
+3. In Langflow, add the **CometAPI** component to your flow.
+4. Enter your API key in the **CometAPI API Key** field.
+5. Select your preferred model from the **Model Name** menu.
+6. Configure other parameters as needed for your use case.
+7. Add other components to your flow as needed.
+
+    To perform a basic test, add **Chat Input** and **Chat Output** components to your flow, connect them to the **CometAPI** component accordingly, and then click **Playground** to test the connection and chat with your model.
+
+    For more advanced use cases, you can connect the CometAPI component to other components like **Prompt Template**, **Agent**, or **Smart Transform** components.
