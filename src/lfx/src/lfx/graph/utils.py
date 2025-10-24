@@ -109,12 +109,13 @@ async def log_transaction(
     flow_id: str | UUID,
     source: Vertex,
     status,
-    target: Vertex | None = None,  # noqa: ARG001
-    error=None,  # noqa: ARG001
+    target: Vertex | None = None,
+    error=None,
 ) -> None:
     """Asynchronously logs a transaction record for a vertex in a flow if transaction storage is enabled.
 
-    This is a lightweight implementation that only logs if database service is available.
+    This implementation tries to use the full langflow database logging when available,
+    otherwise falls back to debug logging.
     """
     try:
         settings_service = get_settings_service()
@@ -132,8 +133,37 @@ async def log_transaction(
             else:
                 return
 
-        # Log basic transaction info - concrete implementation should be in langflow
-        logger.debug(f"Transaction logged: vertex={source.id}, flow={flow_id}, status={status}")
+        # Try to use the full langflow transaction logging implementation
+        try:
+            from langflow.services.database.models.transactions.model import TransactionBase
+            from langflow.services.database.models.transactions.crud import log_transaction as db_log_transaction
+            from langflow.services.deps import session_scope
+            
+            # Create transaction data
+            transaction_data = TransactionBase(
+                vertex_id=source.id,
+                target_id=target.id if target else None,
+                inputs=_vertex_to_primitive_dict(source) if hasattr(source, 'data') else None,
+                outputs=_vertex_to_primitive_dict(target) if target and hasattr(target, 'data') else None,
+                status=status,
+                error=str(error) if error else None,
+                flow_id=flow_id,
+            )
+            
+            # Get database session and log transaction
+            async with session_scope() as session:
+                await db_log_transaction(session, transaction_data)
+                
+            logger.debug(f"Transaction logged to database: vertex={source.id}, flow={flow_id}, status={status}")
+            
+        except ImportError:
+            # Fallback to debug logging if langflow models are not available
+            logger.debug(f"Transaction logged (debug only): vertex={source.id}, flow={flow_id}, status={status}")
+        except Exception as db_exc:
+            # Log database errors but don't fail the transaction
+            logger.debug(f"Error logging transaction to database: {db_exc!s}")
+            logger.debug(f"Transaction logged (debug only): vertex={source.id}, flow={flow_id}, status={status}")
+            
     except Exception as exc:  # noqa: BLE001
         logger.debug(f"Error logging transaction: {exc!s}")
 
