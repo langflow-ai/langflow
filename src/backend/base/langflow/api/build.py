@@ -31,11 +31,7 @@ from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_chat_service, get_telemetry_service, session_scope
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
-from langflow.services.telemetry.schema import (
-    ComponentInputsPayload,
-    ComponentPayload,
-    PlaygroundPayload,
-)
+from langflow.services.telemetry.schema import ComponentInputsPayload, ComponentPayload, PlaygroundPayload
 
 
 def _log_component_input_telemetry(
@@ -230,12 +226,14 @@ async def generate_flow_events(
         start_time = time.perf_counter()
         components_count = 0
         graph = None
+        run_id = str(uuid.uuid4())
         try:
             flow_id_str = str(flow_id)
             # Create a fresh session for database operations
             async with session_scope() as fresh_session:
                 graph = await create_graph(fresh_session, flow_id_str, flow_name)
 
+            graph.set_run_id(run_id)
             first_layer = sort_vertices(graph)
 
             for vertex_id in first_layer:
@@ -248,10 +246,10 @@ async def generate_flow_events(
             vertices_to_run = list(graph.vertices_to_run.union(get_top_level_vertices(graph, graph.vertices_to_run)))
 
             await chat_service.set_cache(flow_id_str, graph)
-            await log_telemetry(start_time, components_count, success=True)
+            await log_telemetry(start_time, components_count, run_id=run_id, success=True)
 
         except Exception as exc:
-            await log_telemetry(start_time, components_count, success=False, error_message=str(exc))
+            await log_telemetry(start_time, components_count, run_id=run_id, success=False, error_message=str(exc))
 
             if "stream or streaming set to True" in str(exc):
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -260,7 +258,12 @@ async def generate_flow_events(
         return first_layer, vertices_to_run, graph
 
     async def log_telemetry(
-        start_time: float, components_count: int, *, success: bool, error_message: str | None = None
+        start_time: float,
+        components_count: int,
+        *,
+        run_id: str | None = None,
+        success: bool,
+        error_message: str | None = None,
     ):
         background_tasks.add_task(
             telemetry_service.log_package_playground,
@@ -269,6 +272,7 @@ async def generate_flow_events(
                 playground_component_count=components_count,
                 playground_success=success,
                 playground_error_message=str(error_message) if error_message else "",
+                playground_run_id=run_id,
             ),
         )
 
@@ -400,11 +404,8 @@ async def generate_flow_events(
                 data=result_data_response,
             )
 
-            # Generate run_id for this component execution
-            component_run_id = str(uuid.uuid4())
-
             # Extract and send component input telemetry (separate payload)
-            _log_component_input_telemetry(vertex, vertex_id, component_run_id, background_tasks, telemetry_service)
+            _log_component_input_telemetry(vertex, vertex_id, graph.run_id, background_tasks, telemetry_service)
 
             # Send component execution telemetry
             background_tasks.add_task(
@@ -415,15 +416,13 @@ async def generate_flow_events(
                     component_seconds=int(time.perf_counter() - start_time),
                     component_success=valid,
                     component_error_message=error_message,
-                    component_run_id=component_run_id,
+                    component_run_id=graph.run_id,
                 ),
             )
         except Exception as exc:
-            # Generate run_id for this component execution (error case)
-            component_run_id = str(uuid.uuid4())
-
-            # Extract and send component input telemetry even on error (separate payload)
-            _log_component_input_telemetry(vertex, vertex_id, component_run_id, background_tasks, telemetry_service)
+            if "vertex" in locals():
+                # Extract and send component input telemetry even on error (separate payload)
+                _log_component_input_telemetry(vertex, vertex_id, graph.run_id, background_tasks, telemetry_service)
 
             # Send component execution telemetry (error case)
             background_tasks.add_task(
@@ -434,7 +433,7 @@ async def generate_flow_events(
                     component_seconds=int(time.perf_counter() - start_time),
                     component_success=False,
                     component_error_message=str(exc),
-                    component_run_id=component_run_id,
+                    component_run_id=graph.run_id,
                 ),
             )
             await logger.aexception("Error building Component")

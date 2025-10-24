@@ -258,6 +258,7 @@ class TestTelemetryPayloadValidation:
             "playgroundSuccess": True,
             "playgroundErrorMessage": "",
             "clientType": "desktop",
+            "playgroundRunId": None,
         }
         assert serialized == expected
 
@@ -283,6 +284,7 @@ class TestTelemetryPayloadValidation:
             "runSuccess": False,
             "runErrorMessage": "Connection timeout",
             "clientType": "oss",
+            "runId": None,
         }
         assert serialized == expected
 

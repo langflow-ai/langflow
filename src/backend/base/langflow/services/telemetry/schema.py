@@ -16,6 +16,7 @@ class RunPayload(BasePayload):
     run_seconds: int = Field(serialization_alias="runSeconds")
     run_success: bool = Field(serialization_alias="runSuccess")
     run_error_message: str = Field("", serialization_alias="runErrorMessage")
+    run_id: str | None = Field(None, serialization_alias="runId")
 
 
 class ShutdownPayload(BasePayload):
@@ -38,6 +39,7 @@ class PlaygroundPayload(BasePayload):
     playground_component_count: int | None = Field(None, serialization_alias="playgroundComponentCount")
     playground_success: bool = Field(serialization_alias="playgroundSuccess")
     playground_error_message: str = Field("", serialization_alias="playgroundErrorMessage")
+    playground_run_id: str | None = Field(None, serialization_alias="playgroundRunId")
 
 
 class ComponentPayload(BasePayload):

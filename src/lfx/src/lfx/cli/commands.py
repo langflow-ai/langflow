@@ -43,7 +43,7 @@ def serve_command(
     host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host to bind the server to"),
     port: int = typer.Option(8000, "--port", "-p", help="Port to bind the server to"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show diagnostic output and execution details"),  # noqa: FBT001, FBT003
-    env_file: Path | None = typer.Option(  # noqa: B008
+    env_file: Path | None = typer.Option(
         None,
         "--env-file",
         help="Path to the .env file containing environment variables",
