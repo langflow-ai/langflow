@@ -254,6 +254,7 @@ export default function ToolsTable({
 
   const tableOptions = {
     block_hide: true,
+    hide_options: false,
   };
 
   const handleRowClicked = (event) => {
@@ -304,6 +305,9 @@ export default function ToolsTable({
             onRowClicked={handleRowClicked}
             getRowId={getRowId}
             onGridReady={handleGridReady}
+            pagination={true}
+            paginationPageSize={50}
+            paginationPageSizeSelector={[25, 50, 100, 200]}
           />
         </div>
       </main>
