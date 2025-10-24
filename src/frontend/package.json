@@ -99,6 +99,7 @@
     "serve": "vite preview",
     "format": "npx @biomejs/biome check --write",
     "check-format": "npx @biomejs/biome check",
+    "check-format:staged": "npx @biomejs/biome check --staged",
     "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite"
   },
   "browserslist": {
