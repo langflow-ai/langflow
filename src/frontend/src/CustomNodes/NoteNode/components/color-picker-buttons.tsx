@@ -122,13 +122,24 @@ export const ColorPickerButtons = memo(
         </div>
 
         {/* Native color picker */}
-        <div className="flex items-center justify-center gap-3 w-full">
+        <div
+          className="flex items-center justify-center gap-3 w-full cursor-pointer"
+          onClick={() =>
+            document.getElementById("native_color_picker")?.click()
+          }
+        >
           <input
+            id="native_color_picker"
             type="color"
             value={currentHexColor}
             onChange={handleColorChange}
-            className="h-8 w-16 cursor-pointer rounded border border-input bg-background flex-shrink-0"
+            className="h-4 w-4 rounded-full border border-input bg-background flex-shrink-0"
             data-testid="native_color_picker"
+            style={{ display: "none" }}
+          />
+          <div
+            className="h-4 w-4 rounded-full border border-input bg-background flex-shrink-0"
+            style={{ backgroundColor: currentHexColor }}
           />
           <span className="text-sm text-muted-foreground whitespace-nowrap">
             Custom Color
