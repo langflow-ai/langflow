@@ -90,13 +90,19 @@ jest.mock("@/components/ui/button", () => ({
   Button: ({
     children,
     onClick,
-    ...props
+    unstyled,
+    size,
+    className,
+    disabled,
   }: {
     children: React.ReactNode;
     onClick?: () => void;
-    [key: string]: unknown;
+    unstyled?: boolean;
+    size?: string;
+    className?: string;
+    disabled?: boolean;
   }) => (
-    <button onClick={onClick} {...props}>
+    <button onClick={onClick} className={className} disabled={disabled}>
       {children}
     </button>
   ),

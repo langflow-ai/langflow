@@ -14,8 +14,9 @@ const mockCreateApiKey = jest.fn();
 
 jest.mock("@/controllers/API", () => ({
   getMCP: () => mockGetMCP(),
-  postInstall: (...args: unknown[]) => mockPostInstall(...args),
-  createApiKey: (...args: unknown[]) => mockCreateApiKey(...args),
+  postInstall: (client: string, folderId: string) =>
+    mockPostInstall(client, folderId),
+  createApiKey: (name: string) => mockCreateApiKey(name),
 }));
 
 jest.mock("@/controllers/API/queries/mcp", () => ({
