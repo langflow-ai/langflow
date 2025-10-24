@@ -21,6 +21,14 @@ class TransactionBase(SQLModel):
     class Config:
         arbitrary_types_allowed = True
 
+    def __init__(self, **data):
+        # Filter out the 'code' key from inputs before creating the model
+        if "inputs" in data and isinstance(data["inputs"], dict) and "code" in data["inputs"]:
+            # Create a shallow copy and remove the code key
+            data["inputs"] = data["inputs"].copy()
+            data["inputs"].pop("code")
+        super().__init__(**data)
+
     @field_validator("flow_id", mode="before")
     @classmethod
     def validate_flow_id(cls, value):
