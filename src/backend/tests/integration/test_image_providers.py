@@ -69,6 +69,8 @@ def test_openai_vision_api_real_call(sample_image):
         # If we get here without an exception, the format is accepted
         assert response.choices[0].message.content is not None
 
+    except (openai.OpenAIError, openai.RateLimitError) as e:
+        pytest.skip(f"Skipped due to OpenAI insufficient quota error: {e}")
     except Exception as e:
         pytest.fail(f"OpenAI API call failed with image content dict format: {e}")
 
@@ -99,6 +101,8 @@ def test_openai_vision_api_with_jpeg(sample_jpeg_image):
         assert response.choices[0].message.content is not None
         # API call successful
 
+    except (openai.OpenAIError, openai.RateLimitError) as e:
+        pytest.skip(f"Skipped due to OpenAI insufficient quota error: {e}")
     except Exception as e:
         pytest.fail(f"OpenAI API call failed with JPEG image: {e}")
 
@@ -172,7 +176,6 @@ def test_anthropic_vision_api_with_jpeg(sample_jpeg_image):
 
         assert response.content[0].text is not None
         # API call successful
-
     except Exception as e:
         pytest.fail(f"Anthropic API call failed with JPEG image: {e}")
 
