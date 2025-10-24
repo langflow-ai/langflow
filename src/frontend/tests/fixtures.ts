@@ -2,6 +2,24 @@
 import { test as base, expect } from "@playwright/test";
 import OpenAI from "openai";
 
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+export async function checkRateLimit(): Promise<boolean> {
+  try {
+    await client.models.list(); // lightweight API call
+    return false; // no rate limit hit
+  } catch (error: any) {
+    if (error.status === 429) {
+      console.log("Rate limit reached");
+      return true;
+    } else {
+      throw error;
+    }
+  }
+}
+
 // Extend test to log backend errors
 export const test = base.extend({
   page: async ({ page }, use) => {
@@ -226,9 +244,26 @@ export const test = base.extend({
       }
     });
 
+    // --- Added rate-limiting check before `use(page)` ---
+    let rateLimited = false;
+    try {
+      // Simulate a call to OpenAI API to check for rate limit
+      await checkRateLimit();
+    } catch (error: any) {
+      if (error instanceof OpenAI.RateLimitError || error.status === 429) {
+        rateLimited = true;
+      }
+    }
+
+    // Skip the test if rate-limited
+    if (rateLimited) {
+      test.skip(true, `Skipped due to OpenAI RateLimitError`);
+    }
+
     try {
       await use(page);
     } catch (error: any) {
+      // --- Skip logic for rate-limit inside catch block ---
       if (error instanceof OpenAI.RateLimitError || error.status === 429) {
         test.skip(true, `Skipped due to OpenAI RateLimitError`);
       } else {
