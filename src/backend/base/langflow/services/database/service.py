@@ -22,6 +22,8 @@ from sqlmodel import SQLModel, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 from tenacity import retry, stop_after_attempt, wait_fixed
 
+from langflow.alembic.revision_checker import check_and_downgrade_if_needed
+from langflow.alembic.version_mapping import get_revision_for_version_flexible
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.logging.logger import logger
 from langflow.services.base import Service
@@ -361,6 +363,9 @@ class DatabaseService(Service):
             else:
                 logger.debug("Alembic initialized")
 
+            # Check for rollback scenarios before running normal migrations
+            self._check_and_handle_rollback_scenario(alembic_cfg, buffer)
+
             try:
                 buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: Checking migrations\n")
                 command.check(alembic_cfg)
@@ -381,6 +386,70 @@ class DatabaseService(Service):
 
             if fix:
                 self.try_downgrade_upgrade_until_success(alembic_cfg)
+
+    def _check_and_handle_rollback_scenario(self, alembic_cfg, buffer) -> None:
+        """Check for rollback scenarios and handle them gracefully.
+        
+        This method detects when the database is ahead of the application version
+        (typical during rollback scenarios) and attempts to downgrade the database
+        to maintain compatibility.
+        """
+        try:
+            # Get migration strategy from settings
+            migration_strategy = self.settings_service.settings.migration_strategy
+            
+            # Skip rollback checks for 'strict' mode (original behavior)
+            if migration_strategy == "strict":
+                logger.debug("Migration strategy is 'strict', skipping rollback scenario check")
+                buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: Using strict migration strategy\n")
+                return
+            
+            # Get current Langflow version
+            current_version = self._get_langflow_version()
+            target_revision = get_revision_for_version_flexible(current_version)
+            
+            if not target_revision:
+                logger.info(
+                    f"No target revision mapped for version {current_version}. "
+                    "Skipping compatibility check. Database may be ahead of source code, "
+                    "which is acceptable during rollback scenarios."
+                )
+                buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: No version mapping for {current_version}\n")
+                return
+            
+            # Check if database is ahead and attempt downgrade if needed
+            fail_on_error = migration_strategy == "auto_downgrade"
+            was_downgraded, message = check_and_downgrade_if_needed(
+                alembic_cfg, current_version, target_revision, fail_on_error=fail_on_error
+            )
+            
+            if was_downgraded:
+                logger.info(f"Successfully downgraded database: {message}")
+                buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: {message}\n")
+            elif "Could not downgrade" in message:
+                if migration_strategy == "permissive":
+                    logger.warning(f"Database ahead of code: {message}")
+                    buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: WARNING - {message}\n")
+                else:
+                    # This shouldn't happen with auto_downgrade and fail_on_error=True
+                    logger.error(f"Failed to downgrade database: {message}")
+                    buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: ERROR - {message}\n")
+            else:
+                logger.debug(f"Migration compatibility check: {message}")
+                buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: {message}\n")
+                
+        except Exception as exc:
+            logger.warning(f"Error during rollback scenario check: {exc}")
+            buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: Rollback check failed: {exc}\n")
+
+    def _get_langflow_version(self) -> str:
+        """Get the current Langflow version."""
+        try:
+            from langflow import __version__
+            return __version__
+        except ImportError:
+            # Fallback if version is not available
+            return "unknown"
 
     async def run_migrations(self, *, fix=False) -> None:
         should_initialize_alembic = False

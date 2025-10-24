@@ -317,6 +317,15 @@ class Settings(BaseSettings):
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
 
+    # Migration Strategy
+    migration_strategy: Literal["strict", "permissive", "auto_downgrade"] = "permissive"
+    """Migration strategy for handling database schema mismatches during rollback scenarios.
+    
+    - 'strict': Fail on schema mismatch (original behavior)
+    - 'permissive': Allow newer schema and continue startup (default for cloud deployments)
+    - 'auto_downgrade': Attempt automatic downgrade when database is ahead of code
+    """
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def validate_cors_origins(cls, value):
