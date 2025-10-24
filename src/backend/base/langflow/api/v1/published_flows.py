@@ -78,7 +78,7 @@ async def publish_flow(
         import copy
 
         cloned_flow.data = copy.deepcopy(original_flow.data) if original_flow.data else {}
-        cloned_flow.description = original_flow.description
+        cloned_flow.description = payload.description or original_flow.description  # Use payload description if provided
         cloned_flow.tags = payload.tags  # Use marketplace tags from publish modal
         cloned_flow.icon = original_flow.icon
 
@@ -88,7 +88,7 @@ async def publish_flow(
         # Update published_flow record (copy description for pagination, tags from payload)
         existing.version = payload.version
         existing.tags = payload.tags  # User-selected tags from publish modal
-        existing.description = original_flow.description  # Denormalized
+        existing.description = payload.description or original_flow.description  # Use payload description if provided, else denormalized
         existing.flow_name = cloned_flow.name  # Denormalized
         existing.flow_icon = cloned_flow.icon  # Denormalized
         existing.published_by_username = current_user.username  # Denormalized
@@ -117,6 +117,7 @@ async def publish_flow(
         user_id=current_user.id,
         marketplace_flow_name=payload.marketplace_flow_name,
         tags=payload.tags,  # Pass marketplace tags to clone
+        description=payload.description,  # Pass description from publish modal to clone
     )
 
     # Update original flow's tags to match marketplace tags
@@ -131,7 +132,7 @@ async def publish_flow(
         status=PublishStatusEnum.PUBLISHED,
         version=payload.version,
         tags=payload.tags,  # User-selected tags from publish modal
-        description=original_flow.description,  # Denormalized for pagination
+        description=payload.description or original_flow.description,  # Use payload description if provided, else denormalized for pagination
         flow_name=cloned_flow.name,  # Denormalized
         flow_icon=cloned_flow.icon,  # Denormalized
         published_by_username=current_user.username,  # Denormalized
@@ -307,6 +308,7 @@ async def check_flow_published(
             "marketplace_flow_name": cloned_flow.name,
             "version": published_flow.version,
             "tags": published_flow.tags,
+            "description": published_flow.description,
         }
 
     return {
