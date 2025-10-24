@@ -8,9 +8,13 @@ jest.mock("react-syntax-highlighter", () => ({
 }));
 
 jest.mock("@/components/common/genericIconComponent", () => ({
-  ForwardedIconComponent: ({ name }: { name: string }) => (
-    <span data-testid={`icon-${name}`}>{name}</span>
-  ),
+  ForwardedIconComponent: ({
+    name,
+    dataTestId,
+  }: {
+    name: string;
+    dataTestId?: string;
+  }) => <span data-testid={dataTestId || `icon-${name}`}>{name}</span>,
 }));
 
 jest.mock("@/components/ui/button", () => ({
@@ -117,5 +121,19 @@ describe("McpJsonContent", () => {
     expect(screen.getByTestId("syntax-highlighter")).toHaveTextContent(
       "mcpServers",
     );
+  });
+
+  it("renders with copy state", () => {
+    const { container } = render(
+      <McpJsonContent {...defaultProps} isCopied={false} />,
+    );
+    expect(container).toBeInTheDocument();
+  });
+
+  it("renders with copied state", () => {
+    const { container } = render(
+      <McpJsonContent {...defaultProps} isCopied={true} />,
+    );
+    expect(container).toBeInTheDocument();
   });
 });
