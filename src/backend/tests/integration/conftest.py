@@ -12,5 +12,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "no_leaks: detect asyncio task leaks, thread leaks, and event loop blocking")
 
 
+@pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_call(item: pytest.Item):
     skip_on_openai_quota_error(item)
+    yield

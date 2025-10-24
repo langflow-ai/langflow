@@ -810,5 +810,7 @@ async def get_starter_project(client, active_user):  # noqa: ARG001
         await session.commit()
 
 
+@pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_call(item: pytest.Item):
     skip_on_openai_quota_error(item)
+    yield
