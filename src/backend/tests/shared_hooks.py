@@ -11,7 +11,7 @@ def skip_on_openai_quota_error(item: pytest.Function) -> None:
     def wrapped(*args, **kwargs):
         try:
             return test_func(*args, **kwargs)
-        except openai.OpenAIError as e:
+        except (openai.OpenAIError, openai.RateLimitError) as e:
             message = str(e)
             if (
                 "insufficient_quota" in message
