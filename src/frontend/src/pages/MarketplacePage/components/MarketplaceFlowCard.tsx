@@ -7,7 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Archive, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Archive, Trash2, Circle } from "lucide-react";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useUnpublishFlow, useDeletePublishedFlow } from "@/controllers/API/queries/published-flows";
 import useAlertStore from "@/stores/alertStore";
@@ -94,7 +94,17 @@ export default function MarketplaceFlowCard({
       <div className="mb-3 flex items-start justify-between">
         <div className="flex-1">
           <h3 className="mb-1 truncate text-base font-semibold text-foreground" title={name}>
-            {name}
+            {name}           
+            {/* Live Status Badge - Only for PUBLISHED flows */}
+            {item.status === "PUBLISHED" && (
+            <Badge
+              variant="secondary"
+              className="gap-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 animate-pulse"
+            >
+              <Circle className="h-3 w-3 fill-current" />
+              {/* Live */}
+            </Badge>
+          )}
           </h3>
           {/* <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {tags.length > 0 && <span className="truncate" title={tags[0]}>{tags[0]}</span>}

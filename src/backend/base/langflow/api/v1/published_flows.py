@@ -192,6 +192,7 @@ async def list_all_published_flows(
     search: str | None = Query(None, description="Search in flow name and description"),
     category: str | None = Query(None, description="Filter by category"),
     tags: str | None = Query(None, description="Filter by tags (comma-separated)"),
+    status_filter: str | None = Query(None, regex="^(published|unpublished|all)$", description="Filter by status"),
     sort_by: str = Query("published_at", regex="^(published_at|name|date)$", description="Sort by field"),
     order: str = Query("desc", regex="^(asc|desc)$", description="Sort order"),
 ):
@@ -200,8 +201,13 @@ async def list_all_published_flows(
     Public endpoint - no authentication required.
     Returns paginated list with denormalized flow and publisher information.
     """
-    # Base query - no joins needed, all data is denormalized
-    query = select(PublishedFlow).where(PublishedFlow.status == PublishStatusEnum.PUBLISHED)
+    # Base query - apply status filter
+    if status_filter == "published":
+        query = select(PublishedFlow).where(PublishedFlow.status == PublishStatusEnum.PUBLISHED)
+    elif status_filter == "unpublished":
+        query = select(PublishedFlow).where(PublishedFlow.status == PublishStatusEnum.UNPUBLISHED)
+    else:  # "all" or None - show all flows (default)
+        query = select(PublishedFlow)
 
     # Apply search filter on denormalized flow_name and description
     if search:
@@ -220,8 +226,13 @@ async def list_all_published_flows(
             # Works with both PostgreSQL and SQLite
             query = query.where(cast(PublishedFlow.tags, Text).contains(f'"{tag}"'))
 
-    # Count total with same filters - simple query, no joins
-    count_query = select(func.count(PublishedFlow.id)).where(PublishedFlow.status == PublishStatusEnum.PUBLISHED)
+    # Count total with same status filter
+    if status_filter == "published":
+        count_query = select(func.count(PublishedFlow.id)).where(PublishedFlow.status == PublishStatusEnum.PUBLISHED)
+    elif status_filter == "unpublished":
+        count_query = select(func.count(PublishedFlow.id)).where(PublishedFlow.status == PublishStatusEnum.UNPUBLISHED)
+    else:  # "all" or None - count all flows (default)
+        count_query = select(func.count(PublishedFlow.id))
 
     # Apply same filters to count query
     if search:

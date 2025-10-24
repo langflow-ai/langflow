@@ -8,6 +8,7 @@ export interface GetAllPublishedFlowsParams {
   search?: string;
   category?: string;
   tags?: string;
+  status?: "published" | "unpublished" | "all";
   sort_by?: string;
   order?: string;
 }
