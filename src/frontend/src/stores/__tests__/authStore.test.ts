@@ -575,16 +575,50 @@ describe("useAuthStore", () => {
       consoleErrorSpy.mockRestore();
     });
 
-    it("should handle missing api_key in response", async () => {
+    it("should NOT set apiKey when response has no api_key property", async () => {
       const { result } = renderHook(() => useAuthStore());
       const initialApiKey = result.current.apiKey;
 
+      // Response without api_key property
       mockCreateApiKey.mockResolvedValue({});
 
       await act(async () => {
         await result.current.generateApiKey?.();
       });
 
+      // apiKey should remain unchanged (condition if (res?.api_key) is false)
+      expect(result.current.apiKey).toBe(initialApiKey);
+      expect(result.current.isGeneratingApiKey).toBe(false);
+    });
+
+    it("should NOT set apiKey when api_key is null", async () => {
+      const { result } = renderHook(() => useAuthStore());
+      const initialApiKey = result.current.apiKey;
+
+      // Response with null api_key
+      mockCreateApiKey.mockResolvedValue({ api_key: null });
+
+      await act(async () => {
+        await result.current.generateApiKey?.();
+      });
+
+      // apiKey should remain unchanged (condition if (res?.api_key) is false)
+      expect(result.current.apiKey).toBe(initialApiKey);
+      expect(result.current.isGeneratingApiKey).toBe(false);
+    });
+
+    it("should NOT set apiKey when api_key is undefined", async () => {
+      const { result } = renderHook(() => useAuthStore());
+      const initialApiKey = result.current.apiKey;
+
+      // Response with undefined api_key
+      mockCreateApiKey.mockResolvedValue({ api_key: undefined });
+
+      await act(async () => {
+        await result.current.generateApiKey?.();
+      });
+
+      // apiKey should remain unchanged (condition if (res?.api_key) is false)
       expect(result.current.apiKey).toBe(initialApiKey);
       expect(result.current.isGeneratingApiKey).toBe(false);
     });
