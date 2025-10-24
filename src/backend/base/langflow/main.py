@@ -259,6 +259,19 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await logger.awarning(f"Failed to create/update builder agent flow: {e}")
 
             current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Creating/updating marketplace agent folder")
+            try:
+                from langflow.initial_setup.setup import get_or_create_marketplace_agent_folder
+                from langflow.services.deps import session_scope
+                async with session_scope() as session:
+                    await get_or_create_marketplace_agent_folder(session)
+                await logger.adebug(
+                    f"Marketplace agent folder created/updated in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                )
+            except Exception as e:  # noqa: BLE001
+                await logger.awarning(f"Failed to create/update marketplace agent folder: {e}")
+
+            current_time = asyncio.get_event_loop().time()
             await logger.adebug("Starting telemetry service")
             telemetry_service.start()
             await logger.adebug(f"started telemetry service in {asyncio.get_event_loop().time() - current_time:.2f}s")

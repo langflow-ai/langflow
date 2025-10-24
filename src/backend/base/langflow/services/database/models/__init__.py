@@ -4,6 +4,7 @@ from .file import File
 from .flow import Flow
 from .folder import Folder
 from .message import MessageTable
+from .published_flow import PublishedFlow
 from .transactions import TransactionTable
 from .user import User
 from .variable import Variable
@@ -15,6 +16,7 @@ __all__ = [
     "Flow",
     "Folder",
     "MessageTable",
+    "PublishedFlow",
     "RuntimeAdapter",
     "TransactionTable",
     "User",

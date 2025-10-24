@@ -1,0 +1,283 @@
+import { useState, useCallback, useEffect } from "react";
+import { Search, Grid3x3, List, Filter } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import MarketplaceFlowCard from "./components/MarketplaceFlowCard";
+import FlowPagination from "./components/FlowPagination";
+import { useGetAllPublishedFlows } from "@/controllers/API/queries/published-flows";
+import ListSkeleton from "../MainPage/components/listSkeleton";
+import { debounce } from "lodash";
+import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
+
+export default function MarketplacePage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [pageIndex, setPageIndex] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+  const [tagFilter, setTagFilter] = useState<string | "all">("all");
+  const [pendingTag, setPendingTag] = useState<string | "all">("all");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<"name" | "date">("name");
+  const [order] = useState<"asc" | "desc">("desc");
+
+  // Debounce search
+  const debouncedSetSearchQuery = useCallback(
+    debounce((value: string) => {
+      setSearchQuery(value);
+      setPageIndex(1);
+    }, 500),
+    []
+  );
+
+  useEffect(() => {
+    debouncedSetSearchQuery(debouncedSearch);
+    return () => {
+      debouncedSetSearchQuery.cancel();
+    };
+  }, [debouncedSearch, debouncedSetSearchQuery]);
+
+  useEffect(() => {
+    if (isFilterOpen) {
+      setPendingTag(tagFilter);
+    }
+  }, [isFilterOpen, tagFilter]);
+
+  // Fetch published flows
+  const { data, isLoading } = useGetAllPublishedFlows({
+    page: pageIndex,
+    limit: pageSize,
+    search: searchQuery || undefined,
+    tags: tagFilter !== "all" ? tagFilter : undefined,
+    sort_by: sortBy,
+    order: order,
+  });
+
+  const items = data?.items || [];
+  const total = data?.total || 0;
+  const pages = data?.pages || 1;
+  const currentPage = Math.min(pageIndex, pages);
+  const start = (currentPage - 1) * pageSize;
+  const end = start + pageSize;
+  const visibleItems = items;
+  const expandCards = visibleItems.length === 12;
+
+  const handlePageChange = useCallback((newPageIndex: number) => {
+    setPageIndex(newPageIndex);
+  }, []);
+
+  const handlePageSizeChange = useCallback((newPageSize: number) => {
+    setPageSize(newPageSize);
+    setPageIndex(1);
+  }, []);
+
+  return (
+    <div className="flex h-full w-full flex-col overflow-y-auto bg-[#FBFAFF] dark:bg-black dark:text-white">
+      <div className="flex h-full w-full flex-col">
+        <div className="flex w-full flex-1 flex-col gap-4 p-4 md:p-6">
+          {/* Header */}
+          <div className="flex w-full items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <h1 className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic">
+                Agent Marketplace
+              </h1>
+              <span className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic">
+                ({total} Agents)
+              </span>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center gap-3">
+              {/* Search */}
+              <div className="relative w-[500px] max-w-[500px]">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search Agents..."
+                  value={debouncedSearch}
+                  onChange={(e) => setDebouncedSearch(e.target.value)}
+                  className="pl-10 h-9 rounded-md border border-[#EBE8FF] dark:border-white/20 dark:bg-black dark:text-white placeholder:text-muted-foreground dark:placeholder:text-white/60"
+                />
+              </div>
+
+              {/* Sort */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Sort By</span>
+                <Select
+                  value={sortBy}
+                  onValueChange={(v) => setSortBy(v as typeof sortBy)}
+                >
+                  <SelectTrigger className="h-8 w-[160px] rounded-md border border-[#EBE8FF] dark:border-white/20 dark:text-white text-sm">
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent className="dark:bg-black dark:text-white">
+                    <SelectItem value="name" className="dark:text-white">Name</SelectItem>
+                    <SelectItem value="date" className="dark:text-white">Published Date</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filter Button + Popover */}
+              <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-2 rounded-md border border-[#EBE8FF] dark:border-white/20"
+                    aria-label="Filter"
+                  >
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    Filter
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="end"
+                  className="w-[360px] rounded-md border border-[#EBE8FF] dark:border-white/20 bg-white dark:bg-black dark:text-white p-4 shadow-md"
+                >
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="text-base font-semibold">Tags</div>
+                      <Select
+                        value={pendingTag}
+                        onValueChange={(v) => setPendingTag(v as string)}
+                      >
+                        <SelectTrigger className="h-10 w-full rounded-md border border-[#EBE8FF] dark:border-white/20 text-sm dark:text-white">
+                          <SelectValue placeholder="All Tags" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-64 overflow-y-auto dark:bg-black dark:text-white">
+                          <SelectItem value="all" className="dark:text-white">All Tags</SelectItem>
+                          {MARKETPLACE_TAGS.map((tag) => (
+                            <SelectItem key={tag} value={tag} className="dark:text-white">
+                              {tag}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 rounded-md border border-[#EBE8FF] dark:border-white/20"
+                        onClick={() => {
+                          setPendingTag(tagFilter);
+                          setIsFilterOpen(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-9 rounded-md bg-[#350E84] text-white hover:bg-[#2D0B6E]"
+                        onClick={() => {
+                          setTagFilter(pendingTag);
+                          setPageIndex(1);
+                          setIsFilterOpen(false);
+                        }}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* View Toggle */}
+              <div className="flex items-center gap-1 rounded-md border border-[#EBE8FF] dark:border-white/20 p-1">
+                <Button
+                  variant={viewMode === "list" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("list")}
+                  className="h-8 w-8 p-0"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "grid" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("grid")}
+                  className="h-8 w-8 p-0"
+                >
+                  <Grid3x3 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Loading State */}
+          {isLoading ? (
+            <div
+              className={
+                viewMode === "grid"
+                  ? "grid auto-rows-fr grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 min-h-[calc(100vh-280px)]"
+                  : "flex flex-col gap-4 flex-1 min-h-[calc(100vh-280px)]"
+              }
+            >
+              <ListSkeleton />
+              <ListSkeleton />
+              <ListSkeleton />
+            </div>
+          ) : (
+            <>
+              {/* Flow Grid */}
+              <div
+                className={
+                  viewMode === "grid"
+                    ? `grid ${expandCards ? "auto-rows-fr" : "auto-rows-auto"} grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 min-h-[calc(100vh-280px)]`
+                    : "flex flex-col gap-4 flex-1 min-h-[calc(100vh-280px)]"
+                }
+              >
+                {visibleItems.map((item: any) => (
+                  <MarketplaceFlowCard
+                    key={item.id}
+                    item={item}
+                    viewMode={viewMode}
+                    expand={viewMode === "grid" && expandCards}
+                  />
+                ))}
+              </div>
+
+              {/* Empty State */}
+              {items.length === 0 && (
+                <div className="flex h-64 items-center justify-center text-muted-foreground">
+                  {searchQuery
+                    ? "No marketplace flows match your search."
+                    : "No marketplace flows available yet."}
+                </div>
+              )}
+
+              {/* Results Counter */}
+              {!isLoading && total > 0 && (
+                <div className="mt-2 flex items-center justify-end text-xs text-[#444444] dark:text-white/60">
+                  {`Showing ${start + 1} - ${Math.min(end, total)} results of ${total}`}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Pagination */}
+          {!isLoading && total > 0 && (
+            <div className="mt-6 flex justify-end border-t dark:border-white/20 pt-4">
+              <FlowPagination
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalPages={pages}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

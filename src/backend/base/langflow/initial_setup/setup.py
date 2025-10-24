@@ -34,6 +34,8 @@ from langflow.base.constants import (
 from langflow.initial_setup.constants import (
     BUILDER_AGENT_FOLDER_DESCRIPTION,
     BUILDER_AGENT_FOLDER_NAME,
+    MARKETPLACE_AGENT_FOLDER_DESCRIPTION,
+    MARKETPLACE_AGENT_FOLDER_NAME,
     STARTER_FOLDER_DESCRIPTION,
     STARTER_FOLDER_NAME,
 )
@@ -730,6 +732,20 @@ async def get_or_create_builder_agent_folder(session: AsyncSession) -> Folder:
         await session.refresh(db_folder)
         return db_folder
     stmt = select(Folder).where(Folder.name == BUILDER_AGENT_FOLDER_NAME)
+    return (await session.exec(stmt)).first()
+
+
+async def get_or_create_marketplace_agent_folder(session: AsyncSession) -> Folder:
+    """Get or create the Marketplace Agent folder (system folder)."""
+    if not await folder_exists(session, MARKETPLACE_AGENT_FOLDER_NAME):
+        new_folder = FolderCreate(name=MARKETPLACE_AGENT_FOLDER_NAME, description=MARKETPLACE_AGENT_FOLDER_DESCRIPTION)
+        db_folder = Folder.model_validate(new_folder, from_attributes=True)
+        db_folder.user_id = None  # System folder - not owned by any user
+        session.add(db_folder)
+        await session.commit()
+        await session.refresh(db_folder)
+        return db_folder
+    stmt = select(Folder).where(Folder.name == MARKETPLACE_AGENT_FOLDER_NAME)
     return (await session.exec(stmt)).first()
 
 

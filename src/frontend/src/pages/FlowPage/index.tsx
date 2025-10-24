@@ -21,11 +21,12 @@ import Page from "./components/PageComponent";
 
 interface FlowPageProps {
   view?: boolean;
+  readOnly?: boolean;
   flowId?: string;
   folderId?: string;
 }
 
-export default function FlowPage({ view, flowId: propFlowId, folderId: propFolderId }: FlowPageProps): JSX.Element {
+export default function FlowPage({ view, readOnly, flowId: propFlowId, folderId: propFolderId }: FlowPageProps): JSX.Element {
   const types = useTypesStore((state) => state.types);
 
   useGetTypes({
@@ -38,12 +39,15 @@ export default function FlowPage({ view, flowId: propFlowId, folderId: propFolde
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Skip change tracking for read-only/view mode
   const changesNotSaved =
+    !view && !readOnly &&
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
     (currentFlow?.data?.nodes?.length ?? 0) > 0;
 
   const isBuilding = useFlowStore((state) => state.isBuilding);
-  const blocker = useBlocker(changesNotSaved || isBuilding);
+  // Don't block navigation in view/read-only mode
+  const blocker = useBlocker(view || readOnly ? false : (changesNotSaved || isBuilding));
 
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
   const { id: paramId } = useParams();
@@ -85,14 +89,20 @@ export default function FlowPage({ view, flowId: propFlowId, folderId: propFolde
         proceed = true;
       })
       .catch((error) => {
-        console.error("Failed to save flow:", error);
+        // Check if this is just a "flow not ready" guard vs actual error
+        const isFlowNotReady = error?.message?.includes("Cannot save flow without ID");
+
+        if (!isFlowNotReady) {
+          // Actual save error - show error message
+          console.error("Failed to save flow:", error);
+          setSuccessData({
+            title: "Failed to save flow, but navigation will continue",
+          });
+        }
+
         // Even if save fails, we should still proceed with navigation
         blocker.proceed && blocker.proceed();
         proceed = true;
-        // Optionally show an error message
-        setSuccessData({
-          title: "Failed to save flow, but navigation will continue",
-        });
       });
   };
 
@@ -110,6 +120,9 @@ export default function FlowPage({ view, flowId: propFlowId, folderId: propFolde
   };
 
   useEffect(() => {
+    // Skip beforeunload warning in view/read-only mode
+    if (view || readOnly) return;
+
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (changesNotSaved || isBuilding) {
         event.preventDefault();
@@ -122,7 +135,7 @@ export default function FlowPage({ view, flowId: propFlowId, folderId: propFolde
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [changesNotSaved, isBuilding]);
+  }, [changesNotSaved, isBuilding, view, readOnly]);
 
   // Set flow tab id
   useEffect(() => {
@@ -131,20 +144,36 @@ export default function FlowPage({ view, flowId: propFlowId, folderId: propFolde
         const isAnExistingFlow = flows.find((flow) => flow.id === id);
 
         if (!isAnExistingFlow) {
-          // Only navigate to /all if we're not using props (i.e., we're in a normal route context)
-          if (!propFlowId) {
-            navigate("/all");
-            return;
-          }
-          // If using props, try to load the flow directly
+          // Flow not in local state, try to fetch it from backend API
           if (id) {
-            await getFlowToAddToCanvas(id);
+            try {
+              // Try to load the flow from backend (this will check permissions)
+              await getFlowToAddToCanvas(id);
+              // If successful, the flow will be loaded and displayed
+              // No redirect needed - backend permission check passed
+            } catch (error: any) {
+              // Backend returned error (404 = not found, 403 = no permission)
+              // Only NOW redirect to /all
+              console.error("Failed to load flow:", {
+                flowId: id,
+                status: error?.response?.status,
+                message: error?.response?.data?.detail || error?.message,
+              });
+              if (!propFlowId) {
+                navigate("/all");
+              }
+            }
+          } else {
+            // No ID provided, redirect
+            if (!propFlowId) {
+              navigate("/all");
+            }
           }
           return;
         }
 
+        // Flow exists in local state, load it normally
         const isAnExistingFlowId = isAnExistingFlow.id;
-
         await getFlowToAddToCanvas(isAnExistingFlowId);
       }
     };
@@ -163,17 +192,27 @@ export default function FlowPage({ view, flowId: propFlowId, folderId: propFolde
   }, [id]);
 
   useEffect(() => {
+    // Skip auto-save in view/read-only mode
+    if (view || readOnly) return;
+
     if (
       blocker.state === "blocked" &&
       autoSaving &&
       changesNotSaved &&
       !isBuilding
     ) {
+      // Prevent auto-save if current flow doesn't have an ID yet
+      if (!currentFlow?.id) {
+        return;
+      }
       handleSave();
     }
-  }, [blocker.state, isBuilding]);
+  }, [blocker.state, isBuilding, view, readOnly]);
 
   useEffect(() => {
+    // Skip blocker logic in view/read-only mode
+    if (view || readOnly) return;
+
     if (blocker.state === "blocked") {
       if (isBuilding) {
         stopBuilding();
@@ -181,11 +220,23 @@ export default function FlowPage({ view, flowId: propFlowId, folderId: propFolde
         blocker.proceed && blocker.proceed();
       }
     }
-  }, [blocker.state, isBuilding]);
+  }, [blocker.state, isBuilding, view, readOnly]);
 
   const getFlowToAddToCanvas = async (id: string) => {
-    const flow = await getFlow({ id: id });
-    setCurrentFlow(flow);
+    try {
+      const flow = await getFlow({ id: id });
+
+      // Ensure flow has an ID before setting it
+      if (!flow || !flow.id) {
+        console.error("Loaded flow is missing ID");
+        throw new Error("Flow data is incomplete - missing ID");
+      }
+
+      setCurrentFlow(flow);
+    } catch (error) {
+      console.error("Failed to load flow:", error);
+      throw error;
+    }
   };
 
   const isMobile = useIsMobile();
@@ -203,7 +254,7 @@ export default function FlowPage({ view, flowId: propFlowId, folderId: propFolde
               <FlowSearchProvider>
                 <main className="flex w-full overflow-hidden">
                   <div className="h-full w-full">
-                    <Page setIsLoading={setIsLoading} />
+                    <Page view={view} readOnly={readOnly} setIsLoading={setIsLoading} />
                   </div>
                 </main>
                 {!view && <FlowSidebarComponent isLoading={isLoading} />}
@@ -212,7 +263,7 @@ export default function FlowPage({ view, flowId: propFlowId, folderId: propFolde
           </div>
         )}
       </div>
-      {blocker.state === "blocked" && (
+      {!view && !readOnly && blocker.state === "blocked" && (
         <>
           {!isBuilding && currentSavedFlow && (
             <SaveChangesModal
