@@ -192,33 +192,34 @@ class LanguageModelComponent(LCModelComponent):
 
         # Validate API key
         # Try to get API key from database if not provided
-        api_key_value: str | None = getattr(self, 'api_key', None)
+        api_key_value: str | None = getattr(self, "api_key", None)
         if not api_key_value:
             # Map provider to variable name (same as environment variables)
             provider_variable_mapping = {
                 "OpenAI": "OPENAI_API_KEY",
-                "Anthropic": "ANTHROPIC_API_KEY", 
+                "Anthropic": "ANTHROPIC_API_KEY",
                 "Google": "GOOGLE_API_KEY",
                 "Watsonx": "WATSONX_API_KEY",
             }
-            
+
             variable_name = provider_variable_mapping.get(provider)
-            if variable_name and hasattr(self, 'user_id') and self.user_id:
+            if variable_name and hasattr(self, "user_id") and self.user_id:
                 # Try to get API key from encrypted database storage using variable service
                 try:
-                    if hasattr(self, 'get_variable'):
+                    if hasattr(self, "get_variable"):
                         api_key: str | None = self.get_variable(variable_name, "value")
                         if api_key:
                             api_key_value = api_key
                 except Exception as e:
                     import logging
+
                     logging.debug(f"Failed to get API key from database for {provider}: {e}")
-        
+
         # Final validation
         if not api_key_value:
             msg = f"{provider} API key is required when using {provider} provider. Please set it in the component input or store it as a global variable."
             raise ValueError(msg)
-        
+
         # Set the final API key value
         self.api_key = api_key_value
 
