@@ -14,6 +14,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { validateFlowForPublish } from "@/utils/flowValidation";
+import { incrementPatchVersion } from "@/utils/versionUtils";
 import type { AllNodeType, EdgeType } from "@/types/flow";
 import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
 
@@ -48,14 +49,15 @@ export default function PublishFlowModal({
   useEffect(() => {
     if (open) {
       if (existingPublishedData?.is_published) {
-        // Re-publish: Pre-fill with existing published data
+        // Re-publish: Auto-increment patch version
         setMarketplaceName(existingPublishedData.marketplace_flow_name || flowName);
-        setVersion(existingPublishedData.version || "");
+        const newVersion = incrementPatchVersion(existingPublishedData.version);
+        setVersion(newVersion);
         setTags(existingPublishedData.tags || []);
       } else {
-        // First-time publish: Use defaults
+        // First-time publish: Default to 1.0.0
         setMarketplaceName(flowName);
-        setVersion("");
+        setVersion("1.0.0");
         setTags([]);
       }
     }
