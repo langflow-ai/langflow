@@ -1,6 +1,8 @@
 import type { ReactFlowJsonObject } from "@xyflow/react";
+import { compare } from "fast-json-patch";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
-import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
+import type { PatchOperation } from "@/controllers/API/queries/flows/use-patch-json-patch-flow";
+import { usePatchJsonPatchFlow } from "@/controllers/API/queries/flows/use-patch-json-patch-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -14,7 +16,7 @@ const useSaveFlow = () => {
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
 
   const { mutate: getFlow } = useGetFlow();
-  const { mutate } = usePatchUpdateFlow();
+  const { mutate } = usePatchJsonPatchFlow();
 
   const saveFlow = async (flow?: FlowType): Promise<void> => {
     const currentFlow = useFlowStore.getState().currentFlow;
@@ -71,15 +73,17 @@ const useSaveFlow = () => {
             locked,
           } = flow;
           if (!currentSavedFlow?.data?.nodes.length || data!.nodes.length > 0) {
+            // Use fast-json-patch to automatically detect changes
+            // This is more efficient than manually building operations
+            const operations = compare(
+              currentSavedFlow || {},
+              flow,
+            ) as PatchOperation[];
+
             mutate(
               {
                 id,
-                name,
-                data: data!,
-                description,
-                folder_id,
-                endpoint_name,
-                locked,
+                operations,
               },
               {
                 onSuccess: (updatedFlow) => {
