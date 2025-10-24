@@ -4,6 +4,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
+from pydantic import BaseModel, Field
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.database.models.variable.model import VariableRead
@@ -11,39 +12,40 @@ from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CATEGORY_GLOBAL, CREDENTIAL_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 
+
+class ModelProviderCredentialCreate(BaseModel):
+    """Request model for creating a model provider credential."""
+    name: str = Field(..., description="Name of the credential")
+    provider: str = Field(..., description="Model provider (e.g., OpenAI, Anthropic)")
+    value: str = Field(..., description="API key value")
+    description: str | None = Field(None, description="Optional description of the credential")
+
+
+class ModelProviderCredentialValueResponse(BaseModel):
+    """Response model for credential value."""
+    value: str = Field(..., description="The decrypted credential value")
+
 router = APIRouter(tags=["Model Provider Credentials"], prefix="/model-provider-credentials")
 
 
 @router.post("/", response_model=VariableRead, status_code=201)
 async def create_model_provider_credential(
-    request: dict,
+    request: ModelProviderCredentialCreate,
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
     """Create a new model provider credential.
-
+    
     Args:
-        request: JSON body containing name, provider, value, and optional description
+        request: Model provider credential creation request
         current_user: Current authenticated user
         session: Database session
-
+        
     Returns:
         VariableRead: The created credential
     """
     try:
-        # Extract parameters from request body
-        name = request.get("name")
-        provider = request.get("provider")
-        value = request.get("value")
-        description = request.get("description")
-
-        # Validate required fields
-        if not name or not provider or not value:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing required fields: name, provider, and value are required",
-            )
 
         variable_service = get_variable_service()
         if not isinstance(variable_service, DatabaseVariableService):
@@ -53,13 +55,13 @@ async def create_model_provider_credential(
             )
 
         # Create a unique name that includes the provider
-        credential_name = f"{provider.lower()}_{name.lower().replace(' ', '_')}"
+        credential_name = f"{request.provider.lower()}_{request.name.lower().replace(' ', '_')}"
 
         return await variable_service.create_variable(
             user_id=current_user.id,
             name=credential_name,
-            value=value,
-            default_fields=[provider, "api_key"],
+            value=request.value,
+            default_fields=[request.provider, "api_key"],
             type_=CREDENTIAL_TYPE,
             category=CATEGORY_GLOBAL,
             session=session,
@@ -67,7 +69,7 @@ async def create_model_provider_credential(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to create model provider credential: {e!s}",
+            detail=f"Failed to create model provider credential: {str(e)}",
         ) from e
 
 
@@ -79,12 +81,12 @@ async def get_model_provider_credentials(
     current_user: CurrentActiveUser,
 ):
     """Get model provider credentials for the current user.
-
+    
     Args:
         provider: Optional provider filter
         current_user: Current authenticated user
         session: Database session
-
+        
     Returns:
         list[VariableRead]: List of credentials
     """
@@ -95,16 +97,19 @@ async def get_model_provider_credentials(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Variable service is not available",
             )
-
+        
         # Get all variables for the user
         all_variables = await variable_service.get_all(
             user_id=current_user.id,
             session=session,
         )
-
+        
         # Filter for model provider credentials (those with CREDENTIAL_TYPE and CATEGORY_GLOBAL)
-        credentials = [var for var in all_variables if var.type == CREDENTIAL_TYPE and var.category == CATEGORY_GLOBAL]
-
+        credentials = [
+            var for var in all_variables 
+            if var.type == CREDENTIAL_TYPE and var.category == CATEGORY_GLOBAL
+        ]
+        
         # Filter by provider if specified
         if provider:
             provider_credentials = []
@@ -113,12 +118,12 @@ async def get_model_provider_credentials(
                     if cred.default_fields[0].lower() == provider.lower():
                         provider_credentials.append(cred)
             return provider_credentials
-
+        
         return credentials
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve model provider credentials: {e!s}",
+            detail=f"Failed to retrieve model provider credentials: {str(e)}",
         ) from e
 
 
@@ -130,12 +135,12 @@ async def get_model_provider_credential(
     current_user: CurrentActiveUser,
 ):
     """Get a specific model provider credential.
-
+    
     Args:
         credential_id: The credential ID
         current_user: Current authenticated user
         session: Database session
-
+        
     Returns:
         VariableRead: The credential
     """
@@ -146,7 +151,7 @@ async def get_model_provider_credential(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Variable service is not available",
             )
-
+        
         credential = await variable_service.get_variable_by_id(
             user_id=current_user.id,
             variable_id=credential_id,
@@ -157,21 +162,21 @@ async def get_model_provider_credential(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
             )
-
+        
         # Verify it's a model provider credential
         if credential.type != CREDENTIAL_TYPE or credential.category != CATEGORY_GLOBAL:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
             )
-
+        
         return credential
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve model provider credential: {e!s}",
+            detail=f"Failed to retrieve model provider credential: {str(e)}",
         ) from e
 
 
@@ -183,12 +188,12 @@ async def delete_model_provider_credential(
     current_user: CurrentActiveUser,
 ):
     """Delete a model provider credential.
-
+    
     Args:
         credential_id: The credential ID
         current_user: Current authenticated user
         session: Database session
-
+        
     Returns:
         dict: Success message
     """
@@ -199,45 +204,45 @@ async def delete_model_provider_credential(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Variable service is not available",
             )
-
+        
         # Get the existing credential first to verify it exists and is a model provider credential
         existing_credential = await variable_service.get_variable_by_id(
             user_id=current_user.id,
             variable_id=credential_id,
             session=session,
         )
-
+        
         if not existing_credential:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
             )
-
+        
         # Verify it's a model provider credential
         if existing_credential.type != CREDENTIAL_TYPE or existing_credential.category != CATEGORY_GLOBAL:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
             )
-
+        
         # Delete the credential
         await variable_service.delete_variable(
             user_id=current_user.id,
             variable_id=credential_id,
             session=session,
         )
-
+        
         return {"detail": "Model provider credential deleted successfully"}
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to delete model provider credential: {e!s}",
+            detail=f"Failed to delete model provider credential: {str(e)}",
         ) from e
 
 
-@router.get("/{credential_id}/value", response_model=dict[str, str])
+@router.get("/{credential_id}/value", response_model=ModelProviderCredentialValueResponse)
 async def get_model_provider_credential_value(
     credential_id: UUID,
     *,
@@ -245,12 +250,12 @@ async def get_model_provider_credential_value(
     current_user: CurrentActiveUser,
 ):
     """Get the decrypted value of a model provider credential.
-
+    
     Args:
         credential_id: The credential ID
         current_user: Current authenticated user
         session: Database session
-
+        
     Returns:
         dict[str, str]: The decrypted value
     """
@@ -261,27 +266,27 @@ async def get_model_provider_credential_value(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Variable service is not available",
             )
-
+        
         # Get the credential first
         credential = await variable_service.get_variable_by_id(
             user_id=current_user.id,
             variable_id=credential_id,
             session=session,
         )
-
+        
         if not credential:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
             )
-
+        
         # Verify it's a model provider credential
         if credential.type != CREDENTIAL_TYPE or credential.category != CATEGORY_GLOBAL:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
             )
-
+        
         # Get the decrypted value
         value = await variable_service.get_variable(
             user_id=current_user.id,
@@ -289,14 +294,14 @@ async def get_model_provider_credential_value(
             field="value",
             session=session,
         )
-
-        return {"value": value}
+        
+        return ModelProviderCredentialValueResponse(value=value)
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve credential value: {e!s}",
+            detail=f"Failed to retrieve credential value: {str(e)}",
         ) from e
 
 
@@ -308,12 +313,12 @@ async def get_credentials_by_provider(
     current_user: CurrentActiveUser,
 ):
     """Get all credentials for a specific provider.
-
+    
     Args:
         provider: The provider name
         current_user: Current authenticated user
         session: Database session
-
+        
     Returns:
         list[VariableRead]: List of credentials for the provider
     """
@@ -324,26 +329,29 @@ async def get_credentials_by_provider(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Variable service is not available",
             )
-
+        
         # Get all variables for the user
         all_variables = await variable_service.get_all(
             user_id=current_user.id,
             session=session,
         )
-
+        
         # Filter for model provider credentials
-        credentials = [var for var in all_variables if var.type == CREDENTIAL_TYPE and var.category == CATEGORY_GLOBAL]
-
+        credentials = [
+            var for var in all_variables 
+            if var.type == CREDENTIAL_TYPE and var.category == CATEGORY_GLOBAL
+        ]
+        
         # Filter by provider
         provider_credentials = []
         for cred in credentials:
             if cred.default_fields and len(cred.default_fields) > 0:
                 if cred.default_fields[0].lower() == provider.lower():
                     provider_credentials.append(cred)
-
+        
         return provider_credentials
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve credentials for provider {provider}: {e!s}",
+            detail=f"Failed to retrieve credentials for provider {provider}: {str(e)}",
         ) from e
