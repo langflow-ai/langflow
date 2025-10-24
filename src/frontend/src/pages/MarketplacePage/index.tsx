@@ -90,7 +90,7 @@ export default function MarketplacePage() {
                 Flow Marketplace
               </h1>
               <span className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic">
-                ({total} Flows)
+                ({total} Agents)
               </span>
             </div>
 
@@ -101,7 +101,7 @@ export default function MarketplacePage() {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="text"
-                  placeholder="Search flows..."
+                  placeholder="Search Agents..."
                   value={debouncedSearch}
                   onChange={(e) => setDebouncedSearch(e.target.value)}
                   className="pl-10 h-9 rounded-md border border-[#EBE8FF] dark:border-white/20 dark:bg-black dark:text-white placeholder:text-muted-foreground dark:placeholder:text-white/60"
