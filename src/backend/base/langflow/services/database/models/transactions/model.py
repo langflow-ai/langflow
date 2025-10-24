@@ -40,6 +40,12 @@ class TransactionBase(SQLModel):
         Returns:
             dict: The serialized input data with applied constraints.
         """
+        # Filter out the "code" key from inputs if present
+        if isinstance(data, dict) and "code" in data:
+            # Create a shallow copy and remove the code key
+            data = data.copy()
+            data.pop("code")
+
         return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @field_serializer("outputs")
