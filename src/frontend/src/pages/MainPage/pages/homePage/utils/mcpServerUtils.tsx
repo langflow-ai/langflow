@@ -1,5 +1,26 @@
 import { parseString } from "@/utils/stringManipulation";
 
+type RawFlow = {
+  id: string;
+  action_name?: string;
+  action_description?: string;
+  name?: string;
+  description?: string;
+  mcp_enabled?: boolean;
+};
+
+export type ToolFlow = {
+  id: string;
+  name: string;
+  description: string;
+  display_name?: string;
+  display_description?: string;
+  status: boolean;
+  tags?: string[];
+};
+
+type InstalledClient = { installed?: boolean; name?: string };
+
 export const MAX_MCP_SERVER_NAME_LENGTH = 64;
 
 export const autoInstallers = [
@@ -107,25 +128,6 @@ export const buildMcpServerJson = (opts: {
 }`;
 };
 
-type RawFlow = {
-  id: string;
-  action_name?: string;
-  action_description?: string;
-  name?: string;
-  description?: string;
-  mcp_enabled?: boolean;
-};
-
-export type ToolFlow = {
-  id: string;
-  name: string;
-  description: string;
-  display_name?: string;
-  display_description?: string;
-  status: boolean;
-  tags?: string[];
-};
-
 export const mapFlowsToTools = (flows: RawFlow[] = []): ToolFlow[] =>
   flows.map((flow) => ({
     id: flow.id,
@@ -136,8 +138,6 @@ export const mapFlowsToTools = (flows: RawFlow[] = []): ToolFlow[] =>
     status: flow.mcp_enabled ?? false,
     tags: [flow.name ?? ""],
   }));
-
-type InstalledClient = { installed?: boolean; name?: string };
 
 export const extractInstalledClientNames = (
   installedData?: InstalledClient[],
