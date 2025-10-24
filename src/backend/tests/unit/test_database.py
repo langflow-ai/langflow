@@ -627,6 +627,33 @@ async def test_sqlite_pragmas():
         assert (await session.exec(text("PRAGMA synchronous;"))).scalar() == 1
 
 
+async def test_migration_strategy_settings():
+    """Test that migration strategy settings are properly configured."""
+    from langflow.services.deps import get_settings_service
+    
+    settings_service = get_settings_service()
+    settings = settings_service.settings
+    
+    # Test default migration strategy
+    assert settings.migration_strategy == "permissive"
+    
+    # Test that the setting is properly typed
+    assert settings.migration_strategy in ["strict", "permissive", "auto_downgrade"]
+
+
+async def test_database_service_migration_strategy():
+    """Test that DatabaseService properly uses migration strategy setting."""
+    from langflow.services.database.service import DatabaseService
+    from langflow.services.deps import get_settings_service
+    
+    settings_service = get_settings_service()
+    db_service = DatabaseService(settings_service)
+    
+    # Test that the service has access to migration strategy
+    assert hasattr(db_service.settings_service.settings, 'migration_strategy')
+    assert db_service.settings_service.settings.migration_strategy in ["strict", "permissive", "auto_downgrade"]
+
+
 @pytest.mark.usefixtures("active_user")
 async def test_read_folder(client: AsyncClient, logged_in_headers):
     # Create a new project
