@@ -141,7 +141,10 @@ type InstalledClient = { installed?: boolean; name?: string };
 
 export const extractInstalledClientNames = (
   installedData?: InstalledClient[],
-) => installedData?.filter((c) => c.installed).map((c) => c.name) ?? [];
+): string[] =>
+  installedData
+    ?.filter((c) => c.installed && c.name)
+    .map((c) => c.name as string) ?? [];
 
 export const createSyntaxHighlighterStyle = (isDarkMode: boolean) => ({
   "hljs-string": { color: isDarkMode ? "hsla(158, 64%, 52%, 1)" : "#059669" },
