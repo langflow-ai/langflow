@@ -52,6 +52,34 @@ export default function PromptModal({
   const previewRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const insertVariableAtCursor = () => {
+    if (readonly) return;
+
+    // Switch to edit mode first if not already in edit mode
+    if (!isEdit) {
+      setIsEdit(true);
+    }
+
+    // Insert the variable at the end of current text
+    const variableText = "{variable_name}";
+    const newText = inputValue + variableText;
+
+    setInputValue(newText);
+
+    // Focus and select "variable_name" part for immediate editing
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        const insertPosition = inputValue.length;
+        const selectStart = insertPosition + 1; // After opening brace
+        const selectEnd = insertPosition + variableText.length - 1; // Before closing brace
+        textareaRef.current.setSelectionRange(selectStart, selectEnd);
+      }
+    }, 100);
+
+    checkVariables(newText);
+  };
+
   function checkVariables(valueToCheck: string): void {
     // Match *any* brace run around an identifier
     const regex = /(\{+)([^{}]+)(\}+)/g;
@@ -245,7 +273,11 @@ export default function PromptModal({
         </div>
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
-        <div className={classNames("flex h-full w-full rounded-lg border")}>
+        <div
+          className={classNames(
+            "relative flex h-full w-full rounded-lg border",
+          )}
+        >
           {isEdit && !readonly ? (
             <Textarea
               id={"modal-" + id}
@@ -275,6 +307,18 @@ export default function PromptModal({
               content={coloredContent}
               suppressWarning={true}
             />
+          )}
+          {!readonly && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={insertVariableAtCursor}
+              className="absolute top-3 right-3 z-10 bg-background/80 backdrop-blur-sm"
+              data-testid="add-variable-button"
+            >
+              <IconComponent name="Plus" className="h-4 w-4" />
+              Add Variable
+            </Button>
           )}
         </div>
       </BaseModal.Content>
