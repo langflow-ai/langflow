@@ -16,8 +16,8 @@ import NodeDescription from "../GenericNode/components/NodeDescription";
 import NoteToolbarComponent from "./NoteToolbarComponent";
 
 const CHAR_LIMIT = 2500;
-const DEFAULT_WIDTH = 324;
-const DEFAULT_HEIGHT = 324;
+const DEFAULT_WIDTH = NOTE_NODE_MIN_WIDTH;
+const DEFAULT_HEIGHT = NOTE_NODE_MIN_HEIGHT;
 
 function NoteNode({
   data,
@@ -31,10 +31,8 @@ function NoteNode({
       (key) => key === data.node?.template.backgroundColor,
     ) ?? Object.keys(COLOR_OPTIONS)[0];
   const nodeDiv = useRef<HTMLDivElement>(null);
-  const [_resizedNote, setResizedNote] = useState(false);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const setNode = useFlowStore((state) => state.setNode);
-  const [isResizing, setIsResizing] = useState(false);
 
   const nodeData = useMemo(
     () => currentFlow?.data?.nodes.find((node) => node.id === data.id),
@@ -42,12 +40,12 @@ function NoteNode({
   );
 
   const nodeDataWidth = useMemo(
-    () => nodeData?.measured?.width ?? DEFAULT_WIDTH,
-    [nodeData?.measured?.width],
+    () => nodeData?.width ?? DEFAULT_WIDTH,
+    [nodeData?.width],
   );
   const nodeDataHeight = useMemo(
-    () => nodeData?.measured?.height ?? DEFAULT_HEIGHT,
-    [nodeData?.measured?.height],
+    () => nodeData?.height ?? DEFAULT_HEIGHT,
+    [nodeData?.height],
   );
 
   const dataId = useMemo(() => data.id, [data.id]);
@@ -67,7 +65,7 @@ function NoteNode({
           };
         });
       }, 5),
-    [],
+    [data.id, setNode],
   );
 
   const [editNameDescription, set] = useAlternate(false);
@@ -87,37 +85,32 @@ function NoteNode({
   return (
     <>
       <NodeResizer
-        minWidth={Math.max(DEFAULT_WIDTH, NOTE_NODE_MIN_WIDTH)}
-        minHeight={Math.max(DEFAULT_HEIGHT, NOTE_NODE_MIN_HEIGHT)}
+        minWidth={NOTE_NODE_MIN_WIDTH}
+        minHeight={NOTE_NODE_MIN_HEIGHT}
         maxWidth={NOTE_NODE_MAX_WIDTH}
         maxHeight={NOTE_NODE_MAX_HEIGHT}
         onResize={(_, params) => {
           const { width, height } = params;
           debouncedResize(width, height);
         }}
-        isVisible={selected}
-        lineClassName="!border !border-muted-foreground"
-        onResizeStart={() => {
-          setResizedNote(true);
-          setIsResizing(true);
-        }}
         onResizeEnd={() => {
-          setIsResizing(false);
           debouncedResize.flush();
         }}
+        isVisible={selected}
+        lineClassName="!border !border-muted-foreground"
       />
       <div
         data-testid="note_node"
         style={{
-          minWidth: nodeDataWidth,
-          minHeight: nodeDataHeight,
+          width: nodeDataWidth,
+          height: nodeDataHeight,
           backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000",
         }}
         ref={nodeDiv}
         className={cn(
           "relative flex h-full w-full flex-col gap-3 rounded-xl p-3",
           "duration-200 ease-in-out",
-          !isResizing && "transition-transform",
+          "transition-transform",
           COLOR_OPTIONS[bgColor] !== null &&
             `border ${!selected && "-z-50 shadow-sm"}`,
         )}
@@ -129,15 +122,16 @@ function NoteNode({
             height: "100%",
             display: "flex",
             overflow: "hidden",
+            maxHeight: "100%",
           }}
           className={cn(
             "flex-1 duration-200 ease-in-out",
-            !isResizing && "transition-[width,height]",
+            "transition-[width,height]",
           )}
         >
           <NodeDescription
             inputClassName={cn(
-              "border-0 ring-0 focus:ring-0 resize-none shadow-none rounded-sm h-full min-w-full",
+              "border-0 ring-0 focus:ring-0 resize-none shadow-none rounded-sm h-full min-w-full max-h-full overflow-auto",
               COLOR_OPTIONS[bgColor] === null
                 ? ""
                 : "dark:!ring-background dark:text-background",
@@ -146,7 +140,7 @@ function NoteNode({
               COLOR_OPTIONS[bgColor] === null
                 ? "dark:prose-invert"
                 : "dark:!text-background",
-              "min-w-full",
+              "min-w-full max-h-full overflow-auto",
             )}
             style={{ backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000" }}
             charLimit={CHAR_LIMIT}
