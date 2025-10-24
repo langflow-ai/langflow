@@ -9,7 +9,7 @@ from langflow.services.database.models.component_mapping import (
     ComponentMapping,
     ComponentCategoryEnum,
 )
-from langflow.custom.genesis.spec.models import Component
+# Using ComponentMapping instead of legacy Component model
 
 
 @pytest.fixture

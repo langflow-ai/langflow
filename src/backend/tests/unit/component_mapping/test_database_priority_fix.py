@@ -4,9 +4,8 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 from uuid import uuid4
 
-from langflow.custom.genesis.spec.mapper import ComponentMapper
-from langflow.services.spec.service import SpecService
 from langflow.services.component_mapping.service import ComponentMappingService
+from langflow.services.spec.service import SpecService
 from langflow.services.database.models.component_mapping import (
     ComponentMapping,
     ComponentCategoryEnum,

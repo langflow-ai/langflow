@@ -5,7 +5,8 @@ import jsonschema
 from typing import Dict, Any, Optional, List
 import logging
 
-from langflow.custom.genesis.spec import FlowConverter, ComponentMapper, VariableResolver
+# Legacy Genesis implementation removed during consolidation cleanup
+# from langflow.custom.genesis.spec import FlowConverter, ComponentMapper, VariableResolver
 from .validation_schemas import GENESIS_SPEC_SCHEMA, get_component_config_schema
 from .semantic_validator import SemanticValidator
 from .dynamic_schema_generator import DynamicSchemaGenerator
@@ -29,9 +30,13 @@ class SpecService:
 
     def __init__(self):
         """Initialize the service with enhanced database-driven component discovery."""
-        self.mapper = ComponentMapper()
-        self.converter = FlowConverter(self.mapper)
-        self.resolver = VariableResolver()
+        # Legacy Genesis components removed during consolidation cleanup
+        # self.mapper = ComponentMapper()
+        # self.converter = FlowConverter(self.mapper)
+        # self.resolver = VariableResolver()
+        self.mapper = None  # TODO: Replace with current implementation
+        self.converter = None  # TODO: Replace with current implementation
+        self.resolver = None  # TODO: Replace with current implementation
         self._validation_cache = {}  # Cache for validation results
 
         # Initialize database-driven services (AUTPE-6207)

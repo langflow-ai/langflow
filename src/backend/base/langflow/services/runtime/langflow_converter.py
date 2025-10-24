@@ -24,7 +24,8 @@ from .base_converter import (
     ConversionError,
     ConverterValidationError
 )
-from langflow.custom.genesis.spec import FlowConverter, ComponentMapper, VariableResolver
+# Legacy Genesis implementation removed during consolidation cleanup
+# from langflow.custom.genesis.spec import FlowConverter, ComponentMapper, VariableResolver
 
 logger = logging.getLogger(__name__)
 
@@ -43,9 +44,13 @@ class LangflowConverter(RuntimeConverter):
     def __init__(self, runtime_type: RuntimeType = RuntimeType.LANGFLOW):
         """Initialize the Langflow converter."""
         super().__init__(runtime_type)
-        self.mapper = ComponentMapper()
-        self.flow_converter = FlowConverter(self.mapper)
-        self.resolver = VariableResolver()
+        # Legacy Genesis components removed during consolidation cleanup
+        # self.mapper = ComponentMapper()
+        # self.flow_converter = FlowConverter(self.mapper)
+        # self.resolver = VariableResolver()
+        self.mapper = None  # TODO: Replace with current implementation
+        self.flow_converter = None  # TODO: Replace with current implementation
+        self.resolver = None  # TODO: Replace with current implementation
         self._supported_components_cache = None
 
     def get_runtime_info(self) -> Dict[str, Any]:
