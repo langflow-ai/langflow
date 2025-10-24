@@ -158,6 +158,7 @@ export default function MarketplaceDetailPage() {
                     flowId={publishedFlowData.flow_id}
                     view={true}
                     readOnly={true}
+                    viewOnly={true}
                   />
                 </div>
               ) : (

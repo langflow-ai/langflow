@@ -22,11 +22,12 @@ import Page from "./components/PageComponent";
 interface FlowPageProps {
   view?: boolean;
   readOnly?: boolean;
+  viewOnly?: boolean;
   flowId?: string;
   folderId?: string;
 }
 
-export default function FlowPage({ view, readOnly, flowId: propFlowId, folderId: propFolderId }: FlowPageProps): JSX.Element {
+export default function FlowPage({ view, readOnly, viewOnly, flowId: propFlowId, folderId: propFolderId }: FlowPageProps): JSX.Element {
   const types = useTypesStore((state) => state.types);
 
   useGetTypes({
@@ -254,10 +255,10 @@ export default function FlowPage({ view, readOnly, flowId: propFlowId, folderId:
               <FlowSearchProvider>
                 <main className="flex w-full overflow-hidden">
                   <div className="h-full w-full">
-                    <Page view={view} readOnly={readOnly} setIsLoading={setIsLoading} />
+                    <Page view={view} readOnly={readOnly} viewOnly={viewOnly} setIsLoading={setIsLoading} />
                   </div>
                 </main>
-                {!view && <FlowSidebarComponent isLoading={isLoading} />}
+                {!view && !viewOnly && <FlowSidebarComponent isLoading={isLoading} />}
               </FlowSearchProvider>
             </SidebarProvider>
           </div>

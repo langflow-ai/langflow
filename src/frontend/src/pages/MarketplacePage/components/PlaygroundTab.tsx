@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { v4 as uuid } from "uuid";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import LoadingIcon from "@/components/ui/loading";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { Square } from "lucide-react";
+import { hasMarkdownFormatting } from "@/utils/markdownUtils";
 
 interface PlaygroundTabProps {
   publishedFlowData: any;
@@ -377,24 +380,33 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
                   : "bg-muted text-foreground"
               }`}
             >
-              <div className="whitespace-pre-wrap break-words">
+              <div className="break-words">
                 {(() => {
                   // For agent messages, use typing animation if available
                   if (message.type === "agent") {
                     const displayedText = displayedTexts.get(message.id);
+                    const textToRender = displayedText !== undefined
+                      ? (displayedText || `Working${'.'.repeat(loadingDots)}`)
+                      : (message.text || "");
 
-                    // If we have typing animation in progress (message in Map)
-                    if (displayedText !== undefined) {
-                      // Show animated text, or "Working..." if empty
-                      return displayedText || `Working${'.'.repeat(loadingDots)}`;
+                    // Smart detection: Only render as Markdown if patterns detected
+                    if (hasMarkdownFormatting(textToRender)) {
+                      return (
+                        <Markdown
+                          remarkPlugins={[remarkGfm]}
+                          className="prose prose-sm dark:prose-invert max-w-none"
+                        >
+                          {textToRender}
+                        </Markdown>
+                      );
+                    } else {
+                      // Plain text response - keep as-is with whitespace preservation
+                      return <div className="whitespace-pre-wrap">{textToRender}</div>;
                     }
-
-                    // Completed message (not in Map anymore), use message.text
-                    return message.text || "";
                   }
 
-                  // For user messages, just show the text
-                  return message.text;
+                  // For user messages, always plain text
+                  return <div className="whitespace-pre-wrap">{message.text}</div>;
                 })()}
                 {message.isStreaming && message.type === "agent" && (() => {
                   const displayedText = displayedTexts.get(message.id) || "";

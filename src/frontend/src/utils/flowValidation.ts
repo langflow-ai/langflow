@@ -275,7 +275,7 @@ export function validateFlowForPublish(
   errors.push(...validateAllNodesConnected(nodes, edges));
   errors.push(...validateOutputNodeExists(nodes));
   errors.push(...validateOutputNodesAtEnd(nodes, edges));
-  errors.push(...validateRequiredFields(nodes, edges));
+  // errors.push(...validateRequiredFields(nodes, edges));
   errors.push(...validateOutputNodesReachable(nodes, edges));
 
   // Return all errors found

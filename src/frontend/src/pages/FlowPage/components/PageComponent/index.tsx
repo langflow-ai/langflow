@@ -95,9 +95,11 @@ const edgeTypes = {
 export default function Page({
   view,
   readOnly,
+  viewOnly,
   setIsLoading,
 }: {
   view?: boolean;
+  viewOnly?: boolean;
   readOnly?: boolean;
   setIsLoading: (isLoading: boolean) => void;
 }): JSX.Element {
@@ -721,7 +723,7 @@ export default function Page({
       {showCanvas ? (
         <>
           <div id="react-flow-id" className="h-full w-full bg-canvas relative">
-            {!view && !readOnly && (
+            {!view && !readOnly && !viewOnly && (
               <>
                 <MemoizedLogCanvasControls />
                 <MemoizedCanvasControls
@@ -731,6 +733,14 @@ export default function Page({
                 />
                 <FlowToolbar />
               </>
+            )}
+
+            {viewOnly && (
+              <MemoizedCanvasControls
+                setIsAddingNote={setIsAddingNote}
+                shadowBoxWidth={shadowBoxWidth}
+                shadowBoxHeight={shadowBoxHeight}
+              />
             )}
 
             <SelectionMenu
@@ -776,9 +786,9 @@ export default function Page({
               tabIndex={isLocked || readOnly ? -1 : undefined}
               minZoom={MIN_ZOOM}
               maxZoom={MAX_ZOOM}
-              zoomOnScroll={!view}
-              zoomOnPinch={!view}
-              panOnDrag={!view}
+              zoomOnScroll={!view || viewOnly}
+              zoomOnPinch={!view || viewOnly}
+              panOnDrag={!view || viewOnly}
               panActivationKeyCode={""}
               proOptions={{ hideAttribution: true }}
               onPaneClick={readOnly ? undefined : onPaneClick}
