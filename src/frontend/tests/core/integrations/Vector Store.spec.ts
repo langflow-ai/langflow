@@ -1,5 +1,5 @@
 import path from "path";
-import { expect, test } from "../../fixtures";
+import { checkRateLimit, expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
@@ -16,6 +16,13 @@ withEventDeliveryModes(
       !process?.env?.OPENAI_API_KEY,
       "OPENAI_API_KEY required to run this test",
     );
+    const rateLimited = await checkRateLimit(process?.env?.OPENAI_API_KEY);
+    if (rateLimited) {
+      test.skip(
+        true,
+        `Skipped due to OpenAI RateLimitError or Insufficient Quota error`,
+      );
+    }
 
     test.skip(
       !process?.env?.ASTRA_DB_APPLICATION_TOKEN,

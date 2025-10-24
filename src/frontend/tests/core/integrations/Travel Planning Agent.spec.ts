@@ -1,7 +1,11 @@
 import { type Page } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import { expect, test } from "../../fixtures";
+import {
+  expect,
+  checkRateLimit as fixtureCheckRateLimit,
+  test,
+} from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
@@ -14,6 +18,15 @@ withEventDeliveryModes(
       !process?.env?.OPENAI_API_KEY,
       "OPENAI_API_KEY required to run this test",
     );
+    const rateLimited = await fixtureCheckRateLimit(
+      process?.env?.OPENAI_API_KEY,
+    );
+    if (rateLimited) {
+      test.skip(
+        true,
+        `Skipped due to OpenAI RateLimitError or Insufficient Quota error`,
+      );
+    }
 
     test.skip(
       !process?.env?.SEARCH_API_KEY,

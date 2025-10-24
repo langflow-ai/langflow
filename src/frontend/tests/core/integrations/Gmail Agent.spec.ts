@@ -1,6 +1,6 @@
 import * as dotenv from "dotenv";
 import path from "path";
-import { expect, test } from "../../fixtures";
+import { checkRateLimit, expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
@@ -13,6 +13,13 @@ withEventDeliveryModes(
       !process?.env?.OPENAI_API_KEY,
       "OPENAI_API_KEY required to run this test",
     );
+    const rateLimited = await checkRateLimit(process?.env?.OPENAI_API_KEY);
+    if (rateLimited) {
+      test.skip(
+        true,
+        `Skipped due to OpenAI RateLimitError or Insufficient Quota error`,
+      );
+    }
 
     test.skip(
       !process?.env?.COMPOSIO_API_KEY,
