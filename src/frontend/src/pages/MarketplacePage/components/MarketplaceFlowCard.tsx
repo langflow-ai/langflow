@@ -131,7 +131,7 @@ export default function MarketplaceFlowCard({
               {item.flow_cloned_from && (
                 <DropdownMenuItem onClick={handleEditOriginal} className="gap-2">
                   <Pencil className="h-4 w-4" />
-                  Edit Original Flow
+                  Edit
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem onClick={handleUnpublish} className="gap-2">

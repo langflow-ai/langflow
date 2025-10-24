@@ -81,6 +81,7 @@ async def publish_flow(
         cloned_flow.description = payload.description or original_flow.description  # Use payload description if provided
         cloned_flow.tags = payload.tags  # Use marketplace tags from publish modal
         cloned_flow.icon = original_flow.icon
+        cloned_flow.name = payload.marketplace_flow_name  # Update cloned flow name from modal
 
         # Also update original flow's tags
         original_flow.tags = payload.tags
@@ -289,10 +290,11 @@ async def check_flow_published(
     Returns publication status, IDs, and metadata for pre-filling re-publish modal.
     """
     # Query by flow_cloned_from (original flow ID) and join with Flow to get cloned flow name
+    # Include both PUBLISHED and UNPUBLISHED to allow pre-filling data for re-publishing
     query = (
         select(PublishedFlow, Flow)
         .join(Flow, PublishedFlow.flow_id == Flow.id)
-        .where(PublishedFlow.flow_cloned_from == flow_id, PublishedFlow.status == PublishStatusEnum.PUBLISHED)
+        .where(PublishedFlow.flow_cloned_from == flow_id)
     )
     result = await session.exec(query)
     row = result.first()
@@ -300,11 +302,11 @@ async def check_flow_published(
     if row:
         published_flow, cloned_flow = row
         return {
-            "is_published": True,
+            "is_published": published_flow.status == PublishStatusEnum.PUBLISHED,
             "published_flow_id": str(published_flow.id),
             "cloned_flow_id": str(published_flow.flow_id),
             "published_at": published_flow.published_at.isoformat(),
-            # Additional data for pre-filling modal on re-publish
+            # Additional data for pre-filling modal on re-publish (works for both published and unpublished)
             "marketplace_flow_name": cloned_flow.name,
             "version": published_flow.version,
             "tags": published_flow.tags,

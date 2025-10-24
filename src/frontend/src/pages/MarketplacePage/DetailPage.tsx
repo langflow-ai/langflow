@@ -137,7 +137,7 @@ export default function MarketplaceDetailPage() {
                     name="Pencil"
                     className="h-4 w-4 shrink-0"
                   />
-                  Edit Original Flow
+                  Edit
                 </Button>
               )}
             </div>

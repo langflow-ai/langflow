@@ -50,15 +50,24 @@ export default function PublishFlowModal({
   // Pre-fill form fields when modal opens
   useEffect(() => {
     if (open) {
-      if (existingPublishedData?.is_published) {
-        // Re-publish: Auto-increment patch version
+      // Check if flow has been published before (includes both published and unpublished)
+      if (existingPublishedData?.marketplace_flow_name) {
+        // Previously published: Use cloned flow data
         setMarketplaceName(existingPublishedData.marketplace_flow_name || flowName);
-        const newVersion = incrementPatchVersion(existingPublishedData.version);
-        setVersion(newVersion);
+
+        // Auto-increment version only if currently published, otherwise keep same version
+        if (existingPublishedData.is_published) {
+          const newVersion = incrementPatchVersion(existingPublishedData.version);
+          setVersion(newVersion);
+        } else {
+          // Unpublished: Keep the same version (user can edit)
+          setVersion(existingPublishedData.version || "1.0.0");
+        }
+
         setDescription(existingPublishedData.description || "");
         setTags(existingPublishedData.tags || []);
       } else {
-        // First-time publish: Default to 1.0.0
+        // Never published: Default to original flow data
         setMarketplaceName(flowName);
         setVersion("1.0.0");
         setDescription("");
