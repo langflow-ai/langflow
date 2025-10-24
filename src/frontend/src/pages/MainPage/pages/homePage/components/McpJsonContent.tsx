@@ -93,6 +93,7 @@ const MemoizedCodeTag = memo(
             name={isCopied ? "Check" : "Copy"}
             className="h-4 w-4"
             aria-hidden="true"
+            dataTestId={isCopied ? "icon-check" : "icon-copy"}
           />
         </Button>
       </div>
