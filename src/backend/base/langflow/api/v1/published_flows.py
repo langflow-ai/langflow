@@ -255,8 +255,8 @@ async def list_all_published_flows(
     # Apply sorting on denormalized fields
     if sort_by == "published_at" or sort_by == "date":
         order_col = PublishedFlow.published_at
-    else:  # name
-        order_col = PublishedFlow.flow_name
+    else:  # name - use case-insensitive sorting
+        order_col = func.lower(PublishedFlow.flow_name)
 
     if order == "desc":
         query = query.order_by(order_col.desc())
