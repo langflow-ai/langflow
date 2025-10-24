@@ -29,7 +29,6 @@ export const MARKETPLACE_TAGS = [
   'Quality',
   'Stars',
   'Revenue Cycle Management',
-  'Utilization Management',
   'Care Gap',
   'Chart Review',
   'HEDIS Care Gap',
