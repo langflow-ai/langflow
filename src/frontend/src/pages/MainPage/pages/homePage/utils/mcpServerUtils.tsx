@@ -101,7 +101,7 @@ export const buildMcpServerJson = (opts: {
 
   if (selectedPlatform === "windows") {
     argsParts.push(`"/c"`, `"uvx"`);
-  } else if (selectedPlatform === `"wsl"`) {
+  } else if (selectedPlatform === "wsl") {
     argsParts.push(`"uvx"`);
   }
   argsParts.push(proxy);

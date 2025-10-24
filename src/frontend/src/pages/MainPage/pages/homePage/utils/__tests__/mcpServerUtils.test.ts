@@ -120,6 +120,19 @@ describe("mcpServerUtils", () => {
       expect(json).toContain('"mcp-proxy"');
     });
 
+    it("builds JSON with wsl command and uvx arg for WSL platform", () => {
+      const json = buildMcpServerJson({
+        folderName: "wslproj",
+        selectedPlatform: "wsl",
+        apiUrl: "https://api.test.com",
+        isOAuthProject: false,
+        authHeadersFragment: "",
+      });
+
+      expect(json).toContain('"command": "wsl"');
+      expect(json).toContain('"uvx"');
+    });
+
     it("builds JSON with cmd for windows platform", () => {
       const json = buildMcpServerJson({
         folderName: "project",
