@@ -1,0 +1,44 @@
+# Langflow Service Configuration
+#
+# This file tells LFX to use Langflow's full-featured service implementations
+# instead of the minimal/noop services built into LFX.
+#
+# Usage:
+#   1. Copy this file to your LANGFLOW_CONFIG_DIR as lfx.toml
+#   2. Or add to pyproject.toml under [tool.lfx.services]
+#
+# The services will be automatically discovered and loaded when you run:
+#   - langflow run
+#   - lfx serve (when run from langflow project)
+
+[services]
+# Core Services - Full-featured Langflow implementations
+database_service = "langflow.services.database.service:DatabaseService"
+storage_service = "langflow.services.storage.local:LocalStorageService"
+cache_service = "langflow.services.cache.service:ThreadingInMemoryCache"
+
+# Authentication & Session Management
+auth_service = "langflow.services.auth.service:AuthService"
+session_service = "langflow.services.session.service:SessionService"
+
+# Chat & Communication
+chat_service = "langflow.services.chat.service:ChatService"
+
+# State & Data Management
+state_service = "langflow.services.state.service:StateService"
+variable_service = "langflow.services.variable.service:VariableService"
+
+# Background Processing
+task_service = "langflow.services.task.service:TaskService"
+job_queue_service = "langflow.services.job_queue.service:JobQueueService"
+
+# Marketplace & Components
+store_service = "langflow.services.store.service:StoreService"
+shared_component_cache_service = "langflow.services.shared_component_cache.service:SharedComponentCacheService"
+
+# Observability
+telemetry_service = "langflow.services.telemetry.service:TelemetryService"
+tracing_service = "langflow.services.tracing.service:TracingService"
+
+# Note: settings_service is NOT configurable - it always uses the built-in implementation
+# Note: mcp_composer_service uses the lfx implementation by default
