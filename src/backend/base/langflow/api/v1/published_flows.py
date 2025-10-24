@@ -78,9 +78,10 @@ async def publish_flow(
         import copy
 
         cloned_flow.data = copy.deepcopy(original_flow.data) if original_flow.data else {}
-        cloned_flow.description = original_flow.description
+        cloned_flow.description = payload.description or original_flow.description  # Use payload description if provided
         cloned_flow.tags = payload.tags  # Use marketplace tags from publish modal
         cloned_flow.icon = original_flow.icon
+        cloned_flow.name = payload.marketplace_flow_name  # Update cloned flow name from modal
 
         # Also update original flow's tags
         original_flow.tags = payload.tags
@@ -88,7 +89,7 @@ async def publish_flow(
         # Update published_flow record (copy description for pagination, tags from payload)
         existing.version = payload.version
         existing.tags = payload.tags  # User-selected tags from publish modal
-        existing.description = original_flow.description  # Denormalized
+        existing.description = payload.description or original_flow.description  # Use payload description if provided, else denormalized
         existing.flow_name = cloned_flow.name  # Denormalized
         existing.flow_icon = cloned_flow.icon  # Denormalized
         existing.published_by_username = current_user.username  # Denormalized
@@ -117,6 +118,7 @@ async def publish_flow(
         user_id=current_user.id,
         marketplace_flow_name=payload.marketplace_flow_name,
         tags=payload.tags,  # Pass marketplace tags to clone
+        description=payload.description,  # Pass description from publish modal to clone
     )
 
     # Update original flow's tags to match marketplace tags
@@ -131,7 +133,7 @@ async def publish_flow(
         status=PublishStatusEnum.PUBLISHED,
         version=payload.version,
         tags=payload.tags,  # User-selected tags from publish modal
-        description=original_flow.description,  # Denormalized for pagination
+        description=payload.description or original_flow.description,  # Use payload description if provided, else denormalized for pagination
         flow_name=cloned_flow.name,  # Denormalized
         flow_icon=cloned_flow.icon,  # Denormalized
         published_by_username=current_user.username,  # Denormalized
@@ -254,8 +256,8 @@ async def list_all_published_flows(
     # Apply sorting on denormalized fields
     if sort_by == "published_at" or sort_by == "date":
         order_col = PublishedFlow.published_at
-    else:  # name
-        order_col = PublishedFlow.flow_name
+    else:  # name - use case-insensitive sorting
+        order_col = func.lower(PublishedFlow.flow_name)
 
     if order == "desc":
         query = query.order_by(order_col.desc())
@@ -288,10 +290,11 @@ async def check_flow_published(
     Returns publication status, IDs, and metadata for pre-filling re-publish modal.
     """
     # Query by flow_cloned_from (original flow ID) and join with Flow to get cloned flow name
+    # Include both PUBLISHED and UNPUBLISHED to allow pre-filling data for re-publishing
     query = (
         select(PublishedFlow, Flow)
         .join(Flow, PublishedFlow.flow_id == Flow.id)
-        .where(PublishedFlow.flow_cloned_from == flow_id, PublishedFlow.status == PublishStatusEnum.PUBLISHED)
+        .where(PublishedFlow.flow_cloned_from == flow_id)
     )
     result = await session.exec(query)
     row = result.first()
@@ -299,14 +302,15 @@ async def check_flow_published(
     if row:
         published_flow, cloned_flow = row
         return {
-            "is_published": True,
+            "is_published": published_flow.status == PublishStatusEnum.PUBLISHED,
             "published_flow_id": str(published_flow.id),
             "cloned_flow_id": str(published_flow.flow_id),
             "published_at": published_flow.published_at.isoformat(),
-            # Additional data for pre-filling modal on re-publish
+            # Additional data for pre-filling modal on re-publish (works for both published and unpublished)
             "marketplace_flow_name": cloned_flow.name,
             "version": published_flow.version,
             "tags": published_flow.tags,
+            "description": published_flow.description,
         }
 
     return {

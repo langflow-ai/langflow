@@ -7,6 +7,7 @@ export interface PublishFlowPayload {
   target_folder_id?: string;
   version?: string;
   tags?: string[];
+  description?: string;
 }
 
 export const usePublishFlow = () => {

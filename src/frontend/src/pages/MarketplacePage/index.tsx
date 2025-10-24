@@ -27,7 +27,16 @@ export default function MarketplacePage() {
   const [pendingTag, setPendingTag] = useState<string | "all">("all");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [sortBy, setSortBy] = useState<"name" | "date">("name");
-  const [order] = useState<"asc" | "desc">("desc");
+  const [order, setOrder] = useState<"asc" | "desc">("asc");
+
+  // Auto-adjust sort order based on sort type
+  useEffect(() => {
+    if (sortBy === "name") {
+      setOrder("asc");  // A → Z for names
+    } else if (sortBy === "date") {
+      setOrder("desc"); // Newest first for dates
+    }
+  }, [sortBy]);
 
   // Debounce search
   const debouncedSetSearchQuery = useCallback(

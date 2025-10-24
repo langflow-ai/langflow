@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { usePublishFlow, type PublishCheckResponse } from "@/controllers/API/queries/published-flows";
 import useAlertStore from "@/stores/alertStore";
@@ -35,6 +36,7 @@ export default function PublishFlowModal({
 }: PublishFlowModalProps) {
   const [marketplaceName, setMarketplaceName] = useState(flowName);
   const [version, setVersion] = useState("");
+  const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const { mutate: publishFlow, isPending } = usePublishFlow();
@@ -48,16 +50,27 @@ export default function PublishFlowModal({
   // Pre-fill form fields when modal opens
   useEffect(() => {
     if (open) {
-      if (existingPublishedData?.is_published) {
-        // Re-publish: Auto-increment patch version
+      // Check if flow has been published before (includes both published and unpublished)
+      if (existingPublishedData?.marketplace_flow_name) {
+        // Previously published: Use cloned flow data
         setMarketplaceName(existingPublishedData.marketplace_flow_name || flowName);
-        const newVersion = incrementPatchVersion(existingPublishedData.version);
-        setVersion(newVersion);
+
+        // Auto-increment version only if currently published, otherwise keep same version
+        if (existingPublishedData.is_published) {
+          const newVersion = incrementPatchVersion(existingPublishedData.version);
+          setVersion(newVersion);
+        } else {
+          // Unpublished: Keep the same version (user can edit)
+          setVersion(existingPublishedData.version || "1.0.0");
+        }
+
+        setDescription(existingPublishedData.description || "");
         setTags(existingPublishedData.tags || []);
       } else {
-        // First-time publish: Default to 1.0.0
+        // Never published: Default to original flow data
         setMarketplaceName(flowName);
         setVersion("1.0.0");
+        setDescription("");
         setTags([]);
       }
     }
@@ -114,6 +127,7 @@ export default function PublishFlowModal({
         payload: {
           marketplace_flow_name: marketplaceName,
           version: version || undefined,
+          description: description || undefined,
           tags: tags.length > 0 ? tags : undefined,
         },
       },
@@ -125,6 +139,7 @@ export default function PublishFlowModal({
           setOpen(false);
           setMarketplaceName("");
           setVersion("");
+          setDescription("");
           setTags([]);
         },
         onError: (error: any) => {
@@ -141,12 +156,12 @@ export default function PublishFlowModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Publish the Agent to MarketPlace</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 overflow-y-auto pr-2">
           <div className="space-y-2">
             <Label htmlFor="marketplace-name">
               Marketplace Flow Name <span className="text-destructive">*</span>
@@ -163,29 +178,45 @@ export default function PublishFlowModal({
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="version">Version (Optional)</Label>
-            <Input
-              id="version"
-              placeholder="1.0.0"
-              value={version}
-              onChange={(e) => setVersion(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Semantic versioning recommended (e.g., 1.0.0, 1.2.3)
-            </p>
+          <div className="flex gap-4">
+            <div className="space-y-2 flex-[2]">
+              <Label htmlFor="version">Version (Optional)</Label>
+              <Input
+                id="version"
+                placeholder="1.0.0"
+                value={version}
+                onChange={(e) => setVersion(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Semantic versioning recommended (e.g., 1.0.0, 1.2.3)
+              </p>
+            </div>
+
+            <div className="space-y-2 flex-[3]">
+              <Label htmlFor="tags">Tags (Optional)</Label>
+              <MultiSelect
+                options={MARKETPLACE_TAGS}
+                selected={tags}
+                onChange={setTags}
+                placeholder="Select tags..."
+              />
+              <p className="text-xs text-muted-foreground">
+                Select one or more tags to categorize your flow
+              </p>
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tags">Tags (Optional)</Label>
-            <MultiSelect
-              options={MARKETPLACE_TAGS}
-              selected={tags}
-              onChange={setTags}
-              placeholder="Select tags..."
+            <Label htmlFor="description">Description (Optional)</Label>
+            <Textarea
+              id="description"
+              placeholder="Describe what this agent does and how to use it"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
             />
             <p className="text-xs text-muted-foreground">
-              Select one or more tags to categorize your flow
+              Describe what this agent does and how to use it
             </p>
           </div>
 

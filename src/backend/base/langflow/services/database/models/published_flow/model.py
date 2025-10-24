@@ -85,6 +85,7 @@ class PublishedFlowCreate(SQLModel):
     target_folder_id: UUID | None = None
     version: str | None = None
     tags: list[str] | None = None
+    description: str | None = None
 
 
 class PublishedFlowRead(PublishedFlowBase):

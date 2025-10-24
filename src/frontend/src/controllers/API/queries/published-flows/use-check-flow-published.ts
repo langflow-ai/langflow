@@ -11,6 +11,7 @@ export interface PublishCheckResponse {
   marketplace_flow_name?: string | null;
   version?: string | null;
   tags?: string[] | null;
+  description?: string | null;
 }
 
 export const useCheckFlowPublished = (flowId: string | undefined) => {
