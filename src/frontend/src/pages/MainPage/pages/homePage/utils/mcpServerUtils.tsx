@@ -41,12 +41,18 @@ export const getCommandForPlatform = (platform?: string) =>
 export const getServerName = (
   folderName?: string,
   maxLen = MAX_MCP_SERVER_NAME_LENGTH,
-) =>
-  `lf-${parseString(folderName ?? "project", [
+) => {
+  const name =
+    folderName?.trim() && folderName.trim().length > 0
+      ? folderName.trim()
+      : "project";
+  return `lf-${parseString(name, [
     "snake_case",
     "no_blank",
     "lowercase",
-  ]).slice(0, maxLen - 4)}`;
+    "sanitize_mcp_name",
+  ]).slice(0, maxLen - 3)}`;
+};
 
 export const getAuthHeaders = ({
   enableComposer,

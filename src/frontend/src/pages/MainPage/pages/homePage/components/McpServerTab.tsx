@@ -1,20 +1,14 @@
-import { ReactNode, useState } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
-import ToolsComponent from "@/components/core/parameterRenderComponent/components/ToolsComponent";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
 import { useCustomIsLocalConnection } from "@/customization/hooks/use-custom-is-local-connection";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import AuthModal from "@/modals/authModal";
 
 import { useFolderStore } from "@/stores/foldersStore";
-import { AUTH_METHODS } from "@/utils/mcpUtils";
-import { toSpaceCase } from "@/utils/stringManipulation";
 import { cn, getOS } from "@/utils/utils";
 import { useMcpServer } from "../hooks/useMcpServer";
 

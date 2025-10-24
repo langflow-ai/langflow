@@ -54,7 +54,7 @@ const MemoizedApiKeyButton = memo(
       onClick={generateApiKey}
     >
       <ForwardedIconComponent
-        name={"key"}
+        name="Key"
         className="h-4 w-4"
         aria-hidden="true"
       />
@@ -74,7 +74,7 @@ const MemoizedCodeTag = memo(
     isGeneratingApiKey,
     generateApiKey,
   }: MemoizedCodeTagProps) => (
-    <div className="relative bg-background text-[13px]">
+    <code className="relative block bg-background text-[13px]">
       <div className="absolute right-4 top-4 flex items-center gap-6">
         {isAuthApiKey && (
           <MemoizedApiKeyButton
@@ -90,7 +90,7 @@ const MemoizedCodeTag = memo(
           onClick={copyToClipboard}
         >
           <ForwardedIconComponent
-            name={isCopied ? "check" : "copy"}
+            name={isCopied ? "Check" : "Copy"}
             className="h-4 w-4"
             aria-hidden="true"
           />
@@ -99,7 +99,7 @@ const MemoizedCodeTag = memo(
       <div className="overflow-x-auto p-4">
         <span>{children}</span>
       </div>
-    </div>
+    </code>
   ),
 );
 MemoizedCodeTag.displayName = "MemoizedCodeTag";
