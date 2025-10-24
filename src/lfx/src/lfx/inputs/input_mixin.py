@@ -18,7 +18,7 @@ from lfx.schema.cross_module import CrossModuleModel
 class FieldTypes(str, Enum):
     TEXT = "str"
     INTEGER = "int"
-    PASSWORD = "str"  # noqa: PIE796
+    PASSWORD = "str"  # noqa: PIE796 pragma: allowlist secret
     FLOAT = "float"
     BOOLEAN = "bool"
     DICT = "dict"
@@ -40,6 +40,15 @@ class FieldTypes(str, Enum):
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
+
+# Field types that should never be tracked in telemetry due to sensitive data
+SENSITIVE_FIELD_TYPES = {
+    FieldTypes.PASSWORD,
+    FieldTypes.AUTH,
+    FieldTypes.FILE,
+    FieldTypes.CONNECTION,
+    FieldTypes.MCP,
+}
 
 
 # Base mixin for common input field attributes and methods
@@ -96,6 +105,13 @@ class BaseInputMixin(CrossModuleModel, validate_assignment=True):  # type: ignor
 
     title_case: bool = False
     """Specifies if the field should be displayed in title case. Defaults to True."""
+
+    track_in_telemetry: CoalesceBool = False
+    """Specifies if the field value should be tracked in telemetry.
+
+    Defaults to False (opt-in). Automatically disabled for sensitive field types.
+    Individual input types can explicitly enable tracking for safe, useful data.
+    """
 
     def to_dict(self):
         return self.model_dump(exclude_none=True, by_alias=True)

@@ -388,6 +388,7 @@ async def build_vertex(
             telemetry_service.log_package_component,
             ComponentPayload(
                 component_name=vertex_id.split("-")[0],
+                component_id=vertex_id,
                 component_seconds=int(time.perf_counter() - start_time),
                 component_success=valid,
                 component_error_message=error_message,
@@ -399,6 +400,7 @@ async def build_vertex(
             telemetry_service.log_package_component,
             ComponentPayload(
                 component_name=vertex_id.split("-")[0],
+                component_id=vertex_id,
                 component_seconds=int(time.perf_counter() - start_time),
                 component_success=False,
                 component_error_message=str(exc),
