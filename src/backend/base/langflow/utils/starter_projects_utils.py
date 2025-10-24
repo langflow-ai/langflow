@@ -46,7 +46,7 @@ def get_starter_projects_json_content():
 
 # Hardcoded list of specific files to include in basic_examples response
 ALLOWED_BASIC_EXAMPLE_FILES = [
-    "Ask Auto Agent.json",
+    "AskAutoAgent.json",
     "BenefitCheckAgent.json", 
     "EOCCheckAgent.json",
     "EligibilityChecker.json",
@@ -58,11 +58,10 @@ ALLOWED_BASIC_EXAMPLE_FILES = [
     "Lab Value Extraction.json",
     "Auth Guideline.json",
     "AttachDocumentAgent.json",
-    "guideline-retrieval-agent.json"
-
-
-
-
+    "guideline-retrieval-agent.json",
+    "Document Retrieval Agent.json",
+    "Simple Agent.json",
+    "AccumulatorCheckAgent.json"
 
 
     # Add more filenames here as needed

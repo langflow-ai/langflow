@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from langflow.custom.genesis.services.prompt.service import PromptService
     from langflow.custom.genesis.services.rag.service import RAGService
     from langflow.custom.genesis.services.tracing.service import TracingService
+    from langflow.custom.genesis.services.encoder_pro import EncoderProService
 
 
 def get_service(service_name: str, default=None):
@@ -172,6 +173,11 @@ def get_pa_lookup_service() -> PALookupService:
     from langflow.custom.genesis.services.pa_lookup.factory import PALookupServiceFactory
 
     return get_service("pa_lookup_service", PALookupServiceFactory())
+
+def get_encoder_pro_service() -> "EncoderProService":
+    """Retrieves the EncoderProService instance from the service manager."""
+    from langflow.custom.genesis.services.encoder_pro.factory import EncoderProServiceFactory
+    return get_service("encoder_pro_service", EncoderProServiceFactory())
 
 
 def get_encoder_pro_service() -> EncoderProService:

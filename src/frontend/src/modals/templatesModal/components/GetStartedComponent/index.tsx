@@ -26,7 +26,7 @@ export default function GetStartedComponent() {
       icon: "MessagesSquare",
       category: "prompting",
       flow: filteredExamples.find(
-        (example) => example.name === "Ask Auto Agent"
+        (example) => example.name === "Ask Auto Agent "
       ),
     },
     {
