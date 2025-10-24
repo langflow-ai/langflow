@@ -15,6 +15,7 @@ from pydantic import (
     field_serializer,
     field_validator,
     model_serializer,
+    model_validator,
 )
 
 from langflow.schema.dotdict import dotdict
@@ -462,3 +463,67 @@ class MCPProjectResponse(BaseModel):
 
 class MCPInstallRequest(BaseModel):
     client: str
+
+
+class PatchOperationType(str, Enum):
+    """Enum for JSON Patch operation types as defined in RFC 6902."""
+
+    ADD = "add"
+    REMOVE = "remove"
+    REPLACE = "replace"
+    MOVE = "move"
+    COPY = "copy"
+    TEST = "test"
+
+
+class PatchOperation(BaseModel):
+    """Model for a single JSON Patch operation as defined in RFC 6902."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    op: PatchOperationType = Field(..., description="The operation to perform")
+    path: str = Field(..., description="JSON Pointer to the target location")
+    value: Any | None = Field(
+        default=None, description="The value to add, replace, or test against (null is a valid value)"
+    )
+    from_: str | None = Field(
+        None, alias="from", description="JSON Pointer to the source location for move/copy operations"
+    )
+
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, v: str) -> str:
+        """Validate that the path is a valid JSON Pointer."""
+        if not v.startswith("/"):
+            msg = "Path must start with a forward slash (/)"
+            raise ValueError(msg)
+        return v
+
+    @field_validator("from_")
+    @classmethod
+    def validate_from_format(cls, v: str | None) -> str | None:
+        """Validate that the from field is a valid JSON Pointer when provided."""
+        if v is not None and not v.startswith("/"):
+            msg = "'from' field must start with a forward slash (/)"
+            raise ValueError(msg)
+        return v
+
+    @model_validator(mode="after")
+    def validate_operation(self):
+        """Validate that required fields are present for each operation type.
+
+        Note: For replace operations, null is a valid value (used to clear fields).
+        We only validate that move/copy have 'from' field.
+        """
+        # Validate 'from' field for move/copy operations
+        if self.op in [PatchOperationType.MOVE, PatchOperationType.COPY] and not self.from_:
+            msg = f"'from' field is required for {self.op} operations"
+            raise ValueError(msg)
+
+        return self
+
+
+class JsonPatch(BaseModel):
+    """Model for a JSON Patch document as defined in RFC 6902."""
+
+    operations: list[PatchOperation] = Field(..., description="List of patch operations to apply")
