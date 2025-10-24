@@ -12,6 +12,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.flows import clone_flow_for_marketplace
+from langflow.initial_setup.setup import get_or_create_marketplace_agent_folder
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.published_flow.model import (
@@ -54,18 +55,9 @@ async def publish_flow(
             detail="You don't have permission to publish this flow",
         )
 
-    # 3. Determine target folder (use payload if provided, otherwise use original flow's folder)
-    target_folder_id = payload.target_folder_id if payload.target_folder_id else original_flow.folder_id
-
-    if not target_folder_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Flow must belong to a folder to be published"
-        )
-
-    target_folder = await session.get(Folder, target_folder_id)
-    if not target_folder or target_folder.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid target folder")
+    # 3. Use Marketplace Agent folder for the cloned flow
+    marketplace_folder = await get_or_create_marketplace_agent_folder(session)
+    target_folder_id = marketplace_folder.id
 
     # 4. Check if already published (by flow_cloned_from)
     existing_result = await session.exec(
