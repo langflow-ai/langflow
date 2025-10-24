@@ -67,14 +67,26 @@ def set_config(ctx: click.Context, key: str, value: str):
 
     Available keys:
         ai_studio_url       - AI Studio URL
-        ai_studio_api_key   - API key for authentication
         default_project     - Default project for flows
         default_folder      - Default folder for flows
         templates_path      - Custom templates directory
         verbose             - Enable verbose output (true/false)
+
+    Note: API key must be set via environment variables:
+        export AI_STUDIO_API_KEY=your-api-key
+        Or add to .env file: AI_STUDIO_API_KEY=your-api-key
     """
     try:
         config_manager = ctx.obj['config']
+
+        # Block API key updates
+        if key in ['ai_studio_api_key', 'api_key']:
+            error_message("API key cannot be set via config command.")
+            error_message("Use environment variables instead:")
+            error_message("  export AI_STUDIO_API_KEY=your-api-key")
+            error_message("Or add to .env file:")
+            error_message("  AI_STUDIO_API_KEY=your-api-key")
+            ctx.exit(1)
 
         # Convert boolean strings
         if value.lower() in ['true', 'false']:
@@ -144,15 +156,19 @@ def test_config(ctx: click.Context):
             success_message(f"Successfully connected to AI Studio at {config_manager.ai_studio_url}")
 
             # Test authentication if API key is set
-            if config_manager.api_key:
+            api_key = config_manager.get_api_key()
+            if api_key:
                 try:
                     # Try to fetch components to test API key
                     api_client.get_available_components_sync()
                     success_message("API key authentication successful")
+                    api_key_source = config_manager.get_api_key_source()
+                    info_message(f"API key source: {api_key_source}")
                 except Exception as e:
                     warning_message(f"API key authentication failed: {e}")
             else:
                 info_message("No API key configured (authentication may be required for some operations)")
+                info_message("Set API key with: export AI_STUDIO_API_KEY=your-api-key")
 
         else:
             error_message(f"Failed to connect to AI Studio at {config_manager.ai_studio_url}")

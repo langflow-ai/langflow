@@ -7,7 +7,7 @@ from typing import Any
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, Output, StrInput
 from langflow.schema.data import Data
-from langflow.custom.genesis.services.deps import get_external_integration_service, get_flexstore_service
+from langflow.services.deps import get_flexstore_service
 from loguru import logger
 
 

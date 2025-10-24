@@ -160,7 +160,7 @@ class EnhancedValidator:
     def _load_component_mappings(self):
         """Load component mappings for validation."""
         try:
-            from langflow.custom.genesis.spec.mapper import ComponentMapper
+            from langflow.services.genesis.mapper import ComponentMapper
             self.mapper = ComponentMapper()
         except ImportError as e:
             logger.warning(f"Could not load ComponentMapper: {e}")

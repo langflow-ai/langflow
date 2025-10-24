@@ -18,7 +18,7 @@ from langflow.schema.data import Data
 from loguru import logger
 
 from langflow.base.modelhub import ATModelComponent
-from langflow.custom.genesis.services.modelhub.model_endpoint import ModelEndpoint
+from langflow.services.modelhub.model_endpoint import ModelEndpoint
 
 
 class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
@@ -36,21 +36,18 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
     MODEL_OPTIONS = {
         "SRF Extraction": ModelEndpoint.SRF_EXTRACTION,
         "SRF Identification": ModelEndpoint.SRF_IDENTIFICATION,
-        "Letter Split Model": ModelEndpoint.LETTER_SPLIT,
     }
 
     # Model descriptions for UI
     MODEL_DESCRIPTIONS = {
         "SRF Extraction": "Extract structured retinal findings from medical images",
         "SRF Identification": "Identify subretinal fluid in OCT images",
-        "Letter Split Model": "Split documents into logical blocks and sections",
     }
 
     # Valid file extensions based on model
     MODEL_EXTENSIONS = {
         "SRF Extraction": IMG_FILE_TYPES,
         "SRF Identification": IMG_FILE_TYPES,
-        "Letter Split Model": ["pdf", "jpg", "jpeg", "png", "bmp", "tiff", "tif"],
     }
 
     VALID_EXTENSIONS = ["pdf", "jpg", "jpeg", "png", "bmp", "tiff", "tif"]
@@ -240,20 +237,11 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
                 if not content_type:
                     content_type = "application/octet-stream"
 
-                # Special handling for Letter Split Model
-                if self.model_name == "Letter Split Model":
-                    # For Letter Split Model, we need to process extracted text
-                    # This is a placeholder - you may need to integrate with text extraction first
-                    response = await self.predict(
-                        file_path=file_path,
-                        content_type=content_type
-                    )
-                else:
-                    # For SRF models
-                    response = await self.predict(
-                        file_path=file_path,
-                        content_type=content_type
-                    )
+                # Process with the selected model
+                response = await self.predict(
+                    file_path=file_path,
+                    content_type=content_type
+                )
 
                 # Handle string responses
                 if isinstance(response, str):

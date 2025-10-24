@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from dataclasses import dataclass, field, asdict
 
 from langflow.services.base import Service
-from langflow.custom.genesis.services.modelhub.model_endpoint import ModelEndpoint
+from langflow.services.modelhub.model_endpoint import ModelEndpoint
 
 logger = logging.getLogger(__name__)
 

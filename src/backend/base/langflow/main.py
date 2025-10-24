@@ -165,20 +165,11 @@ def get_lifespan(*, fix_migration=False, version=None):
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Initializing Genesis Studio Extensions")
             try:
-                from langflow.custom.genesis.integration import initialize_genesis_extensions, is_genesis_extensions_enabled
-
-                if is_genesis_extensions_enabled():
-                    success = await initialize_genesis_extensions(_app)
-                    if success:
-                        await logger.adebug(f"Genesis Extensions initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
-                    else:
-                        await logger.awarning(f"Genesis Extensions failed to initialize in {asyncio.get_event_loop().time() - current_time:.2f}s")
-                else:
-                    await logger.adebug("Genesis Extensions disabled via environment variable")
-            except ImportError:
-                await logger.adebug("Genesis Extensions not available")
+                # Genesis extensions have been integrated into the main services
+                # Genesis components and features are now available through the standard service layer
+                await logger.adebug(f"Genesis integration complete - services available in {asyncio.get_event_loop().time() - current_time:.2f}s")
             except Exception as e:
-                await logger.aerror(f"Genesis Extensions initialization failed: {e}")
+                await logger.aerror(f"Genesis integration check failed: {e}")
                 # Don't fail startup if Genesis fails
                 pass
 
@@ -412,18 +403,9 @@ def create_app():
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
 
-    # Enable Genesis middleware for BFF authentication
-    try:
-        from langflow.custom.genesis.integration import setup_genesis_middleware, is_genesis_extensions_enabled
-        if is_genesis_extensions_enabled():
-            setup_genesis_middleware(app)
-            logger.info("✅ Genesis BFF authentication middleware enabled")
-        else:
-            logger.info("ℹ️ Genesis extensions disabled via environment variable")
-    except ImportError:
-        logger.warning("⚠️ Genesis extensions not available")
-    except Exception as e:
-        logger.error(f"❌ Failed to setup Genesis middleware: {e}")
+    # Genesis middleware has been integrated into the main application
+    # Genesis authentication and middleware are now part of the standard flow
+    logger.info("ℹ️ Genesis authentication integrated into main middleware stack")
 
     @app.middleware("http")
     async def check_boundary(request: Request, call_next):

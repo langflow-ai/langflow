@@ -356,9 +356,16 @@ class ComponentMappingService(Service):
                 logger.debug(f"Genesis type: {genesis_type}, Category: {category}, Category value: {category_value}")
 
                 # Create mapping data with safe enum handling and validation
+                # Fix for ISSUE: Include component name in base_config for proper mapping
+                base_config = mapping_info.get("config", {}).copy() if mapping_info.get("config") else {}
+
+                # CRITICAL: Add the component name to base_config so langflow_component property works
+                if "component" in mapping_info:
+                    base_config["component"] = mapping_info["component"]
+
                 mapping_dict = {
                     "genesis_type": genesis_type,
-                    "base_config": mapping_info.get("config", {}) if mapping_info.get("config") else {},
+                    "base_config": base_config,
                     "io_mapping": self._extract_io_mapping(mapping_info),
                     "component_category": category_value,  # Use safely extracted string value
                     "description": f"Migrated from hardcoded mapping for {genesis_type}",
@@ -457,6 +464,49 @@ class ComponentMappingService(Service):
             "input_types": [],    # Will be filled by ComponentMapper introspection
             "output_types": [],   # Will be filled by ComponentMapper introspection
         }
+
+    async def get_component_mapping(self, genesis_type: str, session: AsyncSession) -> Optional[ComponentMapping]:
+        """
+        Get component mapping by genesis type.
+
+        This method was identified as missing in AUTPE-6237 critical gaps.
+
+        Args:
+            genesis_type: Genesis component type
+            session: Database session
+
+        Returns:
+            Component mapping if found
+        """
+        return await self.get_component_mapping_by_genesis_type(session, genesis_type, active_only=True)
+
+    async def get_all_mappings(self, session: AsyncSession) -> List[ComponentMapping]:
+        """
+        Get all available component mappings.
+
+        This method was identified as missing in AUTPE-6237 critical gaps.
+
+        Args:
+            session: Database session
+
+        Returns:
+            List of all component mappings
+        """
+        return await self.get_all_component_mappings(session, active_only=True, limit=1000)
+
+    async def get_tool_components(self, session: AsyncSession) -> List[ComponentMapping]:
+        """
+        Get components that support tool mode.
+
+        This method was identified as missing in AUTPE-6237 critical gaps.
+
+        Args:
+            session: Database session
+
+        Returns:
+            List of tool-capable component mappings
+        """
+        return await self.get_components_with_tool_capabilities(session, provides_tools=True)
 
     async def get_components_with_tool_capabilities(
         self,

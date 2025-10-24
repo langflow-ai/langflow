@@ -200,6 +200,28 @@ class ComponentMapping(ComponentMappingBase, table=True):
         # If JSON querying is needed, create GIN indexes in a separate migration
     )
 
+    # Backward compatibility properties for legacy code
+    @property
+    def langflow_component(self) -> Optional[str]:
+        """Get the Langflow component name from base_config.
+
+        This property provides backward compatibility for code expecting
+        the langflow_component attribute.
+        """
+        if self.base_config and isinstance(self.base_config, dict):
+            return self.base_config.get("component")
+        return "CustomComponent"  # Default fallback for missing component names
+
+    @property
+    def default_config(self) -> Optional[dict]:
+        """Alias for base_config to maintain backward compatibility."""
+        return self.base_config
+
+    @property
+    def category(self) -> str:
+        """Alias for component_category to maintain backward compatibility."""
+        return self.component_category
+
 
 class ComponentMappingCreate(ComponentMappingBase):
     """Schema for creating component mappings."""

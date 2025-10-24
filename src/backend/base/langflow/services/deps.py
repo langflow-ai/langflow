@@ -14,7 +14,11 @@ if TYPE_CHECKING:
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
+    from langflow.services.flexstore.service import FlexStoreService
     from langflow.services.job_queue.service import JobQueueService
+    from langflow.services.knowledge.service import KnowledgeService
+    from langflow.services.modelhub.service import ModelHubService
+    from langflow.services.prompt.service import PromptService
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
     from langflow.services.socket.service import SocketIOService
@@ -264,3 +268,47 @@ def get_queue_service() -> JobQueueService:
     from langflow.services.job_queue.factory import JobQueueServiceFactory
 
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
+
+
+def get_modelhub_service() -> ModelHubService:
+    """Retrieves the ModelHubService instance from the service manager.
+
+    Returns:
+        ModelHubService: The ModelHubService instance.
+    """
+    from langflow.services.modelhub.factory import ModelHubServiceFactory
+
+    return get_service(ServiceType.MODELHUB_SERVICE, ModelHubServiceFactory())
+
+
+def get_knowledge_service() -> KnowledgeService:
+    """Retrieves the KnowledgeService instance from the service manager.
+
+    Returns:
+        KnowledgeService: The KnowledgeService instance.
+    """
+    from langflow.services.knowledge.factory import KnowledgeServiceFactory
+
+    return get_service(ServiceType.KNOWLEDGE_SERVICE, KnowledgeServiceFactory())
+
+
+def get_flexstore_service() -> FlexStoreService:
+    """Retrieves the FlexStoreService instance from the service manager.
+
+    Returns:
+        FlexStoreService: The FlexStoreService instance.
+    """
+    from langflow.services.flexstore.factory import FlexStoreServiceFactory
+
+    return get_service(ServiceType.FLEXSTORE_SERVICE, FlexStoreServiceFactory())
+
+
+def get_prompt_service() -> PromptService:
+    """Retrieves the PromptService instance from the service manager.
+
+    Returns:
+        PromptService: The PromptService instance.
+    """
+    from langflow.services.prompt.factory import PromptServiceFactory
+
+    return get_service(ServiceType.PROMPT_SERVICE, PromptServiceFactory())

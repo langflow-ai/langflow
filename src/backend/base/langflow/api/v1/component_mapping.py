@@ -313,7 +313,7 @@ async def migrate_hardcoded_mappings(
     overwrite_existing: bool = Query(False, description="Overwrite existing mappings"),
 ):
     """Migrate hardcoded mappings to database."""
-    from langflow.custom.genesis.spec.mapper import ComponentMapper
+    from langflow.services.spec.mapper import ComponentMapper
 
     mapper = ComponentMapper()
     all_mappings = {

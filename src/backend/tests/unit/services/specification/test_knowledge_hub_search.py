@@ -103,7 +103,7 @@ class TestKnowledgeHubSearchComponent:
             }
         }
 
-        with patch('langflow.custom.genesis.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
+        with patch('langflow.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
             result = await component.update_build_config(build_config, [], "selected_hubs")
 
         # Verify service was called
@@ -128,7 +128,7 @@ class TestKnowledgeHubSearchComponent:
         mock_service = Mock()
         mock_service.ready = False
 
-        with patch('langflow.custom.genesis.services.deps.get_knowledge_service', return_value=mock_service):
+        with patch('langflow.services.deps.get_knowledge_service', return_value=mock_service):
             result = await component.update_build_config(build_config, [], "selected_hubs")
 
         assert result["selected_hubs"]["options"] == ["Service not ready"]
@@ -146,7 +146,7 @@ class TestKnowledgeHubSearchComponent:
         mock_service.ready = True
         mock_service.get_knowledge_hubs = AsyncMock(side_effect=Exception("Service error"))
 
-        with patch('langflow.custom.genesis.services.deps.get_knowledge_service', return_value=mock_service):
+        with patch('langflow.services.deps.get_knowledge_service', return_value=mock_service):
             with pytest.raises(Exception):
                 await component.update_build_config(build_config, [], "selected_hubs")
 
@@ -171,7 +171,7 @@ class TestKnowledgeHubSearchComponent:
         ]
         component.search_query = "drug interactions"
 
-        with patch('langflow.custom.genesis.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
+        with patch('langflow.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
             result = await component.build_output()
 
         # Verify service was called with correct parameters
@@ -209,7 +209,7 @@ class TestKnowledgeHubSearchComponent:
         mock_service = Mock()
         mock_service.ready = False
 
-        with patch('langflow.custom.genesis.services.deps.get_knowledge_service', return_value=mock_service):
+        with patch('langflow.services.deps.get_knowledge_service', return_value=mock_service):
             result = await component.build_output()
 
         assert isinstance(result, Data)
@@ -224,7 +224,7 @@ class TestKnowledgeHubSearchComponent:
 
         mock_knowledge_service.query_vector_store = AsyncMock(side_effect=Exception("Query error"))
 
-        with patch('langflow.custom.genesis.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
+        with patch('langflow.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
             result = await component.build_output()
 
         assert isinstance(result, Data)
@@ -237,7 +237,7 @@ class TestKnowledgeHubSearchComponent:
         component._hub_data = []  # Empty hub data should trigger refresh
         component.search_query = "test query"
 
-        with patch('langflow.custom.genesis.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
+        with patch('langflow.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
             result = await component.build_output()
 
         # Should have called get_knowledge_hubs to refresh data
@@ -252,7 +252,7 @@ class TestKnowledgeHubSearchComponent:
         component._selected_hub_names = ["Medical Knowledge", "Nonexistent Hub"]
         component._hub_data = []
 
-        with patch('langflow.custom.genesis.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
+        with patch('langflow.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
             is_valid, validated_hubs = await component._validate_and_refresh_data_sources()
 
         # Should be valid since at least one hub exists
@@ -266,7 +266,7 @@ class TestKnowledgeHubSearchComponent:
         component._selected_hub_names = ["Nonexistent Hub 1", "Nonexistent Hub 2"]
         component._hub_data = []
 
-        with patch('langflow.custom.genesis.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
+        with patch('langflow.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
             is_valid, validated_hubs = await component._validate_and_refresh_data_sources()
 
         # Should be invalid since no hubs exist
@@ -322,7 +322,7 @@ class TestKnowledgeHubSearchComponent:
             component.update_build_config(build_config, [], "selected_hubs")
         ]
 
-        with patch('langflow.custom.genesis.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
+        with patch('langflow.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
             results = await asyncio.gather(*tasks)
 
         # Both should succeed
@@ -339,7 +339,7 @@ class TestKnowledgeHubSearchComponent:
         # Mock empty results
         mock_knowledge_service.query_vector_store = AsyncMock(return_value=[])
 
-        with patch('langflow.custom.genesis.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
+        with patch('langflow.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
             result = await component.build_output()
 
         assert isinstance(result, Data)
@@ -353,7 +353,7 @@ class TestKnowledgeHubSearchComponent:
         component._hub_data = [{"id": "hub1", "name": "Medical Knowledge"}]
         component.search_query = "drug & side-effects: 50% patients"
 
-        with patch('langflow.custom.genesis.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
+        with patch('langflow.services.deps.get_knowledge_service', return_value=mock_knowledge_service):
             result = await component.build_output()
 
         # Should handle special characters without errors

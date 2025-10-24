@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
 import aiohttp
-from langflow.custom.genesis.services.knowledge.service import KnowledgeService
-from langflow.custom.genesis.services.knowledge.settings import KnowledgeSettings
+from langflow.services.knowledge.service import KnowledgeService
+from langflow.services.knowledge.settings import KnowledgeSettings
 
 
 class TestKnowledgeService:
@@ -24,7 +24,7 @@ class TestKnowledgeService:
     @pytest.fixture
     def service(self, mock_settings):
         """Create KnowledgeService with mocked settings."""
-        with patch('langflow.custom.genesis.services.knowledge.service.KnowledgeSettings', return_value=mock_settings):
+        with patch('langflow.services.knowledge.service.KnowledgeSettings', return_value=mock_settings):
             return KnowledgeService()
 
     def test_service_initialization(self, service, mock_settings):

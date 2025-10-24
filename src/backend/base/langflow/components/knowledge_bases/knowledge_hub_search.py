@@ -3,14 +3,14 @@ from __future__ import annotations
 from typing import Any
 
 from langflow.custom import Component
-from langflow.custom.genesis.services.deps import get_knowledge_service
+from langflow.services.deps import get_knowledge_service
 from langflow.io import DropdownInput, IntInput, MultilineInput, MultiselectInput, Output
 from langflow.schema import Data
 from loguru import logger
 
 # Import the service and factory directly
-from langflow.custom.genesis.services.knowledge.factory import KnowledgeServiceFactory
-from langflow.custom.genesis.services.knowledge.service import KnowledgeService
+from langflow.services.knowledge.factory import KnowledgeServiceFactory
+from langflow.services.knowledge.service import KnowledgeService
 
 
 class KnowledgeHubSearchComponent(Component):

@@ -9,7 +9,7 @@ from langflow.io import Output
 from langflow.schema.data import Data
 from langflow.logging import logger
 from langflow.components.helpers.studio_builder.api_client import SpecAPIClient
-from langflow.custom.genesis.spec.mapper import ComponentMapper
+from langflow.services.genesis.mapper import ComponentMapper
 
 
 class ComponentValidator(Component):

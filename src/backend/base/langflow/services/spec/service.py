@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional, List
 import logging
 
 # Legacy Genesis implementation removed during consolidation cleanup
-# from langflow.custom.genesis.spec import FlowConverter, ComponentMapper, VariableResolver
+# from langflow.services.spec import FlowConverter, ComponentMapper, VariableResolver
 from .validation_schemas import GENESIS_SPEC_SCHEMA, get_component_config_schema
 from .semantic_validator import SemanticValidator
 from .dynamic_schema_generator import DynamicSchemaGenerator
@@ -30,13 +30,12 @@ class SpecService:
 
     def __init__(self):
         """Initialize the service with enhanced database-driven component discovery."""
-        # Legacy Genesis components removed during consolidation cleanup
-        # self.mapper = ComponentMapper()
-        # self.converter = FlowConverter(self.mapper)
-        # self.resolver = VariableResolver()
-        self.mapper = None  # TODO: Replace with current implementation
-        self.converter = None  # TODO: Replace with current implementation
-        self.resolver = None  # TODO: Replace with current implementation
+        # Initialize Genesis services for MVP functionality
+        from langflow.services.genesis import ComponentMapper, GenesisSpecificationConverter, VariableResolver
+
+        self.mapper = ComponentMapper()
+        self.converter = GenesisSpecificationConverter(self.mapper)
+        self.resolver = VariableResolver()
         self._validation_cache = {}  # Cache for validation results
 
         # Initialize database-driven services (AUTPE-6207)
@@ -1131,7 +1130,7 @@ class SpecService:
         target_type = target_comp.get("type", "")
 
         try:
-            from langflow.custom.genesis.spec.models import Component
+            from langflow.services.spec.models import Component
 
             # Create mock Component objects for FlowConverter validation
             source_component = Component(
@@ -2104,16 +2103,23 @@ class SpecService:
             if mappings:
                 # Update mapper's database cache
                 for mapping in mappings:
-                    genesis_type = mapping.genesis_type
-                    langflow_component = mapping.langflow_component
+                    try:
+                        genesis_type = mapping.genesis_type
+                        # Use properties for backward compatibility, with fallbacks
+                        langflow_component = getattr(mapping, 'langflow_component', None) or "CustomComponent"
+                        default_config = getattr(mapping, 'default_config', None) or mapping.base_config or {}
+                        category = getattr(mapping, 'category', None) or mapping.component_category or "tool"
 
-                    # Create mapping structure
-                    mapping_dict = {
-                        "component": langflow_component,
-                        "config": mapping.default_config or {},
-                        "category": mapping.category,
-                        "database_id": str(mapping.id)
-                    }
+                        # Create mapping structure
+                        mapping_dict = {
+                            "component": langflow_component,
+                            "config": default_config,
+                            "category": category,
+                            "database_id": str(mapping.id)
+                        }
+                    except Exception as mapping_error:
+                        logger.warning(f"Error processing mapping {mapping.genesis_type}: {mapping_error}, skipping")
+                        continue
 
                     # Update mapper's cache
                     self.mapper._database_cache[genesis_type] = mapping_dict

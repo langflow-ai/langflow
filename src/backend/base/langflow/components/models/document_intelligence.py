@@ -345,7 +345,7 @@ class AzureDocumentIntelligenceComponent(BaseFileComponent):
     ) -> tuple[Data, str]:
         """Process a single file using the OCR service."""
         try:
-            from langflow.custom.genesis.services.ocr.factory import OCRServiceFactory
+            from langflow.services.document_intelligence.factory import OCRServiceFactory
             
             # Create OCR service directly
             ocr_factory = OCRServiceFactory()

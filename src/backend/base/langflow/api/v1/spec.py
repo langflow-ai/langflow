@@ -389,7 +389,7 @@ async def get_knowledge(
     """
     try:
         # Import the mapper directly to avoid recursion through KnowledgeLoader
-        from langflow.custom.genesis.spec.mapper import ComponentMapper
+        from langflow.services.spec.mapper import ComponentMapper
         from pathlib import Path
         import json
         import yaml

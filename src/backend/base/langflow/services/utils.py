@@ -244,3 +244,57 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
         await logger.awarning(f"Error assigning orphaned flows to the superuser: {exc!s}")
     await clean_transactions(settings_service, session)
     await clean_vertex_builds(settings_service, session)
+
+    # Initialize component mappings population (CRITICAL MVP FUNCTIONALITY)
+    await initialize_component_mappings()
+
+
+async def initialize_component_mappings() -> None:
+    """
+    Initialize component mappings population during application startup.
+
+    This ensures the component_mappings table is populated with all available
+    components for the MVP functionality.
+    """
+    try:
+        await logger.adebug("Initializing component mappings...")
+        start_time = asyncio.get_event_loop().time()
+
+        # Import the startup population service
+        from langflow.services.component_mapping.startup_population import StartupPopulationService
+
+        # Create service instance
+        startup_service = StartupPopulationService()
+
+        # Check if population should run based on environment settings
+        if not startup_service.should_run_startup_population():
+            await logger.adebug("Component mapping population skipped due to environment settings")
+            return
+
+        # Run population with database session
+        db_service = get_db_service()
+        async with db_service.with_session() as session:
+            population_results = await startup_service.populate_on_startup(session)
+
+            # Log results
+            status = population_results.get("status", "unknown")
+            await logger.adebug(f"Component mapping population {status}")
+
+            if status == "completed":
+                stats = population_results.get("statistics", {})
+                total_mappings = stats.get("total_mappings", 0)
+                total_adapters = stats.get("total_adapters", 0)
+                duration = population_results.get("duration_seconds", 0)
+
+                await logger.adebug(f"Populated {total_mappings} mappings and {total_adapters} adapters in {duration:.2f}s")
+            elif status == "failed":
+                error = population_results.get("error", "Unknown error")
+                await logger.awarning(f"Component mapping population failed: {error}")
+
+        end_time = asyncio.get_event_loop().time()
+        await logger.adebug(f"Component mapping initialization completed in {end_time - start_time:.2f}s")
+
+    except Exception as e:
+        await logger.aerror(f"Failed to initialize component mappings: {e}")
+        # Don't raise exception to prevent startup failure
+        # The system can still operate with fallback mappings

@@ -44,7 +44,7 @@ class StartupPopulationService(Service):
         self.capability_service = ComponentCapabilityService()
 
         # Initialize mapper for accessing hardcoded mappings
-        from langflow.custom.genesis.spec.mapper import ComponentMapper
+        from langflow.services.genesis.mapper import ComponentMapper
         self.mapper = ComponentMapper()
 
         # Initialize unified discovery component (AUTPE-6206)
