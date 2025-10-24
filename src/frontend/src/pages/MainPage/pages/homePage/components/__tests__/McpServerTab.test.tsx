@@ -22,33 +22,43 @@ jest.mock("@/stores/foldersStore", () => ({
 }));
 
 // Mock the custom hook with minimal data
-const mockUseMcpServer = jest.fn(() => ({
-  flowsMCPData: [],
-  currentAuthSettings: { auth_type: "none" },
-  isOAuthProject: false,
-  composerUrlData: {},
-  installedClients: [],
-  installedMCPData: [],
-  apiKey: "",
-  isGeneratingApiKey: false,
-  generateApiKey: jest.fn(),
-  isCopied: false,
-  copyToClipboard: jest.fn(),
-  loadingMCP: [],
-  installClient: jest.fn(),
-  authModalOpen: false,
-  setAuthModalOpen: jest.fn(),
-  isLoading: false,
-  handleOnNewValue: jest.fn(),
-  handleAuthSave: jest.fn(),
-  mcpJson: '{"mcpServers":{}}',
-  hasAuthentication: false,
-  isAuthApiKey: false,
-  hasOAuthError: false,
-}));
+const mockUseMcpServer = jest.fn(
+  (_params?: {
+    projectId: string;
+    folderName?: string;
+    selectedPlatform?: string;
+  }) => ({
+    flowsMCPData: [],
+    currentAuthSettings: { auth_type: "none" },
+    isOAuthProject: false,
+    composerUrlData: {},
+    installedClients: [],
+    installedMCPData: [],
+    apiKey: "",
+    isGeneratingApiKey: false,
+    generateApiKey: jest.fn(),
+    isCopied: false,
+    copyToClipboard: jest.fn(),
+    loadingMCP: [],
+    installClient: jest.fn(),
+    authModalOpen: false,
+    setAuthModalOpen: jest.fn(),
+    isLoading: false,
+    handleOnNewValue: jest.fn(),
+    handleAuthSave: jest.fn(),
+    mcpJson: '{"mcpServers":{}}',
+    hasAuthentication: false,
+    isAuthApiKey: false,
+    hasOAuthError: false,
+  }),
+);
 
 jest.mock("../../hooks/useMcpServer", () => ({
-  useMcpServer: (params: any) => mockUseMcpServer(params),
+  useMcpServer: (params: {
+    projectId: string;
+    folderName?: string;
+    selectedPlatform?: string;
+  }) => mockUseMcpServer(params),
 }));
 
 jest.mock("react-router-dom", () => ({
@@ -58,14 +68,14 @@ jest.mock("react-router-dom", () => ({
 
 // Mock common components
 jest.mock("@/components/common/genericIconComponent", () => ({
-  ForwardedIconComponent: ({ name }: any) => (
+  ForwardedIconComponent: ({ name }: { name: string }) => (
     <span data-testid={`icon-${name}`}>{name}</span>
   ),
 }));
 
 jest.mock("@/components/common/shadTooltipComponent", () => ({
   __esModule: true,
-  default: ({ children }: any) => <>{children}</>,
+  default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 jest.mock(
@@ -77,7 +87,15 @@ jest.mock(
 );
 
 jest.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, ...props }: any) => (
+  Button: ({
+    children,
+    onClick,
+    ...props
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    [key: string]: unknown;
+  }) => (
     <button onClick={onClick} {...props}>
       {children}
     </button>
@@ -85,13 +103,18 @@ jest.mock("@/components/ui/button", () => ({
 }));
 
 jest.mock("@/components/ui/tabs-button", () => ({
-  Tabs: ({ children }: any) => <div>{children}</div>,
-  TabsList: ({ children }: any) => <div>{children}</div>,
-  TabsTrigger: ({ children }: any) => <div>{children}</div>,
+  Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  TabsList: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  TabsTrigger: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
 }));
 
 jest.mock("@/utils/utils", () => ({
-  cn: (...args: any[]) => args.filter(Boolean).join(" "),
+  cn: (...args: (string | boolean | undefined)[]) =>
+    args.filter(Boolean).join(" "),
   getOS: () => "macoslinux",
 }));
 

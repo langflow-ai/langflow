@@ -203,13 +203,14 @@ describe("mcpServerUtils", () => {
     });
 
     it("handles flows with missing optional fields", () => {
-      const flows = [
-        {
-          id: "1",
-        },
-      ];
+      const flows: Array<{ id: string; name?: string; action_name?: string }> =
+        [
+          {
+            id: "1",
+          },
+        ];
 
-      const tools = mapFlowsToTools(flows as any);
+      const tools = mapFlowsToTools(flows);
 
       expect(tools[0]).toMatchObject({
         id: "1",
