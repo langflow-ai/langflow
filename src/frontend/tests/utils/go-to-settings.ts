@@ -1,4 +1,4 @@
-import { expect, type Page } from "playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 export const navigateSettingsPages = async (
   page: Page,
