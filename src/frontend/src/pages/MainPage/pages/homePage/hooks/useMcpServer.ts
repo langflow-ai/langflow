@@ -229,6 +229,14 @@ export const useMcpServer = ({
   const isInstalling = (clientName: string) =>
     s.loadingMCP.includes(clientName);
 
+  const hasAuthentication = !!(
+    currentAuthSettings?.auth_type && currentAuthSettings.auth_type !== "none"
+  );
+  const isAuthApiKey = ENABLE_MCP_COMPOSER
+    ? authType === "apikey"
+    : !isAutoLoginFromStore;
+  const hasOAuthError = isOAuthProject && !!composerUrlData?.error_message;
+
   return {
     flows,
     flowsMCPData,
@@ -236,14 +244,11 @@ export const useMcpServer = ({
     // auth / composer
     isOAuthProject,
     authType,
-    hasAuthentication: !!(
-      currentAuthSettings?.auth_type && currentAuthSettings.auth_type !== "none"
-    ),
-    isAuthApiKey: ENABLE_MCP_COMPOSER
-      ? authType === "apikey"
-      : !isAutoLoginFromStore,
+    hasAuthentication,
+    isAuthApiKey,
     composerUrlData,
     composerError,
+    hasOAuthError,
     // mcp json + url
     apiUrl,
     authHeadersFragment,
