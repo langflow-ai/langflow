@@ -14,19 +14,26 @@ const getHexFromPreset = (presetName: string): string | null => {
   const colorValue = COLOR_OPTIONS[presetName as keyof typeof COLOR_OPTIONS];
   if (!colorValue) return null;
 
-  // Convert HSL CSS variable to hex
+  // For CSS variables, create a temporary element to get computed color
   if (colorValue.startsWith("hsl(var(--note-")) {
-    // Extract the CSS variable name and convert to hex
-    const cssVar = colorValue.replace("hsl(var(--", "").replace("))", "");
-    // Map CSS variables to approximate hex values
-    const presetToHex: Record<string, string> = {
-      "note-amber": "#FCD34D",
-      "note-neutral": "#E5E5E5",
-      "note-rose": "#FECACA",
-      "note-blue": "#DBEAFE",
-      "note-lime": "#D9F99D",
-    };
-    return presetToHex[cssVar] || null;
+    if (typeof window === "undefined") return "#FFFFFF";
+
+    // Create a temporary element to get the computed color
+    const tempEl = document.createElement("div");
+    tempEl.style.color = colorValue;
+    document.body.appendChild(tempEl);
+    const computedColor = getComputedStyle(tempEl).color;
+    document.body.removeChild(tempEl);
+
+    // Convert RGB to hex
+    const rgb = computedColor.match(/\d+/g);
+    if (rgb && rgb.length >= 3) {
+      const r = parseInt(rgb[0]).toString(16).padStart(2, "0");
+      const g = parseInt(rgb[1]).toString(16).padStart(2, "0");
+      const b = parseInt(rgb[2]).toString(16).padStart(2, "0");
+      return `#${r}${g}${b}`;
+    }
+    return "#FFFFFF";
   }
 
   return colorValue;
