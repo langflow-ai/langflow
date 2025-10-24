@@ -135,27 +135,27 @@ async def log_transaction(
 
         # Try to use the full langflow transaction logging implementation
         try:
-            from langflow.services.database.models.transactions.model import TransactionBase
             from langflow.services.database.models.transactions.crud import log_transaction as db_log_transaction
+            from langflow.services.database.models.transactions.model import TransactionBase
             from langflow.services.deps import session_scope
-            
+
             # Create transaction data
             transaction_data = TransactionBase(
                 vertex_id=source.id,
                 target_id=target.id if target else None,
-                inputs=_vertex_to_primitive_dict(source) if hasattr(source, 'data') else None,
-                outputs=_vertex_to_primitive_dict(target) if target and hasattr(target, 'data') else None,
+                inputs=_vertex_to_primitive_dict(source) if hasattr(source, "data") else None,
+                outputs=_vertex_to_primitive_dict(target) if target and hasattr(target, "data") else None,
                 status=status,
                 error=str(error) if error else None,
                 flow_id=flow_id,
             )
-            
+
             # Get database session and log transaction
             async with session_scope() as session:
                 await db_log_transaction(session, transaction_data)
-                
+
             logger.debug(f"Transaction logged to database: vertex={source.id}, flow={flow_id}, status={status}")
-            
+
         except ImportError:
             # Fallback to debug logging if langflow models are not available
             logger.debug(f"Transaction logged (debug only): vertex={source.id}, flow={flow_id}, status={status}")
@@ -163,7 +163,7 @@ async def log_transaction(
             # Log database errors but don't fail the transaction
             logger.debug(f"Error logging transaction to database: {db_exc!s}")
             logger.debug(f"Transaction logged (debug only): vertex={source.id}, flow={flow_id}, status={status}")
-            
+
     except Exception as exc:  # noqa: BLE001
         logger.debug(f"Error logging transaction: {exc!s}")
 
