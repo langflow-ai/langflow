@@ -45,6 +45,11 @@ jest.mock(
   () => () => null,
 );
 
+// Mock API controller
+jest.mock("@/controllers/API", () => ({
+  createApiKey: jest.fn(),
+}));
+
 import useAuthStore from "../authStore";
 
 describe("useAuthStore", () => {
@@ -488,6 +493,37 @@ describe("useAuthStore", () => {
       // User should still be authenticated until explicit logout
       expect(result.current.isAuthenticated).toBe(true);
       expect(result.current.accessToken).toBe("session-token");
+    });
+  });
+
+  describe("generateApiKey function", () => {
+    it("should update isGeneratingApiKey state", () => {
+      const { result } = renderHook(() => useAuthStore());
+
+      act(() => {
+        result.current.setIsGeneratingApiKey?.(true);
+      });
+
+      expect(result.current.isGeneratingApiKey).toBe(true);
+
+      act(() => {
+        result.current.setIsGeneratingApiKey?.(false);
+      });
+
+      expect(result.current.isGeneratingApiKey).toBe(false);
+    });
+
+    it("should have generateApiKey function defined", () => {
+      const { result } = renderHook(() => useAuthStore());
+
+      expect(result.current.generateApiKey).toBeDefined();
+      expect(typeof result.current.generateApiKey).toBe("function");
+    });
+
+    it("should initialize isGeneratingApiKey as undefined or false", () => {
+      const { result } = renderHook(() => useAuthStore());
+
+      expect(result.current.isGeneratingApiKey).toBeFalsy();
     });
   });
 });
