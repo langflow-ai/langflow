@@ -3,41 +3,7 @@ import { Button } from "@/components/ui/button";
 import { COLOR_OPTIONS } from "@/constants/constants";
 import type { NoteDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
-
-// Helper function to check if a value is a hex color
-const isHexColor = (value: string): boolean => {
-  return /^#[0-9A-Fa-f]{6}$/.test(value);
-};
-
-// Helper function to convert preset color names to hex values for the native picker
-const getHexFromPreset = (presetName: string): string | null => {
-  const colorValue = COLOR_OPTIONS[presetName as keyof typeof COLOR_OPTIONS];
-  if (!colorValue) return null;
-
-  // For CSS variables, create a temporary element to get computed color
-  if (colorValue.startsWith("hsl(var(--note-")) {
-    if (typeof window === "undefined") return "#FFFFFF";
-
-    // Create a temporary element to get the computed color
-    const tempEl = document.createElement("div");
-    tempEl.style.color = colorValue;
-    document.body.appendChild(tempEl);
-    const computedColor = getComputedStyle(tempEl).color;
-    document.body.removeChild(tempEl);
-
-    // Convert RGB to hex
-    const rgb = computedColor.match(/\d+/g);
-    if (rgb && rgb.length >= 3) {
-      const r = parseInt(rgb[0]).toString(16).padStart(2, "0");
-      const g = parseInt(rgb[1]).toString(16).padStart(2, "0");
-      const b = parseInt(rgb[2]).toString(16).padStart(2, "0");
-      return `#${r}${g}${b}`;
-    }
-    return "#FFFFFF";
-  }
-
-  return colorValue;
-};
+import { getHexFromPreset, isHexColor } from "../color-utils";
 
 export const ColorPickerButtons = memo(
   ({

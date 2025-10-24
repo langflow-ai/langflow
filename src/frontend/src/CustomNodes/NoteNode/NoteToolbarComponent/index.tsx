@@ -16,6 +16,7 @@ import { useShortcutsStore } from "@/stores/shortcuts";
 import type { NoteDataType } from "@/types/flow";
 import { classNames, cn } from "@/utils/utils";
 import IconComponent from "../../../components/common/genericIconComponent";
+import { resolveColorValue } from "../color-utils";
 import { ColorPickerButtons } from "../components/color-picker-buttons";
 import { SelectItems } from "../components/select-items";
 
@@ -96,28 +97,6 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
       paste,
     ],
   );
-
-  // Helper function to check if a value is a hex color
-  const isHexColor = (value: string): boolean => {
-    return /^#[0-9A-Fa-f]{6}$/.test(value);
-  };
-
-  // Helper function to resolve color value (handles both hex and preset names)
-  const resolveColorValue = (
-    backgroundColor: string | null | undefined,
-  ): string | null => {
-    if (!backgroundColor) return null;
-
-    // If it's already a hex color, use it directly
-    if (isHexColor(backgroundColor)) {
-      return backgroundColor;
-    }
-
-    // If it's a preset name, get the value from COLOR_OPTIONS
-    const presetValue =
-      COLOR_OPTIONS[backgroundColor as keyof typeof COLOR_OPTIONS];
-    return presetValue || null;
-  };
 
   // Memoize the color picker background style
   const colorPickerStyle = useMemo(

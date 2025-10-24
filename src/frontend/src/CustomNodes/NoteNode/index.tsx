@@ -13,29 +13,8 @@ import useFlowStore from "@/stores/flowStore";
 import type { NoteDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import NodeDescription from "../GenericNode/components/NodeDescription";
+import { isHexColor, resolveColorValue } from "./color-utils";
 import NoteToolbarComponent from "./NoteToolbarComponent";
-
-// Helper function to check if a value is a hex color
-const isHexColor = (value: string): boolean => {
-  return /^#[0-9A-Fa-f]{6}$/.test(value);
-};
-
-// Helper function to resolve color value (handles both hex and preset names)
-const resolveColorValue = (
-  backgroundColor: string | null | undefined,
-): string | null => {
-  if (!backgroundColor) return null;
-
-  // If it's already a hex color, use it directly
-  if (isHexColor(backgroundColor)) {
-    return backgroundColor;
-  }
-
-  // If it's a preset name, get the value from COLOR_OPTIONS
-  const presetValue =
-    COLOR_OPTIONS[backgroundColor as keyof typeof COLOR_OPTIONS];
-  return presetValue || null;
-};
 
 const CHAR_LIMIT = 2500;
 const DEFAULT_WIDTH = 324;
