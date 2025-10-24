@@ -1,5 +1,6 @@
 // tests/fixtures.ts
 import { test as base, expect } from "@playwright/test";
+import OpenAI from "openai";
 
 // Extend test to log backend errors
 export const test = base.extend({
@@ -225,7 +226,15 @@ export const test = base.extend({
       }
     });
 
-    await use(page);
+    try {
+      await use(page);
+    } catch (error: any) {
+      if (error instanceof OpenAI.RateLimitError || error.status === 429) {
+        test.skip(true, `Skipped due to OpenAI RateLimitError`);
+      } else {
+        throw error;
+      }
+    }
 
     // Check for errors and fail test if not allowed
     if (errors.length > 0) {
