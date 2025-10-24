@@ -87,7 +87,7 @@ export default function MarketplaceFlowCard({
 
   return (
     <div
-      className={`group relative flex ${expand ? "h-full" : ""} flex-col rounded-lg border border-[#EBE8FF] bg-white dark:bg-card px-4 py-3 transition-shadow hover:shadow-md cursor-pointer ${!expand ? "max-h-[260px] md:max-h-[280px] xl:max-h-[300px] overflow-hidden" : ""}`}
+      className={`group relative flex ${expand ? "h-full" : ""} flex-col rounded-lg border border-[#EBE8FF] bg-white dark:bg-card px-4 py-3 transition-shadow hover:shadow-md cursor-pointer ${!expand ? "max-h-[150px] overflow-hidden" : ""}`}
       onClick={handleCardClick}
     >
       {/* Header */}
@@ -145,7 +145,7 @@ export default function MarketplaceFlowCard({
 
       {/* Tags - Show only first tag */}
       {tags.length > 0 && (
-        <div className="flex max-w-[240px] flex-wrap gap-1">
+        <div className="flex max-w-[240px] flex-wrap gap-1 mt-auto">
           <Badge
             variant="secondary"
             size="xq"
