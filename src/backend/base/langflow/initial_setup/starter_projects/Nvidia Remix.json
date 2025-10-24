@@ -1804,7 +1804,7 @@
                   },
                   {
                     "name": "langchain_ollama",
-                    "version": "0.2.1"
+                    "version": "0.3.10"
                   },
                   {
                     "name": "langchain_community",
