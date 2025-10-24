@@ -2,8 +2,16 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { McpJsonContent } from "../McpJsonContent";
 
 jest.mock("react-syntax-highlighter", () => ({
-  Light: ({ children }: { children: string }) => (
-    <pre data-testid="syntax-highlighter">{children}</pre>
+  Light: ({
+    children,
+    CodeTag,
+  }: {
+    children: string;
+    CodeTag?: React.ComponentType<{ children: React.ReactNode }>;
+  }) => (
+    <pre data-testid="syntax-highlighter">
+      {CodeTag ? <CodeTag>{children}</CodeTag> : children}
+    </pre>
   ),
 }));
 
@@ -123,17 +131,17 @@ describe("McpJsonContent", () => {
     );
   });
 
-  it("renders with copy state", () => {
-    const { container } = render(
-      <McpJsonContent {...defaultProps} isCopied={false} />,
-    );
-    expect(container).toBeInTheDocument();
+  it("renders copy icon with PascalCase name and lowercase testid", () => {
+    render(<McpJsonContent {...defaultProps} isCopied={false} />);
+    const icon = screen.getByTestId("icon-copy");
+    expect(icon).toBeInTheDocument();
+    expect(icon).toHaveTextContent("Copy");
   });
 
-  it("renders with copied state", () => {
-    const { container } = render(
-      <McpJsonContent {...defaultProps} isCopied={true} />,
-    );
-    expect(container).toBeInTheDocument();
+  it("renders check icon with PascalCase name and lowercase testid when copied", () => {
+    render(<McpJsonContent {...defaultProps} isCopied={true} />);
+    const icon = screen.getByTestId("icon-check");
+    expect(icon).toBeInTheDocument();
+    expect(icon).toHaveTextContent("Check");
   });
 });
