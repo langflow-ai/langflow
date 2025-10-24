@@ -13,6 +13,6 @@ def pytest_configure(config):
 
 
 @pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_call(item: pytest.Item):
+def pytest_runtest_call(item):
     skip_on_openai_quota_error(item)
     yield

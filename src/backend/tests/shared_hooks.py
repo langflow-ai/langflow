@@ -2,7 +2,7 @@ import openai
 import pytest
 
 
-def skip_on_openai_quota_error(item):
+def skip_on_openai_quota_error(item: pytest.Function) -> None:
     """Skip tests automatically if an OpenAI API insufficient quota error occurs."""
     # pytest provides the test function as item.obj
     test_func = item.obj
@@ -11,9 +11,13 @@ def skip_on_openai_quota_error(item):
     def wrapped(*args, **kwargs):
         try:
             return test_func(*args, **kwargs)
-        except openai.RateLimitError as e:
+        except openai.OpenAIError as e:
             message = str(e)
-            if "insufficient_quota" in message or getattr(e, "status_code", None) == 429:
+            if (
+                "insufficient_quota" in message
+                or getattr(e, "status_code", None) == 429
+                or getattr(e, "code", "") == "insufficient_quota"
+            ):
                 pytest.skip(f"Skipped due to OpenAI insufficient quota error: {message}")
             else:
                 raise
