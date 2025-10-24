@@ -3,6 +3,7 @@ import {
   mapFlowsToTools,
 } from "../../utils/mcpServerUtils";
 
+// Note: useMcpServer hook is fully tested via integration tests in McpServerTab.test.tsx
 describe("useMcpServer hook dependencies", () => {
   it("mapFlowsToTools transforms flow data correctly", () => {
     const flows = [
