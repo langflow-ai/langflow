@@ -38,8 +38,8 @@ test(
       page.getByTestId("color_picker_button_transparent"),
     ).toBeVisible();
 
-    // TEST 2: Verify native color picker is visible
-    await expect(page.getByTestId("native_color_picker")).toBeVisible();
+    // TEST 2: Verify native color picker exists (it's intentionally hidden for UX)
+    await expect(page.getByTestId("native_color_picker")).toBeAttached();
 
     // TEST 3: Test preset color selection (Rose)
     await page.getByTestId("color_picker_button_rose").click();
@@ -77,7 +77,10 @@ test(
 
     // Set a custom color using the native picker
     const colorInput = page.getByTestId("native_color_picker");
-    await colorInput.fill("#FF5733"); // Custom orange-red color
+    await colorInput.evaluate((input: HTMLInputElement, color: string) => {
+      input.value = color;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }, "#FF5733"); // Custom orange-red color
     await page.waitForTimeout(1000);
 
     element = await page.getByTestId("note_node");
