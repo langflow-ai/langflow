@@ -90,8 +90,6 @@ export default function ToolsTable({
     if (!open) {
       handleOnNewValue({
         value: data.map((row) => {
-          console.log(row);
-
           const name = parseString(row.name, [
             "snake_case",
             "no_blank",
