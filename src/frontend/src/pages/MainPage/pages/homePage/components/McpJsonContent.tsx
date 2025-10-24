@@ -9,13 +9,37 @@ import {
   operatingSystemTabs,
 } from "../utils/mcpServerUtils";
 
-// Helper Components
+// Types & Interfaces
 interface MemoizedApiKeyButtonProps {
   apiKey: string;
   isGeneratingApiKey: boolean;
   generateApiKey: () => void;
 }
 
+interface MemoizedCodeTagProps {
+  children: ReactNode;
+  isCopied: boolean;
+  copyToClipboard: () => void;
+  isAuthApiKey: boolean | null;
+  apiKey: string;
+  isGeneratingApiKey: boolean;
+  generateApiKey: () => void;
+}
+
+interface McpJsonContentProps {
+  selectedPlatform?: string;
+  setSelectedPlatform: (platform: string) => void;
+  isDarkMode: boolean;
+  isCopied: boolean;
+  copyToClipboard: (text: string) => void;
+  mcpJson: string;
+  isAuthApiKey: boolean | null;
+  apiKey: string;
+  isGeneratingApiKey: boolean;
+  generateApiKey: () => void;
+}
+
+// Helper Components
 const MemoizedApiKeyButton = memo(
   ({
     apiKey,
@@ -39,16 +63,6 @@ const MemoizedApiKeyButton = memo(
   ),
 );
 MemoizedApiKeyButton.displayName = "MemoizedApiKeyButton";
-
-interface MemoizedCodeTagProps {
-  children: ReactNode;
-  isCopied: boolean;
-  copyToClipboard: () => void;
-  isAuthApiKey: boolean | null;
-  apiKey: string;
-  isGeneratingApiKey: boolean;
-  generateApiKey: () => void;
-}
 
 const MemoizedCodeTag = memo(
   ({
@@ -90,19 +104,7 @@ const MemoizedCodeTag = memo(
 );
 MemoizedCodeTag.displayName = "MemoizedCodeTag";
 
-interface McpJsonContentProps {
-  selectedPlatform?: string;
-  setSelectedPlatform: (platform: string) => void;
-  isDarkMode: boolean;
-  isCopied: boolean;
-  copyToClipboard: (text: string) => void;
-  mcpJson: string;
-  isAuthApiKey: boolean | null;
-  apiKey: string;
-  isGeneratingApiKey: boolean;
-  generateApiKey: () => void;
-}
-
+// Main Component
 export const McpJsonContent = ({
   selectedPlatform,
   setSelectedPlatform,
