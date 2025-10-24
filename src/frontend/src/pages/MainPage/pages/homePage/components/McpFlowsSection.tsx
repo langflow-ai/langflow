@@ -1,10 +1,12 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ToolsComponent from "@/components/core/parameterRenderComponent/components/ToolsComponent";
+import type { InputFieldType } from "@/types/api";
+import type { ToolFlow } from "../utils/mcpServerUtils";
 
 interface McpFlowsSectionProps {
-  flowsMCPData: any[];
-  handleOnNewValue: (value: any) => void;
+  flowsMCPData: ToolFlow[];
+  handleOnNewValue: (changes: Partial<InputFieldType>) => void;
 }
 
 export const McpFlowsSection = ({
