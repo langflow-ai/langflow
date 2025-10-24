@@ -143,7 +143,7 @@ export default function PublishFlowModal({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Publish "{flowName}" to Marketplace</DialogTitle>
+          <DialogTitle>Publish the Agent to MarketPlace</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -159,7 +159,7 @@ export default function PublishFlowModal({
               required
             />
             <p className="text-xs text-muted-foreground">
-              Name for the cloned flow in the marketplace
+              Name for workflow in the marketplace
             </p>
           </div>
 

@@ -14,7 +14,7 @@ interface SidebarItem {
 const sidebarItems: SidebarItem[] = [
   { id: 'aistudio', icon: Home, path: '/agent-builder', label: 'AI Studio' },
   { id: 'agentmarketplace', icon: Workflow, path: '/agent-marketplace', label: 'Agent Marketplace' },
-  { id: 'marketplace', icon: ShoppingCart, path: '/marketplace', label: 'Marketplace' },
+  { id: 'marketplace', icon: Workflow, path: '/marketplace', label: 'Marketplace' },
   { id: 'integration', icon: Package, path: '/components', label: 'Integration' },
   { id: 'monitor', icon: Store, path: '/store', label: 'Monitor' },
 ];
