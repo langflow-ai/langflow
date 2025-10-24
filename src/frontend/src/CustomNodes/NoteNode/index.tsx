@@ -15,6 +15,28 @@ import { cn } from "@/utils/utils";
 import NodeDescription from "../GenericNode/components/NodeDescription";
 import NoteToolbarComponent from "./NoteToolbarComponent";
 
+// Helper function to check if a value is a hex color
+const isHexColor = (value: string): boolean => {
+  return /^#[0-9A-Fa-f]{6}$/.test(value);
+};
+
+// Helper function to resolve color value (handles both hex and preset names)
+const resolveColorValue = (
+  backgroundColor: string | null | undefined,
+): string | null => {
+  if (!backgroundColor) return null;
+
+  // If it's already a hex color, use it directly
+  if (isHexColor(backgroundColor)) {
+    return backgroundColor;
+  }
+
+  // If it's a preset name, get the value from COLOR_OPTIONS
+  const presetValue =
+    COLOR_OPTIONS[backgroundColor as keyof typeof COLOR_OPTIONS];
+  return presetValue || null;
+};
+
 const CHAR_LIMIT = 2500;
 const DEFAULT_WIDTH = 324;
 const DEFAULT_HEIGHT = 324;
@@ -26,10 +48,28 @@ function NoteNode({
   data: NoteDataType;
   selected?: boolean;
 }) {
-  const bgColor =
-    Object.keys(COLOR_OPTIONS).find(
-      (key) => key === data.node?.template.backgroundColor,
-    ) ?? Object.keys(COLOR_OPTIONS)[0];
+  // Resolve the background color value (handles both hex and preset names)
+  const resolvedColorValue = useMemo(() => {
+    return resolveColorValue(data.node?.template.backgroundColor);
+  }, [data.node?.template.backgroundColor]);
+
+  // For backward compatibility, keep the original bgColor logic for the toolbar
+  const bgColor = useMemo(() => {
+    const backgroundColor = data.node?.template.backgroundColor;
+    if (!backgroundColor) return "transparent";
+
+    // If it's a hex color, return it as-is for the color picker
+    if (isHexColor(backgroundColor)) {
+      return backgroundColor;
+    }
+
+    // If it's a preset name, return the preset name
+    if (Object.keys(COLOR_OPTIONS).includes(backgroundColor)) {
+      return backgroundColor;
+    }
+
+    return "transparent";
+  }, [data.node?.template.backgroundColor]);
   const nodeDiv = useRef<HTMLDivElement>(null);
   const [_resizedNote, setResizedNote] = useState(false);
   const currentFlow = useFlowStore((state) => state.currentFlow);
@@ -111,14 +151,14 @@ function NoteNode({
         style={{
           minWidth: nodeDataWidth,
           minHeight: nodeDataHeight,
-          backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000",
+          backgroundColor: resolvedColorValue ?? "#00000000",
         }}
         ref={nodeDiv}
         className={cn(
           "relative flex h-full w-full flex-col gap-3 rounded-xl p-3",
           "duration-200 ease-in-out",
           !isResizing && "transition-transform",
-          COLOR_OPTIONS[bgColor] !== null &&
+          resolvedColorValue !== null &&
             `border ${!selected && "-z-50 shadow-sm"}`,
         )}
       >
@@ -138,24 +178,24 @@ function NoteNode({
           <NodeDescription
             inputClassName={cn(
               "border-0 ring-0 focus:ring-0 resize-none shadow-none rounded-sm h-full min-w-full",
-              COLOR_OPTIONS[bgColor] === null
+              resolvedColorValue === null
                 ? ""
                 : "dark:!ring-background dark:text-background",
             )}
             mdClassName={cn(
-              COLOR_OPTIONS[bgColor] === null
+              resolvedColorValue === null
                 ? "dark:prose-invert"
                 : "dark:!text-background",
               "min-w-full",
             )}
-            style={{ backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000" }}
+            style={{ backgroundColor: resolvedColorValue ?? "#00000000" }}
             charLimit={CHAR_LIMIT}
             nodeId={dataId}
             selected={selected}
             description={dataDescription}
             emptyPlaceholder="Double-click to start typing or enter Markdown..."
             placeholderClassName={cn(
-              COLOR_OPTIONS[bgColor] === null ? "" : "dark:!text-background",
+              resolvedColorValue === null ? "" : "dark:!text-background",
               "px-2",
             )}
             editNameDescription={editNameDescription}

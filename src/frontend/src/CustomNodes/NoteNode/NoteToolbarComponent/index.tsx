@@ -97,10 +97,32 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
     ],
   );
 
+  // Helper function to check if a value is a hex color
+  const isHexColor = (value: string): boolean => {
+    return /^#[0-9A-Fa-f]{6}$/.test(value);
+  };
+
+  // Helper function to resolve color value (handles both hex and preset names)
+  const resolveColorValue = (
+    backgroundColor: string | null | undefined,
+  ): string | null => {
+    if (!backgroundColor) return null;
+
+    // If it's already a hex color, use it directly
+    if (isHexColor(backgroundColor)) {
+      return backgroundColor;
+    }
+
+    // If it's a preset name, get the value from COLOR_OPTIONS
+    const presetValue =
+      COLOR_OPTIONS[backgroundColor as keyof typeof COLOR_OPTIONS];
+    return presetValue || null;
+  };
+
   // Memoize the color picker background style
   const colorPickerStyle = useMemo(
     () => ({
-      backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000",
+      backgroundColor: resolveColorValue(bgColor) ?? "#00000000",
     }),
     [bgColor],
   );
@@ -120,14 +142,14 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
                     style={colorPickerStyle}
                     className={cn(
                       "h-4 w-4 rounded-full",
-                      COLOR_OPTIONS[bgColor] === null && "border",
+                      resolveColorValue(bgColor) === null && "border",
                     )}
                   />
                 </div>
               </div>
             </PopoverTrigger>
           </ShadTooltip>
-          <PopoverContent side="top" className="w-fit px-2 py-2">
+          <PopoverContent side="top" className="w-auto min-w-[200px] px-3 py-3">
             <ColorPickerButtons
               bgColor={bgColor}
               data={data}
