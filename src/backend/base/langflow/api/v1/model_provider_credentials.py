@@ -21,9 +21,13 @@ class ModelProviderCredentialCreate(BaseModel):
     description: str | None = Field(None, description="Optional description of the credential")
 
 
-class ModelProviderCredentialValueResponse(BaseModel):
-    """Response model for credential value."""
-    value: str = Field(..., description="The decrypted credential value")
+class ModelProviderCredentialResponse(BaseModel):
+    """Response model for credential metadata."""
+    name: str = Field(..., description="Name of the credential")
+    provider: str = Field(..., description="Model provider (e.g., OpenAI, Anthropic)")
+    description: str | None = Field(None, description="Description of the credential")
+    created_at: str = Field(..., description="When the credential was created")
+    updated_at: str = Field(..., description="When the credential was last updated")
 
 router = APIRouter(tags=["Model Provider Credentials"], prefix="/model-provider-credentials")
 
@@ -242,14 +246,14 @@ async def delete_model_provider_credential(
         ) from e
 
 
-@router.get("/{credential_id}/value", response_model=ModelProviderCredentialValueResponse)
-async def get_model_provider_credential_value(
+@router.get("/{credential_id}/metadata", response_model=ModelProviderCredentialResponse)
+async def get_model_provider_credential_metadata(
     credential_id: UUID,
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
-    """Get the decrypted value of a model provider credential.
+    """Get metadata for a model provider credential.
     
     Args:
         credential_id: The credential ID
@@ -257,7 +261,7 @@ async def get_model_provider_credential_value(
         session: Database session
         
     Returns:
-        dict[str, str]: The decrypted value
+        ModelProviderCredentialResponse: Credential metadata
     """
     try:
         variable_service = get_variable_service()
@@ -287,15 +291,16 @@ async def get_model_provider_credential_value(
                 detail="Model provider credential not found",
             )
         
-        # Get the decrypted value
-        value = await variable_service.get_variable(
-            user_id=current_user.id,
-            name=credential.name,
-            field="value",
-            session=session,
-        )
+        # Extract provider from default_fields
+        provider = credential.default_fields[0] if credential.default_fields else "Unknown"
         
-        return ModelProviderCredentialValueResponse(value=value)
+        return ModelProviderCredentialResponse(
+            name=credential.name,
+            provider=provider,
+            description=credential.description,
+            created_at=credential.created_at.isoformat() if credential.created_at else "",
+            updated_at=credential.updated_at.isoformat() if credential.updated_at else ""
+        )
     except HTTPException:
         raise
     except Exception as e:
