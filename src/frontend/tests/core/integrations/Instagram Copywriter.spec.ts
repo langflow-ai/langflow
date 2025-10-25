@@ -15,6 +15,7 @@ test(
       "OPENAI_API_KEY required to run this test",
     );
     const rateLimited = await checkRateLimit(process?.env?.OPENAI_API_KEY);
+    console.log("________________________", rateLimited);
     if (rateLimited) {
       test.skip(
         true,
