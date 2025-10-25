@@ -240,11 +240,8 @@ class ChatOllamaComponent(LCModelComponent):
                 if not url.endswith("/"):
                     url = url + "/"
                 return (
-                    await client.get(
-                        url=urljoin(url, "api/tags"),
-                        headers=self.headers
-                        )
-                    ).status_code == HTTP_STATUS_OK
+                    await client.get(url=urljoin(url, "api/tags"), headers=self.headers)
+                ).status_code == HTTP_STATUS_OK
         except httpx.RequestError:
             return False
 
@@ -327,11 +324,9 @@ class ChatOllamaComponent(LCModelComponent):
             show_url = urljoin(base_url, "api/show")
 
             async with httpx.AsyncClient() as client:
+                headers = self.headers
                 # Fetch available models
-                tags_response = await client.get(
-                    url=tags_url,
-                    headers=self.headers
-                )
+                tags_response = await client.get(url=tags_url, headers=headers)
                 tags_response.raise_for_status()
                 models = tags_response.json()
                 if asyncio.iscoroutine(models):
@@ -345,11 +340,7 @@ class ChatOllamaComponent(LCModelComponent):
                     await logger.adebug(f"Checking model: {model_name}")
 
                     payload = {"model": model_name}
-                    show_response = await client.post(
-                        url=show_url,
-                        json=payload,
-                        headers=self.headers
-                        )
+                    show_response = await client.post(url=show_url, json=payload, headers=headers)
                     show_response.raise_for_status()
                     json_data = show_response.json()
                     if asyncio.iscoroutine(json_data):
