@@ -25,7 +25,11 @@ withEventDeliveryModes(
     }
 
     await page.goto("/");
-    await awaitBootstrapTest(page);
+    await awaitBootstrapTest(
+      page,
+      {},
+      { apiKey: process?.env?.OPENAI_API_KEY, test },
+    );
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page

@@ -16,7 +16,11 @@ test.skip(
     if (!process.env.CI) {
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
-    await awaitBootstrapTest(page);
+    await awaitBootstrapTest(
+      page,
+      {},
+      { apiKey: process?.env?.OPENAI_API_KEY, test },
+    );
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 30000,

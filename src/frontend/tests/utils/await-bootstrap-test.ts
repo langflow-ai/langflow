@@ -8,15 +8,15 @@ export const awaitBootstrapTest = async (
     skipGoto?: boolean;
     skipModal?: boolean;
   },
-  test?: any,
+  checkRateLimitOptions?: { apiKey?: any; test?: any },
 ) => {
   if (!options?.skipGoto) {
     await page.goto("/");
   }
 
-  if (await checkRateLimit(page)) {
+  if (checkRateLimitOptions?.apiKey && (await checkRateLimit(page))) {
     console.warn("Rate limit detected, skipping test");
-    test.skip();
+    checkRateLimitOptions.test.skip();
   }
 
   await page.waitForSelector('[data-testid="mainpage_title"]', {

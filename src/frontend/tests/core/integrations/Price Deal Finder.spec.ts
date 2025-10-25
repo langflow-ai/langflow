@@ -29,7 +29,11 @@ withEventDeliveryModes(
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
 
-    await awaitBootstrapTest(page);
+    await awaitBootstrapTest(
+      page,
+      {},
+      { apiKey: process?.env?.OPENAI_API_KEY, test },
+    );
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Price Deal Finder" }).click();

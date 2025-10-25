@@ -21,7 +21,11 @@ withEventDeliveryModes(
       !process?.env?.ASTRA_DB_APPLICATION_TOKEN,
       "ASTRA_DB_APPLICATION_TOKEN required to run this test",
     );
-    await awaitBootstrapTest(page);
+    await awaitBootstrapTest(
+      page,
+      {},
+      { apiKey: process?.env?.OPENAI_API_KEY, test },
+    );
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page
