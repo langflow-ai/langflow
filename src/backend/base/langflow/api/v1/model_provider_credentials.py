@@ -359,4 +359,4 @@ async def get_credentials_by_provider(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve credentials for provider {provider}: {str(e)}",
-        ) from e
+        )
