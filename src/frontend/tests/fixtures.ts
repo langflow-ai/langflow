@@ -7,9 +7,11 @@ export async function checkRateLimit(apiKey): Promise<boolean> {
     apiKey,
   });
   try {
-    await client.models.list();
+    const list = await client.models.list();
+    console.log("___________________list", list);
     return false; // no rate limit hit
   } catch (error: any) {
+    console.error("____________________error", error);
     if (error instanceof OpenAI.RateLimitError || error.status === 429) {
       console.log("Rate limit reached");
       return true; // rate limit hit
