@@ -470,7 +470,6 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         headers = component.headers
         assert headers is None
 
-
     def test_headers_with_cloud_url_and_api_key(self):
         """Test that headers include Authorization for cloud URL with API key."""
         from lfx.base.models.ollama_constants import DEFAULT_OLLAMA_API_URL
@@ -482,7 +481,6 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         headers = component.headers
         assert headers is not None
         assert headers["Authorization"] == "Bearer test-api-key-12345"
-
 
     def test_headers_with_local_url_no_api_key(self):
         """Test that headers return None for local URLs without API key."""
@@ -665,9 +663,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
 
         mock_post_response = AsyncMock()
         mock_post_response.raise_for_status.return_value = None
-        mock_post_response.json.return_value = {
-            component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]
-        }
+        mock_post_response.json.return_value = {component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]}
         mock_post.return_value = mock_post_response
 
         result = await component.get_models("http://localhost:11434")
@@ -703,11 +699,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
             "tool_model_enabled": {"value": False},
         }
 
-        updated_config = await component.update_build_config(
-            build_config,
-            DEFAULT_OLLAMA_API_URL,
-            "base_url"
-        )
+        updated_config = await component.update_build_config(build_config, DEFAULT_OLLAMA_API_URL, "base_url")
 
         # Cloud URL should require API key and show the field
         assert updated_config["api_key"]["advanced"] is False
@@ -731,11 +723,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
             "tool_model_enabled": {"value": False},
         }
 
-        updated_config = await component.update_build_config(
-            build_config,
-            "http://localhost:11434",
-            "base_url"
-        )
+        updated_config = await component.update_build_config(build_config, "http://localhost:11434", "base_url")
 
         # For local URL, api_key should be cleared and hidden (advanced=True)
         assert updated_config["api_key"]["value"] is None
@@ -755,14 +743,13 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
             "tool_model_enabled": {"value": False},
         }
 
-        with patch.object(component, "is_valid_ollama_url", return_value=True), \
-             patch.object(component, "get_models", return_value=["glm-4.6:cloud", "kimi-k2:1t-cloud"]) as mock_get_models:
-
-            updated_config = await component.update_build_config(
-                build_config,
-                "new-api-key",
-                "api_key"
-            )
+        with (
+            patch.object(component, "is_valid_ollama_url", return_value=True),
+            patch.object(
+                component, "get_models", return_value=["glm-4.6:cloud", "kimi-k2:1t-cloud"]
+            ) as mock_get_models,
+        ):
+            updated_config = await component.update_build_config(build_config, "new-api-key", "api_key")
 
             # Should trigger model fetch with new API key
             mock_get_models.assert_called_once()
@@ -775,7 +762,6 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
 
         result = transform_localhost_url(DEFAULT_OLLAMA_API_URL)
         assert result == DEFAULT_OLLAMA_API_URL
-
 
     @patch("lfx.components.ollama.ollama.ChatOllama")
     def test_build_model_cloud_with_v1_suffix_stripped(self, mock_chat_ollama):
