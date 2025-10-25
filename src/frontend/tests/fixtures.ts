@@ -2,22 +2,21 @@
 import { test as base, expect } from "@playwright/test";
 import OpenAI from "openai";
 
-export async function checkRateLimit(apiKey): Promise<boolean> {
-  const client = new OpenAI({
-    apiKey,
-  });
+export async function checkRateLimit(page: Page): Promise<boolean> {
   try {
-    const list = await client.models.list();
-    console.log("___________________list", list);
-    return false; // no rate limit hit
-  } catch (error: any) {
-    console.error("____________________error", error);
-    if (error instanceof OpenAI.RateLimitError || error.status === 429) {
-      console.log("Rate limit reached");
-      return true; // rate limit hit
-    } else {
-      throw error;
-    }
+    await Promise.race([
+      page.waitForSelector("text=429", { timeout: 10000 }),
+      page.waitForSelector("text=Too Many Requests", { timeout: 10000 }),
+      page.waitForResponse((response) => response.status() === 429, {
+        timeout: 10000,
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("No rate limit detected")), 10000),
+      ),
+    ]);
+    return true;
+  } catch {
+    return false;
   }
 }
 

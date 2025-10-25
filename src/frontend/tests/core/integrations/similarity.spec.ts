@@ -1,4 +1,4 @@
-import { checkRateLimit, expect, test } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -14,13 +14,6 @@ test(
       !process?.env?.OPENAI_API_KEY,
       "OPENAI_API_KEY required to run this test",
     );
-    const rateLimited = await checkRateLimit(process?.env?.OPENAI_API_KEY);
-    if (rateLimited) {
-      test.skip(
-        true,
-        `Skipped due to OpenAI RateLimitError or Insufficient Quota error`,
-      );
-    }
 
     await awaitBootstrapTest(page);
 

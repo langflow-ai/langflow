@@ -1,7 +1,7 @@
 import { type Page } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import { checkRateLimit, expect, test } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -16,13 +16,6 @@ test(
       !process?.env?.OPENAI_API_KEY,
       "OPENAI_API_KEY required to run this test",
     );
-    const rateLimited = await checkRateLimit(process?.env?.OPENAI_API_KEY);
-    if (rateLimited) {
-      test.skip(
-        true,
-        `Skipped due to OpenAI RateLimitError or Insufficient Quota error`,
-      );
-    }
 
     if (!process.env.CI) {
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });

@@ -1,4 +1,5 @@
 import type { Page } from "playwright/test";
+import { checkRateLimit } from "../fixtures";
 import { addFlowToTestOnEmptyLangflow } from "./add-flow-to-test-on-empty-langflow";
 
 export const awaitBootstrapTest = async (
@@ -7,9 +8,15 @@ export const awaitBootstrapTest = async (
     skipGoto?: boolean;
     skipModal?: boolean;
   },
+  test?: any,
 ) => {
   if (!options?.skipGoto) {
     await page.goto("/");
+  }
+
+  if (await checkRateLimit(page)) {
+    console.warn("Rate limit detected, skipping test");
+    test.skip();
   }
 
   await page.waitForSelector('[data-testid="mainpage_title"]', {
