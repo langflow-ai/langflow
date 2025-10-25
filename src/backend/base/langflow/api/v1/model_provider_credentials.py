@@ -15,6 +15,7 @@ from langflow.services.variable.service import DatabaseVariableService
 
 class ModelProviderCredentialCreate(BaseModel):
     """Request model for creating a model provider credential."""
+
     name: str = Field(..., description="Name of the credential")
     provider: str = Field(..., description="Model provider (e.g., OpenAI, Anthropic)")
     value: str = Field(..., description="API key value")
@@ -40,17 +41,16 @@ async def create_model_provider_credential(
     current_user: CurrentActiveUser,
 ):
     """Create a new model provider credential.
-    
+
     Args:
         request: Model provider credential creation request
         current_user: Current authenticated user
         session: Database session
-        
+
     Returns:
         VariableRead: The created credential
     """
     try:
-
         variable_service = get_variable_service()
         if not isinstance(variable_service, DatabaseVariableService):
             raise HTTPException(
@@ -293,7 +293,7 @@ async def get_model_provider_credential_metadata(
         
         # Extract provider from default_fields
         provider = credential.default_fields[0] if credential.default_fields else "Unknown"
-        
+
         return ModelProviderCredentialResponse(
             name=credential.name,
             provider=provider,
