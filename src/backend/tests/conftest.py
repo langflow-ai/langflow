@@ -10,6 +10,7 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 import anyio
+import openai
 import orjson
 import pytest
 from asgi_lifespan import LifespanManager
@@ -164,6 +165,31 @@ def get_text():
 #         _pytest.skip("OPENAI_API_KEY is not set or is empty")
 
 
+def skip_on_openai_quota_error(item):
+    test_func = item.obj
+
+    def wrapped(*args, **kwargs):
+        try:
+            return test_func(*args, **kwargs)
+        except (openai.OpenAIError, openai.RateLimitError) as e:
+            message = str(e)
+            if (
+                "insufficient_quota" in message
+                or getattr(e, "status_code", None) == 429
+                or getattr(e, "code", "") == "insufficient_quota"
+            ):
+                logger.warning(
+                    "⚠️ Skipping test '%s' due to OpenAI quota/rate limit: %s",
+                    item.name,
+                    message,
+                )
+                pytest.skip(f"Skipped due to OpenAI insufficient quota error: {message}")
+            else:
+                raise
+
+    item.obj = wrapped
+
+
 def pytest_collection_modifyitems(config, items):  # noqa: ARG001
     """Automatically add markers based on test file location."""
     for item in items:
@@ -173,6 +199,7 @@ def pytest_collection_modifyitems(config, items):  # noqa: ARG001
             item.add_marker(pytest.mark.integration)
         elif "tests/slow/" in str(item.fspath):
             item.add_marker(pytest.mark.slow)
+        skip_on_openai_quota_error(item)
 
 
 async def delete_transactions_by_flow_id(db: AsyncSession, flow_id: UUID):

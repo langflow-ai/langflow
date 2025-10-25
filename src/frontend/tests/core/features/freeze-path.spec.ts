@@ -21,7 +21,11 @@ test(
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
 
-    await awaitBootstrapTest(page);
+    await awaitBootstrapTest(
+      page,
+      {},
+      { apiKey: process?.env?.OPENAI_API_KEY, test },
+    );
 
     const firstRunLangflow = await page
       .getByTestId("empty-project-description")

@@ -18,7 +18,11 @@ withEventDeliveryModes(
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
 
-    await awaitBootstrapTest(page);
+    await awaitBootstrapTest(
+      page,
+      {},
+      { apiKey: process?.env?.OPENAI_API_KEY, test },
+    );
 
     // Open Simple Agent template
     await page.getByTestId("side_nav_options_all-templates").click();

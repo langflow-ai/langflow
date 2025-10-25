@@ -15,7 +15,11 @@ test(
       "OPENAI_API_KEY required to run this test",
     );
 
-    await awaitBootstrapTest(page);
+    await awaitBootstrapTest(
+      page,
+      {},
+      { apiKey: process?.env?.OPENAI_API_KEY, test },
+    );
 
     await page.getByTestId("blank-flow").click();
 

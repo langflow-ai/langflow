@@ -1,5 +1,24 @@
 // tests/fixtures.ts
 import { test as base, expect } from "@playwright/test";
+import OpenAI from "openai";
+
+export async function checkRateLimit(page: Page): Promise<boolean> {
+  try {
+    await Promise.race([
+      page.waitForSelector("text=429", { timeout: 10000 }),
+      page.waitForSelector("text=Too Many Requests", { timeout: 10000 }),
+      page.waitForResponse((response) => response.status() === 429, {
+        timeout: 10000,
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("No rate limit detected")), 10000),
+      ),
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // Extend test to log backend errors
 export const test = base.extend({
@@ -225,7 +244,18 @@ export const test = base.extend({
       }
     });
 
-    await use(page);
+    try {
+      await use(page);
+    } catch (error: any) {
+      if (error instanceof OpenAI.RateLimitError || error.status === 429) {
+        test.skip(
+          true,
+          `Skipped due to OpenAI RateLimitError or Insufficient Quota error`,
+        );
+      } else {
+        throw error;
+      }
+    }
 
     // Check for errors and fail test if not allowed
     if (errors.length > 0) {
