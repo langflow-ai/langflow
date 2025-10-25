@@ -9,12 +9,10 @@ from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.properties import Properties
-from langflow.schema.validators import str_to_timestamp, str_to_timestamp_validator
+from langflow.schema.validators import TF_WITH_TZ_AND_MICROSECONDS, str_to_timestamp, str_to_timestamp_validator
 
 if TYPE_CHECKING:
     from langflow.schema.message import Message
-
-TF_WITH_TZ_AND_MICROSECONDS = "%Y-%m-%d %H:%M:%S.%f %Z"
 
 
 class MessageBase(SQLModel):
