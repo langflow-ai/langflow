@@ -566,14 +566,14 @@ class ConnectionBuilder:
         """Validate inputs for build_connections method."""
         errors = []
 
-        if not isinstance(components, dict):
+        if not isinstance(components, (dict, list)):
             error = self.error_handler.create_error(
                 operation="validate_build_inputs",
                 error_id="invalid_components_type",
-                message="Components must be a dictionary",
+                message="Components must be a dictionary or list",
                 category=ErrorCategory.VALIDATION,
                 severity=ErrorSeverity.CRITICAL,
-                suggested_fix="Ensure components is a dictionary object"
+                suggested_fix="Ensure components is a dictionary or list object"
             )
             errors.append(error)
 

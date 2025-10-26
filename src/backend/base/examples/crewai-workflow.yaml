@@ -1,0 +1,120 @@
+name: Research Team Workflow
+description: Multi-agent research coordination using CrewAI framework
+domain: research_analytics
+version: 1.0.0
+
+# Multi-agent CrewAI workflow demonstrating agent coordination
+components:
+  # Research Analyst Agent
+  - type: CrewAIAgent
+    id: research_analyst
+    config:
+      role: "Research Analyst"
+      goal: "Analyze market data and trends to provide comprehensive insights"
+      backstory: >
+        You are a seasoned financial analyst with 10+ years of experience
+        in market research and data analysis. You excel at identifying patterns
+        and extracting actionable insights from complex datasets.
+      model_provider: OpenAI
+      model: gpt-4
+      temperature: 0.3
+      max_iterations: 3
+      memory: true
+
+  # Report Writer Agent
+  - type: CrewAIAgent
+    id: report_writer
+    config:
+      role: "Technical Report Writer"
+      goal: "Create comprehensive, well-structured reports from analysis results"
+      backstory: >
+        You are a professional technical writer specializing in financial
+        and research documentation. You transform complex analysis into
+        clear, actionable reports that stakeholders can easily understand.
+      model_provider: OpenAI
+      model: gpt-4
+      temperature: 0.5
+      max_iterations: 2
+      memory: true
+
+  # Quality Reviewer Agent
+  - type: CrewAIAgent
+    id: quality_reviewer
+    config:
+      role: "Quality Assurance Reviewer"
+      goal: "Ensure reports meet quality standards and accuracy requirements"
+      backstory: >
+        You are a meticulous quality assurance specialist with expertise
+        in reviewing technical documentation for accuracy, completeness,
+        and clarity.
+      model_provider: OpenAI
+      model: gpt-4
+      temperature: 0.2
+      max_iterations: 1
+      memory: true
+
+  # Data source tools
+  - type: APIRequest
+    id: market_data_api
+    config:
+      url: "https://api.marketdata.com/v1/quotes"
+      method: "GET"
+      headers:
+        Authorization: "Bearer ${MARKET_API_KEY}"
+    provides:
+      - useAs: tools
+        in: research_analyst
+
+  - type: WebSearch
+    id: news_search
+    config:
+      search_engine: "google"
+      max_results: 10
+      search_type: "news"
+    provides:
+      - useAs: tools
+        in: research_analyst
+
+  # Analysis tools
+  - type: Calculator
+    id: financial_calculator
+    config:
+      precision: 8
+      functions: ["statistical", "financial"]
+    provides:
+      - useAs: tools
+        in: research_analyst
+
+  # Document processing
+  - type: DocumentProcessor
+    id: doc_processor
+    config:
+      formats: ["pdf", "csv", "xlsx"]
+      extract_tables: true
+    provides:
+      - useAs: tools
+        in: research_analyst
+      - useAs: tools
+        in: report_writer
+
+  # Crew coordination
+  - type: SequentialCrew
+    id: research_crew
+    config:
+      agents: [research_analyst, report_writer, quality_reviewer]
+      max_execution_time: 3600  # 1 hour
+      verbose: true
+      memory: true
+    depends_on:
+      - research_analyst
+      - report_writer
+      - quality_reviewer
+
+# Workflow validation settings
+validation:
+  target_automation: 85
+  healthcare_compliant: false
+  expected_components: 8
+  expected_edges: 6
+  multi_agent: true
+  crew_workflow: true

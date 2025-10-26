@@ -1,0 +1,218 @@
+id: urn:agent:genesis:data-processing:document-analysis:1.0.0
+name: Document Analysis Agent
+fullyQualifiedName: genesis.data_processing.document_analysis_agent
+description: Intelligent document processing agent that extracts, analyzes, and summarizes information from various document formats
+domain: data-processing.ai
+subDomain: document-analysis
+version: 1.0.0
+environment: production
+agentOwner: data-team@company.ai
+agentOwnerDisplayName: Data Processing Team
+email: data-team@company.ai
+status: ACTIVE
+
+variables:
+- name: supported_formats
+  type: array
+  required: false
+  default: ["pdf", "docx", "txt", "csv", "xlsx"]
+  description: List of supported document formats
+- name: max_file_size_mb
+  type: number
+  required: false
+  default: 50
+  description: Maximum file size in megabytes
+- name: extraction_mode
+  type: string
+  required: false
+  default: "comprehensive"
+  description: Extraction mode (quick, standard, comprehensive)
+- name: language_detection
+  type: boolean
+  required: false
+  default: true
+  description: Enable automatic language detection
+- name: summary_length
+  type: string
+  required: false
+  default: "medium"
+  description: Summary length (short, medium, long)
+
+tags:
+- document-processing
+- text-analysis
+- data-extraction
+- content-summarization
+- automation
+
+reusability:
+  asTools: true
+kind: Single Agent
+agentGoal: Extract, analyze, and summarize key information from documents to enable automated document processing workflows
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: Asynchronous
+runMode: OnDemand
+agencyLevel: DataDrivenWorkflow
+toolsUse: true
+learningCapability: Unsupervised
+
+components:
+- id: document-input
+  name: Document Input Handler
+  kind: Data
+  type: genesis:file_input
+  description: Accept document uploads and file references
+  config:
+    accepted_formats: ["pdf", "docx", "txt", "csv", "xlsx", "pptx"]
+    max_size_mb: ${max_file_size_mb}
+  provides:
+  - useAs: input
+    in: format-detector
+    description: Raw document data for processing
+
+- id: format-detector
+  name: Document Format Detector
+  kind: Processor
+  type: genesis:file_processor
+  description: Detect document format and prepare for appropriate extraction
+  config:
+    auto_detect: true
+    validation: true
+  provides:
+  - useAs: input
+    in: content-extractor
+    description: Formatted document with metadata
+
+- id: content-extractor
+  name: Content Extraction Engine
+  kind: Tool
+  type: genesis:text_extractor
+  description: Extract text content from various document formats
+  asTools: true
+  config:
+    ocr_enabled: true
+    preserve_formatting: true
+    extract_tables: true
+    extract_images: false
+  provides:
+  - useAs: tools
+    in: analysis-agent
+    description: Raw text extraction capabilities
+
+- id: language-detector
+  name: Language Detection Service
+  kind: Tool
+  type: genesis:api_request
+  description: Detect document language for proper processing
+  asTools: true
+  config:
+    method: POST
+    endpoint: "https://api.language-detection.com/detect"
+    headers:
+    - key: Authorization
+      value: ${LANGUAGE_API_KEY}
+    timeout: 10
+  provides:
+  - useAs: tools
+    in: analysis-agent
+    description: Language detection capabilities
+
+- id: entity-extractor
+  name: Named Entity Extractor
+  kind: Tool
+  type: genesis:ner_processor
+  description: Extract named entities from document content
+  asTools: true
+  config:
+    entity_types: ["PERSON", "ORG", "GPE", "MONEY", "DATE", "PRODUCT"]
+    confidence_threshold: 0.8
+  provides:
+  - useAs: tools
+    in: analysis-agent
+    description: Entity extraction capabilities
+
+- id: analysis-agent
+  name: Document Analysis Agent
+  kind: Agent
+  type: genesis:openai
+  description: Main agent that analyzes document content and generates insights
+  config:
+    model: gpt-4-turbo
+    temperature: 0.3
+    max_tokens: 3000
+  prompt: |
+    You are a Document Analysis AI that processes and analyzes various types of documents.
+
+    Your capabilities:
+    1. Extract and structure key information from documents
+    2. Identify important entities, dates, and relationships
+    3. Generate comprehensive summaries
+    4. Categorize document types and content themes
+    5. Flag potential issues or inconsistencies
+
+    Analysis Framework:
+    - **Document Type**: Identify the document category
+    - **Key Information**: Extract critical data points
+    - **Entities**: List important people, organizations, locations, etc.
+    - **Summary**: Provide a concise overview based on length preference
+    - **Themes**: Identify main topics and categories
+    - **Action Items**: Extract tasks, deadlines, or requirements if present
+    - **Quality Assessment**: Note any issues with document quality or completeness
+
+    Output Format:
+    ```json
+    {
+      "document_type": "string",
+      "language": "string",
+      "key_information": {
+        "title": "string",
+        "author": "string",
+        "date": "string",
+        "pages": "number"
+      },
+      "entities": {
+        "people": ["list"],
+        "organizations": ["list"],
+        "locations": ["list"],
+        "dates": ["list"],
+        "amounts": ["list"]
+      },
+      "summary": {
+        "brief": "string",
+        "detailed": "string"
+      },
+      "themes": ["list"],
+      "action_items": ["list"],
+      "quality_score": "number (0-10)",
+      "extraction_confidence": "number (0-1)"
+    }
+    ```
+
+    Document Content: {document_content}
+    Extraction Mode: {extraction_mode}
+    Summary Length: {summary_length}
+  provides:
+  - useAs: output
+    in: result-formatter
+    description: Structured document analysis
+
+- id: result-formatter
+  name: Results Formatter
+  kind: Processor
+  type: genesis:json_processor
+  description: Format analysis results for output
+  config:
+    format: "structured_json"
+    include_metadata: true
+    validate_schema: true
+  provides:
+  - useAs: output
+    in: analysis-output
+    description: Formatted analysis results
+
+- id: analysis-output
+  name: Analysis Results Output
+  kind: Data
+  type: genesis:json_output
+  description: Deliver structured document analysis results

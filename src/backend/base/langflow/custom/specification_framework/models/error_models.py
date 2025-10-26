@@ -116,7 +116,7 @@ class FrameworkError:
         """Convert error to structured log format."""
         return {
             "error_id": self.error_id,
-            "message": self.message,
+            "error_message": self.message,  # Changed from 'message' to avoid LogRecord conflict
             "category": self.category.value,
             "severity": self.severity.value,
             "service": self.context.service_name,

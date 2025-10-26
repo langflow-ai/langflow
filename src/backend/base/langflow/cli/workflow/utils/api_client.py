@@ -77,6 +77,17 @@ class APIClient:
             response.raise_for_status()
             return response.json()
 
+    async def get_all_components(self) -> Dict[str, Any]:
+        """Get all available Langflow components from /all endpoint."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/api/v1/all",
+                headers=self._get_headers(),
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return response.json()
+
     async def get_component_mapping(self, spec_type: str) -> Dict[str, Any]:
         """Get component mapping information."""
         async with httpx.AsyncClient() as client:
@@ -268,6 +279,10 @@ class APIClient:
     def get_available_components_sync(self) -> Dict[str, Any]:
         """Synchronous wrapper for get_available_components."""
         return self._run_async_safely(self.get_available_components())
+
+    def get_all_components_sync(self) -> Dict[str, Any]:
+        """Synchronous wrapper for get_all_components."""
+        return self._run_async_safely(self.get_all_components())
 
     def get_component_mapping_sync(self, spec_type: str) -> Dict[str, Any]:
         """Synchronous wrapper for get_component_mapping."""

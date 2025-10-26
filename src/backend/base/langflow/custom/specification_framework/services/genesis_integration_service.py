@@ -19,12 +19,10 @@ from ..models.processing_context import ProcessingContext
 # Legacy Genesis imports (will be replaced gradually)
 try:
     from langflow.services.spec import SpecService
-    from langflow.services.component_mapping import ComponentMappingService
     from langflow.services.runtime import LangflowConverter
 except ImportError:
     # Fallback if Genesis services are not available
     SpecService = None
-    ComponentMappingService = None
     LangflowConverter = None
 
 logger = logging.getLogger(__name__)
@@ -45,7 +43,6 @@ class GenesisIntegrationService:
 
     def __init__(self,
                  spec_service: Optional[Type] = None,
-                 component_mapping_service: Optional[Type] = None,
                  langflow_converter: Optional[Type] = None,
                  specification_processor: Optional["SpecificationProcessor"] = None):
         """
@@ -53,12 +50,10 @@ class GenesisIntegrationService:
 
         Args:
             spec_service: Legacy SpecService (optional)
-            component_mapping_service: Legacy ComponentMappingService (optional)
             langflow_converter: Legacy LangflowConverter (optional)
             specification_processor: Professional framework processor (optional, will be lazily loaded)
         """
         self.spec_service = spec_service or SpecService
-        self.component_mapping_service = component_mapping_service or ComponentMappingService
         self.langflow_converter_class = langflow_converter or LangflowConverter
 
         # Use dependency injection to avoid circular imports
@@ -475,7 +470,6 @@ class GenesisIntegrationService:
         """Check if legacy Genesis services are available."""
         return all([
             self.spec_service is not None,
-            self.component_mapping_service is not None,
             self.langflow_converter_class is not None
         ])
 

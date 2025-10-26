@@ -6,7 +6,7 @@ with automatic component discovery, edge generation, and healthcare compliance v
 """
 
 from .core.specification_processor import SpecificationProcessor
-from .services.component_discovery import ComponentDiscoveryService
+from .services.component_discovery import SimplifiedComponentValidator
 from .services.workflow_converter import WorkflowConverter
 from .services.connection_builder import ConnectionBuilder
 from .services.genesis_integration_service import GenesisIntegrationService
@@ -18,7 +18,7 @@ from .utils.langflow_compatibility import LangflowCompatibilityHelper
 __version__ = "2.0.0"
 __all__ = [
     "SpecificationProcessor",
-    "ComponentDiscoveryService",
+    "SimplifiedComponentValidator",
     "WorkflowConverter",
     "ConnectionBuilder",
     "GenesisIntegrationService",

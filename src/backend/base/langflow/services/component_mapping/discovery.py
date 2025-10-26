@@ -316,9 +316,16 @@ class UnifiedComponentDiscovery:
                 return
 
             # Create component info
+            # Use 'name' attribute if available, otherwise use class name
+            component_name = getattr(component_class, 'name', class_name)
+            # Ensure component_name is not None
+            if not component_name:
+                component_name = class_name
+            genesis_name = self._generate_genesis_name(component_name)
+
             component = DiscoveredComponent(
-                genesis_type=f"genesis:{self._generate_genesis_name(class_name)}",
-                component_name=class_name,
+                genesis_type=f"genesis:{genesis_name}",
+                component_name=component_name,
                 module_path=module_name,
                 class_name=class_name,
                 category=self._introspect_category(component_class),
@@ -376,8 +383,8 @@ class UnifiedComponentDiscovery:
         """
         capabilities = ComponentCapabilities()
 
-        # Get all methods
-        methods = inspect.getmembers(component_class, inspect.ismethod)
+        # Get all methods (including functions defined in the class)
+        methods = inspect.getmembers(component_class, lambda m: inspect.ismethod(m) or inspect.isfunction(m))
         method_names = [name for name, _ in methods]
 
         # Check for tool-providing methods
@@ -397,6 +404,11 @@ class UnifiedComponentDiscovery:
         if "get_tool" in method_names:
             capabilities.provides_tools = True
             capabilities.tool_methods.append("get_tool")
+
+        # Check for _get_tools method (used by AgentComponent)
+        if "_get_tools" in method_names:
+            capabilities.provides_tools = True
+            capabilities.tool_methods.append("_get_tools")
 
         # Check for build method
         if "build" in method_names:
@@ -638,10 +650,14 @@ class UnifiedComponentDiscovery:
 
     def _generate_genesis_name(self, class_name: str) -> str:
         """Generate genesis type name from class name."""
+        # Handle None or empty class names
+        if not class_name:
+            return "unknown_component"
+
         # Remove common suffixes
         name = class_name
         for suffix in ["Component", "Node", "Tool", "Agent", "Model"]:
-            if name.endswith(suffix):
+            if name and name.endswith(suffix):
                 name = name[:-len(suffix)]
 
         # If name is empty after removing suffixes, use the original class name
@@ -776,10 +792,12 @@ class UnifiedComponentDiscovery:
 
         for component in self.components.values():
             # Create adapter for each component
+            # Ensure target_component is never None
+            target_component = component.component_name or component.class_name or "UnknownComponent"
             adapter = {
                 "genesis_type": component.genesis_type,
                 "runtime_type": "langflow",  # Default runtime
-                "target_component": component.component_name,
+                "target_component": target_component,
                 "adapter_config": {
                     "module": component.module_path,
                     "class": component.class_name,

@@ -1,0 +1,34 @@
+id: urn:agent:genesis:test:simple-test:1.0.0
+name: Simple Test Agent
+description: A basic test agent to validate the simplified framework
+domain: test.ai
+subDomain: validation
+version: 1.0.0
+environment: development
+agentOwner: test@company.ai
+agentOwnerDisplayName: Test Team
+email: test@company.ai
+status: ACTIVE
+
+agentGoal: Test the simplified specification framework
+
+components:
+- id: user-input
+  name: User Input
+  kind: Data
+  type: ChatInput
+  description: Receive messages from users
+
+- id: simple-agent
+  name: Simple Agent
+  kind: Agent
+  type: Agent
+  description: Basic agent for testing
+  config:
+    system_prompt: "You are a helpful assistant."
+
+- id: output
+  name: Output
+  kind: Data
+  type: ChatOutput
+  description: Send responses back to the user

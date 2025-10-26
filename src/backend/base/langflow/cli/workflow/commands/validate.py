@@ -9,7 +9,7 @@ import click
 
 from ..utils.output import success_message, error_message, warning_message, info_message, format_validation_report
 from ..utils.api_client import APIClient
-from ..utils.professional_service_integration import ProfessionalServiceIntegration
+from ..utils.service_integration import ServiceIntegration
 
 
 @click.command(name="validate")
@@ -266,18 +266,13 @@ async def async_validate_main(
     local: bool,
     healthcare: bool,
 ):
-    """Asynchronous validation using professional framework services."""
+    """Asynchronous validation using enhanced service integration."""
     try:
-        professional_integration = ProfessionalServiceIntegration()
-
-        # Initialize professional framework services
-        if not professional_integration.is_service_available():
-            error_message(f"Professional framework services unavailable: {professional_integration.get_last_error()}")
-            error_message("Please use API mode (remove --local flag) or check service configuration")
-            ctx.exit(1)
+        # Initialize service integration with local mode
+        service_integration = ServiceIntegration(local_mode=True)
 
         if debug:
-            success_message("Professional framework services initialized for local validation")
+            success_message("Enhanced service integration initialized for local validation")
             if healthcare:
                 info_message("Healthcare compliance validation enabled")
 
@@ -314,16 +309,14 @@ async def async_validate_main(
             error_message(f"Invalid YAML format: {e}")
             ctx.exit(1)
 
-        # Perform validation using professional framework services
+        # Perform validation using enhanced service integration
         try:
             if quick:
                 info_message("Performing quick local validation...")
             else:
-                info_message("Performing local validation with professional framework...")
+                info_message("Performing local validation with enhanced framework...")
 
-            validation_result = await professional_integration.validate_specification_local(
-                spec_yaml, healthcare_mode=healthcare
-            )
+            validation_result = await service_integration.validate_specification(spec_path)
 
             # Add local processing indicators
             validation_result["local_processing"] = True
@@ -336,11 +329,35 @@ async def async_validate_main(
                 traceback.print_exc()
             ctx.exit(1)
 
-        # Process results based on format
-        valid = validation_result.get('valid', False)
-        errors = validation_result.get('errors', [])
-        warnings = validation_result.get('warnings', [])
-        suggestions = validation_result.get('suggestions', [])
+        # Process results based on format (enhanced service integration format)
+        valid = validation_result.get('success', False)
+        validation_details = validation_result.get('validation_details', {})
+        errors = []
+        warnings = []
+        suggestions = []
+
+        # Extract errors from incompatible and missing components
+        if not valid and validation_details:
+            incompatible = validation_details.get('incompatible_components', [])
+            missing = validation_details.get('missing_components', [])
+
+            for comp in incompatible:
+                errors.append(f"Component '{comp.get('id')}': {comp.get('error', 'Unknown error')}")
+
+            for comp in missing:
+                errors.append(f"Component '{comp.get('id')}': {comp.get('error', 'Unknown error')}")
+
+        # Show component discovery success info
+        if valid and debug:
+            compatible_count = validation_result.get('compatible_count', 0)
+            total_components = validation_result.get('total_components', 0)
+            click.echo(f"🧩 Component Discovery: {compatible_count}/{total_components} components resolved successfully")
+
+        # Convert to legacy format for compatibility
+        validation_result['valid'] = valid
+        validation_result['errors'] = errors
+        validation_result['warnings'] = warnings
+        validation_result['suggestions'] = suggestions
 
         # Show performance info if available
         performance = validation_result.get('performance', {})

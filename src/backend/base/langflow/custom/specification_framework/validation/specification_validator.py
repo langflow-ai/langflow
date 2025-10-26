@@ -11,6 +11,7 @@ from typing import Dict, Any, List, Optional, Set, Tuple
 from datetime import datetime
 
 from ..models.validation_models import ValidationResult, ValidationError, ValidationWarning
+from ..services.component_discovery import SimplifiedComponentValidator
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class SpecificationValidator:
 
     def __init__(self):
         """Initialize the specification validator."""
-        self.supported_component_types = self._get_supported_component_types()
+        self.component_validator = SimplifiedComponentValidator()
         self.required_fields = self._get_required_fields()
         self.healthcare_component_types = self._get_healthcare_component_types()
 
@@ -251,7 +252,7 @@ class SpecificationValidator:
         # Validate individual components
         component_ids = set()
         for component_id, component_definition in component_items:
-            comp_errors, comp_warnings = self._validate_single_component(
+            comp_errors, comp_warnings = await self._validate_single_component(
                 component_id, component_definition, f"components.{component_id}"
             )
             errors.extend(comp_errors)
@@ -270,7 +271,7 @@ class SpecificationValidator:
 
         return errors, warnings
 
-    def _validate_single_component(self,
+    async def _validate_single_component(self,
                                  component_id: str,
                                  component: Dict[str, Any],
                                  field_path: str) -> Tuple[List[ValidationError], List[ValidationWarning]]:
@@ -308,16 +309,27 @@ class SpecificationValidator:
                     severity="error"
                 ))
 
-        # Validate component type
+        # Validate component type using dynamic component validator
         component_type = component.get("type", "")
-        if component_type and component_type not in self.supported_component_types:
-            errors.append(ValidationError(
-                error_type="unsupported_component_type",
-                message=f"Unsupported component type: {component_type}",
-                field_path=f"{field_path}.type",
-                severity="error",
-                suggested_fix=f"Use one of: {', '.join(list(self.supported_component_types)[:5])}"
-            ))
+        if component_type:
+            try:
+                is_valid = await self.component_validator.validate_component(component_type)
+                if not is_valid:
+                    errors.append(ValidationError(
+                        error_type="unsupported_component_type",
+                        message=f"Unsupported component type: {component_type}",
+                        field_path=f"{field_path}.type",
+                        severity="error",
+                        suggested_fix="Check available components in Langflow /all endpoint"
+                    ))
+            except Exception as e:
+                logger.warning(f"Error validating component type {component_type}: {e}")
+                warnings.append(ValidationWarning(
+                    warning_type="component_validation_error",
+                    message=f"Could not validate component type {component_type}: {e}",
+                    field_path=f"{field_path}.type",
+                    severity="medium"
+                ))
 
         # Validate component name
         name = component.get("name", "")
@@ -685,17 +697,6 @@ class SpecificationValidator:
 
         return warnings
 
-    def _get_supported_component_types(self) -> Set[str]:
-        """Get set of supported component types."""
-        return {
-            "genesis:agent", "genesis:prompt", "genesis:chat_input", "genesis:chat_output",
-            "genesis:mcp_tool", "genesis:api_request", "genesis:knowledge_hub_search",
-            "genesis:crewai_agent", "genesis:crewai_sequential_task", "genesis:crewai_sequential_crew",
-            "genesis:ehr_connector", "genesis:eligibility_connector", "genesis:claims_connector",
-            "genesis:pharmacy_connector", "genesis:medical_data_standardizer", "genesis:appeals_data_connector",
-            "genesis:accumulator_benefits_connector", "genesis:autonomize_model", "genesis:memory",
-            "genesis:vector_store", "genesis:embedding", "genesis:data_processor", "genesis:custom"
-        }
 
     def _get_required_fields(self) -> Dict[str, List[str]]:
         """Get required fields for different specification sections."""
@@ -853,36 +854,7 @@ class SpecificationValidator:
         else:
             return 0
 
-    def _validate_healthcare_compliance(self, spec: Dict[str, Any]) -> Tuple[List[ValidationError], List[ValidationWarning], bool]:
-        """Legacy method - redirects to safe version."""
-        import asyncio
-
-        # Convert async call to sync for backward compatibility
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        try:
-            result = loop.run_until_complete(self._validate_healthcare_compliance_safe(spec))
-            if isinstance(result, ErrorResult):
-                # Convert ErrorResult back to legacy format
-                return [ValidationError(
-                    error_type="healthcare_validation_failed",
-                    message="Healthcare compliance validation failed",
-                    field_path="healthcare_compliance",
-                    severity="high"
-                )], [], False
-            return result
-        except Exception as e:
-            logger.error(f"Healthcare compliance validation failed: {e}")
-            return [ValidationError(
-                error_type="healthcare_validation_error",
-                message=str(e),
-                field_path="healthcare_compliance",
-                severity="high"
-            )], [], False
+    # Removed duplicate method - using the original _validate_healthcare_compliance above
 
     def _count_relationships(self, spec: Dict[str, Any]) -> int:
         """Count total relationships in specification."""

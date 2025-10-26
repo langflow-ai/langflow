@@ -1,0 +1,60 @@
+{
+  "specification_loaded": true,
+  "spec_metadata": {
+    "name": "Simple Chatbot Agent",
+    "version": "1.0.0",
+    "component_count": 3
+  },
+  "component_validation": {
+    "user-input": {
+      "type": "genesis:chat_input",
+      "valid": true,
+      "info_retrieved": true,
+      "category": "input_output",
+      "langflow_component": "ChatInput"
+    },
+    "chatbot-agent": {
+      "type": "genesis:openai",
+      "valid": true,
+      "info_retrieved": true,
+      "category": "azure",
+      "langflow_component": "AzureOpenAIModel"
+    },
+    "response-output": {
+      "type": "genesis:chat_output",
+      "valid": true,
+      "info_retrieved": true,
+      "category": "input_output",
+      "langflow_component": "ChatOutput"
+    }
+  },
+  "all_components_valid": true,
+  "processing_results": {
+    "config_1": {
+      "success": false,
+      "has_workflow": false,
+      "component_count": 0,
+      "edge_count": 0,
+      "processing_time": 0.0011360645294189453,
+      "config": {
+        "enable_healthcare_compliance": false,
+        "enable_performance_benchmarking": false
+      },
+      "error": "Workflow conversion failed: Edge 0 references non-existent source node: b00988a6-cf2f-46b8-95c1-cc10a5f39e20"
+    },
+    "config_2": {
+      "success": false,
+      "has_workflow": false,
+      "component_count": 0,
+      "edge_count": 0,
+      "processing_time": 0.0006880760192871094,
+      "config": {
+        "enable_healthcare_compliance": true,
+        "enable_performance_benchmarking": true
+      },
+      "error": "Workflow conversion failed: Edge 0 references non-existent source node: 8296d266-bc3e-4530-92a9-b73fda6f2070"
+    }
+  },
+  "error": "No successful processing results found",
+  "success": false
+}

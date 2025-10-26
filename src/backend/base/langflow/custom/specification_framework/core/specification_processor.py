@@ -9,7 +9,7 @@ import logging
 import time
 from typing import Dict, Any, Optional
 
-from ..services.component_discovery import ComponentDiscoveryService
+from ..services.component_discovery import SimplifiedComponentValidator
 from ..services.workflow_converter import WorkflowConverter
 from ..validation.specification_validator import SpecificationValidator
 from ..validation.workflow_validator import WorkflowValidator
@@ -20,18 +20,18 @@ logger = logging.getLogger(__name__)
 
 class SpecificationProcessor:
     """
-    Core processor for converting agent specifications to Langflow workflows.
+    Simplified processor for converting agent specifications to Langflow workflows.
 
-    This class orchestrates the entire conversion pipeline:
+    This streamlined processor eliminates database overhead and provides direct validation:
     1. Specification validation
-    2. Component discovery and mapping
+    2. Direct component validation via /all endpoint
     3. Workflow conversion
     4. Healthcare compliance validation
     5. Performance optimization
     """
 
     def __init__(self,
-                 component_discovery: Optional[ComponentDiscoveryService] = None,
+                 component_validator: Optional[SimplifiedComponentValidator] = None,
                  workflow_converter: Optional[WorkflowConverter] = None,
                  spec_validator: Optional[SpecificationValidator] = None,
                  workflow_validator: Optional[WorkflowValidator] = None):
@@ -39,12 +39,12 @@ class SpecificationProcessor:
         Initialize the specification processor.
 
         Args:
-            component_discovery: Service for discovering and mapping components
+            component_validator: Simplified validator for component validation
             workflow_converter: Service for converting specifications to workflows
             spec_validator: Validator for agent specifications
             workflow_validator: Validator for generated workflows
         """
-        self.component_discovery = component_discovery or ComponentDiscoveryService()
+        self.component_validator = component_validator or SimplifiedComponentValidator()
         self.workflow_converter = workflow_converter or WorkflowConverter()
         self.spec_validator = spec_validator or SpecificationValidator()
         self.workflow_validator = workflow_validator or WorkflowValidator()
@@ -92,15 +92,15 @@ class SpecificationProcessor:
 
             context.spec_validation_result = validation_result
 
-            # Phase 2: Discover and map components
-            logger.info("Phase 2: Discovering components and building mappings")
-            component_mappings = await self.component_discovery.discover_components(
+            # Phase 2: Validate components using simplified validator
+            logger.info("Phase 2: Validating components with direct /all endpoint validation")
+            component_mappings = await self.component_validator.discover_enhanced_components(
                 spec_dict, context
             )
 
             if not component_mappings:
                 return ProcessingResult.create_error(
-                    "Component discovery failed - no valid components found",
+                    "Component validation failed - no valid components found",
                     context
                 )
 

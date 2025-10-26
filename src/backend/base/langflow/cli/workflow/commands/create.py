@@ -12,7 +12,7 @@ import click
 
 from ..utils.output import success_message, error_message, warning_message, info_message, format_flow_stats
 from ..utils.api_client import APIClient
-from ..utils.professional_service_integration import ProfessionalServiceIntegration
+from ..utils.service_integration import ServiceIntegration
 
 
 def load_variables_from_file(var_file: str) -> Dict[str, Any]:
@@ -246,21 +246,15 @@ async def async_create_main(
     try:
         config_manager = ctx.obj['config']
         api_client = APIClient(config_manager)
-        professional_integration = ProfessionalServiceIntegration()
+        service_integration = ServiceIntegration(api_client=api_client if not local else None, local_mode=local)
 
-        # Initialize professional framework services if local mode requested
-        if local:
-            if professional_integration.is_service_available():
-                if debug:
-                    success_message("Professional framework services initialized for local processing")
-                    if benchmark:
-                        info_message("Performance benchmarking enabled")
-                    if healthcare:
-                        info_message("Healthcare compliance mode enabled")
-            else:
-                error_message(f"Professional framework services unavailable: {professional_integration.get_last_error()}")
-                error_message("Please use API mode (remove --local flag) or check service configuration")
-                ctx.exit(1)
+        # Initialize service integration
+        if debug:
+            success_message("Enhanced service integration initialized")
+            if benchmark:
+                info_message("Performance benchmarking enabled")
+            if healthcare:
+                info_message("Healthcare compliance mode enabled")
 
         # Check if template is required and provided
         if not template:
@@ -285,7 +279,7 @@ async def async_create_main(
         for template_file in template_files:
             try:
                 result = await process_single_template(
-                    template_file, config_manager, api_client, professional_integration,
+                    template_file, config_manager, api_client, service_integration,
                     name, project, folder, output, validate_only,
                     variables, tweaks, debug, local, healthcare, benchmark
                 )
@@ -329,7 +323,7 @@ async def async_create_main(
 
 
 async def process_single_template(
-    template: str, config_manager, api_client, professional_integration,
+    template: str, config_manager, api_client, service_integration,
     name: Optional[str], project: Optional[str], folder: Optional[str],
     output: Optional[str], validate_only: bool,
     variables: Dict[str, Any], tweaks: Dict[str, Any],
@@ -427,10 +421,8 @@ async def process_single_template(
     info_message("Validating specification...")
     try:
         if local:
-            # Use professional framework services for validation
-            validation_result = await professional_integration.validate_specification_local(
-                spec_yaml, healthcare_mode=healthcare
-            )
+            # Use enhanced service integration for validation
+            validation_result = await service_integration.validate_specification(Path(template_path))
         else:
             # Use API for validation
             validation_result = api_client.validate_spec_sync(spec_yaml)
@@ -484,13 +476,10 @@ async def process_single_template(
     info_message("Converting specification to flow...")
     try:
         if local:
-            # Use professional framework services for conversion
-            convert_result = await professional_integration.convert_specification_local(
-                spec_yaml=spec_yaml,
-                variables=variables if variables else None,
-                tweaks=tweaks if tweaks else None,
-                healthcare_mode=healthcare,
-                benchmark=benchmark
+            # Use enhanced service integration for conversion
+            convert_result = await service_integration.create_workflow(
+                Path(template_path),
+                output_path=Path(output) if output else None
             )
 
             if not convert_result.get('success'):

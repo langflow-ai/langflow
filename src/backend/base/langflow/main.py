@@ -161,6 +161,18 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
+            # Initialize component mappings for specification framework
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Initializing component mappings")
+            try:
+                from langflow.services.utils import initialize_component_mappings
+                await initialize_component_mappings()
+                await logger.adebug(f"Component mappings initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            except Exception as e:
+                await logger.aerror(f"Component mapping initialization failed: {e}")
+                # Don't fail startup if component mapping initialization fails
+                pass
+
             # Initialize Genesis Studio Extensions
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Initializing Genesis Studio Extensions")

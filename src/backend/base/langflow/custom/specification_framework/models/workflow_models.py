@@ -604,6 +604,15 @@ class WorkflowConversionResult:
         """Check if conversion had errors."""
         return len(self.conversion_errors) > 0
 
+    @property
+    def error_message(self) -> str:
+        """Get first error message or generic message."""
+        if self.conversion_errors:
+            return self.conversion_errors[0]
+        elif not self.success:
+            return "Workflow conversion failed"
+        return ""
+
     def add_error(self, error_message: str) -> None:
         """Add a conversion error."""
         self.conversion_errors.append(error_message)

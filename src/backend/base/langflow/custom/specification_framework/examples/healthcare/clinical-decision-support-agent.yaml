@@ -1,0 +1,182 @@
+id: urn:agent:genesis:healthcare:clinical-decision-support:1.0.0
+name: Clinical Decision Support Agent
+fullyQualifiedName: genesis.healthcare.clinical_decision_support_agent
+description: AI agent that analyzes patient data and provides evidence-based clinical recommendations to healthcare providers
+domain: healthcare.ai
+subDomain: clinical-decision-support
+version: 1.0.0
+environment: production
+agentOwner: clinical-team@healthcare.ai
+agentOwnerDisplayName: Clinical Decision Support Team
+email: clinical-team@healthcare.ai
+status: ACTIVE
+
+variables:
+- name: confidence_threshold
+  type: number
+  required: false
+  default: 0.85
+  description: Minimum confidence score for recommendations
+- name: max_recommendations
+  type: number
+  required: false
+  default: 5
+  description: Maximum number of recommendations to provide
+- name: patient_context_window
+  type: number
+  required: false
+  default: 30
+  description: Days of patient history to consider
+- name: risk_assessment_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable risk stratification analysis
+
+tags:
+- healthcare
+- clinical-decision-support
+- evidence-based-medicine
+- risk-assessment
+- patient-safety
+
+reusability:
+  asTools: false
+kind: Single Agent
+agentGoal: Provide evidence-based clinical recommendations by analyzing patient data, medical history, and current guidelines
+targetUser: internal
+valueGeneration: DecisionSupport
+interactionMode: RealTime
+runMode: OnDemand
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+
+components:
+- id: patient-data-input
+  name: Patient Data Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive patient information and clinical queries
+  provides:
+  - useAs: input
+    in: clinical-agent
+    description: Patient context for clinical analysis
+
+- id: ehr-connector
+  name: EHR Data Connector
+  kind: Tool
+  type: genesis:api_request
+  description: Access electronic health records and patient history
+  asTools: true
+  config:
+    method: GET
+    headers:
+    - key: Authorization
+      value: ${EHR_API_KEY}
+    - key: Content-Type
+      value: application/json
+    timeout: 30
+  provides:
+  - useAs: tools
+    in: clinical-agent
+    description: Access patient medical records
+
+- id: guidelines-database
+  name: Clinical Guidelines Database
+  kind: Tool
+  type: genesis:api_request
+  description: Query evidence-based clinical guidelines and protocols
+  asTools: true
+  config:
+    method: POST
+    headers:
+    - key: Authorization
+      value: ${GUIDELINES_API_KEY}
+    timeout: 45
+  provides:
+  - useAs: tools
+    in: clinical-agent
+    description: Access clinical guidelines and protocols
+
+- id: drug-interaction-checker
+  name: Drug Interaction Checker
+  kind: Tool
+  type: genesis:api_request
+  description: Check for potential drug interactions and contraindications
+  asTools: true
+  config:
+    method: POST
+    headers:
+    - key: API-Key
+      value: ${DRUG_DB_API_KEY}
+    timeout: 20
+  provides:
+  - useAs: tools
+    in: clinical-agent
+    description: Validate medication safety
+
+- id: clinical-agent
+  name: Clinical Decision Support Agent
+  kind: Agent
+  type: genesis:openai
+  description: Main agent that processes patient data and generates clinical recommendations
+  config:
+    model: gpt-4-turbo
+    temperature: 0.2
+    max_tokens: 2000
+  prompt: |
+    You are a Clinical Decision Support AI assistant helping healthcare providers make evidence-based decisions.
+
+    Your role:
+    1. Analyze patient data including demographics, medical history, current symptoms, and medications
+    2. Consider relevant clinical guidelines and best practices
+    3. Assess potential risks and contraindications
+    4. Provide clear, actionable recommendations with confidence scores
+
+    Guidelines:
+    - Always prioritize patient safety
+    - Provide evidence-based recommendations with citations when possible
+    - Include risk assessment and potential complications
+    - Suggest follow-up actions and monitoring requirements
+    - Flag any critical findings that require immediate attention
+
+    Format your response as:
+    **Clinical Assessment:**
+    [Your analysis of the patient's condition]
+
+    **Recommendations:**
+    1. [Primary recommendation with confidence score]
+    2. [Alternative options if applicable]
+
+    **Risk Factors:**
+    [Key risks and contraindications to consider]
+
+    **Follow-up:**
+    [Monitoring and next steps]
+
+    Patient Context: {patient_context}
+    Clinical Query: {clinical_query}
+  provides:
+  - useAs: output
+    in: recommendation-formatter
+    description: Clinical recommendations and analysis
+
+- id: recommendation-formatter
+  name: Recommendation Formatter
+  kind: Processor
+  type: genesis:text_processor
+  description: Format clinical recommendations for provider review
+  config:
+    format: structured
+    include_metadata: true
+  provides:
+  - useAs: output
+    in: clinical-output
+    description: Formatted clinical recommendations
+
+- id: clinical-output
+  name: Clinical Recommendations Output
+  kind: Data
+  type: genesis:chat_output
+  description: Deliver formatted clinical recommendations to healthcare provider
