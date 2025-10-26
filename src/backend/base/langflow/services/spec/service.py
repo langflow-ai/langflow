@@ -12,11 +12,11 @@ from .semantic_validator import SemanticValidator
 from .dynamic_schema_generator import DynamicSchemaGenerator
 from langflow.services.runtime import converter_factory, RuntimeType, ValidationOptions
 from langflow.services.spec.component_template_service import component_template_service
-from langflow.services.component_mapping.service import ComponentMappingService
+# ComponentMappingService removed during cleanup - was deleted module
 from langflow.services.database.models.flow import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
-from langflow.services.database.models.component_mapping import ComponentMapping
+# ComponentMapping removed during cleanup - was deleted module
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from datetime import datetime, timezone
@@ -39,7 +39,8 @@ class SpecService:
         self._validation_cache = {}  # Cache for validation results
 
         # Initialize database-driven services (AUTPE-6207)
-        self.component_mapping_service = ComponentMappingService()
+        # ComponentMappingService removed during cleanup - using simplified validator
+        self.component_mapping_service = None
         self.dynamic_schema_generator = DynamicSchemaGenerator()
         self._database_components_cache = {}  # Cache for database component mappings
         self._last_cache_refresh = None
@@ -2091,14 +2092,12 @@ class SpecService:
             session: Database session for fetching mappings
         """
         try:
-            if not self.component_mapping_service:
-                logger.debug("ComponentMappingService not available, skipping cache refresh")
-                return
+            # ComponentMappingService removed during cleanup
+            logger.debug("ComponentMappingService removed during cleanup, skipping cache refresh")
+            return
 
-            # Get all active component mappings from database
-            mappings = await self.component_mapping_service.get_all_component_mappings(
-                session, active_only=True, limit=1000
-            )
+            # ComponentMappingService removed - skip database mappings
+            mappings = []
 
             if mappings:
                 # Update mapper's database cache
@@ -2151,11 +2150,10 @@ class SpecService:
             # Start with base implementation
             result = await self.get_all_available_components()
 
-            if session and self.component_mapping_service:
-                # Enhance with database mappings
-                db_mappings = await self.component_mapping_service.get_all_component_mappings(
-                    session, active_only=True, limit=1000
-                )
+            # ComponentMappingService removed during cleanup
+            if False:  # Disabled - ComponentMappingService was removed
+                # Database mappings enhancement disabled
+                db_mappings = []
 
                 # Add database mappings to result
                 database_mapped = {}
@@ -2218,12 +2216,9 @@ class SpecService:
         try:
             comp_type = component.get("type", "")
 
-            # Get component mapping from database if available
+            # ComponentMappingService removed during cleanup
             component_mapping = None
-            if session and self.component_mapping_service and comp_type.startswith("genesis:"):
-                component_mapping = await self.component_mapping_service.get_component_mapping_by_genesis_type(
-                    session, comp_type
-                )
+            # Database mappings disabled - ComponentMappingService was removed
 
             # Generate or retrieve schema
             if component_mapping:

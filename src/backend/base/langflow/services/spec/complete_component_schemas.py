@@ -1130,11 +1130,11 @@ def validate_schema_completeness() -> Dict[str, Any]:
         # Try to get database component count
         database_component_count = 0
         try:
-            from langflow.services.component_mapping.service import ComponentMappingService
+            # ComponentMappingService removed during cleanup
             # Note: This is a rough estimate since we can't access database synchronously
             database_component_count = 251  # Known discovered components from AUTPE-6206
         except ImportError:
-            logger.debug("ComponentMappingService not available for validation")
+            logger.debug("ComponentMappingService removed during cleanup")
 
         # Calculate coverage
         total_components = max(static_schema_count, database_component_count)
@@ -1184,8 +1184,8 @@ def get_enhanced_component_schema(component_type: str, session=None) -> Optional
     # 3. Try database lookup if available
     if session and _database_service:
         try:
-            from langflow.services.component_mapping.service import ComponentMappingService
-            service = ComponentMappingService()
+            # ComponentMappingService removed during cleanup
+            service = None
 
             # Try async operation in sync context (not ideal but for compatibility)
             import asyncio
@@ -1287,11 +1287,12 @@ async def refresh_database_schemas(session) -> Dict[str, Any]:
 
     try:
         if not _database_service:
-            from langflow.services.component_mapping.service import ComponentMappingService
-            _database_service = ComponentMappingService()
+            # ComponentMappingService removed during cleanup
+            _database_service = None
 
-        # Get all mappings from database
-        mappings = await _database_service.get_all_component_mappings(
+        # ComponentMappingService removed - skip database mappings
+        if False:  # Disabled - _database_service is None
+            mappings = await _database_service.get_all_component_mappings(
             session, active_only=True, limit=1000
         )
 

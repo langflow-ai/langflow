@@ -348,10 +348,9 @@ class ComponentMapper:
             Refresh result
         """
         try:
-            from langflow.services.component_mapping.service import ComponentMappingService
-
-            service = ComponentMappingService()
-            mappings = await service.get_all_component_mappings(session, active_only=True, limit=1000)
+            # ComponentMappingService removed during cleanup
+            # Return empty result since database service is no longer available
+            mappings = []
 
             refreshed_count = 0
             for mapping in mappings:
