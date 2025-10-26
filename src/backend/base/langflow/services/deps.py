@@ -312,3 +312,36 @@ def get_prompt_service() -> PromptService:
     from langflow.services.prompt.factory import PromptServiceFactory
 
     return get_service(ServiceType.PROMPT_SERVICE, PromptServiceFactory())
+
+
+def get_pa_lookup_service():
+    """Retrieves the PALookupService instance from the service manager.
+
+    Returns:
+        PALookupService: The PALookupService instance.
+    """
+    from langflow.services.pa_lookup.factory import PALookupServiceFactory
+
+    return get_service(ServiceType.PA_LOOKUP_SERVICE, PALookupServiceFactory())
+
+
+def get_claim_auth_history_service():
+    """Retrieves the ClaimAuthHistoryService instance from the service manager.
+
+    Returns:
+        ClaimAuthHistoryService: The ClaimAuthHistoryService instance.
+    """
+    from langflow.services.claim_auth_history.factory import ClaimAuthHistoryServiceFactory
+
+    return get_service(ServiceType.CLAIM_AUTH_HISTORY_SERVICE, ClaimAuthHistoryServiceFactory())
+
+
+def get_encoder_pro_service():
+    """Retrieves the EncoderProService instance from the service manager.
+
+    Returns:
+        EncoderProService: The EncoderProService instance.
+    """
+    from langflow.services.encoder_pro.factory import EncoderProServiceFactory
+
+    return get_service(ServiceType.ENCODER_PRO_SERVICE, EncoderProServiceFactory())

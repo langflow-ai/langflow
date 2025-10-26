@@ -428,12 +428,12 @@ def create_app():
 
     # Enable Genesis middleware for BFF authentication
     try:
-        from langflow.custom.genesis.integration import setup_genesis_middleware, is_genesis_extensions_enabled
-        if is_genesis_extensions_enabled():
+        from langflow.custom.genesis.integration import setup_genesis_middleware, is_genesis_auth_enabled
+        if is_genesis_auth_enabled():
             setup_genesis_middleware(app)
             logger.info("✅ Genesis BFF authentication middleware enabled")
         else:
-            logger.info("ℹ️ Genesis extensions disabled via environment variable")
+            logger.info("ℹ️ Genesis authentication disabled via environment variable")
     except ImportError:
         logger.warning("⚠️ Genesis extensions not available")
     except Exception as e:

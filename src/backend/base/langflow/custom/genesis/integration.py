@@ -36,8 +36,7 @@ def setup_genesis_middleware(app: FastAPI) -> bool:
         logger.info("🔐 Setting up Genesis Auth Middleware...")
 
         # Check if auth middleware should be enabled
-        auth_enabled = os.getenv("GENESIS_AUTH_ENABLED", "true").lower() == "true"
-        if auth_enabled:
+        if is_genesis_auth_enabled():
             # Check if required environment variables are present
             genesis_client_id = os.getenv("GENESIS_CLIENT_ID")
             genesis_auth_url = os.getenv("GENESIS_SERVICE_AUTH_URL")
@@ -128,6 +127,16 @@ async def initialize_genesis_extensions(app: Optional[FastAPI] = None) -> bool:
 def is_genesis_extensions_enabled() -> bool:
     """Check if Genesis extensions should be enabled."""
     return os.getenv("GENESIS_ENABLE_EXTENSIONS", "true").lower() == "true"
+
+
+def is_genesis_auth_enabled() -> bool:
+    """Check if Genesis authentication should be enabled."""
+    # If extensions are disabled, auth is also disabled
+    if not is_genesis_extensions_enabled():
+        return False
+
+    # Check specific auth enablement
+    return os.getenv("GENESIS_AUTH_ENABLED", "true").lower() == "true"
 
 
 def _setup_auth_dependency_overrides(app):
@@ -320,5 +329,6 @@ def _setup_auth_dependency_overrides(app):
 __all__ = [
     "initialize_genesis_extensions",
     "is_genesis_extensions_enabled",
+    "is_genesis_auth_enabled",
     "setup_genesis_middleware",
 ]
