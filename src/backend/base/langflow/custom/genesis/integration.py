@@ -12,14 +12,11 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from sqlmodel import select
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session
-from langflow.services.manager import ServiceManager
 from langflow.services.auth.utils import get_current_active_user
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
-from .services import register_genesis_services
 from .auth.middleware import AuthMiddleware
-from .startup_extensions import initialize_genesis_studio_extensions, initialize_complete_genesis_extensions
 
 
 
@@ -67,7 +64,7 @@ def setup_genesis_middleware(app: FastAPI) -> bool:
 
 
 async def initialize_genesis_extensions(app: Optional[FastAPI] = None) -> bool:
-    """Initialize all Genesis Studio extensions.
+    """Initialize Genesis Studio extensions.
 
     Args:
         app: Optional FastAPI app instance for middleware registration
@@ -75,49 +72,14 @@ async def initialize_genesis_extensions(app: Optional[FastAPI] = None) -> bool:
     Returns:
         bool: True if initialization was successful
     """
-    success = True
-
     try:
         logger.info("🚀 Initializing Genesis Studio Extensions...")
 
-        # 1. Register custom services
-        logger.info("\n🔧 Registering Genesis Services...")
-        try:
-            registered_services = register_genesis_services()
-            if registered_services:
-                logger.debug(f"✅ Registered Genesis services successfully")
-            else:
-                logger.warning("⚠️ No Genesis services were registered")
-        except Exception as e:
-            logger.error(f"❌ Failed to register services: {e}")
-            success = False
+        # Genesis services are now auto-registered via ServiceType enum
+        # No additional initialization needed beyond auth middleware
 
-        # 2. Initialize complete startup extensions (starter projects, component mappings, schema integration)
-        logger.info("\n🎯 Initializing Complete Genesis Startup Extensions...")
-        try:
-            # Import session_getter for database access during startup
-            from langflow.services.database.utils import session_getter
-            from langflow.services.deps import get_db_service
-
-            # Use session context for database operations
-            db_service = get_db_service()
-            async with session_getter(db_service) as session:
-                startup_success = await initialize_complete_genesis_extensions(session)
-                if startup_success:
-                    logger.debug("✅ Complete Genesis Startup Extensions initialized")
-                else:
-                    logger.debug("⚠️ Some startup extensions failed to initialize")
-        except Exception as e:
-            logger.error(f"❌ Failed to initialize complete startup extensions: {e}")
-            success = False
-
-        # Summary
-        if success:
-            logger.info("\n🎉 Genesis Studio Extensions initialized successfully!")
-        else:
-            logger.warning("\n⚠️ Genesis Studio Extensions initialized with some failures")
-
-        return success
+        logger.info("🎉 Genesis Studio Extensions initialized successfully!")
+        return True
 
     except Exception as e:
         logger.error(f"❌ Critical error during Genesis initialization: {e}")
