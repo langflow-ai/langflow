@@ -25,16 +25,19 @@ def upgrade() -> None:
     conn = op.get_bind()
 
     if migration.table_exists("published_flow", conn):
-        # Add denormalized fields
-        op.add_column(
-            "published_flow", sa.Column("flow_name", sa.String(length=255), nullable=True)
-        )
-        op.add_column(
-            "published_flow", sa.Column("flow_icon", sa.String(length=255), nullable=True)
-        )
-        op.add_column(
-            "published_flow", sa.Column("published_by_username", sa.String(length=255), nullable=True)
-        )
+        # Add denormalized fields - only if they don't exist
+        if not migration.column_exists("published_flow", "flow_name", conn):
+            op.add_column(
+                "published_flow", sa.Column("flow_name", sa.String(length=255), nullable=True)
+            )
+        if not migration.column_exists("published_flow", "flow_icon", conn):
+            op.add_column(
+                "published_flow", sa.Column("flow_icon", sa.String(length=255), nullable=True)
+            )
+        if not migration.column_exists("published_flow", "published_by_username", conn):
+            op.add_column(
+                "published_flow", sa.Column("published_by_username", sa.String(length=255), nullable=True)
+            )
 
 
 def downgrade() -> None:
@@ -42,6 +45,10 @@ def downgrade() -> None:
     conn = op.get_bind()
 
     if migration.table_exists("published_flow", conn):
-        op.drop_column("published_flow", "published_by_username")
-        op.drop_column("published_flow", "flow_icon")
-        op.drop_column("published_flow", "flow_name")
+        # Remove denormalized fields - only if they exist
+        if migration.column_exists("published_flow", "published_by_username", conn):
+            op.drop_column("published_flow", "published_by_username")
+        if migration.column_exists("published_flow", "flow_icon", conn):
+            op.drop_column("published_flow", "flow_icon")
+        if migration.column_exists("published_flow", "flow_name", conn):
+            op.drop_column("published_flow", "flow_name")
