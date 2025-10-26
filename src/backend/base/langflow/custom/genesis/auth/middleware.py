@@ -48,8 +48,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app) -> None:
         super().__init__(app)
-        # Always BFF mode - authentication handled by genesis-bff
-        logger.info("🔄 AuthMiddleware: BFF mode enabled (always)")
+
+        # Check if Genesis auth is enabled
+        import os
+        from langflow.custom.genesis.integration import is_genesis_auth_enabled
+        self.genesis_auth_enabled = is_genesis_auth_enabled()
+
+        if self.genesis_auth_enabled:
+            logger.info("🔄 AuthMiddleware: BFF mode enabled (Genesis)")
+        else:
+            logger.info("🔄 AuthMiddleware: Genesis auth disabled, delegating to Langflow auth")
 
         # Langflow-specific public routes
         self.public_routes = [
@@ -113,6 +121,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
             if request.method == "OPTIONS":
                 return await call_next(request)
 
+            # If Genesis auth is disabled, delegate all authentication to Langflow
+            if not self.genesis_auth_enabled:
+                logger.debug("Genesis auth disabled, delegating all authentication to Langflow")
+                return await call_next(request)
+
             # Check if route is public
             if any(route in request.url.path for route in self.public_routes):
                 return await call_next(request)
@@ -131,7 +144,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 logger.debug("No auth headers found, delegating to Langflow authentication")
                 return await call_next(request)
 
-            # Handle JWT Bearer tokens with Genesis authentication
+            # Handle JWT Bearer tokens with Genesis authentication (only when Genesis is enabled)
             if access_token:
                 try:
                     # Extract user from JWT payload (BFF already validated)

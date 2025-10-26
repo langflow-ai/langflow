@@ -25,3 +25,7 @@ class ServiceType(str, Enum):
     KNOWLEDGE_SERVICE = "knowledge_service"
     FLEXSTORE_SERVICE = "flexstore_service"
     PROMPT_SERVICE = "prompt_service"
+    # Genesis Services
+    PA_LOOKUP_SERVICE = "pa_lookup_service"
+    CLAIM_AUTH_HISTORY_SERVICE = "claim_auth_history_service"
+    ENCODER_PRO_SERVICE = "encoder_pro_service"
