@@ -134,6 +134,10 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
         ):
             continue
 
+        # Skip abstract classes - they cannot be instantiated
+        if _getattr(obj, "__abstractmethods__", None):
+            continue
+
         try:
             comp_instance = obj()
             # modname is the full module name without the name of the obj

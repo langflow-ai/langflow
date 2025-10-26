@@ -1,0 +1,215 @@
+id: urn:agent:genesis:general:customer-service:1.0.0
+name: Customer Service Agent
+fullyQualifiedName: genesis.general.customer_service_agent
+description: Intelligent customer service agent that handles inquiries, provides support, and escalates complex issues appropriately
+domain: customer-service.ai
+subDomain: support-automation
+version: 1.0.0
+environment: production
+agentOwner: support@company.ai
+agentOwnerDisplayName: Customer Support Team
+email: support@company.ai
+status: ACTIVE
+
+variables:
+- name: company_name
+  type: string
+  required: true
+  description: Name of the company for personalized responses
+- name: business_hours
+  type: string
+  required: false
+  default: "9 AM - 5 PM EST, Monday-Friday"
+  description: Business hours for setting expectations
+- name: escalation_threshold
+  type: number
+  required: false
+  default: 3
+  description: Number of failed resolution attempts before escalation
+- name: sentiment_monitoring
+  type: boolean
+  required: false
+  default: true
+  description: Enable real-time sentiment analysis
+- name: knowledge_base_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable knowledge base integration
+
+tags:
+- customer-service
+- support-automation
+- sentiment-analysis
+- escalation-management
+- knowledge-base
+
+reusability:
+  asTools: true
+kind: Single Agent
+agentGoal: Provide excellent customer service by resolving inquiries efficiently and escalating complex issues when needed
+targetUser: external
+valueGeneration: CustomerExperience
+interactionMode: RealTime
+runMode: OnDemand
+agencyLevel: ConversationalWorkflow
+toolsUse: true
+learningCapability: Contextual
+
+components:
+- id: customer-input
+  name: Customer Inquiry Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive customer messages and support requests
+  provides:
+  - useAs: input
+    in: sentiment-analyzer
+    description: Raw customer message for sentiment analysis
+  - useAs: input
+    in: service-agent
+    description: Customer inquiry for processing
+
+- id: sentiment-analyzer
+  name: Sentiment Analysis Tool
+  kind: Tool
+  type: genesis:sentiment_analyzer
+  description: Analyze customer sentiment to tailor response approach
+  asTools: true
+  config:
+    model: "roberta-sentiment"
+    confidence_threshold: 0.7
+    emotion_detection: true
+  provides:
+  - useAs: tools
+    in: service-agent
+    description: Sentiment analysis capabilities
+
+- id: knowledge-base-search
+  name: Knowledge Base Search
+  kind: Tool
+  type: genesis:vector_search
+  description: Search company knowledge base for relevant information
+  asTools: true
+  config:
+    index_name: "customer_support_kb"
+    similarity_threshold: 0.8
+    max_results: 5
+  provides:
+  - useAs: tools
+    in: service-agent
+    description: Knowledge base search capabilities
+
+- id: ticket-system-api
+  name: Ticket System Integration
+  kind: Tool
+  type: genesis:api_request
+  description: Create and manage customer support tickets
+  asTools: true
+  config:
+    method: POST
+    endpoint: "https://api.ticketing-system.com/tickets"
+    headers:
+    - key: Authorization
+      value: ${TICKET_API_KEY}
+    - key: Content-Type
+      value: application/json
+    timeout: 20
+  provides:
+  - useAs: tools
+    in: service-agent
+    description: Ticket creation and management
+
+- id: escalation-router
+  name: Escalation Routing Tool
+  kind: Tool
+  type: genesis:api_request
+  description: Route complex issues to appropriate human agents
+  asTools: true
+  config:
+    method: POST
+    endpoint: "https://api.routing-system.com/escalate"
+    headers:
+    - key: Authorization
+      value: ${ROUTING_API_KEY}
+    timeout: 15
+  provides:
+  - useAs: tools
+    in: service-agent
+    description: Human agent escalation capabilities
+
+- id: service-agent
+  name: Customer Service Agent
+  kind: Agent
+  type: genesis:openai
+  description: Main customer service agent that handles inquiries and provides support
+  config:
+    model: gpt-4-turbo
+    temperature: 0.4
+    max_tokens: 1000
+  prompt: |
+    You are a helpful customer service representative for {company_name}.
+
+    Your role:
+    1. Provide friendly, professional customer support
+    2. Answer questions accurately using available knowledge
+    3. Resolve issues efficiently and effectively
+    4. Escalate complex problems to human agents when needed
+    5. Create support tickets for tracking purposes
+
+    Service Guidelines:
+    - Always be polite, empathetic, and professional
+    - Listen carefully to customer concerns
+    - Provide clear, actionable solutions
+    - Set appropriate expectations about resolution times
+    - Follow up to ensure satisfaction
+    - Apologize sincerely when issues occur
+
+    Available Tools:
+    - Sentiment analysis (to understand customer mood)
+    - Knowledge base search (for accurate information)
+    - Ticket creation (for issue tracking)
+    - Escalation routing (for complex issues)
+
+    Escalation Triggers:
+    - Technical issues beyond your knowledge
+    - Billing or account problems requiring verification
+    - Complaints about company policies
+    - Customer requests to speak with a human
+    - After {escalation_threshold} failed resolution attempts
+
+    Response Format:
+    1. Acknowledge the customer's concern
+    2. Provide relevant information or solution
+    3. Offer additional assistance
+    4. Set expectations for next steps if needed
+
+    Business Hours: {business_hours}
+    Sentiment Monitoring: {sentiment_monitoring}
+
+    Customer Message: {customer_message}
+    Customer Sentiment: {customer_sentiment}
+  provides:
+  - useAs: output
+    in: response-formatter
+    description: Customer service response
+
+- id: response-formatter
+  name: Response Formatter
+  kind: Processor
+  type: genesis:text_processor
+  description: Format customer service responses consistently
+  config:
+    include_signature: true
+    add_case_number: true
+    professional_tone: true
+  provides:
+  - useAs: output
+    in: service-output
+    description: Formatted customer response
+
+- id: service-output
+  name: Customer Response Output
+  kind: Data
+  type: genesis:chat_output
+  description: Deliver formatted response to customer

@@ -7,7 +7,7 @@ from langflow.io import DropdownInput, Output
 from langflow.schema.message import Message
 from loguru import logger
 
-from langflow.custom.genesis.services.deps import get_prompt_service
+from langflow.services.deps import get_prompt_service
 
 
 class GenesisPromptComponent(PromptComponent):

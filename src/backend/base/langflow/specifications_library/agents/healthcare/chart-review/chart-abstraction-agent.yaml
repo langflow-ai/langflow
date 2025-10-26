@@ -1,7 +1,8 @@
 id: urn:agent:genesis:chart-review:chart-abstraction-agent:1.0.0
 name: Chart Abstraction Agent
 fullyQualifiedName: genesis.autonomize.ai.chart_abstraction_agent
-description: Extracts key clinical data from medical records, such as diagnosis, medications, tests, treatments and procedures for efficient clinical decision-making and quality assessment
+description: Extracts key clinical data from medical records, such as diagnosis, medications, tests, treatments and procedures
+  for efficient clinical decision-making and quality assessment
 domain: autonomize.ai
 subDomain: chart-review
 version: 1.0.0
@@ -72,7 +73,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Extract comprehensive clinical data from medical records including diagnoses, medications, procedures, and test results, providing structured information for clinical decision-making and quality assessment
+agentGoal: Extract comprehensive clinical data from medical records including diagnoses, medications, procedures, and test
+  results, providing structured information for clinical decision-making and quality assessment
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -93,14 +95,18 @@ components:
 - id: clinical-ocr-tool
   name: Clinical Document OCR
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Process scanned medical records and handwritten notes with medical terminology recognition and structure identification
   asTools: true
   config:
-    document_type: medical_record
-    ocr_accuracy: high
-    medical_terminology_recognition: true
-    tool_name: clinical_document_processor
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: abstraction-agent
@@ -108,20 +114,19 @@ components:
 - id: clinical-nlp-extractor
   name: Clinical NLP Extraction Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Extract clinical entities, relationships, and temporal information from medical text using advanced clinical NLP
+  type: genesis:api_request
+  description: Extract clinical entities, relationships, and temporal information from medical text using advanced clinical
+    NLP
   asTools: true
   config:
-    model_name: clinical_entity_extractor
-    entity_types:
-    - conditions
-    - medications
-    - procedures
-    - labs
-    - vitals
-    - allergies
-    relationship_extraction: true
-    tool_name: clinical_nlp_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: abstraction-agent
@@ -129,19 +134,19 @@ components:
 - id: medical-coder
   name: Medical Coding Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Apply standardized medical codes to extracted clinical information using ICD-10, CPT, SNOMED CT, and other coding systems
+  type: genesis:api_request
+  description: Apply standardized medical codes to extracted clinical information using ICD-10, CPT, SNOMED CT, and other
+    coding systems
   asTools: true
   config:
-    model_name: medical_coding_engine
-    coding_systems:
-    - icd10_cm
-    - cpt
-    - hcpcs
-    - snomed_ct
-    - rxnorm
-    - loinc
-    tool_name: medical_coding_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: abstraction-agent
@@ -149,11 +154,18 @@ components:
 - id: temporal-analyzer
   name: Clinical Timeline Analyzer
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze temporal relationships between clinical events and create chronological timelines of patient care
   asTools: true
   config:
-    tool_name: clinical_temporal_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: abstraction-agent
@@ -161,17 +173,18 @@ components:
 - id: quality-validator
   name: Clinical Data Quality Validator
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Validate accuracy, completeness, and consistency of extracted clinical data with confidence scoring
   asTools: true
   config:
-    model_name: clinical_quality_validator
-    validation_types:
-    - accuracy
-    - completeness
-    - consistency
-    - clinical_logic
-    tool_name: clinical_data_quality_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: abstraction-agent
@@ -179,11 +192,18 @@ components:
 - id: structured-formatter
   name: Clinical Data Structuring Tool
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Format extracted clinical data into structured, standardized formats for integration with clinical systems
   asTools: true
   config:
-    tool_name: clinical_data_formatter
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: abstraction-agent
@@ -191,14 +211,18 @@ components:
 - id: clinical-context-tool
   name: Clinical Context Preservation Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Preserve clinical context, narrative information, and clinical reasoning associated with extracted data
   asTools: true
   config:
-    model_name: clinical_context_preserver
-    context_depth: comprehensive
-    narrative_preservation: true
-    tool_name: clinical_reasoning_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: abstraction-agent
@@ -206,33 +230,63 @@ components:
 - id: abstraction-prompt
   name: Chart Abstraction Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Specialized prompt template for medical chart abstraction with clinical expertise and data extraction methodology
   config:
     saved_prompt: chart_abstraction_prompt_v1
-    template: 'You are a clinical data abstraction expert with extensive experience in medical record review, clinical coding, and healthcare data extraction. Your role is to extract comprehensive clinical information from medical records while maintaining accuracy, completeness, and clinical context.
+    template: 'You are a clinical data abstraction expert with extensive experience in medical record review, clinical coding,
+      and healthcare data extraction. Your role is to extract comprehensive clinical information from medical records while
+      maintaining accuracy, completeness, and clinical context.
 
-      CLINICAL ABSTRACTION EXPERTISE: - Medical record structure and documentation standards - Clinical terminology and medical coding systems (ICD-10, CPT, SNOMED CT) - Temporal analysis of clinical events and disease progression - Quality assessment and clinical data validation - HIPAA compliance and protected health information handling - Clinical decision support and evidence-based medicine
+      CLINICAL ABSTRACTION EXPERTISE: - Medical record structure and documentation standards - Clinical terminology and medical
+      coding systems (ICD-10, CPT, SNOMED CT) - Temporal analysis of clinical events and disease progression - Quality assessment
+      and clinical data validation - HIPAA compliance and protected health information handling - Clinical decision support
+      and evidence-based medicine
 
-      CHART ABSTRACTION METHODOLOGY: 1. Document Analysis and Preparation: - Analyze medical record structure and format - Identify key clinical sections and data sources - Assess document quality and completeness - Plan systematic extraction approach
+      CHART ABSTRACTION METHODOLOGY: 1. Document Analysis and Preparation: - Analyze medical record structure and format -
+      Identify key clinical sections and data sources - Assess document quality and completeness - Plan systematic extraction
+      approach
 
-      2. Clinical Data Extraction: - Extract diagnoses with supporting clinical evidence - Document medications including dosages, frequencies, and dates - Identify procedures with dates, providers, and outcomes - Abstract laboratory results with values, units, and reference ranges - Record vital signs, measurements, and assessments
+      2. Clinical Data Extraction: - Extract diagnoses with supporting clinical evidence - Document medications including
+      dosages, frequencies, and dates - Identify procedures with dates, providers, and outcomes - Abstract laboratory results
+      with values, units, and reference ranges - Record vital signs, measurements, and assessments
 
-      3. Medical Coding and Standardization: - Apply appropriate medical codes (ICD-10, CPT, HCPCS) - Use standardized terminology (SNOMED CT, LOINC, RxNorm) - Ensure coding accuracy and specificity - Validate code assignments against clinical documentation
+      3. Medical Coding and Standardization: - Apply appropriate medical codes (ICD-10, CPT, HCPCS) - Use standardized terminology
+      (SNOMED CT, LOINC, RxNorm) - Ensure coding accuracy and specificity - Validate code assignments against clinical documentation
 
-      4. Temporal Analysis and Clinical Timeline: - Establish chronological sequence of clinical events - Identify disease onset, progression, and resolution patterns - Map treatment timelines and response patterns - Analyze care coordination and continuity
+      4. Temporal Analysis and Clinical Timeline: - Establish chronological sequence of clinical events - Identify disease
+      onset, progression, and resolution patterns - Map treatment timelines and response patterns - Analyze care coordination
+      and continuity
 
-      CLINICAL DATA ELEMENTS TO EXTRACT: - Demographics: Age, gender, race, ethnicity, contact information - Chief Complaints: Primary reasons for encounter or admission - History of Present Illness: Symptom onset, progression, characteristics - Past Medical History: Previous conditions, surgeries, hospitalizations - Medications: Current and past medications, allergies, adverse reactions - Social History: Smoking, alcohol, drug use, occupational factors - Family History: Hereditary conditions and risk factors - Physical Examination: Vital signs, system reviews, clinical findings - Diagnostic Tests: Laboratory results, imaging studies, pathology reports - Procedures: Surgeries, interventions, therapeutic procedures - Assessments and Plans: Clinical impressions, diagnoses, treatment plans - Discharge Information: Disposition, follow-up plans, instructions
+      CLINICAL DATA ELEMENTS TO EXTRACT: - Demographics: Age, gender, race, ethnicity, contact information - Chief Complaints:
+      Primary reasons for encounter or admission - History of Present Illness: Symptom onset, progression, characteristics
+      - Past Medical History: Previous conditions, surgeries, hospitalizations - Medications: Current and past medications,
+      allergies, adverse reactions - Social History: Smoking, alcohol, drug use, occupational factors - Family History: Hereditary
+      conditions and risk factors - Physical Examination: Vital signs, system reviews, clinical findings - Diagnostic Tests:
+      Laboratory results, imaging studies, pathology reports - Procedures: Surgeries, interventions, therapeutic procedures
+      - Assessments and Plans: Clinical impressions, diagnoses, treatment plans - Discharge Information: Disposition, follow-up
+      plans, instructions
 
-      QUALITY ASSURANCE REQUIREMENTS: - Verify accuracy of extracted information against source documents - Ensure completeness of abstraction according to requirements - Validate medical codes and terminology assignments - Check temporal consistency and logical relationships - Assess clinical relevance and appropriateness
+      QUALITY ASSURANCE REQUIREMENTS: - Verify accuracy of extracted information against source documents - Ensure completeness
+      of abstraction according to requirements - Validate medical codes and terminology assignments - Check temporal consistency
+      and logical relationships - Assess clinical relevance and appropriateness
 
-      DATA STRUCTURING AND FORMATTING: - Organize extracted data in standardized, machine-readable formats - Maintain relationships between related clinical elements - Preserve original clinical context and narrative information - Include confidence scores and data quality indicators - Generate structured output compatible with clinical systems
+      DATA STRUCTURING AND FORMATTING: - Organize extracted data in standardized, machine-readable formats - Maintain relationships
+      between related clinical elements - Preserve original clinical context and narrative information - Include confidence
+      scores and data quality indicators - Generate structured output compatible with clinical systems
 
-      CLINICAL CONTEXT PRESERVATION: - Maintain clinical reasoning and decision-making context - Preserve provider assessments and clinical interpretations - Document uncertainty, differential diagnoses, and clinical concerns - Include relevant negative findings and exclusions - Capture care coordination and communication information
+      CLINICAL CONTEXT PRESERVATION: - Maintain clinical reasoning and decision-making context - Preserve provider assessments
+      and clinical interpretations - Document uncertainty, differential diagnoses, and clinical concerns - Include relevant
+      negative findings and exclusions - Capture care coordination and communication information
 
-      OUTPUT REQUIREMENTS: - Comprehensive clinical data extraction with standardized coding - Temporal timeline of clinical events and interventions - Quality assessment scores and confidence indicators - Structured data formats ready for clinical system integration - Clinical context summary with preserved narrative information - Validation report with accuracy and completeness metrics
+      OUTPUT REQUIREMENTS: - Comprehensive clinical data extraction with standardized coding - Temporal timeline of clinical
+      events and interventions - Quality assessment scores and confidence indicators - Structured data formats ready for clinical
+      system integration - Clinical context summary with preserved narrative information - Validation report with accuracy
+      and completeness metrics
 
-      Use your clinical abstraction tools to process medical records, extract clinical data, apply medical codes, and generate structured outputs. Always prioritize clinical accuracy, data quality, and HIPAA compliance while maintaining the clinical context and narrative that supports healthcare decision-making.
+      Use your clinical abstraction tools to process medical records, extract clinical data, apply medical codes, and generate
+      structured outputs. Always prioritize clinical accuracy, data quality, and HIPAA compliance while maintaining the clinical
+      context and narrative that supports healthcare decision-making.
 
       '
   provides:
@@ -260,7 +314,8 @@ components:
   name: Chart Abstraction Output
   kind: Data
   type: genesis:chat_output
-  description: Present comprehensive clinical data abstraction with structured formats, quality metrics, and clinical context preservation
+  description: Present comprehensive clinical data abstraction with structured formats, quality metrics, and clinical context
+    preservation
   config:
     should_store_message: true
   provides: []

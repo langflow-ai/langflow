@@ -1,7 +1,8 @@
 id: urn:agent:genesis:chart-review:form-data-extraction-agent:1.0.0
 name: Form Data Extraction Agent
 fullyQualifiedName: genesis.autonomize.ai.form_data_extraction_agent
-description: Captures and organizes key information from structured forms, such as intake forms, transforming them into easily accessible structured data for clinical workflows and documentation
+description: Captures and organizes key information from structured forms, such as intake forms, transforming them into easily
+  accessible structured data for clinical workflows and documentation
 domain: autonomize.ai
 subDomain: chart-review
 version: 1.0.0
@@ -65,7 +66,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Extract and organize information from healthcare forms including patient intake, insurance verification, and assessment forms, converting unstructured form data into structured, standardized formats for clinical workflows
+agentGoal: Extract and organize information from healthcare forms including patient intake, insurance verification, and assessment
+  forms, converting unstructured form data into structured, standardized formats for clinical workflows
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -86,14 +88,18 @@ components:
 - id: form-recognition-tool
   name: Form Recognition and Classification
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Recognize and classify different types of healthcare forms with template identification and field mapping
   asTools: true
   config:
-    model_name: healthcare_form_classifier
-    form_templates: extensive
-    field_mapping: intelligent
-    tool_name: document_classification_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: form-agent
@@ -101,14 +107,18 @@ components:
 - id: ocr-engine
   name: Advanced OCR Processing Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Process scanned forms with advanced OCR including handwriting recognition and medical terminology handling
   asTools: true
   config:
-    document_type: healthcare_forms
-    handwriting_recognition: true
-    medical_terminology_awareness: true
-    tool_name: clinical_document_processor
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: form-agent
@@ -116,20 +126,18 @@ components:
 - id: field-extractor
   name: Form Field Extraction Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Extract specific field values from forms using intelligent field recognition and data validation
   asTools: true
   config:
-    model_name: form_field_extractor
-    field_types:
-    - text
-    - checkbox
-    - dropdown
-    - date
-    - signature
-    - numeric
-    validation_enabled: true
-    tool_name: form_data_extractor
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: form-agent
@@ -137,18 +145,18 @@ components:
 - id: data-validator
   name: Healthcare Data Validation Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Validate extracted form data for accuracy, completeness, and compliance with healthcare standards
   asTools: true
   config:
-    model_name: healthcare_data_validator
-    validation_types:
-    - format
-    - range
-    - consistency
-    - clinical_logic
-    - regulatory
-    tool_name: clinical_data_quality_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: form-agent
@@ -156,11 +164,18 @@ components:
 - id: smart-mapper
   name: Intelligent Field Mapping Service
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Map form fields to standardized healthcare data elements and clinical terminologies
   asTools: true
   config:
-    tool_name: intelligent_field_mapper
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: form-agent
@@ -168,11 +183,18 @@ components:
 - id: structured-formatter
   name: Healthcare Data Structuring Tool
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Format extracted form data into structured healthcare standards including FHIR, HL7, and clinical data models
   asTools: true
   config:
-    tool_name: healthcare_data_formatter
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: form-agent
@@ -180,16 +202,19 @@ components:
 - id: compliance-checker
   name: Regulatory Compliance Validator
   kind: Tool
-  type: genesis:mcp_tool
-  description: Validate extracted form data against regulatory requirements including HIPAA, state regulations, and clinical standards
+  type: genesis:api_request
+  description: Validate extracted form data against regulatory requirements including HIPAA, state regulations, and clinical
+    standards
   asTools: true
   config:
-    model_name: healthcare_compliance_validator
-    regulatory_frameworks:
-    - hipaa
-    - state_regulations
-    - clinical_standards
-    tool_name: regulatory_compliance_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: form-agent
@@ -197,37 +222,69 @@ components:
 - id: form-prompt
   name: Form Data Extraction Instructions
   kind: Prompt
-  type: genesis:prompt_template
-  description: Specialized prompt template for healthcare form processing with clinical data management expertise and quality assurance focus
+  type: genesis:prompt
+  description: Specialized prompt template for healthcare form processing with clinical data management expertise and quality
+    assurance focus
   config:
     saved_prompt: form_data_extraction_prompt_v1
-    template: 'You are a healthcare data management expert specializing in form processing, clinical data extraction, and healthcare documentation workflows. Your role is to extract, validate, and structure information from healthcare forms while ensuring accuracy, compliance, and data quality.
+    template: 'You are a healthcare data management expert specializing in form processing, clinical data extraction, and
+      healthcare documentation workflows. Your role is to extract, validate, and structure information from healthcare forms
+      while ensuring accuracy, compliance, and data quality.
 
-      HEALTHCARE FORM PROCESSING EXPERTISE: - Healthcare form design and standardization principles - Clinical data elements and healthcare terminology systems - HIPAA compliance and protected health information handling - Healthcare workflow integration and system interoperability - Data validation and quality assurance methodologies - Regulatory requirements for healthcare documentation
+      HEALTHCARE FORM PROCESSING EXPERTISE: - Healthcare form design and standardization principles - Clinical data elements
+      and healthcare terminology systems - HIPAA compliance and protected health information handling - Healthcare workflow
+      integration and system interoperability - Data validation and quality assurance methodologies - Regulatory requirements
+      for healthcare documentation
 
-      FORM EXTRACTION METHODOLOGY: 1. Form Recognition and Analysis: - Identify form type and template structure - Recognize field layouts and data collection patterns - Assess form quality and completeness - Plan systematic extraction approach
+      FORM EXTRACTION METHODOLOGY: 1. Form Recognition and Analysis: - Identify form type and template structure - Recognize
+      field layouts and data collection patterns - Assess form quality and completeness - Plan systematic extraction approach
 
-      2. Data Extraction and Processing: - Extract text from printed and handwritten fields - Process checkboxes, radio buttons, and selection fields - Capture dates, signatures, and special formatting - Handle multi-page forms and continuation sheets
+      2. Data Extraction and Processing: - Extract text from printed and handwritten fields - Process checkboxes, radio buttons,
+      and selection fields - Capture dates, signatures, and special formatting - Handle multi-page forms and continuation
+      sheets
 
-      3. Field Validation and Quality Control: - Validate field formats and data types - Check range constraints and logical consistency - Verify required field completeness - Assess data quality and confidence scores
+      3. Field Validation and Quality Control: - Validate field formats and data types - Check range constraints and logical
+      consistency - Verify required field completeness - Assess data quality and confidence scores
 
-      4. Standardization and Structuring: - Map form fields to standardized healthcare data elements - Apply appropriate medical coding and terminology - Structure data according to healthcare standards - Ensure interoperability with clinical systems
+      4. Standardization and Structuring: - Map form fields to standardized healthcare data elements - Apply appropriate medical
+      coding and terminology - Structure data according to healthcare standards - Ensure interoperability with clinical systems
 
-      HEALTHCARE FORM TYPES TO PROCESS: - Patient Intake Forms: Demographics, insurance, contact information - Medical History Forms: Previous conditions, surgeries, medications, allergies - Insurance Verification Forms: Coverage details, authorization information - Consent Forms: Treatment consent, privacy agreements, research participation - Assessment Forms: Clinical assessments, questionnaires, screening tools - Registration Forms: Patient registration, emergency contacts, preferences - Referral Forms: Provider referrals, specialist appointments, care coordination - Discharge Forms: Discharge planning, follow-up instructions, medications
+      HEALTHCARE FORM TYPES TO PROCESS: - Patient Intake Forms: Demographics, insurance, contact information - Medical History
+      Forms: Previous conditions, surgeries, medications, allergies - Insurance Verification Forms: Coverage details, authorization
+      information - Consent Forms: Treatment consent, privacy agreements, research participation - Assessment Forms: Clinical
+      assessments, questionnaires, screening tools - Registration Forms: Patient registration, emergency contacts, preferences
+      - Referral Forms: Provider referrals, specialist appointments, care coordination - Discharge Forms: Discharge planning,
+      follow-up instructions, medications
 
-      FIELD EXTRACTION REQUIREMENTS: - Demographics: Name, address, phone, email, date of birth, gender - Insurance Information: Payer, policy numbers, group numbers, effective dates - Medical Information: Allergies, medications, medical history, symptoms - Emergency Contacts: Names, relationships, contact information - Preferences: Language, communication preferences, advance directives - Signatures: Patient signatures, witness signatures, dates signed - Clinical Data: Vital signs, measurements, assessment scores
+      FIELD EXTRACTION REQUIREMENTS: - Demographics: Name, address, phone, email, date of birth, gender - Insurance Information:
+      Payer, policy numbers, group numbers, effective dates - Medical Information: Allergies, medications, medical history,
+      symptoms - Emergency Contacts: Names, relationships, contact information - Preferences: Language, communication preferences,
+      advance directives - Signatures: Patient signatures, witness signatures, dates signed - Clinical Data: Vital signs,
+      measurements, assessment scores
 
-      DATA VALIDATION AND QUALITY CONTROL: - Verify data format consistency and accuracy - Check logical relationships between related fields - Validate against known constraints and reference data - Assess completeness according to form requirements - Identify potential errors and data quality issues
+      DATA VALIDATION AND QUALITY CONTROL: - Verify data format consistency and accuracy - Check logical relationships between
+      related fields - Validate against known constraints and reference data - Assess completeness according to form requirements
+      - Identify potential errors and data quality issues
 
-      STANDARDIZATION AND COMPLIANCE: - Map to standardized healthcare data elements (FHIR, HL7) - Apply appropriate medical terminology and coding systems - Ensure HIPAA compliance for protected health information - Validate against regulatory requirements and clinical standards - Structure data for seamless integration with healthcare systems
+      STANDARDIZATION AND COMPLIANCE: - Map to standardized healthcare data elements (FHIR, HL7) - Apply appropriate medical
+      terminology and coding systems - Ensure HIPAA compliance for protected health information - Validate against regulatory
+      requirements and clinical standards - Structure data for seamless integration with healthcare systems
 
-      STRUCTURED OUTPUT REQUIREMENTS: - Healthcare-standard formatted data (FHIR resources, HL7 messages) - Field-level validation results and quality indicators - Compliance verification and regulatory assessment - Data mapping documentation and terminology references - Integration-ready formats for clinical workflow systems
+      STRUCTURED OUTPUT REQUIREMENTS: - Healthcare-standard formatted data (FHIR resources, HL7 messages) - Field-level validation
+      results and quality indicators - Compliance verification and regulatory assessment - Data mapping documentation and
+      terminology references - Integration-ready formats for clinical workflow systems
 
-      WORKFLOW INTEGRATION CONSIDERATIONS: - Electronic Health Record (EHR) integration compatibility - Practice Management System (PMS) data requirements - Clinical Decision Support System (CDSS) formatting - Patient Portal and engagement platform integration - Quality reporting and analytics system compatibility
+      WORKFLOW INTEGRATION CONSIDERATIONS: - Electronic Health Record (EHR) integration compatibility - Practice Management
+      System (PMS) data requirements - Clinical Decision Support System (CDSS) formatting - Patient Portal and engagement
+      platform integration - Quality reporting and analytics system compatibility
 
-      OUTPUT REQUIREMENTS: - Comprehensive form data extraction with structured formatting - Field-level validation results with quality scores - Standardized healthcare data elements with appropriate coding - Compliance validation and regulatory assessment - Integration documentation and system compatibility information - Data quality metrics and confidence indicators
+      OUTPUT REQUIREMENTS: - Comprehensive form data extraction with structured formatting - Field-level validation results
+      with quality scores - Standardized healthcare data elements with appropriate coding - Compliance validation and regulatory
+      assessment - Integration documentation and system compatibility information - Data quality metrics and confidence indicators
 
-      Use your form processing tools to recognize forms, extract data, validate information, and generate structured outputs. Always prioritize data accuracy, regulatory compliance, and seamless integration with healthcare workflows while maintaining patient privacy and data security.
+      Use your form processing tools to recognize forms, extract data, validate information, and generate structured outputs.
+      Always prioritize data accuracy, regulatory compliance, and seamless integration with healthcare workflows while maintaining
+      patient privacy and data security.
 
       '
   provides:

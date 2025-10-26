@@ -1,9 +1,8 @@
 id: urn:agent:genesis:utilization-management:appeals-summarization-agent:1.0.0
 name: Appeals Summarization Agent
 fullyQualifiedName: genesis.autonomize.ai.appeals_summarization_agent
-description: Summarizes member or provider appeal letters using advanced NLP, intelligently
-  linking summaries to original denial reasons, relevant policies, and referenced
-  evidence for comprehensive appeals processing.
+description: Summarizes member or provider appeal letters using advanced NLP, intelligently linking summaries to original
+  denial reasons, relevant policies, and referenced evidence for comprehensive appeals processing.
 domain: autonomize.ai
 subDomain: utilization-management
 version: 1.0.0
@@ -12,6 +11,10 @@ agentOwner: utilization-management@autonomize.ai
 agentOwnerDisplayName: Utilization Management Team
 email: utilization-management@autonomize.ai
 status: ACTIVE
+securityInfo:
+  hipaaCompliant: true
+reusability:
+  asTools: false
 variables:
 - name: summarization_length
   type: string
@@ -22,8 +25,7 @@ variables:
   type: string
   required: false
   default: '0.80'
-  description: Minimum confidence score for automatic linking to denial reasons and
-    policies
+  description: Minimum confidence score for automatic linking to denial reasons and policies
 - name: evidence_extraction_depth
   type: string
   required: false
@@ -52,9 +54,8 @@ sampleInput:
   submission_date: '2024-10-11'
   urgency_level: standard
 kind: Single Agent
-agentGoal: Accurately summarize appeal letters using NLP and intelligently link summaries
-  to original denial reasons, relevant policies, and referenced evidence to streamline
-  appeals processing and improve decision-making
+agentGoal: Accurately summarize appeal letters using NLP and intelligently link summaries to original denial reasons, relevant
+  policies, and referenced evidence to streamline appeals processing and improve decision-making
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -71,67 +72,75 @@ components:
   - useAs: input
     in: appeals-agent
     description: Provide appeal context and processing parameters
-- id: appeal-letters-api
-  name: Appeal Letters API Access
-  kind: Tool
-  type: genesis:mcp_tool
-  description: Access member and provider appeal letters from appeals management systems
-  asTools: true
-  config:
-    tool_name: appeal_letters_api
-  provides:
-  - useAs: tools
-    in: appeals-agent
-    description: Enable access to appeal letters and supporting documents
 - id: appeals-data-connector
   name: Appeals Data Connector
   kind: Tool
-  type: genesis:mcp_tool
-  description: HIPAA-compliant appeals data connector providing unified access to
-    denial reasons, policies, and evidence databases for utilization management workflows
+  type: genesis:appeals_data_connector
+  description: HIPAA-compliant appeals data connector providing unified access to appeal letters, denial reasons, policies, and evidence databases
   asTools: true
   config:
-    tool_name: appeals_data_connector
+    hipaa_compliant: true
+    audit_logging: true
+    encryption_enabled: true
+    access_mode: read_write
+    data_retention_days: 2555
+    mock_data_enabled: true
   provides:
   - useAs: tools
     in: appeals-agent
-    description: Enable comprehensive access to denial reasons, policies, and evidence
-      for intelligent linking
-- id: healthcare-nlp-engine
-  name: Healthcare NLP Processing Engine
+    description: Enable comprehensive access to appeals data with HIPAA compliance
+- id: clinical-nlp-analyzer
+  name: Clinical NLP Analyzer
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced NLP engine specialized for healthcare appeals processing and
-    medical terminology analysis
+  type: genesis:autonomize
+  description: Advanced clinical language model for healthcare appeals processing and medical terminology analysis
   asTools: true
   config:
-    tool_name: healthcare_appeals_nlp
+    selected_model: "Clinical LLM"
+    confidence_threshold: 0.85
+    hipaa_compliant: true
+    audit_logging: true
+    encryption_at_rest: true
+    phi_detection: true
+    anonymization: true
   provides:
   - useAs: tools
     in: appeals-agent
-    description: Enable advanced NLP processing for appeals analysis
-- id: intelligent-linking-engine
-  name: Intelligent Linking Engine
+    description: Enable advanced clinical NLP processing for appeals analysis
+- id: clinical-llm-model
+  name: Clinical LLM Model
   kind: Tool
-  type: genesis:mcp_tool
-  description: Machine learning engine for intelligent linking between appeals, denials,
-    policies, and evidence
+  type: genesis:autonomize
+  description: Clinical LLM model for entity extraction and medical text analysis
   asTools: true
   config:
-    tool_name: intelligent_linking_engine
+    selected_model: "autonomize-clinical-llm"
+    confidence_threshold: 0.8
   provides:
   - useAs: tools
     in: appeals-agent
-    description: Enable intelligent linking capabilities
+    description: Enable clinical entity extraction and medical text analysis
+- id: entity-linking-model
+  name: Combined Entity Linking Model
+  kind: Tool
+  type: genesis:autonomize
+  description: Combined entity linking model for intelligent linking between appeals, denials, policies, and evidence
+  asTools: true
+  config:
+    selected_model: "autonomize-combined-entity-linking"
+    confidence_threshold: 0.8
+  provides:
+  - useAs: tools
+    in: appeals-agent
+    description: Enable intelligent entity linking and vocabulary mapping
 - id: appeals-agent
   name: Appeals Summarization Agent
   kind: Agent
   type: genesis:agent
-  description: Intelligent agent that processes appeal letters using NLP and creates
-    comprehensive summaries with intelligent linking to denials, policies, and evidence
+  description: Intelligent agent that processes appeal letters using NLP and creates comprehensive summaries with intelligent
+    linking to denials, policies, and evidence
   config:
-    system_message: 'You are a healthcare appeals processing specialist with expertise
-      in medical and pharmacy appeals.
+    system_message: 'You are a healthcare appeals processing specialist with expertise in medical and pharmacy appeals.
 
       Your role is to:
 
@@ -148,15 +157,13 @@ components:
 
       Available Tools:
 
-      - appeal_letters_api: Access member and provider appeal letters
+      - appeals_data_connector: HIPAA-compliant unified access to appeal letters, denial reasons, policies, and evidence data
 
-      - appeals_data_connector: HIPAA-compliant unified access to denial reasons,
-      policies, and evidence data
+      - clinical_nlp_analyzer: Advanced clinical NLP engine for medical terminology analysis and entity extraction
 
-      - healthcare_appeals_nlp: Advanced NLP engine for medical terminology analysis
+      - clinical_llm_model: Clinical LLM model for advanced medical text analysis and entity extraction
 
-      - intelligent_linking_engine: ML engine for intelligent linking between appeals,
-      denials, policies, and evidence
+      - entity_linking_model: Combined entity linking model for intelligent linking between appeals, denials, policies, and evidence
 
 
       Use the appeals_data_connector to:
@@ -183,21 +190,18 @@ components:
       - Member/provider concerns and requests
 
 
-      Ensure all linkages have high confidence scores and provide actionable insights
-      for appeals reviewers.
+      Ensure all linkages have high confidence scores and provide actionable insights for appeals reviewers.
 
       '
   provides:
   - useAs: output
     in: appeals-output
-    description: Process appeals and generate comprehensive summaries with intelligent
-      linking
+    description: Process appeals and generate comprehensive summaries with intelligent linking
 - id: appeals-output
   name: Appeals Summary Output
   kind: Data
   type: genesis:chat_output
-  description: Present comprehensive appeals summaries with intelligent linking results
-    and confidence scoring
+  description: Present comprehensive appeals summaries with intelligent linking results and confidence scoring
   provides: []
 outputs:
 - appeal_summary

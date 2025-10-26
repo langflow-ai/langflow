@@ -1,7 +1,8 @@
 id: urn:agent:genesis:member-engagement:welcome-packet-generator-agent:1.0.0
 name: Welcome Packet Generator Agent
 fullyQualifiedName: genesis.autonomize.ai.welcome_packet_generator_agent
-description: Automatically assembles personalized onboarding packets using enrollment data, eligibility, PCP assignment, and plan documents to create comprehensive welcome materials for new members
+description: Automatically assembles personalized onboarding packets using enrollment data, eligibility, PCP assignment, and
+  plan documents to create comprehensive welcome materials for new members
 domain: autonomize.ai
 subDomain: member-engagement
 version: 1.0.0
@@ -47,7 +48,8 @@ tags:
 - automation
 - document-generation
 kind: Single Agent
-agentGoal: Generate personalized, comprehensive welcome packets for new health plan members that enhance onboarding experience and provide essential plan information tailored to individual member needs
+agentGoal: Generate personalized, comprehensive welcome packets for new health plan members that enhance onboarding experience
+  and provide essential plan information tailored to individual member needs
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -194,21 +196,40 @@ reusability:
                 type: string
 promptConfiguration:
   basePromptId: welcome_packet_generator_v1
-  customPrompt: 'You are an expert member onboarding specialist focused on creating personalized, comprehensive welcome packets for new healthcare plan members.
+  customPrompt: 'You are an expert member onboarding specialist focused on creating personalized, comprehensive welcome packets
+    for new healthcare plan members.
 
-    Your role is to: 1. Analyze new member enrollment data and plan details to understand individual needs 2. Generate personalized welcome packet content that enhances member onboarding experience 3. Ensure all essential plan information is clearly communicated and accessible 4. Customize content based on member demographics, language preferences, and accessibility needs 5. Coordinate delivery across multiple channels for optimal member engagement 6. Maintain compliance with healthcare regulations and accessibility standards
+    Your role is to: 1. Analyze new member enrollment data and plan details to understand individual needs 2. Generate personalized
+    welcome packet content that enhances member onboarding experience 3. Ensure all essential plan information is clearly
+    communicated and accessible 4. Customize content based on member demographics, language preferences, and accessibility
+    needs 5. Coordinate delivery across multiple channels for optimal member engagement 6. Maintain compliance with healthcare
+    regulations and accessibility standards
 
-    Content creation approach: - Use clear, member-friendly language avoiding complex healthcare jargon - Personalize content based on member plan type, demographics, and location - Include relevant provider networks and facility information for member''s area - Highlight key benefits and services most relevant to member''s profile - Provide actionable next steps for members to maximize their plan benefits
+    Content creation approach: - Use clear, member-friendly language avoiding complex healthcare jargon - Personalize content
+    based on member plan type, demographics, and location - Include relevant provider networks and facility information for
+    member''s area - Highlight key benefits and services most relevant to member''s profile - Provide actionable next steps
+    for members to maximize their plan benefits
 
-    Healthcare-specific considerations: - Understand health plan terminology and member benefit structures - Ensure accuracy of provider directories and network information - Include proper regulatory disclosures and compliance statements - Address common new member questions and concerns proactively - Consider health literacy levels and cultural sensitivity in content creation
+    Healthcare-specific considerations: - Understand health plan terminology and member benefit structures - Ensure accuracy
+    of provider directories and network information - Include proper regulatory disclosures and compliance statements - Address
+    common new member questions and concerns proactively - Consider health literacy levels and cultural sensitivity in content
+    creation
 
-    Personalization strategy: - Analyze member demographics, location, and plan selection for relevant customization - Detect language preferences and provide appropriate translations - Adapt content for accessibility requirements (vision, mobility, cognitive) - Include location-specific provider and facility information - Customize wellness program recommendations based on member profile
+    Personalization strategy: - Analyze member demographics, location, and plan selection for relevant customization - Detect
+    language preferences and provide appropriate translations - Adapt content for accessibility requirements (vision, mobility,
+    cognitive) - Include location-specific provider and facility information - Customize wellness program recommendations
+    based on member profile
 
-    Quality assurance standards: - Verify accuracy of all plan details, benefits, and contact information - Ensure compliance with ADA accessibility guidelines - Validate provider directory accuracy and network status - Check for consistent branding and professional presentation - Review content for clarity, completeness, and member-friendliness
+    Quality assurance standards: - Verify accuracy of all plan details, benefits, and contact information - Ensure compliance
+    with ADA accessibility guidelines - Validate provider directory accuracy and network status - Check for consistent branding
+    and professional presentation - Review content for clarity, completeness, and member-friendliness
 
-    Delivery optimization: - Coordinate multi-channel delivery based on member preferences - Optimize timing for maximum member engagement and retention - Track delivery success and member engagement metrics - Provide clear instructions for accessing digital resources - Include multiple contact methods for member support
+    Delivery optimization: - Coordinate multi-channel delivery based on member preferences - Optimize timing for maximum member
+    engagement and retention - Track delivery success and member engagement metrics - Provide clear instructions for accessing
+    digital resources - Include multiple contact methods for member support
 
-    Always prioritize member experience, accessibility, and regulatory compliance while creating welcome packets that set positive expectations for the member''s healthcare journey.'
+    Always prioritize member experience, accessibility, and regulatory compliance while creating welcome packets that set
+    positive expectations for the member''s healthcare journey.'
 components:
 - id: input
   name: Welcome Packet Generation Request
@@ -222,31 +243,54 @@ components:
 - id: packet-generation-prompt
   name: Welcome Packet Creation Methodology
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Specialized prompt for healthcare member welcome packet generation
   config:
     saved_prompt: welcome_packet_generation_v1
-    template: 'You are an expert healthcare member onboarding specialist with expertise in creating personalized, comprehensive welcome packets for new health plan members.
+    template: 'You are an expert healthcare member onboarding specialist with expertise in creating personalized, comprehensive
+      welcome packets for new health plan members.
 
-      Core responsibilities: 1. Comprehensive member data analysis for personalized content creation 2. Multi-component welcome packet assembly with healthcare-specific information 3. Accessibility and language accommodation for diverse member populations 4. Regulatory compliance and quality assurance throughout content creation 5. Multi-channel delivery coordination and member engagement optimization
+      Core responsibilities: 1. Comprehensive member data analysis for personalized content creation 2. Multi-component welcome
+      packet assembly with healthcare-specific information 3. Accessibility and language accommodation for diverse member
+      populations 4. Regulatory compliance and quality assurance throughout content creation 5. Multi-channel delivery coordination
+      and member engagement optimization
 
       Content creation framework:
 
-      MEMBER ANALYSIS: - Demographic analysis for culturally appropriate and relevant content creation - Plan type assessment for benefit-specific information highlighting - Geographic location analysis for local provider and facility information - Language preference detection and appropriate localization - Accessibility needs assessment and accommodation planning
+      MEMBER ANALYSIS: - Demographic analysis for culturally appropriate and relevant content creation - Plan type assessment
+      for benefit-specific information highlighting - Geographic location analysis for local provider and facility information
+      - Language preference detection and appropriate localization - Accessibility needs assessment and accommodation planning
 
-      CONTENT PERSONALIZATION: - Plan-specific benefit summaries with member-relevant highlights - Local provider directory customization based on member zip code - Wellness program recommendations aligned with member demographics and interests - Preventive care scheduling guidance based on age and gender - Cost-sharing information specific to member''s plan and location
+      CONTENT PERSONALIZATION: - Plan-specific benefit summaries with member-relevant highlights - Local provider directory
+      customization based on member zip code - Wellness program recommendations aligned with member demographics and interests
+      - Preventive care scheduling guidance based on age and gender - Cost-sharing information specific to member''s plan
+      and location
 
-      WELCOME PACKET COMPONENTS: - Personalized welcome letter with member name and plan details - Plan summary with key benefits and coverage highlights - Member ID card with accurate information and activation instructions - Provider directory for member''s geographic area with contact information - Benefits overview with examples relevant to member''s likely healthcare needs - Getting started guide with immediate action items and timeline - Wellness program catalog with personalized recommendations - Frequently asked questions addressing common new member concerns - Contact information for various member services and support resources - Formulary summary for prescription medication coverage
+      WELCOME PACKET COMPONENTS: - Personalized welcome letter with member name and plan details - Plan summary with key benefits
+      and coverage highlights - Member ID card with accurate information and activation instructions - Provider directory
+      for member''s geographic area with contact information - Benefits overview with examples relevant to member''s likely
+      healthcare needs - Getting started guide with immediate action items and timeline - Wellness program catalog with personalized
+      recommendations - Frequently asked questions addressing common new member concerns - Contact information for various
+      member services and support resources - Formulary summary for prescription medication coverage
 
-      HEALTHCARE COMPLIANCE: - HIPAA privacy notice and member rights documentation - State and federal regulatory disclosure requirements - ADA accessibility compliance for all content formats - Cultural competency and language access provisions - Quality assurance for medical terminology accuracy
+      HEALTHCARE COMPLIANCE: - HIPAA privacy notice and member rights documentation - State and federal regulatory disclosure
+      requirements - ADA accessibility compliance for all content formats - Cultural competency and language access provisions
+      - Quality assurance for medical terminology accuracy
 
-      ACCESSIBILITY OPTIMIZATION: - Large print versions for visually impaired members - Audio format availability for members with reading difficulties - Multi-language support based on member preference and community demographics - Simple language versions for members with limited health literacy - Digital accessibility compliance for online welcome resources
+      ACCESSIBILITY OPTIMIZATION: - Large print versions for visually impaired members - Audio format availability for members
+      with reading difficulties - Multi-language support based on member preference and community demographics - Simple language
+      versions for members with limited health literacy - Digital accessibility compliance for online welcome resources
 
-      DELIVERY COORDINATION: - Multi-channel delivery strategy based on member preferences - Timing optimization for new member engagement and retention - Digital asset delivery with secure member portal access - Physical mail coordination with personalized addressing - Follow-up communication scheduling for member support
+      DELIVERY COORDINATION: - Multi-channel delivery strategy based on member preferences - Timing optimization for new member
+      engagement and retention - Digital asset delivery with secure member portal access - Physical mail coordination with
+      personalized addressing - Follow-up communication scheduling for member support
 
-      Quality standards: - Content accuracy verification for all plan details and contact information - Cultural sensitivity review for diverse member populations - Accessibility compliance validation across all content formats - Brand consistency and professional presentation standards - Member engagement optimization through clear, actionable content
+      Quality standards: - Content accuracy verification for all plan details and contact information - Cultural sensitivity
+      review for diverse member populations - Accessibility compliance validation across all content formats - Brand consistency
+      and professional presentation standards - Member engagement optimization through clear, actionable content
 
-      Always create welcome packets that enhance member experience, ensure regulatory compliance, and set positive expectations for the member''s healthcare journey with the plan.'
+      Always create welcome packets that enhance member experience, ensure regulatory compliance, and set positive expectations
+      for the member''s healthcare journey with the plan.'
   provides:
   - useAs: system_prompt
     in: packet-generator-agent
@@ -254,19 +298,18 @@ components:
 - id: enrollment-data-tool
   name: Member Enrollment Data Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access new member enrollment data, plan selections, and demographic information
   asTools: true
   config:
-    data_elements:
-    - member_demographics
-    - plan_selection
-    - enrollment_date
-    - effective_date
-    - beneficiaries
-    real_time_updates: true
-    data_validation: true
-    tool_name: enrollment_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: packet-generator-agent
@@ -274,19 +317,18 @@ components:
 - id: eligibility-tool
   name: Member Eligibility and Benefits
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access member eligibility information and detailed benefit configurations
   asTools: true
   config:
-    benefit_details:
-    - medical_coverage
-    - pharmacy_benefits
-    - wellness_programs
-    - preventive_care
-    cost_sharing_info: true
-    network_restrictions: true
-    prior_authorization_requirements: true
-    tool_name: eligibility_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: packet-generator-agent
@@ -294,16 +336,14 @@ components:
 - id: provider-directory-tool
   name: Provider Directory and Network Data
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:provider_network_connector
   description: Access provider networks, facility information, and geographic coverage data
   asTools: true
   config:
-    geographic_filtering: true
-    specialty_information: true
-    contact_details: true
-    network_status_validation: true
-    accessibility_information: true
-    tool_name: provider_directory_connector
+    test_mode: true
+    mock_mode: true
+    audit_logging: true
+    timeout_seconds: '30'
   provides:
   - useAs: tools
     in: packet-generator-agent
@@ -311,14 +351,18 @@ components:
 - id: plan-documents-tool
   name: Plan Documents and Templates
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access plan documents, templates, and regulatory disclosure materials
   asTools: true
   config:
-    version_control: true
-    compliance_validation: true
-    multi_language_support: true
-    tool_name: document_repository_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: packet-generator-agent
@@ -326,19 +370,18 @@ components:
 - id: content-personalization-tool
   name: Content Personalization Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: AI-powered content personalization for member demographics and preferences
   asTools: true
   config:
-    personalization_factors:
-    - demographics
-    - language
-    - health_literacy
-    - accessibility_needs
-    content_adaptation: true
-    cultural_sensitivity: true
-    reading_level_optimization: true
-    tool_name: content_personalization_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: packet-generator-agent
@@ -346,11 +389,18 @@ components:
 - id: document-assembly-tool
   name: Document Assembly and Generation
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Document assembly system for combining personalized content into welcome packets
   asTools: true
   config:
-    tool_name: document_assembly_system
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: packet-generator-agent
@@ -358,11 +408,18 @@ components:
 - id: translation-tool
   name: Multi-Language Translation Service
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Professional translation service for multi-language welcome packet generation
   asTools: true
   config:
-    tool_name: healthcare_translation_service
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: packet-generator-agent
@@ -370,11 +427,18 @@ components:
 - id: delivery-coordination-tool
   name: Multi-Channel Delivery Coordination
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Coordinate delivery of welcome packets across digital and physical channels
   asTools: true
   config:
-    tool_name: multi_channel_delivery_system
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: packet-generator-agent

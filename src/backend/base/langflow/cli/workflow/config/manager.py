@@ -5,6 +5,7 @@ import yaml
 from pathlib import Path
 from typing import Optional, Dict, Any
 from pydantic import BaseModel, Field, HttpUrl
+from dotenv import load_dotenv
 
 from langflow.services.deps import get_settings_service
 
@@ -16,10 +17,7 @@ class AIStudioConfig(BaseModel):
         default="http://localhost:7860",
         description="AI Studio URL"
     )
-    api_key: Optional[str] = Field(
-        default=None,
-        description="API key for authentication"
-    )
+    # Note: API key is no longer stored in config file, read from environment variables
 
 
 class GenesisConfig(BaseModel):
@@ -49,6 +47,9 @@ class ConfigManager:
         """Load configuration from file and environment."""
         config_data = {}
 
+        # Load .env files before processing config
+        self._load_dotenv_files()
+
         # Load from file if exists
         if self.config_file.exists():
             try:
@@ -68,6 +69,36 @@ class ConfigManager:
         # Create config object
         self.config = GenesisConfig(**config_data)
 
+    def _load_dotenv_files(self):
+        """Load .env files in priority order."""
+        # Priority order for .env files:
+        # 1. Current directory .env
+        # 2. Project root .env (go up directories to find)
+        # 3. Home directory .env
+
+        dotenv_paths = [
+            Path.cwd() / ".env",  # Current directory
+            self._find_project_root() / ".env",  # Project root
+            Path.home() / ".env"  # Home directory
+        ]
+
+        for env_path in dotenv_paths:
+            if env_path.exists():
+                load_dotenv(env_path, override=False)  # Don't override already set variables
+
+    def _find_project_root(self) -> Path:
+        """Find project root by looking for common markers."""
+        current = Path.cwd()
+        markers = [".git", "pyproject.toml", "setup.py", "requirements.txt"]
+
+        # Go up directories to find project root
+        for parent in [current] + list(current.parents):
+            if any((parent / marker).exists() for marker in markers):
+                return parent
+
+        # Fallback to current directory
+        return current
+
     def _load_from_environment(self, config_data: Dict[str, Any]):
         """Load configuration from environment variables."""
         # AI Studio configuration
@@ -76,16 +107,7 @@ class ConfigManager:
                 config_data["ai_studio"] = {}
             config_data["ai_studio"]["url"] = url
 
-        # API key from multiple possible environment variables
-        api_key = (
-            os.getenv("AI_STUDIO_API_KEY") or
-            os.getenv("LANGFLOW_API_KEY") or
-            os.getenv("GENESIS_API_KEY")
-        )
-        if api_key:
-            if "ai_studio" not in config_data:
-                config_data["ai_studio"] = {}
-            config_data["ai_studio"]["api_key"] = api_key
+        # Note: API key is no longer loaded here - it's accessed directly via get_api_key()
 
         # Genesis-specific settings
         if project := os.getenv("GENESIS_DEFAULT_PROJECT"):
@@ -131,6 +153,10 @@ class ConfigManager:
         if self.config:
             config_dict = self.config.model_dump(exclude_none=True)
 
+            # Ensure API key is not saved to config file
+            if "ai_studio" in config_dict and "api_key" in config_dict["ai_studio"]:
+                del config_dict["ai_studio"]["api_key"]
+
             with open(self.config_file, 'w') as f:
                 yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
 
@@ -145,8 +171,16 @@ class ConfigManager:
         if self.config is None:
             self._load_config()
 
-        # Update values
+        # Filter out API key updates
+        filtered_kwargs = {}
         for key, value in kwargs.items():
+            if key in ['ai_studio_api_key', 'api_key']:
+                # Don't update API key in config - it should be set via environment
+                continue
+            filtered_kwargs[key] = value
+
+        # Update values
+        for key, value in filtered_kwargs.items():
             if hasattr(self.config, key):
                 setattr(self.config, key, value)
             elif key.startswith('ai_studio_'):
@@ -163,17 +197,29 @@ class ConfigManager:
         if self.config is None:
             self._load_config()
 
+        # Get API key info
+        api_key = self.get_api_key()
+        api_key_source = self.get_api_key_source()
+        api_key_display = f"[{api_key_source}]" if api_key else "[Not Set]"
+
         config_info = []
         config_info.append("Genesis CLI Configuration")
         config_info.append("=" * 30)
         config_info.append(f"AI Studio URL: {self.config.ai_studio.url}")
-        config_info.append(f"API Key: {'[Set]' if self.config.ai_studio.api_key else '[Not Set]'}")
+        config_info.append(f"API Key: {api_key_display}")
         config_info.append(f"Default Project: {self.config.default_project or '[None]'}")
         config_info.append(f"Default Folder: {self.config.default_folder or '[None]'}")
         config_info.append(f"Templates Path: {self.config.templates_path or '[Default]'}")
         config_info.append(f"Verbose Mode: {self.config.verbose}")
         config_info.append(f"Config File: {self.config_file}")
         config_info.append(f"Config Dir: {self.config_dir}")
+
+        if not api_key:
+            config_info.append("")
+            config_info.append("To set API key, use environment variable:")
+            config_info.append("  export AI_STUDIO_API_KEY=your-api-key")
+            config_info.append("Or add to .env file:")
+            config_info.append("  AI_STUDIO_API_KEY=your-api-key")
 
         return "\n".join(config_info)
 
@@ -231,7 +277,29 @@ class ConfigManager:
         """Get AI Studio URL as string."""
         return str(self.get_config().ai_studio.url)
 
+    def get_api_key(self) -> Optional[str]:
+        """Get API key from environment variables with priority order."""
+        # Priority order:
+        # 1. AI_STUDIO_API_KEY environment variable
+        # 2. LANGFLOW_API_KEY environment variable
+        # 3. GENESIS_API_KEY environment variable
+        return (
+            os.getenv("AI_STUDIO_API_KEY") or
+            os.getenv("LANGFLOW_API_KEY") or
+            os.getenv("GENESIS_API_KEY")
+        )
+
+    def get_api_key_source(self) -> Optional[str]:
+        """Get the source of the API key for display purposes."""
+        if os.getenv("AI_STUDIO_API_KEY"):
+            return "From AI_STUDIO_API_KEY"
+        elif os.getenv("LANGFLOW_API_KEY"):
+            return "From LANGFLOW_API_KEY"
+        elif os.getenv("GENESIS_API_KEY"):
+            return "From GENESIS_API_KEY"
+        return None
+
     @property
     def api_key(self) -> Optional[str]:
-        """Get API key."""
-        return self.get_config().ai_studio.api_key
+        """Get API key - backward compatibility property."""
+        return self.get_api_key()

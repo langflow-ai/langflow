@@ -1,9 +1,8 @@
 id: urn:agent:genesis:provider-enablement:care-coordination-summarizer-agent:1.0.0
 name: Care Coordination Summarizer Agent
 fullyQualifiedName: genesis.autonomize.ai.care_coordination_summarizer_agent
-description: Multi-agent system that gathers structured and unstructured data from
-  multiple providers to generate comprehensive referral packets and discharge summaries
-  for seamless transitions of care
+description: Multi-agent system that gathers structured and unstructured data from multiple providers to generate comprehensive
+  referral packets and discharge summaries for seamless transitions of care
 domain: autonomize.ai
 subDomain: provider-enablement
 version: 1.0.0
@@ -50,9 +49,8 @@ tags:
 reusability:
   asTools: false
 kind: Multi Agent
-agentGoal: Streamline transitions of care by automatically generating comprehensive,
-  accurate referral packets and discharge summaries that consolidate structured and
-  unstructured data from multiple healthcare providers and systems
+agentGoal: Streamline transitions of care by automatically generating comprehensive, accurate referral packets and discharge
+  summaries that consolidate structured and unstructured data from multiple healthcare providers and systems
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -65,8 +63,7 @@ components:
   name: Care Coordination Request Input
   kind: Data
   type: genesis:chat_input
-  description: Receive care coordination and transition requests with patient and
-    provider details
+  description: Receive care coordination and transition requests with patient and provider details
   provides:
   - useAs: input
     in: data-collection-agent
@@ -74,12 +71,18 @@ components:
 - id: ehr-systems-tool
   name: EHR Systems Integration
   kind: Tool
-  type: genesis:mcp_tool
-  description: Access multiple Electronic Health Record systems for comprehensive
-    patient data
+  type: genesis:api_request
+  description: Access multiple Electronic Health Record systems for comprehensive patient data
   asTools: true
   config:
-    tool_name: ehr_systems_integration
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-collection-agent
@@ -87,13 +90,18 @@ components:
 - id: clinical-documents-tool
   name: Clinical Documents Access
   kind: Tool
-  type: genesis:mcp_tool
-  description: Process unstructured clinical documents, notes, and reports using OCR
-    and NLP
+  type: genesis:api_request
+  description: Process unstructured clinical documents, notes, and reports using OCR and NLP
   asTools: true
   config:
-    tool_name: clinical_documents_processor
-    api_key: "${CLINICAL_DOCUMENTS_API_KEY}"
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-collection-agent
@@ -101,11 +109,18 @@ components:
 - id: referral-management-tool
   name: Referral Management Systems
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access referral management platforms for transition history and requirements
   asTools: true
   config:
-    tool_name: referral_management_systems
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-collection-agent
@@ -113,11 +128,18 @@ components:
 - id: hie-integration-tool
   name: Health Information Exchange
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access Health Information Exchanges for cross-provider data sharing
   asTools: true
   config:
-    tool_name: hie_integration
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-collection-agent
@@ -125,11 +147,18 @@ components:
 - id: care-management-tool
   name: Care Management Platforms
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access care management systems for care plans and coordination data
   asTools: true
   config:
-    tool_name: care_management_platforms
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-collection-agent
@@ -138,20 +167,15 @@ components:
   name: Data Collection Agent
   kind: Agent
   type: genesis:crewai_agent
-  description: Gather and consolidate structured and unstructured data from multiple
-    healthcare sources
+  description: Gather and consolidate structured and unstructured data from multiple healthcare sources
   config:
     role: Healthcare Data Integration Specialist
-    goal: Collect comprehensive patient data from multiple healthcare systems and
-      providers for transition of care
-    backstory: 'You are a healthcare informatics specialist with expertise in multi-system
-      data integration.
+    goal: Collect comprehensive patient data from multiple healthcare systems and providers for transition of care
+    backstory: 'You are a healthcare informatics specialist with expertise in multi-system data integration.
 
-      Your skills include EHR interoperability, FHIR standards, and clinical data
-      harmonization.
+      Your skills include EHR interoperability, FHIR standards, and clinical data harmonization.
 
-      You ensure complete and accurate data collection while maintaining patient privacy
-      and security.
+      You ensure complete and accurate data collection while maintaining patient privacy and security.
 
       '
     allow_delegation: false
@@ -168,10 +192,8 @@ components:
   description: Process and synthesize clinical information using NLP and medical knowledge
   config:
     role: Clinical Information Analyst
-    goal: Synthesize complex clinical data into coherent, accurate summaries for care
-      transitions
-    backstory: 'You are a clinical informaticist with deep knowledge of medical terminology
-      and care protocols.
+    goal: Synthesize complex clinical data into coherent, accurate summaries for care transitions
+    backstory: 'You are a clinical informaticist with deep knowledge of medical terminology and care protocols.
 
       Your expertise includes clinical NLP, medical coding, and evidence-based summarization.
 
@@ -189,17 +211,13 @@ components:
   name: Template Generation Agent
   kind: Agent
   type: genesis:crewai_agent
-  description: Generate formatted referral packets and discharge summaries using clinical
-    templates
+  description: Generate formatted referral packets and discharge summaries using clinical templates
   config:
     role: Clinical Documentation Specialist
-    goal: Create comprehensive, well-formatted care transition documents that meet
-      clinical and regulatory standards
-    backstory: 'You are a clinical documentation expert with knowledge of healthcare
-      communication standards.
+    goal: Create comprehensive, well-formatted care transition documents that meet clinical and regulatory standards
+    backstory: 'You are a clinical documentation expert with knowledge of healthcare communication standards.
 
-      Your skills include template design, regulatory compliance, and provider workflow
-      optimization.
+      Your skills include template design, regulatory compliance, and provider workflow optimization.
 
       You create professional documents that facilitate effective care coordination.
 
@@ -218,16 +236,12 @@ components:
   description: Validate completeness, accuracy, and compliance of generated summaries
   config:
     role: Clinical Quality Specialist
-    goal: Ensure generated care coordination documents meet quality standards and
-      clinical requirements
-    backstory: 'You are a clinical quality expert with experience in documentation
-      standards and care transitions.
+    goal: Ensure generated care coordination documents meet quality standards and clinical requirements
+    backstory: 'You are a clinical quality expert with experience in documentation standards and care transitions.
 
-      Your expertise includes clinical accuracy validation, completeness assessment,
-      and regulatory compliance.
+      Your expertise includes clinical accuracy validation, completeness assessment, and regulatory compliance.
 
-      You ensure all care coordination documents meet the highest quality and safety
-      standards.
+      You ensure all care coordination documents meet the highest quality and safety standards.
 
       '
     allow_delegation: false
@@ -241,8 +255,7 @@ components:
   name: Data Collection Task
   kind: Data
   type: genesis:crewai_sequential_task
-  description: Collect comprehensive patient and clinical data from multiple healthcare
-    sources
+  description: Collect comprehensive patient and clinical data from multiple healthcare sources
   config:
     description: Collect comprehensive patient and clinical data from multiple healthcare sources
     agent_id: data-collection-agent
@@ -317,8 +330,7 @@ components:
   name: Quality Assurance Task
   kind: Data
   type: genesis:crewai_sequential_task
-  description: Validate completeness, accuracy, and compliance of care transition
-    documents
+  description: Validate completeness, accuracy, and compliance of care transition documents
   config:
     description: Validate completeness, accuracy, and compliance of care transition documents
     agent_id: quality-assurance-agent

@@ -21,3 +21,7 @@ class ServiceType(str, Enum):
     TELEMETRY_SERVICE = "telemetry_service"
     JOB_QUEUE_SERVICE = "job_queue_service"
     MCP_COMPOSER_SERVICE = "mcp_composer_service"
+    MODELHUB_SERVICE = "modelhub_service"
+    KNOWLEDGE_SERVICE = "knowledge_service"
+    FLEXSTORE_SERVICE = "flexstore_service"
+    PROMPT_SERVICE = "prompt_service"

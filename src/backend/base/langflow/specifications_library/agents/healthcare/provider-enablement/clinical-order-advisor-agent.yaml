@@ -1,7 +1,8 @@
 id: urn:agent:genesis:provider-enablement:clinical-order-advisor-agent:1.0.0
 name: Clinical Order Advisor Agent
 fullyQualifiedName: genesis.autonomize.ai.clinical_order_advisor_agent
-description: Uses EHR, labs, diagnosis codes, and care guidelines to suggest appropriate tests, referrals, or therapies to providers at point of care. Provides evidence-based clinical decision support.
+description: Uses EHR, labs, diagnosis codes, and care guidelines to suggest appropriate tests, referrals, or therapies to
+  providers at point of care. Provides evidence-based clinical decision support.
 domain: autonomize.ai
 subDomain: provider-enablement
 version: 1.0.0
@@ -70,7 +71,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Provide evidence-based clinical order recommendations including lab tests, imaging studies, referrals, and therapies based on patient data, diagnosis codes, clinical guidelines, and provider specialty context
+agentGoal: Provide evidence-based clinical order recommendations including lab tests, imaging studies, referrals, and therapies
+  based on patient data, diagnosis codes, clinical guidelines, and provider specialty context
 targetUser: internal
 valueGeneration: DecisionSupport
 interactionMode: RequestResponse
@@ -83,7 +85,8 @@ components:
   name: Clinical Order Request Input
   kind: Data
   type: genesis:chat_input
-  description: Receive clinical order advisor requests with patient data, diagnosis information, and provider context for decision support
+  description: Receive clinical order advisor requests with patient data, diagnosis information, and provider context for
+    decision support
   provides:
   - useAs: input
     in: advisor-agent
@@ -91,11 +94,19 @@ components:
 - id: ehr-data-tool
   name: EHR Clinical Data Connector
   kind: Tool
-  type: genesis:mcp_tool
-  description: HIPAA-compliant EHR connector for accessing patient clinical data, lab results, medical history, and current medications for informed order recommendations
+  type: genesis:api_request
+  description: HIPAA-compliant EHR connector for accessing patient clinical data, lab results, medical history, and current
+    medications for informed order recommendations
   asTools: true
   config:
-    tool_name: ehr_clinical_data_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: advisor-agent
@@ -103,11 +114,19 @@ components:
 - id: clinical-guidelines-tool
   name: Clinical Guidelines Database
   kind: Tool
-  type: genesis:mcp_tool
-  description: Comprehensive clinical guidelines database with evidence-based recommendations from professional medical societies, CDC, and quality organizations
+  type: genesis:api_request
+  description: Comprehensive clinical guidelines database with evidence-based recommendations from professional medical societies,
+    CDC, and quality organizations
   asTools: true
   config:
-    tool_name: clinical_guidelines_database
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: advisor-agent
@@ -115,11 +134,19 @@ components:
 - id: diagnostic-decision-tool
   name: Diagnostic Decision Support Model
   kind: Tool
-  type: genesis:mcp_tool
-  description: AI-powered diagnostic decision support model that analyzes patient symptoms, lab results, and clinical data to suggest appropriate diagnostic tests and procedures
+  type: genesis:api_request
+  description: AI-powered diagnostic decision support model that analyzes patient symptoms, lab results, and clinical data
+    to suggest appropriate diagnostic tests and procedures
   asTools: true
   config:
-    tool_name: diagnostic_decision_support
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: advisor-agent
@@ -127,11 +154,19 @@ components:
 - id: lab-reference-tool
   name: Laboratory Reference Service
   kind: Tool
-  type: genesis:mcp_tool
-  description: Laboratory test reference service with normal ranges, clinical significance, and ordering guidelines for comprehensive lab test recommendations
+  type: genesis:api_request
+  description: Laboratory test reference service with normal ranges, clinical significance, and ordering guidelines for comprehensive
+    lab test recommendations
   asTools: true
   config:
-    tool_name: laboratory_reference_service
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: advisor-agent
@@ -139,11 +174,19 @@ components:
 - id: imaging-protocols-tool
   name: Medical Imaging Protocol Guide
   kind: Tool
-  type: genesis:mcp_tool
-  description: Medical imaging protocol guide with appropriateness criteria, radiation considerations, and contrast protocols for optimal imaging recommendations
+  type: genesis:api_request
+  description: Medical imaging protocol guide with appropriateness criteria, radiation considerations, and contrast protocols
+    for optimal imaging recommendations
   asTools: true
   config:
-    tool_name: medical_imaging_protocols
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: advisor-agent
@@ -151,11 +194,19 @@ components:
 - id: referral-network-tool
   name: Provider Referral Network
   kind: Tool
-  type: genesis:mcp_tool
-  description: Provider referral network with specialist availability, expertise areas, insurance participation, and patient matching for optimal referral recommendations
+  type: genesis:api_request
+  description: Provider referral network with specialist availability, expertise areas, insurance participation, and patient
+    matching for optimal referral recommendations
   asTools: true
   config:
-    tool_name: provider_referral_network
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: advisor-agent
@@ -163,11 +214,19 @@ components:
 - id: contraindication-checker
   name: Clinical Contraindication Checker
   kind: Tool
-  type: genesis:mcp_tool
-  description: Clinical contraindication and safety checker that validates recommended orders against patient allergies, medications, and medical conditions
+  type: genesis:api_request
+  description: Clinical contraindication and safety checker that validates recommended orders against patient allergies, medications,
+    and medical conditions
   asTools: true
   config:
-    tool_name: clinical_contraindication_checker
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: advisor-agent
@@ -175,11 +234,19 @@ components:
 - id: cost-analysis-tool
   name: Healthcare Cost Analysis Service
   kind: Tool
-  type: genesis:mcp_tool
-  description: Healthcare cost analysis service with procedure costs, insurance coverage analysis, and cost-effectiveness evaluation for clinical orders
+  type: genesis:api_request
+  description: Healthcare cost analysis service with procedure costs, insurance coverage analysis, and cost-effectiveness
+    evaluation for clinical orders
   asTools: true
   config:
-    tool_name: healthcare_cost_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: advisor-agent
@@ -187,76 +254,53 @@ components:
 - id: advisor-agent-prompt
   name: Clinical Order Advisor Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Specialized prompt template for clinical order advisor with evidence-based medicine expertise
   config:
     saved_prompt: clinical_order_advisor_prompt_v1
-    template: 'You are a clinical decision support specialist with expertise in evidence-based medicine, diagnostic testing, and clinical care guidelines. Your role is to provide appropriate clinical order recommendations based on patient data, diagnosis codes, and current medical evidence.
+    template: 'You are a clinical decision support specialist with expertise in evidence-based medicine, diagnostic testing,
+      and clinical care guidelines. Your role is to provide appropriate clinical order recommendations based on patient data,
+      diagnosis codes, and current medical evidence.
 
-      CLINICAL DECISION SUPPORT EXPERTISE:
-      - Evidence-based medicine principles and clinical guidelines
-      - Diagnostic test selection and interpretation
-      - Medical imaging appropriateness criteria
-      - Specialist referral protocols and timing
-      - Clinical care pathways and quality measures
-      - Risk stratification and patient safety considerations
-      - Cost-effectiveness analysis in healthcare decisions
+      CLINICAL DECISION SUPPORT EXPERTISE: - Evidence-based medicine principles and clinical guidelines - Diagnostic test
+      selection and interpretation - Medical imaging appropriateness criteria - Specialist referral protocols and timing -
+      Clinical care pathways and quality measures - Risk stratification and patient safety considerations - Cost-effectiveness
+      analysis in healthcare decisions
 
-      ORDER RECOMMENDATION PROCESS:
-      1. Analyze patient clinical data and current presentation
-      2. Review relevant diagnosis codes and clinical history
-      3. Consult current clinical guidelines and evidence base
-      4. Evaluate diagnostic testing needs and appropriateness
-      5. Consider imaging studies with radiation and contrast safety
-      6. Assess specialist referral needs and urgency
-      7. Validate safety and contraindications for all recommendations
-      8. Provide cost-effectiveness and insurance coverage analysis
+      ORDER RECOMMENDATION PROCESS: 1. Analyze patient clinical data and current presentation 2. Review relevant diagnosis
+      codes and clinical history 3. Consult current clinical guidelines and evidence base 4. Evaluate diagnostic testing needs
+      and appropriateness 5. Consider imaging studies with radiation and contrast safety 6. Assess specialist referral needs
+      and urgency 7. Validate safety and contraindications for all recommendations 8. Provide cost-effectiveness and insurance
+      coverage analysis
 
-      DIAGNOSTIC TESTING RECOMMENDATIONS:
-      - Laboratory tests: Based on clinical presentation and guidelines
-      - Blood work: CBC, CMP, lipid panels, cardiac markers, inflammatory markers
-      - Specialized labs: Endocrine panels, tumor markers, genetic testing
-      - Microbiology: Cultures, sensitivity testing, infectious disease panels
-      - Pathology: Tissue analysis, cytology, molecular diagnostics
+      DIAGNOSTIC TESTING RECOMMENDATIONS: - Laboratory tests: Based on clinical presentation and guidelines - Blood work:
+      CBC, CMP, lipid panels, cardiac markers, inflammatory markers - Specialized labs: Endocrine panels, tumor markers, genetic
+      testing - Microbiology: Cultures, sensitivity testing, infectious disease panels - Pathology: Tissue analysis, cytology,
+      molecular diagnostics
 
-      IMAGING STUDY RECOMMENDATIONS:
-      - X-rays: Appropriate views and clinical indications
-      - CT scans: Contrast protocols and radiation considerations
-      - MRI: Sequences selection and contraindication screening
-      - Ultrasound: Point-of-care and specialty applications
-      - Nuclear medicine: Appropriate radiopharmaceuticals and timing
+      IMAGING STUDY RECOMMENDATIONS: - X-rays: Appropriate views and clinical indications - CT scans: Contrast protocols and
+      radiation considerations - MRI: Sequences selection and contraindication screening - Ultrasound: Point-of-care and specialty
+      applications - Nuclear medicine: Appropriate radiopharmaceuticals and timing
 
-      REFERRAL RECOMMENDATIONS:
-      - Specialty consultation needs and urgency classification
-      - Provider network and expertise matching
-      - Insurance participation and prior authorization requirements
-      - Communication templates and clinical information sharing
-      - Follow-up coordination and care transitions
+      REFERRAL RECOMMENDATIONS: - Specialty consultation needs and urgency classification - Provider network and expertise
+      matching - Insurance participation and prior authorization requirements - Communication templates and clinical information
+      sharing - Follow-up coordination and care transitions
 
-      SAFETY AND QUALITY CONSIDERATIONS:
-      - Patient safety screening and contraindication checking
-      - Allergy and medication interaction validation
-      - Clinical appropriateness and evidence level assessment
-      - Cost-effectiveness and resource utilization analysis
-      - Quality metrics and outcome tracking recommendations
+      SAFETY AND QUALITY CONSIDERATIONS: - Patient safety screening and contraindication checking - Allergy and medication
+      interaction validation - Clinical appropriateness and evidence level assessment - Cost-effectiveness and resource utilization
+      analysis - Quality metrics and outcome tracking recommendations
 
-      EVIDENCE-BASED DECISION MAKING:
-      - Clinical guideline adherence and evidence levels
-      - Professional society recommendations integration
-      - Quality measure alignment and reporting
-      - Risk-benefit analysis for all recommendations
-      - Patient preference and shared decision making support
+      EVIDENCE-BASED DECISION MAKING: - Clinical guideline adherence and evidence levels - Professional society recommendations
+      integration - Quality measure alignment and reporting - Risk-benefit analysis for all recommendations - Patient preference
+      and shared decision making support
 
-      OUTPUT FORMAT:
-      - Laboratory test recommendations with clinical rationale
-      - Imaging study suggestions with appropriateness criteria
-      - Specialist referral recommendations with urgency classification
-      - Safety validation results and contraindication alerts
-      - Cost-effectiveness analysis and insurance coverage status
-      - Clinical guideline citations and evidence levels
+      OUTPUT FORMAT: - Laboratory test recommendations with clinical rationale - Imaging study suggestions with appropriateness
+      criteria - Specialist referral recommendations with urgency classification - Safety validation results and contraindication
+      alerts - Cost-effectiveness analysis and insurance coverage status - Clinical guideline citations and evidence levels
       - Quality metrics and outcome predictions
 
-      Use your clinical decision support tools to access patient data, guidelines, and safety information. Always prioritize patient safety, clinical appropriateness, and evidence-based medicine principles.
+      Use your clinical decision support tools to access patient data, guidelines, and safety information. Always prioritize
+      patient safety, clinical appropriateness, and evidence-based medicine principles.
 
       '
   provides:

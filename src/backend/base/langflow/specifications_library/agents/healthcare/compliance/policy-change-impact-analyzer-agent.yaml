@@ -1,7 +1,8 @@
 id: urn:agent:genesis:compliance:policy-change-impact-analyzer-agent:1.0.0
 name: Policy Change Impact Analyzer Agent
 fullyQualifiedName: genesis.autonomize.ai.policy_change_impact_analyzer_agent
-description: Summarizes CMS/state regulation updates and maps them to impacted workflows, policies, and implementation playbooks with comprehensive impact analysis and stakeholder notifications
+description: Summarizes CMS/state regulation updates and maps them to impacted workflows, policies, and implementation playbooks
+  with comprehensive impact analysis and stakeholder notifications
 domain: autonomize.ai
 subDomain: compliance
 version: 1.0.0
@@ -60,7 +61,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Analyze regulatory policy changes from CMS and state agencies, assess organizational impact, map affected workflows and policies, and generate actionable implementation guidance with stakeholder notifications
+agentGoal: Analyze regulatory policy changes from CMS and state agencies, assess organizational impact, map affected workflows
+  and policies, and generate actionable implementation guidance with stakeholder notifications
 targetUser: internal
 valueGeneration: DecisionSupport
 interactionMode: RequestResponse
@@ -81,11 +83,19 @@ components:
 - id: regulatory-monitor-tool
   name: Regulatory Monitoring Service
   kind: Tool
-  type: genesis:mcp_tool
-  description: Monitor CMS HPMS memos, state Medicaid updates, and federal healthcare regulations with automated change detection and priority classification
+  type: genesis:api_request
+  description: Monitor CMS HPMS memos, state Medicaid updates, and federal healthcare regulations with automated change detection
+    and priority classification
   asTools: true
   config:
-    tool_name: regulatory_monitoring_service
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: policy-analyzer-agent
@@ -93,18 +103,19 @@ components:
 - id: policy-analysis-model
   name: Policy Analysis AI Model
   kind: Tool
-  type: genesis:mcp_tool
-  description: Specialized AI model for healthcare policy analysis, impact assessment, and regulatory interpretation with CMS expertise
+  type: genesis:api_request
+  description: Specialized AI model for healthcare policy analysis, impact assessment, and regulatory interpretation with
+    CMS expertise
   asTools: true
   config:
-    model_name: policy_analyzer_v2
-    analysis_depth: comprehensive
-    regulation_expertise:
-    - cms
-    - medicaid
-    - hipaa
-    - aca
-    tool_name: policy_analysis_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: policy-analyzer-agent
@@ -112,11 +123,19 @@ components:
 - id: workflow-mapping-tool
   name: Workflow Impact Mapping Service
   kind: Tool
-  type: genesis:mcp_tool
-  description: Map policy changes to affected organizational workflows, processes, and procedures with dependency analysis and risk assessment
+  type: genesis:api_request
+  description: Map policy changes to affected organizational workflows, processes, and procedures with dependency analysis
+    and risk assessment
   asTools: true
   config:
-    tool_name: workflow_impact_mapper
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: policy-analyzer-agent
@@ -124,14 +143,19 @@ components:
 - id: policy-database-tool
   name: Policy and Procedure Database
   kind: Tool
-  type: genesis:mcp_tool
-  description: Access organizational policies, procedures, implementation playbooks, and compliance documentation with version control
+  type: genesis:api_request
+  description: Access organizational policies, procedures, implementation playbooks, and compliance documentation with version
+    control
   asTools: true
   config:
-    database_type: policy_management
-    include_versioning: true
-    compliance_metadata: true
-    tool_name: healthcare_data_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: policy-analyzer-agent
@@ -140,7 +164,8 @@ components:
   name: Stakeholder Notification Service
   kind: Tool
   type: genesis:api_request
-  description: Send targeted notifications to compliance officers, department heads, and implementation teams based on impact severity
+  description: Send targeted notifications to compliance officers, department heads, and implementation teams based on impact
+    severity
   asTools: true
   config:
     method: POST
@@ -158,11 +183,19 @@ components:
 - id: compliance-timeline-tool
   name: Compliance Timeline Generator
   kind: Tool
-  type: genesis:mcp_tool
-  description: Generate implementation timelines, compliance deadlines, and milestone tracking for policy changes with calendar integration
+  type: genesis:api_request
+  description: Generate implementation timelines, compliance deadlines, and milestone tracking for policy changes with calendar
+    integration
   asTools: true
   config:
-    tool_name: compliance_timeline_generator
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: policy-analyzer-agent
@@ -170,29 +203,46 @@ components:
 - id: policy-analyzer-prompt
   name: Policy Impact Analysis Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Specialized prompt template for policy change analysis with regulatory expertise and impact assessment methodology
   config:
     saved_prompt: policy_impact_analyzer_prompt_v1
-    template: 'You are a healthcare compliance expert specializing in regulatory policy analysis, CMS regulations, and organizational impact assessment. Your role is to analyze policy changes, assess organizational impact, and provide actionable implementation guidance.
+    template: 'You are a healthcare compliance expert specializing in regulatory policy analysis, CMS regulations, and organizational
+      impact assessment. Your role is to analyze policy changes, assess organizational impact, and provide actionable implementation
+      guidance.
 
-      REGULATORY EXPERTISE: - CMS regulations and HPMS memo interpretation - State Medicaid policy changes and requirements - HIPAA, HITECH, and ACA compliance requirements - Medicare Advantage and managed care regulations - Quality measurement and reporting requirements - Payment policy and reimbursement changes
+      REGULATORY EXPERTISE: - CMS regulations and HPMS memo interpretation - State Medicaid policy changes and requirements
+      - HIPAA, HITECH, and ACA compliance requirements - Medicare Advantage and managed care regulations - Quality measurement
+      and reporting requirements - Payment policy and reimbursement changes
 
-      POLICY ANALYSIS METHODOLOGY: 1. Regulatory Document Analysis: - Parse CMS memos, state updates, and federal notices - Extract key requirements, deadlines, and compliance obligations - Identify mandatory vs. optional changes - Assess implementation complexity and resource requirements
+      POLICY ANALYSIS METHODOLOGY: 1. Regulatory Document Analysis: - Parse CMS memos, state updates, and federal notices
+      - Extract key requirements, deadlines, and compliance obligations - Identify mandatory vs. optional changes - Assess
+      implementation complexity and resource requirements
 
-      2. Organizational Impact Assessment: - Map policy changes to affected departments and workflows - Assess operational, financial, and compliance impacts - Identify required system changes and staff training needs - Evaluate timeline constraints and implementation challenges
+      2. Organizational Impact Assessment: - Map policy changes to affected departments and workflows - Assess operational,
+      financial, and compliance impacts - Identify required system changes and staff training needs - Evaluate timeline constraints
+      and implementation challenges
 
-      3. Workflow and Process Mapping: - Identify all organizational processes affected by policy changes - Map dependencies between affected workflows - Assess risks and mitigation strategies - Prioritize implementation tasks by urgency and complexity
+      3. Workflow and Process Mapping: - Identify all organizational processes affected by policy changes - Map dependencies
+      between affected workflows - Assess risks and mitigation strategies - Prioritize implementation tasks by urgency and
+      complexity
 
-      4. Implementation Planning: - Generate actionable implementation roadmaps - Create compliance timelines with key milestones - Identify required resources, training, and system updates - Develop monitoring and validation procedures
+      4. Implementation Planning: - Generate actionable implementation roadmaps - Create compliance timelines with key milestones
+      - Identify required resources, training, and system updates - Develop monitoring and validation procedures
 
-      STAKEHOLDER COMMUNICATION: - Compliance officers and legal teams - Department heads and operational managers - IT teams for system implementation - Training coordinators for staff education - Executive leadership for strategic decisions
+      STAKEHOLDER COMMUNICATION: - Compliance officers and legal teams - Department heads and operational managers - IT teams
+      for system implementation - Training coordinators for staff education - Executive leadership for strategic decisions
 
-      IMPACT SEVERITY CLASSIFICATION: - CRITICAL: Immediate compliance risk, regulatory penalties - HIGH: Significant operational changes, tight deadlines - MEDIUM: Moderate process updates, reasonable timelines - LOW: Minor adjustments, flexible implementation
+      IMPACT SEVERITY CLASSIFICATION: - CRITICAL: Immediate compliance risk, regulatory penalties - HIGH: Significant operational
+      changes, tight deadlines - MEDIUM: Moderate process updates, reasonable timelines - LOW: Minor adjustments, flexible
+      implementation
 
-      OUTPUT REQUIREMENTS: - Executive summary with key impacts and deadlines - Detailed impact analysis by department and workflow - Implementation roadmap with timelines and milestones - Resource requirements and cost estimates - Risk assessment and mitigation strategies - Stakeholder notification templates and communication plan
+      OUTPUT REQUIREMENTS: - Executive summary with key impacts and deadlines - Detailed impact analysis by department and
+      workflow - Implementation roadmap with timelines and milestones - Resource requirements and cost estimates - Risk assessment
+      and mitigation strategies - Stakeholder notification templates and communication plan
 
-      Use your regulatory tools to monitor policy changes, analyze organizational impact, map affected workflows, and generate comprehensive implementation guidance. Always prioritize regulatory compliance, patient safety, and operational continuity.
+      Use your regulatory tools to monitor policy changes, analyze organizational impact, map affected workflows, and generate
+      comprehensive implementation guidance. Always prioritize regulatory compliance, patient safety, and operational continuity.
 
       '
   provides:

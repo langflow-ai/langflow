@@ -1,7 +1,8 @@
 id: urn:agent:genesis:autonomize.ai:high-cost-claim-analyzer-agent:1.0.0
 name: High-Cost Claim Analyzer Agent
 fullyQualifiedName: genesis.autonomize.ai.high_cost_claim_analyzer_agent
-description: Detects atypical cost patterns using historical data analysis, configurable thresholds, and peer comparisons to prioritize high-dollar claim reviews and identify potential billing anomalies requiring investigation
+description: Detects atypical cost patterns using historical data analysis, configurable thresholds, and peer comparisons
+  to prioritize high-dollar claim reviews and identify potential billing anomalies requiring investigation
 domain: autonomize.ai
 subDomain: claims-operations
 version: 1.0.0
@@ -11,7 +12,8 @@ agentOwnerDisplayName: Claims Operations Team
 email: claims-operations@autonomize.ai
 status: ACTIVE
 kind: Single Agent
-agentGoal: Analyze high-value claims for cost anomalies using advanced statistical analysis, historical patterns, and provider peer comparisons to prioritize review queues and identify potential billing irregularities
+agentGoal: Analyze high-value claims for cost anomalies using advanced statistical analysis, historical patterns, and provider
+  peer comparisons to prioritize review queues and identify potential billing irregularities
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: RequestResponse
@@ -19,7 +21,6 @@ runMode: RealTime
 agencyLevel: ModelBasedReflexAgent
 toolsUse: true
 learningCapability: Supervised
-
 variables:
 - name: high_cost_threshold
   type: number
@@ -41,43 +42,43 @@ variables:
   required: false
   default: 0.85
   description: Confidence threshold for automatic flagging
-
 tags:
-  - high-cost-analysis
-  - cost-outlier-detection
-  - peer-comparison
-  - billing-anomaly
-  - claims-prioritization
-  - statistical-analysis
-
+- high-cost-analysis
+- cost-outlier-detection
+- peer-comparison
+- billing-anomaly
+- claims-prioritization
+- statistical-analysis
 sampleInput:
   claim_data:
-    claim_id: "CLM-2024-003789"
-    member_id: "MBR321654987"
-    provider_npi: "1357924680"
-    provider_specialty: "cardiothoracic_surgery"
-    facility_type: "hospital_inpatient"
-    service_date: "2024-01-25"
-    total_claim_amount: 125000.00
+    claim_id: CLM-2024-003789
+    member_id: MBR321654987
+    provider_npi: '1357924680'
+    provider_specialty: cardiothoracic_surgery
+    facility_type: hospital_inpatient
+    service_date: '2024-01-25'
+    total_claim_amount: 125000.0
     service_lines:
-      - cpt_code: "33533"
-        description: "Coronary artery bypass, using arterial graft(s)"
-        units: 1
-        charge_amount: 85000.00
-      - cpt_code: "93456"
-        description: "Catheterization, coronary angiography"
-        units: 1
-        charge_amount: 15000.00
-      - cpt_code: "99223"
-        description: "Hospital inpatient care, per day"
-        units: 5
-        charge_amount: 25000.00
-    diagnosis_codes: ["I25.10", "I48.91", "Z95.1"]
+    - cpt_code: '33533'
+      description: Coronary artery bypass, using arterial graft(s)
+      units: 1
+      charge_amount: 85000.0
+    - cpt_code: '93456'
+      description: Catheterization, coronary angiography
+      units: 1
+      charge_amount: 15000.0
+    - cpt_code: '99223'
+      description: Hospital inpatient care, per day
+      units: 5
+      charge_amount: 25000.0
+    diagnosis_codes:
+    - I25.10
+    - I48.91
+    - Z95.1
     member_demographics:
       age: 67
-      gender: "M"
-      geographic_region: "northeast"
-
+      gender: M
+      geographic_region: northeast
 components:
 - id: high-cost-input
   type: genesis:chat_input
@@ -87,128 +88,112 @@ components:
   - in: cost-analyzer-agent
     useAs: input
     description: High-cost claim data for analysis
-
 - id: claims-analytics-engine
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: Claims Analytics Engine
   description: Advanced analytics engine for statistical analysis and pattern detection in claims data
   config:
-    tool_name: "claims_analytics_engine"
-    description: "Statistical analysis tool for claims cost anomaly detection using multiple algorithms including z-score, IQR, isolation forest, and DBSCAN"
-    timeout_seconds: 30
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: cost-analyzer-agent
     useAs: tool
     description: Statistical analysis and outlier detection
-
 - id: provider-benchmarking-service
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: Provider Benchmarking Service
   description: Compares provider costs against peer groups and industry standards
   config:
-    tool_name: "provider_benchmarking_service"
-    description: "Provider benchmarking tool that compares costs against peer groups by specialty, geographic region, facility type, and case mix index"
-    timeout_seconds: 45
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: cost-analyzer-agent
     useAs: tool
     description: Provider peer comparison and benchmarking
-
 - id: historical-claims-connector
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: Historical Claims Database
   description: Connects to comprehensive claims database for historical pattern analysis
   config:
-    tool_name: "historical_claims_connector"
-    description: "Historical claims database connector with 5-year data retention, query optimization, and real-time updates"
-    timeout_seconds: 60
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: cost-analyzer-agent
     useAs: tool
     description: Historical claims data access
-
 - id: cost-prediction-model
-  type: genesis:mcp_tool
+  type: genesis:api_request
   name: Healthcare Cost Prediction Model
   description: ML model trained to predict expected costs based on procedure, provider, and patient characteristics
   config:
-    tool_name: "cost_prediction_model"
-    description: "ML cost prediction model using gradient boosting with automated feature engineering and confidence intervals (v3.2.1)"
-    timeout_seconds: 30
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - in: cost-analyzer-agent
     useAs: tool
     description: Cost prediction and variance analysis
-
 - id: cost-analyzer-agent
   type: genesis:agent
   name: High-Cost Claims Analyzer
   description: Analyzes high-cost claims for outliers, anomalies, and prioritization using advanced analytics
   config:
-    system_prompt: |
-      You are a High-Cost Claims Analysis Specialist with expertise in healthcare economics, statistical analysis, and billing pattern recognition. Your role is to identify cost outliers and prioritize high-value claims for detailed review.
-
-      **Analysis Framework:**
-
-      1. **Cost Classification Categories:**
-         - **High-Cost Normal**: Expensive but within expected range
-         - **High-Cost Outlier**: Significantly above expected costs
-         - **Extreme Outlier**: Costs beyond reasonable medical necessity
-         - **Billing Anomaly**: Cost patterns suggesting potential errors
-
-      2. **Statistical Analysis Methods:**
-         - **Z-Score Analysis**: Standard deviation from mean costs
-         - **Interquartile Range (IQR)**: Outlier detection using quartiles
-         - **Peer Comparison**: Provider vs. specialty/geographic peers
-         - **Historical Trending**: Cost patterns over time
-         - **Case-Mix Adjustment**: Complexity-adjusted cost analysis
-
-      3. **Available Tools:**
-         - **Claims Analytics Engine** - Advanced statistical analysis
-         - **Provider Benchmarking Service** - Peer group comparisons
-         - **Historical Claims Database** - Pattern and trend analysis
-         - **Cost Prediction Model** - Expected cost calculations
-
-      **Analysis Process:**
-      1. Calculate statistical outlier scores using multiple methods
-      2. Compare against provider peer groups and industry benchmarks
-      3. Analyze historical patterns for the provider and procedure type
-      4. Generate expected cost predictions with confidence intervals
-      5. Identify specific anomaly indicators and their severity
-      6. Prioritize review urgency based on potential impact
-
-      **Outlier Detection Criteria:**
-      - **Z-Score > 2.5**: Significant outlier requiring review
-      - **Peer Percentile > 90**: Provider charges above 90th percentile
-      - **Cost Variance > 25%**: Claim exceeds expected range by 25%+
-      - **Billing Pattern Anomaly**: Unusual coding or bundling patterns
-
-      **Prioritization Logic:**
-      - **Immediate Review**: Extreme outliers with high confidence
-      - **Priority Review**: Significant outliers with savings potential
-      - **Routine Review**: Moderate outliers within review capacity
-      - **Monitor Only**: Minor variations within acceptable ranges
-
-      **Output Requirements:**
-      - Clear cost classification with statistical confidence
-      - Detailed peer comparison analysis with percentile ranking
-      - Specific anomaly indicators with severity assessment
-      - Review recommendations with urgency prioritization
-      - Potential cost savings estimates for review prioritization
-
-      Focus on identifying genuine billing anomalies while accounting for legitimate cost variations due to case complexity, patient acuity, and regional differences.
+    system_prompt: "You are a High-Cost Claims Analysis Specialist with expertise in healthcare economics, statistical analysis,\
+      \ and billing pattern recognition. Your role is to identify cost outliers and prioritize high-value claims for detailed\
+      \ review.\n\n**Analysis Framework:**\n\n1. **Cost Classification Categories:**\n   - **High-Cost Normal**: Expensive\
+      \ but within expected range\n   - **High-Cost Outlier**: Significantly above expected costs\n   - **Extreme Outlier**:\
+      \ Costs beyond reasonable medical necessity\n   - **Billing Anomaly**: Cost patterns suggesting potential errors\n\n\
+      2. **Statistical Analysis Methods:**\n   - **Z-Score Analysis**: Standard deviation from mean costs\n   - **Interquartile\
+      \ Range (IQR)**: Outlier detection using quartiles\n   - **Peer Comparison**: Provider vs. specialty/geographic peers\n\
+      \   - **Historical Trending**: Cost patterns over time\n   - **Case-Mix Adjustment**: Complexity-adjusted cost analysis\n\
+      \n3. **Available Tools:**\n   - **Claims Analytics Engine** - Advanced statistical analysis\n   - **Provider Benchmarking\
+      \ Service** - Peer group comparisons\n   - **Historical Claims Database** - Pattern and trend analysis\n   - **Cost\
+      \ Prediction Model** - Expected cost calculations\n\n**Analysis Process:**\n1. Calculate statistical outlier scores\
+      \ using multiple methods\n2. Compare against provider peer groups and industry benchmarks\n3. Analyze historical patterns\
+      \ for the provider and procedure type\n4. Generate expected cost predictions with confidence intervals\n5. Identify\
+      \ specific anomaly indicators and their severity\n6. Prioritize review urgency based on potential impact\n\n**Outlier\
+      \ Detection Criteria:**\n- **Z-Score > 2.5**: Significant outlier requiring review\n- **Peer Percentile > 90**: Provider\
+      \ charges above 90th percentile\n- **Cost Variance > 25%**: Claim exceeds expected range by 25%+\n- **Billing Pattern\
+      \ Anomaly**: Unusual coding or bundling patterns\n\n**Prioritization Logic:**\n- **Immediate Review**: Extreme outliers\
+      \ with high confidence\n- **Priority Review**: Significant outliers with savings potential\n- **Routine Review**: Moderate\
+      \ outliers within review capacity\n- **Monitor Only**: Minor variations within acceptable ranges\n\n**Output Requirements:**\n\
+      - Clear cost classification with statistical confidence\n- Detailed peer comparison analysis with percentile ranking\n\
+      - Specific anomaly indicators with severity assessment\n- Review recommendations with urgency prioritization\n- Potential\
+      \ cost savings estimates for review prioritization\n\nFocus on identifying genuine billing anomalies while accounting\
+      \ for legitimate cost variations due to case complexity, patient acuity, and regional differences.\n"
     temperature: 0.1
     max_tokens: 2000
   provides:
   - in: cost-analysis-output
     useAs: input
     description: Send high-cost analysis results to output
-
 - id: cost-analysis-output
   type: genesis:chat_output
   name: High-Cost Analysis Results
   description: Display comprehensive high-cost claim analysis and prioritization recommendations
-
 outputs:
 - cost_analysis
 - outlier_score
@@ -216,34 +201,32 @@ outputs:
 - anomaly_indicators
 - recommendation
 - potential_savings
-
 kpis:
 - name: outlier_detection_accuracy
   category: performance
   description: Accuracy of identifying true cost outliers
-  target: ">92%"
+  target: '>92%'
   valueType: percentage
 - name: review_prioritization_efficiency
   category: efficiency
   description: Percentage of high-priority reviews yielding adjustments
-  target: ">75%"
+  target: '>75%'
   valueType: percentage
 - name: cost_savings_identification
   category: business
   description: Monthly cost savings identified through analysis
-  target: ">$500,000"
+  target: '>$500,000'
   valueType: number
 - name: analysis_processing_time
   category: performance
   description: Average time to complete high-cost analysis
-  target: "<1 second"
+  target: <1 second
   valueType: duration
 - name: false_positive_rate
   category: quality
   description: Rate of incorrectly flagged normal-cost claims
-  target: "<8%"
+  target: <8%
   valueType: percentage
-
 securityInfo:
   visibility: Internal
   gdprSensitive: true

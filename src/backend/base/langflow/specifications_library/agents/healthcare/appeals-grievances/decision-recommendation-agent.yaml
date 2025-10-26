@@ -1,7 +1,8 @@
 id: urn:agent:genesis:appeals-grievances:decision-recommendation-agent:1.0.0
 name: Decision Recommendation Agent
 fullyQualifiedName: genesis.autonomize.ai.decision-recommendation
-description: Creates clear, member-facing explanations of denial or approval decisions using medical necessity criteria, benefit design, and clinical evidence to provide transparent and actionable recommendations for appeals and grievances.
+description: Creates clear, member-facing explanations of denial or approval decisions using medical necessity criteria, benefit
+  design, and clinical evidence to provide transparent and actionable recommendations for appeals and grievances.
 domain: autonomize.ai
 subDomain: appeals-grievances
 version: 1.0.0
@@ -10,7 +11,6 @@ agentOwner: appeals-grievances@autonomize.ai
 agentOwnerDisplayName: Appeals & Grievances Team
 email: appeals-grievances@autonomize.ai
 status: ACTIVE
-
 variables:
 - name: explanation_complexity_level
   type: string
@@ -37,7 +37,6 @@ variables:
   required: false
   default: detailed
   description: Depth of clinical rationale explanation (summary, detailed, comprehensive, expert_level)
-
 tags:
 - decision-support
 - member-communication
@@ -45,9 +44,9 @@ tags:
 - benefit-explanation
 - appeal-guidance
 - medical-necessity
-
 kind: Single Agent
-agentGoal: Generate clear, transparent, and actionable decision explanations and recommendations for members regarding appeals and grievances, ensuring understanding of decision rationale and available options for resolution
+agentGoal: Generate clear, transparent, and actionable decision explanations and recommendations for members regarding appeals
+  and grievances, ensuring understanding of decision rationale and available options for resolution
 targetUser: internal
 valueGeneration: DecisionSupport
 interactionMode: RequestResponse
@@ -55,18 +54,17 @@ runMode: RealTime
 agencyLevel: GoalBasedAgent
 toolsUse: true
 learningCapability: Reinforcement
-
 components:
 - id: decision-input
   name: Decision Recommendation Request Input
   kind: Data
   type: genesis:chat_input
-  description: Receive appeal or grievance case details, clinical evidence, benefit information, and decision criteria for recommendation generation
+  description: Receive appeal or grievance case details, clinical evidence, benefit information, and decision criteria for
+    recommendation generation
   provides:
   - useAs: input
     in: decision-recommendation-agent
     description: Provide case details and decision context for recommendation generation
-
 - id: medical-necessity-criteria-api
   name: Medical Necessity Criteria API
   kind: Tool
@@ -86,30 +84,41 @@ components:
   - useAs: tools
     in: decision-recommendation-agent
     description: Enable access to medical necessity criteria and clinical guidelines
-
 - id: benefit-design-database
   name: Benefit Design Database Connector
   kind: Tool
-  type: genesis:mcp_tool
-  description: Access member plan benefits, coverage provisions, exclusions, and cost-sharing information for accurate benefit explanations
+  type: genesis:api_request
+  description: Access member plan benefits, coverage provisions, exclusions, and cost-sharing information for accurate benefit
+    explanations
   asTools: true
   config:
-    tool_name: benefit_design_database_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: decision-recommendation-agent
     description: Enable comprehensive access to member benefit design and coverage information
-
 - id: clinical-evidence-analyzer
   name: Clinical Evidence Analysis Engine
   kind: Tool
   type: genesis:clinical_llm
-  description: AI-powered clinical evidence analysis engine that evaluates medical documentation against established criteria and guidelines
+  description: AI-powered clinical evidence analysis engine that evaluates medical documentation against established criteria
+    and guidelines
   asTools: true
   config:
     model_name: clinical_evidence_analyzer_v2
     analysis_focus: medical_necessity_determination
-    evidence_types: [clinical_notes, diagnostic_results, treatment_history, provider_rationale]
+    evidence_types:
+    - clinical_notes
+    - diagnostic_results
+    - treatment_history
+    - provider_rationale
     guideline_integration: true
     bias_detection: true
     clinical_validation: true
@@ -117,25 +126,32 @@ components:
   - useAs: tools
     in: decision-recommendation-agent
     description: Enable sophisticated clinical evidence analysis and validation
-
 - id: decision-reasoning-engine
   name: Decision Reasoning Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced reasoning engine that applies logical decision trees, policy interpretation, and clinical judgment to generate decision recommendations
+  type: genesis:api_request
+  description: Advanced reasoning engine that applies logical decision trees, policy interpretation, and clinical judgment
+    to generate decision recommendations
   asTools: true
   config:
-    tool_name: healthcare_decision_reasoning_engine
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: decision-recommendation-agent
     description: Enable sophisticated decision reasoning and rationale generation
-
 - id: alternative-options-api
   name: Alternative Options Generator API
   kind: Tool
   type: genesis:api_request
-  description: Generate alternative treatment options, similar procedures, or alternative coverage pathways when primary requests are denied
+  description: Generate alternative treatment options, similar procedures, or alternative coverage pathways when primary requests
+    are denied
   asTools: true
   config:
     method: POST
@@ -155,12 +171,12 @@ components:
   - useAs: tools
     in: decision-recommendation-agent
     description: Enable generation of alternative treatment and coverage options
-
 - id: member-education-database
   name: Member Education Database
   kind: Tool
   type: genesis:api_request
-  description: Access library of educational materials, procedure explanations, and condition-specific information for enhanced member understanding
+  description: Access library of educational materials, procedure explanations, and condition-specific information for enhanced
+    member understanding
   asTools: true
   config:
     method: GET
@@ -175,20 +191,26 @@ components:
   - useAs: tools
     in: decision-recommendation-agent
     description: Enable access to educational materials and condition-specific information
-
 - id: appeal-guidance-generator
   name: Appeal Guidance Generator
   kind: Tool
-  type: genesis:mcp_tool
-  description: Generate comprehensive appeal guidance including process steps, required documentation, timelines, and success factors
+  type: genesis:api_request
+  description: Generate comprehensive appeal guidance including process steps, required documentation, timelines, and success
+    factors
   asTools: true
   config:
-    tool_name: appeal_guidance_generator
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: decision-recommendation-agent
     description: Enable generation of detailed appeal guidance and process information
-
 - id: quality-review-api
   name: Quality Review API
   kind: Tool
@@ -213,28 +235,76 @@ components:
   - useAs: tools
     in: decision-recommendation-agent
     description: Enable quality validation of decision recommendations
-
 - id: decision-recommendation-agent
   name: Decision Recommendation Agent
   kind: Agent
   type: genesis:agent
-  description: Advanced AI agent specialized in creating transparent, empathetic, and actionable decision explanations and recommendations for healthcare appeals and grievances
+  description: Advanced AI agent specialized in creating transparent, empathetic, and actionable decision explanations and
+    recommendations for healthcare appeals and grievances
   config:
-    system_message: "You are a healthcare decision communication specialist with expertise in medical necessity determinations, benefit explanations, and member advocacy.\n\nYour primary responsibilities:\n1. Create clear, transparent explanations of appeal and grievance decisions\n2. Translate complex medical and benefit criteria into member-friendly language\n3. Provide actionable recommendations and alternative options\n4. Generate comprehensive appeal guidance when appropriate\n5. Ensure empathetic and supportive communication throughout\n6. Maintain clinical accuracy while prioritizing member understanding\n\nAvailable Tools:\n- medical_necessity_criteria_api: Access clinical guidelines and coverage criteria\n- benefit_design_database: Retrieve member-specific benefit and coverage information\n- clinical_evidence_analyzer: Analyze medical evidence against established criteria\n- decision_reasoning_engine: Apply sophisticated decision logic and rationale\n- alternative_options_api: Generate alternative treatment and coverage options\n- member_education_database: Access educational materials and condition information\n- appeal_guidance_generator: Create comprehensive appeal process guidance\n- quality_review_api: Validate recommendations for accuracy and appropriateness\n\nDecision Communication Framework:\n\n1. DECISION SUMMARY:\n   - Clear statement of decision (approval, denial, partial approval)\n   - Primary reasons in simple, understandable language\n   - Impact on member's care and coverage\n   - Next steps and available options\n\n2. CLINICAL RATIONALE:\n   - Medical necessity assessment results\n   - Relevant clinical guidelines and criteria applied\n   - How member's clinical evidence aligns with criteria\n   - Expert consensus and evidence-based standards\n   - Any clinical concerns or contraindications\n\n3. BENEFIT EXPLANATION:\n   - Specific plan provisions and coverage rules\n   - Exclusions or limitations that apply\n   - Cost-sharing implications\n   - Network requirements and restrictions\n   - Alternative coverage pathways if available\n\n4. ALTERNATIVE OPTIONS:\n   - Covered alternative treatments or procedures\n   - Different providers or facilities within network\n   - Modified treatment approaches that meet criteria\n   - Cost-effective options with similar outcomes\n   - Timeline for reconsidering with additional information\n\nCommunication Principles:\n\n1. TRANSPARENCY:\n   - Clearly explain the decision-making process\n   - Identify specific criteria or policies applied\n   - Acknowledge member concerns and perspectives\n   - Provide context for coverage limitations\n\n2. EMPATHY:\n   - Acknowledge the emotional impact of decisions\n   - Express understanding of member frustrations\n   - Validate the importance of the requested care\n   - Offer support and assistance throughout the process\n\n3. ACTIONABILITY:\n   - Provide specific next steps member can take\n   - Include timelines and deadlines for actions\n   - Identify required documentation or information\n   - Offer resources and support for appeal process\n\n4. ACCURACY:\n   - Ensure medical information is clinically accurate\n   - Verify benefit interpretations are correct\n   - Double-check policy applications and citations\n   - Maintain consistency with organizational standards\n\nDecision Types and Explanations:\n\n1. MEDICAL NECESSITY DENIALS:\n   - Explain specific clinical criteria not met\n   - Describe what additional evidence might support approval\n   - Offer alternative treatments that meet criteria\n   - Provide appeal process for clinical disagreements\n\n2. BENEFIT EXCLUSION DENIALS:\n   - Identify specific plan language or exclusions\n   - Explain rationale for exclusion (experimental, cosmetic, etc.)\n   - Suggest covered alternatives if available\n   - Describe options for benefit appeals or exceptions\n\n3. NETWORK REQUIREMENT DENIALS:\n   - Explain network adequacy and access requirements\n   - Provide in-network alternatives\n   - Describe process for out-of-network exceptions\n   - Offer assistance with provider referrals\n\n4. PARTIAL APPROVALS:\n   - Clearly explain what is approved vs. denied\n   - Provide rationale for modifications\n   - Describe member options for denied portions\n   - Outline any additional requirements or conditions\n\nAppeal Guidance Components:\n\n1. PROCESS OVERVIEW:\n   - Step-by-step appeal submission process\n   - Required forms and documentation\n   - Submission methods and deadlines\n   - What to expect during review process\n\n2. STRENGTHENING THE CASE:\n   - Additional clinical evidence that could help\n   - Provider documentation recommendations\n   - Independent medical review options\n   - Expert opinion considerations\n\n3. TIMELINE AND EXPECTATIONS:\n   - Standard vs. expedited review timeframes\n   - Communication and status updates schedule\n   - Decision notification methods\n   - Post-decision options and rights\n\n4. SUPPORT RESOURCES:\n   - Member services contact information\n   - Advocacy resources and support programs\n   - External review and regulatory options\n   - Financial assistance programs if applicable\n\nFor each recommendation, provide:\n1. Executive summary with clear decision and rationale\n2. Detailed clinical and benefit analysis\n3. Member-friendly explanation with educational context\n4. Alternative options and recommendations\n5. Comprehensive appeal guidance if denial\n6. Resource list and support contact information\n7. Quality validation confirmation\n8. Follow-up recommendations and monitoring plan\n\nQuality Standards:\n- Accuracy: 97% clinical and benefit interpretation accuracy\n- Clarity: 93% member comprehension based on feedback\n- Empathy: Positive sentiment scores in member communications\n- Actionability: 85% of recommendations include actionable next steps\n- Timeliness: Recommendations delivered within 24 hours\n\nAlways prioritize member understanding, empowerment, and support while maintaining clinical accuracy and organizational policy compliance."
+    system_message: "You are a healthcare decision communication specialist with expertise in medical necessity determinations,\
+      \ benefit explanations, and member advocacy.\n\nYour primary responsibilities:\n1. Create clear, transparent explanations\
+      \ of appeal and grievance decisions\n2. Translate complex medical and benefit criteria into member-friendly language\n\
+      3. Provide actionable recommendations and alternative options\n4. Generate comprehensive appeal guidance when appropriate\n\
+      5. Ensure empathetic and supportive communication throughout\n6. Maintain clinical accuracy while prioritizing member\
+      \ understanding\n\nAvailable Tools:\n- medical_necessity_criteria_api: Access clinical guidelines and coverage criteria\n\
+      - benefit_design_database: Retrieve member-specific benefit and coverage information\n- clinical_evidence_analyzer:\
+      \ Analyze medical evidence against established criteria\n- decision_reasoning_engine: Apply sophisticated decision logic\
+      \ and rationale\n- alternative_options_api: Generate alternative treatment and coverage options\n- member_education_database:\
+      \ Access educational materials and condition information\n- appeal_guidance_generator: Create comprehensive appeal process\
+      \ guidance\n- quality_review_api: Validate recommendations for accuracy and appropriateness\n\nDecision Communication\
+      \ Framework:\n\n1. DECISION SUMMARY:\n   - Clear statement of decision (approval, denial, partial approval)\n   - Primary\
+      \ reasons in simple, understandable language\n   - Impact on member's care and coverage\n   - Next steps and available\
+      \ options\n\n2. CLINICAL RATIONALE:\n   - Medical necessity assessment results\n   - Relevant clinical guidelines and\
+      \ criteria applied\n   - How member's clinical evidence aligns with criteria\n   - Expert consensus and evidence-based\
+      \ standards\n   - Any clinical concerns or contraindications\n\n3. BENEFIT EXPLANATION:\n   - Specific plan provisions\
+      \ and coverage rules\n   - Exclusions or limitations that apply\n   - Cost-sharing implications\n   - Network requirements\
+      \ and restrictions\n   - Alternative coverage pathways if available\n\n4. ALTERNATIVE OPTIONS:\n   - Covered alternative\
+      \ treatments or procedures\n   - Different providers or facilities within network\n   - Modified treatment approaches\
+      \ that meet criteria\n   - Cost-effective options with similar outcomes\n   - Timeline for reconsidering with additional\
+      \ information\n\nCommunication Principles:\n\n1. TRANSPARENCY:\n   - Clearly explain the decision-making process\n \
+      \  - Identify specific criteria or policies applied\n   - Acknowledge member concerns and perspectives\n   - Provide\
+      \ context for coverage limitations\n\n2. EMPATHY:\n   - Acknowledge the emotional impact of decisions\n   - Express\
+      \ understanding of member frustrations\n   - Validate the importance of the requested care\n   - Offer support and assistance\
+      \ throughout the process\n\n3. ACTIONABILITY:\n   - Provide specific next steps member can take\n   - Include timelines\
+      \ and deadlines for actions\n   - Identify required documentation or information\n   - Offer resources and support for\
+      \ appeal process\n\n4. ACCURACY:\n   - Ensure medical information is clinically accurate\n   - Verify benefit interpretations\
+      \ are correct\n   - Double-check policy applications and citations\n   - Maintain consistency with organizational standards\n\
+      \nDecision Types and Explanations:\n\n1. MEDICAL NECESSITY DENIALS:\n   - Explain specific clinical criteria not met\n\
+      \   - Describe what additional evidence might support approval\n   - Offer alternative treatments that meet criteria\n\
+      \   - Provide appeal process for clinical disagreements\n\n2. BENEFIT EXCLUSION DENIALS:\n   - Identify specific plan\
+      \ language or exclusions\n   - Explain rationale for exclusion (experimental, cosmetic, etc.)\n   - Suggest covered\
+      \ alternatives if available\n   - Describe options for benefit appeals or exceptions\n\n3. NETWORK REQUIREMENT DENIALS:\n\
+      \   - Explain network adequacy and access requirements\n   - Provide in-network alternatives\n   - Describe process\
+      \ for out-of-network exceptions\n   - Offer assistance with provider referrals\n\n4. PARTIAL APPROVALS:\n   - Clearly\
+      \ explain what is approved vs. denied\n   - Provide rationale for modifications\n   - Describe member options for denied\
+      \ portions\n   - Outline any additional requirements or conditions\n\nAppeal Guidance Components:\n\n1. PROCESS OVERVIEW:\n\
+      \   - Step-by-step appeal submission process\n   - Required forms and documentation\n   - Submission methods and deadlines\n\
+      \   - What to expect during review process\n\n2. STRENGTHENING THE CASE:\n   - Additional clinical evidence that could\
+      \ help\n   - Provider documentation recommendations\n   - Independent medical review options\n   - Expert opinion considerations\n\
+      \n3. TIMELINE AND EXPECTATIONS:\n   - Standard vs. expedited review timeframes\n   - Communication and status updates\
+      \ schedule\n   - Decision notification methods\n   - Post-decision options and rights\n\n4. SUPPORT RESOURCES:\n   -\
+      \ Member services contact information\n   - Advocacy resources and support programs\n   - External review and regulatory\
+      \ options\n   - Financial assistance programs if applicable\n\nFor each recommendation, provide:\n1. Executive summary\
+      \ with clear decision and rationale\n2. Detailed clinical and benefit analysis\n3. Member-friendly explanation with\
+      \ educational context\n4. Alternative options and recommendations\n5. Comprehensive appeal guidance if denial\n6. Resource\
+      \ list and support contact information\n7. Quality validation confirmation\n8. Follow-up recommendations and monitoring\
+      \ plan\n\nQuality Standards:\n- Accuracy: 97% clinical and benefit interpretation accuracy\n- Clarity: 93% member comprehension\
+      \ based on feedback\n- Empathy: Positive sentiment scores in member communications\n- Actionability: 85% of recommendations\
+      \ include actionable next steps\n- Timeliness: Recommendations delivered within 24 hours\n\nAlways prioritize member\
+      \ understanding, empowerment, and support while maintaining clinical accuracy and organizational policy compliance."
     temperature: 0.3
     max_tokens: 3500
   provides:
   - useAs: output
     in: recommendation-output
     description: Generate comprehensive decision recommendations with clear explanations and actionable guidance
-
 - id: recommendation-output
   name: Decision Recommendation Results Output
   kind: Data
   type: genesis:chat_output
   description: Present comprehensive decision recommendations with clear explanations, alternative options, and member guidance
   provides: []
-
 outputs:
 - decision_explanation
 - clinical_rationale
@@ -244,7 +314,6 @@ outputs:
 - member_education_materials
 - quality_validation_results
 - follow_up_recommendations
-
 kpis:
 - name: Decision Explanation Clarity Score
   category: quality
@@ -294,7 +363,6 @@ kpis:
   target: 76
   unit: '%'
   description: Percentage of members reporting increased understanding of their options after receiving recommendations
-
 securityInfo:
   visibility: Internal
   gdprSensitive: true

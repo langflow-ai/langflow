@@ -9,7 +9,7 @@ from langflow.io import Output
 from langflow.schema.data import Data
 from langflow.logging import logger
 from langflow.components.helpers.studio_builder.api_client import SpecAPIClient
-from langflow.custom.genesis.spec.mapper import ComponentMapper
+from langflow.services.genesis.mapper import ComponentMapper
 
 
 class ComponentValidator(Component):
@@ -85,7 +85,7 @@ class ComponentValidator(Component):
                     "genesis:agent",
                     "genesis:autonomize_agent",
                     "genesis:language_model",
-                    "genesis:prompt_template",
+                    "genesis:prompt",
                     "genesis:mcp_tool",
                     "genesis:api_request",
                     "genesis:knowledge_hub_search",
@@ -192,8 +192,8 @@ class ComponentValidator(Component):
             "llm": "genesis:agent",
             "ai": "genesis:agent",
             "model": "genesis:autonomize_model",
-            "prompt": "genesis:prompt_template",
-            "template": "genesis:prompt_template",
+            "prompt": "genesis:prompt",
+            "template": "genesis:prompt",
             "tool": "genesis:mcp_tool",
             "api": "genesis:api_request",
             "http": "genesis:api_request",
@@ -267,7 +267,7 @@ class ComponentValidator(Component):
         output_types = {"genesis:chat_output", "genesis:text_output"} & valid_components
         agent_types = {"genesis:agent", "genesis:autonomize_agent", "genesis:language_model"} & valid_components
         tool_types = {"genesis:mcp_tool", "genesis:api_request", "genesis:knowledge_hub_search"} & valid_components
-        prompt_types = {"genesis:prompt_template", "genesis:genesis_prompt"} & valid_components
+        prompt_types = {"genesis:prompt", "genesis:genesis_prompt"} & valid_components
 
         # Identify pattern and missing components
         has_input = bool(component_types & input_types)

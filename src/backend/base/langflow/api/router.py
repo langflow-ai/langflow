@@ -6,7 +6,6 @@ from langflow.api.v1 import (
     api_key_router,
     agent_marketplace_router,
     chat_router,
-    component_mapping_router,
     endpoints_router,
     files_router,
     flows_router,
@@ -15,6 +14,7 @@ from langflow.api.v1 import (
     login_router,
     mcp_projects_router,
     mcp_router,
+    models_router,
     monitor_router,
     openai_responses_router,
     projects_router,
@@ -40,7 +40,6 @@ router_v2 = APIRouter(
 
 router_v1.include_router(agent_builder_router)
 router_v1.include_router(chat_router)
-router_v1.include_router(component_mapping_router)
 router_v1.include_router(endpoints_router)
 router_v1.include_router(validate_router)
 router_v1.include_router(store_router)
@@ -55,6 +54,7 @@ router_v1.include_router(folders_router)
 router_v1.include_router(projects_router)
 router_v1.include_router(published_flows_router)
 router_v1.include_router(agent_marketplace_router)
+router_v1.include_router(models_router)
 router_v1.include_router(spec_router)
 router_v1.include_router(starter_projects_router)
 router_v1.include_router(knowledge_bases_router)

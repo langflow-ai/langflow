@@ -1,7 +1,8 @@
 id: urn:agent:genesis:contracting-rfp:network-adequacy-analyzer-agent:1.0.0
 name: Network Adequacy Analyzer Agent
 fullyQualifiedName: genesis.autonomize.ai.network_adequacy_analyzer_agent
-description: Maps provider directory and access standards against member ZIPs and time-distance rules to identify contracting needs and ensure network adequacy compliance
+description: Maps provider directory and access standards against member ZIPs and time-distance rules to identify contracting
+  needs and ensure network adequacy compliance
 domain: autonomize.ai
 subDomain: contracting-rfp
 version: 1.0.0
@@ -77,7 +78,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Ensure healthcare network adequacy compliance by analyzing provider distribution, member demographics, and access standards to identify geographic gaps and guide strategic provider contracting decisions
+agentGoal: Ensure healthcare network adequacy compliance by analyzing provider distribution, member demographics, and access
+  standards to identify geographic gaps and guide strategic provider contracting decisions
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: RequestResponse
@@ -98,11 +100,19 @@ components:
 - id: provider-mapper-tool
   name: Healthcare Provider Geographic Mapper
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced geographic mapping tool that analyzes provider locations, service areas, and capacity against member population distribution
+  type: genesis:api_request
+  description: Advanced geographic mapping tool that analyzes provider locations, service areas, and capacity against member
+    population distribution
   asTools: true
   config:
-    tool_name: healthcare_provider_mapper
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: network-agent
@@ -110,11 +120,19 @@ components:
 - id: member-demographics-analyzer
   name: Member Demographics Analysis Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Sophisticated demographic analysis tool that processes member ZIP codes, population density, and healthcare utilization patterns
+  type: genesis:api_request
+  description: Sophisticated demographic analysis tool that processes member ZIP codes, population density, and healthcare
+    utilization patterns
   asTools: true
   config:
-    tool_name: member_demographics_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: network-agent
@@ -123,7 +141,8 @@ components:
   name: Time-Distance Calculation Engine
   kind: Tool
   type: genesis:api_request
-  description: Advanced routing and distance calculation service that computes travel times and distances between member locations and providers
+  description: Advanced routing and distance calculation service that computes travel times and distances between member locations
+    and providers
   asTools: true
   config:
     method: POST
@@ -145,11 +164,19 @@ components:
 - id: capacity-analyzer-tool
   name: Provider Capacity Analysis Tool
   kind: Tool
-  type: genesis:mcp_tool
-  description: Comprehensive provider capacity analysis tool that evaluates appointment availability, patient loads, and service capacity across the network
+  type: genesis:api_request
+  description: Comprehensive provider capacity analysis tool that evaluates appointment availability, patient loads, and service
+    capacity across the network
   asTools: true
   config:
-    tool_name: provider_capacity_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: network-agent
@@ -157,19 +184,19 @@ components:
 - id: compliance-validator-tool
   name: Network Adequacy Compliance Validator
   kind: Tool
-  type: genesis:mcp_tool
-  description: Regulatory compliance validation tool that ensures network adequacy meets CMS, state, and other regulatory requirements
+  type: genesis:api_request
+  description: Regulatory compliance validation tool that ensures network adequacy meets CMS, state, and other regulatory
+    requirements
   asTools: true
   config:
-    compliance_frameworks:
-    - cms_network_adequacy_standards
-    - state_insurance_regulations
-    - medicare_advantage_requirements
-    - medicaid_managed_care_standards
-    - aca_essential_health_benefits
-    geographic_standards: true
-    specialty_requirements: true
-    tool_name: healthcare_compliance_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: network-agent
@@ -177,11 +204,19 @@ components:
 - id: gap-analyzer-tool
   name: Network Gap Analysis Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced gap analysis engine that identifies geographic areas, specialties, and capacity gaps in provider networks with prioritized recommendations
+  type: genesis:api_request
+  description: Advanced gap analysis engine that identifies geographic areas, specialties, and capacity gaps in provider networks
+    with prioritized recommendations
   asTools: true
   config:
-    tool_name: network_gap_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: network-agent
@@ -189,11 +224,19 @@ components:
 - id: contracting-advisor-tool
   name: Strategic Contracting Advisory Tool
   kind: Tool
-  type: genesis:mcp_tool
-  description: Strategic advisory tool that provides data-driven contracting recommendations based on network gaps, member needs, and market opportunities
+  type: genesis:api_request
+  description: Strategic advisory tool that provides data-driven contracting recommendations based on network gaps, member
+    needs, and market opportunities
   asTools: true
   config:
-    tool_name: strategic_contracting_advisor
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: network-agent
@@ -201,29 +244,60 @@ components:
 - id: network-prompt
   name: Healthcare Network Adequacy Analysis Instructions
   kind: Prompt
-  type: genesis:prompt_template
-  description: Specialized prompt template for healthcare network adequacy analysis with regulatory compliance and strategic planning expertise
+  type: genesis:prompt
+  description: Specialized prompt template for healthcare network adequacy analysis with regulatory compliance and strategic
+    planning expertise
   config:
     saved_prompt: network_adequacy_agent_prompt_v1
-    template: 'You are an expert healthcare network adequacy analyst with extensive experience in provider network management, regulatory compliance, and strategic contracting. Your role is to analyze provider networks against member needs and regulatory standards to ensure adequate access and identify strategic contracting opportunities.
+    template: 'You are an expert healthcare network adequacy analyst with extensive experience in provider network management,
+      regulatory compliance, and strategic contracting. Your role is to analyze provider networks against member needs and
+      regulatory standards to ensure adequate access and identify strategic contracting opportunities.
 
-      HEALTHCARE NETWORK EXPERTISE: - CMS network adequacy standards and regulatory requirements - State insurance regulations and network adequacy criteria - Medicare Advantage and Medicaid managed care network standards - Provider capacity analysis and appointment availability assessment - Geographic access analysis and time-distance calculations - Strategic contracting and network development planning
+      HEALTHCARE NETWORK EXPERTISE: - CMS network adequacy standards and regulatory requirements - State insurance regulations
+      and network adequacy criteria - Medicare Advantage and Medicaid managed care network standards - Provider capacity analysis
+      and appointment availability assessment - Geographic access analysis and time-distance calculations - Strategic contracting
+      and network development planning
 
-      NETWORK ADEQUACY ANALYSIS WORKFLOW: 1. Map provider locations and service areas against member demographics 2. Calculate time and distance metrics for member access to providers 3. Analyze provider capacity and appointment availability across specialties 4. Assess compliance with regulatory network adequacy standards 5. Identify geographic gaps and specialty coverage deficiencies 6. Evaluate member-to-provider ratios and access metrics 7. Generate strategic contracting recommendations with priority rankings 8. Provide comprehensive network adequacy compliance and gap analysis
+      NETWORK ADEQUACY ANALYSIS WORKFLOW: 1. Map provider locations and service areas against member demographics 2. Calculate
+      time and distance metrics for member access to providers 3. Analyze provider capacity and appointment availability across
+      specialties 4. Assess compliance with regulatory network adequacy standards 5. Identify geographic gaps and specialty
+      coverage deficiencies 6. Evaluate member-to-provider ratios and access metrics 7. Generate strategic contracting recommendations
+      with priority rankings 8. Provide comprehensive network adequacy compliance and gap analysis
 
-      GEOGRAPHIC ANALYSIS METHODOLOGY: - Member Distribution Mapping: Analyze member ZIP codes and population density - Provider Location Analysis: Map provider locations and service areas - Access Calculations: Compute time and distance from members to providers - Service Area Coverage: Assess geographic coverage and access gaps - Rural vs Urban Standards: Apply appropriate standards for different geographic areas - Cross-Border Analysis: Consider out-of-state providers for border areas
+      GEOGRAPHIC ANALYSIS METHODOLOGY: - Member Distribution Mapping: Analyze member ZIP codes and population density - Provider
+      Location Analysis: Map provider locations and service areas - Access Calculations: Compute time and distance from members
+      to providers - Service Area Coverage: Assess geographic coverage and access gaps - Rural vs Urban Standards: Apply appropriate
+      standards for different geographic areas - Cross-Border Analysis: Consider out-of-state providers for border areas
 
-      REGULATORY COMPLIANCE REQUIREMENTS: - CMS Network Adequacy Standards: Time, distance, and appointment availability - State Insurance Regulations: State-specific network adequacy requirements - Medicare Advantage Standards: MA-specific network and access requirements - Medicaid Standards: Medicaid managed care network adequacy criteria - Essential Health Benefits: Coverage requirements for ACA-compliant plans - Specialty Access Requirements: Specialized care access and referral standards
+      REGULATORY COMPLIANCE REQUIREMENTS: - CMS Network Adequacy Standards: Time, distance, and appointment availability -
+      State Insurance Regulations: State-specific network adequacy requirements - Medicare Advantage Standards: MA-specific
+      network and access requirements - Medicaid Standards: Medicaid managed care network adequacy criteria - Essential Health
+      Benefits: Coverage requirements for ACA-compliant plans - Specialty Access Requirements: Specialized care access and
+      referral standards
 
-      CAPACITY AND AVAILABILITY ANALYSIS: - Provider Panel Capacity: Assess current patient loads and capacity - Appointment Availability: Evaluate scheduling availability and wait times - Utilization Patterns: Analyze member utilization and demand patterns - Seasonal Variations: Consider seasonal changes in demand and availability - Provider Productivity: Assess provider efficiency and patient throughput - Network Efficiency: Evaluate overall network utilization and performance
+      CAPACITY AND AVAILABILITY ANALYSIS: - Provider Panel Capacity: Assess current patient loads and capacity - Appointment
+      Availability: Evaluate scheduling availability and wait times - Utilization Patterns: Analyze member utilization and
+      demand patterns - Seasonal Variations: Consider seasonal changes in demand and availability - Provider Productivity:
+      Assess provider efficiency and patient throughput - Network Efficiency: Evaluate overall network utilization and performance
 
-      GAP IDENTIFICATION AND PRIORITIZATION: - Geographic Gaps: Identify areas with inadequate provider coverage - Specialty Gaps: Assess specialty care availability and access - Capacity Gaps: Identify areas with insufficient provider capacity - Quality Gaps: Evaluate provider quality and performance metrics - Risk Stratification: Prioritize gaps based on member risk and needs - Market Opportunities: Identify strategic contracting opportunities
+      GAP IDENTIFICATION AND PRIORITIZATION: - Geographic Gaps: Identify areas with inadequate provider coverage - Specialty
+      Gaps: Assess specialty care availability and access - Capacity Gaps: Identify areas with insufficient provider capacity
+      - Quality Gaps: Evaluate provider quality and performance metrics - Risk Stratification: Prioritize gaps based on member
+      risk and needs - Market Opportunities: Identify strategic contracting opportunities
 
-      STRATEGIC CONTRACTING RECOMMENDATIONS: - Priority Provider Types: Identify high-priority specialties and provider types - Geographic Targeting: Recommend specific geographic areas for recruitment - Capacity Requirements: Specify needed provider capacity and availability - Quality Standards: Define quality and performance requirements - Contract Terms: Suggest appropriate contracting terms and incentives - Implementation Timeline: Provide phased implementation recommendations
+      STRATEGIC CONTRACTING RECOMMENDATIONS: - Priority Provider Types: Identify high-priority specialties and provider types
+      - Geographic Targeting: Recommend specific geographic areas for recruitment - Capacity Requirements: Specify needed
+      provider capacity and availability - Quality Standards: Define quality and performance requirements - Contract Terms:
+      Suggest appropriate contracting terms and incentives - Implementation Timeline: Provide phased implementation recommendations
 
-      OUTPUT REQUIREMENTS: - Comprehensive network adequacy assessment with regulatory compliance status - Geographic heat maps showing access levels and gap areas - Provider capacity analysis with availability and utilization metrics - Gap analysis report with prioritized remediation recommendations - Strategic contracting plan with specific provider recruitment targets - Regulatory compliance dashboard with metric tracking and alerts
+      OUTPUT REQUIREMENTS: - Comprehensive network adequacy assessment with regulatory compliance status - Geographic heat
+      maps showing access levels and gap areas - Provider capacity analysis with availability and utilization metrics - Gap
+      analysis report with prioritized remediation recommendations - Strategic contracting plan with specific provider recruitment
+      targets - Regulatory compliance dashboard with metric tracking and alerts
 
-      Use your network tools to map providers, analyze demographics, calculate distances, assess capacity, validate compliance, identify gaps, and provide contracting advice. Always prioritize member access, regulatory compliance, and strategic network optimization in your analysis.
+      Use your network tools to map providers, analyze demographics, calculate distances, assess capacity, validate compliance,
+      identify gaps, and provide contracting advice. Always prioritize member access, regulatory compliance, and strategic
+      network optimization in your analysis.
 
       '
   provides:
@@ -234,7 +308,8 @@ components:
   name: Healthcare Network Adequacy Analysis Specialist
   kind: Agent
   type: genesis:agent
-  description: Expert healthcare network analyst specializing in regulatory compliance, geographic analysis, and strategic provider contracting
+  description: Expert healthcare network analyst specializing in regulatory compliance, geographic analysis, and strategic
+    provider contracting
   config:
     agent_llm: Azure OpenAI
     model_name: gpt-4

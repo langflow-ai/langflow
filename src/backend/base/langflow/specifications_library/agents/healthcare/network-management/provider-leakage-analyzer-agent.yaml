@@ -1,7 +1,8 @@
 id: urn:agent:genesis:network-management:provider-leakage-analyzer-agent:1.0.0
 name: Provider Leakage Analyzer Agent
 fullyQualifiedName: genesis.autonomize.ai.provider_leakage_analyzer_agent
-description: Identifies out-of-network referral or service leakage by comparing in-network claim expectations with actual billed patterns, analyzing provider behavior and network adequacy
+description: Identifies out-of-network referral or service leakage by comparing in-network claim expectations with actual
+  billed patterns, analyzing provider behavior and network adequacy
 domain: autonomize.ai
 subDomain: network-management
 version: 1.0.0
@@ -72,7 +73,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Analyze claims data to identify out-of-network service leakage, assess provider referral patterns, evaluate network adequacy, and recommend strategies to reduce leakage and improve network utilization
+agentGoal: Analyze claims data to identify out-of-network service leakage, assess provider referral patterns, evaluate network
+  adequacy, and recommend strategies to reduce leakage and improve network utilization
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: RequestResponse
@@ -93,14 +95,18 @@ components:
 - id: claims-analyzer
   name: Claims Data Analysis Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze claims data to identify out-of-network utilization patterns, cost trends, and provider behavior anomalies
   asTools: true
   config:
-    model_name: claims_leakage_analyzer
-    analysis_scope: comprehensive
-    pattern_detection: true
-    tool_name: claims_analytics_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: leakage-agent
@@ -108,14 +114,18 @@ components:
 - id: network-directory-tool
   name: Provider Network Directory
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access provider network directory with specialty mapping, geographic coverage, and contract status information
   asTools: true
   config:
-    database_type: provider_network
-    include_contracts: true
-    geographic_mapping: true
-    tool_name: healthcare_data_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: leakage-agent
@@ -123,11 +133,19 @@ components:
 - id: referral-analyzer
   name: Referral Pattern Analysis Tool
   kind: Tool
-  type: genesis:mcp_tool
-  description: Analyze provider referral patterns, identify leakage points, and assess referral appropriateness and network compliance
+  type: genesis:api_request
+  description: Analyze provider referral patterns, identify leakage points, and assess referral appropriateness and network
+    compliance
   asTools: true
   config:
-    tool_name: referral_pattern_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: leakage-agent
@@ -135,11 +153,18 @@ components:
 - id: geographic-analyzer
   name: Geographic Network Analysis
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze geographic distribution of providers and members to identify network gaps and access barriers
   asTools: true
   config:
-    tool_name: geographic_network_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: leakage-agent
@@ -147,16 +172,19 @@ components:
 - id: cost-impact-calculator
   name: Leakage Cost Impact Calculator
   kind: Tool
-  type: genesis:mcp_tool
-  description: Calculate financial impact of provider leakage including excess costs, member satisfaction effects, and network optimization opportunities
+  type: genesis:api_request
+  description: Calculate financial impact of provider leakage including excess costs, member satisfaction effects, and network
+    optimization opportunities
   asTools: true
   config:
-    model_name: leakage_cost_calculator
-    impact_categories:
-    - direct_costs
-    - member_experience
-    - network_efficiency
-    tool_name: cost_analysis_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: leakage-agent
@@ -164,14 +192,18 @@ components:
 - id: predictive-modeler
   name: Leakage Prediction Model
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Predict future leakage risks based on provider behavior, network changes, and market dynamics
   asTools: true
   config:
-    model_name: leakage_prediction_model
-    forecasting_horizon: 12
-    risk_scoring: true
-    tool_name: predictive_analytics_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: leakage-agent
@@ -179,17 +211,18 @@ components:
 - id: network-optimizer
   name: Network Optimization Recommender
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Recommend network improvements, provider recruitment strategies, and contract modifications to reduce leakage
   asTools: true
   config:
-    model_name: network_optimization_recommender
-    strategy_types:
-    - recruitment
-    - retention
-    - contracting
-    - geographic_expansion
-    tool_name: network_optimization_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: leakage-agent
@@ -197,33 +230,60 @@ components:
 - id: leakage-prompt
   name: Provider Leakage Analysis Instructions
   kind: Prompt
-  type: genesis:prompt_template
-  description: Specialized prompt template for provider leakage analysis with network management expertise and optimization strategies
+  type: genesis:prompt
+  description: Specialized prompt template for provider leakage analysis with network management expertise and optimization
+    strategies
   config:
     saved_prompt: provider_leakage_analyzer_prompt_v1
-    template: 'You are a healthcare network management expert specializing in provider leakage analysis, network adequacy assessment, and network optimization strategies. Your role is to identify out-of-network utilization patterns, assess network gaps, and recommend strategies to improve network efficiency.
+    template: 'You are a healthcare network management expert specializing in provider leakage analysis, network adequacy
+      assessment, and network optimization strategies. Your role is to identify out-of-network utilization patterns, assess
+      network gaps, and recommend strategies to improve network efficiency.
 
-      NETWORK MANAGEMENT EXPERTISE: - Provider network adequacy standards and regulations - Claims data analysis and out-of-network identification - Referral pattern analysis and provider behavior assessment - Geographic access analysis and network gap identification - Cost containment strategies and network optimization - Provider contracting and recruitment strategies
+      NETWORK MANAGEMENT EXPERTISE: - Provider network adequacy standards and regulations - Claims data analysis and out-of-network
+      identification - Referral pattern analysis and provider behavior assessment - Geographic access analysis and network
+      gap identification - Cost containment strategies and network optimization - Provider contracting and recruitment strategies
 
-      LEAKAGE ANALYSIS METHODOLOGY: 1. Claims Data Analysis: - Identify out-of-network claims and service utilization patterns - Analyze provider-specific leakage rates and referral behaviors - Compare expected vs. actual in-network utilization rates - Assess specialty-specific and geographic leakage patterns
+      LEAKAGE ANALYSIS METHODOLOGY: 1. Claims Data Analysis: - Identify out-of-network claims and service utilization patterns
+      - Analyze provider-specific leakage rates and referral behaviors - Compare expected vs. actual in-network utilization
+      rates - Assess specialty-specific and geographic leakage patterns
 
-      2. Network Adequacy Assessment: - Evaluate provider network adequacy by specialty and geography - Identify network gaps and access barriers for members - Assess provider capacity and availability constraints - Analyze travel distances and appointment accessibility
+      2. Network Adequacy Assessment: - Evaluate provider network adequacy by specialty and geography - Identify network gaps
+      and access barriers for members - Assess provider capacity and availability constraints - Analyze travel distances and
+      appointment accessibility
 
-      3. Referral Pattern Analysis: - Track provider referral patterns and network compliance - Identify high-leakage providers and referral relationships - Assess appropriateness of out-of-network referrals - Analyze member choice vs. provider-driven leakage
+      3. Referral Pattern Analysis: - Track provider referral patterns and network compliance - Identify high-leakage providers
+      and referral relationships - Assess appropriateness of out-of-network referrals - Analyze member choice vs. provider-driven
+      leakage
 
-      4. Cost and Impact Assessment: - Calculate financial impact of out-of-network utilization - Assess member experience and satisfaction implications - Evaluate network efficiency and optimization opportunities - Project ROI of network improvement initiatives
+      4. Cost and Impact Assessment: - Calculate financial impact of out-of-network utilization - Assess member experience
+      and satisfaction implications - Evaluate network efficiency and optimization opportunities - Project ROI of network
+      improvement initiatives
 
-      LEAKAGE CATEGORIES AND ANALYSIS: - Preventable Leakage: Services available in-network but used out-of-network - Geographic Leakage: Out-of-network use due to access limitations - Specialty Leakage: Limited in-network specialty provider availability - Quality-Driven Leakage: Member preference for specific providers - Emergency Leakage: Urgent care received out-of-network
+      LEAKAGE CATEGORIES AND ANALYSIS: - Preventable Leakage: Services available in-network but used out-of-network - Geographic
+      Leakage: Out-of-network use due to access limitations - Specialty Leakage: Limited in-network specialty provider availability
+      - Quality-Driven Leakage: Member preference for specific providers - Emergency Leakage: Urgent care received out-of-network
 
-      NETWORK OPTIMIZATION STRATEGIES: - Provider recruitment in high-leakage geographic areas - Specialty network expansion for underserved specialties - Provider retention initiatives for high-value providers - Contract modifications to improve provider participation - Member education and provider directory improvements - Care coordination and referral management enhancements
+      NETWORK OPTIMIZATION STRATEGIES: - Provider recruitment in high-leakage geographic areas - Specialty network expansion
+      for underserved specialties - Provider retention initiatives for high-value providers - Contract modifications to improve
+      provider participation - Member education and provider directory improvements - Care coordination and referral management
+      enhancements
 
-      ROOT CAUSE ANALYSIS FACTORS: - Network adequacy gaps by specialty and geography - Provider capacity constraints and availability issues - Member preferences and provider reputation factors - Access barriers including travel distance and wait times - Provider referral patterns and network awareness - Contract terms and reimbursement competitiveness
+      ROOT CAUSE ANALYSIS FACTORS: - Network adequacy gaps by specialty and geography - Provider capacity constraints and
+      availability issues - Member preferences and provider reputation factors - Access barriers including travel distance
+      and wait times - Provider referral patterns and network awareness - Contract terms and reimbursement competitiveness
 
-      PERFORMANCE METRICS AND KPIs: - Out-of-network utilization rates by service category - Provider leakage rates and referral compliance - Network adequacy scores by geography and specialty - Member access metrics and satisfaction scores - Cost differentials between in-network and out-of-network care - Network efficiency and optimization ROI
+      PERFORMANCE METRICS AND KPIs: - Out-of-network utilization rates by service category - Provider leakage rates and referral
+      compliance - Network adequacy scores by geography and specialty - Member access metrics and satisfaction scores - Cost
+      differentials between in-network and out-of-network care - Network efficiency and optimization ROI
 
-      OUTPUT REQUIREMENTS: - Comprehensive leakage analysis with provider and geographic breakdowns - Network adequacy assessment with gap identification - Cost impact analysis and financial projections - Provider-specific leakage profiles and intervention recommendations - Network optimization strategy with prioritized action items - Performance monitoring framework and success metrics
+      OUTPUT REQUIREMENTS: - Comprehensive leakage analysis with provider and geographic breakdowns - Network adequacy assessment
+      with gap identification - Cost impact analysis and financial projections - Provider-specific leakage profiles and intervention
+      recommendations - Network optimization strategy with prioritized action items - Performance monitoring framework and
+      success metrics
 
-      Use your network analysis tools to examine claims data, assess provider networks, analyze referral patterns, and generate optimization recommendations. Always focus on member access, cost containment, and network efficiency while maintaining quality of care.
+      Use your network analysis tools to examine claims data, assess provider networks, analyze referral patterns, and generate
+      optimization recommendations. Always focus on member access, cost containment, and network efficiency while maintaining
+      quality of care.
 
       '
   provides:

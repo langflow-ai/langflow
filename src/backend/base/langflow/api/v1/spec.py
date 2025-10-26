@@ -10,6 +10,7 @@ import yaml
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from sqlmodel.ext.asyncio.session import AsyncSession
+from typing import Optional
 
 from langflow.api.utils import DbSession, CurrentActiveUser
 from langflow.services.spec.service import SpecService
@@ -109,7 +110,8 @@ class ComponentMappingResponse(BaseModel):
 
 @router.post("/convert", response_model=SpecConvertResponse)
 async def convert_spec_to_flow(
-    request: SpecConvertRequest
+    request: SpecConvertRequest,
+    session: DbSession
 ) -> SpecConvertResponse:
     """
     Convert YAML specification to Langflow JSON.
@@ -122,7 +124,8 @@ async def convert_spec_to_flow(
         flow = await service.convert_spec_to_flow(
             spec_yaml=request.spec_yaml,
             variables=request.variables,
-            tweaks=request.tweaks
+            tweaks=request.tweaks,
+            session=session
         )
 
         return SpecConvertResponse(flow=flow, success=True)
@@ -142,7 +145,8 @@ async def convert_spec_to_flow(
 
 @router.post("/validate", response_model=SpecValidationResponse)
 async def validate_spec(
-    request: SpecValidationRequest
+    request: SpecValidationRequest,
+    session: DbSession
 ) -> SpecValidationResponse:
     """
     Enhanced specification validation with comprehensive error reporting.
@@ -154,7 +158,8 @@ async def validate_spec(
         service = SpecService()
         result = await service.validate_spec(
             spec_yaml=request.spec_yaml,
-            detailed=request.detailed
+            detailed=request.detailed,
+            session=session
         )
 
         # Convert validation issues to proper format
@@ -220,7 +225,8 @@ async def validate_spec(
 
 @router.post("/validate-quick", response_model=SpecValidationResponse)
 async def validate_spec_quick(
-    request: SpecValidationRequest
+    request: SpecValidationRequest,
+    session: DbSession
 ) -> SpecValidationResponse:
     """
     Quick specification validation for real-time feedback.
@@ -231,7 +237,7 @@ async def validate_spec_quick(
     """
     try:
         service = SpecService()
-        result = await service.validate_spec_quick(request.spec_yaml)
+        result = await service.validate_spec_quick(request.spec_yaml, session=session)
 
         # Convert validation issues to proper format
         def convert_issues(issues):
@@ -318,16 +324,17 @@ async def get_error_context(error_code: str):
 
 
 @router.get("/components", response_model=ComponentsResponse)
-async def get_available_components() -> ComponentsResponse:
+async def get_available_components(session: DbSession) -> ComponentsResponse:
     """
     Get list of available components with their configurations.
 
     Returns all available Genesis component types that can be used in
     specifications, along with their options and input/output configurations.
+    Now includes database-discovered components.
     """
     try:
         service = SpecService()
-        components = service.get_available_components()
+        components = await service.get_all_available_components_with_database(session)
 
         return ComponentsResponse(components=components)
 
@@ -382,7 +389,7 @@ async def get_knowledge(
     """
     try:
         # Import the mapper directly to avoid recursion through KnowledgeLoader
-        from langflow.custom.genesis.spec.mapper import ComponentMapper
+        from langflow.services.spec.mapper import ComponentMapper
         from pathlib import Path
         import json
         import yaml

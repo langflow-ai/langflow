@@ -53,7 +53,7 @@ def sample_runtime_adapter():
     return RuntimeAdapter(
         id=uuid4(),
         genesis_type="genesis:test_component",
-        runtime_type=RuntimeTypeEnum.LANGFLOW,
+        runtime_type=RuntimeTypeEnum.LANGFLOW.value,
         target_component="TestComponent",
         adapter_config={"test": "config"},
         version="1.0.0",
@@ -459,7 +459,7 @@ class TestMockBasedIntegration:
             from langflow.services.database.models.component_mapping.runtime_adapter import RuntimeAdapterCreate
             adapter_data = RuntimeAdapterCreate(
                 genesis_type="genesis:test_component",
-                runtime_type=RuntimeTypeEnum.LANGFLOW,
+                runtime_type=RuntimeTypeEnum.LANGFLOW.value,
                 target_component="TestComponent",
                 version="1.0.0",
                 description="Test adapter",
@@ -474,7 +474,7 @@ class TestMockBasedIntegration:
 
             # Test get adapter
             retrieved_adapter = await component_mapping_service.get_runtime_adapter_for_genesis_type(
-                mock_session, "genesis:test_component", RuntimeTypeEnum.LANGFLOW
+                mock_session, "genesis:test_component", RuntimeTypeEnum.LANGFLOW.value
             )
             assert retrieved_adapter is not None
             assert retrieved_adapter.target_component == "TestComponent"

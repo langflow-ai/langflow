@@ -9,7 +9,7 @@ import pytest
 from unittest.mock import Mock, patch
 from typing import Dict, Any, List
 
-from langflow.custom.genesis.spec import ComponentMapper
+from langflow.services.genesis.mapper import ComponentMapper
 
 
 class TestTypeCompatibilityValidationLogic:

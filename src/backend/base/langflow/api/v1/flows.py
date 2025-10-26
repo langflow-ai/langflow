@@ -215,7 +215,7 @@ async def _resolve_project_folder(
     """
     if not project_name:
         # This should not happen with the updated logic, but handle gracefully
-        project_name = "My Projects"
+        project_name = "Starter Project"
 
     # Look for existing folder with matching name (case-insensitive)
     existing_folder = (
@@ -352,8 +352,8 @@ async def create_flow(
     try:
         # Resolve project folder - always assign flows to a project
         if flow.folder_id is None:
-            # Use provided project_name or default to "My Projects"
-            default_project_name = project_name or "My Projects"
+            # Use provided project_name or default to "Starter Project"
+            default_project_name = project_name or "Starter Project"
             resolved_folder_id = await _resolve_project_folder(
                 session=session,
                 project_name=default_project_name,

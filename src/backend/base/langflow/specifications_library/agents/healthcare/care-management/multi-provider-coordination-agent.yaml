@@ -1,7 +1,8 @@
 id: urn:agent:genesis:care-management:multi-provider-coordination-agent:1.0.0
 name: Multi-Provider Coordination Agent
 fullyQualifiedName: genesis.autonomize.ai.multi_provider_coordination_agent
-description: Multi-agent system that aggregates referrals, labs, notes, and patient messages across multiple providers to build longitudinal care views and coordinate interventions
+description: Multi-agent system that aggregates referrals, labs, notes, and patient messages across multiple providers to
+  build longitudinal care views and coordinate interventions
 domain: autonomize.ai
 subDomain: care-management
 version: 1.0.0
@@ -53,7 +54,8 @@ tags:
 reusability:
   asTools: false
 kind: Multi Agent
-agentGoal: Create comprehensive longitudinal care views across multiple providers and coordinate interventions to optimize patient care and reduce fragmentation
+agentGoal: Create comprehensive longitudinal care views across multiple providers and coordinate interventions to optimize
+  patient care and reduce fragmentation
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RealTime
@@ -74,22 +76,18 @@ components:
 - id: ehr-provider-data-tool
   name: Multi-Provider EHR Data Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access clinical data across multiple provider systems and health networks
   asTools: true
   config:
-    data_elements:
-    - encounters
-    - observations
-    - conditions
-    - medications
-    - procedures
-    - care_plans
-    - clinical_notes
-    multi_provider_support: true
-    include_care_teams: true
-    cross_network_access: true
-    tool_name: ehr_integration
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-aggregation-agent
@@ -97,22 +95,18 @@ components:
 - id: referral-management-tool
   name: Referral Management System
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Track referrals, authorizations, and specialist communications across the care network
   asTools: true
   config:
-    tool_name: referral_management_system
-    tracking_elements:
-    - referral_requests
-    - authorization_status
-    - specialist_appointments
-    - consultation_reports
-    - follow_up_recommendations
-    provider_networks:
-    - internal
-    - external
-    - specialty_groups
-    status_monitoring: true
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-aggregation-agent
@@ -120,24 +114,18 @@ components:
 - id: lab-results-aggregation-tool
   name: Laboratory Results Aggregation
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Aggregate lab results across multiple providers and laboratory systems
   asTools: true
   config:
-    tool_name: lab_results_aggregation
-    lab_systems:
-    - hospital_labs
-    - commercial_labs
-    - point_of_care
-    - specialty_labs
-    result_categories:
-    - routine_chemistry
-    - hematology
-    - microbiology
-    - pathology
-    - molecular_diagnostics
-    include_trends: true
-    duplicate_detection: true
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-aggregation-agent
@@ -145,20 +133,18 @@ components:
 - id: patient-communication-tool
   name: Patient Communication Hub
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Aggregate patient messages, portal communications, and care team interactions
   asTools: true
   config:
-    tool_name: patient_communication_hub
-    communication_channels:
-    - patient_portal
-    - secure_messaging
-    - phone_calls
-    - care_team_notes
-    - patient_surveys
-    sentiment_analysis: true
-    priority_flagging: true
-    response_tracking: true
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: communication-agent
@@ -166,20 +152,18 @@ components:
 - id: care-coordination-analytics-model
   name: Care Coordination Analytics
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Advanced analytics for care coordination assessment and optimization
   asTools: true
   config:
-    analysis_domains:
-    - care_continuity
-    - provider_communication
-    - care_gaps
-    - duplicate_services
-    - care_quality
-    coordination_scoring: true
-    gap_detection: true
-    intervention_recommendations: true
-    tool_name: care_coordination_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: coordination-analytics-agent
@@ -212,8 +196,10 @@ components:
   description: Aggregate clinical data, referrals, and communications across multiple providers
   config:
     role: Multi-Provider Data Integration Specialist
-    goal: Aggregate comprehensive patient data from multiple providers, systems, and care settings to create unified longitudinal care views
-    backstory: 'You are a multi-provider data integration specialist with expertise in healthcare interoperability and data aggregation.
+    goal: Aggregate comprehensive patient data from multiple providers, systems, and care settings to create unified longitudinal
+      care views
+    backstory: 'You are a multi-provider data integration specialist with expertise in healthcare interoperability and data
+      aggregation.
 
       Your skills include FHIR data integration, provider network coordination, and comprehensive care view creation.
 
@@ -285,7 +271,8 @@ components:
   config:
     role: Care Coordination Intervention Specialist
     goal: Design and implement targeted interventions to improve care coordination and patient outcomes across multiple providers
-    backstory: 'You are a care coordination intervention specialist with expertise in healthcare process improvement and care optimization.
+    backstory: 'You are a care coordination intervention specialist with expertise in healthcare process improvement and care
+      optimization.
 
       Your skills include intervention design, workflow optimization, and outcome measurement.
 
@@ -307,7 +294,8 @@ components:
   type: genesis:crewai_sequential_task
   description: Aggregate comprehensive patient data across multiple providers and systems
   config:
-    description: Collect and aggregate patient data from multiple providers, referrals, labs, and communications to create unified care view
+    description: Collect and aggregate patient data from multiple providers, referrals, labs, and communications to create
+      unified care view
     agent_id: data-aggregation-agent
     expected_output: 'Comprehensive multi-provider data package including:
 
@@ -334,7 +322,8 @@ components:
   type: genesis:crewai_sequential_task
   description: Analyze care coordination patterns and identify optimization opportunities
   config:
-    description: Analyze multi-provider care patterns to identify coordination gaps, duplicate services, and optimization opportunities
+    description: Analyze multi-provider care patterns to identify coordination gaps, duplicate services, and optimization
+      opportunities
     agent_id: coordination-analytics-agent
     expected_output: 'Care coordination analytics report including:
 

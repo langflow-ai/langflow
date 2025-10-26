@@ -1,0 +1,157 @@
+# MCP Tools Mappings Seed Data
+# Part of AUTPE-6204: Database-first component mapping approach
+# MCP (Model Context Protocol) tool configurations
+
+mcp_tools:
+  - genesis_type: "genesis:mcp_tool"
+    display_name: "MCP Tools Component"
+    description: "Generic MCP tools integration component"
+    category: "tools"
+    version: "1.0.0"
+    is_active: true
+    config:
+      command: "echo '{\"tools\": [], \"capabilities\": {}}'"
+      args: []
+      env: {}
+      url: ""
+      headers: {}
+      timeout_seconds: 30
+      sse_read_timeout_seconds: 30
+    io_mapping:
+      component: "MCPToolsComponent"
+      dataType: "MCPToolsComponent"
+      output_field: "response"
+      output_types: ["DataFrame"]
+
+  - genesis_type: "genesis:mcp_sse_tool"
+    display_name: "MCP SSE Tool"
+    description: "MCP tool with Server-Sent Events connection"
+    category: "tools"
+    version: "1.0.0"
+    is_active: true
+    config:
+      connection_mode: "SSE"
+      url: ""
+      headers: {}
+      timeout_seconds: 30
+      sse_read_timeout_seconds: 30
+    io_mapping:
+      component: "MCPToolsComponent"
+      dataType: "MCPToolsComponent"
+
+  - genesis_type: "genesis:mcp_stdio_tool"
+    display_name: "MCP STDIO Tool"
+    description: "MCP tool with STDIO connection"
+    category: "tools"
+    version: "1.0.0"
+    is_active: true
+    config:
+      connection_mode: "Stdio"
+      command: ""
+      args: []
+      env: {}
+    io_mapping:
+      component: "MCPToolsComponent"
+      dataType: "MCPToolsComponent"
+
+  - genesis_type: "genesis:mcp_client"
+    display_name: "MCP Client"
+    description: "MCP client component"
+    category: "tools"
+    version: "1.0.0"
+    is_active: true
+    config: {}
+    io_mapping:
+      component: "MCPClient"
+      dataType: "Data"
+
+  - genesis_type: "genesis:mcp_server"
+    display_name: "MCP Server"
+    description: "MCP server component"
+    category: "tools"
+    version: "1.0.0"
+    is_active: true
+    config: {}
+    io_mapping:
+      component: "MCPServer"
+      dataType: "Data"
+
+  # Domain-specific MCP tool mappings
+  - genesis_type: "genesis:encoder_pro"
+    display_name: "Encoder Pro Tool"
+    description: "Medical coding and validation tool"
+    category: "tools"
+    version: "1.0.0"
+    is_active: true
+    config:
+      tool_name: "encoder_pro"
+      description: "Medical coding and validation tool"
+    io_mapping:
+      component: "MCPToolsComponent"
+      dataType: "MCPToolsComponent"
+    metadata:
+      tool_category: "medical_coding"
+      server_name: "healthcare_coding_server"
+
+  - genesis_type: "genesis:pa_lookup"
+    display_name: "PA Lookup Tool"
+    description: "Prior authorization lookup tool"
+    category: "tools"
+    version: "1.0.0"
+    is_active: true
+    config:
+      tool_name: "pa_lookup"
+      description: "Prior authorization lookup tool"
+    io_mapping:
+      component: "MCPToolsComponent"
+      dataType: "MCPToolsComponent"
+    metadata:
+      tool_category: "authorization"
+      server_name: "authorization_server"
+
+  - genesis_type: "genesis:eligibility_component"
+    display_name: "Eligibility Component"
+    description: "Member eligibility validation tool"
+    category: "tools"
+    version: "1.0.0"
+    is_active: true
+    config:
+      tool_name: "eligibility_check"
+      description: "Member eligibility validation tool"
+    io_mapping:
+      component: "MCPToolsComponent"
+      dataType: "MCPToolsComponent"
+    metadata:
+      tool_category: "eligibility"
+      server_name: "insurance_services_server"
+
+  - genesis_type: "genesis:qnext_auth_history"
+    display_name: "QNext Auth History"
+    description: "QNext authorization history tool"
+    category: "tools"
+    version: "1.0.0"
+    is_active: true
+    config:
+      tool_name: "qnext_auth_history"
+      description: "QNext authorization history tool"
+    io_mapping:
+      component: "MCPToolsComponent"
+      dataType: "MCPToolsComponent"
+    metadata:
+      tool_category: "authorization"
+      server_name: "qnext_server"
+
+  - genesis_type: "genesis:knowledge_hub_search"
+    display_name: "Knowledge Hub Search"
+    description: "Knowledge base search tool"
+    category: "tools"
+    version: "1.0.0"
+    is_active: true
+    config: {}
+    io_mapping:
+      component: "KnowledgeHubSearch"
+      dataType: "KnowledgeHubSearch"
+      input_field: "search_query"
+      output_field: "query_results"
+      input_types: ["str", "Message"]
+      output_types: ["Data"]

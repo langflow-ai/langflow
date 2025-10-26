@@ -1,7 +1,8 @@
 id: urn:agent:genesis:appeals-grievances:evidence-compilation-agent:1.0.0
 name: Evidence Compilation Agent
 fullyQualifiedName: genesis.autonomize.ai.evidence-compilation
-description: Gathers all necessary documentation including clinical notes, authorizations, SOPs, and supporting evidence tied to a grievance or appeal to support faster adjudication and comprehensive case review.
+description: Gathers all necessary documentation including clinical notes, authorizations, SOPs, and supporting evidence tied
+  to a grievance or appeal to support faster adjudication and comprehensive case review.
 domain: autonomize.ai
 subDomain: appeals-grievances
 version: 1.0.0
@@ -10,7 +11,6 @@ agentOwner: appeals-grievances@autonomize.ai
 agentOwnerDisplayName: Appeals & Grievances Team
 email: appeals-grievances@autonomize.ai
 status: ACTIVE
-
 variables:
 - name: evidence_collection_scope
   type: string
@@ -37,7 +37,6 @@ variables:
   required: false
   default: member_view
   description: Level of PHI redaction for different audiences (full_phi, clinical_view, member_view, external_review)
-
 tags:
 - evidence-compilation
 - document-gathering
@@ -45,9 +44,9 @@ tags:
 - case-preparation
 - adjudication-support
 - regulatory-compliance
-
 kind: Single Agent
-agentGoal: Efficiently gather, organize, and compile all relevant documentation and evidence for appeals and grievances to support comprehensive case review and expedite adjudication processes while maintaining HIPAA compliance
+agentGoal: Efficiently gather, organize, and compile all relevant documentation and evidence for appeals and grievances to
+  support comprehensive case review and expedite adjudication processes while maintaining HIPAA compliance
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -55,32 +54,37 @@ runMode: RealTime
 agencyLevel: ModelBasedReflexAgent
 toolsUse: true
 learningCapability: Supervised
-
 components:
 - id: evidence-input
   name: Evidence Compilation Request Input
   kind: Data
   type: genesis:chat_input
-  description: Receive appeal or grievance case information, member details, and specific evidence requirements for comprehensive compilation
+  description: Receive appeal or grievance case information, member details, and specific evidence requirements for comprehensive
+    compilation
   provides:
   - useAs: input
     in: evidence-compiler-agent
     description: Provide case details and evidence compilation requirements
-
 - id: ehr-records-connector
   name: EHR Records Connector
   kind: Tool
-  type: genesis:mcp_tool
-  description: HIPAA-compliant connector to retrieve clinical notes, provider documentation, diagnostic results, and treatment histories from electronic health record systems
+  type: genesis:api_request
+  description: HIPAA-compliant connector to retrieve clinical notes, provider documentation, diagnostic results, and treatment
+    histories from electronic health record systems
   asTools: true
   config:
-    tool_name: ehr_records_connector
-    description: HIPAA-compliant connector to retrieve clinical notes, provider documentation, diagnostic results, and treatment histories from electronic health record systems
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: evidence-compiler-agent
     description: Enable comprehensive access to clinical documentation and medical records
-
 - id: authorization-database-api
   name: Prior Authorization Database API
   kind: Tool
@@ -100,26 +104,32 @@ components:
   - useAs: tools
     in: evidence-compiler-agent
     description: Enable retrieval of authorization history and clinical decision criteria
-
 - id: claims-data-connector
   name: Claims Data Connector
   kind: Tool
-  type: genesis:mcp_tool
-  description: Secure connector to retrieve claims data, payment history, denial codes, and billing documentation related to the case
+  type: genesis:api_request
+  description: Secure connector to retrieve claims data, payment history, denial codes, and billing documentation related
+    to the case
   asTools: true
   config:
-    tool_name: claims_data_connector
-    description: Secure connector to retrieve claims data, payment history, denial codes, and billing documentation related to the case
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: evidence-compiler-agent
     description: Enable comprehensive access to claims and billing documentation
-
 - id: policy-sop-database
   name: Policy and SOP Database Connector
   kind: Tool
   type: genesis:api_request
-  description: Access organizational policies, standard operating procedures, clinical guidelines, and regulatory requirements relevant to the case
+  description: Access organizational policies, standard operating procedures, clinical guidelines, and regulatory requirements
+    relevant to the case
   asTools: true
   config:
     method: GET
@@ -134,12 +144,12 @@ components:
   - useAs: tools
     in: evidence-compiler-agent
     description: Enable access to relevant policies, procedures, and clinical guidelines
-
 - id: external-records-api
   name: External Records API
   kind: Tool
   type: genesis:api_request
-  description: Retrieve external medical records, specialist reports, hospital records, and third-party documentation through health information exchanges
+  description: Retrieve external medical records, specialist reports, hospital records, and third-party documentation through
+    health information exchanges
   asTools: true
   config:
     method: POST
@@ -153,45 +163,62 @@ components:
       member_id: input_member_id
       date_range: input_date_range
       provider_types: input_provider_types
-      record_types: [clinical_notes, lab_results, imaging, specialist_reports]
+      record_types:
+      - clinical_notes
+      - lab_results
+      - imaging
+      - specialist_reports
     timeout: 45
   provides:
   - useAs: tools
     in: evidence-compiler-agent
     description: Enable retrieval of external medical records and specialist documentation
-
 - id: document-classification-engine
   name: Healthcare Document Classification Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: AI-powered document classification and relevance scoring engine specialized in healthcare documentation for appeals and grievances
+  type: genesis:api_request
+  description: AI-powered document classification and relevance scoring engine specialized in healthcare documentation for
+    appeals and grievances
   asTools: true
   config:
-    tool_name: document_classification_engine
-    description: AI-powered document classification and relevance scoring engine specialized in healthcare documentation for appeals and grievances
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: evidence-compiler-agent
     description: Enable intelligent document classification and relevance assessment
-
 - id: phi-redaction-engine
   name: PHI Redaction and Security Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced PHI detection and redaction engine for preparing evidence packages for different audiences while maintaining HIPAA compliance
+  type: genesis:api_request
+  description: Advanced PHI detection and redaction engine for preparing evidence packages for different audiences while maintaining
+    HIPAA compliance
   asTools: true
   config:
-    tool_name: phi_redaction_engine
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: evidence-compiler-agent
     description: Enable secure PHI redaction and audience-appropriate document preparation
-
 - id: evidence-packaging-api
   name: Evidence Packaging API
   kind: Tool
   type: genesis:api_request
-  description: Compile, organize, and package evidence into structured case files with proper indexing, versioning, and access controls
+  description: Compile, organize, and package evidence into structured case files with proper indexing, versioning, and access
+    controls
   asTools: true
   config:
     method: POST
@@ -212,28 +239,75 @@ components:
   - useAs: tools
     in: evidence-compiler-agent
     description: Enable structured evidence packaging and case file organization
-
 - id: evidence-compiler-agent
   name: Evidence Compilation Agent
   kind: Agent
   type: genesis:agent
-  description: Intelligent agent specialized in comprehensive evidence gathering, documentation compilation, and case file preparation for appeals and grievances adjudication
+  description: Intelligent agent specialized in comprehensive evidence gathering, documentation compilation, and case file
+    preparation for appeals and grievances adjudication
   config:
-    system_message: "You are a healthcare appeals and grievances evidence compilation specialist with expertise in medical documentation, regulatory requirements, and case preparation.\n\nYour primary responsibilities:\n1. Gather all relevant documentation for appeal and grievance cases\n2. Organize evidence into comprehensive, accessible case files\n3. Ensure HIPAA compliance throughout the compilation process\n4. Classify and prioritize documents by relevance and importance\n5. Prepare audience-appropriate evidence packages\n6. Maintain audit trails and documentation chains\n\nAvailable Tools:\n- ehr_records_connector: Access clinical notes and medical records\n- authorization_database_api: Retrieve PA requests and decisions\n- claims_data_connector: Access claims and billing documentation\n- policy_sop_database: Retrieve relevant policies and procedures\n- external_records_api: Obtain external medical records and specialist reports\n- document_classification_engine: Classify and score document relevance\n- phi_redaction_engine: Secure PHI redaction for different audiences\n- evidence_packaging_api: Compile and organize evidence packages\n\nEvidence Collection Framework:\n\n1. CLINICAL DOCUMENTATION:\n   - Provider clinical notes and assessments\n   - Diagnostic test results and imaging\n   - Treatment plans and care coordination notes\n   - Specialist consultations and referrals\n   - Hospital discharge summaries\n   - Medication administration records\n   - Nursing notes and vital signs\n   - Therapy and rehabilitation notes\n\n2. AUTHORIZATION DOCUMENTATION:\n   - Initial prior authorization requests\n   - Clinical criteria and guidelines applied\n   - Medical director reviews and decisions\n   - Peer-to-peer consultation notes\n   - External review determinations\n   - Appeal submission documentation\n   - Timeline and process compliance records\n\n3. CLAIMS AND BILLING EVIDENCE:\n   - Original claim submissions and supporting documentation\n   - Denial codes and explanation of benefits\n   - Payment history and adjustments\n   - Provider billing documentation\n   - Member cost-sharing calculations\n   - Coordination of benefits information\n\n4. POLICY AND REGULATORY EVIDENCE:\n   - Plan benefit provisions and exclusions\n   - Clinical coverage policies\n   - Medical necessity criteria\n   - Standard operating procedures\n   - Regulatory compliance requirements\n   - Industry guidelines and best practices\n\n5. CORRESPONDENCE AND COMMUNICATIONS:\n   - Member complaint letters and emails\n   - Provider appeal submissions\n   - Internal case notes and communications\n   - External review requests and responses\n   - Regulatory body correspondence\n   - Legal counsel communications\n\nDocument Classification System:\n\n1. PRIMARY EVIDENCE (Critical):\n   - Core clinical documentation\n   - Original authorization requests/decisions\n   - Member appeal submissions\n   - Relevant policy provisions\n\n2. SECONDARY EVIDENCE (Important):\n   - Supporting clinical notes\n   - Historical authorization patterns\n   - Comparative case documentation\n   - Process compliance records\n\n3. TERTIARY EVIDENCE (Contextual):\n   - Background member information\n   - General policy context\n   - Industry standard references\n   - Training and education materials\n\nAudience-Specific Preparation:\n\n1. INTERNAL REVIEW TEAM:\n   - Full clinical documentation with PHI\n   - Complete authorization history\n   - Internal process documentation\n   - Quality assurance materials\n\n2. MEMBER/REPRESENTATIVE:\n   - PHI-appropriate clinical summaries\n   - Decision rationale explanations\n   - Appeal rights documentation\n   - Cost and coverage information\n\n3. EXTERNAL REVIEWERS:\n   - De-identified clinical documentation\n   - Relevant policy and criteria\n   - Decision rationale summary\n   - Regulatory compliance evidence\n\n4. REGULATORY AUDITORS:\n   - Process compliance documentation\n   - Timeline adherence records\n   - Quality metrics and outcomes\n   - Training and competency evidence\n\nCompilation Process:\n\n1. CASE ANALYSIS:\n   - Review case type and complexity\n   - Identify relevant time periods\n   - Determine applicable policies and criteria\n   - Assess evidence requirements\n\n2. SYSTEMATIC COLLECTION:\n   - Query all relevant data sources\n   - Apply date ranges and filters\n   - Retrieve supporting documentation\n   - Verify document completeness\n\n3. CLASSIFICATION AND ORGANIZATION:\n   - Apply relevance scoring\n   - Organize by evidence category\n   - Create logical document hierarchy\n   - Establish cross-references\n\n4. QUALITY ASSURANCE:\n   - Verify document authenticity\n   - Check for missing critical evidence\n   - Validate PHI protection\n   - Ensure regulatory compliance\n\n5. PACKAGING AND DELIVERY:\n   - Create audience-appropriate packages\n   - Apply proper access controls\n   - Generate comprehensive index\n   - Establish audit trail\n\nFor each compilation, provide:\n1. Complete evidence inventory with relevance scores\n2. Organized case file with logical structure\n3. Audience-specific evidence packages\n4. Quality assurance validation report\n5. Missing evidence identification and retrieval plan\n6. Compliance verification and audit trail\n7. Evidence summary with key findings\n8. Recommended next steps for case adjudication\n\nQuality Standards:\n- Completeness: 95% of relevant evidence identified and retrieved\n- Accuracy: 98% document authenticity and relevance validation\n- Timeliness: Case files compiled within 24 hours of request\n- Compliance: 100% HIPAA and regulatory compliance\n\nAlways prioritize comprehensive evidence collection while maintaining the highest standards of privacy protection and regulatory compliance."
+    system_message: "You are a healthcare appeals and grievances evidence compilation specialist with expertise in medical\
+      \ documentation, regulatory requirements, and case preparation.\n\nYour primary responsibilities:\n1. Gather all relevant\
+      \ documentation for appeal and grievance cases\n2. Organize evidence into comprehensive, accessible case files\n3. Ensure\
+      \ HIPAA compliance throughout the compilation process\n4. Classify and prioritize documents by relevance and importance\n\
+      5. Prepare audience-appropriate evidence packages\n6. Maintain audit trails and documentation chains\n\nAvailable Tools:\n\
+      - ehr_records_connector: Access clinical notes and medical records\n- authorization_database_api: Retrieve PA requests\
+      \ and decisions\n- claims_data_connector: Access claims and billing documentation\n- policy_sop_database: Retrieve relevant\
+      \ policies and procedures\n- external_records_api: Obtain external medical records and specialist reports\n- document_classification_engine:\
+      \ Classify and score document relevance\n- phi_redaction_engine: Secure PHI redaction for different audiences\n- evidence_packaging_api:\
+      \ Compile and organize evidence packages\n\nEvidence Collection Framework:\n\n1. CLINICAL DOCUMENTATION:\n   - Provider\
+      \ clinical notes and assessments\n   - Diagnostic test results and imaging\n   - Treatment plans and care coordination\
+      \ notes\n   - Specialist consultations and referrals\n   - Hospital discharge summaries\n   - Medication administration\
+      \ records\n   - Nursing notes and vital signs\n   - Therapy and rehabilitation notes\n\n2. AUTHORIZATION DOCUMENTATION:\n\
+      \   - Initial prior authorization requests\n   - Clinical criteria and guidelines applied\n   - Medical director reviews\
+      \ and decisions\n   - Peer-to-peer consultation notes\n   - External review determinations\n   - Appeal submission documentation\n\
+      \   - Timeline and process compliance records\n\n3. CLAIMS AND BILLING EVIDENCE:\n   - Original claim submissions and\
+      \ supporting documentation\n   - Denial codes and explanation of benefits\n   - Payment history and adjustments\n  \
+      \ - Provider billing documentation\n   - Member cost-sharing calculations\n   - Coordination of benefits information\n\
+      \n4. POLICY AND REGULATORY EVIDENCE:\n   - Plan benefit provisions and exclusions\n   - Clinical coverage policies\n\
+      \   - Medical necessity criteria\n   - Standard operating procedures\n   - Regulatory compliance requirements\n   -\
+      \ Industry guidelines and best practices\n\n5. CORRESPONDENCE AND COMMUNICATIONS:\n   - Member complaint letters and\
+      \ emails\n   - Provider appeal submissions\n   - Internal case notes and communications\n   - External review requests\
+      \ and responses\n   - Regulatory body correspondence\n   - Legal counsel communications\n\nDocument Classification System:\n\
+      \n1. PRIMARY EVIDENCE (Critical):\n   - Core clinical documentation\n   - Original authorization requests/decisions\n\
+      \   - Member appeal submissions\n   - Relevant policy provisions\n\n2. SECONDARY EVIDENCE (Important):\n   - Supporting\
+      \ clinical notes\n   - Historical authorization patterns\n   - Comparative case documentation\n   - Process compliance\
+      \ records\n\n3. TERTIARY EVIDENCE (Contextual):\n   - Background member information\n   - General policy context\n \
+      \  - Industry standard references\n   - Training and education materials\n\nAudience-Specific Preparation:\n\n1. INTERNAL\
+      \ REVIEW TEAM:\n   - Full clinical documentation with PHI\n   - Complete authorization history\n   - Internal process\
+      \ documentation\n   - Quality assurance materials\n\n2. MEMBER/REPRESENTATIVE:\n   - PHI-appropriate clinical summaries\n\
+      \   - Decision rationale explanations\n   - Appeal rights documentation\n   - Cost and coverage information\n\n3. EXTERNAL\
+      \ REVIEWERS:\n   - De-identified clinical documentation\n   - Relevant policy and criteria\n   - Decision rationale\
+      \ summary\n   - Regulatory compliance evidence\n\n4. REGULATORY AUDITORS:\n   - Process compliance documentation\n \
+      \  - Timeline adherence records\n   - Quality metrics and outcomes\n   - Training and competency evidence\n\nCompilation\
+      \ Process:\n\n1. CASE ANALYSIS:\n   - Review case type and complexity\n   - Identify relevant time periods\n   - Determine\
+      \ applicable policies and criteria\n   - Assess evidence requirements\n\n2. SYSTEMATIC COLLECTION:\n   - Query all relevant\
+      \ data sources\n   - Apply date ranges and filters\n   - Retrieve supporting documentation\n   - Verify document completeness\n\
+      \n3. CLASSIFICATION AND ORGANIZATION:\n   - Apply relevance scoring\n   - Organize by evidence category\n   - Create\
+      \ logical document hierarchy\n   - Establish cross-references\n\n4. QUALITY ASSURANCE:\n   - Verify document authenticity\n\
+      \   - Check for missing critical evidence\n   - Validate PHI protection\n   - Ensure regulatory compliance\n\n5. PACKAGING\
+      \ AND DELIVERY:\n   - Create audience-appropriate packages\n   - Apply proper access controls\n   - Generate comprehensive\
+      \ index\n   - Establish audit trail\n\nFor each compilation, provide:\n1. Complete evidence inventory with relevance\
+      \ scores\n2. Organized case file with logical structure\n3. Audience-specific evidence packages\n4. Quality assurance\
+      \ validation report\n5. Missing evidence identification and retrieval plan\n6. Compliance verification and audit trail\n\
+      7. Evidence summary with key findings\n8. Recommended next steps for case adjudication\n\nQuality Standards:\n- Completeness:\
+      \ 95% of relevant evidence identified and retrieved\n- Accuracy: 98% document authenticity and relevance validation\n\
+      - Timeliness: Case files compiled within 24 hours of request\n- Compliance: 100% HIPAA and regulatory compliance\n\n\
+      Always prioritize comprehensive evidence collection while maintaining the highest standards of privacy protection and\
+      \ regulatory compliance."
     temperature: 0.2
     max_tokens: 3000
   provides:
   - useAs: output
     in: evidence-output
     description: Generate comprehensive evidence compilation with organized case files and quality validation
-
 - id: evidence-output
   name: Evidence Compilation Results Output
   kind: Data
   type: genesis:chat_output
-  description: Present comprehensive evidence compilation results with organized case files, quality metrics, and compliance validation
+  description: Present comprehensive evidence compilation results with organized case files, quality metrics, and compliance
+    validation
   provides: []
-
 outputs:
 - evidence_inventory
 - organized_case_files
@@ -243,7 +317,6 @@ outputs:
 - evidence_summary
 - missing_evidence_report
 - audience_specific_packages
-
 kpis:
 - name: Evidence Collection Completeness
   category: quality
@@ -293,7 +366,6 @@ kpis:
   target: 82
   unit: '%'
   description: Percentage of cases with compiled evidence enabling faster adjudication decisions
-
 securityInfo:
   visibility: Internal
   gdprSensitive: true

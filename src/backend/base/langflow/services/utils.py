@@ -244,3 +244,5 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
         await logger.awarning(f"Error assigning orphaned flows to the superuser: {exc!s}")
     await clean_transactions(settings_service, session)
     await clean_vertex_builds(settings_service, session)
+
+

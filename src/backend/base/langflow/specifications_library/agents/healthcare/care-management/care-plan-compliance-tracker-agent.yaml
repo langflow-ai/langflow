@@ -1,7 +1,8 @@
 id: urn:agent:genesis:care-management:care-plan-compliance-tracker-agent:1.0.0
 name: Care Plan Compliance Tracker Agent
 fullyQualifiedName: genesis.autonomize.ai.care_plan_compliance_tracker_agent
-description: Multi-agent system that monitors appointment attendance, lab results, and prescription fills to detect care plan deviations and send alerts to care teams for proactive intervention
+description: Multi-agent system that monitors appointment attendance, lab results, and prescription fills to detect care plan
+  deviations and send alerts to care teams for proactive intervention
 domain: autonomize.ai
 subDomain: care-management
 version: 1.0.0
@@ -53,7 +54,8 @@ tags:
 reusability:
   asTools: false
 kind: Multi Agent
-agentGoal: Continuously monitor patient compliance with care plan requirements and proactively alert care teams to deviations requiring intervention
+agentGoal: Continuously monitor patient compliance with care plan requirements and proactively alert care teams to deviations
+  requiring intervention
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RealTime
@@ -74,19 +76,18 @@ components:
 - id: ehr-care-plan-tool
   name: EHR Care Plan Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access active care plans, treatment protocols, and clinical guidelines
   asTools: true
   config:
-    data_elements:
-    - care_plans
-    - care_goals
-    - care_activities
-    - treatment_protocols
-    - clinical_guidelines
-    include_care_team: true
-    include_timelines: true
-    tool_name: ehr_integration
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: care-plan-agent
@@ -94,23 +95,18 @@ components:
 - id: appointment-tracking-tool
   name: Appointment Tracking System
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Monitor appointment scheduling, attendance, and cancellation patterns
   asTools: true
   config:
-    tool_name: appointment_tracking_system
-    tracking_elements:
-    - scheduled_appointments
-    - attendance_status
-    - cancellations
-    - rescheduling
-    - no_shows
-    provider_types:
-    - primary_care
-    - specialty
-    - ancillary_services
-    - diagnostic
-    real_time_updates: true
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: compliance-monitoring-agent
@@ -118,19 +114,18 @@ components:
 - id: pharmacy-data-tool
   name: Pharmacy Claims and Adherence
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Monitor prescription fills, medication adherence, and pharmacy claims
   asTools: true
   config:
-    data_sources:
-    - pharmacy_claims
-    - prescription_fills
-    - medication_synchronization
-    - adherence_metrics
-    calculate_pdc: true
-    include_therapy_changes: true
-    monitor_gaps: true
-    tool_name: pharmacy_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: compliance-monitoring-agent
@@ -138,19 +133,18 @@ components:
 - id: lab-results-tool
   name: Laboratory Results Monitoring
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Track lab test ordering, completion, and result availability
   asTools: true
   config:
-    tool_name: lab_results_monitoring
-    lab_categories:
-    - routine_monitoring
-    - chronic_disease_management
-    - medication_monitoring
-    - diagnostic_workup
-    include_critical_values: true
-    track_ordering_compliance: true
-    monitor_result_follow_up: true
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: compliance-monitoring-agent
@@ -158,20 +152,18 @@ components:
 - id: compliance-analytics-model
   name: Care Plan Compliance Analytics
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Advanced analytics for care plan compliance assessment and trend analysis
   asTools: true
   config:
-    analysis_domains:
-    - appointment_compliance
-    - medication_adherence
-    - lab_compliance
-    - care_goal_progress
-    trend_analysis: true
-    risk_scoring: true
-    predictive_alerts: true
-    benchmark_comparisons: true
-    tool_name: compliance_analytics_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: analytics-agent
@@ -226,7 +218,8 @@ components:
   description: Monitor patient compliance across multiple care plan dimensions
   config:
     role: Compliance Monitoring Specialist
-    goal: Continuously monitor patient compliance with care plan requirements across appointments, medications, and diagnostic testing
+    goal: Continuously monitor patient compliance with care plan requirements across appointments, medications, and diagnostic
+      testing
     backstory: 'You are a compliance monitoring specialist with expertise in healthcare quality measurement and patient engagement.
 
       Your skills include data integration, compliance tracking, and deviation detection across multiple care dimensions.

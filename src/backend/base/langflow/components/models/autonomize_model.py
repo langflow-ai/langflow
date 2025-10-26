@@ -4,7 +4,7 @@ import ast
 import json
 from typing import Any
 
-from langflow.custom.genesis.services.modelhub.model_endpoint import ModelEndpoint
+from langflow.services.modelhub.model_endpoint import ModelEndpoint
 from loguru import logger
 
 from langflow.base.modelhub import ATModelComponent

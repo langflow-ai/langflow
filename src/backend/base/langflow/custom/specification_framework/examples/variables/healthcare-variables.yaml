@@ -1,0 +1,28 @@
+# Healthcare Agent Variable Examples
+# Use these variables when creating or testing healthcare-related agents
+
+# Clinical Decision Support Variables
+confidence_threshold: 0.9
+max_recommendations: 3
+patient_context_window: 60
+risk_assessment_enabled: true
+
+# API Configuration
+EHR_API_KEY: "your-ehr-api-key-here"
+GUIDELINES_API_KEY: "your-guidelines-api-key-here"
+DRUG_DB_API_KEY: "your-drug-database-api-key-here"
+
+# Clinical Guidelines
+include_evidence_grades: true
+citation_required: true
+risk_stratification_levels: ["low", "moderate", "high", "critical"]
+
+# Compliance Settings
+hipaa_compliant: true
+audit_logging_enabled: true
+data_retention_days: 2555  # 7 years for medical records
+
+# Emergency Protocols
+critical_alert_threshold: 0.95
+emergency_contact_enabled: true
+auto_escalation_minutes: 15

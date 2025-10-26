@@ -277,7 +277,7 @@ class ConverterGapAnalyzer:
     def _get_genesis_mappings(self) -> Dict[str, Dict[str, Any]]:
         """Get current Genesis component mappings."""
         try:
-            from langflow.custom.genesis.spec.mapper import ComponentMapper
+            from langflow.services.genesis.mapper import ComponentMapper
             mapper = ComponentMapper()
 
             # Combine all mappings

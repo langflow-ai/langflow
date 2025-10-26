@@ -1,7 +1,6 @@
 from langflow.api.v1.agent_builder import router as agent_builder_router
 from langflow.api.v1.api_key import router as api_key_router
 from langflow.api.v1.chat import router as chat_router
-from langflow.api.v1.component_mapping import router as component_mapping_router
 from langflow.api.v1.endpoints import router as endpoints_router
 from langflow.api.v1.files import router as files_router
 from langflow.api.v1.flows import router as flows_router
@@ -10,6 +9,7 @@ from langflow.api.v1.knowledge_bases import router as knowledge_bases_router
 from langflow.api.v1.login import router as login_router
 from langflow.api.v1.mcp import router as mcp_router
 from langflow.api.v1.mcp_projects import router as mcp_projects_router
+from langflow.api.v1.models import router as models_router
 from langflow.api.v1.monitor import router as monitor_router
 from langflow.api.v1.openai_responses import router as openai_responses_router
 from langflow.api.v1.projects import router as projects_router
@@ -27,7 +27,6 @@ __all__ = [
     "agent_builder_router",
     "api_key_router",
     "chat_router",
-    "component_mapping_router",
     "endpoints_router",
     "files_router",
     "flows_router",
@@ -36,6 +35,7 @@ __all__ = [
     "login_router",
     "mcp_projects_router",
     "mcp_router",
+    "models_router",
     "monitor_router",
     "openai_responses_router",
     "projects_router",

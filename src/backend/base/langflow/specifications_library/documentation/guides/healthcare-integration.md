@@ -138,7 +138,7 @@ components:
 
 ```yaml
 - id: ehr-specialist-prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   name: EHR Specialist Instructions
   description: Specialized prompt for EHR data processing
   config:
@@ -494,7 +494,7 @@ components:
     description: Accept patient information for comprehensive processing
 
   - id: healthcare-prompt
-    type: genesis:prompt_template
+    type: genesis:prompt
     name: Healthcare Integration Instructions
     description: Comprehensive healthcare workflow orchestration
     config:

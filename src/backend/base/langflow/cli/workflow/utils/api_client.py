@@ -17,7 +17,7 @@ class APIClient:
     def __init__(self, config_manager: ConfigManager):
         self.config = config_manager.get_config()
         self.base_url = str(self.config.ai_studio.url).rstrip('/')
-        self.api_key = self.config.ai_studio.api_key
+        self.api_key = config_manager.get_api_key()  # Use the new method to get API key from environment
 
     def _get_headers(self) -> Dict[str, str]:
         """Get HTTP headers with authentication."""
@@ -71,6 +71,17 @@ class APIClient:
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{self.base_url}/api/v1/spec/components",
+                headers=self._get_headers(),
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def get_all_components(self) -> Dict[str, Any]:
+        """Get all available Langflow components from /all endpoint."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/api/v1/all",
                 headers=self._get_headers(),
                 timeout=30.0
             )
@@ -242,52 +253,70 @@ class APIClient:
             return response.json()
 
     # Synchronous wrappers for CLI usage
+    def _run_async_safely(self, coro):
+        """Safely run an async coroutine, handling event loop conflicts."""
+        try:
+            # Check if there's already an event loop running
+            loop = asyncio.get_running_loop()
+            # If we have a running loop, use a thread executor
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, coro)
+                return future.result()
+        except RuntimeError:
+            # No running event loop, use asyncio.run normally
+            return asyncio.run(coro)
+
     def validate_spec_sync(self, spec_yaml: str, detailed: bool = True) -> Dict[str, Any]:
         """Synchronous wrapper for validate_spec."""
-        return asyncio.run(self.validate_spec(spec_yaml, detailed))
+        return self._run_async_safely(self.validate_spec(spec_yaml, detailed))
 
     def convert_spec_sync(self, spec_yaml: str, variables: Optional[Dict[str, Any]] = None,
                          tweaks: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Synchronous wrapper for convert_spec."""
-        return asyncio.run(self.convert_spec(spec_yaml, variables, tweaks))
+        return self._run_async_safely(self.convert_spec(spec_yaml, variables, tweaks))
 
     def get_available_components_sync(self) -> Dict[str, Any]:
         """Synchronous wrapper for get_available_components."""
-        return asyncio.run(self.get_available_components())
+        return self._run_async_safely(self.get_available_components())
+
+    def get_all_components_sync(self) -> Dict[str, Any]:
+        """Synchronous wrapper for get_all_components."""
+        return self._run_async_safely(self.get_all_components())
 
     def get_component_mapping_sync(self, spec_type: str) -> Dict[str, Any]:
         """Synchronous wrapper for get_component_mapping."""
-        return asyncio.run(self.get_component_mapping(spec_type))
+        return self._run_async_safely(self.get_component_mapping(spec_type))
 
     def list_available_specifications_sync(self) -> Dict[str, Any]:
         """Synchronous wrapper for list_available_specifications."""
-        return asyncio.run(self.list_available_specifications())
+        return self._run_async_safely(self.list_available_specifications())
 
     def create_flow_from_library_sync(self, specification_file: str,
                                     folder_id: Optional[str] = None) -> Dict[str, Any]:
         """Synchronous wrapper for create_flow_from_library."""
-        return asyncio.run(self.create_flow_from_library(specification_file, folder_id))
+        return self._run_async_safely(self.create_flow_from_library(specification_file, folder_id))
 
     def get_flows_sync(self) -> Dict[str, Any]:
         """Synchronous wrapper for get_flows."""
-        return asyncio.run(self.get_flows())
+        return self._run_async_safely(self.get_flows())
 
     def create_flow_sync(self, name: str, data: Dict[str, Any],
                         description: str = "", folder_id: Optional[str] = None) -> Dict[str, Any]:
         """Synchronous wrapper for create_flow."""
-        return asyncio.run(self.create_flow(name, data, description, folder_id))
+        return self._run_async_safely(self.create_flow(name, data, description, folder_id))
 
     def delete_flow_sync(self, flow_id: str) -> Dict[str, Any]:
         """Synchronous wrapper for delete_flow."""
-        return asyncio.run(self.delete_flow(flow_id))
+        return self._run_async_safely(self.delete_flow(flow_id))
 
     def get_folders_sync(self) -> Dict[str, Any]:
         """Synchronous wrapper for get_folders."""
-        return asyncio.run(self.get_folders())
+        return self._run_async_safely(self.get_folders())
 
     def health_check_sync(self) -> bool:
         """Synchronous wrapper for health_check."""
-        return asyncio.run(self.health_check())
+        return self._run_async_safely(self.health_check())
 
     def export_flow_sync(self, flow_data: Dict[str, Any],
                         preserve_variables: bool = True,
@@ -296,7 +325,7 @@ class APIClient:
                         description_override: Optional[str] = None,
                         domain_override: Optional[str] = None) -> Dict[str, Any]:
         """Synchronous wrapper for export_flow."""
-        return asyncio.run(self.export_flow(
+        return self._run_async_safely(self.export_flow(
             flow_data=flow_data,
             preserve_variables=preserve_variables,
             include_metadata=include_metadata,
@@ -310,7 +339,7 @@ class APIClient:
                                include_metadata: bool = False,
                                domain_override: Optional[str] = None) -> Dict[str, Any]:
         """Synchronous wrapper for export_flows_batch."""
-        return asyncio.run(self.export_flows_batch(
+        return self._run_async_safely(self.export_flows_batch(
             flows=flows,
             preserve_variables=preserve_variables,
             include_metadata=include_metadata,
@@ -319,4 +348,4 @@ class APIClient:
 
     def validate_flow_for_export_sync(self, flow_data: Dict[str, Any]) -> Dict[str, Any]:
         """Synchronous wrapper for validate_flow_for_export."""
-        return asyncio.run(self.validate_flow_for_export(flow_data))
+        return self._run_async_safely(self.validate_flow_for_export(flow_data))

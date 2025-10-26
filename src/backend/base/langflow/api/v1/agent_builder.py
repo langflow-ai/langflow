@@ -26,7 +26,7 @@ async def stream_agent_builder_events(request: AgentBuilderRequest) -> AsyncGene
     """
     try:
         # Use the unified multi-orchestrator flow
-        from langflow.custom.genesis.services.agent_builder.multi_agent_orchestrator import MultiAgentOrchestrator
+        from langflow.services.genesis.orchestrator import MultiAgentOrchestrator
 
         # Initialize orchestrator with session_id from request
         orchestrator = MultiAgentOrchestrator(session_id=request.session_id)

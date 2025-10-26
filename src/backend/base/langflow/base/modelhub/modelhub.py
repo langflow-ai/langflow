@@ -8,11 +8,11 @@ from langflow.custom import Component
 from langflow.base.langchain_utilities.model import LCToolComponent
 from loguru import logger
 
-from langflow.custom.genesis.services.deps import get_modelhub_service
-from langflow.custom.genesis.services.modelhub.model_endpoint import ModelEndpoint
+from langflow.services.deps import get_modelhub_service
+from langflow.services.modelhub.model_endpoint import ModelEndpoint
 
 if TYPE_CHECKING:
-    from langflow.custom.genesis.services.modelhub.service import ModelHubService
+    from langflow.services.modelhub.service import ModelHubService
 
 
 class ATModelComponent(LCToolComponent):

@@ -1,8 +1,8 @@
 id: urn:agent:genesis:patient-experience:post-visit-qa-agent:1.0.0
 name: Post-Visit QandA Agent
 fullyQualifiedName: genesis.autonomize.ai.post_visit_qa_agent
-description: Uses discharge summaries, physician notes, and medication records to
-  answer patient questions after a visit, supporting better adherence and satisfaction
+description: Uses discharge summaries, physician notes, and medication records to answer patient questions after a visit,
+  supporting better adherence and satisfaction
 domain: autonomize.ai
 subDomain: patient-experience
 version: 1.0.0
@@ -45,8 +45,8 @@ tags:
 - patient-adherence
 - patient-satisfaction
 kind: Single Agent
-agentGoal: Answer patient questions after medical visits using visit documentation
-  to improve adherence and satisfaction while reducing follow-up calls
+agentGoal: Answer patient questions after medical visits using visit documentation to improve adherence and satisfaction while
+  reducing follow-up calls
 targetUser: external
 valueGeneration: CustomerService
 interactionMode: RequestResponse
@@ -95,20 +95,17 @@ reusability:
           description: Whether patient should contact provider
 promptConfiguration:
   basePromptId: post_visit_qa_v1
-  customPrompt: 'You are a compassionate healthcare communication specialist helping
-    patients understand their visit and care instructions.
+  customPrompt: 'You are a compassionate healthcare communication specialist helping patients understand their visit and care
+    instructions.
 
-    Your role is to: 1. Answer patient questions using their specific visit documentation
-    2. Provide clear, patient-friendly explanations 3. Reference relevant medication
-    instructions and care plans 4. Encourage adherence while being empathetic 5. Identify
-    when patients should contact their provider
+    Your role is to: 1. Answer patient questions using their specific visit documentation 2. Provide clear, patient-friendly
+    explanations 3. Reference relevant medication instructions and care plans 4. Encourage adherence while being empathetic
+    5. Identify when patients should contact their provider
 
-    Communication guidelines: - Use simple, non-medical language - Be warm and empathetic
-    - Provide specific, actionable information - Reference their actual visit and
-    medications - Encourage questions and follow-up when appropriate
+    Communication guidelines: - Use simple, non-medical language - Be warm and empathetic - Provide specific, actionable information
+    - Reference their actual visit and medications - Encourage questions and follow-up when appropriate
 
-    Always base answers on the patient''s actual visit documentation and medication
-    records. '
+    Always base answers on the patient''s actual visit documentation and medication records. '
 components:
 - id: input
   name: Patient Question
@@ -122,33 +119,28 @@ components:
 - id: qa-prompt
   name: Healthcare Communication Guidelines
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Specialized prompt for patient communication
   config:
     saved_prompt: post_visit_qa_prompt_v1
-    template: 'You are a compassionate healthcare communication specialist helping
-      patients understand their visit and care instructions.
+    template: 'You are a compassionate healthcare communication specialist helping patients understand their visit and care
+      instructions.
 
-      Your responsibilities: 1. Answer patient questions using their specific visit
-      documentation 2. Provide clear, patient-friendly explanations in simple language
-      3. Reference relevant medication instructions, dosages, and timing 4. Address
-      care plan instructions and follow-up requirements 5. Encourage medication adherence
-      while being empathetic 6. Identify when patients should contact their provider
-      immediately
+      Your responsibilities: 1. Answer patient questions using their specific visit documentation 2. Provide clear, patient-friendly
+      explanations in simple language 3. Reference relevant medication instructions, dosages, and timing 4. Address care plan
+      instructions and follow-up requirements 5. Encourage medication adherence while being empathetic 6. Identify when patients
+      should contact their provider immediately
 
-      Communication standards: - Use 6th-grade reading level language - Avoid medical
-      jargon; explain necessary terms - Be warm, empathetic, and encouraging - Provide
-      specific, actionable information - Reference their actual visit notes and prescriptions
-      - Include timing, dosage, and administration instructions - Mention potential
-      side effects they discussed with provider - Encourage questions and clarification
+      Communication standards: - Use 6th-grade reading level language - Avoid medical jargon; explain necessary terms - Be
+      warm, empathetic, and encouraging - Provide specific, actionable information - Reference their actual visit notes and
+      prescriptions - Include timing, dosage, and administration instructions - Mention potential side effects they discussed
+      with provider - Encourage questions and clarification
 
-      Data sources available: - Visit notes and discharge summaries - Medication records
-      and prescription details - Care plan instructions - Clinical guidelines for
-      patient education
+      Data sources available: - Visit notes and discharge summaries - Medication records and prescription details - Care plan
+      instructions - Clinical guidelines for patient education
 
-      Response format: - Direct answer to their question - Relevant details from their
-      visit - Clear action steps - When to contact provider - Confidence level in
-      answer
+      Response format: - Direct answer to their question - Relevant details from their visit - Clear action steps - When to
+      contact provider - Confidence level in answer
 
       Always prioritize patient safety and encourage provider contact for urgent concerns.'
   provides:
@@ -158,11 +150,17 @@ components:
 - id: ehr-access
   name: Electronic Health Record Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:ehr_connector
   description: Access patient visit notes, discharge summaries, and care plans
   asTools: true
   config:
-    tool_name: ehr_patient_records
+    test_mode: true
+    mock_mode: true
+    audit_logging: true
+    timeout_seconds: '30'
+    record_type: comprehensive
+    include_clinical_notes: true
+    fhir_compatibility: true
   provides:
   - useAs: tools
     in: qa-agent
@@ -170,11 +168,18 @@ components:
 - id: medication-database
   name: Medication Information System
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access detailed medication information and patient-specific prescriptions
   asTools: true
   config:
-    tool_name: medication_records
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: qa-agent

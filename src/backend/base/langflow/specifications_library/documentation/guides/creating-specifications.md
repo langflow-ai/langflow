@@ -182,7 +182,7 @@ For complex or reusable prompts:
 
 ```yaml
   - id: agent-prompt
-    type: genesis:prompt_template
+    type: genesis:prompt
     name: "Agent Instructions"
     description: "Detailed prompt template"
     config:
@@ -563,7 +563,7 @@ components:
         description: Send request to agent
 
   - id: agent-prompt
-    type: genesis:prompt_template
+    type: genesis:prompt
     name: Retrieval Instructions
     description: Specialized prompt for guideline retrieval
     config:

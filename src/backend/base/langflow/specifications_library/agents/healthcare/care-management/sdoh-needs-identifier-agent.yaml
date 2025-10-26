@@ -1,7 +1,8 @@
 id: urn:agent:genesis:care-management:sdoh-needs-identifier-agent:1.0.0
 name: SDoH Needs Identifier Agent
 fullyQualifiedName: genesis.autonomize.ai.sdoh_needs_identifier_agent
-description: Multi-agent system that scans assessments, intake notes, and case manager comments to identify food insecurity, housing instability, transportation barriers, and other social determinants of health needs
+description: Multi-agent system that scans assessments, intake notes, and case manager comments to identify food insecurity,
+  housing instability, transportation barriers, and other social determinants of health needs
 domain: autonomize.ai
 subDomain: care-management
 version: 1.0.0
@@ -48,7 +49,8 @@ tags:
 reusability:
   asTools: false
 kind: Multi Agent
-agentGoal: Systematically identify and categorize social determinants of health needs from clinical documentation to enable targeted social services interventions
+agentGoal: Systematically identify and categorize social determinants of health needs from clinical documentation to enable
+  targeted social services interventions
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: Batch
@@ -69,11 +71,18 @@ components:
 - id: ehr-documentation-tool
   name: EHR Documentation Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access clinical documentation including notes, assessments, and care plans
   asTools: true
   config:
-    tool_name: ehr_integration
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: document-collection-agent
@@ -81,11 +90,18 @@ components:
 - id: case-management-tool
   name: Case Management System Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access case manager notes, social work assessments, and care coordination documentation
   asTools: true
   config:
-    tool_name: case_management_system
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: document-collection-agent
@@ -93,11 +109,18 @@ components:
 - id: sdoh-nlp-model
   name: Social Determinants NLP Model
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Advanced NLP model trained to identify social determinants of health from clinical text
   asTools: true
   config:
-    tool_name: sdoh_nlp_analysis
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: nlp-analysis-agent
@@ -105,11 +128,18 @@ components:
 - id: needs-classification-model
   name: SDoH Needs Classification Model
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: ML model for classifying and prioritizing identified social needs
   asTools: true
   config:
-    tool_name: sdoh_classification
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: needs-assessment-agent
@@ -117,11 +147,18 @@ components:
 - id: community-resources-tool
   name: Community Resources Database
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access community resources and social services database for referral matching
   asTools: true
   config:
-    tool_name: community_resources_db
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: intervention-planning-agent
@@ -157,7 +194,8 @@ components:
   description: Analyze clinical text to extract social determinants indicators using advanced NLP
   config:
     role: Clinical NLP Analyst
-    goal: Extract and identify social determinants of health indicators from clinical documentation using advanced natural language processing
+    goal: Extract and identify social determinants of health indicators from clinical documentation using advanced natural
+      language processing
     backstory: 'You are a clinical NLP specialist with expertise in healthcare text analysis and social determinants identification.
 
       Your skills include natural language processing, entity extraction, and clinical terminology analysis.

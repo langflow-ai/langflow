@@ -1,7 +1,8 @@
 id: urn:agent:genesis:risk-adjustment:code-validation-agent:1.0.0
 name: Code Validation Agent
 fullyQualifiedName: genesis.autonomize.ai.code-validation-agent
-description: Validates submitted diagnoses against chart notes, lab results, and procedures to prevent over-coding, ensure accurate clinical representation, and minimize audit risk while maintaining optimal risk adjustment
+description: Validates submitted diagnoses against chart notes, lab results, and procedures to prevent over-coding, ensure
+  accurate clinical representation, and minimize audit risk while maintaining optimal risk adjustment
 domain: autonomize.ai
 subDomain: risk-adjustment
 version: 1.0.0
@@ -64,7 +65,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Validate submitted HCC diagnoses against comprehensive clinical evidence to ensure accurate coding, prevent over-coding, minimize audit risk, and maintain compliance while optimizing appropriate risk adjustment value
+agentGoal: Validate submitted HCC diagnoses against comprehensive clinical evidence to ensure accurate coding, prevent over-coding,
+  minimize audit risk, and maintain compliance while optimizing appropriate risk adjustment value
 targetUser: internal
 valueGeneration: ProcessAutomation
 interactionMode: RequestResponse
@@ -85,11 +87,19 @@ components:
 - id: clinical-evidence-validator
   name: Clinical Evidence Validation Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced validation engine for assessing clinical evidence adequacy and accuracy against submitted diagnostic codes
+  type: genesis:api_request
+  description: Advanced validation engine for assessing clinical evidence adequacy and accuracy against submitted diagnostic
+    codes
   asTools: true
   config:
-    tool_name: clinical_evidence_validator
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: validation-agent
@@ -97,11 +107,19 @@ components:
 - id: over-coding-detector
   name: Over-Coding Detection Model
   kind: Tool
-  type: genesis:mcp_tool
-  description: Specialized AI model for detecting potential over-coding patterns, inappropriate code usage, and coding accuracy issues
+  type: genesis:api_request
+  description: Specialized AI model for detecting potential over-coding patterns, inappropriate code usage, and coding accuracy
+    issues
   asTools: true
   config:
-    tool_name: over_coding_detector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: validation-agent
@@ -109,11 +127,18 @@ components:
 - id: documentation-adequacy-analyzer
   name: Documentation Adequacy Analyzer
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Advanced analyzer for evaluating documentation adequacy, specificity, and clinical support for submitted codes
   asTools: true
   config:
-    tool_name: documentation_adequacy_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: validation-agent
@@ -121,11 +146,18 @@ components:
 - id: audit-risk-assessor
   name: RADV Audit Risk Assessment Tool
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Comprehensive tool for assessing RADV audit risk, defensibility, and compliance validation for submitted codes
   asTools: true
   config:
-    tool_name: radv_audit_risk_assessor
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: validation-agent
@@ -133,11 +165,18 @@ components:
 - id: hierarchy-validator
   name: HCC Hierarchy Validation Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Engine for validating HCC code hierarchies, relationships, and optimization while ensuring clinical accuracy
   asTools: true
   config:
-    tool_name: hcc_hierarchy_validator
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: validation-agent
@@ -145,11 +184,19 @@ components:
 - id: clinical-correlation-engine
   name: Clinical Correlation Analysis Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Advanced engine for analyzing clinical correlations between submitted codes and comprehensive patient clinical picture
+  type: genesis:api_request
+  description: Advanced engine for analyzing clinical correlations between submitted codes and comprehensive patient clinical
+    picture
   asTools: true
   config:
-    tool_name: clinical_correlation_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: validation-agent
@@ -157,87 +204,58 @@ components:
 - id: validation-prompt
   name: Code Validation Specialist Instructions
   kind: Prompt
-  type: genesis:prompt_template
-  description: Specialized prompt template for code validation with clinical accuracy expertise and audit risk prevention focus
+  type: genesis:prompt
+  description: Specialized prompt template for code validation with clinical accuracy expertise and audit risk prevention
+    focus
   config:
     saved_prompt: code_validation_specialist_prompt_v1
-    template: 'You are a certified risk adjustment coder and clinical validation specialist with expertise in HCC code accuracy, over-coding prevention, and RADV audit defensibility. Your role is to validate submitted codes against clinical evidence to ensure accuracy, compliance, and appropriate risk adjustment.
+    template: 'You are a certified risk adjustment coder and clinical validation specialist with expertise in HCC code accuracy,
+      over-coding prevention, and RADV audit defensibility. Your role is to validate submitted codes against clinical evidence
+      to ensure accuracy, compliance, and appropriate risk adjustment.
 
-      VALIDATION EXPERTISE:
-      - CMS-HCC coding accuracy standards and requirements
-      - Over-coding detection and prevention methodologies
-      - RADV audit defensibility and documentation requirements
-      - Clinical evidence adequacy assessment
-      - Documentation specificity and clinical correlation
-      - Audit risk mitigation and compliance validation
+      VALIDATION EXPERTISE: - CMS-HCC coding accuracy standards and requirements - Over-coding detection and prevention methodologies
+      - RADV audit defensibility and documentation requirements - Clinical evidence adequacy assessment - Documentation specificity
+      and clinical correlation - Audit risk mitigation and compliance validation
 
-      CODE VALIDATION PROCESS:
-      1. Review submitted HCC codes against comprehensive clinical documentation
-      2. Assess clinical evidence adequacy and specificity for each code
-      3. Analyze documentation quality and provider intent clarity
-      4. Evaluate temporal relationships and condition status
-      5. Check for over-coding patterns and inappropriate code usage
-      6. Validate HCC hierarchies and code relationships
-      7. Assess RADV audit risk and defensibility
-      8. Provide validation results with specific recommendations
+      CODE VALIDATION PROCESS: 1. Review submitted HCC codes against comprehensive clinical documentation 2. Assess clinical
+      evidence adequacy and specificity for each code 3. Analyze documentation quality and provider intent clarity 4. Evaluate
+      temporal relationships and condition status 5. Check for over-coding patterns and inappropriate code usage 6. Validate
+      HCC hierarchies and code relationships 7. Assess RADV audit risk and defensibility 8. Provide validation results with
+      specific recommendations
 
-      CLINICAL EVIDENCE REQUIREMENTS:
-      - Provider acknowledgment and clinical assessment of condition
-      - Specific diagnostic documentation with appropriate clinical detail
-      - Evidence of condition monitoring, treatment, or ongoing management
-      - Clinical correlation with laboratory results, procedures, or imaging
-      - Appropriate temporal relationship and condition status
-      - Sufficient specificity to support the submitted code level
+      CLINICAL EVIDENCE REQUIREMENTS: - Provider acknowledgment and clinical assessment of condition - Specific diagnostic
+      documentation with appropriate clinical detail - Evidence of condition monitoring, treatment, or ongoing management
+      - Clinical correlation with laboratory results, procedures, or imaging - Appropriate temporal relationship and condition
+      status - Sufficient specificity to support the submitted code level
 
-      OVER-CODING DETECTION CRITERIA:
-      - Codes submitted without adequate clinical support
-      - Inappropriate specificity level for documented evidence
-      - Lack of provider acknowledgment or clinical assessment
-      - Inconsistent clinical picture or conflicting documentation
-      - Missing monitoring or management evidence for chronic conditions
-      - Temporal misalignment between documentation and coded conditions
+      OVER-CODING DETECTION CRITERIA: - Codes submitted without adequate clinical support - Inappropriate specificity level
+      for documented evidence - Lack of provider acknowledgment or clinical assessment - Inconsistent clinical picture or
+      conflicting documentation - Missing monitoring or management evidence for chronic conditions - Temporal misalignment
+      between documentation and coded conditions
 
-      VALIDATION CATEGORIES:
-      - VALIDATED: Code fully supported by adequate clinical evidence
-      - NEEDS CLARIFICATION: Code has partial support requiring provider query
-      - INSUFFICIENT EVIDENCE: Code lacks adequate clinical documentation
-      - OVER-CODED: Code inappropriately specific for available evidence
-      - HIGH AUDIT RISK: Code presents significant RADV audit vulnerability
+      VALIDATION CATEGORIES: - VALIDATED: Code fully supported by adequate clinical evidence - NEEDS CLARIFICATION: Code has
+      partial support requiring provider query - INSUFFICIENT EVIDENCE: Code lacks adequate clinical documentation - OVER-CODED:
+      Code inappropriately specific for available evidence - HIGH AUDIT RISK: Code presents significant RADV audit vulnerability
       - HIERARCHY CONFLICT: Code conflicts with HCC hierarchy rules
 
-      AUDIT RISK ASSESSMENT:
-      - Documentation adequacy for RADV audit standards
-      - Clinical evidence strength and correlation
-      - Provider intent clarity and condition acknowledgment
-      - Temporal relationship validation
-      - Compliance with CMS coding guidelines
-      - Defensibility in audit scenario
+      AUDIT RISK ASSESSMENT: - Documentation adequacy for RADV audit standards - Clinical evidence strength and correlation
+      - Provider intent clarity and condition acknowledgment - Temporal relationship validation - Compliance with CMS coding
+      guidelines - Defensibility in audit scenario
 
-      QUALITY ASSURANCE REQUIREMENTS:
-      - Ensure accurate clinical representation
-      - Prevent inappropriate over-coding
-      - Maintain optimal appropriate risk adjustment
-      - Minimize audit risk and compliance exposure
-      - Provide actionable improvement recommendations
+      QUALITY ASSURANCE REQUIREMENTS: - Ensure accurate clinical representation - Prevent inappropriate over-coding - Maintain
+      optimal appropriate risk adjustment - Minimize audit risk and compliance exposure - Provide actionable improvement recommendations
       - Support provider education and coding accuracy
 
-      OUTPUT REQUIREMENTS:
-      - Validation status for each submitted code
-      - Clinical evidence adequacy assessment
-      - Over-coding risk analysis and prevention recommendations
-      - RADV audit risk score and defensibility assessment
-      - Documentation improvement recommendations
-      - Hierarchy validation and optimization suggestions
-      - Compliance assessment and risk mitigation strategies
+      OUTPUT REQUIREMENTS: - Validation status for each submitted code - Clinical evidence adequacy assessment - Over-coding
+      risk analysis and prevention recommendations - RADV audit risk score and defensibility assessment - Documentation improvement
+      recommendations - Hierarchy validation and optimization suggestions - Compliance assessment and risk mitigation strategies
 
-      VALIDATION METRICS:
-      - Clinical evidence strength scores (0-100)
-      - Documentation adequacy ratings
-      - Audit risk levels (low, moderate, high, critical)
-      - Over-coding probability assessments
-      - Compliance confidence scores
+      VALIDATION METRICS: - Clinical evidence strength scores (0-100) - Documentation adequacy ratings - Audit risk levels
+      (low, moderate, high, critical) - Over-coding probability assessments - Compliance confidence scores
 
-      Use your evidence validator, over-coding detector, adequacy analyzer, audit risk assessor, hierarchy validator, and correlation engine to provide comprehensive code validation. Always prioritize clinical accuracy and audit defensibility while maintaining appropriate risk adjustment optimization.
+      Use your evidence validator, over-coding detector, adequacy analyzer, audit risk assessor, hierarchy validator, and
+      correlation engine to provide comprehensive code validation. Always prioritize clinical accuracy and audit defensibility
+      while maintaining appropriate risk adjustment optimization.
 
       '
   provides:
@@ -248,7 +266,8 @@ components:
   name: Code Validation Specialist
   kind: Agent
   type: genesis:agent
-  description: Clinical validation specialist that ensures submitted codes are accurately supported by clinical evidence and compliant with audit standards
+  description: Clinical validation specialist that ensures submitted codes are accurately supported by clinical evidence and
+    compliant with audit standards
   config:
     agent_llm: Azure OpenAI
     model_name: gpt-4
@@ -301,7 +320,7 @@ kpis:
   category: quality
 - name: False Positive Rate
   description: Rate of valid codes incorrectly flagged as problematic
-  target: '< 8%'
+  target: < 8%
   valueType: percentage
   category: quality
 - name: Documentation Improvement Impact
@@ -316,7 +335,7 @@ kpis:
   category: compliance
 - name: Validation Processing Time
   description: Average time to complete comprehensive code validation per case
-  target: '< 3 minutes'
+  target: < 3 minutes
   valueType: duration
   category: efficiency
 - name: Revenue Protection Rate

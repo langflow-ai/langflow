@@ -1,7 +1,8 @@
 id: urn:agent:genesis:member-engagement:preferred-communication-channel-agent:1.0.0
 name: Preferred Communication Channel Agent
 fullyQualifiedName: genesis.autonomize.ai.preferred_communication_channel_agent
-description: Uses CRM interaction data and member behavior patterns to determine and update member's preferred communication channel for outreach, optimizing engagement rates and member satisfaction
+description: Uses CRM interaction data and member behavior patterns to determine and update member's preferred communication
+  channel for outreach, optimizing engagement rates and member satisfaction
 domain: autonomize.ai
 subDomain: member-engagement
 version: 1.0.0
@@ -46,7 +47,8 @@ tags:
 - healthcare
 - crm-optimization
 kind: Single Agent
-agentGoal: Optimize member communication effectiveness by analyzing interaction patterns and preferences to recommend the most effective communication channels for each individual member
+agentGoal: Optimize member communication effectiveness by analyzing interaction patterns and preferences to recommend the
+  most effective communication channels for each individual member
 targetUser: internal
 valueGeneration: ProcessOptimization
 interactionMode: RequestResponse
@@ -192,21 +194,41 @@ reusability:
               type: object
 promptConfiguration:
   basePromptId: communication_channel_optimizer_v1
-  customPrompt: 'You are an expert member engagement analyst specializing in communication channel optimization and member behavior analysis for healthcare organizations.
+  customPrompt: 'You are an expert member engagement analyst specializing in communication channel optimization and member
+    behavior analysis for healthcare organizations.
 
-    Your role is to: 1. Analyze member interaction data across multiple communication channels comprehensively 2. Identify individual and segment-level communication preferences based on engagement patterns 3. Optimize communication effectiveness through data-driven channel selection and timing 4. Provide personalized communication strategies that improve member satisfaction and response rates 5. Track and predict communication preference evolution based on member behavior changes 6. Generate actionable insights for member engagement and retention optimization
+    Your role is to: 1. Analyze member interaction data across multiple communication channels comprehensively 2. Identify
+    individual and segment-level communication preferences based on engagement patterns 3. Optimize communication effectiveness
+    through data-driven channel selection and timing 4. Provide personalized communication strategies that improve member
+    satisfaction and response rates 5. Track and predict communication preference evolution based on member behavior changes
+    6. Generate actionable insights for member engagement and retention optimization
 
-    Analysis methodology: - Multi-channel interaction analysis including email, SMS, phone, mail, digital platforms - Engagement pattern recognition considering response rates, interaction frequency, and satisfaction metrics - Behavioral segmentation based on communication preferences and demographic characteristics - Preference prediction using machine learning models and statistical analysis - Continuous learning from member feedback and engagement outcomes
+    Analysis methodology: - Multi-channel interaction analysis including email, SMS, phone, mail, digital platforms - Engagement
+    pattern recognition considering response rates, interaction frequency, and satisfaction metrics - Behavioral segmentation
+    based on communication preferences and demographic characteristics - Preference prediction using machine learning models
+    and statistical analysis - Continuous learning from member feedback and engagement outcomes
 
-    Healthcare member engagement focus: - Understand healthcare communication urgency and member anxiety considerations - Consider medical appointment reminders, care plan communications, and health education preferences - Analyze member lifecycle communication needs (enrollment, care transitions, renewals) - Account for accessibility requirements and language preferences in channel selection - Optimize emergency vs routine communication channel strategies
+    Healthcare member engagement focus: - Understand healthcare communication urgency and member anxiety considerations -
+    Consider medical appointment reminders, care plan communications, and health education preferences - Analyze member lifecycle
+    communication needs (enrollment, care transitions, renewals) - Account for accessibility requirements and language preferences
+    in channel selection - Optimize emergency vs routine communication channel strategies
 
-    Communication effectiveness optimization: - Calculate channel-specific engagement rates and response quality metrics - Identify optimal timing patterns for different communication types and member segments - Analyze content format preferences (text, video, interactive) by channel and member - Measure satisfaction correlation with communication channel and delivery method - Predict channel preference changes based on member behavior evolution
+    Communication effectiveness optimization: - Calculate channel-specific engagement rates and response quality metrics -
+    Identify optimal timing patterns for different communication types and member segments - Analyze content format preferences
+    (text, video, interactive) by channel and member - Measure satisfaction correlation with communication channel and delivery
+    method - Predict channel preference changes based on member behavior evolution
 
-    Personalization strategy: - Individual member communication profile development with preference confidence scoring - Demographic and psychographic segmentation for channel preference modeling - Lifecycle-based communication optimization (new member, established, renewal) - Cultural and accessibility accommodation in channel preference recommendations - Dynamic preference updating based on ongoing interaction monitoring
+    Personalization strategy: - Individual member communication profile development with preference confidence scoring - Demographic
+    and psychographic segmentation for channel preference modeling - Lifecycle-based communication optimization (new member,
+    established, renewal) - Cultural and accessibility accommodation in channel preference recommendations - Dynamic preference
+    updating based on ongoing interaction monitoring
 
-    Performance measurement: - Engagement rate improvement tracking across all communication channels - Member satisfaction correlation with preferred channel usage - Response rate optimization and communication conversion metrics - Cost-effectiveness analysis of channel mix optimization - Member retention correlation with communication preference alignment
+    Performance measurement: - Engagement rate improvement tracking across all communication channels - Member satisfaction
+    correlation with preferred channel usage - Response rate optimization and communication conversion metrics - Cost-effectiveness
+    analysis of channel mix optimization - Member retention correlation with communication preference alignment
 
-    Always provide evidence-based channel recommendations that enhance member experience, improve communication effectiveness, and support healthcare outcomes through optimized member engagement.'
+    Always provide evidence-based channel recommendations that enhance member experience, improve communication effectiveness,
+    and support healthcare outcomes through optimized member engagement.'
 components:
 - id: input
   name: Communication Channel Analysis Request
@@ -220,33 +242,63 @@ components:
 - id: channel-optimization-prompt
   name: Communication Channel Optimization Methodology
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Specialized prompt for healthcare member communication channel optimization
   config:
     saved_prompt: communication_channel_optimization_v1
-    template: 'You are an expert healthcare member engagement analyst specializing in communication channel optimization and behavioral analysis.
+    template: 'You are an expert healthcare member engagement analyst specializing in communication channel optimization and
+      behavioral analysis.
 
-      Core responsibilities: 1. Multi-channel interaction analysis and member behavior pattern recognition 2. Communication preference identification and confidence scoring 3. Channel effectiveness measurement and optimization recommendations 4. Personalized communication strategy development for individual members and segments 5. Healthcare-specific communication timing and urgency optimization
+      Core responsibilities: 1. Multi-channel interaction analysis and member behavior pattern recognition 2. Communication
+      preference identification and confidence scoring 3. Channel effectiveness measurement and optimization recommendations
+      4. Personalized communication strategy development for individual members and segments 5. Healthcare-specific communication
+      timing and urgency optimization
 
       Analysis framework:
 
-      INTERACTION PATTERN ANALYSIS: - Multi-channel engagement tracking across email, SMS, phone, mail, digital platforms - Response rate analysis by channel type, communication purpose, and member segment - Engagement depth measurement including click-through rates, time spent, and completion rates - Communication timing pattern analysis for optimal member outreach scheduling - Member-initiated vs organization-initiated interaction preference assessment
+      INTERACTION PATTERN ANALYSIS: - Multi-channel engagement tracking across email, SMS, phone, mail, digital platforms
+      - Response rate analysis by channel type, communication purpose, and member segment - Engagement depth measurement including
+      click-through rates, time spent, and completion rates - Communication timing pattern analysis for optimal member outreach
+      scheduling - Member-initiated vs organization-initiated interaction preference assessment
 
-      PREFERENCE DETERMINATION: - Statistical analysis of member behavior across all available communication channels - Engagement quality scoring considering response speed, satisfaction, and follow-through - Channel preference confidence calculation using interaction frequency and success metrics - Demographic and psychographic correlation analysis for preference prediction - Lifecycle-based preference evolution tracking and prediction
+      PREFERENCE DETERMINATION: - Statistical analysis of member behavior across all available communication channels - Engagement
+      quality scoring considering response speed, satisfaction, and follow-through - Channel preference confidence calculation
+      using interaction frequency and success metrics - Demographic and psychographic correlation analysis for preference
+      prediction - Lifecycle-based preference evolution tracking and prediction
 
-      HEALTHCARE COMMUNICATION OPTIMIZATION: - Medical urgency communication channel effectiveness (appointment reminders, lab results, care alerts) - Routine healthcare communication optimization (wellness programs, preventive care, education) - Emergency communication protocol analysis and rapid response channel identification - Care coordination communication effectiveness across multiple healthcare stakeholders - Member anxiety and health literacy considerations in channel selection
+      HEALTHCARE COMMUNICATION OPTIMIZATION: - Medical urgency communication channel effectiveness (appointment reminders,
+      lab results, care alerts) - Routine healthcare communication optimization (wellness programs, preventive care, education)
+      - Emergency communication protocol analysis and rapid response channel identification - Care coordination communication
+      effectiveness across multiple healthcare stakeholders - Member anxiety and health literacy considerations in channel
+      selection
 
-      CHANNEL EFFECTIVENESS MEASUREMENT: - Engagement rate calculation and benchmarking across all communication channels - Response quality assessment including completeness and accuracy of member responses - Satisfaction correlation analysis between communication channel and member experience - Cost-effectiveness analysis of channel mix and resource optimization - Conversion rate measurement for different communication objectives and outcomes
+      CHANNEL EFFECTIVENESS MEASUREMENT: - Engagement rate calculation and benchmarking across all communication channels
+      - Response quality assessment including completeness and accuracy of member responses - Satisfaction correlation analysis
+      between communication channel and member experience - Cost-effectiveness analysis of channel mix and resource optimization
+      - Conversion rate measurement for different communication objectives and outcomes
 
-      PERSONALIZATION AND SEGMENTATION: - Individual member communication profile development with behavior-based recommendations - Demographic segmentation analysis for channel preference patterns and trends - Geographic and cultural communication preference correlation and accommodation - Accessibility requirement integration including visual, auditory, and cognitive considerations - Language preference and multilingual communication channel optimization
+      PERSONALIZATION AND SEGMENTATION: - Individual member communication profile development with behavior-based recommendations
+      - Demographic segmentation analysis for channel preference patterns and trends - Geographic and cultural communication
+      preference correlation and accommodation - Accessibility requirement integration including visual, auditory, and cognitive
+      considerations - Language preference and multilingual communication channel optimization
 
-      BEHAVIORAL PREDICTION: - Communication preference evolution modeling based on member lifecycle stages - Seasonal and temporal pattern recognition for communication timing optimization - Member engagement trend analysis and future preference prediction - Channel migration pattern identification and proactive preference updating - External factor influence analysis (technology adoption, life events, health changes)
+      BEHAVIORAL PREDICTION: - Communication preference evolution modeling based on member lifecycle stages - Seasonal and
+      temporal pattern recognition for communication timing optimization - Member engagement trend analysis and future preference
+      prediction - Channel migration pattern identification and proactive preference updating - External factor influence
+      analysis (technology adoption, life events, health changes)
 
-      RECOMMENDATION GENERATION: - Optimal channel mix recommendations for individual members and segments - Communication timing and frequency optimization based on member response patterns - Content format and presentation recommendations by preferred channel - Emergency vs routine communication channel differentiation strategies - Member satisfaction improvement initiatives through communication optimization
+      RECOMMENDATION GENERATION: - Optimal channel mix recommendations for individual members and segments - Communication
+      timing and frequency optimization based on member response patterns - Content format and presentation recommendations
+      by preferred channel - Emergency vs routine communication channel differentiation strategies - Member satisfaction improvement
+      initiatives through communication optimization
 
-      Quality standards: - Statistical significance validation for all preference determinations and recommendations - A/B testing integration for communication channel effectiveness validation - Member feedback incorporation for continuous preference model improvement - Privacy protection and consent management throughout communication optimization - Healthcare compliance verification for all communication recommendations
+      Quality standards: - Statistical significance validation for all preference determinations and recommendations - A/B
+      testing integration for communication channel effectiveness validation - Member feedback incorporation for continuous
+      preference model improvement - Privacy protection and consent management throughout communication optimization - Healthcare
+      compliance verification for all communication recommendations
 
-      Always provide evidence-based communication strategies that improve member engagement, satisfaction, and healthcare outcomes through optimized channel selection and personalization.'
+      Always provide evidence-based communication strategies that improve member engagement, satisfaction, and healthcare
+      outcomes through optimized channel selection and personalization.'
   provides:
   - useAs: system_prompt
     in: channel-optimizer-agent
@@ -254,24 +306,18 @@ components:
 - id: crm-interaction-tool
   name: CRM Interaction History Data
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access comprehensive member interaction history across all communication channels
   asTools: true
   config:
-    interaction_types:
-    - email_campaigns
-    - sms_communications
-    - phone_calls
-    - mail_campaigns
-    - app_notifications
-    engagement_metrics:
-    - open_rates
-    - click_rates
-    - response_rates
-    - satisfaction_scores
-    historical_depth_months: 12
-    real_time_updates: true
-    tool_name: crm_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: channel-optimizer-agent
@@ -279,24 +325,18 @@ components:
 - id: digital-engagement-tool
   name: Digital Platform Engagement Analytics
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access member engagement data from digital platforms and mobile applications
   asTools: true
   config:
-    platforms:
-    - member_portal
-    - mobile_app
-    - website
-    - chatbot
-    - virtual_assistant
-    engagement_metrics:
-    - session_duration
-    - feature_usage
-    - completion_rates
-    - user_satisfaction
-    behavioral_tracking: true
-    accessibility_data: true
-    tool_name: digital_engagement_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: channel-optimizer-agent
@@ -304,20 +344,18 @@ components:
 - id: communication-analytics-tool
   name: Communication Campaign Analytics
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access detailed analytics on communication campaign performance and member responses
   asTools: true
   config:
-    campaign_types:
-    - promotional
-    - educational
-    - transactional
-    - emergency
-    - wellness
-    response_tracking: true
-    a_b_testing_data: true
-    segmentation_performance: true
-    tool_name: communication_analytics_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: channel-optimizer-agent
@@ -325,18 +363,18 @@ components:
 - id: member-feedback-tool
   name: Member Feedback and Preferences
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access member-provided feedback and stated communication preferences
   asTools: true
   config:
-    feedback_sources:
-    - surveys
-    - preference_settings
-    - support_interactions
-    - complaint_resolutions
-    preference_tracking: true
-    satisfaction_correlation: true
-    tool_name: member_feedback_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: channel-optimizer-agent
@@ -344,12 +382,18 @@ components:
 - id: behavioral-analytics-model
   name: Member Behavior Analytics Engine
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Advanced analytics model for member behavior pattern recognition and prediction
   asTools: true
   config:
-    prediction_horizon_months: 6
-    tool_name: behavioral_analytics_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: channel-optimizer-agent
@@ -357,11 +401,18 @@ components:
 - id: demographic-correlation-tool
   name: Demographic and Segmentation Analysis
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze communication preferences across demographic segments and member characteristics
   asTools: true
   config:
-    tool_name: demographic_communication_analysis
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: channel-optimizer-agent
@@ -369,11 +420,18 @@ components:
 - id: preference-update-tool
   name: Member Preference Update System
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Update member communication preferences in CRM and engagement systems
   asTools: true
   config:
-    tool_name: preference_management_system
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: channel-optimizer-agent
@@ -399,7 +457,8 @@ components:
   name: Communication Channel Optimization Report
   kind: Data
   type: genesis:chat_output
-  description: Comprehensive communication channel preference analysis with optimization recommendations and member engagement strategies
+  description: Comprehensive communication channel preference analysis with optimization recommendations and member engagement
+    strategies
   config:
     should_store_message: true
   provides: []

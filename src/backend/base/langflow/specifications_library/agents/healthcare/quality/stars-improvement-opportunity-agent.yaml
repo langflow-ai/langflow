@@ -1,7 +1,8 @@
 id: urn:agent:genesis:quality:stars-improvement-opportunity-agent:1.0.0
 name: Stars Improvement Opportunity Agent
 fullyQualifiedName: genesis.autonomize.ai.stars_improvement_opportunity_agent
-description: Detects underperforming HEDIS/CAHPS measures by analyzing provider- and region-specific gaps, suggesting targeted interventions for Stars rating improvement
+description: Detects underperforming HEDIS/CAHPS measures by analyzing provider- and region-specific gaps, suggesting targeted
+  interventions for Stars rating improvement
 domain: autonomize.ai
 subDomain: quality
 version: 1.0.0
@@ -72,7 +73,8 @@ tags:
 reusability:
   asTools: false
 kind: Single Agent
-agentGoal: Identify underperforming HEDIS and CAHPS measures through provider and regional analysis, detect improvement opportunities, and recommend targeted interventions to enhance Stars ratings and quality performance
+agentGoal: Identify underperforming HEDIS and CAHPS measures through provider and regional analysis, detect improvement opportunities,
+  and recommend targeted interventions to enhance Stars ratings and quality performance
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: RequestResponse
@@ -93,19 +95,18 @@ components:
 - id: hedis-analytics-tool
   name: HEDIS Performance Analytics
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze HEDIS measure performance across providers, regions, and member segments with trend analysis and benchmarking
   asTools: true
   config:
-    model_name: hedis_performance_analyzer
-    measure_categories:
-    - effectiveness
-    - access
-    - experience
-    - utilization
-    - health_plan_descriptive
-    benchmarking_enabled: true
-    tool_name: hedis_analytics_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: stars-agent
@@ -113,18 +114,19 @@ components:
 - id: cahps-analytics-tool
   name: CAHPS Experience Analytics
   kind: Tool
-  type: genesis:mcp_tool
-  description: Analyze CAHPS survey results and member experience scores with driver analysis and improvement opportunity identification
+  type: genesis:api_request
+  description: Analyze CAHPS survey results and member experience scores with driver analysis and improvement opportunity
+    identification
   asTools: true
   config:
-    model_name: cahps_experience_analyzer
-    survey_domains:
-    - overall_rating
-    - care_coordination
-    - customer_service
-    - prescription_drugs
-    driver_analysis: true
-    tool_name: cahps_analytics_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: stars-agent
@@ -132,11 +134,18 @@ components:
 - id: provider-performance-tool
   name: Provider Performance Analysis
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze provider-specific performance on quality measures with practice pattern analysis and improvement opportunities
   asTools: true
   config:
-    tool_name: provider_quality_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: stars-agent
@@ -144,11 +153,18 @@ components:
 - id: regional-analysis-tool
   name: Regional Performance Analysis
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze regional and geographic variations in quality performance with market dynamics and local factors consideration
   asTools: true
   config:
-    tool_name: regional_quality_analyzer
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: stars-agent
@@ -156,18 +172,19 @@ components:
 - id: gap-detection-tool
   name: Performance Gap Detection Engine
   kind: Tool
-  type: genesis:mcp_tool
-  description: Identify specific performance gaps, root causes, and improvement opportunities using advanced analytics and machine learning
+  type: genesis:api_request
+  description: Identify specific performance gaps, root causes, and improvement opportunities using advanced analytics and
+    machine learning
   asTools: true
   config:
-    model_name: quality_gap_detector
-    gap_types:
-    - performance
-    - process
-    - resource
-    - knowledge
-    root_cause_analysis: true
-    tool_name: gap_analysis_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: stars-agent
@@ -175,14 +192,16 @@ components:
 - id: intervention-recommender
   name: Quality Intervention Recommender
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:agent
   description: Recommend evidence-based interventions for quality improvement with implementation guidance and ROI projections
-  asTools: true
   config:
-    model_name: quality_intervention_recommender
-    evidence_based: true
-    implementation_guidance: true
-    tool_name: intervention_recommendation_model
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 4000
+    handle_parsing_errors: true
+    max_iterations: 20
+    verbose: true
   provides:
   - useAs: tools
     in: stars-agent
@@ -190,14 +209,18 @@ components:
 - id: benchmarking-tool
   name: Quality Benchmarking Service
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access national and regional quality benchmarks, peer comparisons, and industry standards for performance contextualization
   asTools: true
   config:
-    database_type: quality_benchmarks
-    include_peer_data: true
-    national_standards: true
-    tool_name: healthcare_data_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: stars-agent
@@ -205,33 +228,59 @@ components:
 - id: stars-prompt
   name: Stars Improvement Analysis Instructions
   kind: Prompt
-  type: genesis:prompt_template
-  description: Specialized prompt template for Stars rating improvement analysis with quality measurement expertise and intervention methodology
+  type: genesis:prompt
+  description: Specialized prompt template for Stars rating improvement analysis with quality measurement expertise and intervention
+    methodology
   config:
     saved_prompt: stars_improvement_analyzer_prompt_v1
-    template: 'You are a healthcare quality expert specializing in Stars ratings, HEDIS measures, CAHPS scores, and quality improvement initiatives. Your role is to identify improvement opportunities, analyze performance gaps, and recommend targeted interventions to enhance quality outcomes.
+    template: 'You are a healthcare quality expert specializing in Stars ratings, HEDIS measures, CAHPS scores, and quality
+      improvement initiatives. Your role is to identify improvement opportunities, analyze performance gaps, and recommend
+      targeted interventions to enhance quality outcomes.
 
-      QUALITY MEASUREMENT EXPERTISE: - HEDIS technical specifications and measurement methodologies - CAHPS survey design and scoring algorithms - CMS Stars rating calculation and weighting factors - Quality improvement strategies and evidence-based interventions - Provider performance analysis and practice transformation - Member engagement and health behavior change techniques
+      QUALITY MEASUREMENT EXPERTISE: - HEDIS technical specifications and measurement methodologies - CAHPS survey design
+      and scoring algorithms - CMS Stars rating calculation and weighting factors - Quality improvement strategies and evidence-based
+      interventions - Provider performance analysis and practice transformation - Member engagement and health behavior change
+      techniques
 
-      PERFORMANCE ANALYSIS METHODOLOGY: 1. Measure Performance Assessment: - Analyze current performance against benchmarks and thresholds - Identify underperforming measures and improvement opportunities - Calculate improvement potential and Stars impact - Assess performance trends and trajectory
+      PERFORMANCE ANALYSIS METHODOLOGY: 1. Measure Performance Assessment: - Analyze current performance against benchmarks
+      and thresholds - Identify underperforming measures and improvement opportunities - Calculate improvement potential and
+      Stars impact - Assess performance trends and trajectory
 
-      2. Gap Analysis and Root Cause Identification: - Conduct provider-level performance variation analysis - Analyze regional and demographic disparities - Identify process gaps and system barriers - Assess resource and capability constraints
+      2. Gap Analysis and Root Cause Identification: - Conduct provider-level performance variation analysis - Analyze regional
+      and demographic disparities - Identify process gaps and system barriers - Assess resource and capability constraints
 
-      3. Intervention Opportunity Identification: - Map performance gaps to evidence-based interventions - Assess intervention feasibility and implementation requirements - Calculate potential impact on Stars ratings and quality scores - Prioritize interventions by ROI and strategic importance
+      3. Intervention Opportunity Identification: - Map performance gaps to evidence-based interventions - Assess intervention
+      feasibility and implementation requirements - Calculate potential impact on Stars ratings and quality scores - Prioritize
+      interventions by ROI and strategic importance
 
-      4. Targeted Recommendation Development: - Develop provider-specific improvement recommendations - Create regional intervention strategies - Design member engagement and outreach programs - Establish monitoring and measurement frameworks
+      4. Targeted Recommendation Development: - Develop provider-specific improvement recommendations - Create regional intervention
+      strategies - Design member engagement and outreach programs - Establish monitoring and measurement frameworks
 
-      HEDIS MEASURE CATEGORIES: - Effectiveness of Care: diabetes care, cardiovascular health, respiratory conditions - Access/Availability of Care: preventive screenings, specialist access - Experience of Care: CAHPS survey domains and communication measures - Utilization and Risk Adjusted Utilization: emergency department visits, readmissions - Health Plan Descriptive Information: provider network and member demographics
+      HEDIS MEASURE CATEGORIES: - Effectiveness of Care: diabetes care, cardiovascular health, respiratory conditions - Access/Availability
+      of Care: preventive screenings, specialist access - Experience of Care: CAHPS survey domains and communication measures
+      - Utilization and Risk Adjusted Utilization: emergency department visits, readmissions - Health Plan Descriptive Information:
+      provider network and member demographics
 
-      CAHPS SURVEY DOMAINS: - Overall Rating of Health Plan and Health Care - Rating of Health Plan Customer Service - Care Coordination and Health Information - Access to Needed Care and Prescription Drugs - Shared Decision Making and Health Promotion
+      CAHPS SURVEY DOMAINS: - Overall Rating of Health Plan and Health Care - Rating of Health Plan Customer Service - Care
+      Coordination and Health Information - Access to Needed Care and Prescription Drugs - Shared Decision Making and Health
+      Promotion
 
-      INTERVENTION STRATEGIES: - Provider education and practice transformation support - Member outreach and engagement programs - Care management and coordination enhancements - Technology solutions and decision support tools - Financial incentives and value-based contracts - Community partnerships and social determinants initiatives
+      INTERVENTION STRATEGIES: - Provider education and practice transformation support - Member outreach and engagement programs
+      - Care management and coordination enhancements - Technology solutions and decision support tools - Financial incentives
+      and value-based contracts - Community partnerships and social determinants initiatives
 
-      IMPROVEMENT OPPORTUNITY PRIORITIZATION: - Stars rating impact and point improvement potential - Implementation feasibility and resource requirements - Evidence base and success probability - Timeline to impact and sustainability factors - Cost-effectiveness and return on investment
+      IMPROVEMENT OPPORTUNITY PRIORITIZATION: - Stars rating impact and point improvement potential - Implementation feasibility
+      and resource requirements - Evidence base and success probability - Timeline to impact and sustainability factors -
+      Cost-effectiveness and return on investment
 
-      OUTPUT REQUIREMENTS: - Performance gap analysis with specific metrics and targets - Provider and regional improvement opportunity identification - Evidence-based intervention recommendations with implementation guidance - ROI projections and resource requirement estimates - Priority ranking and implementation timeline recommendations - Monitoring and measurement framework for tracking progress
+      OUTPUT REQUIREMENTS: - Performance gap analysis with specific metrics and targets - Provider and regional improvement
+      opportunity identification - Evidence-based intervention recommendations with implementation guidance - ROI projections
+      and resource requirement estimates - Priority ranking and implementation timeline recommendations - Monitoring and measurement
+      framework for tracking progress
 
-      Use your quality analytics tools to analyze HEDIS and CAHPS performance, identify gaps, benchmark against peers, and generate targeted improvement recommendations. Always focus on evidence-based interventions, member outcomes, and sustainable quality improvement.
+      Use your quality analytics tools to analyze HEDIS and CAHPS performance, identify gaps, benchmark against peers, and
+      generate targeted improvement recommendations. Always focus on evidence-based interventions, member outcomes, and sustainable
+      quality improvement.
 
       '
   provides:
@@ -259,7 +308,8 @@ components:
   name: Stars Improvement Analysis Output
   kind: Data
   type: genesis:chat_output
-  description: Present comprehensive Stars improvement opportunities with targeted intervention recommendations and implementation guidance
+  description: Present comprehensive Stars improvement opportunities with targeted intervention recommendations and implementation
+    guidance
   config:
     should_store_message: true
   provides: []

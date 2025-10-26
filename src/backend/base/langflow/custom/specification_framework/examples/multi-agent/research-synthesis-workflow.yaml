@@ -1,0 +1,357 @@
+id: urn:agent:genesis:multi-agent:research-synthesis:1.0.0
+name: Research Synthesis Multi-Agent Workflow
+fullyQualifiedName: genesis.multi_agent.research_synthesis_workflow
+description: Advanced multi-agent system that conducts comprehensive research, analyzes multiple sources, and synthesizes findings into actionable insights
+domain: research.ai
+subDomain: knowledge-synthesis
+version: 1.0.0
+environment: production
+agentOwner: research-team@company.ai
+agentOwnerDisplayName: Research & Analytics Team
+email: research-team@company.ai
+status: ACTIVE
+
+variables:
+- name: research_depth
+  type: string
+  required: false
+  default: "comprehensive"
+  description: Research depth level (surface, standard, comprehensive, deep)
+- name: max_sources
+  type: number
+  required: false
+  default: 20
+  description: Maximum number of sources to analyze
+- name: synthesis_style
+  type: string
+  required: false
+  default: "academic"
+  description: Output style (academic, business, technical, summary)
+- name: fact_check_enabled
+  type: boolean
+  required: false
+  default: true
+  description: Enable cross-source fact checking
+- name: citation_format
+  type: string
+  required: false
+  default: "APA"
+  description: Citation format (APA, MLA, Chicago)
+- name: quality_threshold
+  type: number
+  required: false
+  default: 0.8
+  description: Minimum quality score for sources (0-1)
+
+tags:
+- multi-agent
+- research
+- knowledge-synthesis
+- fact-checking
+- academic
+- business-intelligence
+
+reusability:
+  asTools: false
+kind: Multi Agent
+agentGoal: Conduct comprehensive research on topics and synthesize findings into well-structured, cited reports with actionable insights
+targetUser: internal
+valueGeneration: KnowledgeGeneration
+interactionMode: Asynchronous
+runMode: OnDemand
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+
+components:
+- id: research-request-input
+  name: Research Request Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive research topics and requirements
+  provides:
+  - useAs: input
+    in: research-coordinator
+    description: Initial research request and parameters
+
+- id: web-search-tool
+  name: Web Search Engine
+  kind: Tool
+  type: genesis:api_request
+  description: Search the web for relevant information and sources
+  asTools: true
+  config:
+    method: GET
+    endpoint: "https://api.search-engine.com/search"
+    headers:
+    - key: Authorization
+      value: ${SEARCH_API_KEY}
+    parameters:
+      results_per_query: 10
+      safe_search: true
+    timeout: 30
+  provides:
+  - useAs: tools
+    in: research-coordinator
+    description: Web search capabilities
+  - useAs: tools
+    in: source-analyst
+    description: Additional search capabilities
+
+- id: academic-database-tool
+  name: Academic Database Access
+  kind: Tool
+  type: genesis:api_request
+  description: Access academic papers and scholarly sources
+  asTools: true
+  config:
+    method: POST
+    endpoint: "https://api.academic-db.com/search"
+    headers:
+    - key: API-Key
+      value: ${ACADEMIC_API_KEY}
+    timeout: 45
+  provides:
+  - useAs: tools
+    in: research-coordinator
+    description: Academic research access
+  - useAs: tools
+    in: source-analyst
+    description: Scholarly source validation
+
+- id: content-extractor-tool
+  name: Content Extraction Tool
+  kind: Tool
+  type: genesis:text_extractor
+  description: Extract and clean content from web pages and documents
+  asTools: true
+  config:
+    clean_html: true
+    extract_main_content: true
+    preserve_structure: true
+  provides:
+  - useAs: tools
+    in: source-analyst
+    description: Content extraction capabilities
+
+- id: research-coordinator
+  name: Research Coordination Agent
+  kind: Agent
+  type: genesis:openai
+  description: Coordinates research activities and manages the workflow
+  config:
+    model: gpt-4-turbo
+    temperature: 0.2
+    max_tokens: 2000
+  prompt: |
+    You are the Research Coordinator, responsible for orchestrating a comprehensive research project.
+
+    Your responsibilities:
+    1. Break down research topics into specific, searchable queries
+    2. Coordinate search strategies across multiple sources
+    3. Manage research workflow and prioritization
+    4. Ensure comprehensive coverage of the topic
+    5. Direct other agents in the research process
+
+    Research Framework:
+    - Identify key aspects and subtopics
+    - Plan search strategies for different source types
+    - Set quality and relevance criteria
+    - Coordinate with specialized agents
+    - Monitor progress and coverage gaps
+
+    Current Research Request: {research_topic}
+    Research Depth: {research_depth}
+    Maximum Sources: {max_sources}
+
+    Create a research plan and begin coordinating the search process.
+  provides:
+  - useAs: coordination
+    in: source-analyst
+    description: Research coordination and task assignment
+  - useAs: input
+    in: fact-checker
+    description: Research plan and initial findings
+
+- id: source-analyst
+  name: Source Analysis Agent
+  kind: Agent
+  type: genesis:openai
+  description: Analyzes individual sources for quality, relevance, and key information
+  config:
+    model: gpt-4-turbo
+    temperature: 0.1
+    max_tokens: 1500
+  prompt: |
+    You are a Source Analysis Expert specializing in evaluating research sources.
+
+    Your role:
+    1. Assess source credibility and authority
+    2. Extract key information and insights
+    3. Evaluate relevance to research topic
+    4. Identify potential biases or limitations
+    5. Rate source quality and reliability
+
+    Analysis Criteria:
+    - Author credentials and expertise
+    - Publication date and currency
+    - Peer review status
+    - Citation count and impact
+    - Methodology quality (for studies)
+    - Potential conflicts of interest
+
+    Quality Scoring (0-1):
+    - 0.9-1.0: Excellent (peer-reviewed, authoritative)
+    - 0.7-0.8: Good (credible, well-sourced)
+    - 0.5-0.6: Fair (useful but limited)
+    - 0.0-0.4: Poor (unreliable or irrelevant)
+
+    For each source, provide:
+    ```json
+    {
+      "source_id": "string",
+      "title": "string",
+      "author": "string",
+      "publication_date": "string",
+      "quality_score": "number",
+      "relevance_score": "number",
+      "key_findings": ["list"],
+      "limitations": ["list"],
+      "citation": "string"
+    }
+    ```
+
+    Quality Threshold: {quality_threshold}
+  provides:
+  - useAs: analysis
+    in: fact-checker
+    description: Source quality analysis and key findings
+  - useAs: input
+    in: synthesis-agent
+    description: Analyzed source information
+
+- id: fact-checker
+  name: Fact Verification Agent
+  kind: Agent
+  type: genesis:openai
+  description: Cross-references information across sources to verify facts and identify inconsistencies
+  config:
+    model: gpt-4-turbo
+    temperature: 0.1
+    max_tokens: 1000
+  prompt: |
+    You are a Fact Verification Specialist focused on ensuring information accuracy.
+
+    Your responsibilities:
+    1. Cross-reference claims across multiple sources
+    2. Identify potential contradictions or inconsistencies
+    3. Assess the reliability of specific facts
+    4. Flag claims that need additional verification
+    5. Rate the confidence level of key findings
+
+    Verification Process:
+    - Compare information across sources
+    - Look for corroborating evidence
+    - Identify outlier claims or data
+    - Check for recent updates or corrections
+    - Assess sample sizes and methodologies
+
+    Confidence Levels:
+    - High (3+ reliable sources agree)
+    - Medium (2 sources agree, or 1 authoritative source)
+    - Low (single source or conflicting information)
+    - Uncertain (insufficient or contradictory evidence)
+
+    Output verified facts with confidence ratings and supporting evidence.
+
+    Fact Checking Enabled: {fact_check_enabled}
+  provides:
+  - useAs: verification
+    in: synthesis-agent
+    description: Fact-checked information with confidence ratings
+
+- id: synthesis-agent
+  name: Research Synthesis Agent
+  kind: Agent
+  type: genesis:claude
+  description: Synthesizes research findings into comprehensive, well-structured reports
+  config:
+    model: claude-3-sonnet
+    temperature: 0.3
+    max_tokens: 4000
+  prompt: |
+    You are a Research Synthesis Expert who creates comprehensive, well-structured research reports.
+
+    Your expertise:
+    1. Synthesize information from multiple sources
+    2. Identify key themes and patterns
+    3. Structure findings logically
+    4. Present balanced, objective analysis
+    5. Include proper citations and references
+
+    Report Structure for {synthesis_style} style:
+
+    **Executive Summary**
+    - Key findings overview
+    - Main conclusions
+    - Actionable recommendations
+
+    **Introduction**
+    - Research scope and objectives
+    - Methodology overview
+    - Source quality summary
+
+    **Findings**
+    - Major themes and insights
+    - Supporting evidence
+    - Quantitative data where available
+    - Conflicting viewpoints
+
+    **Analysis**
+    - Implications and significance
+    - Connections between findings
+    - Gaps and limitations
+    - Future research directions
+
+    **Conclusions**
+    - Summary of key insights
+    - Confidence levels
+    - Actionable recommendations
+
+    **References**
+    - {citation_format} format citations
+    - Source quality indicators
+
+    Quality Standards:
+    - Objective and balanced presentation
+    - Clear logical flow
+    - Proper attribution
+    - Evidence-based conclusions
+    - Actionable insights
+
+    Synthesize the research findings into a comprehensive report.
+  provides:
+  - useAs: output
+    in: report-formatter
+    description: Synthesized research report
+
+- id: report-formatter
+  name: Report Formatting Service
+  kind: Processor
+  type: genesis:document_processor
+  description: Format the final research report with proper styling and citations
+  config:
+    output_format: "markdown"
+    include_toc: true
+    citation_style: ${citation_format}
+    quality_indicators: true
+  provides:
+  - useAs: output
+    in: research-output
+    description: Formatted research report
+
+- id: research-output
+  name: Research Report Output
+  kind: Data
+  type: genesis:document_output
+  description: Deliver the final formatted research report

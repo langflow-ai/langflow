@@ -112,7 +112,7 @@ class PatternAnalyzer(Component):
         input_components = [comp for comp in components if comp.get("type") == "genesis:chat_input"]
         output_components = [comp for comp in components if comp.get("type") == "genesis:chat_output"]
         agent_components = [comp for comp in components if comp.get("type") == "genesis:agent"]
-        prompt_components = [comp for comp in components if comp.get("type") == "genesis:prompt_template"]
+        prompt_components = [comp for comp in components if comp.get("type") == "genesis:prompt"]
         model_components = [comp for comp in components if comp.get("type", "").startswith("genesis:") and
                           any(model_type in comp.get("type", "") for model_type in ["clinical_llm", "icd10", "cpt", "rxnorm", "combined_entity"])]
         api_components = [comp for comp in components if comp.get("type") == "genesis:api_request"]
@@ -197,7 +197,7 @@ class PatternAnalyzer(Component):
                                 "description": f"Provides tool capabilities to {agent_id}"
                             })
 
-            elif comp_type == "genesis:prompt_template":
+            elif comp_type == "genesis:prompt":
                 # Prompts provide TO agents via system_prompt relationship
                 if agent_components:
                     for agent in agent_components:
@@ -244,7 +244,7 @@ class PatternAnalyzer(Component):
                     comp["name"] = "Response Output"
                 elif comp_type == "genesis:agent":
                     comp["name"] = "AI Agent"
-                elif comp_type == "genesis:prompt_template":
+                elif comp_type == "genesis:prompt":
                     comp["name"] = "Agent Instructions"
                 elif comp_type == "genesis:mcp_tool":
                     comp["name"] = comp.get("description", "Integration Tool")
@@ -258,7 +258,7 @@ class PatternAnalyzer(Component):
                     comp["kind"] = "Data"
                 elif comp_type == "genesis:agent":
                     comp["kind"] = "Agent"
-                elif comp_type == "genesis:prompt_template":
+                elif comp_type == "genesis:prompt":
                     comp["kind"] = "Prompt"
                 elif comp_type == "genesis:mcp_tool":
                     comp["kind"] = "Tool"

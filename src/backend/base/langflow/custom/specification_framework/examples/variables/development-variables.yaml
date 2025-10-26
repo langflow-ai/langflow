@@ -1,0 +1,29 @@
+# Development Environment Variables
+# Use these variables for testing and development
+
+# General Configuration
+environment: "development"
+debug_mode: true
+log_level: "DEBUG"
+test_mode: true
+
+# API Keys (Development/Sandbox)
+OPENAI_API_KEY: "your-openai-api-key"
+ANTHROPIC_API_KEY: "your-anthropic-api-key"
+SEARCH_API_KEY: "your-search-api-key"
+ACADEMIC_API_KEY: "your-academic-api-key"
+
+# Service Configuration
+max_retries: 3
+timeout_seconds: 30
+rate_limit_requests_per_minute: 60
+
+# Testing Parameters
+test_confidence_threshold: 0.7
+mock_external_apis: true
+enable_performance_metrics: true
+
+# Development Settings
+auto_validate_on_create: true
+save_intermediate_results: true
+enable_debugging_output: true

@@ -134,7 +134,7 @@ variables:
 
 ```yaml
 - id: hipaa-compliant-prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   name: HIPAA Compliant Processing Instructions
   description: Standard HIPAA compliance prompt for healthcare agents
   config:
@@ -813,7 +813,7 @@ components:
         description: Secure EHR data access
 
   - id: hipaa-prompt
-    type: genesis:prompt_template
+    type: genesis:prompt
     name: HIPAA Compliance Instructions
     description: Comprehensive HIPAA compliance prompt
     config:

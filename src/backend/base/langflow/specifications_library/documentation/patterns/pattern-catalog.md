@@ -117,7 +117,7 @@ components:
 
 ### Components Required
 1. `genesis:chat_input` - User input
-2. `genesis:prompt_template` - Managed prompt
+2. `genesis:prompt` - Managed prompt
 3. `genesis:agent` - Processing logic
 4. `genesis:chat_output` - Results display
 
@@ -139,7 +139,7 @@ components:
         description: Send input to agent
 
   - id: prompt
-    type: genesis:prompt_template
+    type: genesis:prompt
     name: Agent Instructions
     description: Managed prompt template
     config:
@@ -215,7 +215,7 @@ components:
 2. `genesis:agent` - Processing logic with tool access
 3. `genesis:mcp_tool` OR `genesis:knowledge_hub_search` - External capability
 4. `genesis:chat_output` - Results display
-5. Optional: `genesis:prompt_template` - Complex prompts
+5. Optional: `genesis:prompt` - Complex prompts
 
 ### Template
 ```yaml
@@ -319,7 +319,7 @@ For internal knowledge base search:
 
 ### Components Required
 1. `genesis:chat_input` - User input
-2. `genesis:prompt_template` - Complex workflow prompt
+2. `genesis:prompt` - Complex workflow prompt
 3. `genesis:agent` - Orchestrating agent
 4. Multiple `genesis:mcp_tool` - Various external capabilities
 5. `genesis:chat_output` - Results display
@@ -342,7 +342,7 @@ components:
         description: Send input to agent
 
   - id: prompt
-    type: genesis:prompt_template
+    type: genesis:prompt
     name: Workflow Instructions
     description: Complex workflow prompt
     config:
@@ -929,7 +929,7 @@ Location: /Users/jagveersingh/Developer/studio/ai-studio/src/backend/base/langfl
 2. `genesis:healthcare_connector` - EHR, Claims, Eligibility, or Pharmacy connector
 3. `genesis:agent` - Healthcare processing logic
 4. `genesis:chat_output` - Clinical results display
-5. Optional: `genesis:prompt_template` - Clinical prompt management
+5. Optional: `genesis:prompt` - Clinical prompt management
 
 ### Template
 
@@ -1073,7 +1073,7 @@ components:
 
 ### Components Required
 1. `genesis:chat_input` - Patient data input
-2. `genesis:prompt_template` - Healthcare workflow prompt
+2. `genesis:prompt` - Healthcare workflow prompt
 3. `genesis:ehr_connector` - Electronic health records
 4. `genesis:claims_connector` - Claims processing
 5. `genesis:eligibility_connector` - Insurance verification
@@ -1117,7 +1117,7 @@ components:
         description: Send patient data to orchestration agent
 
   - id: healthcare-prompt
-    type: genesis:prompt_template
+    type: genesis:prompt
     name: Healthcare Orchestration Instructions
     description: Comprehensive healthcare workflow prompt
     config:
@@ -1359,7 +1359,7 @@ All healthcare patterns include:
 1. `genesis:chat_input` - Clinical query input
 2. `genesis:knowledge_hub_search` - Clinical guideline search
 3. `genesis:healthcare_connector` - Patient data access
-4. `genesis:prompt_template` - Clinical reasoning prompt
+4. `genesis:prompt` - Clinical reasoning prompt
 5. `genesis:agent` - Clinical decision agent
 6. `genesis:chat_output` - Clinical recommendations
 
@@ -1391,7 +1391,7 @@ components:
         description: Send clinical query to decision agent
 
   - id: clinical-prompt
-    type: genesis:prompt_template
+    type: genesis:prompt
     name: Clinical Decision Support Instructions
     description: Evidence-based clinical reasoning prompt
     config:

@@ -1,7 +1,8 @@
 id: urn:agent:genesis:care-management:risk-stratification-agent:1.0.0
 name: Risk Stratification Agent
 fullyQualifiedName: genesis.autonomize.ai.risk_stratification_agent
-description: Multi-agent system that combines claims, social determinants of health (SDoH), and EHR data to score and prioritize patients for care management outreach or chronic care programs
+description: Multi-agent system that combines claims, social determinants of health (SDoH), and EHR data to score and prioritize
+  patients for care management outreach or chronic care programs
 domain: autonomize.ai
 subDomain: care-management
 version: 1.0.0
@@ -53,7 +54,8 @@ tags:
 reusability:
   asTools: false
 kind: Multi Agent
-agentGoal: Identify and prioritize high-risk patients for proactive care management interventions using comprehensive data analysis and risk scoring algorithms
+agentGoal: Identify and prioritize high-risk patients for proactive care management interventions using comprehensive data
+  analysis and risk scoring algorithms
 targetUser: internal
 valueGeneration: InsightGeneration
 interactionMode: Batch
@@ -74,17 +76,18 @@ components:
 - id: claims-data-tool
   name: Claims Data Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access healthcare claims data for utilization patterns and cost analysis
   asTools: true
   config:
-    data_sources:
-    - medical_claims
-    - pharmacy_claims
-    - facility_claims
-    include_diagnosis_codes: true
-    include_procedure_codes: true
-    tool_name: claims_connector
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-collection-agent
@@ -92,19 +95,18 @@ components:
 - id: ehr-data-tool
   name: EHR Clinical Data Access
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Access electronic health record data for clinical indicators and assessments
   asTools: true
   config:
-    data_elements:
-    - conditions
-    - observations
-    - medications
-    - allergies
-    - vital_signs
-    include_lab_values: true
-    include_assessments: true
-    tool_name: ehr_integration
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-collection-agent
@@ -112,24 +114,18 @@ components:
 - id: sdoh-assessment-tool
   name: Social Determinants Assessment
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Analyze social determinants of health data from multiple sources
   asTools: true
   config:
-    assessment_domains:
-    - housing
-    - food_security
-    - transportation
-    - social_support
-    - education
-    - employment
-    data_sources:
-    - surveys
-    - claims_indicators
-    - geographic_data
-    - community_resources
-    risk_scoring_enabled: true
-    tool_name: sdoh_assessment_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: data-collection-agent
@@ -137,19 +133,18 @@ components:
 - id: risk-prediction-model
   name: Population Health Risk Model
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Advanced ML model for healthcare risk prediction and stratification
   asTools: true
   config:
-    prediction_horizon_months: 6
-    risk_categories:
-    - hospitalization
-    - emergency_department
-    - cost_escalation
-    - chronic_disease_progression
-    include_comorbidity_index: true
-    calibrated_scoring: true
-    tool_name: population_health_risk_model
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: risk-analysis-agent

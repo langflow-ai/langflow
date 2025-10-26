@@ -135,7 +135,16 @@ def _list_components(api_client: APIClient, search: Optional[str], category: str
         info_message("Fetching available components...")
         result = api_client.get_available_components_sync()
 
-        components = result.get('components', {})
+        # Handle new nested response structure
+        components_data = result.get('components', {})
+
+        # Get genesis_mapped components which includes database components
+        components = components_data.get('genesis_mapped', {})
+
+        # Fallback to old format if genesis_mapped doesn't exist
+        if not components and isinstance(components_data, dict):
+            components = components_data
+
         if not components:
             warning_message("No components found")
             return

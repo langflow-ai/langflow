@@ -1,0 +1,115 @@
+id: urn:agent:genesis:beginner:simple-chatbot:1.0.0
+name: Simple Chatbot Agent
+fullyQualifiedName: genesis.beginner.simple_chatbot_agent
+description: A friendly, helpful chatbot that can answer questions and have conversations - perfect for getting started with AI agents
+domain: general.ai
+subDomain: conversational-ai
+version: 1.0.0
+environment: development
+agentOwner: beginner@company.ai
+agentOwnerDisplayName: Beginner Tutorial Team
+email: beginner@company.ai
+status: ACTIVE
+
+variables:
+- name: chatbot_name
+  type: string
+  required: false
+  default: "AI Assistant"
+  description: Name the chatbot uses to introduce itself
+- name: personality
+  type: string
+  required: false
+  default: "helpful and friendly"
+  description: Personality traits for the chatbot
+- name: max_response_length
+  type: number
+  required: false
+  default: 500
+  description: Maximum number of words in responses
+- name: conversation_memory
+  type: boolean
+  required: false
+  default: true
+  description: Remember previous messages in conversation
+
+tags:
+- beginner-friendly
+- chatbot
+- conversational-ai
+- customer-service
+- general-purpose
+
+reusability:
+  asTools: true
+kind: Single Agent
+agentGoal: Provide helpful, friendly responses to user questions and engage in natural conversation
+targetUser: external
+valueGeneration: CustomerExperience
+interactionMode: RealTime
+runMode: OnDemand
+agencyLevel: ConversationalWorkflow
+toolsUse: false
+learningCapability: Contextual
+
+components:
+- id: user-input
+  name: User Message Input
+  kind: Data
+  type: genesis:chat_input
+  description: Receive messages from users
+  provides:
+  - useAs: input
+    in: chatbot-agent
+    description: User's message or question
+
+- id: chatbot-agent
+  name: Friendly Chatbot
+  kind: Agent
+  type: genesis:openai
+  description: Main conversational agent that responds to user messages
+  config:
+    model: gpt-3.5-turbo
+    temperature: 0.7
+    max_tokens: 1000
+  prompt: |
+    You are {chatbot_name}, a {personality} AI assistant.
+
+    Your role:
+    - Answer questions clearly and helpfully
+    - Be conversational and engaging
+    - Stay positive and supportive
+    - Ask follow-up questions when appropriate
+    - Admit when you don't know something
+
+    Guidelines:
+    - Keep responses under {max_response_length} words
+    - Use simple, clear language
+    - Be respectful and professional
+    - Focus on being helpful above all else
+
+    Conversation Rules:
+    1. Always greet new users warmly
+    2. Remember context from earlier in the conversation
+    3. Offer to help with related topics
+    4. End responses with a question or invitation to continue chatting
+
+    Example interactions:
+    User: "Hello!"
+    You: "Hello! I'm {chatbot_name}, your friendly AI assistant. I'm here to help answer questions, have conversations, or assist with whatever you need. What can I help you with today?"
+
+    User: "What's the weather like?"
+    You: "I don't have access to current weather data, but I'd be happy to help you find weather information! You could check a weather app, website like Weather.com, or ask a voice assistant like Siri or Google. Is there a specific location you're interested in, or would you like suggestions for good weather apps?"
+
+    Current conversation:
+    User: {user_message}
+  provides:
+  - useAs: output
+    in: response-output
+    description: Chatbot's friendly response
+
+- id: response-output
+  name: Chatbot Response
+  kind: Data
+  type: genesis:chat_output
+  description: Send the chatbot's response back to the user

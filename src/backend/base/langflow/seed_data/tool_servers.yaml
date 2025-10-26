@@ -1,0 +1,211 @@
+# Tool Server Mappings Seed Data
+# Part of AUTPE-6204: Database-first component mapping approach
+# Maps tool names to MCP server configurations
+
+tool_servers:
+  # Healthcare EHR Tools
+  - tool_name: "ehr_patient_records"
+    server_name: "healthcare_ehr_server"
+    tool_filter: "ehr_patient_records"
+    description: "Healthcare EHR system for patient records access"
+    category: "healthcare"
+    config:
+      connection_mode: "Stdio"
+      hipaa_compliant: true
+
+  - tool_name: "ehr_calendar_access"
+    server_name: "healthcare_ehr_server"
+    tool_filter: "ehr_calendar_access"
+    description: "Healthcare EHR system for provider scheduling"
+    category: "healthcare"
+    config:
+      connection_mode: "Stdio"
+      hipaa_compliant: true
+
+  - tool_name: "ehr_care_plans"
+    server_name: "healthcare_ehr_server"
+    tool_filter: "ehr_care_plans"
+    description: "Healthcare EHR system for care plans access"
+    category: "healthcare"
+    config:
+      connection_mode: "Stdio"
+      hipaa_compliant: true
+
+  # Pharmacy and Claims Tools
+  - tool_name: "pharmacy_claims_ncpdp"
+    server_name: "pharmacy_claims_server"
+    tool_filter: "pharmacy_claims_ncpdp"
+    description: "NCPDP pharmacy claims data access"
+    category: "healthcare"
+    config:
+      connection_mode: "Stdio"
+      hipaa_compliant: true
+
+  - tool_name: "medication_records"
+    server_name: "pharmacy_claims_server"
+    tool_filter: "medication_records"
+    description: "Medication information and prescription access"
+    category: "healthcare"
+    config:
+      connection_mode: "Stdio"
+      hipaa_compliant: true
+
+  - tool_name: "healthcare_claims_database"
+    server_name: "claims_analytics_server"
+    tool_filter: "healthcare_claims_database"
+    description: "Healthcare claims database for analytics"
+    category: "healthcare"
+    config:
+      connection_mode: "Stdio"
+      hipaa_compliant: true
+
+  # Insurance and Eligibility Tools
+  - tool_name: "insurance_eligibility_check"
+    server_name: "insurance_services_server"
+    tool_filter: "insurance_eligibility_check"
+    description: "Real-time insurance eligibility verification"
+    category: "healthcare"
+    config:
+      connection_mode: "SSE"
+      real_time: true
+      hipaa_compliant: true
+
+  - tool_name: "insurance_plan_rules"
+    server_name: "insurance_services_server"
+    tool_filter: "insurance_plan_rules"
+    description: "Insurance plan benefits and coverage information"
+    category: "healthcare"
+    config:
+      connection_mode: "Stdio"
+      hipaa_compliant: true
+
+  # Member Management Tools
+  - tool_name: "member_management_system"
+    server_name: "member_services_server"
+    tool_filter: "member_management_system"
+    description: "Member demographics and management system"
+    category: "healthcare"
+    config:
+      connection_mode: "Stdio"
+      hipaa_compliant: true
+
+  # Communication Tools
+  - tool_name: "sms_gateway"
+    server_name: "communication_services_server"
+    tool_filter: "sms_gateway"
+    description: "SMS messaging service"
+    category: "communication"
+    config:
+      connection_mode: "SSE"
+      async_messaging: true
+
+  - tool_name: "email_service"
+    server_name: "communication_services_server"
+    tool_filter: "email_service"
+    description: "Email communication service"
+    category: "communication"
+    config:
+      connection_mode: "Stdio"
+
+  # Analytics and Feedback Tools
+  - tool_name: "call_center_logs"
+    server_name: "analytics_server"
+    tool_filter: "call_center_logs"
+    description: "Call center logs and conversation analytics"
+    category: "analytics"
+    config:
+      connection_mode: "Stdio"
+
+  - tool_name: "member_feedback_system"
+    server_name: "analytics_server"
+    tool_filter: "member_feedback_system"
+    description: "Member satisfaction and feedback tracking"
+    category: "analytics"
+    config:
+      connection_mode: "Stdio"
+
+  - tool_name: "policy_database"
+    server_name: "analytics_server"
+    tool_filter: "policy_database"
+    description: "Insurance policy database for reference"
+    category: "analytics"
+    config:
+      connection_mode: "Stdio"
+
+  # Medical Coding Tools
+  - tool_name: "medical_coding_assistant"
+    server_name: "healthcare_coding_server"
+    tool_filter: "medical_coding_assistant"
+    description: "Medical coding assistance and validation"
+    category: "healthcare"
+    config:
+      connection_mode: "Stdio"
+      hipaa_compliant: true
+
+  - tool_name: "encoder_pro"
+    server_name: "healthcare_coding_server"
+    tool_filter: "encoder_pro"
+    description: "Professional medical encoding tool"
+    category: "healthcare"
+    config:
+      connection_mode: "Stdio"
+      hipaa_compliant: true
+
+  # Prior Authorization Tools
+  - tool_name: "pa_lookup"
+    server_name: "authorization_server"
+    tool_filter: "pa_lookup"
+    description: "Prior authorization lookup and status"
+    category: "healthcare"
+    config:
+      connection_mode: "SSE"
+      real_time: true
+      hipaa_compliant: true
+
+  - tool_name: "qnext_auth_history"
+    server_name: "qnext_server"
+    tool_filter: "qnext_auth_history"
+    description: "QNext authorization history access"
+    category: "healthcare"
+    config:
+      connection_mode: "Stdio"
+      hipaa_compliant: true
+
+  # Clinical Decision Support Tools
+  - tool_name: "clinical_guidelines"
+    server_name: "clinical_decision_server"
+    tool_filter: "clinical_guidelines"
+    description: "Clinical practice guidelines database"
+    category: "healthcare"
+    config:
+      connection_mode: "Stdio"
+      hipaa_compliant: true
+
+  - tool_name: "drug_interactions"
+    server_name: "clinical_decision_server"
+    tool_filter: "drug_interactions"
+    description: "Drug interaction checking service"
+    category: "healthcare"
+    config:
+      connection_mode: "SSE"
+      real_time: true
+      hipaa_compliant: true
+
+  # Document Processing Tools
+  - tool_name: "document_ocr"
+    server_name: "document_processing_server"
+    tool_filter: "document_ocr"
+    description: "OCR service for medical documents"
+    category: "document_processing"
+    config:
+      connection_mode: "Stdio"
+      hipaa_compliant: true
+
+  - tool_name: "form_extraction"
+    server_name: "document_processing_server"
+    tool_filter: "form_extraction"
+    description: "Medical form data extraction"
+    category: "document_processing"
+    config:
+      connection_mode: "Stdio"
+      hipaa_compliant: true

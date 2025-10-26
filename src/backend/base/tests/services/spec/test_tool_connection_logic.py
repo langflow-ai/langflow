@@ -8,8 +8,8 @@ import pytest
 from unittest.mock import Mock, patch
 from typing import Dict, Any, List
 
-from langflow.custom.genesis.spec.converter import FlowConverter
-from langflow.custom.genesis.spec.models import Component, ComponentProvides, AgentSpec
+from langflow.services.genesis.converter import FlowConverter
+from langflow.services.genesis.models import Component, ComponentProvides, AgentSpec
 
 
 class TestToolConnectionLogic:

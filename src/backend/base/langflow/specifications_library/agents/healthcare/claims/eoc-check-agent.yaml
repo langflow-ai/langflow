@@ -105,11 +105,11 @@ components:
 - id: eoc-prompt
   name: Agent Instructions
   kind: Prompt
-  type: genesis:prompt_template
+  type: genesis:prompt
   description: Prompt template for agent instructions
   config:
-    template: You are an EOC validation specialist. Analyze the member's Evidence
-      of Coverage to determine if requested services are covered.
+    template: You are an EOC validation specialist. Analyze the member's Evidence of Coverage to determine if requested services
+      are covered.
     saved_prompt: benefit-check-eoc
   provides:
   - useAs: system_prompt
@@ -157,11 +157,18 @@ components:
 - id: service-validator
   name: Service Code Validator
   kind: Tool
-  type: genesis:mcp_tool
+  type: genesis:api_request
   description: Validate and enrich service codes via MCP
   asTools: true
   config:
-    tool_name: encoder_pro
+    method: POST
+    headers:
+    - key: Content-Type
+      value: application/json
+    - key: Authorization
+      value: ${API_KEY}
+    timeout: 30
+    body: []
   provides:
   - useAs: tools
     in: eoc-agent

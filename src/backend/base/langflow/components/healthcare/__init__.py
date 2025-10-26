@@ -8,22 +8,50 @@ from langflow.components._importing import import_mod
 
 if TYPE_CHECKING:
     from langflow.base.healthcare_connector_base import HealthcareConnectorBase
+    from langflow.components.healthcare.accumulator_benefits_connector import AccumulatorBenefitsConnector
     from langflow.components.healthcare.appeals_data_connector import AppealsDataConnector
     from langflow.components.healthcare.claims_connector import ClaimsConnector
+    from langflow.components.healthcare.compliance_data_connector import ComplianceDataConnector
     from langflow.components.healthcare.ehr_connector import EHRConnector
     from langflow.components.healthcare.eligibility_connector import EligibilityConnector
+    from langflow.components.healthcare.medical_terminology_connector import MedicalTerminologyConnector
+    from langflow.components.healthcare.pharmacy_benefits_connector import PharmacyBenefitsConnector
     from langflow.components.healthcare.pharmacy_connector import PharmacyConnector
+    from langflow.components.healthcare.provider_network_connector import ProviderNetworkConnector
+    from langflow.components.healthcare.quality_metrics_connector import QualityMetricsConnector
+    from langflow.components.healthcare.medical_data_standardizer_connector import MedicalDataStandardizerConnector
 
 _dynamic_imports = {
     "HealthcareConnectorBase": "langflow.base.healthcare_connector_base",
+    "AccumulatorBenefitsConnector": "accumulator_benefits_connector",
     "AppealsDataConnector": "appeals_data_connector",
     "ClaimsConnector": "claims_connector",
+    "ComplianceDataConnector": "compliance_data_connector",
     "EHRConnector": "ehr_connector",
     "EligibilityConnector": "eligibility_connector",
+    "MedicalTerminologyConnector": "medical_terminology_connector",
+    "PharmacyBenefitsConnector": "pharmacy_benefits_connector",
     "PharmacyConnector": "pharmacy_connector",
+    "ProviderNetworkConnector": "provider_network_connector",
+    "QualityMetricsConnector": "quality_metrics_connector",
+    "MedicalDataStandardizerConnector": "medical_data_standardizer_connector",
 }
 
-__all__ = ["HealthcareConnectorBase", "AppealsDataConnector", "ClaimsConnector", "EHRConnector", "EligibilityConnector", "PharmacyConnector"]
+__all__ = [
+    "HealthcareConnectorBase",
+    "AccumulatorBenefitsConnector",
+    "AppealsDataConnector",
+    "ClaimsConnector",
+    "ComplianceDataConnector",
+    "EHRConnector",
+    "EligibilityConnector",
+    "MedicalTerminologyConnector",
+    "PharmacyBenefitsConnector",
+    "PharmacyConnector",
+    "ProviderNetworkConnector",
+    "QualityMetricsConnector",
+    "MedicalDataStandardizerConnector"
+]
 
 
 def __getattr__(attr_name: str) -> Any:
