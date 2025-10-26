@@ -1,8 +1,8 @@
 """
 Service Integration for CLI Workflow Validation
 
-Clean integration between CLI workflow commands and the SimplifiedComponentValidator,
-providing simplified local vs API mode validation.
+Clean integration between CLI workflow commands and the LangflowComponentValidator,
+providing streamlined local vs API mode validation.
 """
 
 import logging
@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 
 class ServiceIntegration:
     """
-    Clean integration between CLI workflow commands and SimplifiedComponentValidator.
+    Clean integration between CLI workflow commands and LangflowComponentValidator.
 
     Provides unified interface for workflow validation and processing
-    using only the simplified architecture.
+    using the Langflow component validation architecture.
     """
 
     def __init__(self, api_client: Optional[APIClient] = None, local_mode: bool = False):
@@ -63,7 +63,7 @@ class ServiceIntegration:
 
     async def _validate_local(self, spec_dict: Dict[str, Any], spec_file: Path) -> Dict[str, Any]:
         """
-        Validate specification using SimplifiedComponentValidator.
+        Validate specification using LangflowComponentValidator.
 
         Args:
             spec_dict: Loaded specification dictionary
@@ -101,7 +101,7 @@ class ServiceIntegration:
                 "error_message": result.error_message if not result.success else None
             }
 
-            # Add component details from SimplifiedComponentValidator
+            # Add component details from LangflowComponentValidator
             if result.success and result.context and result.context.component_mappings:
                 validation_result["component_details"] = self._extract_component_details(
                     result.context.component_mappings
@@ -168,7 +168,7 @@ class ServiceIntegration:
             if self.api_client:
                 return await self.api_client.get_all_components()
             else:
-                # In local mode, SimplifiedComponentValidator handles component discovery
+                # In local mode, LangflowComponentValidator handles component discovery
                 logger.warning("API client not available for component discovery")
                 return {}
 
@@ -285,10 +285,10 @@ class ServiceIntegration:
 
     def _extract_component_details(self, discovered_components: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Extract component details for validation result from SimplifiedComponentValidator.
+        Extract component details for validation result from LangflowComponentValidator.
 
         Args:
-            discovered_components: Discovered components from SimplifiedComponentValidator
+            discovered_components: Discovered components from LangflowComponentValidator
 
         Returns:
             List of component detail dictionaries
@@ -307,10 +307,10 @@ class ServiceIntegration:
 
     def _check_healthcare_compliance(self, discovered_components: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Check healthcare compliance from SimplifiedComponentValidator results.
+        Check healthcare compliance from LangflowComponentValidator results.
 
         Args:
-            discovered_components: Discovered components from SimplifiedComponentValidator
+            discovered_components: Discovered components from LangflowComponentValidator
 
         Returns:
             Healthcare compliance summary
@@ -334,12 +334,12 @@ class ServiceIntegration:
             "healthcare_component_ids": healthcare_components,
             "has_healthcare_components": len(healthcare_components) > 0,
             "compliance_percentage": 100 if len(healthcare_components) > 0 else 0,  # All healthcare components are compliant
-            "fully_compliant": True  # SimplifiedComponentValidator ensures compliance
+            "fully_compliant": True  # LangflowComponentValidator ensures compliance
         }
 
     async def create_workflow(self, spec_file: Path, output_path: Optional[Path] = None) -> Dict[str, Any]:
         """
-        Create a workflow from specification using SimplifiedComponentValidator.
+        Create a workflow from specification using LangflowComponentValidator.
 
         Args:
             spec_file: Path to specification file

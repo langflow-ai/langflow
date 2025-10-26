@@ -9,7 +9,7 @@ import logging
 import time
 from typing import Dict, Any, Optional
 
-from ..services.component_discovery import SimplifiedComponentValidator
+from ..services.component_discovery import LangflowComponentValidator
 from ..services.workflow_converter import WorkflowConverter
 from ..validation.specification_validator import SpecificationValidator
 from ..validation.workflow_validator import WorkflowValidator
@@ -31,7 +31,7 @@ class SpecificationProcessor:
     """
 
     def __init__(self,
-                 component_validator: Optional[SimplifiedComponentValidator] = None,
+                 component_validator: Optional[LangflowComponentValidator] = None,
                  workflow_converter: Optional[WorkflowConverter] = None,
                  spec_validator: Optional[SpecificationValidator] = None,
                  workflow_validator: Optional[WorkflowValidator] = None):
@@ -39,12 +39,12 @@ class SpecificationProcessor:
         Initialize the specification processor.
 
         Args:
-            component_validator: Simplified validator for component validation
+            component_validator: Langflow validator for component validation
             workflow_converter: Service for converting specifications to workflows
             spec_validator: Validator for agent specifications
             workflow_validator: Validator for generated workflows
         """
-        self.component_validator = component_validator or SimplifiedComponentValidator()
+        self.component_validator = component_validator or LangflowComponentValidator()
         self.workflow_converter = workflow_converter or WorkflowConverter()
         self.spec_validator = spec_validator or SpecificationValidator()
         self.workflow_validator = workflow_validator or WorkflowValidator()

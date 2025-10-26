@@ -46,6 +46,13 @@ const useSaveFlow = () => {
           };
         }
 
+        // Validate flow has ID before attempting save
+        if (!flow?.id) {
+          setSaveLoading(false);
+          resolve(); // Resolve gracefully - this is not an error, just a guard condition
+          return;
+        }
+
         if (flow) {
           if (!flow?.data) {
             getFlow(

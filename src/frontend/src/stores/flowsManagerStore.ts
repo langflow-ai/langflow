@@ -46,9 +46,14 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   },
   flows: undefined,
   setFlows: (flows: FlowType[]) => {
+    const state = get();
+    const flowInList = flows.find((flow) => flow.id === state.currentFlowId);
+
     set({
       flows,
-      currentFlow: flows.find((flow) => flow.id === get().currentFlowId),
+      // Preserve currentFlow if it's not in the new flows list
+      // This handles the case where admin is viewing another user's flow
+      currentFlow: flowInList || state.currentFlow,
     });
   },
   currentFlow: undefined,

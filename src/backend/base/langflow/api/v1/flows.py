@@ -11,7 +11,7 @@ from uuid import UUID
 import orjson
 from aiofile import async_open
 from anyio import Path
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
@@ -35,6 +35,7 @@ from langflow.services.database.models.flow.model import (
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder, FolderCreate
+from langflow.services.auth.permissions import can_delete_flow, can_edit_flow, can_view_flow, get_user_roles_from_request
 from langflow.services.deps import get_settings_service
 from langflow.utils.compression import compress_response
 
@@ -86,6 +87,113 @@ async def _save_flow_to_fs(flow: Flow) -> None:
             await logger.aexception("Detailed traceback for flow %s save failure", flow.name)
             # Re-raise the exception to maintain original behavior
             raise
+
+
+async def _get_unique_flow_name(
+    session: AsyncSession,
+    base_name: str,
+    user_id: UUID,
+    folder_id: UUID,
+) -> str:
+    """
+    Check if name exists in folder and append (1), (2), etc. if it does.
+
+    Args:
+        session: Database session
+        base_name: The desired flow name
+        user_id: User ID who owns the flow
+        folder_id: Folder ID where the flow will be created
+
+    Returns:
+        A unique flow name in the specified folder
+    """
+    existing_result = await session.exec(
+        select(Flow).where(
+            Flow.name == base_name,
+            Flow.user_id == user_id,
+            Flow.folder_id == folder_id,
+        )
+    )
+    existing = existing_result.first()
+
+    if not existing:
+        return base_name
+
+    # Find next available number
+    counter = 1
+    while True:
+        new_name = f"{base_name} ({counter})"
+        exists_result = await session.exec(
+            select(Flow).where(
+                Flow.name == new_name,
+                Flow.user_id == user_id,
+                Flow.folder_id == folder_id,
+            )
+        )
+        if not exists_result.first():
+            return new_name
+        counter += 1
+
+
+async def clone_flow_for_marketplace(
+    session: AsyncSession,
+    original_flow: Flow,
+    target_folder_id: UUID,
+    user_id: UUID,
+    marketplace_flow_name: str,
+    tags: list[str] | None = None,
+    description: str | None = None,
+) -> Flow:
+    """
+    Clone a flow for marketplace publication.
+
+    Creates a deep copy of the flow with a new ID and places it in the target folder.
+    The cloned flow is marked as locked to prevent direct editing.
+
+    Args:
+        session: Database session
+        original_flow: The flow to clone
+        target_folder_id: Folder where the clone should be placed
+        user_id: User ID who owns the flow
+        marketplace_flow_name: Name for the cloned flow
+        tags: Optional tags for the cloned flow (marketplace tags from publish modal).
+              If None, copies tags from original flow.
+        description: Optional description for the cloned flow (from publish modal).
+                    If None, copies description from original flow.
+
+    Returns:
+        The cloned Flow object with a new ID
+    """
+    import copy
+
+    # Deep copy flow data
+    cloned_data = copy.deepcopy(original_flow.data) if original_flow.data else {}
+
+    # Handle duplicate names in target folder
+    final_name = await _get_unique_flow_name(
+        session, marketplace_flow_name, user_id, target_folder_id
+    )
+
+    # Create cloned flow
+    cloned_flow = Flow(
+        name=final_name,
+        description=description if description is not None else original_flow.description,
+        data=cloned_data,
+        user_id=user_id,
+        folder_id=target_folder_id,
+        icon=original_flow.icon,
+        tags=tags if tags is not None else original_flow.tags,  # Use marketplace tags if provided
+        locked=True,  # Prevent direct editing
+        is_component=original_flow.is_component,
+    )
+
+    session.add(cloned_flow)
+    await session.commit()
+    await session.refresh(cloned_flow)
+
+    logger.info(f"Cloned flow '{original_flow.name}' to '{final_name}' for marketplace")
+
+    return cloned_flow
 
 
 async def _resolve_project_folder(
@@ -387,14 +495,27 @@ async def _read_flow(
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
 async def read_flow(
     *,
+    request: Request,
     session: DbSession,
     flow_id: UUID,
     current_user: CurrentActiveUser,
 ):
     """Read a flow."""
-    if user_flow := await _read_flow(session, flow_id, current_user.id):
-        return user_flow
-    raise HTTPException(status_code=404, detail="Flow not found")
+    # Fetch flow without user restriction to check permissions properly
+    stmt = select(Flow).where(Flow.id == flow_id)
+    db_flow = (await session.exec(stmt)).first()
+
+    if not db_flow:
+        raise HTTPException(status_code=404, detail="Flow not found")
+
+    # Check if user has permission to view this flow
+    user_roles = get_user_roles_from_request(request)
+
+    if not can_view_flow(current_user, db_flow, user_roles):
+        # Return 404 instead of 403 for security (don't reveal flow exists)
+        raise HTTPException(status_code=404, detail="Flow not found")
+
+    return db_flow
 
 
 @router.get("/public_flow/{flow_id}", response_model=FlowRead, status_code=200)
@@ -415,6 +536,7 @@ async def read_public_flow(
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
 async def update_flow(
     *,
+    request: Request,
     session: DbSession,
     flow_id: UUID,
     flow: FlowUpdate,
@@ -423,14 +545,21 @@ async def update_flow(
     """Update a flow."""
     settings_service = get_settings_service()
     try:
-        db_flow = await _read_flow(
-            session=session,
-            flow_id=flow_id,
-            user_id=current_user.id,
-        )
+        # Fetch flow without user restriction to check permissions properly
+        stmt = select(Flow).where(Flow.id == flow_id)
+        db_flow = (await session.exec(stmt)).first()
 
         if not db_flow:
             raise HTTPException(status_code=404, detail="Flow not found")
+
+        # Check if user has permission to edit this flow
+        user_roles = get_user_roles_from_request(request)
+
+        if not can_edit_flow(current_user, db_flow, user_roles):
+            raise HTTPException(
+                status_code=403,
+                detail="You don't have permission to edit this flow"
+            )
 
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
@@ -483,18 +612,28 @@ async def update_flow(
 @router.delete("/{flow_id}", status_code=200)
 async def delete_flow(
     *,
+    request: Request,
     session: DbSession,
     flow_id: UUID,
     current_user: CurrentActiveUser,
 ):
     """Delete a flow."""
-    flow = await _read_flow(
-        session=session,
-        flow_id=flow_id,
-        user_id=current_user.id,
-    )
+    # Fetch flow without user restriction to check permissions properly
+    stmt = select(Flow).where(Flow.id == flow_id)
+    flow = (await session.exec(stmt)).first()
+
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
+
+    # Check if user has permission to delete this flow
+    user_roles = get_user_roles_from_request(request)
+
+    if not can_delete_flow(current_user, flow, user_roles):
+        raise HTTPException(
+            status_code=403,
+            detail="You don't have permission to delete this flow"
+        )
+
     await cascade_delete_flow(session, flow.id)
     await session.commit()
     return {"message": "Flow deleted successfully"}

@@ -11,7 +11,7 @@ from typing import Dict, Any, List, Optional, Set, Tuple
 from datetime import datetime
 
 from ..models.validation_models import ValidationResult, ValidationError, ValidationWarning
-from ..services.component_discovery import SimplifiedComponentValidator
+from ..services.component_discovery import LangflowComponentValidator
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class SpecificationValidator:
 
     def __init__(self):
         """Initialize the specification validator."""
-        self.component_validator = SimplifiedComponentValidator()
+        self.component_validator = LangflowComponentValidator()
         self.required_fields = self._get_required_fields()
         self.healthcare_component_types = self._get_healthcare_component_types()
 

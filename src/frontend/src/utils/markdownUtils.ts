@@ -50,3 +50,33 @@ export const preprocessChatMessage = (text: string): string => {
 
   return processed;
 };
+
+/**
+ * Detects if text contains Markdown formatting patterns
+ * Returns true if any Markdown syntax is found, false for plain text
+ *
+ * @param text - Text to analyze
+ * @returns boolean indicating if Markdown formatting is present
+ *
+ * @example
+ * hasMarkdownFormatting("### Title")  // true
+ * hasMarkdownFormatting("plain text") // false
+ */
+export const hasMarkdownFormatting = (text: string): boolean => {
+  if (!text || text.trim().length === 0) return false;
+
+  const markdownPatterns = [
+    /^#{1,6}\s+/m,              // Headings: # ## ###
+    /\*\*[^*]+\*\*/,            // Bold: **text**
+    /__[^_]+__/,                // Bold: __text__
+    /^[-*+]\s+/m,               // Unordered lists: - * +
+    /^\d+\.\s+/m,               // Ordered lists: 1. 2.
+    /```[\s\S]*?```/,           // Code blocks: ```code```
+    /`[^`]+`/,                  // Inline code: `code`
+    /\[.+?\]\(.+?\)/,           // Links: [text](url)
+    /^>\s+/m,                   // Blockquotes: > quote
+    /^\|.+\|$/m,                // Tables: | col | col |
+  ];
+
+  return markdownPatterns.some(pattern => pattern.test(text));
+};

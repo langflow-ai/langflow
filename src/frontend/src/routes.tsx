@@ -33,13 +33,14 @@ import SettingsPage from "./pages/SettingsPage";
 import AgentBuilderPage from "./pages/AgentBuilderPage";
 import AgentMarketplacePage from "./pages/AgentMarketplacePage";
 import AgentMarketplaceDetailPage from "./pages/AgentMarketplacePage/DetailPage";
+import MarketplacePage from "./pages/MarketplacePage";
+import MarketplaceDetailPage from "./pages/MarketplacePage/DetailPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
 import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
-import ViewPage from "./pages/ViewPage";
 import ConversationPage from "./pages/AgentBuilderPage/ConversationPage";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
@@ -143,6 +144,8 @@ const router = createBrowserRouter(
                   </Route>
                 </Route>
                 <Route path="agent-marketplace/detail/:flowId" element={<AgentMarketplaceDetailPage />} />
+                <Route path="marketplace" element={<MarketplacePage />} />
+                <Route path="marketplace/detail/:publishedFlowId" element={<MarketplaceDetailPage />} />
                 <Route path="settings" element={<SettingsPage />}>
                   <Route
                     index
@@ -186,7 +189,6 @@ const router = createBrowserRouter(
                   <Route path="folder/:folderId/" element={<FlowPage />} />
                   <Route path="" element={<FlowPage />} />
                 </Route>
-                <Route path="view" element={<ViewPage />} />
               </Route>
             </Route>
           </Route>

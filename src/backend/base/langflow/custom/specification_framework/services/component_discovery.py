@@ -1,9 +1,9 @@
 """
-Simplified Component Validator
+Langflow Component Validator
 
 Direct validation against Langflow /all endpoint without database layer overhead.
-This replaces the complex ComponentDiscoveryService with a lightweight validator
-that eliminates 37% of framework complexity.
+This professional validator provides component validation and discovery for the
+specification framework using Langflow's component registry.
 """
 
 import logging
@@ -17,16 +17,16 @@ from ..models.processing_context import ProcessingContext
 logger = logging.getLogger(__name__)
 
 
-class SimplifiedComponentValidator:
+class LangflowComponentValidator:
     """
-    Direct /all endpoint validation without database layer.
+    Direct Langflow component validation using /all endpoint.
 
-    This simplified validator eliminates database overhead and provides
-    direct component validation against Langflow's component registry.
+    This validator provides efficient component validation and discovery
+    by querying Langflow's component registry directly.
     """
 
     def __init__(self):
-        """Initialize simplified component validator."""
+        """Initialize Langflow component validator."""
         self._all_components_cache: Optional[Dict[str, Any]] = None
 
     async def validate_component(self, component_type: str) -> bool:
@@ -199,7 +199,7 @@ class SimplifiedComponentValidator:
                                          spec_dict: Dict[str, Any],
                                          context: ProcessingContext) -> Dict[str, Dict[str, Any]]:
         """
-        Simplified component discovery using direct /all endpoint validation.
+        Langflow component discovery using direct /all endpoint validation.
 
         Args:
             spec_dict: Agent specification dictionary

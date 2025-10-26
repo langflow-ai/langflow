@@ -11,12 +11,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
+import { useCheckFlowPublished } from "@/controllers/API/queries/published-flows";
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
 import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
 import ApiModal from "@/modals/apiModal";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
 import ExportModal from "@/modals/exportModal";
+import PublishFlowModal from "@/modals/publishFlowModal";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
@@ -43,6 +45,11 @@ export default function PublishDropdown() {
   const [openApiModal, setOpenApiModal] = useState(false);
   const [publishAgent, setPublishModal] = useState(false);
   const [openExportModal, setOpenExportModal] = useState(false);
+  const [openPublishFlowModal, setOpenPublishFlowModal] = useState(false);
+
+  // Check if flow is published to marketplace
+  const { data: publishCheck } = useCheckFlowPublished(flowId);
+  const isPublishedToMarketplace = publishCheck?.is_published;
 
   const handlePublishedSwitch = async (checked: boolean) => {
     mutateAsync(
@@ -101,10 +108,14 @@ export default function PublishDropdown() {
         >
           <DropdownMenuItem
             className="deploy-dropdown-item group"
-            onClick={() => setPublishModal(true)}
+            onClick={() => setOpenPublishFlowModal(true)}
           >
-            <IconComponent name="file" className={`icon-size mr-2`} />
-            <span>Publish</span>
+            <IconComponent name="Upload" className={`icon-size mr-2`} />
+            <span>
+              {isPublishedToMarketplace
+                ? "Published to Marketplace ✓"
+                : "Publish to Marketplace"}
+            </span>
           </DropdownMenuItem>
           <DropdownMenuItem
             className="deploy-dropdown-item group"
@@ -171,6 +182,13 @@ export default function PublishDropdown() {
         setOpen={setPublishModal}
         flowData={currentFlow}
         isPublishMode={true}
+      />
+      <PublishFlowModal
+        open={openPublishFlowModal}
+        setOpen={setOpenPublishFlowModal}
+        flowId={flowId ?? ""}
+        flowName={flowName ?? ""}
+        existingPublishedData={publishCheck}
       />
     </>
   );

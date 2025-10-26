@@ -22,4 +22,8 @@ __all__ = [
     "URLComponent",
     "WebSearchComponent",
     "WebhookComponent",
+    "EncoderProTool",
+    "PALookupTool",
+    "ClaimHistorySchema"
+
 ]
