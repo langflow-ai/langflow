@@ -1,7 +1,7 @@
 """add published flow table
 
 Revision ID: 1234567890ab
-Revises: 0a08019dc5cc
+Revises: d9a6ea21edcd
 Create Date: 2025-01-21 00:00:00.000000
 
 """
@@ -16,7 +16,7 @@ from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = "1234567890ab"
-down_revision: Union[str, None] = "0a08019dc5cc"
+down_revision: Union[str, None] = "d9a6ea21edcd"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
