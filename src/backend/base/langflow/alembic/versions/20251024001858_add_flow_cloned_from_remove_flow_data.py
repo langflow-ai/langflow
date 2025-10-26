@@ -25,39 +25,45 @@ def upgrade() -> None:
     conn = op.get_bind()
 
     if migration.table_exists("published_flow", conn):
-        # 1. Add flow_cloned_from column (nullable initially)
-        op.add_column(
-            "published_flow", sa.Column("flow_cloned_from", sa.UUID(), nullable=True)
-        )
+        # 1. Add flow_cloned_from column (nullable initially) - only if it doesn't exist
+        if not migration.column_exists("published_flow", "flow_cloned_from", conn):
+            op.add_column(
+                "published_flow", sa.Column("flow_cloned_from", sa.UUID(), nullable=True)
+            )
 
-        # 2. Add foreign key constraint
-        op.create_foreign_key(
-            "fk_published_flow_cloned_from",
-            "published_flow",
-            "flow",
-            ["flow_cloned_from"],
-            ["id"],
-        )
+        # 2. Add foreign key constraint - only if it doesn't exist
+        if not migration.foreign_key_exists("published_flow", "fk_published_flow_cloned_from", conn):
+            op.create_foreign_key(
+                "fk_published_flow_cloned_from",
+                "published_flow",
+                "flow",
+                ["flow_cloned_from"],
+                ["id"],
+            )
 
-        # 3. Add index on flow_cloned_from
-        op.create_index(
-            "ix_published_flow_flow_cloned_from",
-            "published_flow",
-            ["flow_cloned_from"],
-        )
+        # 3. Add index on flow_cloned_from - only if it doesn't exist
+        if not migration.index_exists("published_flow", "ix_published_flow_flow_cloned_from", conn):
+            op.create_index(
+                "ix_published_flow_flow_cloned_from",
+                "published_flow",
+                ["flow_cloned_from"],
+            )
 
-        # 4. Drop old unique constraint on flow_id
-        op.drop_constraint(
-            "uq_published_flow_flow_id", "published_flow", type_="unique"
-        )
+        # 4. Drop old unique constraint on flow_id - only if it exists
+        if migration.constraint_exists("published_flow", "uq_published_flow_flow_id", conn):
+            op.drop_constraint(
+                "uq_published_flow_flow_id", "published_flow", type_="unique"
+            )
 
-        # 5. Add unique constraint on flow_cloned_from
-        op.create_unique_constraint(
-            "uq_published_flow_cloned_from", "published_flow", ["flow_cloned_from"]
-        )
+        # 5. Add unique constraint on flow_cloned_from - only if it doesn't exist
+        if not migration.constraint_exists("published_flow", "uq_published_flow_cloned_from", conn):
+            op.create_unique_constraint(
+                "uq_published_flow_cloned_from", "published_flow", ["flow_cloned_from"]
+            )
 
-        # 6. Remove flow_data column
-        op.drop_column("published_flow", "flow_data")
+        # 6. Remove flow_data column - only if it exists
+        if migration.column_exists("published_flow", "flow_data", conn):
+            op.drop_column("published_flow", "flow_data")
 
 
 def downgrade() -> None:
@@ -65,23 +71,36 @@ def downgrade() -> None:
     conn = op.get_bind()
 
     if migration.table_exists("published_flow", conn):
-        # Reverse all changes
-        op.add_column(
-            "published_flow", sa.Column("flow_data", sa.JSON(), nullable=False)
-        )
+        # Reverse all changes with proper existence checks
 
-        op.drop_constraint(
-            "uq_published_flow_cloned_from", "published_flow", type_="unique"
-        )
+        # 1. Add back flow_data column - only if it doesn't exist
+        if not migration.column_exists("published_flow", "flow_data", conn):
+            op.add_column(
+                "published_flow", sa.Column("flow_data", sa.JSON(), nullable=False)
+            )
 
-        op.create_unique_constraint(
-            "uq_published_flow_flow_id", "published_flow", ["flow_id"]
-        )
+        # 2. Drop unique constraint on flow_cloned_from - only if it exists
+        if migration.constraint_exists("published_flow", "uq_published_flow_cloned_from", conn):
+            op.drop_constraint(
+                "uq_published_flow_cloned_from", "published_flow", type_="unique"
+            )
 
-        op.drop_index("ix_published_flow_flow_cloned_from", table_name="published_flow")
+        # 3. Recreate unique constraint on flow_id - only if it doesn't exist
+        if not migration.constraint_exists("published_flow", "uq_published_flow_flow_id", conn):
+            op.create_unique_constraint(
+                "uq_published_flow_flow_id", "published_flow", ["flow_id"]
+            )
 
-        op.drop_constraint(
-            "fk_published_flow_cloned_from", "published_flow", type_="foreignkey"
-        )
+        # 4. Drop index on flow_cloned_from - only if it exists
+        if migration.index_exists("published_flow", "ix_published_flow_flow_cloned_from", conn):
+            op.drop_index("ix_published_flow_flow_cloned_from", table_name="published_flow")
 
-        op.drop_column("published_flow", "flow_cloned_from")
+        # 5. Drop foreign key constraint - only if it exists
+        if migration.foreign_key_exists("published_flow", "fk_published_flow_cloned_from", conn):
+            op.drop_constraint(
+                "fk_published_flow_cloned_from", "published_flow", type_="foreignkey"
+            )
+
+        # 6. Drop flow_cloned_from column - only if it exists
+        if migration.column_exists("published_flow", "flow_cloned_from", conn):
+            op.drop_column("published_flow", "flow_cloned_from")

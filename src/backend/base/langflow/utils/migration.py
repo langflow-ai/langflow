@@ -59,3 +59,19 @@ def constraint_exists(table_name, constraint_name, conn):
     inspector = sa.inspect(conn)
     constraints = inspector.get_unique_constraints(table_name)
     return constraint_name in [constraint["name"] for constraint in constraints]
+
+
+def index_exists(table_name, index_name, conn):
+    """Check if an index exists on a table.
+
+    Parameters:
+    table_name (str): The name of the table to check.
+    index_name (str): The name of the index to check.
+    conn (sqlalchemy.engine.Engine or sqlalchemy.engine.Connection): The SQLAlchemy engine or connection to use.
+
+    Returns:
+    bool: True if the index exists, False otherwise.
+    """
+    inspector = sa.inspect(conn)
+    indexes = inspector.get_indexes(table_name)
+    return index_name in [index["name"] for index in indexes]
