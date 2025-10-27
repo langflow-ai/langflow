@@ -19,6 +19,7 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.core import check_run_endpoints_enabled
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
+from langflow.services.settings.service import SettingsService
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(tags=["Files"], prefix="/files")
@@ -90,8 +91,8 @@ async def upload_user_file(
     file: Annotated[UploadFile, File(...)],
     session: DbSession,
     current_user: CurrentActiveUser,
-    storage_service=Depends(get_storage_service),
-    settings_service=Depends(get_settings_service),
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
     dependencies=[Depends(check_run_endpoints_enabled)],
 ) -> UploadFileResponse:
     """Upload a file for the current user and track it in the database."""
