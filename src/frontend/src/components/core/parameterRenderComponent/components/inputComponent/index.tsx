@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import type { InputComponentType } from "@/types/components";
 import { handleKeyDown } from "@/utils/reactflowUtils";
 import { classNames, cn } from "@/utils/utils";
@@ -185,7 +186,7 @@ export default function InputComponent({
             <button
               disabled={disabled}
               onClick={(e) => {
-                if (disabled) return;
+                if (disabled || LANGFLOW_ONLY_CANVAS) return;
                 setShowOptions(!showOptions);
                 e.preventDefault();
                 e.stopPropagation();

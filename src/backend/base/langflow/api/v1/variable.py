@@ -1,9 +1,10 @@
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import NoResultFound
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils.core import check_run_endpoints_enabled
 from langflow.services.database.models.variable.model import VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE
@@ -18,6 +19,7 @@ async def create_variable(
     session: DbSession,
     variable: VariableCreate,
     current_user: CurrentActiveUser,
+    dependencies=[Depends(check_run_endpoints_enabled)],
 ):
     """Create a new variable."""
     variable_service = get_variable_service()
@@ -71,6 +73,7 @@ async def update_variable(
     variable_id: UUID,
     variable: VariableUpdate,
     current_user: CurrentActiveUser,
+    dependencies=[Depends(check_run_endpoints_enabled)],
 ):
     """Update a variable."""
     variable_service = get_variable_service()
@@ -97,6 +100,7 @@ async def delete_variable(
     session: DbSession,
     variable_id: UUID,
     current_user: CurrentActiveUser,
+    dependencies=[Depends(check_run_endpoints_enabled)],
 ) -> None:
     """Delete a variable."""
     variable_service = get_variable_service()

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
 import { cn } from "../../../../../utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
@@ -94,7 +95,10 @@ export default function InputGlobalComponent({
 
   // Render add new variable button
   const renderAddVariableButton = () => (
-    <GlobalVariableModal referenceField={display_name} disabled={disabled}>
+    <GlobalVariableModal
+      referenceField={display_name}
+      disabled={disabled || LANGFLOW_ONLY_CANVAS}
+    >
       <CommandItem value="doNotFilter-addNewVariable">
         <ForwardedIconComponent
           name="Plus"
