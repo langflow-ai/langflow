@@ -13,7 +13,7 @@ export const LangflowCounts = () => {
     <div className="flex items-center gap-3">
       
       <ShadTooltip
-        content="Use GraceAI to Guide Your Project"
+        content="CI/CD Test"
         side="bottom"
         styleClasses="z-10"
       >
