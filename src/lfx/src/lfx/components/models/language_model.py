@@ -10,6 +10,7 @@ from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_
 from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
+from lfx.base.models.unified_models import get_api_key_for_provider
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput
@@ -143,9 +144,8 @@ class LanguageModelComponent(LCModelComponent):
             name="api_key",
             display_name="API Key",
             info="Model Provider API key",
-            required=False,
-            show=True,
             real_time_refresh=True,
+            advanced=True,
         ),
         MessageInput(
             name="input_value",
@@ -190,19 +190,27 @@ class LanguageModelComponent(LCModelComponent):
         provider = model.get("provider")
         metadata = model.get("metadata", {})
 
-        # Validate API key
-        # TODO: We will read this globally soon...
-        if not self.api_key:
-            msg = f"{provider} API key is required when using {provider} provider"
+        # Get model class and parameter names from metadata
+        api_key_param = metadata.get("api_key_param", "api_key")
+
+        # Get API key from user input or global variables
+        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
+
+        # Validate API key (Ollama doesn't require one)
+        if not api_key and provider != "Ollama":
+            msg = (
+                f"{provider} API key is required when using {provider} provider. "
+                f"Please provide it in the component or configure it globally as "
+                f"{provider.upper().replace(' ', '_')}_API_KEY."
+            )
             raise ValueError(msg)
 
-        # Get model class and parameter names from metadata
+        # Get model class from metadata
         model_class = MODEL_CLASSES.get(metadata.get("model_class"))
         if model_class is None:
             msg = f"No model class defined for {model_name}"
             raise ValueError(msg)
         model_name_param = metadata.get("model_name_param", "model")
-        api_key_param = metadata.get("api_key_param", "api_key")
 
         # Check if this is a reasoning model that doesn't support temperature
         reasoning_models = metadata.get("reasoning_models", [])
@@ -213,7 +221,7 @@ class LanguageModelComponent(LCModelComponent):
         kwargs = {
             model_name_param: model_name,
             "streaming": stream,
-            api_key_param: self.api_key,
+            api_key_param: api_key,
         }
 
         if temperature is not None:

@@ -7,6 +7,7 @@ from langchain_openai import OpenAIEmbeddings
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
+from lfx.base.models.unified_models import get_api_key_for_provider
 from lfx.field_typing import Embeddings
 from lfx.io import (
     BoolInput,
@@ -139,9 +140,8 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             name="api_key",
             display_name="API Key",
             info="Model Provider API key",
-            required=True,
-            show=True,
             real_time_refresh=True,
+            advanced=True,
         ),
         MessageTextInput(
             name="api_base",
@@ -198,9 +198,16 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         provider = model.get("provider")
         metadata = model.get("metadata", {})
 
-        # Validate required fields
-        if not self.api_key:
-            msg = f"{provider} API key is required"
+        # Get API key from user input or global variables
+        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
+
+        # Validate required fields (Ollama doesn't require API key)
+        if not api_key and provider != "Ollama":
+            msg = (
+                f"{provider} API key is required. "
+                f"Please provide it in the component or configure it globally as "
+                f"{provider.upper().replace(' ', '_')}_API_KEY."
+            )
             raise ValueError(msg)
 
         if not model_name:
@@ -236,7 +243,11 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         if "model" in param_mapping:
             kwargs[param_mapping["model"]] = model.get("name")
         if "api_key" in param_mapping:
-            kwargs[param_mapping["api_key"]] = self.api_key
+            kwargs[param_mapping["api_key"]] = get_api_key_for_provider(
+                self.user_id,
+                model.get("provider"),
+                self.api_key,
+            )
 
         # Optional parameters with their values
         optional_params = {

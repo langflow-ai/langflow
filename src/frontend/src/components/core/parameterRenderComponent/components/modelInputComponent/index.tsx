@@ -15,8 +15,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
+import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
+import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import ApiKeyModal from "@/modals/apiKeyModal";
 import useAlertStore from "@/stores/alertStore";
+import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { convertStringToHTML } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
@@ -74,6 +77,14 @@ export default function ModelInputComponent({
   const [openApiKeyDialog, setOpenApiKeyDialog] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Fetch global variables to check if provider is already configured
+  useGetGlobalVariables();
+
+  // Get global variables to check if provider is already configured
+  const globalVariablesEntries = useGlobalVariablesStore(
+    (state) => state.globalVariablesEntries,
+  );
 
   // Sync local state when value prop changes
   useEffect(() => {
@@ -192,6 +203,13 @@ export default function ModelInputComponent({
     setOpenApiKeyDialog(true);
   }, []);
 
+  // Check if the selected provider has an API key configured
+  const isProviderConfigured = useMemo(() => {
+    if (!selectedProvider || !globalVariablesEntries) return false;
+    const variableName = PROVIDER_VARIABLE_MAPPING[selectedProvider];
+    return variableName ? globalVariablesEntries.includes(variableName) : false;
+  }, [selectedProvider, globalVariablesEntries]);
+
   const renderTriggerButton = () => (
     <div className="flex w-full flex-col">
       <PopoverTrigger asChild>
@@ -253,24 +271,18 @@ export default function ModelInputComponent({
   const renderApiKeyInput = () => {
     if (!selectedModel) return null;
 
+    // If provider is already configured, show a green indicator
+    if (isProviderConfigured) {
+      return (
+        <div className="flex items-center gap-2 text-sm text-accent-emerald-foreground">
+          <ForwardedIconComponent name="CheckCircle2" className="h-4 w-4" />
+          <span>{selectedProvider} is configured</span>
+        </div>
+      );
+    }
+
+    // Otherwise show the enable button
     return (
-      //     <div className="flex flex-col gap-3">
-      //       {getCustomParameterTitle({
-      //         title: `${selectedProvider || "Provider"} API Key`,
-      //         nodeId: id,
-      //         isFlexView: false,
-      //         required: true,
-      //       })}
-      //       <InputComponent
-      //         id={`${id}-api-key`}
-      //         value={apiKey}
-      //         disabled={false}
-      //         editNode={false}
-      //         password={true}
-      //         placeholder="Enter model API key"
-      //         onChange={(value) => setApiKey(value)}
-      //         hidePopover={true}
-      //       />
       <Button
         onClick={handleSendApiKey}
         size="sm"
@@ -279,7 +291,6 @@ export default function ModelInputComponent({
       >
         {`Enable ${selectedProvider || "Provider"}`}
       </Button>
-      //     </div>
     );
   };
 
@@ -297,9 +308,12 @@ export default function ModelInputComponent({
             <CommandGroup className="p-0 overflow-y-auto" key={`${category}`}>
               <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center">
                 {category}
-                {false && (
-                  <div className="ml-2 text-xs text-accent-emerald-foreground">
-                    Enabled
+                {globalVariablesEntries?.includes(
+                  PROVIDER_VARIABLE_MAPPING[category] || "",
+                ) && (
+                  <div className="ml-2 text-xs text-accent-emerald-foreground flex items-center gap-1">
+                    <ForwardedIconComponent name="CheckCircle2" className="h-3 w-3" />
+                    Configured
                   </div>
                 )}
               </div>
