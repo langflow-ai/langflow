@@ -101,7 +101,7 @@ export default function MarketplacePage() {
                 Agent Marketplace
               </h1>
               <span className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic">
-                ({(searchQuery || tagFilter !== "all") ? total : 113} Agents)
+                ({total} Agents)
               </span>
             </div>
 

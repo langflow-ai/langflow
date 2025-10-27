@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.12, <3.15"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -4815,6 +4815,7 @@ dependencies = [
     { name = "arize-phoenix-otel" },
     { name = "assemblyai" },
     { name = "astra-assistants", extra = ["tools"] },
+    { name = "asyncpg" },
     { name = "atlassian-python-api" },
     { name = "autonomize-core" },
     { name = "autonomize-model-sdk", extra = ["core"] },
@@ -5028,6 +5029,7 @@ requires-dist = [
     { name = "arize-phoenix-otel", specifier = ">=0.6.1,<1.0.0" },
     { name = "assemblyai", specifier = "==0.35.1" },
     { name = "astra-assistants", extras = ["tools"], specifier = ">=2.2.13,<3.0.0" },
+    { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "atlassian-python-api", specifier = "==3.41.16" },
     { name = "autonomize-core", specifier = "==0.1.15" },
     { name = "autonomize-model-sdk", specifier = "==1.1.70" },
@@ -5229,6 +5231,7 @@ dependencies = [
     { name = "alembic" },
     { name = "assemblyai" },
     { name = "asyncer" },
+    { name = "asyncpg" },
     { name = "bcrypt" },
     { name = "cachetools" },
     { name = "chardet" },
@@ -5363,6 +5366,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.13.0,<2.0.0" },
     { name = "assemblyai", specifier = ">=0.33.0,<1.0.0" },
     { name = "asyncer", specifier = ">=0.0.5,<1.0.0" },
+    { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "asyncpg", marker = "extra == 'postgresql'", specifier = ">=0.30.0" },
     { name = "bcrypt", specifier = "==4.0.1" },
     { name = "cachetools", specifier = ">=5.5.0,<6.0.0" },
