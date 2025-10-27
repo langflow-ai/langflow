@@ -385,6 +385,9 @@ async def update_project_mcp_settings(
             should_start_composer = False
             should_stop_composer = False
 
+            # Store original auth settings in case we need to rollback
+            original_auth_settings = project.auth_settings
+
             # Update project-level auth settings with encryption
             if "auth_settings" in request.model_fields_set and request.auth_settings is not None:
                 auth_result = handle_auth_settings_update(
@@ -395,8 +398,6 @@ async def update_project_mcp_settings(
                 should_handle_mcp_composer = auth_result["should_handle_composer"]
                 should_start_composer = auth_result["should_start_composer"]
                 should_stop_composer = auth_result["should_stop_composer"]
-
-            session.add(project)
 
             # Query flows in the project
             flows = (await session.exec(select(Flow).where(Flow.folder_id == project_id))).all()
@@ -416,12 +417,11 @@ async def update_project_mcp_settings(
                     session.add(flow)
                     updated_flows.append(flow)
 
-            await session.commit()
-
             response: dict[str, Any] = {
                 "message": f"Updated MCP settings for {len(updated_flows)} flows and project auth settings"
             }
 
+            # Handle MCP Composer start/stop before committing auth settings
             if should_handle_mcp_composer:
                 if should_start_composer:
                     await logger.adebug(
@@ -440,20 +440,32 @@ async def update_project_mcp_settings(
                                 "uses_composer": True,
                             }
                         except MCPComposerError as e:
+                            # Rollback auth settings on composer failure
+                            await logger.awarning(
+                                f"MCP Composer failed to start for project {project_id}, "
+                                f"rolling back auth settings: {e.message}"
+                            )
+                            project.auth_settings = original_auth_settings
                             response["result"] = {
                                 "project_id": str(project_id),
                                 "uses_composer": True,
                                 "error_message": e.message,
                             }
                         except Exception as e:
-                            # Unexpected errors
-                            await logger.aerror(f"Failed to get mcp composer URL for project {project_id}: {e}")
+                            # Rollback auth settings on unexpected errors
+                            await logger.aerror(
+                                f"Unexpected error starting MCP Composer for project {project_id}, "
+                                f"rolling back auth settings: {e}"
+                            )
+                            project.auth_settings = original_auth_settings
                             raise HTTPException(status_code=500, detail=str(e)) from e
                     else:
                         # This shouldn't happen - we determined we should start composer but now we can't use it
                         await logger.aerror(
                             f"PATCH: OAuth set but MCP Composer is disabled in settings for project {project_id}"
                         )
+                        # Rollback since we can't use composer
+                        project.auth_settings = original_auth_settings
                         response["result"] = {
                             "project_id": str(project_id),
                             "uses_composer": False,
@@ -479,6 +491,10 @@ async def update_project_mcp_settings(
                         "sse_url": sse_url,
                         "uses_composer": False,
                     }
+
+            # Only commit if composer started successfully (or wasn't needed)
+            session.add(project)
+            await session.commit()
 
             return response
 
