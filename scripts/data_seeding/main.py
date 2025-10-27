@@ -4,6 +4,7 @@
 import asyncio
 import argparse
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Optional
@@ -63,14 +64,20 @@ Examples:
         parser.add_argument(
             '--user-id',
             type=str,
-            help='UUID of the user to associate with created flows (required unless --validate-only)'
+            help='UUID of the user to associate with created flows (required unless --validate-only or --user-username is provided)'
+        )
+
+        parser.add_argument(
+            '--user-username',
+            type=str,
+            help='Username to lookup user ID for (alternative to --user-id)'
         )
 
         parser.add_argument(
             '--database-url',
             type=str,
-            default='postgresql+asyncpg://postgres:postgres@localhost:5432/studio-test',
-            help='Database connection URL (default: %(default)s)'
+            default=os.getenv('LANGFLOW_DATABASE_URL', 'postgresql+asyncpg://postgres:postgres@localhost:5432/studio-test'),
+            help='Database connection URL (default: from LANGFLOW_DATABASE_URL env var or %(default)s)'
         )
 
         parser.add_argument(
@@ -122,8 +129,12 @@ Examples:
                 logging.getLogger().setLevel(logging.DEBUG)
 
             # Validate arguments
-            if not args.validate_only and not args.user_id:
-                logger.error("--user-id is required unless using --validate-only")
+            if not args.validate_only and not args.user_id and not args.user_username:
+                logger.error("Either --user-id or --user-username is required unless using --validate-only")
+                return 1
+
+            if args.user_id and args.user_username:
+                logger.error("Cannot specify both --user-id and --user-username")
                 return 1
 
             # Validate TSV file exists
@@ -190,12 +201,35 @@ Examples:
                     logger.info("All agents passed validation")
                     return 0
 
-            # Convert user_id to UUID
-            try:
-                user_id = UUID(args.user_id)
-            except ValueError:
-                logger.error(f"Invalid user ID format: {args.user_id}")
-                return 1
+            # Get user_id (either from direct UUID or username lookup)
+            user_id = None
+            if args.user_id:
+                # Direct UUID provided
+                try:
+                    user_id = UUID(args.user_id)
+                except ValueError:
+                    logger.error(f"Invalid user ID format: {args.user_id}")
+                    return 1
+            elif args.user_username:
+                # Username provided - need to look up user ID
+                logger.info(f"Looking up user ID for username: {args.user_username}")
+                engine = create_async_engine(args.database_url, echo=args.verbose)
+                async with AsyncSession(engine) as session:
+                    from sqlalchemy import text
+                    result = await session.execute(
+                        text('SELECT id FROM "user" WHERE username = :username LIMIT 1'),
+                        {"username": args.user_username}
+                    )
+                    user_row = result.fetchone()
+
+                    if not user_row:
+                        logger.error(f"User with username '{args.user_username}' not found")
+                        await engine.dispose()
+                        return 1
+
+                    user_id = UUID(str(user_row.id))
+                    logger.info(f"Found user: {args.user_username} with ID: {user_id}")
+                    await engine.dispose()
 
             # Create database session
             engine = create_async_engine(args.database_url, echo=args.verbose)
@@ -250,10 +284,9 @@ Examples:
                     publish_flows=not args.no_publish
                 )
 
-                # Commit the transaction to persist changes to database
+                # No need for final commit - chunks are committed individually for AWS RDS compatibility
                 if not args.dry_run and result.successful > 0:
-                    await session.commit()
-                    logger.info(f"Successfully committed {result.successful} agents to database")
+                    logger.info(f"Successfully seeded {result.successful} agents to database using chunked commits")
 
                 # Print results
                 self._print_results(result, args.dry_run)

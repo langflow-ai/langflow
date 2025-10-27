@@ -42,8 +42,8 @@ class AgentSeedingService:
         dry_run: bool = False,
         publish_flows: bool = True
     ) -> BatchResult:
-        """Seed multiple agents with batch processing and transaction management."""
-        logger.info(f"Starting to seed {len(agents_data)} agents (dry_run={dry_run})")
+        """Seed multiple agents with chunked transaction processing for AWS RDS compatibility."""
+        logger.info(f"Starting to seed {len(agents_data)} agents with chunked transactions (dry_run={dry_run})")
 
         # Ensure required folders exist before processing
         if not dry_run:
@@ -54,21 +54,22 @@ class AgentSeedingService:
         successful = 0
         failed = 0
 
-        # Process in batches
-        for i in range(0, len(agents_data), batch_size):
-            batch = agents_data[i:i + batch_size]
-            logger.info(f"Processing batch {i//batch_size + 1}: agents {i+1}-{min(i+batch_size, len(agents_data))}")
+        # Process in chunks with individual commits for AWS RDS
+        chunk_size = min(batch_size, 5)  # Smaller chunks for cloud databases
+        for i in range(0, len(agents_data), chunk_size):
+            chunk = agents_data[i:i + chunk_size]
+            logger.info(f"Processing chunk {i//chunk_size + 1}: agents {i+1}-{min(i+chunk_size, len(agents_data))}")
 
-            batch_results = await self._process_batch(batch, dry_run, publish_flows)
-            results.extend(batch_results)
+            chunk_results = await self._process_chunk_with_commit(chunk, dry_run, publish_flows)
+            results.extend(chunk_results)
 
             # Count successes and failures
-            batch_successful = sum(1 for r in batch_results if r.success)
-            batch_failed = len(batch_results) - batch_successful
-            successful += batch_successful
-            failed += batch_failed
+            chunk_successful = sum(1 for r in chunk_results if r.success)
+            chunk_failed = len(chunk_results) - chunk_successful
+            successful += chunk_successful
+            failed += chunk_failed
 
-            logger.info(f"Batch completed: {batch_successful} successful, {batch_failed} failed")
+            logger.info(f"Chunk completed and committed: {chunk_successful} successful, {chunk_failed} failed")
 
         end_time = datetime.now()
 
@@ -87,6 +88,46 @@ class AgentSeedingService:
         )
 
         return batch_result
+
+    async def _process_chunk_with_commit(
+        self,
+        chunk: List[AgentData],
+        dry_run: bool,
+        publish_flows: bool
+    ) -> List[SeedingResult]:
+        """Process a chunk of agents with immediate commit for AWS RDS compatibility."""
+        results = []
+
+        for agent_data in chunk:
+            try:
+                result = await self._create_agent_flow(agent_data, dry_run, publish_flows)
+                results.append(result)
+                logger.debug(f"Successfully processed agent: {agent_data.agent_name}")
+            except Exception as e:
+                error_msg = f"Failed to process agent '{agent_data.agent_name}': {str(e)}"
+                logger.warning(error_msg)
+                results.append(SeedingResult(
+                    agent_name=agent_data.agent_name,
+                    success=False,
+                    error_message=error_msg
+                ))
+
+        # Commit the chunk immediately if not dry run
+        if not dry_run and any(r.success for r in results):
+            try:
+                await self.session.commit()
+                successful_count = sum(1 for r in results if r.success)
+                logger.info(f"Committed {successful_count} agents to database")
+            except Exception as e:
+                logger.error(f"Failed to commit chunk: {e}")
+                await self.session.rollback()
+                # Mark all results as failed
+                for result in results:
+                    if result.success:
+                        result.success = False
+                        result.error_message = f"Commit failed: {str(e)}"
+
+        return results
 
     async def _process_batch(
         self,
