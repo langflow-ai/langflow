@@ -1,7 +1,7 @@
 """increase flow_icon column size
 
 Revision ID: 20251027130000
-Revises: 20251027120000
+Revises: 5b431a7ef7c1
 Create Date: 2025-10-27 13:00:00.000000
 
 """
@@ -14,7 +14,7 @@ from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
 revision: str = "20251027130000"
-down_revision: Union[str, None] = "20251027120000"
+down_revision: Union[str, None] = "5b431a7ef7c1"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
