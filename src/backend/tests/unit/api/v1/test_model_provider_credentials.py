@@ -45,10 +45,6 @@ async def test_create_model_provider_credential(client: AsyncClient, openai_cred
         "api/v1/model-provider-credentials/", json=openai_credential, headers=logged_in_headers
     )
 
-    # Print the response for debugging
-    print(f"Status: {response.status_code}")
-    print(f"Response: {response.text}")
-
     result = response.json()
 
     assert response.status_code == status.HTTP_201_CREATED
