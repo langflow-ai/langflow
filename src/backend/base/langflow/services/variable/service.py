@@ -52,6 +52,23 @@ class DatabaseVariableService(VariableService, Service):
                 except Exception as e:  # noqa: BLE001
                     await logger.aexception(f"Error processing {var_name} variable: {e!s}")
 
+    async def get_variable_object(
+        self,
+        user_id: UUID | str,
+        name: str,
+        session: AsyncSession,
+    ) -> Variable:
+        # we get the credential from the database
+        stmt = select(Variable).where(Variable.user_id == user_id, Variable.name == name)
+        variable = (await session.exec(stmt)).first()
+
+        if not variable or not variable.value:
+            msg = f"{name} variable not found."
+            raise ValueError(msg)
+
+        return variable
+
+
     async def get_variable(
         self,
         user_id: UUID | str,
@@ -61,12 +78,7 @@ class DatabaseVariableService(VariableService, Service):
     ) -> str:
         # we get the credential from the database
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
-        stmt = select(Variable).where(Variable.user_id == user_id, Variable.name == name)
-        variable = (await session.exec(stmt)).first()
-
-        if not variable or not variable.value:
-            msg = f"{name} variable not found."
-            raise ValueError(msg)
+        variable = await self.get_variable_object(user_id, name, session)
 
         if variable.type == CREDENTIAL_TYPE and field == "session_id":
             msg = (

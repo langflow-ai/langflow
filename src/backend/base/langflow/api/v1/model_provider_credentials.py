@@ -131,9 +131,9 @@ async def get_model_provider_credentials(
     return credentials
 
 
-@router.get("/{credential_id}", response_model=VariableRead)
+@router.get("/{name}", response_model=VariableRead)
 async def get_model_provider_credential(
-    credential_id: UUID,
+    name: str,
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
@@ -141,7 +141,7 @@ async def get_model_provider_credential(
     """Get a specific model provider credential.
 
     Args:
-        credential_id: The credential ID
+        name: The name of the credential
         current_user: Current authenticated user
         session: Database session
 
@@ -156,10 +156,9 @@ async def get_model_provider_credential(
                 detail="Variable service is not available",
             )
 
-        credential = await variable_service.get_variable(
+        credential = await variable_service.get_variable_object(
             user_id=current_user.id,
-            name=credential_id,
-            field="",
+            name=name,
             session=session,
         )
         if not credential:
@@ -185,9 +184,9 @@ async def get_model_provider_credential(
         return credential
 
 
-@router.delete("/{credential_id}", status_code=status.HTTP_200_OK)
+@router.delete("/{name}", status_code=status.HTTP_200_OK)
 async def delete_model_provider_credential(
-    credential_id: UUID,
+    name: str,
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
@@ -195,7 +194,7 @@ async def delete_model_provider_credential(
     """Delete a model provider credential.
 
     Args:
-        credential_id: The credential ID
+        name: The name of the credential
         current_user: Current authenticated user
         session: Database session
 
@@ -211,9 +210,9 @@ async def delete_model_provider_credential(
             )
 
         # Get the existing credential first to verify it exists and is a model provider credential
-        existing_credential = await variable_service.get_variable(
+        existing_credential = await variable_service.get_variable_object(
             user_id=current_user.id,
-            name=credential_id,
+            name=name,
             field="",
             session=session,
         )
@@ -234,7 +233,7 @@ async def delete_model_provider_credential(
         # Delete the credential
         await variable_service.delete_variable(
             user_id=current_user.id,
-            name=credential_id,
+            name=name,
             session=session,
         )
 
@@ -249,9 +248,9 @@ async def delete_model_provider_credential(
     return {"detail": "Model provider credential deleted successfully"}
 
 
-@router.get("/{credential_id}/metadata", response_model=ModelProviderCredentialResponse)
+@router.get("/{name}/metadata", response_model=ModelProviderCredentialResponse)
 async def get_model_provider_credential_metadata(
-    credential_id: UUID,
+    name: str,
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
@@ -259,7 +258,7 @@ async def get_model_provider_credential_metadata(
     """Get metadata for a model provider credential.
 
     Args:
-        credential_id: The credential ID
+        name: The name of the credential
         current_user: Current authenticated user
         session: Database session
 
@@ -275,9 +274,9 @@ async def get_model_provider_credential_metadata(
             )
 
         # Get the credential first
-        credential = await variable_service.get_variable(
+        credential = await variable_service.get_variable_object(
             user_id=current_user.id,
-            name=credential_id,
+            name=name,
             field="",
             session=session,
         )
