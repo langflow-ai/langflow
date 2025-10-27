@@ -171,6 +171,8 @@ def get_api_key_for_provider(user_id: UUID | str, provider: str, api_key: str | 
         async def _get_variable():
             async with session_scope() as session:
                 variable_service = get_variable_service()
+                if variable_service is None:
+                    return None
                 return await variable_service.get_variable(
                     user_id=UUID(user_id),
                     name=variable_name,
@@ -179,6 +181,8 @@ def get_api_key_for_provider(user_id: UUID | str, provider: str, api_key: str | 
                 )
 
         return run_until_complete(_get_variable())
-    except RuntimeError:
+    except (RuntimeError, ValueError, TypeError, AttributeError):
         # If we can't get the global variable, return None
+        # Handles: RuntimeError (async issues), ValueError (invalid UUID),
+        # TypeError (None user_id), AttributeError (service issues)
         return None

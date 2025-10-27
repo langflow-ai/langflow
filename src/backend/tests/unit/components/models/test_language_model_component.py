@@ -190,14 +190,26 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         assert call_kwargs["google_api_key"] == "google-test-key"
         assert model == mock_instance
 
-    async def test_build_model_openai_missing_api_key(self, component_class, default_kwargs):
+    @patch("lfx.base.models.unified_models.get_variable_service")
+    async def test_build_model_openai_missing_api_key(self, mock_get_variable_service, component_class, default_kwargs):
+        # Mock get_variable_service to return None (no API key found)
+        mock_service = MagicMock()
+        mock_service.get_variable.return_value = None
+        mock_get_variable_service.return_value = mock_service
+
         component = component_class(**default_kwargs)
         component.api_key = None
 
         with pytest.raises(ValueError, match="OpenAI API key is required when using OpenAI provider"):
             component.build_model()
 
-    async def test_build_model_anthropic_missing_api_key(self, component_class):
+    @patch("lfx.base.models.unified_models.get_variable_service")
+    async def test_build_model_anthropic_missing_api_key(self, mock_get_variable_service, component_class):
+        # Mock get_variable_service to return None (no API key found)
+        mock_service = MagicMock()
+        mock_service.get_variable.return_value = None
+        mock_get_variable_service.return_value = mock_service
+
         component = component_class(
             model=[
                 {
@@ -216,7 +228,13 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="Anthropic API key is required when using Anthropic provider"):
             component.build_model()
 
-    async def test_build_model_google_missing_api_key(self, component_class):
+    @patch("lfx.base.models.unified_models.get_variable_service")
+    async def test_build_model_google_missing_api_key(self, mock_get_variable_service, component_class):
+        # Mock get_variable_service to return None (no API key found)
+        mock_service = MagicMock()
+        mock_service.get_variable.return_value = None
+        mock_get_variable_service.return_value = mock_service
+
         component = component_class(
             model=[
                 {
