@@ -26,6 +26,7 @@ const LogoUploadForm = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLogoRemoved, setIsLogoRemoved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { validateFileSize } = useFileSizeValidator();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -60,6 +61,7 @@ const LogoUploadForm = () => {
 
     // Store the file for upload
     setSelectedFile(file);
+    setIsLogoRemoved(false);
 
     // Convert to base64 data URL for local preview only (not uploaded yet)
     const reader = new FileReader();
@@ -102,7 +104,7 @@ const LogoUploadForm = () => {
   };
 
   const handleRemoveLogo = () => {
-    setLogoUrl(null);
+    setIsLogoRemoved(true);
     setPreviewUrl(null);
     setSelectedFile(null);
     if (fileInputRef.current) {
@@ -111,6 +113,31 @@ const LogoUploadForm = () => {
   };
 
   const handleSaveLogo = async () => {
+    // If user removed the logo, delete it from database
+    if (isLogoRemoved && !selectedFile) {
+      setIsUploading(true);
+      try {
+        await updateAppConfig({
+          key: "app-logo",
+          value: "",
+          description: "Application logo removed",
+        });
+        setLogoUrl(null);
+        setSuccessData({
+          title: "Logo Removed Successfully",
+        });
+        setIsLogoRemoved(false);
+      } catch (error: any) {
+        setErrorData({
+          title: "Failed to Remove Logo",
+          list: [error.message || "Please try again."],
+        });
+      } finally {
+        setIsUploading(false);
+      }
+      return;
+    }
+
     if (!selectedFile) {
       setErrorData({
         title: "No File Selected",
@@ -192,7 +219,7 @@ const LogoUploadForm = () => {
       <CardContent>
         <div className="space-y-4">
           {/* Preview Area - shows local preview or uploaded logo */}
-          {(previewUrl || logoUrl) && (
+          {!isLogoRemoved && (previewUrl || logoUrl) && (
             <div className="flex items-center gap-4">
               <div className="flex h-20 w-20 items-center justify-center rounded-lg border bg-muted">
                 <img
@@ -256,10 +283,10 @@ const LogoUploadForm = () => {
       <CardFooter className="border-t px-6 py-4">
         <Button
           onClick={handleSaveLogo}
-          disabled={!selectedFile || isUploading}
+          disabled={(!selectedFile && !isLogoRemoved) || isUploading}
           className="w-full sm:w-auto"
         >
-          {isUploading ? "Uploading..." : "Save Logo"}
+          {isUploading ? (isLogoRemoved ? "Removing..." : "Uploading...") : isLogoRemoved ? "Remove Logo" : "Save Logo"}
         </Button>
       </CardFooter>
     </Card>

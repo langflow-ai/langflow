@@ -47,7 +47,7 @@ class PublishedFlowBase(SQLModel):
     unpublished_at: datetime | None = Field(default=None, nullable=True)
     # Denormalized fields for performance (avoid joins)
     flow_name: str | None = Field(default=None, nullable=True, max_length=255)
-    flow_icon: str | None = Field(default=None, nullable=True, max_length=255)
+    flow_icon: str | None = Field(default=None, nullable=True, max_length=1000)
     published_by_username: str | None = Field(default=None, nullable=True, max_length=255)
 
 
@@ -86,6 +86,7 @@ class PublishedFlowCreate(SQLModel):
     version: str | None = None
     tags: list[str] | None = None
     description: str | None = None
+    flow_icon: str | None = None
 
 
 class PublishedFlowRead(PublishedFlowBase):
