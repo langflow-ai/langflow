@@ -193,9 +193,7 @@ class ModelsProviderSetupComponent(LCModelComponent):
         # Update model options and API key label based on selected provider and model type
         if field_name in {"provider", "model_type"}:
             provider = (
-                field_value
-                if field_name == "provider"
-                else build_config.get("provider", {}).get("value", "OpenAI")
+                field_value if field_name == "provider" else build_config.get("provider", {}).get("value", "OpenAI")
             )
 
             # Update model type if changed

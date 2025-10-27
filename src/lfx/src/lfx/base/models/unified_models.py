@@ -137,6 +137,7 @@ def get_unified_models_detailed(
         for prov, models in provider_map.items()
     ]
 
+
 def get_api_key_for_provider(user_id: UUID | str, provider: str, api_key: str | None = None) -> str | None:
     """Get API key from self.api_key or global variables.
 
@@ -166,6 +167,7 @@ def get_api_key_for_provider(user_id: UUID | str, provider: str, api_key: str | 
 
     # Try to get from global variables
     try:
+
         async def _get_variable():
             async with session_scope() as session:
                 variable_service = get_variable_service()
