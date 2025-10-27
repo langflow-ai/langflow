@@ -155,9 +155,10 @@ async def get_model_provider_credential(
                 detail="Variable service is not available",
             )
 
-        credential = await variable_service.get_variable_by_id(
+        credential = await variable_service.get_variable(
             user_id=current_user.id,
-            variable_id=credential_id,
+            name=credential_id,
+            field="",
             session=session,
         )
         if not credential:
@@ -209,9 +210,10 @@ async def delete_model_provider_credential(
             )
 
         # Get the existing credential first to verify it exists and is a model provider credential
-        existing_credential = await variable_service.get_variable_by_id(
+        existing_credential = await variable_service.get_variable(
             user_id=current_user.id,
-            variable_id=credential_id,
+            name=credential_id,
+            field="",
             session=session,
         )
 
@@ -231,7 +233,7 @@ async def delete_model_provider_credential(
         # Delete the credential
         await variable_service.delete_variable(
             user_id=current_user.id,
-            variable_id=credential_id,
+            name=credential_id,
             session=session,
         )
 
@@ -272,9 +274,10 @@ async def get_model_provider_credential_metadata(
             )
 
         # Get the credential first
-        credential = await variable_service.get_variable_by_id(
+        credential = await variable_service.get_variable(
             user_id=current_user.id,
-            variable_id=credential_id,
+            name=credential_id,
+            field="",
             session=session,
         )
 
