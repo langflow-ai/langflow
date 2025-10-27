@@ -37,9 +37,7 @@ WATSONX_MODELS_DETAILED = [
 
 # Filter lists based on metadata properties
 WATSONX_EMBEDDING_MODEL_NAMES = [
-    metadata["name"]
-    for metadata in WATSONX_MODELS_DETAILED
-    if not metadata.get("not_supported", False)
+    metadata["name"] for metadata in WATSONX_MODELS_DETAILED if not metadata.get("not_supported", False)
 ]
 
 # Backwards compatibility

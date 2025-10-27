@@ -25,9 +25,7 @@ async def list_model_providers() -> list[str]:
 @router.get("", status_code=200)
 async def list_models(
     *,
-    provider: Annotated[
-        list[str] | None, Query(description="Repeat to include multiple providers")
-    ] = None,
+    provider: Annotated[list[str] | None, Query(description="Repeat to include multiple providers")] = None,
     model_name: str | None = None,
     model_type: str | None = None,
     include_unsupported: bool = False,
