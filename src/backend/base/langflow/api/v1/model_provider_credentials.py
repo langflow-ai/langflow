@@ -349,7 +349,8 @@ async def get_credentials_by_provider(
 
         # Filter by provider using list comprehension
         return [
-            cred for cred in credentials
+            cred
+            for cred in credentials
             if cred.default_fields
             and len(cred.default_fields) > 0
             and cred.default_fields[0].lower() == provider.lower()
