@@ -38,15 +38,11 @@ export const useGetModelProviders: useQueryFunctionType<
     }
   };
 
-  const queryResult = query(
-    ["useGetModelProviders"],
-    getModelProvidersFn,
-    {
-      refetchOnWindowFocus: false,
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      ...options,
-    },
-  );
+  const queryResult = query(["useGetModelProviders"], getModelProvidersFn, {
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    ...options,
+  });
 
   return queryResult;
 };
