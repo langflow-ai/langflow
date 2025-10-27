@@ -76,6 +76,15 @@ class MCPComposerService(Service):
             str, asyncio.Task
         ] = {}  # Track active start tasks to cancel them when new request arrives
         self._port_to_project: dict[int, str] = {}  # Track which project is using which port
+        self._last_errors: dict[str, str] = {}  # Track last error message per project for UI display
+
+    def get_last_error(self, project_id: str) -> str | None:
+        """Get the last error message for a project, if any."""
+        return self._last_errors.get(project_id)
+
+    def clear_last_error(self, project_id: str) -> None:
+        """Clear the last error message for a project."""
+        self._last_errors.pop(project_id, None)
 
     def _is_port_available(self, port: int) -> bool:
         """Check if a port is available by trying to bind to it."""
@@ -674,7 +683,10 @@ class MCPComposerService(Service):
                             # Kill the old process on the old port
                             await self._do_stop_project_composer(project_id)
                             # Also kill any process that might be using the old port
-                            await self._kill_process_on_port(existing_port)
+                            try:
+                                await asyncio.wait_for(self._kill_process_on_port(existing_port), timeout=5.0)
+                            except asyncio.TimeoutError:
+                                await logger.aerror(f"Timeout while killing process on port {existing_port}")
                         else:
                             await logger.adebug(f"Config changed for project {project_id}, restarting MCP Composer")
                             await self._do_stop_project_composer(project_id)
@@ -689,14 +701,21 @@ class MCPComposerService(Service):
                     await self._do_stop_project_composer(project_id)
                     # Also kill any process that might be using the old port
                     if existing_port:
-                        await self._kill_process_on_port(existing_port)
-
-            # Ensure port is available (only kill untracked processes)
-            await self._ensure_port_available(project_port, project_id)
+                        try:
+                            await asyncio.wait_for(self._kill_process_on_port(existing_port), timeout=5.0)
+                        except asyncio.TimeoutError:
+                            await logger.aerror(f"Timeout while killing process on port {existing_port}")
 
             # Retry loop: try starting the process multiple times
             last_error = None
             try:
+                # Ensure port is available (only kill untracked processes)
+                try:
+                    await self._ensure_port_available(project_port, project_id)
+                except MCPComposerPortError as e:
+                    # Port error before starting - store and raise immediately
+                    self._last_errors[project_id] = e.message
+                    raise
                 for retry_attempt in range(1, max_retries + 1):
                     try:
                         await logger.adebug(
@@ -744,6 +763,8 @@ class MCPComposerService(Service):
                             "auth_config": auth_config,
                         }
                         self._port_to_project[project_port] = project_id
+                        # Clear any previous error on success
+                        self.clear_last_error(project_id)
 
                         await logger.adebug(
                             f"MCP Composer started for project {project_id} on port {project_port} "
@@ -756,6 +777,8 @@ class MCPComposerService(Service):
                     await logger.aerror(
                         f"MCP Composer failed to start for project {project_id} after {max_retries} attempts"
                     )
+                    # Store the error message for later retrieval
+                    self._last_errors[project_id] = last_error.message
                     raise last_error
 
             except asyncio.CancelledError:

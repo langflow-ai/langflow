@@ -434,6 +434,11 @@ async def update_project_mcp_settings(
                             auth_config = await _get_mcp_composer_auth_config(project)
                             await get_or_start_mcp_composer(auth_config, project.name, project_id)
                             composer_sse_url = await get_composer_sse_url(project)
+                            # Clear any previous error on success
+                            mcp_composer_service: MCPComposerService = cast(
+                                MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+                            )
+                            mcp_composer_service.clear_last_error(str(project_id))
                             response["result"] = {
                                 "project_id": str(project_id),
                                 "sse_url": composer_sse_url,
@@ -480,6 +485,8 @@ async def update_project_mcp_settings(
                         MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
                     )
                     await mcp_composer_service.stop_project_composer(str(project_id))
+                    # Clear any error when user explicitly disables OAuth
+                    mcp_composer_service.clear_last_error(str(project_id))
 
                     # Provide the direct SSE URL since we're no longer using composer
                     sse_url = await get_project_sse_url(project_id)
@@ -747,7 +754,22 @@ async def get_project_composer_url(
     """
     try:
         project = await verify_project_access(project_id, current_user)
+
+        # Check if there's a recent error from a failed OAuth attempt
+        mcp_composer_service: MCPComposerService = cast(
+            MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+        )
+        last_error = mcp_composer_service.get_last_error(str(project_id))
+
         if not should_use_mcp_composer(project):
+            # If there's a recent error, return it even though OAuth is not currently active
+            # This happens when OAuth was attempted but rolled back due to an error
+            if last_error:
+                return {
+                    "project_id": str(project_id),
+                    "uses_composer": False,
+                    "error_message": last_error,
+                }
             return {
                 "project_id": str(project_id),
                 "uses_composer": False,
