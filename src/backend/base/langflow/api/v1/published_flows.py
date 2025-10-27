@@ -195,7 +195,7 @@ async def list_all_published_flows(
     category: str | None = Query(None, description="Filter by category"),
     tags: str | None = Query(None, description="Filter by tags (comma-separated)"),
     status_filter: str | None = Query(None, regex="^(published|unpublished|all)$", description="Filter by status"),
-    sort_by: str = Query("published_at", regex="^(published_at|name|date)$", description="Sort by field"),
+    sort_by: str = Query("published_at", regex="^(published_at|name|date|tags)$", description="Sort by field"),
     order: str = Query("desc", regex="^(asc|desc)$", description="Sort order"),
 ):
     """
@@ -256,8 +256,13 @@ async def list_all_published_flows(
     # Apply sorting on denormalized fields
     if sort_by == "published_at" or sort_by == "date":
         order_col = PublishedFlow.published_at
-    else:  # name - use case-insensitive sorting
+    elif sort_by == "name":
+        # Case-insensitive sorting by name
         order_col = func.lower(PublishedFlow.flow_name)
+    elif sort_by == "tags":
+        # Sort by tags JSON textual representation for portability (SQLite/PostgreSQL)
+        # Using lower() for case-insensitive comparison across databases
+        order_col = func.lower(cast(PublishedFlow.tags, Text))
 
     if order == "desc":
         query = query.order_by(order_col.desc())
