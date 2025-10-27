@@ -131,7 +131,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         ModelInput(
             name="model",
             display_name="Embedding Model",
-            model_options=_MODEL_OPTIONS,
+            options=_MODEL_OPTIONS,
             providers=_PROVIDERS,
             info="Select your model provider",
             real_time_refresh=True,

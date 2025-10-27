@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-W9YGR",
+            "id": "File-Bph6t",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "Document",
-            "id": "Prompt-7H522",
+            "id": "Prompt-gvFY1",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,45 +23,19 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-File-W9YGR{œdataTypeœ:œFileœ,œidœ:œFile-W9YGRœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-7H522{œfieldNameœ:œDocumentœ,œidœ:œPrompt-7H522œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-File-Bph6t{œdataTypeœ:œFileœ,œidœ:œFile-Bph6tœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-gvFY1{œfieldNameœ:œDocumentœ,œidœ:œPrompt-gvFY1œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "File-W9YGR",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-W9YGRœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-7H522",
-        "targetHandle": "{œfieldNameœ: œDocumentœ, œidœ: œPrompt-7H522œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-7H522",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_message",
-            "id": "LanguageModelComponent-oFXw1",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__Prompt-7H522{œdataTypeœ:œPromptœ,œidœ:œPrompt-7H522œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-oFXw1{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-oFXw1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-7H522",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-7H522œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-oFXw1",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-oFXw1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "File-Bph6t",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-Bph6tœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-gvFY1",
+        "targetHandle": "{œfieldNameœ: œDocumentœ, œidœ: œPrompt-gvFY1œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-DPXvG",
+            "id": "ChatInput-RKlNi",
             "name": "message",
             "output_types": [
               "Message"
@@ -69,46 +43,44 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-oFXw1",
+            "id": "LanguageModelComponent-5gOuk",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-DPXvG{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DPXvGœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-oFXw1{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-oFXw1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-DPXvG",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-DPXvGœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-oFXw1",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-oFXw1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__ChatInput-RKlNi{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RKlNiœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-5gOuk{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-5gOukœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-RKlNi",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-RKlNiœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-5gOuk",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-5gOukœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-oFXw1",
-            "name": "text_output",
+            "dataType": "Prompt",
+            "id": "Prompt-gvFY1",
+            "name": "prompt",
             "output_types": [
               "Message"
             ]
           },
           "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-VjBju",
+            "fieldName": "system_message",
+            "id": "LanguageModelComponent-5gOuk",
             "inputTypes": [
-              "Data",
-              "DataFrame",
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__LanguageModelComponent-oFXw1{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-oFXw1œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-VjBju{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-VjBjuœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "source": "LanguageModelComponent-oFXw1",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-oFXw1œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-VjBju",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-VjBjuœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__Prompt-gvFY1{œdataTypeœ:œPromptœ,œidœ:œPrompt-gvFY1œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-5gOuk{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-5gOukœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-gvFY1",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-gvFY1œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-5gOuk",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-5gOukœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -116,7 +88,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-DPXvG",
+          "id": "ChatInput-RKlNi",
           "node": {
             "base_classes": [
               "Message"
@@ -356,7 +328,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-DPXvG",
+        "id": "ChatInput-RKlNi",
         "measured": {
           "height": 234,
           "width": 320
@@ -377,7 +349,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-VjBju",
+          "id": "ChatOutput-N7tzN",
           "node": {
             "base_classes": [
               "Message"
@@ -637,7 +609,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-VjBju",
+        "id": "ChatOutput-N7tzN",
         "measured": {
           "height": 234,
           "width": 320
@@ -656,7 +628,7 @@
       },
       {
         "data": {
-          "id": "note-RKebL",
+          "id": "note-Aw4bv",
           "node": {
             "description": "# Document Q&A\n\nThis flow loads a file and uses an LLM to answer questions based on content from the loaded document. \n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Paste your OpenAI API key in the **OpenAI** model component.\n2.  In the **File** component, select a file  you want to load.\n3. Open the **Playground** and chat with your document.",
             "display_name": "",
@@ -667,7 +639,7 @@
         },
         "dragging": false,
         "height": 509,
-        "id": "note-RKebL",
+        "id": "note-Aw4bv",
         "measured": {
           "height": 509,
           "width": 420
@@ -693,7 +665,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-7H522",
+          "id": "Prompt-gvFY1",
           "node": {
             "base_classes": [
               "Message"
@@ -833,7 +805,7 @@
         },
         "dragging": false,
         "height": 347,
-        "id": "Prompt-7H522",
+        "id": "Prompt-gvFY1",
         "measured": {
           "height": 347,
           "width": 320
@@ -852,7 +824,7 @@
       },
       {
         "data": {
-          "id": "File-W9YGR",
+          "id": "File-Bph6t",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -877,7 +849,7 @@
             ],
             "frozen": false,
             "icon": "file-text",
-            "last_updated": "2025-10-23T16:05:59.214Z",
+            "last_updated": "2025-10-27T20:02:27.524Z",
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
@@ -1303,7 +1275,7 @@
           "type": "File"
         },
         "dragging": false,
-        "id": "File-W9YGR",
+        "id": "File-Bph6t",
         "measured": {
           "height": 256,
           "width": 320
@@ -1317,7 +1289,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-oFXw1",
+          "id": "LanguageModelComponent-5gOuk",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1340,15 +1312,22 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "last_updated": "2025-10-23T16:06:16.801Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "d840e2d4511e",
+              "code_hash": "e5edbb3e5865",
               "dependencies": {
                 "dependencies": [
                   {
                     "name": "langchain_anthropic",
                     "version": "0.3.14"
+                  },
+                  {
+                    "name": "langchain_ibm",
+                    "version": "0.3.19"
+                  },
+                  {
+                    "name": "langchain_ollama",
+                    "version": "0.2.1"
                   },
                   {
                     "name": "langchain_openai",
@@ -1359,7 +1338,7 @@
                     "version": null
                   }
                 ],
-                "total_dependencies": 3
+                "total_dependencies": 5
               },
               "keywords": [
                 "model",
@@ -1379,8 +1358,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1395,9 +1372,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
-                "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
                   "LanguageModel"
@@ -1411,7 +1385,7 @@
               "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "API Key",
                 "dynamic": false,
                 "info": "Model Provider API key",
@@ -1443,7 +1417,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Any\n\nfrom langchain_anthropic import ChatAnthropic\nfrom langchain_ibm import ChatWatsonx\nfrom langchain_ollama import ChatOllama\nfrom langchain_openai import ChatOpenAI\n\nfrom lfx.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS\nfrom lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed\nfrom lfx.base.models.model import LCModelComponent\nfrom lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES\nfrom lfx.base.models.unified_models import get_api_key_for_provider\nfrom lfx.field_typing import LanguageModel\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.inputs.inputs import BoolInput\nfrom lfx.io import MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput\n\n# Mapping of class names to actual class objects\nMODEL_CLASSES = {\n    \"ChatOpenAI\": ChatOpenAI,\n    \"ChatAnthropic\": ChatAnthropic,\n    \"ChatGoogleGenerativeAIFixed\": ChatGoogleGenerativeAIFixed,\n    \"ChatOllama\": ChatOllama,\n    \"ChatWatsonx\": ChatWatsonx,\n}\n\n\ndef _get_language_model_options() -> list[dict[str, Any]]:\n    \"\"\"Return a list of available language model providers with their configuration.\"\"\"\n    # OpenAI models\n    openai_options = [\n        {\n            \"name\": model_name,\n            \"icon\": \"OpenAI\",\n            \"category\": \"OpenAI\",\n            \"provider\": \"OpenAI\",\n            \"metadata\": {\n                \"context_length\": 128000,\n                \"model_class\": \"ChatOpenAI\",\n                \"model_name_param\": \"model\",\n                \"api_key_param\": \"api_key\",\n                \"reasoning_models\": OPENAI_REASONING_MODEL_NAMES,\n            },\n        }\n        for model_name in OPENAI_CHAT_MODEL_NAMES\n    ]\n\n    # Anthropic models\n    anthropic_options = [\n        {\n            \"name\": model_name,\n            \"icon\": \"Anthropic\",\n            \"category\": \"Anthropic\",\n            \"provider\": \"Anthropic\",\n            \"metadata\": {\n                \"context_length\": 200000,\n                \"model_class\": \"ChatAnthropic\",\n                \"model_name_param\": \"model\",\n                \"api_key_param\": \"api_key\",\n            },\n        }\n        for model_name in ANTHROPIC_MODELS\n    ]\n\n    # Google models\n    google_options = [\n        {\n            \"name\": model_name,\n            \"icon\": \"GoogleGenerativeAI\",\n            \"category\": \"Google\",\n            \"provider\": \"Google\",\n            \"metadata\": {\n                \"context_length\": 32768,\n                \"model_class\": \"ChatGoogleGenerativeAIFixed\",\n                \"model_name_param\": \"model\",\n                \"api_key_param\": \"google_api_key\",\n            },\n        }\n        for model_name in GOOGLE_GENERATIVE_AI_MODELS\n    ]\n\n    # Ollama models (local)\n    ollama_options = [\n        {\n            \"name\": \"ChatOllama\",\n            \"icon\": \"Ollama\",\n            \"category\": \"Ollama\",\n            \"provider\": \"Ollama\",\n            \"metadata\": {\n                \"context_length\": 8192,  # Varies by model\n                \"model_class\": \"ChatOllama\",\n                \"model_name_param\": \"model\",\n                \"base_url_param\": \"base_url\",\n            },\n        }\n    ]\n\n    # WatsonX models\n    watsonx_options = [\n        {\n            \"name\": \"ChatWatsonx\",\n            \"icon\": \"WatsonxAI\",\n            \"category\": \"IBM WatsonX\",\n            \"provider\": \"IBM WatsonX\",\n            \"metadata\": {\n                \"context_length\": 8192,  # Varies by model\n                \"model_class\": \"ChatWatsonx\",\n                \"model_name_param\": \"model_id\",\n                \"api_key_param\": \"apikey\",\n                \"url_param\": \"url\",\n                \"project_id_param\": \"project_id\",\n            },\n        }\n    ]\n\n    # Combine all options and return\n    return openai_options + anthropic_options + google_options + ollama_options + watsonx_options\n\n\n# Compute model options once at module level\n_MODEL_OPTIONS = _get_language_model_options()\n_PROVIDERS = [provider[\"provider\"] for provider in _MODEL_OPTIONS]\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-models\"\n    icon = \"brain-circuit\"\n    category = \"models\"\n    priority = 0  # Set priority to 0 to make it appear first\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            model_options=_MODEL_OPTIONS,\n            providers=_PROVIDERS,\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Model Provider API key\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=False,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        # Safely extract model configuration\n        if not self.model or not isinstance(self.model, list) or len(self.model) == 0:\n            msg = \"A model selection is required\"\n            raise ValueError(msg)\n\n        model = self.model[0]\n        temperature = self.temperature\n        stream = self.stream\n\n        # Extract model configuration from metadata\n        model_name = model.get(\"name\")\n        provider = model.get(\"provider\")\n        metadata = model.get(\"metadata\", {})\n\n        # Get model class and parameter names from metadata\n        api_key_param = metadata.get(\"api_key_param\", \"api_key\")\n\n        # Get API key from user input or global variables\n        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)\n\n        # Validate API key (Ollama doesn't require one)\n        if not api_key and provider != \"Ollama\":\n            msg = (\n                f\"{provider} API key is required when using {provider} provider. \"\n                f\"Please provide it in the component or configure it globally as \"\n                f\"{provider.upper().replace(' ', '_')}_API_KEY.\"\n            )\n            raise ValueError(msg)\n\n        # Get model class from metadata\n        model_class = MODEL_CLASSES.get(metadata.get(\"model_class\"))\n        if model_class is None:\n            msg = f\"No model class defined for {model_name}\"\n            raise ValueError(msg)\n        model_name_param = metadata.get(\"model_name_param\", \"model\")\n\n        # Check if this is a reasoning model that doesn't support temperature\n        reasoning_models = metadata.get(\"reasoning_models\", [])\n        if model_name in reasoning_models:\n            temperature = None\n\n        # Build kwargs dynamically\n        kwargs = {\n            model_name_param: model_name,\n            \"streaming\": stream,\n            api_key_param: api_key,\n        }\n\n        if temperature is not None:\n            kwargs[\"temperature\"] = temperature\n\n        return model_class(**kwargs)\n"
+                "value": "from typing import Any\n\nfrom langchain_anthropic import ChatAnthropic\nfrom langchain_ibm import ChatWatsonx\nfrom langchain_ollama import ChatOllama\nfrom langchain_openai import ChatOpenAI\n\nfrom lfx.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS\nfrom lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed\nfrom lfx.base.models.model import LCModelComponent\nfrom lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES\nfrom lfx.base.models.unified_models import get_api_key_for_provider\nfrom lfx.field_typing import LanguageModel\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.inputs.inputs import BoolInput\nfrom lfx.io import MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput\n\n# Mapping of class names to actual class objects\nMODEL_CLASSES = {\n    \"ChatOpenAI\": ChatOpenAI,\n    \"ChatAnthropic\": ChatAnthropic,\n    \"ChatGoogleGenerativeAIFixed\": ChatGoogleGenerativeAIFixed,\n    \"ChatOllama\": ChatOllama,\n    \"ChatWatsonx\": ChatWatsonx,\n}\n\n\ndef _get_language_model_options() -> list[dict[str, Any]]:\n    \"\"\"Return a list of available language model providers with their configuration.\"\"\"\n    # OpenAI models\n    openai_options = [\n        {\n            \"name\": model_name,\n            \"icon\": \"OpenAI\",\n            \"category\": \"OpenAI\",\n            \"provider\": \"OpenAI\",\n            \"metadata\": {\n                \"context_length\": 128000,\n                \"model_class\": \"ChatOpenAI\",\n                \"model_name_param\": \"model\",\n                \"api_key_param\": \"api_key\",\n                \"reasoning_models\": OPENAI_REASONING_MODEL_NAMES,\n            },\n        }\n        for model_name in OPENAI_CHAT_MODEL_NAMES\n    ]\n\n    # Anthropic models\n    anthropic_options = [\n        {\n            \"name\": model_name,\n            \"icon\": \"Anthropic\",\n            \"category\": \"Anthropic\",\n            \"provider\": \"Anthropic\",\n            \"metadata\": {\n                \"context_length\": 200000,\n                \"model_class\": \"ChatAnthropic\",\n                \"model_name_param\": \"model\",\n                \"api_key_param\": \"api_key\",\n            },\n        }\n        for model_name in ANTHROPIC_MODELS\n    ]\n\n    # Google models\n    google_options = [\n        {\n            \"name\": model_name,\n            \"icon\": \"GoogleGenerativeAI\",\n            \"category\": \"Google\",\n            \"provider\": \"Google\",\n            \"metadata\": {\n                \"context_length\": 32768,\n                \"model_class\": \"ChatGoogleGenerativeAIFixed\",\n                \"model_name_param\": \"model\",\n                \"api_key_param\": \"google_api_key\",\n            },\n        }\n        for model_name in GOOGLE_GENERATIVE_AI_MODELS\n    ]\n\n    # Ollama models (local)\n    ollama_options = [\n        {\n            \"name\": \"ChatOllama\",\n            \"icon\": \"Ollama\",\n            \"category\": \"Ollama\",\n            \"provider\": \"Ollama\",\n            \"metadata\": {\n                \"context_length\": 8192,  # Varies by model\n                \"model_class\": \"ChatOllama\",\n                \"model_name_param\": \"model\",\n                \"base_url_param\": \"base_url\",\n            },\n        }\n    ]\n\n    # WatsonX models\n    watsonx_options = [\n        {\n            \"name\": \"ChatWatsonx\",\n            \"icon\": \"WatsonxAI\",\n            \"category\": \"IBM WatsonX\",\n            \"provider\": \"IBM WatsonX\",\n            \"metadata\": {\n                \"context_length\": 8192,  # Varies by model\n                \"model_class\": \"ChatWatsonx\",\n                \"model_name_param\": \"model_id\",\n                \"api_key_param\": \"apikey\",\n                \"url_param\": \"url\",\n                \"project_id_param\": \"project_id\",\n            },\n        }\n    ]\n\n    # Combine all options and return\n    return openai_options + anthropic_options + google_options + ollama_options + watsonx_options\n\n\n# Compute model options once at module level\n_MODEL_OPTIONS = _get_language_model_options()\n_PROVIDERS = [provider[\"provider\"] for provider in _MODEL_OPTIONS]\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-models\"\n    icon = \"brain-circuit\"\n    category = \"models\"\n    priority = 0  # Set priority to 0 to make it appear first\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            options=_MODEL_OPTIONS,\n            providers=_PROVIDERS,\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Model Provider API key\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=False,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        # Safely extract model configuration\n        if not self.model or not isinstance(self.model, list) or len(self.model) == 0:\n            msg = \"A model selection is required\"\n            raise ValueError(msg)\n\n        model = self.model[0]\n        temperature = self.temperature\n        stream = self.stream\n\n        # Extract model configuration from metadata\n        model_name = model.get(\"name\")\n        provider = model.get(\"provider\")\n        metadata = model.get(\"metadata\", {})\n\n        # Get model class and parameter names from metadata\n        api_key_param = metadata.get(\"api_key_param\", \"api_key\")\n\n        # Get API key from user input or global variables\n        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)\n\n        # Validate API key (Ollama doesn't require one)\n        if not api_key and provider != \"Ollama\":\n            msg = (\n                f\"{provider} API key is required when using {provider} provider. \"\n                f\"Please provide it in the component or configure it globally as \"\n                f\"{provider.upper().replace(' ', '_')}_API_KEY.\"\n            )\n            raise ValueError(msg)\n\n        # Get model class from metadata\n        model_class = MODEL_CLASSES.get(metadata.get(\"model_class\"))\n        if model_class is None:\n            msg = f\"No model class defined for {model_name}\"\n            raise ValueError(msg)\n        model_name_param = metadata.get(\"model_name_param\", \"model\")\n\n        # Check if this is a reasoning model that doesn't support temperature\n        reasoning_models = metadata.get(\"reasoning_models\", [])\n        if model_name in reasoning_models:\n            temperature = None\n\n        # Build kwargs dynamically\n        kwargs = {\n            model_name_param: model_name,\n            \"streaming\": stream,\n            api_key_param: api_key,\n        }\n\n        if temperature is not None:\n            kwargs[\"temperature\"] = temperature\n\n        return model_class(**kwargs)\n"
               },
               "input_value": {
                 "_input_type": "MessageInput",
@@ -1958,6 +1932,32 @@
                     },
                     "name": "gemma-2-27b",
                     "provider": "Google"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "base_url_param": "base_url",
+                      "context_length": 8192,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "ChatOllama",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "api_key_param": "apikey",
+                      "context_length": 8192,
+                      "model_class": "ChatWatsonx",
+                      "model_name_param": "model_id",
+                      "project_id_param": "project_id",
+                      "url_param": "url"
+                    },
+                    "name": "ChatWatsonx",
+                    "provider": "IBM WatsonX"
                   }
                 ],
                 "placeholder": "",
@@ -1992,7 +1992,9 @@
                   "Google",
                   "Google",
                   "Google",
-                  "Google"
+                  "Google",
+                  "Ollama",
+                  "IBM WatsonX"
                 ],
                 "real_time_refresh": true,
                 "required": false,
@@ -2082,28 +2084,28 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-oFXw1",
+        "id": "LanguageModelComponent-5gOuk",
         "measured": {
-          "height": 451,
+          "height": 369,
           "width": 320
         },
         "position": {
-          "x": 1251.8955983426035,
-          "y": -59.65176242863839
+          "x": 1244.6176432785394,
+          "y": 26.541826297736137
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 19.99265357694071,
-      "y": 260.87952859859524,
-      "zoom": 0.5847191629974343
+      "x": -163.96910614932415,
+      "y": 338.4971764272847,
+      "zoom": 0.584090310847885
     }
   },
   "description": "Integrates PDF reading with a language model to answer document-specific questions. Ideal for small-scale texts, it facilitates direct queries with immediate insights.",
   "endpoint_name": null,
-  "id": "8d8404dc-841d-4644-8b75-3b37b7dcdf14",
+  "id": "9314b19d-86e2-4d82-b222-be08f2605499",
   "is_component": false,
   "last_tested_version": "1.6.4",
   "name": "Document Q&A",

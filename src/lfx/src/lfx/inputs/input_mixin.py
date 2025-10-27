@@ -123,7 +123,7 @@ class ModelInputMixin(BaseModel):
     """Name of the model to be used in the input."""
     model_type: str | None = "language"
     """Type of model: 'language' or 'embedding'. Defaults to 'language'."""
-    model_options: list[dict[str, Any]] | None = Field(default=None, serialization_alias="options")
+    options: list[dict[str, Any]] | None = Field(default=None, serialization_alias="options")
     """List of model options with name, icon, category, provider, and metadata."""
     providers: list[str] | None = None
     """List of provider names to prioritize (e.g., ['OpenAI', 'Anthropic'])."""

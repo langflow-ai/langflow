@@ -3,7 +3,9 @@ from uuid import UUID
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
 from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS_DETAILED
+from lfx.base.models.ollama_constants import OLLAMA_MODELS_DETAILED
 from lfx.base.models.openai_constants import OPENAI_MODELS_DETAILED
+from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 
@@ -43,7 +45,13 @@ model_provider_metadata = get_model_provider_metadata()
 
 @lru_cache(maxsize=1)
 def get_models_detailed():
-    return [ANTHROPIC_MODELS_DETAILED, OPENAI_MODELS_DETAILED, GOOGLE_GENERATIVE_AI_MODELS_DETAILED]
+    return [
+        ANTHROPIC_MODELS_DETAILED,
+        OPENAI_MODELS_DETAILED,
+        GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
+        OLLAMA_MODELS_DETAILED,
+        WATSONX_MODELS_DETAILED,
+    ]
 
 
 MODELS_DETAILED = get_models_detailed()
