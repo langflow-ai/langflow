@@ -116,7 +116,8 @@ async def get_model_provider_credentials(
         # Filter by provider if specified
         if provider:
             return [
-                cred for cred in credentials
+                cred
+                for cred in credentials
                 if cred.default_fields
                 and len(cred.default_fields) > 0
                 and cred.default_fields[0].lower() == provider.lower()
