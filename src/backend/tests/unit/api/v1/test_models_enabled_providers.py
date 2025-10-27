@@ -53,9 +53,7 @@ async def test_enabled_providers_empty_initially(client: AsyncClient, logged_in_
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_enabled_providers_after_credential_creation(
-    client: AsyncClient, openai_credential, logged_in_headers
-):
+async def test_enabled_providers_after_credential_creation(client: AsyncClient, openai_credential, logged_in_headers):
     """Test that provider status changes after credential creation."""
     # Check initial status
     initial_response = await client.get("api/v1/models/enabled_providers", headers=logged_in_headers)
@@ -107,14 +105,10 @@ async def test_enabled_providers_multiple_credentials(
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_enabled_providers_after_credential_deletion(
-    client: AsyncClient, openai_credential, logged_in_headers
-):
+async def test_enabled_providers_after_credential_deletion(client: AsyncClient, openai_credential, logged_in_headers):
     """Test that provider status updates after credential deletion."""
     # Get initial OpenAI credentials to clean up
-    initial_creds = await client.get(
-        "api/v1/model-provider-credentials/?provider=OpenAI", headers=logged_in_headers
-    )
+    initial_creds = await client.get("api/v1/model-provider-credentials/?provider=OpenAI", headers=logged_in_headers)
     for cred in initial_creds.json():
         await client.delete(f"api/v1/model-provider-credentials/{cred['id']}", headers=logged_in_headers)
 
@@ -180,9 +174,7 @@ async def test_enabled_providers_filter_by_specific_providers(
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_variables_category_llm_credential_redaction(
-    client: AsyncClient, openai_credential, logged_in_headers
-):
+async def test_variables_category_llm_credential_redaction(client: AsyncClient, openai_credential, logged_in_headers):
     """Test that LLM category variables have credentials properly redacted."""
     # Create a credential (which should be stored as CATEGORY_LLM)
     create_response = await client.post(
@@ -269,9 +261,7 @@ async def test_variables_category_case_insensitive(client: AsyncClient, openai_c
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_enabled_providers_reflects_models_endpoint(
-    client: AsyncClient, openai_credential, logged_in_headers
-):
+async def test_enabled_providers_reflects_models_endpoint(client: AsyncClient, openai_credential, logged_in_headers):
     """Test that /models endpoint reflects same is_enabled status as /enabled_providers."""
     # Create credential
     await client.post("api/v1/model-provider-credentials/", json=openai_credential, headers=logged_in_headers)
