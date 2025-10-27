@@ -43,6 +43,10 @@ export const useGetProfilePicturesQuery: useQueryFunctionType<
 
   const queryResult = query(["useGetProfilePicturesQuery"], responseFn, {
     placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,  // Don't refetch when window gains focus
+    refetchOnMount: false,         // Don't refetch on component mount
+    staleTime: Infinity,           // Data never becomes stale
+    retry: 1,                      // Only retry once on failure
   });
 
   return queryResult;

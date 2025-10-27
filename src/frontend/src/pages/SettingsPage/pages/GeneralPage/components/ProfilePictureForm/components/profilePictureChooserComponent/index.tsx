@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { ProfilePicturesQueryResponse } from "@/controllers/API/queries/files";
 import { customPreLoadImageUrl } from "@/customization/utils/custom-pre-load-image-url";
 import { Button } from "../../../../../../../../components/ui/button";
 import Loading from "../../../../../../../../components/ui/loading";
 import { useDarkStore } from "../../../../../../../../stores/darkStore";
 import { cn } from "../../../../../../../../utils/utils";
-import usePreloadImages from "./hooks/use-preload-images";
 
 export type ProfilePictureChooserComponentProps = {
   profilePictures?: ProfilePicturesQueryResponse;
@@ -22,7 +21,6 @@ export default function ProfilePictureChooserComponent({
 }: ProfilePictureChooserComponentProps) {
   const ref = useRef<HTMLButtonElement>(null);
   const dark = useDarkStore((state) => state.dark);
-  const [imagesLoaded, setImagesLoaded] = useState(false);
 
   useEffect(() => {
     if (value && ref) {
@@ -30,21 +28,23 @@ export default function ProfilePictureChooserComponent({
     }
   }, [ref, value]);
 
-  usePreloadImages(setImagesLoaded, loading, profilePictures);
-
   return (
     <div className="flex flex-col justify-center gap-2">
-      {loading || !imagesLoaded ? (
+      {loading && !profilePictures ? (
         <Loading />
+      ) : !profilePictures || Object.keys(profilePictures).length === 0 ? (
+        <div className="text-sm text-muted-foreground py-4 text-center">
+          No profile pictures available
+        </div>
       ) : (
-        Object.keys(profilePictures!).map((folder, index) => (
+        Object.keys(profilePictures).map((folder, index) => (
           <div className="flex flex-col gap-2" key={index}>
             <div className="edit-flow-arrangement">
               <span className="font-normal">{folder}</span>
             </div>
             <div className="block overflow-hidden">
               <div className="flex items-center gap-1 overflow-x-auto rounded-lg bg-muted px-1 custom-scroll">
-                {profilePictures![folder].map((path, idx) => (
+                {profilePictures[folder].map((path, idx) => (
                   <Button
                     key={idx}
                     ref={value === folder + "/" + path ? ref : undefined}

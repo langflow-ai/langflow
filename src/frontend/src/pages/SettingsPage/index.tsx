@@ -93,7 +93,7 @@ export default function SettingsPage(): JSX.Element {
     <PageLayout
       backTo={-1 as To}
       title="Settings"
-      description="Manage the general settings for Langflow."
+      description="Manage the general settings for AI Studio."
     >
       <SideBarButtonsComponent items={sidebarNavItems} />
       <main className="flex flex-1 overflow-hidden">

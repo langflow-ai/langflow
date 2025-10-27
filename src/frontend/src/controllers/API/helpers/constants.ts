@@ -3,8 +3,10 @@ import { BASE_URL_API, BASE_URL_API_V2 } from "../../../constants/constants";
 export const URLs = {
   TRANSACTIONS: `monitor/transactions`,
   API_KEY: `api_key`,
+  APPLICATION_CONFIG: `application-config`,
   FILES: `files`,
   FILE_MANAGEMENT: `files`,
+  FLEXSTORE: `flexstore`,
   VERSION: `version`,
   MESSAGES: `monitor/messages`,
   BUILDS: `monitor/builds`,

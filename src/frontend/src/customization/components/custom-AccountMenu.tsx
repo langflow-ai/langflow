@@ -12,9 +12,11 @@ import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
+import { useNavigate } from "react-router-dom";
 
 export function CustomAccountMenu() {
   const { mutate: mutationLogout } = useLogout();
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     if (envConfig.keycloakEnabled) {
@@ -50,6 +52,9 @@ export function CustomAccountMenu() {
       </DropdownMenuTrigger>
       <HeaderMenuItems position="right" classNameSize="w-[200px]">
         <div className="py-1">
+          <HeaderMenuItemButton onClick={() => navigate("/settings/general")} icon="settings">
+            Settings
+          </HeaderMenuItemButton>
           <HeaderMenuItemButton onClick={handleLogout} icon="log-out">
             Logout
           </HeaderMenuItemButton>

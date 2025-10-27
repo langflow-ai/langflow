@@ -13,12 +13,14 @@ import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import useAlertStore from "@/stores/alertStore";
+import useLogoStore from "@/stores/logoStore";
 import { useSidebar } from "@/contexts/sidebarContext";
 import { PanelLeft, Moon, Sun } from "lucide-react";
 import FlowMenu from "./components/FlowMenu";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import { useLocation } from "react-router-dom";
 import { useDarkStore } from "@/stores/darkStore";
+import { useGetAppConfig } from "@/controllers/API/queries/application-config";
 // import AutonomizeIcon from "@/icons/Autonomize";
 
 export default function AppHeader(): JSX.Element {
@@ -30,8 +32,29 @@ export default function AppHeader(): JSX.Element {
   const { toggleSidebar } = useSidebar();
   const dark = useDarkStore((state) => state.dark);
   const setDark = useDarkStore((state) => state.setDark);
+  const customLogoUrl = useLogoStore((state) => state.logoUrl);
+  const setLogoUrl = useLogoStore((state) => state.setLogoUrl);
   useTheme();
   const location = useLocation();
+
+  // Load logo from database on mount
+  const { data: logoConfig } = useGetAppConfig(
+    { key: "app-logo" },
+    {
+      retry: false,
+      refetchOnWindowFocus: false,
+      onError: () => {
+        // Silently ignore if logo config doesn't exist
+      },
+    }
+  );
+
+  // Update logo store when logo config is loaded from database
+  useEffect(() => {
+    if (logoConfig?.value) {
+      setLogoUrl(logoConfig.value);
+    }
+  }, [logoConfig, setLogoUrl]);
 
   const toggleTheme = () => {
     const newDark = !dark;
@@ -114,18 +137,24 @@ export default function AppHeader(): JSX.Element {
             <PanelLeft className="h-4 w-4" />
           </Button>
         </ShadTooltip>
-        <Button
-          unstyled
-          onClick={() => navigate("/")}
-          className="mr-1 flex h-8 w-24 items-center"
-          data-testid="icon-ChevronLeft"
-        >
-          {ENABLE_DATASTAX_LANGFLOW ? (
-            <DataStaxLogo className="fill-black dark:fill-[white]" />
-          ) : (
-            <img src={AutonomizeLogoUrl} alt="Autonomize Logo" />
+        <div className="flex items-center gap-2">
+          {/* Custom Logo - appears before Autonomize logo when uploaded */}
+          {customLogoUrl && !ENABLE_DATASTAX_LANGFLOW && (
+            <Button
+              unstyled
+              onClick={() => navigate("/")}
+              className="flex h-8 w-24 items-center"
+              data-testid="custom-logo-button"
+            >
+              <img
+                src={customLogoUrl}
+                alt="Custom Logo"
+                className="h-full w-full object-contain"
+              />
+            </Button>
           )}
-        </Button>
+
+        </div>
         <div className="text-white text-[12px] font-medium mt-2">
           <Breadcrumb items={breadcrumbItems} className="mb-6 text-white font-medium mt-2" />
         </div>
@@ -144,6 +173,23 @@ export default function AppHeader(): JSX.Element {
 
       {/* Right Section */}
       <div className="flex items-center gap-2">
+                  {/* Autonomize Logo - always visible */}
+          <Button
+            unstyled
+            onClick={() => navigate("/")}
+            className="mr-1 flex h-8 w-24 items-center"
+            data-testid="icon-ChevronLeft"
+          >
+            {ENABLE_DATASTAX_LANGFLOW ? (
+              <DataStaxLogo className="fill-black dark:fill-[white]" />
+            ) : (
+              <img
+                src={AutonomizeLogoUrl}
+                alt="Autonomize Logo"
+                className="h-full w-full object-contain"
+              />
+            )}
+          </Button>
         {/* Theme Toggle Button */}
         <ShadTooltip content={dark ? "Switch to Light Mode" : "Switch to Dark Mode"}>
           <Button

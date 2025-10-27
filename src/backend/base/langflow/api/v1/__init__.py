@@ -1,5 +1,7 @@
 from langflow.api.v1.agent_builder import router as agent_builder_router
+from langflow.api.v1.agent_marketplace import router as agent_marketplace_router
 from langflow.api.v1.api_key import router as api_key_router
+from langflow.api.v1.application_config import router as application_config_router
 from langflow.api.v1.chat import router as chat_router
 from langflow.api.v1.endpoints import router as endpoints_router
 from langflow.api.v1.files import router as files_router
@@ -14,7 +16,6 @@ from langflow.api.v1.monitor import router as monitor_router
 from langflow.api.v1.openai_responses import router as openai_responses_router
 from langflow.api.v1.projects import router as projects_router
 from langflow.api.v1.published_flows import router as published_flows_router
-from langflow.api.v1.agent_marketplace import router as agent_marketplace_router
 from langflow.api.v1.spec import router as spec_router
 from langflow.api.v1.starter_projects import router as starter_projects_router
 from langflow.api.v1.store import router as store_router
@@ -25,7 +26,9 @@ from langflow.api.v1.voice_mode import router as voice_mode_router
 
 __all__ = [
     "agent_builder_router",
+    "agent_marketplace_router",
     "api_key_router",
+    "application_config_router",
     "chat_router",
     "endpoints_router",
     "files_router",
@@ -40,7 +43,6 @@ __all__ = [
     "openai_responses_router",
     "projects_router",
     "published_flows_router",
-    "agent_marketplace_router",
     "spec_router",
     "starter_projects_router",
     "store_router",

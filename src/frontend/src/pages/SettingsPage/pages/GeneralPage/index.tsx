@@ -26,6 +26,7 @@ import type {
 } from "../../../../types/components";
 import useScrollToElement from "../hooks/use-scroll-to-element";
 import GeneralPageHeaderComponent from "./components/GeneralPageHeader";
+import LogoUploadForm from "./components/LogoUploadForm";
 import PasswordFormComponent from "./components/PasswordForm";
 import ProfilePictureFormComponent from "./components/ProfilePictureForm";
 
@@ -142,7 +143,11 @@ export const GeneralPage = () => {
       <GeneralPageHeaderComponent />
 
       <div className="flex w-full flex-col gap-6">
-        {ENABLE_PROFILE_ICONS && (
+        {/* Logo Upload - Application logo for header */}
+        <LogoUploadForm />
+
+        {/* Profile Picture - User avatar */}
+        {/* {ENABLE_PROFILE_ICONS && (
           <ProfilePictureFormComponent
             profilePicture={profilePicture}
             handleInput={handleInput}
@@ -150,16 +155,17 @@ export const GeneralPage = () => {
             handleGetProfilePictures={handleGetProfilePictures}
             userData={userData}
           />
-        )}
+        )} */}
 
-        {!autoLogin && (
+        {/* Password Change */}
+        {/* {!autoLogin && (
           <PasswordFormComponent
             password={password}
             cnfPassword={cnfPassword}
             handleInput={handleInput}
             handlePatchPassword={handlePatchPassword}
           />
-        )}
+        )} */}
       </div>
 
       <CustomTermsLinks />
