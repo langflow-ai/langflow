@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
@@ -30,10 +29,8 @@ from sqlmodel import select
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
 from langflow.api.v1.schemas import (
     ConfigResponse,
-    CustomComponentPatchResponse,
     CustomComponentRequest,
     CustomComponentResponse,
-    JsonPatch,
     RunResponse,
     SimplifiedAPIRequest,
     TaskStatusResponse,
@@ -852,144 +849,6 @@ async def custom_component_update(
         return jsonable_encoder(component_node)
     except Exception as exc:
         raise SerializationError.from_exception(exc, data=component_node) from exc
-
-
-@router.post("/custom_component/json-patch", status_code=HTTPStatus.OK)
-async def custom_component_json_patch(
-    *,
-    patch: JsonPatch,
-    user: CurrentActiveUser,
-):
-    """Update a custom component using JSON Patch operations (RFC 6902).
-
-    This endpoint allows for partial updates to a custom component using JSON Patch operations.
-    The operations are applied in order, and the resulting component is validated before returning.
-    This is more efficient than the traditional update endpoint for frequent small changes.
-
-    Args:
-        patch: The JSON Patch operations to apply
-        user: The current user
-
-    Returns:
-        CustomComponentPatchResponse: A lightweight response with information about the applied patch
-
-    Raises:
-        HTTPException: If the patch operations are invalid
-    """
-    try:
-        # Extract the code and template from the patch operations
-        code = None
-        template = None
-        field = None
-        field_value = None
-        tool_mode = False
-
-        # Process patch operations to extract necessary data
-        for op in patch.operations:
-            if op.path == "/code" and op.op == "replace":
-                code = op.value
-            elif op.path == "/template" and op.op == "replace":
-                template = op.value
-            elif op.path.startswith("/field/") and op.op == "replace":
-                field = op.path.split("/")[-1]
-                field_value = op.value
-            elif op.path == "/tool_mode" and op.op == "replace":
-                tool_mode = op.value
-
-        if not code and not template:
-            raise HTTPException(
-                status_code=400, detail="At least one of 'code' or 'template' must be provided in the patch operations"
-            )
-
-        # Create a component instance
-        component = Component(_code=code) if code else None
-
-        # If we have both code and template, build the component
-        if component and template:
-            component_node, cc_instance = build_custom_component_template(
-                component,
-                user_id=user.id,
-            )
-
-            # Apply tool_mode if specified
-            component_node["tool_mode"] = tool_mode
-
-            # IMPORTANT: component_node now has the freshly built template with correct load_from_db values
-            # We should use this template, not the old one from the frontend
-
-            # Apply field updates if specified
-            if field and field_value is not None:
-                if hasattr(cc_instance, "set_attributes"):
-                    # Use the rebuilt template from component_node, not the old one from frontend
-                    rebuilt_template = component_node.get("template", {})
-                    params = {}
-
-                    for key, value_dict in rebuilt_template.items():
-                        if isinstance(value_dict, dict):
-                            value = value_dict.get("value")
-                            input_type = str(value_dict.get("_input_type"))
-                            params[key] = parse_value(value, input_type)
-
-                    load_from_db_fields = [
-                        field_name
-                        for field_name, field_dict in rebuilt_template.items()
-                        if isinstance(field_dict, dict) and field_dict.get("load_from_db") and field_dict.get("value")
-                    ]
-
-                    if isinstance(cc_instance, Component):
-                        params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
-                        cc_instance.set_attributes(params)
-
-                # Update the build config with the field change
-                # IMPORTANT: Use the template from component_node (from rebuild), not the old template from frontend
-                # The rebuild sets up all the correct defaults, including load_from_db fields
-                updated_build_config = component_node.get("template", template)
-                await update_component_build_config(
-                    cc_instance,
-                    build_config=updated_build_config,
-                    field_value=field_value,
-                    field_name=field,
-                )
-
-                # Ensure code field is present
-                if "code" not in updated_build_config or not updated_build_config.get("code", {}).get("value"):
-                    updated_build_config = add_code_field_to_build_config(updated_build_config, code)
-
-                # Set the updated template back
-                component_node["template"] = updated_build_config
-
-                # Validate outputs
-                if isinstance(cc_instance, Component):
-                    await cc_instance.run_and_validate_update_outputs(
-                        frontend_node=component_node,
-                        field_name=field,
-                        field_value=field_value,
-                    )
-
-            # Generate response operations based on the changes made
-            response_operations = []
-
-            # Add operations for any fields that were updated
-            if field and field_value is not None:
-                response_operations.append({"op": "replace", "path": f"/template/{field}/value", "value": field_value})
-
-            # Return a response with the component node and response operations
-            return CustomComponentPatchResponse(
-                success=True,
-                updated_at=datetime.now(timezone.utc),
-                updated_fields=[op.path for op in patch.operations],
-                operations_applied=len(patch.operations),
-                component_node=component_node,
-                response_operations=response_operations,
-            )
-
-        # If we only have template updates without code, return an error
-        raise HTTPException(status_code=400, detail="Cannot process patch without valid code and template")
-
-    except Exception as exc:
-        if isinstance(exc, HTTPException):
-            raise
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/config")

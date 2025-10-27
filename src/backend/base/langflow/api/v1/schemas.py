@@ -527,27 +527,3 @@ class JsonPatch(BaseModel):
     """Model for a JSON Patch document as defined in RFC 6902."""
 
     operations: list[PatchOperation] = Field(..., description="List of patch operations to apply")
-
-
-class CustomComponentPatchResponse(BaseModel):
-    """Response model for Custom Component JSON Patch operations."""
-
-    success: bool = Field(default=True, description="Whether the patch was successful")
-    updated_at: datetime = Field(..., description="When the component was updated")
-    updated_fields: list[str] = Field(default_factory=list, description="List of fields that were updated by the patch")
-    operations_applied: int = Field(..., description="Number of operations that were applied")
-    component_node: dict = Field(..., description="The updated component node")
-    response_operations: list[PatchOperation] = Field(
-        default_factory=list, description="JSON patch operations to apply on the frontend"
-    )
-
-
-class JsonPatchResponse(BaseModel):
-    """Response model for JSON Patch operations."""
-
-    id: UUID = Field(..., description="The ID of the patched flow")
-    success: bool = Field(default=True, description="Whether the patch was successful")
-    updated_at: datetime = Field(..., description="When the flow was updated")
-    updated_fields: list[str] = Field(default_factory=list, description="List of fields that were updated by the patch")
-    operations_applied: int = Field(..., description="Number of operations that were applied")
-    folder_id: UUID | None = Field(None, description="The folder ID of the flow (for refetching)")
