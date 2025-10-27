@@ -22,7 +22,7 @@ from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
-from langflow.api.v1.schemas import FlowListCreate, JsonPatch
+from langflow.api.v1.schemas import FlowListCreate, JsonPatch, JsonPatchResponse
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import (
@@ -623,14 +623,14 @@ async def apply_json_patch_to_flow(flow: Flow, patch: JsonPatch) -> Flow:
         return patched_flow
 
 
-@router.patch("/{flow_id}/json-patch", response_model=FlowRead, status_code=200)
+@router.patch("/{flow_id}/json-patch", response_model=JsonPatchResponse, status_code=200)
 async def patch_flow(
     *,
     session: DbSession,
     flow_id: UUID,
     patch: JsonPatch,
     current_user: CurrentActiveUser,
-) -> Flow:
+) -> JsonPatchResponse:
     """Update a flow using JSON Patch operations (RFC 6902).
 
     This endpoint allows for partial updates to a flow using JSON Patch operations.
@@ -709,4 +709,13 @@ async def patch_flow(
 
         raise HTTPException(status_code=500, detail=str(e)) from e
     else:
-        return db_flow
+        # Create a lightweight response instead of returning the entire flow
+        updated_fields = [op.path for op in patch.operations]
+        return JsonPatchResponse(
+            id=db_flow.id,
+            success=True,
+            updated_at=db_flow.updated_at,
+            updated_fields=updated_fields,
+            operations_applied=len(patch.operations),
+            folder_id=db_flow.folder_id,
+        )

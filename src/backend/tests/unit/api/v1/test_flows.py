@@ -338,8 +338,11 @@ async def test_patch_flow_json_patch_success(client: AsyncClient, flow, logged_i
     )
 
     assert response.status_code == 200
-    assert response.json()["name"] == "Updated Flow Name"
-    assert response.json()["id"] == str(flow.id)
+    response_data = response.json()
+    assert response_data["id"] == str(flow.id)
+    assert response_data["success"] is True
+    assert response_data["operations_applied"] == 1
+    assert "/name" in response_data["updated_fields"]
 
 
 async def test_patch_flow_json_patch_not_found(client: AsyncClient, logged_in_headers):
@@ -397,8 +400,20 @@ async def test_patch_flow_json_patch_complex_operations(client: AsyncClient, flo
     )
 
     assert response.status_code == 200
-    assert response.json()["name"] == "Complex Update"
-    assert response.json()["description"] == "Updated description"
+    response_data = response.json()
+    assert response_data["success"] is True
+    assert response_data["operations_applied"] == 2
+    assert "/name" in response_data["updated_fields"]
+    assert "/description" in response_data["updated_fields"]
+
+    # Verify the changes by fetching the flow
+    verify_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    verify_data = verify_response.json()
+    assert verify_data["name"] == "Complex Update"
+    assert verify_data["description"] == "Updated description"
 
 
 async def test_patch_flow_json_patch_data_field(client: AsyncClient, flow, logged_in_headers):
@@ -413,7 +428,17 @@ async def test_patch_flow_json_patch_data_field(client: AsyncClient, flow, logge
     )
 
     assert response.status_code == 200
-    assert response.json()["data"] == new_data
+    response_data = response.json()
+    assert response_data["success"] is True
+    assert response_data["operations_applied"] == 1
+    assert "/data" in response_data["updated_fields"]
+
+    # Verify the data was updated by fetching the flow
+    verify_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    assert verify_response.json()["data"] == new_data
 
 
 async def test_backward_compatibility_traditional_patch_still_works(client: AsyncClient, flow, logged_in_headers):
@@ -456,4 +481,14 @@ async def test_json_patch_endpoint_is_separate(client: AsyncClient, flow, logged
     )
 
     assert response.status_code == 200
-    assert response.json()["name"] == "JSON Patch Update"
+    response_data = response.json()
+    assert response_data["success"] is True
+    assert response_data["operations_applied"] == 1
+    assert "/name" in response_data["updated_fields"]
+
+    # Verify the name was updated by fetching the flow
+    verify_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    assert verify_response.json()["name"] == "JSON Patch Update"

@@ -104,9 +104,22 @@ async def test_json_patch_vs_traditional_patch_comparison(client: AsyncClient, f
     # Assertions
     # Note: When updating ALL fields, JSON Patch may have overhead due to operations array
     # The real benefit is in partial updates (see test_json_patch_partial_update_efficiency)
-    assert response_json_patch.json()["name"] == new_name
-    assert response_json_patch.json()["description"] == new_description
-    assert response_json_patch.json()["data"] == new_data
+    response_data = response_json_patch.json()
+    assert response_data["success"] is True
+    assert response_data["operations_applied"] == 3
+    assert "/name" in response_data["updated_fields"]
+    assert "/description" in response_data["updated_fields"]
+    assert "/data" in response_data["updated_fields"]
+
+    # Verify the flow was actually updated by fetching it
+    verify_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    verify_data = verify_response.json()
+    assert verify_data["name"] == new_name
+    assert verify_data["description"] == new_description
+    assert verify_data["data"] == new_data
 
 
 @pytest.mark.asyncio
@@ -119,7 +132,17 @@ async def test_json_patch_null_value_clears_field(client: AsyncClient, flow, log
         headers=logged_in_headers,
     )
     assert response.status_code == 200
-    assert response.json()["endpoint_name"] == "test-endpoint"
+    response_data = response.json()
+    assert response_data["success"] is True
+    assert response_data["operations_applied"] == 1
+    assert "/endpoint_name" in response_data["updated_fields"]
+
+    # Verify the endpoint was set by fetching the flow
+    verify_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    assert verify_response.json()["endpoint_name"] == "test-endpoint"
 
     # Now clear it with null
     response = await client.patch(
@@ -129,7 +152,17 @@ async def test_json_patch_null_value_clears_field(client: AsyncClient, flow, log
     )
 
     assert response.status_code == 200
-    assert response.json()["endpoint_name"] is None
+    response_data = response.json()
+    assert response_data["success"] is True
+    assert response_data["operations_applied"] == 1
+    assert "/endpoint_name" in response_data["updated_fields"]
+
+    # Verify the endpoint was cleared by fetching the flow
+    verify_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    assert verify_response.json()["endpoint_name"] is None
 
     logger.info(
         "\n✅ NULL VALUE TEST PASSED:\n   Verified that null values in replace operations properly clear fields"
@@ -167,7 +200,17 @@ async def test_json_patch_partial_update_efficiency(client: AsyncClient, flow, l
     )
 
     assert response.status_code == 200
-    assert response.json()["name"] == "Just Name Change"
+    response_data = response.json()
+    assert response_data["success"] is True
+    assert response_data["operations_applied"] == 1
+    assert "/name" in response_data["updated_fields"]
+
+    # Verify the name was updated by fetching the flow
+    verify_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    assert verify_response.json()["name"] == "Just Name Change"
 
     separator = "=" * 70
     logger.info(
