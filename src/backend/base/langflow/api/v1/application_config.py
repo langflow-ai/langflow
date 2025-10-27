@@ -63,7 +63,8 @@ async def update_application_config(
         HTTPException: 400 if validation fails, 500 for server errors
     """
     try:
-        if not update.value:
+        # Allow empty value for app-logo (represents logo removal)
+        if not update.value and key != "app-logo":
             raise HTTPException(status_code=400, detail="Configuration value cannot be empty")
 
         config = await upsert_config(
