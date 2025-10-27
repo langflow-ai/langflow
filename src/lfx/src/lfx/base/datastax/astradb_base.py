@@ -14,6 +14,7 @@ from lfx.io import (
     SecretStrInput,
     StrInput,
 )
+from lfx.log.logger import logger
 
 
 class AstraDBBaseComponent(Component):
@@ -364,8 +365,8 @@ class AstraDBBaseComponent(Component):
                     "status": db.status if db.status != "ACTIVE" else None,
                     "org_id": db.org_id if db.org_id else None,
                 }
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as e:  # noqa: BLE001
+                logger.debug("Failed to get metadata for database %s: %s", db.name, e)
 
         return db_info_dict
 
