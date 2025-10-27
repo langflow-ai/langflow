@@ -608,6 +608,16 @@ async def apply_json_patch_to_flow(flow: Flow, patch: JsonPatch) -> Flow:
         # Apply the patch
         patched_flow_dict = json_patch_obj.apply(flow_dict)
 
+        # Ensure required fields are present
+        required_fields = {"name"}
+        for field in required_fields:
+            if field not in patched_flow_dict or patched_flow_dict[field] is None:
+                if hasattr(flow, field) and getattr(flow, field) is not None:
+                    patched_flow_dict[field] = getattr(flow, field)
+                else:
+                    msg = f"Required field '{field}' is missing after applying patch"
+                    raise HTTPException(status_code=400, detail=msg)
+
         # Convert back to Flow object
         patched_flow = Flow.model_validate(patched_flow_dict)
 

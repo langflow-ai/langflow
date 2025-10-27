@@ -1,10 +1,11 @@
 import type { UseMutationResult } from "@tanstack/react-query";
-import useFlowStore from "@/stores/flowStore";
+import { applyPatch, compare } from "fast-json-patch";
 import type {
   APIClassType,
   ResponseErrorDetailAPI,
   useMutationFunctionType,
 } from "@/types/api";
+import type { JsonPatchOperation } from "@/types/api/json-patch";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -27,7 +28,6 @@ export const usePostTemplateValue: useMutationFunctionType<
   ResponseErrorDetailAPI
 > = ({ parameterId, nodeId, node }, options?) => {
   const { mutate } = UseRequestProcessor();
-  const getNode = useFlowStore((state) => state.getNode);
 
   const postTemplateValueFn = async (
     payload: IPostTemplateValue,
@@ -36,26 +36,54 @@ export const usePostTemplateValue: useMutationFunctionType<
 
     if (!template) return;
     const lastUpdated = new Date().toISOString();
-    const response = await api.post<APIClassType>(
-      getURL("CUSTOM_COMPONENT", { update: "update" }),
-      {
-        code: template.code.value,
-        template: template,
-        field: parameterId,
-        field_value: payload.value,
-        tool_mode: payload.tool_mode,
-      },
-    );
-    const newTemplate = response.data;
-    newTemplate.last_updated = lastUpdated;
-    const newNode = getNode(nodeId)?.data?.node as APIClassType | undefined;
 
-    if (
-      !newNode?.last_updated ||
-      !newTemplate.last_updated ||
-      Date.parse(newNode.last_updated) < Date.parse(newTemplate.last_updated)
-    ) {
-      return newTemplate;
+    // Build JSON Patch operations
+    // LIMITATION: Backend still requires full template for component rebuild
+    // Future optimization: Make backend accept partial template updates
+    // For now, payload is similar size to traditional PATCH, but uses consistent JSON Patch format
+    const operations: JsonPatchOperation[] = [
+      {
+        op: "replace",
+        path: "/code",
+        value: template.code?.value,
+      },
+      {
+        op: "replace",
+        path: "/template",
+        value: template,
+      },
+      {
+        op: "replace",
+        path: `/field/${parameterId}`,
+        value: payload.value,
+      },
+      ...(payload.tool_mode !== undefined
+        ? [
+            {
+              op: "replace" as const,
+              path: "/tool_mode",
+              value: payload.tool_mode,
+            },
+          ]
+        : []),
+    ];
+
+    const response = await api.post(
+      getURL("CUSTOM_COMPONENT", { update: "json-patch" }),
+      { operations },
+    );
+    // If successful, apply changes efficiently using JSON Patch
+    if (response.data.success) {
+      // Compare old node with backend response to get minimal operations
+      const backendNode = response.data.component_node;
+      const operations = compare(node, backendNode);
+
+      // Apply only the changes to the existing node (more efficient!)
+      const updatedNode = { ...node };
+      applyPatch(updatedNode, operations);
+      updatedNode.last_updated = lastUpdated;
+
+      return updatedNode as APIClassType;
     }
 
     return undefined;
