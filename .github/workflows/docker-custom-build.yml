@@ -14,7 +14,8 @@ on:
 
 env:
   DOCKER_IMAGE: dlaiosa/xc475-graceful
-  DOCKER_TAG: dev-latest  # Change to 'latest' for production
+  # Use 'latest' for main, 'dev-latest' for feature branches
+  DOCKER_TAG: 'latest'
 
 jobs:
   # Step 1: Run smoke tests first
