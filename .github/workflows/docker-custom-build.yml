@@ -3,7 +3,7 @@ name: Docker Build & Push (Minimal)
 on:
   push:
     branches:
-      - feature/add-ai-chat-button-and-toggle  # Change to 'main' for production
+      - main # Change to 'main' for production
     paths:
       - 'src/**'
       - 'docker_example/**'
@@ -63,4 +63,4 @@ jobs:
         run: |
           echo "✅ Image pushed successfully!"
           echo "Image: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
-          echo "🚂 Railway will auto-deploy this image within a few minutes!"
+          echo "🚂 Railway will/should auto-deploy this image within a few minutes!"
