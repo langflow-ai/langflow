@@ -8,6 +8,7 @@ from langflow.api.v1.knowledge_bases import router as knowledge_bases_router
 from langflow.api.v1.login import router as login_router
 from langflow.api.v1.mcp import router as mcp_router
 from langflow.api.v1.mcp_projects import router as mcp_projects_router
+from langflow.api.v1.model_provider_credentials import router as model_provider_credentials_router
 from langflow.api.v1.models import router as models_router
 from langflow.api.v1.monitor import router as monitor_router
 from langflow.api.v1.openai_responses import router as openai_responses_router
@@ -30,6 +31,7 @@ __all__ = [
     "login_router",
     "mcp_projects_router",
     "mcp_router",
+    "model_provider_credentials_router",
     "models_router",
     "monitor_router",
     "openai_responses_router",
