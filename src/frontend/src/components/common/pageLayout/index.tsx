@@ -54,7 +54,7 @@ export default function PageLayout({
                   {betaIcon && <span className="store-beta-icon">Beta</span>}
                 </h2>
               </div>
-              <p className="text-muted-foreground dark:text-white/80">{description}</p>
+              <p className="text-muted-foreground dark:text-white/80 pl-8">{description}</p>
               </div>
               <div className="flex-shrink-0">{button && button}</div>
             </div>
