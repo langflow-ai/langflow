@@ -72,7 +72,7 @@ export default function AddMcpServerModal({
     setStdioName("");
     setStdioCommand("");
     setStdioArgs([""]);
-    setStdioEnv([]);
+    setStdioEnv({});
     setHttpName("");
     setHttpUrl("");
     setHttpEnv([]);
@@ -85,7 +85,9 @@ export default function AddMcpServerModal({
   const [stdioArgs, setStdioArgs] = useState<string[]>(
     initialData?.args || [""],
   );
-  const [stdioEnv, setStdioEnv] = useState<any>(initialData?.env || []);
+  const [stdioEnv, setStdioEnv] = useState<Record<string, string>>(
+    initialData?.env || {},
+  );
 
   // HTTP state
   const [httpName, setHttpName] = useState(initialData?.name || "");
@@ -103,7 +105,7 @@ export default function AddMcpServerModal({
       setStdioName(initialData?.name || "");
       setStdioCommand(initialData?.command || "");
       setStdioArgs(initialData?.args || [""]);
-      setStdioEnv(initialData?.env || []);
+      setStdioEnv(initialData?.env || {});
       setHttpName(initialData?.name || "");
       setHttpUrl(initialData?.url || "");
       setHttpEnv(initialData?.env || []);
@@ -142,7 +144,7 @@ export default function AddMcpServerModal({
           name,
           command: stdioCommand,
           args: stdioArgs.filter((a) => a.trim() !== ""),
-          env: parseEnvList(stdioEnv),
+          env: stdioEnv,
         });
         if (!initialData) {
           await queryClient.setQueryData(["useGetMCPServers"], (old: any) => {
@@ -154,7 +156,7 @@ export default function AddMcpServerModal({
         setStdioName("");
         setStdioCommand("");
         setStdioArgs([""]);
-        setStdioEnv([]);
+        setStdioEnv({});
         setError(null);
       } catch (err: any) {
         setError(err?.message || "Failed to add MCP server.");
