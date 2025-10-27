@@ -68,7 +68,6 @@ class DatabaseVariableService(VariableService, Service):
 
         return variable
 
-
     async def get_variable(
         self,
         user_id: UUID | str,
