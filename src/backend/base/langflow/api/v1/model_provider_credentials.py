@@ -1,7 +1,6 @@
 """API endpoints for model provider credentials CRUD operations."""
 
 from typing import Annotated
-from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
