@@ -1,9 +1,10 @@
 """API endpoints for model provider credentials CRUD operations."""
 
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.database.models.variable.model import VariableRead
@@ -19,6 +20,15 @@ class ModelProviderCredentialCreate(BaseModel):
     provider: str = Field(..., description="Model provider (e.g., OpenAI, Anthropic)")
     value: str = Field(..., description="API key value")
     description: str | None = Field(None, description="Optional description of the credential")
+
+    @field_validator("name", "provider", "value")
+    @classmethod
+    def validate_non_empty(cls, v: str) -> str:
+        """Validate that string fields are not empty."""
+        if not v or not v.strip():
+            msg = "Field cannot be empty"
+            raise ValueError(msg)
+        return v
 
 
 class ModelProviderCredentialResponse(BaseModel):
@@ -130,23 +140,26 @@ async def get_model_provider_credentials(
     return credentials
 
 
-@router.get("/{name}", response_model=VariableRead)
+@router.get("/{credential_id}", response_model=VariableRead)
 async def get_model_provider_credential(
-    name: str,
+    credential_id: UUID,
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
-    """Get a specific model provider credential.
+    """Get a specific model provider credential by ID.
 
     Args:
-        name: The name of the credential
+        credential_id: The ID of the credential
         current_user: Current authenticated user
         session: Database session
 
     Returns:
         VariableRead: The credential
     """
+    from langflow.services.database.models.variable.model import Variable
+    from sqlmodel import select
+
     try:
         variable_service = get_variable_service()
         if not isinstance(variable_service, DatabaseVariableService):
@@ -155,11 +168,10 @@ async def get_model_provider_credential(
                 detail="Variable service is not available",
             )
 
-        credential = await variable_service.get_variable_object(
-            user_id=current_user.id,
-            name=name,
-            session=session,
-        )
+        # Query variable by ID directly
+        stmt = select(Variable).where(Variable.id == credential_id, Variable.user_id == current_user.id)
+        credential = (await session.exec(stmt)).first()
+        
         if not credential:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -183,23 +195,27 @@ async def get_model_provider_credential(
         return credential
 
 
-@router.delete("/{name}", status_code=status.HTTP_200_OK)
-async def delete_model_provider_credential(
-    name: str,
+@router.get("/{credential_id}/value")
+async def get_model_provider_credential_value(
+    credential_id: UUID,
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
-    """Delete a model provider credential.
+    """Get the decrypted value of a model provider credential.
 
     Args:
-        name: The name of the credential
+        credential_id: The ID of the credential
         current_user: Current authenticated user
         session: Database session
 
     Returns:
-        dict: Success message
+        dict: The decrypted credential value
     """
+    from langflow.services.auth import utils as auth_utils
+    from langflow.services.database.models.variable.model import Variable
+    from sqlmodel import select
+
     try:
         variable_service = get_variable_service()
         if not isinstance(variable_service, DatabaseVariableService):
@@ -208,12 +224,70 @@ async def delete_model_provider_credential(
                 detail="Variable service is not available",
             )
 
-        # Get the existing credential first to verify it exists and is a model provider credential
-        existing_credential = await variable_service.get_variable_object(
-            user_id=current_user.id,
-            name=name,
-            session=session,
+        # Query variable by ID directly
+        stmt = select(Variable).where(Variable.id == credential_id, Variable.user_id == current_user.id)
+        credential = (await session.exec(stmt)).first()
+        
+        if not credential:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Model provider credential not found",
+            )
+
+        # Verify it's a model provider credential
+        if credential.type != CREDENTIAL_TYPE or credential.category != CATEGORY_GLOBAL:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Model provider credential not found",
+            )
+
+        # Decrypt the value directly
+        decrypted_value = auth_utils.decrypt_api_key(
+            credential.value, 
+            settings_service=variable_service.settings_service
         )
+
+        return {"value": decrypted_value}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve credential value: {e!s}",
+        ) from e
+
+
+@router.delete("/{credential_id}", status_code=status.HTTP_200_OK)
+async def delete_model_provider_credential(
+    credential_id: UUID,
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+):
+    """Delete a model provider credential by ID.
+
+    Args:
+        credential_id: The ID of the credential
+        current_user: Current authenticated user
+        session: Database session
+
+    Returns:
+        dict: Success message
+    """
+    from langflow.services.database.models.variable.model import Variable
+    from sqlmodel import select
+
+    try:
+        variable_service = get_variable_service()
+        if not isinstance(variable_service, DatabaseVariableService):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Variable service is not available",
+            )
+
+        # Query variable by ID directly
+        stmt = select(Variable).where(Variable.id == credential_id, Variable.user_id == current_user.id)
+        existing_credential = (await session.exec(stmt)).first()
 
         if not existing_credential:
             raise HTTPException(
@@ -228,10 +302,10 @@ async def delete_model_provider_credential(
                 detail="Model provider credential not found",
             )
 
-        # Delete the credential
+        # Delete the credential by name
         await variable_service.delete_variable(
             user_id=current_user.id,
-            name=name,
+            name=existing_credential.name,
             session=session,
         )
 
@@ -239,11 +313,11 @@ async def delete_model_provider_credential(
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Failed to delete model provider credential: {e!s}",
         ) from e
 
-    return {"detail": "Model provider credential deleted successfully"}
+    return {"detail": "Credential deleted successfully"}
 
 
 @router.get("/{name}/metadata", response_model=ModelProviderCredentialResponse)
