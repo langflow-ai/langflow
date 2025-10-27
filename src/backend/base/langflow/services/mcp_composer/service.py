@@ -79,13 +79,14 @@ class MCPComposerService(Service):
 
     def _is_port_available(self, port: int) -> bool:
         """Check if a port is available by trying to bind to it."""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                sock.bind(("0.0.0.0", port))  # noqa: S104
-                return True  # Port is available
+            sock.bind(("0.0.0.0", port))  # noqa: S104
+            return True  # Port is available
         except OSError:
             return False  # Port is in use/bound
+        finally:
+            sock.close()
 
     async def _kill_process_on_port(self, port: int) -> bool:
         """Kill the process using the specified port.
