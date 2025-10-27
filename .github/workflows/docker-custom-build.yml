@@ -63,24 +63,4 @@ jobs:
         run: |
           echo "✅ Image pushed successfully!"
           echo "Image: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
-          echo "Railway will auto-deploy if watching this image!"
-
-  # Step 3: Deploy to Railway
-  deploy-to-railway:
-    name: Deploy to Railway
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to Railway
-        run: |
-          curl -X POST https://backboard.railway.app/graphql/v2 \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "query": "mutation redeployService($serviceId: String!) { redeployService(id: $serviceId) { id } }",
-              "variables": {
-                "serviceId": "'"${{ secrets.RAILWAY_SERVICE_ID }}"'"
-              }
-            }'
-      - name: Confirm Redeploy Triggered
-        run: echo "Triggered redeploy for service ${{ secrets.RAILWAY_SERVICE_ID }}"
+          echo "🚂 Railway will auto-deploy this image within a few minutes!"
