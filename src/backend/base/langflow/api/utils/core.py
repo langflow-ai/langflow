@@ -19,7 +19,7 @@ from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.deps import get_session, session_scope
+from langflow.services.deps import get_session, get_settings_service, session_scope
 from langflow.services.store.utils import get_lf_version_from_pypi
 from langflow.utils.constants import LANGFLOW_GLOBAL_VAR_HEADER_PREFIX
 
@@ -409,3 +409,17 @@ def extract_global_variables_from_headers(headers) -> dict[str, str]:
         logger.exception("Failed to extract global variables from headers: %s", exc)
 
     return variables
+
+
+def check_run_endpoints_enabled() -> None:
+    """Check if run endpoints are enabled based on LANGFLOW_ONLY_CANVAS setting.
+
+    Raises:
+        HTTPException: 404 error if run endpoints are disabled in canvas-only mode.
+    """
+    settings_service = get_settings_service()
+    if settings_service.settings.only_canvas:
+        raise HTTPException(
+            status_code=404,
+            detail="Run endpoints are disabled in canvas-only mode",
+        )

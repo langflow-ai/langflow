@@ -2,7 +2,10 @@ import { useEffect } from "react";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
-import { ENABLE_FILE_MANAGEMENT } from "@/customization/feature-flags";
+import {
+  ENABLE_FILE_MANAGEMENT,
+  LANGFLOW_ONLY_CANVAS,
+} from "@/customization/feature-flags";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import FileManagerModal from "@/modals/fileManagerModal";
 import FilesRendererComponent from "@/modals/fileManagerModal/components/filesRendererComponent";
@@ -241,7 +244,7 @@ export default function InputFileComponent({
                         : (selectedFiles[0] ?? ""),
                     });
                   }}
-                  disabled={isDisabled}
+                  disabled={isDisabled || LANGFLOW_ONLY_CANVAS}
                   types={fileTypes}
                   isList={isList}
                 >

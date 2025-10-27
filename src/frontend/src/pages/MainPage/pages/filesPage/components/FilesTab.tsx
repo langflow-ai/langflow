@@ -15,6 +15,7 @@ import Loading from "@/components/ui/loading";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { useDeleteFilesV2 } from "@/controllers/API/queries/file-management/use-delete-files";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import { useCustomHandleBulkFilesDownload } from "@/customization/hooks/use-custom-handle-bulk-files-download";
 import { customPostUploadFileV2 } from "@/customization/hooks/use-custom-post-upload-file";
 import useUploadFile from "@/hooks/files/use-upload-file";
@@ -289,6 +290,7 @@ const FilesTab = ({
           }}
           id="upload-file-btn"
           data-testid="upload-file-btn"
+          disabled={LANGFLOW_ONLY_CANVAS}
         >
           <ForwardedIconComponent
             name="Plus"

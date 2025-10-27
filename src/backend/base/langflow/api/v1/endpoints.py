@@ -27,6 +27,7 @@ from lfx.services.settings.service import SettingsService
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
+from langflow.api.utils.core import check_run_endpoints_enabled
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -58,20 +59,6 @@ if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
 
 router = APIRouter(tags=["Base"])
-
-
-def check_run_endpoints_enabled() -> None:
-    """Check if run endpoints are enabled based on LANGFLOW_ONLY_CANVAS setting.
-
-    Raises:
-        HTTPException: 404 error if run endpoints are disabled in canvas-only mode.
-    """
-    settings_service = get_settings_service()
-    if settings_service.settings.only_canvas:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Run endpoints are disabled in canvas-only mode",
-        )
 
 
 async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIRequest:

@@ -12,6 +12,7 @@ from lfx.services.settings.service import SettingsService
 from lfx.utils.helpers import build_content_type_from_extension
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils.core import check_run_endpoints_enabled
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
@@ -45,6 +46,7 @@ async def upload_file(
     current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
+    dependencies=[Depends(check_run_endpoints_enabled)],
 ) -> UploadFileResponse:
     try:
         max_file_size_upload = settings_service.settings.max_file_size_upload
@@ -170,6 +172,7 @@ async def list_profile_pictures():
 async def list_files(
     flow: Annotated[Flow, Depends(get_flow)],
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    dependencies=[Depends(check_run_endpoints_enabled)],
 ):
     try:
         files = await storage_service.list_files(flow_id=str(flow.id))

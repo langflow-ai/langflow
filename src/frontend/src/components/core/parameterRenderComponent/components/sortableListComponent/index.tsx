@@ -3,6 +3,7 @@ import { ReactSortable } from "react-sortablejs";
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import { cn } from "@/utils/utils";
 import type { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
@@ -145,6 +146,7 @@ const SortableListComponent = ({
               editNode ? "py-1" : "py-2",
             )}
             data-testid="button_open_list_selection"
+            disabled={LANGFLOW_ONLY_CANVAS}
           >
             <div
               className={cn(

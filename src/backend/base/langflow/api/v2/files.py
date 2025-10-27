@@ -16,6 +16,7 @@ from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils.core import check_run_endpoints_enabled
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
@@ -91,6 +92,7 @@ async def upload_user_file(
     current_user: CurrentActiveUser,
     storage_service=Depends(get_storage_service),
     settings_service=Depends(get_settings_service),
+    dependencies=[Depends(check_run_endpoints_enabled)],
 ) -> UploadFileResponse:
     """Upload a file for the current user and track it in the database."""
     # Get the max allowed file size from settings (in MB)
@@ -308,6 +310,7 @@ async def download_files_batch(
     current_user: CurrentActiveUser,
     session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    dependencies=[Depends(check_run_endpoints_enabled)],
 ):
     """Download multiple files as a zip file by their IDs."""
     try:
@@ -457,6 +460,7 @@ async def edit_file_name(
     name: str,
     current_user: CurrentActiveUser,
     session: DbSession,
+    dependencies=[Depends(check_run_endpoints_enabled)],
 ) -> UploadFileResponse:
     """Edit the name of a file by its ID."""
     try:
