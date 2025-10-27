@@ -10,6 +10,7 @@ from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_
 from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
+from lfx.base.models.unified_models import get_api_key_for_provider
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput
@@ -143,9 +144,8 @@ class LanguageModelComponent(LCModelComponent):
             name="api_key",
             display_name="API Key",
             info="Model Provider API key",
-            required=False,
-            show=True,
             real_time_refresh=True,
+            advanced=True,
         ),
         MessageInput(
             name="input_value",
@@ -190,46 +190,27 @@ class LanguageModelComponent(LCModelComponent):
         provider = model.get("provider")
         metadata = model.get("metadata", {})
 
-        # Validate API key
-        # Try to get API key from database if not provided
-        api_key_value: str | None = getattr(self, "api_key", None)
-        if not api_key_value:
-            # Map provider to variable name (same as environment variables)
-            provider_variable_mapping = {
-                "OpenAI": "OPENAI_API_KEY",
-                "Anthropic": "ANTHROPIC_API_KEY",
-                "Google": "GOOGLE_API_KEY",
-                "Watsonx": "WATSONX_API_KEY",
-            }
+        # Get model class and parameter names from metadata
+        api_key_param = metadata.get("api_key_param", "api_key")
 
-            variable_name = provider_variable_mapping.get(provider)
-            if variable_name and hasattr(self, "user_id") and self.user_id:
-                # Try to get API key from encrypted database storage using variable service
-                try:
-                    if hasattr(self, "get_variable"):
-                        api_key: str | None = self.get_variable(variable_name, "value")
-                        if api_key:
-                            api_key_value = api_key
-                except Exception as e:
-                    import logging
+        # Get API key from user input or global variables
+        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
 
-                    logging.debug(f"Failed to get API key from database for {provider}: {e}")
-
-        # Final validation
-        if not api_key_value:
-            msg = f"{provider} API key is required when using {provider} provider. Please set it in the component input or store it as a global variable."
+        # Validate API key (Ollama doesn't require one)
+        if not api_key and provider != "Ollama":
+            msg = (
+                f"{provider} API key is required when using {provider} provider. "
+                f"Please provide it in the component or configure it globally as "
+                f"{provider.upper().replace(' ', '_')}_API_KEY."
+            )
             raise ValueError(msg)
 
-        # Set the final API key value
-        self.api_key = api_key_value
-
-        # Get model class and parameter names from metadata
+        # Get model class from metadata
         model_class = MODEL_CLASSES.get(metadata.get("model_class"))
         if model_class is None:
             msg = f"No model class defined for {model_name}"
             raise ValueError(msg)
         model_name_param = metadata.get("model_name_param", "model")
-        api_key_param = metadata.get("api_key_param", "api_key")
 
         # Check if this is a reasoning model that doesn't support temperature
         reasoning_models = metadata.get("reasoning_models", [])
@@ -240,7 +221,7 @@ class LanguageModelComponent(LCModelComponent):
         kwargs = {
             model_name_param: model_name,
             "streaming": stream,
-            api_key_param: self.api_key,
+            api_key_param: api_key,
         }
 
         if temperature is not None:

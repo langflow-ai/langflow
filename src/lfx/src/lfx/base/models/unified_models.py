@@ -1,8 +1,11 @@
 from functools import lru_cache
+from uuid import UUID
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
 from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS_DETAILED
 from lfx.base.models.openai_constants import OPENAI_MODELS_DETAILED
+from lfx.services.deps import get_variable_service, session_scope
+from lfx.utils.async_helpers import run_until_complete
 
 
 @lru_cache(maxsize=1)
@@ -19,6 +22,18 @@ def get_model_provider_metadata():
         "Google Generative AI": {
             "icon": "GoogleGenerativeAI",
             "variable_name": "GOOGLE_API_KEY",
+        },
+        "Google": {
+            "icon": "GoogleGenerativeAI",
+            "variable_name": "GOOGLE_API_KEY",
+        },
+        "Ollama": {
+            "icon": "Ollama",
+            "variable_name": "OLLAMA_BASE_URL",  # Ollama is local but can have custom URL
+        },
+        "IBM WatsonX": {
+            "icon": "WatsonxAI",
+            "variable_name": "WATSONX_APIKEY",
         },
     }
 
@@ -121,3 +136,49 @@ def get_unified_models_detailed(
         }
         for prov, models in provider_map.items()
     ]
+
+
+def get_api_key_for_provider(user_id: UUID | str, provider: str, api_key: str | None = None) -> str | None:
+    """Get API key from self.api_key or global variables.
+
+    Args:
+        user_id: The user ID to look up global variables for
+        provider: The provider name (e.g., "OpenAI", "Anthropic")
+        api_key: An optional API key provided directly
+
+    Returns:
+        The API key if found, None otherwise
+    """
+    # First check if user provided an API key directly
+    if api_key:
+        return api_key
+
+    # Map provider to global variable name
+    provider_variable_map = {
+        "OpenAI": "OPENAI_API_KEY",
+        "Anthropic": "ANTHROPIC_API_KEY",
+        "Google": "GOOGLE_API_KEY",
+        "IBM WatsonX": "WATSONX_APIKEY",
+    }
+
+    variable_name = provider_variable_map.get(provider)
+    if not variable_name:
+        return None
+
+    # Try to get from global variables
+    try:
+
+        async def _get_variable():
+            async with session_scope() as session:
+                variable_service = get_variable_service()
+                return await variable_service.get_variable(
+                    user_id=UUID(user_id),
+                    name=variable_name,
+                    field="",
+                    session=session,
+                )
+
+        return run_until_complete(_get_variable())
+    except RuntimeError:
+        # If we can't get the global variable, return None
+        return None
