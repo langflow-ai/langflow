@@ -248,7 +248,6 @@ async def get_model_provider_credential_value(
             credential.value, settings_service=variable_service.settings_service
         )
 
-        return {"value": decrypted_value}
     except HTTPException:
         raise
     except Exception as e:
@@ -256,6 +255,8 @@ async def get_model_provider_credential_value(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve credential value: {e!s}",
         ) from e
+
+    return {"value": decrypted_value}
 
 
 @router.delete("/{credential_id}", status_code=status.HTTP_200_OK)
