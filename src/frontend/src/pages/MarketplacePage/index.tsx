@@ -26,7 +26,7 @@ export default function MarketplacePage() {
   const [tagFilter, setTagFilter] = useState<string | "all">("all");
   const [pendingTag, setPendingTag] = useState<string | "all">("all");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<"name" | "date">("name");
+  const [sortBy, setSortBy] = useState<"name" | "date" | "tags">("name");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
 
   // Auto-adjust sort order based on sort type
@@ -35,6 +35,8 @@ export default function MarketplacePage() {
       setOrder("asc");  // A → Z for names
     } else if (sortBy === "date") {
       setOrder("desc"); // Newest first for dates
+    } else if (sortBy === "tags") {
+      setOrder("asc");  // Alphabetical by tags
     }
   }, [sortBy]);
 
@@ -130,6 +132,7 @@ export default function MarketplacePage() {
                   <SelectContent className="dark:bg-black dark:text-white">
                     <SelectItem value="name" className="dark:text-white">Name</SelectItem>
                     <SelectItem value="date" className="dark:text-white">Published Date</SelectItem>
+                    <SelectItem value="tags" className="dark:text-white">Tags</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
