@@ -297,11 +297,12 @@ class MCPComposerService(Service):
             except Exception as e:  # noqa: BLE001
                 await logger.adebug(f"Error reading {stream_name}: {e}")
 
-    async def _ensure_port_available(self, port: int) -> None:
-        """Ensure a port is available, killing processes if necessary.
+    async def _ensure_port_available(self, port: int, current_project_id: str) -> None:
+        """Ensure a port is available, only killing untracked processes.
 
         Args:
             port: The port number to ensure is available
+            current_project_id: The project ID requesting the port
 
         Raises:
             MCPComposerPortError: If port cannot be made available
@@ -310,7 +311,23 @@ class MCPComposerService(Service):
         await logger.adebug(f"Port {port} availability check: {is_port_available}")
 
         if not is_port_available:
-            await logger.awarning(f"Port {port} is already in use. Attempting to kill the process using it.")
+            # Check if the port is being used by another tracked project
+            is_used_by_other, other_project_id = self._is_port_used_by_another_project(port, current_project_id)
+
+            if is_used_by_other:
+                # Port is being used by another tracked project - don't kill it
+                await logger.aerror(
+                    f"Port {port} is already in use by project {other_project_id}. "
+                    f"Will not kill legitimate MCP Composer process."
+                )
+                port_error_msg = (
+                    f"Port {port} is already in use by project {other_project_id}. "
+                    f"Please choose a different port or stop the other project's MCP Composer first."
+                )
+                raise MCPComposerPortError(port_error_msg)
+
+            # Port is in use but not by a tracked project - attempt to kill
+            await logger.awarning(f"Port {port} is already in use by an untracked process. Attempting to kill it.")
 
             # Try to kill the process using the port
             killed = await self._kill_process_on_port(port)
@@ -636,16 +653,6 @@ class MCPComposerService(Service):
                 no_host_error_msg = "No OAuth host provided"
                 raise MCPComposerConfigError(no_host_error_msg, project_id)
 
-            # Check if another project is using this port
-            is_used_by_other, other_project_id = self._is_port_used_by_another_project(project_port, project_id)
-            if is_used_by_other:
-                port_conflict_msg = (
-                    f"Port {project_port} is already in use by project {other_project_id}. "
-                    f"Please choose a different port or stop the other project's MCP Composer first."
-                )
-                await logger.aerror(port_conflict_msg)
-                raise MCPComposerPortError(port_conflict_msg)
-
             if project_id in self.project_composers:
                 composer_info = self.project_composers[project_id]
                 process = composer_info.get("process")
@@ -684,8 +691,8 @@ class MCPComposerService(Service):
                     if existing_port:
                         await self._kill_process_on_port(existing_port)
 
-            # Ensure port is available
-            await self._ensure_port_available(project_port)
+            # Ensure port is available (only kill untracked processes)
+            await self._ensure_port_available(project_port, project_id)
 
             # Retry loop: try starting the process multiple times
             last_error = None
@@ -699,7 +706,7 @@ class MCPComposerService(Service):
                         # Re-check port availability before each attempt to prevent race conditions
                         if retry_attempt > 1:
                             await logger.adebug(f"Re-checking port {project_port} availability before retry...")
-                            await self._ensure_port_available(project_port)
+                            await self._ensure_port_available(project_port, project_id)
 
                         process = await self._start_project_composer_process(
                             project_id,
