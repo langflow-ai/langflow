@@ -25,8 +25,8 @@ async def list_model_providers() -> list[str]:
 @router.get("", status_code=200)
 async def list_models(
     *,
-    providers: Annotated[
-        list[str] | None, Query(description="Repeat to include multiple providers", alias="providers")
+    provider: Annotated[
+        list[str] | None, Query(description="Repeat to include multiple providers")
     ] = None,
     model_name: str | None = None,
     model_type: str | None = None,
@@ -43,9 +43,9 @@ async def list_models(
 ):
     """Return model catalog filtered by query parameters.
 
-    Pass providers as repeated query params, e.g. `?providers=OpenAI&providers=Anthropic`.
+    Pass providers as repeated query params, e.g. `?provider=OpenAI&provider=Anthropic`.
     """
-    selected_providers: list[str] | None = providers  # Build metadata filters dict excluding None values
+    selected_providers: list[str] | None = provider
     metadata_filters = {
         k: v
         for k, v in {

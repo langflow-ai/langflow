@@ -117,6 +117,12 @@ OPENAI_EMBEDDING_MODEL_NAMES = [
     "text-embedding-ada-002",
 ]
 
+# Embedding models as detailed metadata
+OPENAI_EMBEDDING_MODELS_DETAILED = [
+    create_model_metadata(provider="OpenAI", name=name, icon="OpenAI", model_type="embeddings")
+    for name in OPENAI_EMBEDDING_MODEL_NAMES
+]
+
 # Backwards compatibility
 MODEL_NAMES = OPENAI_CHAT_MODEL_NAMES
 OPENAI_MODEL_NAMES = OPENAI_CHAT_MODEL_NAMES
