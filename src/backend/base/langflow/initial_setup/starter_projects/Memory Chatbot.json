@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Memory",
-            "id": "Memory-AMiO3",
+            "id": "Memory-da52R",
             "name": "messages_text",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "memory",
-            "id": "Prompt-EcnV1",
+            "id": "Prompt-oXqs9",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,19 +23,19 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Memory-AMiO3{œdataTypeœ:œMemoryœ,œidœ:œMemory-AMiO3œ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-EcnV1{œfieldNameœ:œmemoryœ,œidœ:œPrompt-EcnV1œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Memory-da52R{œdataTypeœ:œMemoryœ,œidœ:œMemory-da52Rœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-oXqs9{œfieldNameœ:œmemoryœ,œidœ:œPrompt-oXqs9œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Memory-AMiO3",
-        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-AMiO3œ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-EcnV1",
-        "targetHandle": "{œfieldNameœ: œmemoryœ, œidœ: œPrompt-EcnV1œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "Memory-da52R",
+        "sourceHandle": "{œdataTypeœ:œMemoryœ,œidœ:œMemory-da52Rœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-oXqs9",
+        "targetHandle": "{œfieldNameœ:œmemoryœ,œidœ:œPrompt-oXqs9œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-VS53R",
+            "id": "ChatInput-FZugO",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,25 +43,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-BqUng",
+            "id": "LanguageModelComponent-KXVZD",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-VS53R{œdataTypeœ:œChatInputœ,œidœ:œChatInput-VS53Rœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-BqUng{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-BqUngœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-VS53R",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-VS53Rœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-BqUng",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-BqUngœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__ChatInput-FZugO{œdataTypeœ:œChatInputœ,œidœ:œChatInput-FZugOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-KXVZD{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-KXVZDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-FZugO",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-FZugOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "LanguageModelComponent-KXVZD",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-KXVZDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-EcnV1",
+            "id": "Prompt-oXqs9",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -69,25 +69,25 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "LanguageModelComponent-BqUng",
+            "id": "LanguageModelComponent-KXVZD",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-EcnV1{œdataTypeœ:œPromptœ,œidœ:œPrompt-EcnV1œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-BqUng{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-BqUngœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-EcnV1",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-EcnV1œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-BqUng",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-BqUngœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__Prompt-oXqs9{œdataTypeœ:œPromptœ,œidœ:œPrompt-oXqs9œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-KXVZD{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-KXVZDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-oXqs9",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-oXqs9œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "LanguageModelComponent-KXVZD",
+        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-KXVZDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-BqUng",
+            "id": "LanguageModelComponent-KXVZD",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -95,7 +95,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-V3CP6",
+            "id": "ChatOutput-uTEe0",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -104,17 +104,17 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__LanguageModelComponent-BqUng{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-BqUngœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-V3CP6{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-V3CP6œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "source": "LanguageModelComponent-BqUng",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-BqUngœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-V3CP6",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-V3CP6œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__LanguageModelComponent-KXVZD{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-KXVZDœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-uTEe0{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-uTEe0œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "source": "LanguageModelComponent-KXVZD",
+        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-KXVZDœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-uTEe0",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-uTEe0œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-VS53R",
+          "id": "ChatInput-FZugO",
           "node": {
             "base_classes": [
               "Message"
@@ -368,7 +368,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-VS53R",
+        "id": "ChatInput-FZugO",
         "measured": {
           "height": 234,
           "width": 320
@@ -389,7 +389,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-V3CP6",
+          "id": "ChatOutput-uTEe0",
           "node": {
             "base_classes": [
               "Message"
@@ -649,7 +649,7 @@
         },
         "dragging": true,
         "height": 234,
-        "id": "ChatOutput-V3CP6",
+        "id": "ChatOutput-uTEe0",
         "measured": {
           "height": 234,
           "width": 320
@@ -668,7 +668,7 @@
       },
       {
         "data": {
-          "id": "note-jqsQE",
+          "id": "note-DYWXV",
           "node": {
             "description": "This flow extends the **Basic Prompting** template by adding a **Message History** component that can retrieve up to 100 previous chat messages as context for the current conversation.\n\n## Quickstart\n1. In the **Language Model** component, add your OpenAI API key, or select a different provider and model.\n2. Open the **Playground**, and then tell the LLM your name.\n3. Start a new chat session in the Playground, and then ask, `what is my name`. The LLM is able to retrieve your name from the stored chat history.\n\n## About the Message History component\nThe **Language Model** and **Agent** components have built-in chat memory that is enabled by default and functionally the same as the **Message History** component.\nOnly use the **Message History** component when you want to store or retrieve chat memory from an external chat memory database, or when you need to retrieve chat memory outside of the current session context, such as in a non-chat flow or by supplying memories from other chats to a different session. For more information, see [Store chat memory](https://docs.langflow.org/memory#store-chat-memory).",
             "display_name": "",
@@ -679,7 +679,7 @@
         },
         "dragging": false,
         "height": 666,
-        "id": "note-jqsQE",
+        "id": "note-DYWXV",
         "measured": {
           "height": 666,
           "width": 383
@@ -703,7 +703,7 @@
       },
       {
         "data": {
-          "id": "Prompt-EcnV1",
+          "id": "Prompt-oXqs9",
           "node": {
             "base_classes": [
               "Message"
@@ -844,7 +844,7 @@
         },
         "dragging": false,
         "height": 347,
-        "id": "Prompt-EcnV1",
+        "id": "Prompt-oXqs9",
         "measured": {
           "height": 347,
           "width": 320
@@ -863,7 +863,7 @@
       },
       {
         "data": {
-          "id": "Memory-AMiO3",
+          "id": "Memory-da52R",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -1217,7 +1217,7 @@
           "type": "Memory"
         },
         "dragging": false,
-        "id": "Memory-AMiO3",
+        "id": "Memory-da52R",
         "measured": {
           "height": 218,
           "width": 320
@@ -1231,7 +1231,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-BqUng",
+          "id": "LanguageModelComponent-KXVZD",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1254,15 +1254,22 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "last_updated": "2025-10-23T16:06:55.647Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "d840e2d4511e",
+              "code_hash": "ce0b00e37a88",
               "dependencies": {
                 "dependencies": [
                   {
                     "name": "langchain_anthropic",
                     "version": "0.3.14"
+                  },
+                  {
+                    "name": "langchain_ibm",
+                    "version": "0.3.19"
+                  },
+                  {
+                    "name": "langchain_ollama",
+                    "version": "0.2.1"
                   },
                   {
                     "name": "langchain_openai",
@@ -1273,7 +1280,7 @@
                     "version": null
                   }
                 ],
-                "total_dependencies": 3
+                "total_dependencies": 5
               },
               "keywords": [
                 "model",
@@ -1293,8 +1300,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1309,9 +1314,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
-                "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
                   "LanguageModel"
@@ -1325,7 +1327,7 @@
               "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "API Key",
                 "dynamic": false,
                 "info": "Model Provider API key",
@@ -1872,6 +1874,32 @@
                     },
                     "name": "gemma-2-27b",
                     "provider": "Google"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "base_url_param": "base_url",
+                      "context_length": 8192,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "ChatOllama",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "api_key_param": "apikey",
+                      "context_length": 8192,
+                      "model_class": "ChatWatsonx",
+                      "model_name_param": "model_id",
+                      "project_id_param": "project_id",
+                      "url_param": "url"
+                    },
+                    "name": "ChatWatsonx",
+                    "provider": "IBM WatsonX"
                   }
                 ],
                 "placeholder": "",
@@ -1906,7 +1934,9 @@
                   "Google",
                   "Google",
                   "Google",
-                  "Google"
+                  "Google",
+                  "Ollama",
+                  "IBM WatsonX"
                 ],
                 "real_time_refresh": true,
                 "required": false,
@@ -1996,28 +2026,28 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-BqUng",
+        "id": "LanguageModelComponent-KXVZD",
         "measured": {
-          "height": 451,
+          "height": 369,
           "width": 320
         },
         "position": {
-          "x": 2726.461588115707,
-          "y": 531.836022506743
+          "x": 2737.716725782635,
+          "y": 571.1952558022587
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -764.844258872758,
-      "y": -16.418392997046112,
-      "zoom": 0.5611097788947959
+      "x": -951.0046721811004,
+      "y": -59.87608823231869,
+      "zoom": 0.696567564577355
     }
   },
   "description": "Create a chatbot that saves and references previous messages, enabling the model to maintain context throughout the conversation.",
   "endpoint_name": null,
-  "id": "94ca7771-2001-4cfe-85c4-3dca64f7d8af",
+  "id": "d96c6662-764f-4c98-8bcf-2c925d2d72f0",
   "is_component": false,
   "last_tested_version": "1.6.4",
   "name": "Memory Chatbot",
