@@ -8,6 +8,7 @@ export interface PublishFlowPayload {
   version?: string;
   tags?: string[];
   description?: string;
+  flow_icon?: string;
 }
 
 export const usePublishFlow = () => {

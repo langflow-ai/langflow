@@ -23,7 +23,7 @@ export const useGetAppConfig: useQueryFunctionType<
 
   const getAppConfigFn = async () => {
     return await api.get<IApplicationConfig>(
-      `${getBackendUrl()}/api/v1/application-config/${params.key}`
+      `${getBackendUrl()}/api/v1/genesis-studio/application-config/${params.key}`
     );
   };
 

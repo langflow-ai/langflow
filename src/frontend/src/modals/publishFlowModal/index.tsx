@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { usePublishFlow, type PublishCheckResponse } from "@/controllers/API/queries/published-flows";
+import {
+  usePostUploadPresignedUrl,
+  useUploadToBlob,
+  usePostReadPresignedUrl,
+} from "@/controllers/API/queries/flexstore";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -18,6 +23,9 @@ import { validateFlowForPublish } from "@/utils/flowValidation";
 import { incrementPatchVersion } from "@/utils/versionUtils";
 import type { AllNodeType, EdgeType } from "@/types/flow";
 import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
+import { Upload, X } from "lucide-react";
+import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
+import { ALLOWED_IMAGE_INPUT_EXTENSIONS } from "@/constants/constants";
 
 interface PublishFlowModalProps {
   open: boolean;
@@ -39,7 +47,21 @@ export default function PublishFlowModal({
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Logo upload state
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [logoRemoved, setLogoRemoved] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const { mutate: publishFlow, isPending } = usePublishFlow();
+  const { mutateAsync: getUploadUrl } = usePostUploadPresignedUrl();
+  const { mutateAsync: uploadToBlob } = useUploadToBlob();
+  const { mutateAsync: getReadUrl } = usePostReadPresignedUrl();
+  const { validateFileSize } = useFileSizeValidator();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
@@ -73,6 +95,8 @@ export default function PublishFlowModal({
         setDescription("");
         setTags([]);
       }
+      // Reset logo removal flag when modal opens
+      setLogoRemoved(false);
     }
   }, [open, existingPublishedData, flowName]);
 
@@ -86,7 +110,116 @@ export default function PublishFlowModal({
     }
   }, [open, currentFlow]);
 
-  const handlePublish = () => {
+  // Logo upload handlers
+  const handleFileSelect = (file: File) => {
+    // Validate file type
+    const fileExtension = file.name.split(".").pop()?.toLowerCase();
+    if (!fileExtension || !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)) {
+      setErrorData({
+        title: "Invalid File Type",
+        list: [
+          `Please upload an image file (${ALLOWED_IMAGE_INPUT_EXTENSIONS.join(", ")})`,
+        ],
+      });
+      return;
+    }
+
+    // Validate file size (5MB limit)
+    if (!validateFileSize(file.size)) {
+      return; // Error message shown by validator
+    }
+
+    setLogoFile(file);
+    setLogoRemoved(false);
+
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoPreviewUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoFile(null);
+    setLogoPreviewUrl(null);
+    setLogoUrl(null);
+    setLogoRemoved(true);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const uploadLogoToAzure = async (): Promise<string | null> => {
+    if (!logoFile) return null;
+
+    try {
+      setIsUploadingLogo(true);
+
+      const fileExtension = logoFile.name.split(".").pop();
+      const fileName = `agent-logos/logo-${flowId}-${Date.now()}.${fileExtension}`;
+
+      // Step 1: Get presigned upload URL
+      const uploadResponse = await getUploadUrl({
+        sourceType: "azureblobstorage",
+        fileName: fileName,
+        sourceDetails: {
+          containerName: "ai-studio-v2",
+          storageAccount: "autonomizestorageaccount",
+        },
+      });
+
+      // Step 2: Upload file to Azure blob storage
+      await uploadToBlob({
+        presignedUrl: uploadResponse.presignedUrl.data.signedUrl,
+        file: logoFile,
+      });
+
+      // Step 3: Get presigned read URL
+      const readResponse = await getReadUrl({
+        sourceType: "azureblobstorage",
+        fileName: fileName,
+        sourceDetails: {
+          containerName: "ai-studio-v2",
+          storageAccount: "autonomizestorageaccount",
+        },
+      });
+
+      const logoReadUrl = readResponse.presignedUrl.data.signedUrl;
+      setLogoUrl(logoReadUrl);
+      setIsUploadingLogo(false);
+      return logoReadUrl;
+    } catch (error: any) {
+      console.error("Logo upload error:", error);
+      setIsUploadingLogo(false);
+      setErrorData({
+        title: "Logo Upload Failed",
+        list: [error.message || "Failed to upload logo to storage"],
+      });
+      return null;
+    }
+  };
+
+  const handlePublish = async () => {
     // Validate required fields
     if (!marketplaceName.trim()) {
       setErrorData({
@@ -121,6 +254,19 @@ export default function PublishFlowModal({
     // Validation passed - clear any previous errors and proceed with publish
     setValidationErrors([]);
 
+    // Upload logo if a new one was selected
+    let finalLogoUrl = logoRemoved ? null : (logoUrl || existingPublishedData?.flow_icon || null);
+    if (logoFile && !logoUrl && !logoRemoved) {
+      const uploadedLogoUrl = await uploadLogoToAzure();
+      if (uploadedLogoUrl) {
+        finalLogoUrl = uploadedLogoUrl;
+      } else {
+        // Logo upload failed, but we can still publish without it
+        // Error was already shown by uploadLogoToAzure
+        finalLogoUrl = null;
+      }
+    }
+
     publishFlow(
       {
         flowId,
@@ -129,6 +275,7 @@ export default function PublishFlowModal({
           version: version || undefined,
           description: description || undefined,
           tags: tags.length > 0 ? tags : undefined,
+          flow_icon: finalLogoUrl || undefined,
         },
       },
       {
@@ -137,10 +284,12 @@ export default function PublishFlowModal({
             title: "Flow published successfully!",
           });
           setOpen(false);
+          // Reset form
           setMarketplaceName("");
           setVersion("");
           setDescription("");
           setTags([]);
+          handleRemoveLogo();
         },
         onError: (error: any) => {
           setErrorData({
@@ -220,6 +369,65 @@ export default function PublishFlowModal({
             </p>
           </div>
 
+          {/* Agent Logo Upload Section */}
+          <div className="space-y-2">
+            <Label htmlFor="agent-logo">Agent Logo (Optional)</Label>
+            <div className="flex gap-4 items-start">
+              {/* Logo Preview */}
+              {!logoRemoved && (logoPreviewUrl || existingPublishedData?.flow_icon) && (
+                <div className="relative h-24 w-24 rounded-lg border bg-muted flex-shrink-0">
+                  <img
+                    src={logoPreviewUrl || existingPublishedData?.flow_icon || ""}
+                    alt="Agent logo preview"
+                    className="h-full w-full object-contain rounded-lg p-1"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 p-0"
+                    onClick={handleRemoveLogo}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              {/* Upload Dropzone */}
+              {(logoRemoved || (!logoPreviewUrl && !existingPublishedData?.flow_icon)) && (
+                <div
+                  className={`flex h-24 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed transition-colors ${
+                    isDragging
+                      ? "border-primary bg-primary/10"
+                      : "border-muted-foreground/25 hover:border-primary hover:bg-muted"
+                  }`}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    {isDragging ? "Drop logo here" : "Drag and drop or click to upload"}
+                  </span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    hidden
+                    accept={ALLOWED_IMAGE_INPUT_EXTENSIONS.join(",")}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileSelect(file);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Upload a logo for your agent (PNG, JPG, JPEG). This will be displayed in the marketplace.
+            </p>
+          </div>
+
           {validationErrors.length === 0 && (
             <div className="rounded-lg bg-muted p-4 text-sm space-y-2">
               <p className="font-medium">What happens when you publish?</p>
@@ -250,15 +458,19 @@ export default function PublishFlowModal({
           <Button
             variant="outline"
             onClick={() => setOpen(false)}
-            disabled={isPending}
+            disabled={isPending || isUploadingLogo}
           >
             Cancel
           </Button>
           <Button
             onClick={handlePublish}
-            disabled={isPending || validationErrors.length > 0}
+            disabled={isPending || isUploadingLogo || validationErrors.length > 0}
           >
-            {isPending ? "Publishing..." : "Publish to Marketplace"}
+            {isUploadingLogo
+              ? "Uploading Logo..."
+              : isPending
+              ? "Publishing..."
+              : "Publish to Marketplace"}
           </Button>
         </div>
       </DialogContent>

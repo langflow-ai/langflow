@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import AlertDropdown from "@/alerts/alertDropDown";
 import DataStaxLogo from "@/assets/DataStaxLogo.svg?react";
-import AutonomizeLogoUrl from "@/assets/autonomize-full-logo.png";
+// import AutonomizeLogoUrl from "@/assets/autonomize-full-logo.png";
+import AutonomizeLogoUrl from "@/assets/autonomize-poweredby-logo.png";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -97,9 +98,9 @@ export default function AppHeader(): JSX.Element {
     const state = location.state as { name?: string; fileName?: string } | undefined;
 
     // AI Studio (builder) hierarchy
-    if (pathname.startsWith("/agent-builder")) {
-      return [{ label: "AI Studio", href: "/agent-builder" }];
-    }
+    // if (pathname.startsWith("/agent-builder")) {
+    //   return [{ label: "AI Studio", href: "/agent-builder" }];
+    // }
 
     // Agent Marketplace hierarchy
     if (pathname.startsWith("/agent-marketplace")) {
@@ -123,7 +124,7 @@ export default function AppHeader(): JSX.Element {
     >
       {/* Left Section */}
       <div
-        className={`z-30 flex shrink-0 items-center gap-2`}
+        className={`z-30 flex shrink-0 items-center gap-7`}
         data-testid="header_left_section_wrapper"
       >
         <ShadTooltip content="Toggle Sidebar">

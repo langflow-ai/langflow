@@ -22,7 +22,7 @@ export const useUpdateAppConfig: useMutationFunctionType<
   ): Promise<IApplicationConfig> => {
     const { key, value, description } = payload;
     const res = await api.put<IApplicationConfig>(
-      `${getBackendUrl()}/api/v1/application-config/${key}`,
+      `${getBackendUrl()}/api/v1/genesis-studio/application-config/${key}`,
       {
         value,
         description,

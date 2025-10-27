@@ -91,10 +91,10 @@ export default function MarketplaceFlowCard({
       onClick={handleCardClick}
     >
       {/* Header */}
-      <div className="mb-3 flex items-start justify-between">
-        <div className="flex-1">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
           <h3 className="mb-1 truncate text-base font-semibold text-foreground" title={name}>
-            {name}           
+            {name}
             {/* Live Status Badge - Only for PUBLISHED flows */}
             {item.status === "PUBLISHED" && (
             <Badge
@@ -152,19 +152,31 @@ export default function MarketplaceFlowCard({
       <p className="mb-4 line-clamp-2 text-sm text-muted-foreground">
         {description}
       </p>
+      <div className="flex justify-between items-center mt-auto">
+        {/* Tags - Show only first tag */}
+        {tags.length > 0 && (
+          <div className="mt-auto flex flex-wrap items-center gap-2">
+            <Badge
+              variant="secondary"
+              size="xq"
+              className="gap-1 bg-[#F5F2FF] dark:bg-white/10 dark:text-white"
+            >
+              {tags[0]}
+            </Badge>
+          </div>
+        )}
 
-      {/* Tags - Show only first tag */}
-      {tags.length > 0 && (
-        <div className="mt-auto flex flex-wrap items-center gap-2">
-          <Badge
-            variant="secondary"
-            size="xq"
-            className="gap-1 bg-[#F5F2FF] dark:bg-white/10 dark:text-white"
-          >
-            {tags[0]}
-          </Badge>
-        </div>
-      )}
+          {/* Agent Logo */}
+          {item.flow_icon && (
+            // <div className="h-12 w-12 flex-shrink-0 rounded-lg border bg-muted overflow-hidden">
+              <img
+                src={item.flow_icon}
+                alt={`${name} logo`}
+                className="max-h-[48px] max-w-[85px] object-contain p-1"
+              />
+            // </div>
+          )}
+      </div>
     </div>
   );
 }

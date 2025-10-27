@@ -44,8 +44,19 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid", expand =
       onClick={item.flow_id ? handleCardClick : undefined}
     >
       {/* Header */}
-      <div className="mb-3 flex items-start justify-between">
-        <div className="flex-1">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        {/* Agent Logo */}
+        {item.flow_icon && (
+          <div className="h-12 w-12 flex-shrink-0 rounded-lg border bg-muted overflow-hidden">
+            <img
+              src={item.flow_icon}
+              alt={`${name} logo`}
+              className="h-full w-full object-contain p-1"
+            />
+          </div>
+        )}
+
+        <div className="flex-1 min-w-0">
           <h3 className="mb-1 truncate text-base font-semibold text-foreground" title={name}>
             {name}
           </h3>
