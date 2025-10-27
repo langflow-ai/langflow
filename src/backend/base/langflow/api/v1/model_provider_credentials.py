@@ -157,8 +157,9 @@ async def get_model_provider_credential(
     Returns:
         VariableRead: The credential
     """
-    from langflow.services.database.models.variable.model import Variable
     from sqlmodel import select
+
+    from langflow.services.database.models.variable.model import Variable
 
     try:
         variable_service = get_variable_service()
@@ -171,7 +172,7 @@ async def get_model_provider_credential(
         # Query variable by ID directly
         stmt = select(Variable).where(Variable.id == credential_id, Variable.user_id == current_user.id)
         credential = (await session.exec(stmt)).first()
-        
+
         if not credential:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -212,9 +213,10 @@ async def get_model_provider_credential_value(
     Returns:
         dict: The decrypted credential value
     """
+    from sqlmodel import select
+
     from langflow.services.auth import utils as auth_utils
     from langflow.services.database.models.variable.model import Variable
-    from sqlmodel import select
 
     try:
         variable_service = get_variable_service()
@@ -227,7 +229,7 @@ async def get_model_provider_credential_value(
         # Query variable by ID directly
         stmt = select(Variable).where(Variable.id == credential_id, Variable.user_id == current_user.id)
         credential = (await session.exec(stmt)).first()
-        
+
         if not credential:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -243,8 +245,7 @@ async def get_model_provider_credential_value(
 
         # Decrypt the value directly
         decrypted_value = auth_utils.decrypt_api_key(
-            credential.value, 
-            settings_service=variable_service.settings_service
+            credential.value, settings_service=variable_service.settings_service
         )
 
         return {"value": decrypted_value}
@@ -274,8 +275,9 @@ async def delete_model_provider_credential(
     Returns:
         dict: Success message
     """
-    from langflow.services.database.models.variable.model import Variable
     from sqlmodel import select
+
+    from langflow.services.database.models.variable.model import Variable
 
     try:
         variable_service = get_variable_service()
