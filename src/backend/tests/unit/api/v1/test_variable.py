@@ -37,7 +37,8 @@ async def test_create_variable(client: AsyncClient, generic_variable, logged_in_
     assert generic_variable["type"] == result["type"]
     assert generic_variable["default_fields"] == result["default_fields"]
     assert "id" in result
-    assert generic_variable["value"] != result["value"]  # Value should be encrypted
+    # GENERIC_TYPE variables should NOT be encrypted (stored as plaintext)
+    assert generic_variable["value"] == result["value"]
 
 
 @pytest.mark.usefixtures("active_user")
@@ -90,13 +91,13 @@ async def test_create_variable__variable_value_cannot_be_empty(
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_create_variable__httpexception(client: AsyncClient, generic_variable, logged_in_headers):
+async def test_create_variable__httpexception(client: AsyncClient, credential_variable, logged_in_headers):
     status_code = 418
     generic_message = "I'm a teapot"
 
     with mock.patch("langflow.services.auth.utils.encrypt_api_key") as m:
         m.side_effect = HTTPException(status_code=status_code, detail=generic_message)
-        response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
+        response = await client.post("api/v1/variables/", json=credential_variable, headers=logged_in_headers)
         result = response.json()
 
         assert response.status_code == status.HTTP_418_IM_A_TEAPOT
@@ -104,12 +105,12 @@ async def test_create_variable__httpexception(client: AsyncClient, generic_varia
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_create_variable__exception(client: AsyncClient, generic_variable, logged_in_headers):
+async def test_create_variable__exception(client: AsyncClient, credential_variable, logged_in_headers):
     generic_message = "Generic error message"
 
     with mock.patch("langflow.services.auth.utils.encrypt_api_key") as m:
         m.side_effect = Exception(generic_message)
-        response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
+        response = await client.post("api/v1/variables/", json=credential_variable, headers=logged_in_headers)
         result = response.json()
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
