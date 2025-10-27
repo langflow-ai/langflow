@@ -29,3 +29,4 @@ class ServiceType(str, Enum):
     PA_LOOKUP_SERVICE = "pa_lookup_service"
     CLAIM_AUTH_HISTORY_SERVICE = "claim_auth_history_service"
     ENCODER_PRO_SERVICE = "encoder_pro_service"
+    DOCUMENT_INTELLIGENCE_SERVICE = "document_intelligence_service"

@@ -24,7 +24,7 @@ class DocumentIntelligenceSettings(BaseSettings):
         return bool(self.ENDPOINT)
 
     model_config = SettingsConfigDict(
-        env_prefix="AZURE_DOCUMENT_INTELLIGENCE_",
+        env_prefix="AZURE_OCR_DEFAULT_",
         case_sensitive=True,
         validate_assignment=True
     )
