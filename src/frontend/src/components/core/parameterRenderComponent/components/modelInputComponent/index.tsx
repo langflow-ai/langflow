@@ -312,7 +312,10 @@ export default function ModelInputComponent({
                   PROVIDER_VARIABLE_MAPPING[category] || "",
                 ) && (
                   <div className="ml-2 text-xs text-accent-emerald-foreground flex items-center gap-1">
-                    <ForwardedIconComponent name="CheckCircle2" className="h-3 w-3" />
+                    <ForwardedIconComponent
+                      name="CheckCircle2"
+                      className="h-3 w-3"
+                    />
                     Configured
                   </div>
                 )}
