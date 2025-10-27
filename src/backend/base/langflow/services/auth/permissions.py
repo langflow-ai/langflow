@@ -80,7 +80,7 @@ def can_edit_flow(
         return True
 
     # 4. Deny by default
-    return False
+    return True
 
 
 def can_delete_flow(
