@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-from langflow.services.variable.constants import CATEGORY_GLOBAL, CREDENTIAL_TYPE
+from langflow.services.variable.constants import CATEGORY_LLM, CREDENTIAL_TYPE
 
 
 @pytest.fixture
@@ -48,9 +48,9 @@ async def test_create_model_provider_credential(client: AsyncClient, openai_cred
     result = response.json()
 
     assert response.status_code == status.HTTP_201_CREATED
-    assert result["name"] == "openai_api_key"  # Should be transformed
+    assert result["name"] == "OPENAI_API_KEY"  # Should match provider variable mapping
     assert result["type"] == CREDENTIAL_TYPE
-    assert result["category"] == CATEGORY_GLOBAL
+    assert result["category"] == CATEGORY_LLM
     assert result["default_fields"] == ["OpenAI", "api_key"]
     assert "id" in result
     # Value should be encrypted (different from original)
@@ -90,8 +90,8 @@ async def test_get_model_provider_credentials(
 
     # Check that both credentials are present
     credential_names = [cred["name"] for cred in result]
-    assert "openai_api_key" in credential_names
-    assert "anthropic_api_key" in credential_names
+    assert "OPENAI_API_KEY" in credential_names
+    assert "ANTHROPIC_API_KEY" in credential_names
 
 
 @pytest.mark.usefixtures("active_user")
@@ -131,7 +131,7 @@ async def test_get_model_provider_credential_by_id(client: AsyncClient, openai_c
 
     assert response.status_code == status.HTTP_200_OK
     assert result["id"] == credential_id
-    assert result["name"] == "openai_api_key"
+    assert result["name"] == "OPENAI_API_KEY"
     assert result["type"] == CREDENTIAL_TYPE
 
 
@@ -251,7 +251,8 @@ async def test_create_credential_with_special_characters(client: AsyncClient, lo
     result = response.json()
 
     assert response.status_code == status.HTTP_201_CREATED
-    assert result["name"] == "openai-gpt4_api_key_(production)"  # Should be transformed
+    # OpenAI-GPT4 is not in the standard mapping, so it uses the fallback format
+    assert result["name"] == "OPENAI-GPT4_API_KEY"  # Should use fallback format
     assert result["type"] == CREDENTIAL_TYPE
 
 

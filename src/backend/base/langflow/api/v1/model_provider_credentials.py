@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, field_validator
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.database.models.variable.model import VariableRead
 from langflow.services.deps import get_variable_service
-from langflow.services.variable.constants import CATEGORY_GLOBAL, CREDENTIAL_TYPE
+from langflow.services.variable.constants import CATEGORY_LLM, CREDENTIAL_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 
 
@@ -69,16 +69,54 @@ async def create_model_provider_credential(
                 detail="Variable service is not available",
             )
 
-        # Create a unique name that includes the provider
-        credential_name = f"{request.provider.lower()}_{request.name.lower().replace(' ', '_')}"
+        # Create a variable name matching the expected format (e.g., OPENAI_API_KEY)
+        # Map provider names to their variable name format
+        from lfx.base.models.unified_models import get_model_provider_variable_mapping
 
+        provider_variable_map = get_model_provider_variable_mapping()
+        credential_name = provider_variable_map.get(request.provider)
+
+        if not credential_name:
+            # Fallback: generate name from provider if not in mapping
+            credential_name = f"{request.provider.upper().replace(' ', '_')}_API_KEY"
+
+        # Check if credential already exists and update it, otherwise create new
+        from sqlmodel import select
+
+        from langflow.services.database.models.variable.model import Variable
+
+        stmt = select(Variable).where(Variable.user_id == current_user.id, Variable.name == credential_name)
+        existing_variable = (await session.exec(stmt)).first()
+
+        if existing_variable:
+            # Update existing credential using update_variable_fields to preserve all fields
+            from langflow.services.database.models.variable.model import VariableUpdate
+
+            variable_update = VariableUpdate(
+                id=existing_variable.id,
+                name=credential_name,
+                value=request.value,
+                type=CREDENTIAL_TYPE,
+                category=CATEGORY_LLM,
+                default_fields=[request.provider, "api_key"],
+            )
+            updated_var = await variable_service.update_variable_fields(
+                user_id=current_user.id,
+                variable_id=existing_variable.id,
+                variable=variable_update,
+                session=session,
+            )
+            # Convert to VariableRead
+            return VariableRead.model_validate(updated_var, from_attributes=True)
+
+        # Create new credential
         return await variable_service.create_variable(
             user_id=current_user.id,
             name=credential_name,
             value=request.value,
             default_fields=[request.provider, "api_key"],
             type_=CREDENTIAL_TYPE,
-            category=CATEGORY_GLOBAL,
+            category=CATEGORY_LLM,
             session=session,
         )
     except Exception as e:
@@ -119,8 +157,8 @@ async def get_model_provider_credentials(
             session=session,
         )
 
-        # Filter for model provider credentials (those with CREDENTIAL_TYPE and CATEGORY_GLOBAL)
-        credentials = [var for var in all_variables if var.type == CREDENTIAL_TYPE and var.category == CATEGORY_GLOBAL]
+        # Filter for model provider credentials (those with CREDENTIAL_TYPE and CATEGORY_LLM)
+        credentials = [var for var in all_variables if var.type == CREDENTIAL_TYPE and var.category == CATEGORY_LLM]
 
         # Filter by provider if specified
         if provider:
@@ -180,7 +218,7 @@ async def get_model_provider_credential(
             )
 
         # Verify it's a model provider credential
-        if credential.type != CREDENTIAL_TYPE or credential.category != CATEGORY_GLOBAL:
+        if credential.type != CREDENTIAL_TYPE or credential.category != CATEGORY_LLM:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
@@ -237,7 +275,7 @@ async def get_model_provider_credential_value(
             )
 
         # Verify it's a model provider credential
-        if credential.type != CREDENTIAL_TYPE or credential.category != CATEGORY_GLOBAL:
+        if credential.type != CREDENTIAL_TYPE or credential.category != CATEGORY_LLM:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
@@ -299,7 +337,7 @@ async def delete_model_provider_credential(
             )
 
         # Verify it's a model provider credential
-        if existing_credential.type != CREDENTIAL_TYPE or existing_credential.category != CATEGORY_GLOBAL:
+        if existing_credential.type != CREDENTIAL_TYPE or existing_credential.category != CATEGORY_LLM:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
@@ -362,7 +400,7 @@ async def get_model_provider_credential_metadata(
             )
 
         # Verify it's a model provider credential
-        if credential.type != CREDENTIAL_TYPE or credential.category != CATEGORY_GLOBAL:
+        if credential.type != CREDENTIAL_TYPE or credential.category != CATEGORY_LLM:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
@@ -419,7 +457,7 @@ async def get_credentials_by_provider(
         )
 
         # Filter for model provider credentials
-        credentials = [var for var in all_variables if var.type == CREDENTIAL_TYPE and var.category == CATEGORY_GLOBAL]
+        credentials = [var for var in all_variables if var.type == CREDENTIAL_TYPE and var.category == CATEGORY_LLM]
 
         # Filter by provider using list comprehension
         return [
