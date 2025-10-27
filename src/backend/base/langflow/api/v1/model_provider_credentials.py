@@ -212,7 +212,6 @@ async def delete_model_provider_credential(
         existing_credential = await variable_service.get_variable_object(
             user_id=current_user.id,
             name=name,
-            field="",
             session=session,
         )
 
@@ -276,7 +275,6 @@ async def get_model_provider_credential_metadata(
         credential = await variable_service.get_variable_object(
             user_id=current_user.id,
             name=name,
-            field="",
             session=session,
         )
 
