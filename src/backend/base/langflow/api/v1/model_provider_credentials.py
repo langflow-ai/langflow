@@ -115,19 +115,19 @@ async def get_model_provider_credentials(
 
         # Filter by provider if specified
         if provider:
-            provider_credentials = []
-            for cred in credentials:
-                if cred.default_fields and len(cred.default_fields) > 0:
-                    if cred.default_fields[0].lower() == provider.lower():
-                        provider_credentials.append(cred)
-            return provider_credentials
-
-        return credentials
+            return [
+                cred for cred in credentials
+                if cred.default_fields
+                and len(cred.default_fields) > 0
+                and cred.default_fields[0].lower() == provider.lower()
+            ]
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve model provider credentials: {e!s}",
         ) from e
+
+    return credentials
 
 
 @router.get("/{credential_id}", response_model=VariableRead)
@@ -172,8 +172,6 @@ async def get_model_provider_credential(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
             )
-
-        return credential
     except HTTPException:
         raise
     except Exception as e:
@@ -181,6 +179,8 @@ async def get_model_provider_credential(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve model provider credential: {e!s}",
         ) from e
+    else:
+        return credential
 
 
 @router.delete("/{credential_id}", status_code=status.HTTP_200_OK)
@@ -235,7 +235,6 @@ async def delete_model_provider_credential(
             session=session,
         )
 
-        return {"detail": "Model provider credential deleted successfully"}
     except HTTPException:
         raise
     except Exception as e:
@@ -243,6 +242,8 @@ async def delete_model_provider_credential(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to delete model provider credential: {e!s}",
         ) from e
+
+    return {"detail": "Model provider credential deleted successfully"}
 
 
 @router.get("/{credential_id}/metadata", response_model=ModelProviderCredentialResponse)
@@ -343,16 +344,16 @@ async def get_credentials_by_provider(
         # Filter for model provider credentials
         credentials = [var for var in all_variables if var.type == CREDENTIAL_TYPE and var.category == CATEGORY_GLOBAL]
 
-        # Filter by provider
-        provider_credentials = []
-        for cred in credentials:
-            if cred.default_fields and len(cred.default_fields) > 0:
-                if cred.default_fields[0].lower() == provider.lower():
-                    provider_credentials.append(cred)
+        # Filter by provider using list comprehension
+        return [
+            cred for cred in credentials
+            if cred.default_fields
+            and len(cred.default_fields) > 0
+            and cred.default_fields[0].lower() == provider.lower()
+        ]
 
-        return provider_credentials
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve credentials for provider {provider}: {e!s}",
-        )
+        ) from e
