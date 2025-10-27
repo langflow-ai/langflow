@@ -11,6 +11,7 @@ import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
 import ForwardedIconComponent from "../../components/common/genericIconComponent";
 import PageLayout from "../../components/common/pageLayout";
+import { SidebarProvider } from "@/components/ui/sidebar";
 export default function SettingsPage(): JSX.Element {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const hasStore = useStoreStore((state) => state.hasStore);
@@ -88,6 +89,7 @@ export default function SettingsPage(): JSX.Element {
   }
 
   return (
+    <SidebarProvider>
     <PageLayout
       backTo={-1 as To}
       title="Settings"
@@ -100,5 +102,6 @@ export default function SettingsPage(): JSX.Element {
         </div>
       </main>
     </PageLayout>
+    </SidebarProvider>
   );
 }
