@@ -29,7 +29,17 @@ if TYPE_CHECKING:
     from langflow.services.telemetry.service import TelemetryService
     from langflow.services.tracing.service import TracingService
     from langflow.services.variable.service import VariableService
+    from langflow.services.document_intelligence.service import DocumentIntelligenceService
 
+def get_document_intelligence_service() -> DocumentIntelligenceService:
+    """Retrieves the DocumentIntelligenceService instance from the service manager.
+
+    Returns:
+        DocumentIntelligenceService: The DocumentIntelligenceService instance.
+    """
+    from langflow.services.document_intelligence.factory import DocumentIntelligenceServiceFactory
+
+    return get_service(ServiceType.DOCUMENT_INTELLIGENCE_SERVICE, DocumentIntelligenceServiceFactory())
 
 def get_service(service_type: ServiceType, default=None):
     """Retrieves the service instance for the given service type.

@@ -345,11 +345,10 @@ class AzureDocumentIntelligenceComponent(BaseFileComponent):
     ) -> tuple[Data, str]:
         """Process a single file using the OCR service."""
         try:
-            from langflow.services.document_intelligence.factory import OCRServiceFactory
+            from langflow.services.deps import get_document_intelligence_service
             
             # Create OCR service directly
-            ocr_factory = OCRServiceFactory()
-            ocr_service = ocr_factory.create()
+            ocr_service = get_document_intelligence_service()
 
             with open(file_path, "rb") as file:
                 file_content = file.read()
