@@ -46,13 +46,13 @@ def upgrade() -> None:
     
     for key in provider_keys:
         op.execute(
-            f"""
-            UPDATE variable 
-            SET category = 'LLM' 
-            WHERE name = '{key}' 
-            AND (category = 'Global' OR category IS NULL)
-            AND type = 'Credential'
-            """
+            sa.text(
+                "UPDATE variable "
+                "SET category = 'LLM' "
+                "WHERE name = :key "
+                "AND (category = 'Global' OR category IS NULL) "
+                "AND type = 'Credential'"
+            ).bindparams(key=key)
         )
 
     # ### end Alembic commands ###
@@ -70,13 +70,13 @@ def downgrade() -> None:
     
     for key in provider_keys:
         op.execute(
-            f"""
-            UPDATE variable 
-            SET category = 'Global' 
-            WHERE name = '{key}' 
-            AND category = 'LLM'
-            AND type = 'Credential'
-            """
+            sa.text(
+                "UPDATE variable "
+                "SET category = 'Global' "
+                "WHERE name = :key "
+                "AND category = 'LLM' "
+                "AND type = 'Credential'"
+            ).bindparams(key=key)
         )
     
     conn = op.get_bind()
