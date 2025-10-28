@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useDurationStore } from "@/stores/durationStore";
 import { AnimatedNumber } from "../../common/animatedNumbers";
-import ForwardedIconComponent from "../../common/genericIconComponent";
 import Loading from "../../ui/loading";
 
 interface DurationDisplayProps {
@@ -16,7 +15,7 @@ export default function DurationDisplay({
   const {
     durations,
     setDuration,
-    incrementDuration,
+    startTimer,
     clearInterval: clearDurationInterval,
     setInterval: setDurationInterval,
   } = useDurationStore();
@@ -28,9 +27,17 @@ export default function DurationDisplay({
       return;
     }
 
+    // Start timer with current timestamp
+    startTimer(chatId);
+
     const intervalId = setInterval(() => {
-      incrementDuration(chatId);
-    }, 10);
+      // Update duration based on elapsed time from start
+      const startTime = useDurationStore.getState().startTimes[chatId];
+      if (startTime) {
+        const elapsed = Date.now() - startTime;
+        setDuration(chatId, elapsed);
+      }
+    }, 100);
 
     setDurationInterval(chatId, intervalId);
 

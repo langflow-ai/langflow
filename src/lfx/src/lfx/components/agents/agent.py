@@ -188,7 +188,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 },
             ],
         ),
-        *LCToolsAgentComponent._base_inputs,
+        *LCToolsAgentComponent.get_base_inputs(),
         # removed memory inputs from agent component
         # *memory_inputs,
         BoolInput(
