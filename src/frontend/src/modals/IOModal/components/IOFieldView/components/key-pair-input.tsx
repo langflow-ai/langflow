@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { nanoid } from "nanoid";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import IconComponent from "../../../../../components/common/genericIconComponent";
 import { Input } from "../../../../../components/ui/input";
 import { classNames } from "../../../../../utils/utils";
@@ -14,6 +14,26 @@ export type IOKeyPairInputProps = {
   testId?: string;
 };
 
+type Row = { id: string; key: string; value: string };
+
+const arrayToObject = (arr: Row[]) => {
+  return arr.reduce((obj, item) => {
+    obj[item.key] = item.value;
+    return obj;
+  }, {});
+};
+
+const objectToArray = (obj: Record<string, string>, oldData: Row[] = []) => {
+  const keys = Object.keys(obj || {});
+  if (keys.length === 0) {
+    return [{ key: "", value: "", id: nanoid() }];
+  }
+  return keys.map((key) => {
+    const oldItem = oldData.find((item) => item.key === key);
+    return oldItem || { key, value: obj[key] || "", id: nanoid() };
+  });
+};
+
 const IOKeyPairInput = ({
   value,
   onChange,
@@ -22,22 +42,11 @@ const IOKeyPairInput = ({
   isInputField,
   testId,
 }: IOKeyPairInputProps) => {
-  const newData = Object.keys(value || {}).map((key) => ({
-    key: key,
-    value: value[key],
-    id: nanoid(),
-  }));
-  if (newData.length === 0) {
-    newData.push({ key: "", value: "", id: nanoid() });
-  }
-  const [data, setData] = useState(newData);
+  const [data, setData] = useState<Row[]>(objectToArray(value, []));
 
-  const arrayToObject = (arr: any[]) => {
-    return arr.reduce((obj, item) => {
-      obj[item.key] = item.value;
-      return obj;
-    }, {});
-  };
+  useEffect(() => {
+    setData((oldData) => objectToArray(value, oldData));
+  }, [value, setData]);
 
   const handleKeyChange = (id: string, newKey: string) => {
     const item = data.find((item) => item.id === id);
@@ -46,6 +55,9 @@ const IOKeyPairInput = ({
         item.id === id ? { ...item, key: newKey } : item,
       );
       setData(newData);
+      if (newData.filter((kv) => kv.key === newKey).length > 1) {
+        return; // Prevent updating on duplicate keys
+      }
       onChange(arrayToObject(newData));
     }
   };
@@ -57,6 +69,9 @@ const IOKeyPairInput = ({
         item.id === id ? { ...item, value: newValue } : item,
       );
       setData(newData);
+      if (newData.filter((kv) => kv.key === item.key).length > 1) {
+        return; // Prevent updating on duplicate keys
+      }
       onChange(arrayToObject(newData));
     }
   };
