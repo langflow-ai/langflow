@@ -46,6 +46,8 @@ export default function ToolsTable({
   const [sidebarDescription, setSidebarDescription] = useState<string>("");
 
   const editedSelection = useRef<boolean>(false);
+  const applyingSelection = useRef<boolean>(false);
+  const previousRowsCount = useRef<number>(0);
 
   const { setOpen: setSidebarOpen } = useSidebar();
 
@@ -54,37 +56,55 @@ export default function ToolsTable({
   }, []);
 
   useEffect(() => {
+    if (!open) return;
+    previousRowsCount.current = rows.length;
     const initialData = cloneDeep(rows);
     setData(initialData);
     const filter = initialData.filter((row) => row.status === true);
     setSelectedRows(filter);
-  }, [rows, open]);
+    editedSelection.current = false;
+  }, [open]);
 
-  const applyInitialSelection = () => {
-    if (!agGrid.current?.api || editedSelection.current) return;
+  useEffect(() => {
+    if (!open || !selectedRows) return;
+    if (previousRowsCount.current === rows.length) {
+      return;
+    }
 
-    const initialData = cloneDeep(rows);
-    const filter = initialData.filter((row) => row.status === true);
+    previousRowsCount.current = rows.length;
+
+    const updatedData = cloneDeep(rows);
+    setData(updatedData);
+
+    // Preserve current selection by matching display_name/name
+    const updatedSelection = updatedData.filter((row) =>
+      selectedRows.some(
+        (selected) =>
+          (selected.display_name ?? selected.name) ===
+          (row.display_name ?? row.name),
+      ),
+    );
+    setSelectedRows(updatedSelection);
+  }, [rows]);
+
+  useEffect(() => {
+    if (!agGrid.current?.api || !selectedRows || !open) return;
+
+    applyingSelection.current = true;
 
     agGrid.current.api.forEachNode((node) => {
-      if (
-        filter.some(
-          (row) =>
-            (row.display_name ?? row.name) ===
-            (node.data.display_name ?? node.data.name),
-        )
-      ) {
-        node.setSelected(true);
-      } else {
-        node.setSelected(false);
-      }
+      const isSelected = selectedRows.some(
+        (row) =>
+          (row.display_name ?? row.name) ===
+          (node.data.display_name ?? node.data.name),
+      );
+      node.setSelected(isSelected);
     });
-  };
 
-  // Apply initial selection when data changes and grid is ready
-  useEffect(() => {
-    applyInitialSelection();
-  }, [rows, data]);
+    setTimeout(() => {
+      applyingSelection.current = false;
+    }, 0);
+  }, [selectedRows, data, open]);
 
   useEffect(() => {
     if (!open) {
@@ -197,11 +217,13 @@ export default function ToolsTable({
     },
   ];
   const handleSelectionChanged = (event) => {
-    if (open) {
-      const selectedData = event.api.getSelectedRows();
-      editedSelection.current = true;
-      setSelectedRows(selectedData);
+    if (!open) return;
+    if (applyingSelection.current) {
+      return;
     }
+    const selectedData = event.api.getSelectedRows();
+    editedSelection.current = true;
+    setSelectedRows(selectedData);
   };
 
   const handleSidebarInputChange = (
@@ -210,7 +232,7 @@ export default function ToolsTable({
   ) => {
     if (!focusedRow) return;
 
-    const originalName = focusedRow.display_name;
+    const originalName = focusedRow.display_name ?? focusedRow.name;
 
     setFocusedRow((prev) => (prev ? { ...prev, [field]: value } : null));
 
@@ -262,11 +284,6 @@ export default function ToolsTable({
     setSidebarOpen(true);
   };
 
-  const handleGridReady = () => {
-    // Apply initial selection when grid is ready
-    applyInitialSelection();
-  };
-
   const rowName = useMemo(() => {
     return parseString(focusedRow?.display_name || focusedRow?.name || "", [
       "space_case",
@@ -304,10 +321,8 @@ export default function ToolsTable({
             tableOptions={tableOptions}
             onRowClicked={handleRowClicked}
             getRowId={getRowId}
-            onGridReady={handleGridReady}
             pagination={true}
-            paginationPageSize={50}
-            paginationPageSizeSelector={[25, 50, 100, 200]}
+            paginationAutoPageSize={true}
           />
         </div>
       </main>
