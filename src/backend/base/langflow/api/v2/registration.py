@@ -78,7 +78,8 @@ def _save_registration(email: str, append: bool) -> bool:  # noqa: FBT001
         return True
 
 
-@router.post("/register", response_model=RegisterResponse)
+
+@router.post("/", response_model=RegisterResponse)
 async def register_user(request: RegisterRequest):
     """Register a new user with their email."""
     try:
@@ -95,7 +96,7 @@ async def register_user(request: RegisterRequest):
         raise HTTPException(status_code=500, detail=f"Registration failed: {e!s}") from e
 
 
-@router.get("/registrations")
+@router.get("/")
 async def get_registrations():
     """Get all registered users."""
     try:
@@ -105,10 +106,13 @@ async def get_registrations():
         raise HTTPException(status_code=500, detail=f"Failed to load registrations: {e!r}") from e
 
 
-@router.get("/")
+@router.get("/info")
 async def root():
     """Root endpoint."""
     return {
-        "service": "Langflow Registration API",
-        "endpoints": [{"path": "/register", "method": "POST"}, {"path": "/registrations", "method": "GET"}],
+        "service": "Langflow Desktop Registration API",
+        "endpoints": [
+            {"path": "/", "method": "POST"},
+            {"path": "/", "method": "GET"}
+        ]
     }
