@@ -78,7 +78,6 @@ def _save_registration(email: str, append: bool) -> bool:  # noqa: FBT001
         return True
 
 
-
 @router.post("/", response_model=RegisterResponse)
 async def register_user(request: RegisterRequest):
     """Register a new user with their email."""
@@ -111,8 +110,5 @@ async def root():
     """Root endpoint."""
     return {
         "service": "Langflow Desktop Registration API",
-        "endpoints": [
-            {"path": "/", "method": "POST"},
-            {"path": "/", "method": "GET"}
-        ]
+        "endpoints": [{"path": "/", "method": "POST"}, {"path": "/", "method": "GET"}],
     }
