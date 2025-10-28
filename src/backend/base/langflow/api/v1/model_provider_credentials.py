@@ -108,7 +108,7 @@ async def create_model_provider_credential(
         except (ValueError, KeyError):
             existing_variable = None
 
-        if existing_variable is not None:
+        if existing_variable is not None and existing_variable.id:
             # Update existing credential using update_variable_fields to preserve all fields
             from langflow.services.database.models.variable.model import VariableUpdate
 
@@ -119,6 +119,7 @@ async def create_model_provider_credential(
                 type=CREDENTIAL_TYPE,
                 default_fields=[request.provider, "api_key"],
             )
+
             updated_var = await variable_service.update_variable_fields(
                 user_id=current_user.id,
                 variable_id=existing_variable.id,
