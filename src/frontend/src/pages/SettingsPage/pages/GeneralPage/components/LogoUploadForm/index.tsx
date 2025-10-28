@@ -15,10 +15,10 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   usePostUploadPresignedUrl,
   useUploadToBlob,
-  usePostReadPresignedUrl,
 } from "@/controllers/API/queries/flexstore";
 import { useUpdateAppConfig } from "@/controllers/API/queries/application-config";
 import useAlertStore from "@/stores/alertStore";
+import { AppLogoDisplay } from "@/components/AppLogoDisplay";
 
 const LogoUploadForm = () => {
   const { logoUrl, setLogoUrl } = useLogoStore();
@@ -34,7 +34,6 @@ const LogoUploadForm = () => {
 
   const { mutateAsync: getUploadUrl } = usePostUploadPresignedUrl();
   const { mutateAsync: uploadToBlob } = useUploadToBlob();
-  const { mutateAsync: getReadUrl } = usePostReadPresignedUrl();
   const { mutateAsync: updateAppConfig } = useUpdateAppConfig();
 
   const handleFileSelect = (file: File) => {
@@ -168,27 +167,16 @@ const LogoUploadForm = () => {
         file: selectedFile,
       });
 
-      // Step 3: Get presigned read URL
-      const readResponse = await getReadUrl({
-        sourceType: "azureblobstorage",
-        fileName: fileName,
-        sourceDetails: {
-          containerName: "ai-studio-v2",
-          storageAccount: "autonomizestorageaccount",
-        },
-      });
-
-      const logoReadUrl = readResponse.presignedUrl.data.signedUrl;
-
-      // Step 4: Save the logo URL to database
+      // Step 3: Save ONLY the blob path to database (not signed URL)
+      // Frontend will generate fresh signed URLs on-demand when displaying the logo
       await updateAppConfig({
         key: "app-logo",
-        value: logoReadUrl,
-        description: "Application logo URL stored in Azure blob storage",
+        value: fileName,  // Store blob path like "app-logo/logo-xxxxx.png"
+        description: "Application logo blob path",
       });
 
-      // Step 5: Save the read URL to logoStore (local state)
-      setLogoUrl(logoReadUrl);
+      // Step 4: Save the blob path to logoStore (will be converted to signed URL on display)
+      setLogoUrl(fileName);
 
       setSuccessData({
         title: "Logo Uploaded Successfully",
@@ -222,11 +210,20 @@ const LogoUploadForm = () => {
           {!isLogoRemoved && (previewUrl || logoUrl) && (
             <div className="flex items-center gap-4">
               <div className="flex h-20 w-20 items-center justify-center rounded-lg border bg-muted">
-                <img
-                  src={previewUrl || logoUrl || ""}
-                  alt="Logo preview"
-                  className="h-full w-full rounded-lg object-contain"
-                />
+                {previewUrl ? (
+                  // Local file preview (before upload)
+                  <img
+                    src={previewUrl}
+                    alt="Logo preview"
+                    className="h-full w-full rounded-lg object-contain"
+                  />
+                ) : (
+                  // Existing logo from database (blob path) - generate signed URL
+                  <AppLogoDisplay
+                    blobPath={logoUrl}
+                    className="h-full w-full rounded-lg object-contain"
+                  />
+                )}
               </div>
               <Button
                 type="button"

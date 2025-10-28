@@ -11,6 +11,7 @@ import { MoreHorizontal, Pencil, Archive, Trash2, Circle } from "lucide-react";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useUnpublishFlow, useDeletePublishedFlow } from "@/controllers/API/queries/published-flows";
 import useAlertStore from "@/stores/alertStore";
+import { AgentLogo } from "@/components/AgentLogo";
 
 interface MarketplaceFlowCardProps {
   item: any;
@@ -167,15 +168,12 @@ export default function MarketplaceFlowCard({
         )}
 
           {/* Agent Logo */}
-          {item.flow_icon && (
-            // <div className="h-12 w-12 flex-shrink-0 rounded-lg border bg-muted overflow-hidden">
-              <img
-                src={item.flow_icon}
-                alt={`${name} logo`}
-                className="max-h-[48px] max-w-[85px] object-contain p-1"
-              />
-            // </div>
-          )}
+          <AgentLogo
+            blobPath={item.flow_icon}
+            updatedAt={item.flow_icon_updated_at}
+            altText={`${name} logo`}
+            className="max-h-[48px] max-w-[85px]"
+          />
       </div>
     </div>
   );

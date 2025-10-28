@@ -12,6 +12,8 @@ export interface PublishCheckResponse {
   version?: string | null;
   tags?: string[] | null;
   description?: string | null;
+  flow_icon?: string | null;  // Blob path for agent logo
+  flow_icon_updated_at?: string | null;  // ISO timestamp when logo was last updated
 }
 
 export const useCheckFlowPublished = (flowId: string | undefined) => {

@@ -92,6 +92,9 @@ async def publish_flow(
         existing.description = payload.description or original_flow.description  # Use payload description if provided, else denormalized
         existing.flow_name = cloned_flow.name  # Denormalized
         existing.flow_icon = payload.flow_icon or existing.flow_icon  # Use uploaded logo or keep existing
+        # Update flow_icon_updated_at timestamp when logo changes
+        if payload.flow_icon and payload.flow_icon != existing.flow_icon:
+            existing.flow_icon_updated_at = datetime.now(timezone.utc)
         existing.published_by_username = current_user.username  # Denormalized
         existing.published_at = datetime.now(timezone.utc)
         existing.updated_at = datetime.now(timezone.utc)
@@ -136,6 +139,7 @@ async def publish_flow(
         description=payload.description or original_flow.description,  # Use payload description if provided, else denormalized for pagination
         flow_name=cloned_flow.name,  # Denormalized
         flow_icon=payload.flow_icon,  # Uploaded agent logo from marketplace modal
+        flow_icon_updated_at=datetime.now(timezone.utc) if payload.flow_icon else None,  # Set timestamp when logo is uploaded
         published_by_username=current_user.username,  # Denormalized
         published_at=datetime.now(timezone.utc),
         created_at=datetime.now(timezone.utc),

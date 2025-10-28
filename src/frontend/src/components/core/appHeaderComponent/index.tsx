@@ -22,6 +22,7 @@ import Breadcrumb from "@/components/common/Breadcrumb";
 import { useLocation } from "react-router-dom";
 import { useDarkStore } from "@/stores/darkStore";
 import { useGetAppConfig } from "@/controllers/API/queries/application-config";
+import { AppLogoDisplay } from "@/components/AppLogoDisplay";
 // import AutonomizeIcon from "@/icons/Autonomize";
 
 export default function AppHeader(): JSX.Element {
@@ -147,9 +148,8 @@ export default function AppHeader(): JSX.Element {
               className="flex h-8 w-24 items-center"
               data-testid="custom-logo-button"
             >
-              <img
-                src={customLogoUrl}
-                alt="Custom Logo"
+              <AppLogoDisplay
+                blobPath={customLogoUrl}
                 className="h-full w-full object-contain"
               />
             </Button>
