@@ -109,6 +109,19 @@ class DatabaseVariableService(VariableService, Service):
             variables_read.append(variable_read)
         return variables_read
 
+    async def get_variable_by_id(
+        self,
+        user_id: UUID | str,
+        variable_id: UUID | str,
+        session: AsyncSession,
+    ) -> Variable:
+        query = select(Variable).where(Variable.id == variable_id, Variable.user_id == user_id)
+        variable = (await session.exec(query)).first()
+        if not variable:
+            msg = f"{variable_id} variable not found."
+            raise ValueError(msg)
+        return variable
+
     async def get_by_category(
         self,
         user_id: UUID | str,
