@@ -60,6 +60,7 @@ class DatabaseVariableService(VariableService, Service):
                             from langflow.services.database.models.variable.model import VariableUpdate
 
                             variable_update = VariableUpdate(
+                                id=existing.id,
                                 value=value,
                                 default_fields=default_fields,
                             )
@@ -70,7 +71,7 @@ class DatabaseVariableService(VariableService, Service):
                                 session=session,
                             )
                         else:
-                            await self.update_variable(user_id, var_name, value, session)
+                            await self.update_variable(user_id, var_name, value, session=session)
                     else:
                         await self.create_variable(
                             user_id=user_id,
@@ -193,7 +194,9 @@ class DatabaseVariableService(VariableService, Service):
         db_variable.updated_at = datetime.now(timezone.utc)
 
         variable.value = variable.value or ""
-        if variable.type == CREDENTIAL_TYPE:
+        # Use the variable's type if provided, otherwise use the db_variable's type
+        variable_type = variable.type or db_variable.type
+        if variable_type == CREDENTIAL_TYPE:
             encrypted = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
             variable.value = encrypted
 
