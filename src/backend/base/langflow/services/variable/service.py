@@ -44,19 +44,20 @@ class DatabaseVariableService(VariableService, Service):
                 value = os.environ[var_name].strip()
                 query = select(Variable).where(Variable.user_id == user_id, Variable.name == var_name)
                 existing = (await session.exec(query)).first()
-                
+
                 # Set default_fields if this is a known provider variable
                 default_fields = []
                 if var_name in var_to_provider:
                     provider_name = var_to_provider[var_name]
                     default_fields = [provider_name, "api_key"]
-                
+
                 try:
                     if existing:
                         # Update the value, but also update default_fields if they're not set
                         if not existing.default_fields and default_fields:
                             # Use update_variable_fields to set both value and default_fields
                             from langflow.services.database.models.variable.model import VariableUpdate
+
                             variable_update = VariableUpdate(
                                 value=value,
                                 default_fields=default_fields,
@@ -152,7 +153,6 @@ class DatabaseVariableService(VariableService, Service):
             msg = f"{variable_id} variable not found."
             raise ValueError(msg)
         return variable
-
 
     async def list_variables(self, user_id: UUID | str, session: AsyncSession) -> list[str | None]:
         variables = await self.get_all(user_id=user_id, session=session)

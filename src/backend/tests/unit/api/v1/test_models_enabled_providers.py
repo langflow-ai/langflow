@@ -230,10 +230,6 @@ async def test_variables_multiple_credentials_all_redacted(
             assert variable["value"] is None
 
 
-
-
-
-
 @pytest.mark.usefixtures("active_user")
 async def test_enabled_providers_reflects_models_endpoint(client: AsyncClient, openai_credential, logged_in_headers):
     """Test that /models endpoint reflects same is_enabled status as /enabled_providers."""
