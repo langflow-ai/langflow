@@ -7,7 +7,7 @@ import pytest
 from langchain_openai import ChatOpenAI
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs.inputs import TableInput
-from lfx.components.llm_operations.structured_output import StructuredOutputComponent
+from lfx.components.processing.structured_output import StructuredOutputComponent
 from pydantic import BaseModel
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -59,7 +59,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output_base()
             assert isinstance(result, list)
             assert result == [{"field": "value"}]
@@ -180,7 +180,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="Invalid type: invalid_type"):
             component.build_structured_output()
 
-    @patch("lfx.components.llm_operations.structured_output.get_chat_result")
+    @patch("lfx.components.processing.structured_output.get_chat_result")
     def test_nested_output_schema(self, mock_get_chat_result):
         class ChildModel(BaseModel):
             child: str = "value"
@@ -219,7 +219,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, list)
         assert result == [{"parent": {"child": "value"}}]
 
-    @patch("lfx.components.llm_operations.structured_output.get_chat_result")
+    @patch("lfx.components.processing.structured_output.get_chat_result")
     def test_large_input_value(self, mock_get_chat_result):
         large_input = "Test input " * 1000
 
@@ -371,7 +371,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Remove exact duplicates but keep variations that have different field values.",
         )
 
-        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output()
 
             # Check that result is a Data object
@@ -417,27 +417,20 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Extract structured information from the input text.",
         )
 
-        # Attempt to build structured output with max_tokens=1
-        # Note: Some API versions may handle this gracefully and succeed,
-        # while others may raise BadRequestError. This test verifies error handling when it occurs.
-        try:
-            result = component.build_structured_output_base()
-            # If the API succeeds with max_tokens=1, that's also valid behavior
-            # Just verify we got some result back
-            assert result is not None, "Expected a result even with max_tokens=1"
-        except (ValueError, openai.BadRequestError) as exc_info:
-            # If an error is raised, verify it's related to max_tokens
-            error_message = str(exc_info.value)
-            assert any(
-                phrase in error_message
-                for phrase in [
-                    "max_tokens was reached",
-                    "max_tokens or model output limit was reached",
-                    "Could not finish the message because max_tokens",
-                    "BadRequestError",
-                    "with_structured_output also failed",  # Langchain fallback error message
-                ]
-            ), f"Expected max_tokens error but got: {error_message}"
+        # Expect BadRequestError due to max_tokens being reached
+        with pytest.raises(openai.BadRequestError) as exc_info:
+            component.build_structured_output_base()
+
+        # Verify the error message contains expected content (updated to match actual OpenAI error format)
+        error_message = str(exc_info.value)
+        assert any(
+            phrase in error_message
+            for phrase in [
+                "max_tokens was reached",
+                "max_tokens or model output limit was reached",
+                "Could not finish the message because max_tokens",
+            ]
+        ), f"Expected max_tokens error but got: {error_message}"
 
     @pytest.mark.skipif(
         not (os.getenv("OPENAI_API_KEY") or "").strip(),
@@ -614,7 +607,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output_base()
             # Should return the dict directly since there's no "objects" key
             assert isinstance(result, dict)
@@ -636,7 +629,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output_base()
             # Should return the string directly
             assert isinstance(result, str)
@@ -664,7 +657,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output_base()
             # Should return the entire result dict when responses is empty
             assert isinstance(result, dict)
@@ -694,7 +687,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         )
 
         with (
-            patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result),
+            patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result),
             pytest.raises(ValueError, match="No structured output returned"),
         ):
             component.build_structured_output()
@@ -727,7 +720,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output()
 
             # Check that result is a Data object
@@ -780,7 +773,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Extract ALL relevant instances that match the schema",
         )
 
-        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output()
 
             # Check that result is a Data object
@@ -825,7 +818,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Extract person info",
         )
 
-        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output()
 
             # Check that result is a Data object
@@ -867,7 +860,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Extract product info",
         )
 
-        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output()
 
             # Check that result is a Data object
@@ -919,7 +912,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_dataframe()
 
             # Check that result is a DataFrame object
@@ -968,7 +961,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_dataframe()
 
             # Check that result is a DataFrame object
@@ -1011,7 +1004,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         )
 
         with (
-            patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result),
+            patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result),
             pytest.raises(ValueError, match="No structured output returned"),
         ):
             component.build_structured_dataframe()
@@ -1041,7 +1034,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         )
 
         with (
-            patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result),
+            patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result),
             pytest.raises(ValueError, match="No structured output returned"),
         ):
             component.build_structured_dataframe()
@@ -1205,7 +1198,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         )
 
         with (
-            patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result),
+            patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result),
             patch.object(component, "_extract_output_with_langchain") as mock_lc_fallback,
         ):
             result = component.build_structured_output_base()
