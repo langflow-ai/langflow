@@ -53,8 +53,8 @@ async def test_create_model_provider_credential(client: AsyncClient, openai_cred
     assert result["category"] == CATEGORY_LLM
     assert result["default_fields"] == ["OpenAI", "api_key"]
     assert "id" in result
-    # Value should be encrypted (different from original)
-    assert result["value"] != openai_credential["value"]
+    # Value field should not be present in response (security)
+    assert "value" not in result
 
 
 @pytest.mark.usefixtures("active_user")
@@ -240,7 +240,7 @@ async def test_create_credential_with_special_characters(client: AsyncClient, lo
     """Test creating credentials with special characters in name and provider."""
     special_credential = {
         "name": "API Key (Production)",
-        "provider": "OpenAI-GPT4",
+        "provider": "OpenAI",  # Use valid provider name
         "value": "sk-test-key-with-special-chars-123",
         "description": "Production API key for OpenAI GPT-4",
     }
@@ -251,8 +251,8 @@ async def test_create_credential_with_special_characters(client: AsyncClient, lo
     result = response.json()
 
     assert response.status_code == status.HTTP_201_CREATED
-    # OpenAI-GPT4 is not in the standard mapping, so it uses the fallback format
-    assert result["name"] == "OPENAI-GPT4_API_KEY"  # Should use fallback format
+    # OpenAI is in the standard mapping, so it uses the mapped format
+    assert result["name"] == "OPENAI_API_KEY"  # Should use mapped format
     assert result["type"] == CREDENTIAL_TYPE
 
 
@@ -265,6 +265,25 @@ async def test_create_credential_empty_values(client: AsyncClient, logged_in_hea
 
     # Should fail validation
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_create_credential_invalid_provider(client: AsyncClient, logged_in_headers):
+    """Test creating credentials with invalid provider names."""
+    invalid_credential = {
+        "name": "API Key",
+        "provider": "InvalidProvider",
+        "value": "sk-test-key-123",
+        "description": "Test credential with invalid provider",
+    }
+
+    response = await client.post("api/v1/model-provider-credentials/", json=invalid_credential, headers=logged_in_headers)
+
+    # Should fail validation with 422
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    result = response.json()
+    assert "Invalid provider" in result["detail"][0]["msg"]
+    assert "InvalidProvider" in result["detail"][0]["msg"]
 
 
 @pytest.mark.usefixtures("active_user")

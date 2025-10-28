@@ -13,8 +13,11 @@ from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CATEGORY_LLM, CREDENTIAL_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 
+# Import the provider metadata to get valid provider names
+from lfx.base.models.unified_models import get_model_provider_metadata
 
-class ModelProviderCredentialCreate(BaseModel):
+
+class ModelProviderCredentialRequest(BaseModel):
     """Request model for creating a model provider credential."""
 
     name: str = Field(..., description="Name of the credential")
@@ -28,6 +31,16 @@ class ModelProviderCredentialCreate(BaseModel):
         """Validate that string fields are not empty."""
         if not v or not v.strip():
             msg = "Field cannot be empty"
+            raise ValueError(msg)
+        return v
+
+    @field_validator("provider")
+    @classmethod
+    def validate_provider(cls, v: str) -> str:
+        """Validate that provider is in the valid list of supported providers."""
+        valid_providers = list(get_model_provider_metadata().keys())
+        if v not in valid_providers:
+            msg = f"Invalid provider '{v}'. Must be one of: {', '.join(valid_providers)}"
             raise ValueError(msg)
         return v
 
@@ -49,7 +62,7 @@ router = APIRouter(tags=["Model Provider Credentials"], prefix="/model-provider-
 
 @router.post("/", response_model=ModelProviderCredentialResponse, status_code=201)
 async def create_model_provider_credential(
-    request: ModelProviderCredentialCreate,
+    request: ModelProviderCredentialRequest,
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
@@ -223,18 +236,18 @@ async def get_model_provider_credential(
             session=session,
         )
 
-        if not credential:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Model provider credential not found",
-            )
-
         # Verify it's a model provider credential
         if credential.type != CREDENTIAL_TYPE or credential.category != CATEGORY_LLM:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
             )
+    except ValueError as e:
+        # Variable not found
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model provider credential not found",
+        ) from e
     except HTTPException:
         raise
     except Exception as e:
@@ -280,12 +293,6 @@ async def get_model_provider_credential_value(
             session=session,
         )
 
-        if not credential:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Model provider credential not found",
-            )
-
         # Verify it's a model provider credential
         if credential.type != CREDENTIAL_TYPE or credential.category != CATEGORY_LLM:
             raise HTTPException(
@@ -298,6 +305,12 @@ async def get_model_provider_credential_value(
             credential.value, settings_service=variable_service.settings_service
         )
 
+    except ValueError as e:
+        # Variable not found
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model provider credential not found",
+        ) from e
     except HTTPException:
         raise
     except Exception as e:
@@ -355,11 +368,17 @@ async def delete_model_provider_credential(
             session=session,
         )
 
+    except ValueError as e:
+        # Variable not found
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model provider credential not found",
+        ) from e
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete model provider credential: {e!s}",
         ) from e
 
