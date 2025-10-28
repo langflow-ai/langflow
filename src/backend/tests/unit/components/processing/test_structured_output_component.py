@@ -1065,7 +1065,6 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             mock_trustcall.assert_called_once()
             mock_langchain.assert_called_once()
 
-
     def test_fallback_both_methods_fail_raises_value_error(self):
         """Test that when both trustcall and langchain fail, a ValueError is raised."""
         component = StructuredOutputComponent(
@@ -1099,7 +1098,6 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert "fallback with_structured_output also failed" in error_msg
             assert "Langchain parsing error" in error_msg
 
-
     def test_langchain_fallback_processes_basemodel_response(self):
         """Test that langchain fallback correctly processes BaseModel responses."""
         component = StructuredOutputComponent(
@@ -1121,7 +1119,6 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             # Verify it extracted the objects
             assert isinstance(result, list)
             assert result == [{"field": "test_value"}]
-
 
     def test_langchain_fallback_processes_dict_response(self):
         """Test that langchain fallback correctly processes dict responses without BaseModel conversion."""
@@ -1179,6 +1176,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
     def test_trustcall_success_no_fallback_attempted(self):
         """Test that when trustcall succeeds, langchain fallback is not attempted."""
+
         def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
