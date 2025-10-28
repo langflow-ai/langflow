@@ -18,7 +18,7 @@ from lfx.schema.cross_module import CrossModuleModel
 class FieldTypes(str, Enum):
     TEXT = "str"
     INTEGER = "int"
-    PASSWORD = "str"  # noqa: PIE796
+    PASSWORD = "str"  # pragma: allowlist secret # noqa: PIE796
     FLOAT = "float"
     BOOLEAN = "bool"
     DICT = "dict"
@@ -289,6 +289,10 @@ class TabMixin(BaseModel):
 
 class MultilineMixin(BaseModel):
     multiline: CoalesceBool = True
+
+
+class AIMixin(BaseModel):
+    ai_enabled: CoalesceBool = True
 
 
 class LinkMixin(BaseModel):

@@ -1123,6 +1123,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setStopNodeId: (nodeId: string | undefined) => {
     set({ stopNodeId: nodeId });
   },
+  selectedCompData: { fieldName: "", type: "", id: "" },
+  setSelectedCompData: (compData: targetHandleType | undefined) => {
+    set({ selectedCompData: compData });
+  },
 }));
 
 export default useFlowStore;

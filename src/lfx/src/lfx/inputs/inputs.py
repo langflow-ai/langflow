@@ -10,6 +10,7 @@ from lfx.schema.data import Data
 from lfx.schema.message import Message
 
 from .input_mixin import (
+    AIMixin,
     AuthMixin,
     BaseInputMixin,
     ConnectionMixin,
@@ -257,7 +258,7 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin, ToolModeMi
         return value
 
 
-class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin, ToolModeMixin):
+class MultilineInput(MessageTextInput, AIMixin, MultilineMixin, InputTraceMixin, ToolModeMixin):
     """Represents a multiline input field.
 
     Attributes:

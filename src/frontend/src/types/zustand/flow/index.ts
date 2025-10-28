@@ -6,7 +6,12 @@ import type {
   ReactFlowInstance,
   Viewport,
 } from "@xyflow/react";
-import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
+import type {
+  AllNodeType,
+  EdgeType,
+  FlowType,
+  targetHandleType,
+} from "@/types/flow";
 import type { BuildStatus, EventDeliveryType } from "../../../constants/enums";
 import type { VertexBuildTypeAPI } from "../../api";
 import type { ChatInputType, ChatOutputType } from "../../chat";
@@ -297,4 +302,6 @@ export type FlowStoreType = {
   setNewChatOnPlayground: (newChat: boolean) => void;
   stopNodeId: string | undefined;
   setStopNodeId: (nodeId: string | undefined) => void;
+  selectedCompData: targetHandleType | undefined;
+  setSelectedCompData: (compData: targetHandleType | undefined) => void;
 };
