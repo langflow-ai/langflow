@@ -179,15 +179,16 @@ class TestPortChangeHandling:
     """Test handling of port changes in composer restart."""
 
     @pytest.mark.asyncio
-    async def test_port_change_triggers_old_port_kill(self, mcp_service):
-        """Test that changing ports kills the process on the old port."""
+    async def test_port_change_triggers_restart(self, mcp_service):
+        """Test that changing ports triggers a restart via auth config change detection."""
         project_id = "test-project"
         old_port = 9000
         new_port = 9001
 
         # Set up existing composer
+        mock_process = MagicMock(poll=MagicMock(return_value=None), pid=12345)
         mcp_service.project_composers[project_id] = {
-            "process": MagicMock(poll=MagicMock(return_value=None)),  # Running process
+            "process": mock_process,
             "host": "localhost",
             "port": old_port,
             "sse_url": "http://test",
@@ -202,6 +203,8 @@ class TestPortChangeHandling:
                 "oauth_token_url": "http://test",
             },
         }
+        mcp_service._port_to_project[old_port] = project_id
+        mcp_service._pid_to_project[12345] = project_id
 
         new_auth_config = {
             "auth_type": "oauth",
@@ -215,15 +218,13 @@ class TestPortChangeHandling:
         }
 
         with (
-            patch.object(mcp_service, "_do_stop_project_composer", new=AsyncMock()),
-            patch.object(mcp_service, "_kill_process_on_port", new=AsyncMock(return_value=True)) as mock_kill,
+            patch.object(mcp_service, "_do_stop_project_composer", new=AsyncMock()) as mock_stop,
             patch.object(mcp_service, "_is_port_available", return_value=True),
             patch.object(mcp_service, "_start_project_composer_process", new=AsyncMock()),
         ):
             # Initialize locks
             mcp_service._start_locks[project_id] = asyncio.Lock()
 
-            # We're not testing full startup, just the port kill logic
             with contextlib.suppress(Exception):
                 await mcp_service._do_start_project_composer(
                     project_id=project_id,
@@ -234,14 +235,17 @@ class TestPortChangeHandling:
                     startup_delay=0.1,
                 )
 
-            # Verify old port was targeted for killing
-            mock_kill.assert_called_with(old_port)
+            # Verify composer was stopped (because config changed)
+            mock_stop.assert_called_once_with(project_id)
 
     @pytest.mark.asyncio
-    async def test_port_in_use_triggers_kill(self, mcp_service):
-        """Test that when new port is in use, it attempts to kill the process."""
+    async def test_port_in_use_by_own_project_triggers_kill(self, mcp_service):
+        """Test that when port is in use by the current project, it kills the process."""
         project_id = "test-project"
         test_port = 9001
+
+        # Register the port as owned by this project
+        mcp_service._port_to_project[test_port] = project_id
 
         auth_config = {
             "auth_type": "oauth",
@@ -277,14 +281,17 @@ class TestPortChangeHandling:
                     startup_delay=0.1,
                 )
 
-            # Verify kill was attempted on the in-use port
+            # Verify kill was attempted on own project's port
             mock_kill.assert_called_with(test_port)
 
     @pytest.mark.asyncio
-    async def test_port_still_in_use_after_kill_raises_error(self, mcp_service):
-        """Test that error is raised when port is still in use after kill attempt."""
+    async def test_port_in_use_by_unknown_process_raises_error(self, mcp_service):
+        """Test that error is raised when port is in use by unknown process (security)."""
         project_id = "test-project"
         test_port = 9001
+
+        # Port is NOT tracked (unknown process)
+        # mcp_service._port_to_project does NOT contain test_port
 
         auth_config = {
             "auth_type": "oauth",
@@ -297,10 +304,7 @@ class TestPortChangeHandling:
             "oauth_token_url": "http://test",
         }
 
-        with (
-            patch.object(mcp_service, "_is_port_available", return_value=False),  # Port always in use
-            patch.object(mcp_service, "_kill_process_on_port", new=AsyncMock(return_value=True)),
-        ):
+        with patch.object(mcp_service, "_is_port_available", return_value=False):  # Port in use
             # Initialize locks
             mcp_service._start_locks[project_id] = asyncio.Lock()
 
@@ -314,4 +318,5 @@ class TestPortChangeHandling:
                     startup_delay=0.1,
                 )
 
-            assert "still in use after killing process" in str(exc_info.value)
+            # New security message: won't kill unknown processes
+            assert "already in use by another application" in str(exc_info.value)

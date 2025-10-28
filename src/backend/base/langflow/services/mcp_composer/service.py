@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import platform
 import re
 import select
 import socket
@@ -76,6 +77,7 @@ class MCPComposerService(Service):
             str, asyncio.Task
         ] = {}  # Track active start tasks to cancel them when new request arrives
         self._port_to_project: dict[int, str] = {}  # Track which project is using which port
+        self._pid_to_project: dict[int, str] = {}  # Track which PID belongs to which project
         self._last_errors: dict[str, str] = {}  # Track last error message per project for UI display
 
     def get_last_error(self, project_id: str) -> str | None:
@@ -99,6 +101,8 @@ class MCPComposerService(Service):
     async def _kill_process_on_port(self, port: int) -> bool:
         """Kill the process using the specified port.
 
+        Cross-platform implementation supporting Windows, macOS, and Linux.
+
         Args:
             port: The port number to check
 
@@ -107,52 +111,107 @@ class MCPComposerService(Service):
         """
         try:
             await logger.adebug(f"Checking for processes using port {port}...")
+            os_type = platform.system()
 
-            # Use lsof to find the process using the port
-            result = await asyncio.to_thread(
-                subprocess.run,
-                ["lsof", "-ti", f":{port}"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
+            # Platform-specific command to find PID
+            if os_type == "Windows":
+                # Use netstat on Windows
+                result = await asyncio.to_thread(
+                    subprocess.run,
+                    ["netstat", "-ano"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
 
-            await logger.adebug(f"lsof returned code {result.returncode} for port {port}")
-            if result.stdout.strip():
-                await logger.adebug(f"lsof stdout: {result.stdout.strip()}")
-            if result.stderr.strip():
-                await logger.adebug(f"lsof stderr: {result.stderr.strip()}")
+                if result.returncode == 0:
+                    # Parse netstat output to find PID
+                    # Format: TCP    0.0.0.0:PORT    0.0.0.0:0    LISTENING    PID
+                    pids = []
+                    for line in result.stdout.split("\n"):
+                        if f":{port}" in line and "LISTENING" in line:
+                            parts = line.split()
+                            if parts:
+                                try:
+                                    pid = int(parts[-1])
+                                    pids.append(pid)
+                                except (ValueError, IndexError):
+                                    continue
 
-            if result.returncode == 0 and result.stdout.strip():
-                pids = result.stdout.strip().split("\n")
-                await logger.adebug(f"Found {len(pids)} process(es) using port {port}: {pids}")
+                    await logger.adebug(f"Found {len(pids)} process(es) using port {port}: {pids}")
 
-                for pid_str in pids:
-                    try:
-                        pid = int(pid_str.strip())
-                        await logger.adebug(f"Attempting to kill process {pid} on port {port}...")
+                    for pid in pids:
+                        try:
+                            await logger.adebug(f"Attempting to kill process {pid} on port {port}...")
+                            # Use taskkill on Windows
+                            kill_result = await asyncio.to_thread(
+                                subprocess.run,
+                                ["taskkill", "/F", "/PID", str(pid)],
+                                capture_output=True,
+                                check=False,
+                            )
 
-                        # Try to kill the process
-                        kill_result = await asyncio.to_thread(
-                            subprocess.run,
-                            ["kill", "-9", str(pid)],
-                            capture_output=True,
-                            check=False,
-                        )
+                            if kill_result.returncode == 0:
+                                await logger.adebug(f"Successfully killed process {pid} on port {port}")
+                                return True
+                            await logger.awarning(
+                                f"taskkill returned {kill_result.returncode} for process {pid} on port {port}"
+                            )
+                        except Exception as e:  # noqa: BLE001
+                            await logger.aerror(f"Error killing PID {pid}: {e}")
 
-                        if kill_result.returncode == 0:
-                            await logger.adebug(f"Successfully sent kill signal to process {pid} on port {port}")
-                            return True
-                        await logger.awarning(
-                            f"kill command returned {kill_result.returncode} for process {pid} on port {port}"
-                        )
-                    except (ValueError, ProcessLookupError) as e:
-                        await logger.aerror(f"Error processing PID {pid_str}: {e}")
+                    return False
+            else:
+                # Use lsof on Unix-like systems (macOS, Linux)
+                result = await asyncio.to_thread(
+                    subprocess.run,
+                    ["lsof", "-ti", f":{port}"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
 
-                # If we get here, we found processes but couldn't kill any
+                await logger.adebug(f"lsof returned code {result.returncode} for port {port}")
+
+                # Extract PIDs from lsof output
+                lsof_output = result.stdout.strip()
+                lsof_errors = result.stderr.strip()
+
+                if lsof_output:
+                    await logger.adebug(f"lsof stdout: {lsof_output}")
+                if lsof_errors:
+                    await logger.adebug(f"lsof stderr: {lsof_errors}")
+
+                if result.returncode == 0 and lsof_output:
+                    pids = lsof_output.split("\n")
+                    await logger.adebug(f"Found {len(pids)} process(es) using port {port}: {pids}")
+
+                    for pid_str in pids:
+                        try:
+                            pid = int(pid_str.strip())
+                            await logger.adebug(f"Attempting to kill process {pid} on port {port}...")
+
+                            # Try to kill the process
+                            kill_result = await asyncio.to_thread(
+                                subprocess.run,
+                                ["kill", "-9", str(pid)],
+                                capture_output=True,
+                                check=False,
+                            )
+
+                            if kill_result.returncode == 0:
+                                await logger.adebug(f"Successfully sent kill signal to process {pid} on port {port}")
+                                return True
+                            await logger.awarning(
+                                f"kill command returned {kill_result.returncode} for process {pid} on port {port}"
+                            )
+                        except (ValueError, ProcessLookupError) as e:
+                            await logger.aerror(f"Error processing PID {pid_str}: {e}")
+
+                    # If we get here, we found processes but couldn't kill any
+                    return False
+                await logger.adebug(f"No process found using port {port}")
                 return False
-            await logger.adebug(f"No process found using port {port}")
-            return False  # noqa: TRY300
 
         except Exception as e:  # noqa: BLE001
             await logger.aerror(f"Error finding/killing process on port {port}: {e}")
@@ -215,48 +274,49 @@ class MCPComposerService(Service):
         composer_info = self.project_composers[project_id]
         process = composer_info.get("process")
 
-        if process:
-            try:
-                # Check if process is still running before trying to terminate
-                if process.poll() is None:
-                    await logger.adebug(f"Terminating MCP Composer process {process.pid} for project {project_id}")
-                    process.terminate()
+        try:
+            if process:
+                try:
+                    # Check if process is still running before trying to terminate
+                    if process.poll() is None:
+                        await logger.adebug(f"Terminating MCP Composer process {process.pid} for project {project_id}")
+                        process.terminate()
 
-                    # Wait longer for graceful shutdown
-                    try:
-                        await asyncio.wait_for(self._wait_for_process_exit(process), timeout=3.0)
-                        await logger.adebug(f"MCP Composer for project {project_id} terminated gracefully")
-                    except asyncio.TimeoutError:
-                        await logger.aerror(
-                            f"MCP Composer for project {project_id} did not terminate gracefully, force killing"
-                        )
-                        process.kill()
-                        # Wait a bit more for force kill to complete
+                        # Wait longer for graceful shutdown
                         try:
-                            await asyncio.wait_for(self._wait_for_process_exit(process), timeout=2.0)
+                            await asyncio.wait_for(asyncio.to_thread(process.wait), timeout=2.0)
+                            await logger.adebug(f"MCP Composer for project {project_id} terminated gracefully")
                         except asyncio.TimeoutError:
                             await logger.aerror(
-                                f"Failed to kill MCP Composer process {process.pid} for project {project_id}"
+                                f"MCP Composer for project {project_id} did not terminate gracefully, force killing"
                             )
-                else:
+                            await asyncio.to_thread(process.kill)
+                            await asyncio.to_thread(process.wait)
+                    else:
+                        await logger.adebug(f"MCP Composer process for project {project_id} was already terminated")
+
+                    await logger.adebug(f"MCP Composer stopped for project {project_id}")
+
+                except ProcessLookupError:
+                    # Process already terminated
                     await logger.adebug(f"MCP Composer process for project {project_id} was already terminated")
+                except Exception as e:  # noqa: BLE001
+                    await logger.aerror(f"Error stopping MCP Composer for project {project_id}: {e}")
+        finally:
+            # Always clean up tracking, even if stopping failed
+            port = composer_info.get("port")
+            if port and self._port_to_project.get(port) == project_id:
+                self._port_to_project.pop(port, None)
+                await logger.adebug(f"Released port {port} from project {project_id}")
 
-                await logger.adebug(f"MCP Composer stopped for project {project_id}")
+            # Clean up PID tracking
+            if process and process.pid:
+                self._pid_to_project.pop(process.pid, None)
+                await logger.adebug(f"Released PID {process.pid} tracking for project {project_id}")
 
-            except ProcessLookupError:
-                # Process already terminated
-                await logger.adebug(f"MCP Composer process for project {project_id} was already terminated")
-            except Exception as e:  # noqa: BLE001
-                await logger.aerror(f"Error stopping MCP Composer for project {project_id}: {e}")
-
-        # Clean up port tracking
-        port = composer_info.get("port")
-        if port and self._port_to_project.get(port) == project_id:
-            del self._port_to_project[port]
-            await logger.adebug(f"Released port {port} from project {project_id}")
-
-        # Remove from tracking
-        del self.project_composers[project_id]
+            # Remove from tracking
+            self.project_composers.pop(project_id, None)
+            await logger.adebug(f"Removed tracking for project {project_id}")
 
     async def _wait_for_process_exit(self, process):
         """Wait for a process to exit."""
@@ -276,7 +336,9 @@ class MCPComposerService(Service):
             Tuple of (stdout, stderr, error_message)
         """
         try:
-            stdout_content, stderr_content = process.communicate(timeout=timeout)
+            # Use asyncio.to_thread to avoid blocking the event loop
+            # Process was created with text=True, so communicate returns strings
+            stdout_content, stderr_content = await asyncio.to_thread(process.communicate, timeout=timeout)
         except subprocess.TimeoutExpired:
             process.kill()
             error_msg = self._extract_error_message("", "", oauth_server_url)
@@ -320,42 +382,66 @@ class MCPComposerService(Service):
         await logger.adebug(f"Port {port} availability check: {is_port_available}")
 
         if not is_port_available:
-            # Check if the port is being used by another tracked project
+            # Check if the port is being used by a tracked project
             is_used_by_other, other_project_id = self._is_port_used_by_another_project(port, current_project_id)
 
             if is_used_by_other:
-                # Port is being used by another tracked project - don't kill it
+                # Port is being used by another tracked project
+                # Check if we can take ownership (e.g., the other project is failing)
+                other_composer = self.project_composers.get(other_project_id)
+                if other_composer and other_composer.get("process"):
+                    other_process = other_composer["process"]
+                    # If the other process is still running and healthy, don't kill it
+                    if other_process.poll() is None:
+                        await logger.aerror(
+                            f"Port {port} requested by project {current_project_id} is already in use by "
+                            f"project {other_project_id}. Will not kill active MCP Composer process."
+                        )
+                        port_error_msg = (
+                            f"Port {port} is already in use by another project. "
+                            f"Please choose a different port (e.g., {port + 1}) "
+                            f"or disable OAuth on the other project first."
+                        )
+                        raise MCPComposerPortError(port_error_msg, current_project_id)
+
+                    # Process died but port tracking wasn't cleaned up - allow takeover
+                    await logger.adebug(
+                        f"Port {port} was tracked to project {other_project_id} but process died. "
+                        f"Allowing project {current_project_id} to take ownership."
+                    )
+                    # Clean up the old tracking
+                    await self._do_stop_project_composer(other_project_id)
+
+            # Check if port is used by a process owned by the current project (e.g., stuck in startup loop)
+            port_owner_project = self._port_to_project.get(port)
+            if port_owner_project == current_project_id:
+                # Port is owned by current project - safe to kill
+                await logger.adebug(
+                    f"Port {port} is in use by current project {current_project_id} (likely stuck in startup). "
+                    f"Killing process to retry."
+                )
+                killed = await self._kill_process_on_port(port)
+                if killed:
+                    await logger.adebug(
+                        f"Successfully killed own process on port {port}. Waiting for port to be released..."
+                    )
+                    await asyncio.sleep(2)
+                    is_port_available = self._is_port_available(port)
+                    if not is_port_available:
+                        await logger.aerror(f"Port {port} is still in use after killing own process.")
+                        port_error_msg = f"Port {port} is still in use after killing process"
+                        raise MCPComposerPortError(port_error_msg)
+            else:
+                # Port is in use by unknown process - don't kill it (security concern)
                 await logger.aerror(
-                    f"Port {port} is already in use by project {other_project_id}. "
-                    f"Will not kill legitimate MCP Composer process."
+                    f"Port {port} is in use by an unknown process (not owned by Langflow). "
+                    f"Will not kill external application for security reasons."
                 )
                 port_error_msg = (
-                    f"Port {port} is already in use by project {other_project_id}. "
-                    f"Please choose a different port or stop the other project's MCP Composer first."
+                    f"Port {port} is already in use by another application. "
+                    f"Please choose a different port (e.g., {port + 1}) or free up the port manually."
                 )
-                raise MCPComposerPortError(port_error_msg)
-
-            # Port is in use but not by a tracked project - attempt to kill
-            await logger.awarning(f"Port {port} is already in use by an untracked process. Attempting to kill it.")
-
-            # Try to kill the process using the port
-            killed = await self._kill_process_on_port(port)
-            if killed:
-                await logger.adebug(f"Successfully killed process on port {port}. Waiting for port to be released...")
-                # Wait a moment for the port to be released
-                await asyncio.sleep(2)
-                # Check again if port is now available
-                is_port_available = self._is_port_available(port)
-                await logger.adebug(f"Port {port} availability after kill: {is_port_available}")
-
-                if not is_port_available:
-                    await logger.aerror(f"Port {port} is still in use after killing process.")
-                    port_error_msg = f"Port {port} is still in use after killing process"
-                    raise MCPComposerPortError(port_error_msg)
-            else:
-                await logger.aerror(f"Failed to kill process on port {port}.")
-                port_error_msg = f"Port {port} is already in use and could not kill the process"
-                raise MCPComposerPortError(port_error_msg)
+                raise MCPComposerPortError(port_error_msg, current_project_id)
 
         await logger.adebug(f"Port {port} is available, proceeding with MCP Composer startup")
 
@@ -565,9 +651,9 @@ class MCPComposerService(Service):
         project_id: str,
         sse_url: str,
         auth_config: dict[str, Any] | None,
-        max_retries: int = 10,
-        max_startup_checks: int = 60,
-        startup_delay: float = 3.0,
+        max_retries: int = 3,
+        max_startup_checks: int = 20,
+        startup_delay: float = 1.5,
     ) -> None:
         """Start an MCP Composer instance for a specific project.
 
@@ -592,10 +678,18 @@ class MCPComposerService(Service):
                     await active_task
                 except asyncio.CancelledError:
                     await logger.adebug(f"Previous start operation for project {project_id} cancelled successfully")
+                finally:
+                    # Clean up the cancelled task from tracking
+                    del self._active_start_tasks[project_id]
 
         # Create and track the current task
         current_task = asyncio.current_task()
-        if current_task:
+        if not current_task:
+            await logger.awarning(
+                f"Could not get current task for project {project_id}. "
+                f"Concurrent start operations may not be properly cancelled."
+            )
+        else:
             self._active_start_tasks[project_id] = current_task
 
         try:
@@ -612,9 +706,9 @@ class MCPComposerService(Service):
         project_id: str,
         sse_url: str,
         auth_config: dict[str, Any] | None,
-        max_retries: int = 10,
-        max_startup_checks: int = 60,
-        startup_delay: float = 3.0,
+        max_retries: int = 3,
+        max_startup_checks: int = 20,
+        startup_delay: float = 1.5,
     ) -> None:
         """Internal method to start an MCP Composer instance.
 
@@ -672,24 +766,10 @@ class MCPComposerService(Service):
                 if process and process.poll() is None:
                     # Process is running - only restart if config changed
                     auth_changed = self._has_auth_config_changed(existing_auth, auth_config)
-                    port_changed = existing_port != project_port
 
-                    if auth_changed or port_changed:
-                        if port_changed:
-                            await logger.adebug(
-                                f"Port changed for project {project_id} from {existing_port} to {project_port}, "
-                                f"stopping existing MCP Composer and killing process on old port"
-                            )
-                            # Kill the old process on the old port
-                            await self._do_stop_project_composer(project_id)
-                            # Also kill any process that might be using the old port
-                            try:
-                                await asyncio.wait_for(self._kill_process_on_port(existing_port), timeout=5.0)
-                            except asyncio.TimeoutError:
-                                await logger.aerror(f"Timeout while killing process on port {existing_port}")
-                        else:
-                            await logger.adebug(f"Config changed for project {project_id}, restarting MCP Composer")
-                            await self._do_stop_project_composer(project_id)
+                    if auth_changed:
+                        await logger.adebug(f"Config changed for project {project_id}, restarting MCP Composer")
+                        await self._do_stop_project_composer(project_id)
                     else:
                         await logger.adebug(
                             f"MCP Composer already running for project {project_id} with current config"
@@ -754,7 +834,7 @@ class MCPComposerService(Service):
                             await asyncio.sleep(2)
 
                     else:
-                        # Success! Store the composer info and register the port
+                        # Success! Store the composer info and register the port and PID
                         self.project_composers[project_id] = {
                             "process": process,
                             "host": project_host,
@@ -763,6 +843,7 @@ class MCPComposerService(Service):
                             "auth_config": auth_config,
                         }
                         self._port_to_project[project_port] = project_id
+                        self._pid_to_project[process.pid] = project_id
                         # Clear any previous error on success
                         self.clear_last_error(project_id)
 
@@ -865,6 +946,7 @@ class MCPComposerService(Service):
         await logger.adebug(f"Starting MCP Composer with command: {' '.join(safe_cmd)}")
 
         # Start the subprocess with both stdout and stderr captured
+        # text=True for stream reading, but we'll decode manually in _read_process_output_and_extract_error
         process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)  # noqa: ASYNC220, S603
 
         # Monitor the process startup with multiple checks
@@ -917,14 +999,18 @@ class MCPComposerService(Service):
         except asyncio.CancelledError:
             # Operation was cancelled, kill the process and cleanup
             await logger.adebug(
-                f"MCP Composer process startup cancelled for project {project_id}, killing process {process.pid}"
+                f"MCP Composer process startup cancelled for project {project_id}, terminating process {process.pid}"
             )
             try:
                 process.terminate()
-                # Give it a moment to terminate gracefully
-                await asyncio.sleep(0.5)
-                if process.poll() is None:
-                    process.kill()
+                # Wait for graceful termination with timeout
+                try:
+                    await asyncio.wait_for(asyncio.to_thread(process.wait), timeout=2.0)
+                except asyncio.TimeoutError:
+                    # Force kill if graceful termination times out
+                    await logger.adebug(f"Process {process.pid} did not terminate gracefully, force killing")
+                    await asyncio.to_thread(process.kill)
+                    await asyncio.to_thread(process.wait)
             except Exception as e:  # noqa: BLE001
                 await logger.adebug(f"Error terminating process during cancellation: {e}")
             raise  # Re-raise to propagate cancellation
