@@ -98,7 +98,12 @@ export default function Dropdown({
 
   const sourceOptions = dialogInputs?.fields ? dialogInputs : externalOptions;
   const { firstWord } = formatName(name);
-  const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
+  // Prepare Fuse for string-based search over option values.
+  // validOptions is a string[], so we index under a uniform `value` field.
+  const fuse = useMemo(() => {
+    const items = validOptions.map((v) => ({ value: v }));
+    return new Fuse(items, { keys: ["value"], threshold: 0.3 });
+  }, [validOptions]);
   const PopoverContentDropdown =
     children || editNode ? PopoverContent : PopoverContentWithoutPortal;
   const { helperText, hasRefreshButton } = baseInputProps;
@@ -143,9 +148,9 @@ export default function Dropdown({
       return;
     }
 
-    // Search existing options
+    // Search existing options (map back to raw string values)
     const searchValues = fuse.search(value);
-    let filtered = searchValues.map((search) => search.item);
+    let filtered = searchValues.map((res) => res.item.value);
 
     // If the search value exactly matches one of the custom options, include it
     const customOptions = filteredOptions.filter(
