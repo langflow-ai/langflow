@@ -5,7 +5,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableRead
-from langflow.services.variable.constants import CATEGORY_GLOBAL
 
 
 class VariableService(Service):
@@ -91,7 +90,6 @@ class VariableService(Service):
         user_id: UUID | str,
         name: str,
         value: str,
-        category: str | None = CATEGORY_GLOBAL,
         *,
         default_fields: list[str],
         type_: str,
@@ -106,7 +104,6 @@ class VariableService(Service):
             default_fields: The default fields of the variable.
             type_: The type of the variable.
             session: The database session.
-            category: The category of the variable.
 
         Returns:
             The created variable.

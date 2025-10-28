@@ -12,8 +12,10 @@ from pydantic import BaseModel, Field, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.deps import get_variable_service
-from langflow.services.variable.constants import CATEGORY_LLM, CREDENTIAL_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE
 from langflow.services.variable.service import DatabaseVariableService
+
+MIN_DEFAULT_FIELDS_FOR_CREDENTIAL = 2
 
 
 class ModelProviderCredentialRequest(BaseModel):
@@ -51,7 +53,6 @@ class ModelProviderCredentialResponse(BaseModel):
     name: str = Field(..., description="Name of the credential")
     type: str = Field(..., description="Type of the credential")
     default_fields: list[str] | None = Field(None, description="Default fields for the credential")
-    category: str = Field(..., description="Category of the credential")
     created_at: datetime | None = Field(None, description="When the credential was created")
     updated_at: datetime | None = Field(None, description="When the credential was last updated")
 
@@ -110,16 +111,14 @@ async def create_model_provider_credential(
             from langflow.services.database.models.variable.model import VariableUpdate
 
             variable_update = VariableUpdate(
-                id=existing_variable.id,
                 name=credential_name,
                 value=request.value,
                 type=CREDENTIAL_TYPE,
-                category=CATEGORY_LLM,
                 default_fields=[request.provider, "api_key"],
             )
             updated_var = await variable_service.update_variable_fields(
                 user_id=current_user.id,
-                variable_id=str(existing_variable.id),
+                variable_id=existing_variable.id,
                 variable=variable_update,
                 session=session,
             )
@@ -133,7 +132,6 @@ async def create_model_provider_credential(
             value=request.value,
             default_fields=[request.provider, "api_key"],
             type_=CREDENTIAL_TYPE,
-            category=CATEGORY_LLM,
             session=session,
         )
         # Convert to ModelProviderCredentialResponse
@@ -176,8 +174,14 @@ async def get_model_provider_credentials(
             session=session,
         )
 
-        # Filter for model provider credentials (those with CREDENTIAL_TYPE and CATEGORY_LLM)
-        credentials = [var for var in all_variables if var.type == CREDENTIAL_TYPE and var.category == CATEGORY_LLM]
+        # Filter for model provider credentials (those with CREDENTIAL_TYPE and default_fields indicating a provider)
+        credentials = [
+            var
+            for var in all_variables
+            if var.type == CREDENTIAL_TYPE
+            and var.default_fields
+            and len(var.default_fields) >= MIN_DEFAULT_FIELDS_FOR_CREDENTIAL
+        ]
 
         # Filter by provider if specified
         if provider:
@@ -235,7 +239,11 @@ async def get_model_provider_credential(
         )
 
         # Verify it's a model provider credential
-        if credential.type != CREDENTIAL_TYPE or credential.category != CATEGORY_LLM:
+        if (
+            credential.type != CREDENTIAL_TYPE
+            or not credential.default_fields
+            or len(credential.default_fields) < MIN_DEFAULT_FIELDS_FOR_CREDENTIAL
+        ):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
@@ -292,7 +300,11 @@ async def get_model_provider_credential_value(
         )
 
         # Verify it's a model provider credential
-        if credential.type != CREDENTIAL_TYPE or credential.category != CATEGORY_LLM:
+        if (
+            credential.type != CREDENTIAL_TYPE
+            or not credential.default_fields
+            or len(credential.default_fields) < MIN_DEFAULT_FIELDS_FOR_CREDENTIAL
+        ):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
@@ -353,7 +365,11 @@ async def delete_model_provider_credential(
         )
 
         # Verify it's a model provider credential
-        if existing_credential.type != CREDENTIAL_TYPE or existing_credential.category != CATEGORY_LLM:
+        if (
+            existing_credential.type != CREDENTIAL_TYPE
+            or not existing_credential.default_fields
+            or len(existing_credential.default_fields) < MIN_DEFAULT_FIELDS_FOR_CREDENTIAL
+        ):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
@@ -422,7 +438,11 @@ async def get_model_provider_credential_metadata(
             )
 
         # Verify it's a model provider credential
-        if credential.type != CREDENTIAL_TYPE or credential.category != CATEGORY_LLM:
+        if (
+            credential.type != CREDENTIAL_TYPE
+            or not credential.default_fields
+            or len(credential.default_fields) < MIN_DEFAULT_FIELDS_FOR_CREDENTIAL
+        ):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
@@ -478,8 +498,15 @@ async def get_credentials_by_provider(
             session=session,
         )
 
-        # Filter for model provider credentials
-        credentials = [var for var in all_variables if var.type == CREDENTIAL_TYPE and var.category == CATEGORY_LLM]
+        # Filter for model provider credentials (those with CREDENTIAL_TYPE and default_fields indicating a provider)
+        credentials = [
+            var for var in all_variables
+            if (
+                var.type == CREDENTIAL_TYPE
+                and var.default_fields
+                and len(var.default_fields) >= MIN_DEFAULT_FIELDS_FOR_CREDENTIAL
+            )
+        ]
 
         # Filter by provider using list comprehension
         filtered_credentials = [

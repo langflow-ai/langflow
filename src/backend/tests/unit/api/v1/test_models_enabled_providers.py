@@ -3,7 +3,7 @@
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-from langflow.services.variable.constants import CATEGORY_LLM, CREDENTIAL_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE
 
 
 @pytest.fixture
@@ -174,38 +174,38 @@ async def test_enabled_providers_filter_by_specific_providers(
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_variables_category_llm_credential_redaction(client: AsyncClient, openai_credential, logged_in_headers):
-    """Test that LLM category variables have credentials properly redacted."""
-    # Create a credential (which should be stored as CATEGORY_LLM)
+async def test_variables_credential_redaction(client: AsyncClient, openai_credential, logged_in_headers):
+    """Test that credential variables have credentials properly redacted."""
+    # Create a credential
     create_response = await client.post(
         "api/v1/model-provider-credentials/", json=openai_credential, headers=logged_in_headers
     )
     assert create_response.status_code == status.HTTP_201_CREATED
     created_credential = create_response.json()
 
-    # Get variables by LLM category
-    response = await client.get(f"api/v1/variables/category/{CATEGORY_LLM}", headers=logged_in_headers)
+    # Get all variables
+    response = await client.get("api/v1/variables/", headers=logged_in_headers)
     result = response.json()
 
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, list)
 
     # Find the created credential in the response
-    llm_variables = [v for v in result if v.get("id") == created_credential["id"]]
-    assert len(llm_variables) == 1
+    credential_variables = [v for v in result if v.get("id") == created_credential["id"]]
+    assert len(credential_variables) == 1
 
-    llm_variable = llm_variables[0]
+    credential_variable = credential_variables[0]
 
     # Verify credential is redacted (value should be None for CREDENTIAL_TYPE)
-    assert llm_variable["value"] is None
-    assert llm_variable["type"] == CREDENTIAL_TYPE
+    assert credential_variable["value"] is None
+    assert credential_variable["type"] == CREDENTIAL_TYPE
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_variables_category_llm_multiple_credentials_all_redacted(
+async def test_variables_multiple_credentials_all_redacted(
     client: AsyncClient, openai_credential, anthropic_credential, logged_in_headers
 ):
-    """Test that all LLM credentials are redacted when fetching by category."""
+    """Test that all credentials are redacted when fetching all variables."""
     # Create multiple credentials
     create_response1 = await client.post(
         "api/v1/model-provider-credentials/", json=openai_credential, headers=logged_in_headers
@@ -217,8 +217,8 @@ async def test_variables_category_llm_multiple_credentials_all_redacted(
     assert create_response1.status_code == status.HTTP_201_CREATED
     assert create_response2.status_code == status.HTTP_201_CREATED
 
-    # Get variables by LLM category
-    response = await client.get(f"api/v1/variables/category/{CATEGORY_LLM}", headers=logged_in_headers)
+    # Get all variables
+    response = await client.get("api/v1/variables/", headers=logged_in_headers)
     result = response.json()
 
     assert response.status_code == status.HTTP_200_OK
@@ -230,34 +230,8 @@ async def test_variables_category_llm_multiple_credentials_all_redacted(
             assert variable["value"] is None
 
 
-@pytest.mark.usefixtures("active_user")
-async def test_variables_category_invalid_category(client: AsyncClient, logged_in_headers):
-    """Test that invalid category returns proper error."""
-    response = await client.get("api/v1/variables/category/InvalidCategory", headers=logged_in_headers)
-
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    result = response.json()
-    assert "Invalid category" in result["detail"]
 
 
-@pytest.mark.usefixtures("active_user")
-async def test_variables_category_case_insensitive(client: AsyncClient, openai_credential, logged_in_headers):
-    """Test that category lookup is case-insensitive."""
-    # Create a credential
-    await client.post("api/v1/model-provider-credentials/", json=openai_credential, headers=logged_in_headers)
-
-    # Try different cases
-    response_upper = await client.get("api/v1/variables/category/LLM", headers=logged_in_headers)
-    response_lower = await client.get("api/v1/variables/category/llm", headers=logged_in_headers)
-    response_mixed = await client.get("api/v1/variables/category/Llm", headers=logged_in_headers)
-
-    assert response_upper.status_code == status.HTTP_200_OK
-    assert response_lower.status_code == status.HTTP_200_OK
-    assert response_mixed.status_code == status.HTTP_200_OK
-
-    # All should return same results
-    assert len(response_upper.json()) == len(response_lower.json())
-    assert len(response_lower.json()) == len(response_mixed.json())
 
 
 @pytest.mark.usefixtures("active_user")
@@ -287,7 +261,7 @@ async def test_enabled_providers_reflects_models_endpoint(client: AsyncClient, o
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_security_credential_value_never_exposed_in_category_endpoint(
+async def test_security_credential_value_never_exposed_in_variables_endpoint(
     client: AsyncClient, openai_credential, logged_in_headers
 ):
     """Critical security test: ensure credential values are NEVER exposed in plain text."""
@@ -299,8 +273,8 @@ async def test_security_credential_value_never_exposed_in_category_endpoint(
     )
     assert create_response.status_code == status.HTTP_201_CREATED
 
-    # Get by category - this is the security-critical path
-    response = await client.get(f"api/v1/variables/category/{CATEGORY_LLM}", headers=logged_in_headers)
+    # Get all variables - this is the security-critical path
+    response = await client.get("api/v1/variables/", headers=logged_in_headers)
     result = response.json()
 
     # CRITICAL: Original value must NEVER appear in response

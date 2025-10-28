@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-from langflow.services.variable.constants import CATEGORY_LLM, CREDENTIAL_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE
 
 
 @pytest.fixture
@@ -47,10 +47,9 @@ async def test_create_model_provider_credential(client: AsyncClient, openai_cred
 
     result = response.json()
 
-    assert response.status_code == status.HTTP_201_CREATED
+    assert response.status_code == status.HTTP_201_CREATED, f"Response: {result}"
     assert result["name"] == "OPENAI_API_KEY"  # Should match provider variable mapping
     assert result["type"] == CREDENTIAL_TYPE
-    assert result["category"] == CATEGORY_LLM
     assert result["default_fields"] == ["OpenAI", "api_key"]
     assert "id" in result
     # Value field should not be present in response (security)

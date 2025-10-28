@@ -92,7 +92,7 @@ async def get_enabled_providers(
     """Get enabled providers for the current user."""
     from lfx.base.models.unified_models import get_model_provider_variable_mapping
 
-    from langflow.services.variable.constants import CATEGORY_LLM
+    from langflow.services.variable.constants import CREDENTIAL_TYPE
 
     if providers is None:
         providers = []
@@ -103,16 +103,24 @@ async def get_enabled_providers(
                 status_code=500,
                 detail="Variable service is not an instance of DatabaseVariableService",
             )
-        # Get all LLM category variables for the user
-        variables = await variable_service.get_by_category(
-            user_id=current_user.id, category=CATEGORY_LLM, session=session
+        # Get all credential variables for the user
+        all_variables = await variable_service.get_all(
+            user_id=current_user.id, session=session
         )
-        if not variables:
+        
+        # Get all credential variable names (regardless of default_fields)
+        # This includes both env variables and explicitly created model provider credentials
+        credential_names = {
+            var.name for var in all_variables 
+            if var.type == CREDENTIAL_TYPE
+        }
+        
+        if not credential_names:
             return {
                 "enabled_providers": [],
                 "provider_status": {},
             }
-        variable_names = {variable.name for variable in variables if variable}
+        variable_names = credential_names
 
         # Get the provider-variable mapping
         provider_variable_map = get_model_provider_variable_mapping()

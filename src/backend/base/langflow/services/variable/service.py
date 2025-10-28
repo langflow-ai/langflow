@@ -11,7 +11,7 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.variable.base import VariableService
-from langflow.services.variable.constants import CATEGORY_GLOBAL, CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -30,20 +30,51 @@ class DatabaseVariableService(VariableService, Service):
             await logger.adebug("Skipping environment variable storage.")
             return
 
+        # Import the provider mapping to set default_fields for known providers
+        try:
+            from lfx.base.models.unified_models import get_model_provider_variable_mapping
+            provider_mapping = get_model_provider_variable_mapping()
+            # Reverse the mapping to go from variable name to provider
+            var_to_provider = {var_name: provider for provider, var_name in provider_mapping.items()}
+        except Exception:  # noqa: BLE001
+            var_to_provider = {}
+
         for var_name in self.settings_service.settings.variables_to_get_from_environment:
             if var_name in os.environ and os.environ[var_name].strip():
                 value = os.environ[var_name].strip()
                 query = select(Variable).where(Variable.user_id == user_id, Variable.name == var_name)
                 existing = (await session.exec(query)).first()
+                
+                # Set default_fields if this is a known provider variable
+                default_fields = []
+                if var_name in var_to_provider:
+                    provider_name = var_to_provider[var_name]
+                    default_fields = [provider_name, "api_key"]
+                
                 try:
                     if existing:
-                        await self.update_variable(user_id, var_name, value, session)
+                        # Update the value, but also update default_fields if they're not set
+                        if not existing.default_fields and default_fields:
+                            # Use update_variable_fields to set both value and default_fields
+                            from langflow.services.database.models.variable.model import VariableUpdate
+                            variable_update = VariableUpdate(
+                                value=value,
+                                default_fields=default_fields,
+                            )
+                            await self.update_variable_fields(
+                                user_id=user_id,
+                                variable_id=existing.id,
+                                variable=variable_update,
+                                session=session,
+                            )
+                        else:
+                            await self.update_variable(user_id, var_name, value, session)
                     else:
                         await self.create_variable(
                             user_id=user_id,
                             name=var_name,
                             value=value,
-                            default_fields=[],
+                            default_fields=default_fields,
                             type_=CREDENTIAL_TYPE,
                             session=session,
                         )
@@ -122,37 +153,6 @@ class DatabaseVariableService(VariableService, Service):
             raise ValueError(msg)
         return variable
 
-    async def get_by_category(
-        self,
-        user_id: UUID | str,
-        category: str,
-        session: AsyncSession,
-    ) -> list[VariableRead]:
-        stmt = select(Variable).where(Variable.user_id == user_id, Variable.category == category)
-        variables = list((await session.exec(stmt)).all())
-
-        variables_read: list[VariableRead] = []
-        for variable in variables:
-            variable_read = VariableRead.model_validate(variable, from_attributes=True)
-            if variable.type == CREDENTIAL_TYPE:
-                # Do not expose credential values
-                variable_read.value = None
-            elif variable.type == GENERIC_TYPE:
-                # Attempt legacy decrypt with fallback to plaintext
-                try:
-                    variable_read.value = auth_utils.decrypt_api_key(
-                        variable.value, settings_service=self.settings_service
-                    )
-                except Exception as e:  # noqa: BLE001
-                    logger.debug(
-                        f"Decryption of {variable.type} failed for variable '{variable.name}': {e}. Assuming plaintext."
-                    )
-                    variable_read.value = variable.value
-            else:
-                # For other types, set to None
-                variable_read.value = None
-            variables_read.append(variable_read)
-        return variables_read
 
     async def list_variables(self, user_id: UUID | str, session: AsyncSession) -> list[str | None]:
         variables = await self.get_all(user_id=user_id, session=session)
@@ -190,9 +190,6 @@ class DatabaseVariableService(VariableService, Service):
         query = select(Variable).where(Variable.id == variable_id, Variable.user_id == user_id)
         db_variable = (await session.exec(query)).one()
         db_variable.updated_at = datetime.now(timezone.utc)
-
-        if variable.category is not None:
-            db_variable.category = variable.category
 
         variable.value = variable.value or ""
         if variable.type == CREDENTIAL_TYPE:
@@ -236,7 +233,6 @@ class DatabaseVariableService(VariableService, Service):
         user_id: UUID | str,
         name: str,
         value: str,
-        category: str | None = CATEGORY_GLOBAL,
         *,
         default_fields: Sequence[str] = (),
         type_: str = CREDENTIAL_TYPE,
@@ -253,7 +249,6 @@ class DatabaseVariableService(VariableService, Service):
             type=type_,
             value=encrypted_value,
             default_fields=list(default_fields),
-            category=category,
         )
         variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
         session.add(variable)
