@@ -402,7 +402,7 @@ class Graph:
         for vertex in self.vertices:
             if vertex.custom_component is None:
                 continue
-            vertex.custom_component._reset_all_output_values()
+            vertex.custom_component.reset_all_output_values()
 
     def start(
         self,
