@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.services.database.models.variable.model import VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CATEGORY_LLM, CREDENTIAL_TYPE
 from langflow.services.variable.service import DatabaseVariableService
