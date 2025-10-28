@@ -213,7 +213,7 @@ async def test_read_flows_user_isolation(client: AsyncClient, logged_in_headers,
         await session.refresh(other_user)
 
     # Login as the other user to get headers
-    login_data = {"username": "other_test_user", "password": "testpassword"}
+    login_data = {"username": "other_test_user", "password": "testpassword"}  # pragma: allowlist secret
     response = await client.post("api/v1/login", data=login_data)
     assert response.status_code == 200
     tokens = response.json()
@@ -322,3 +322,173 @@ async def test_read_flows_user_isolation(client: AsyncClient, logged_in_headers,
         if user:
             await session.delete(user)
             await session.commit()
+
+
+# JSON Patch endpoint tests
+
+
+async def test_patch_flow_json_patch_success(client: AsyncClient, flow, logged_in_headers):
+    """Test successfully patching a flow using JSON Patch."""
+    patch_data = {"operations": [{"op": "replace", "path": "/name", "value": "Updated Flow Name"}]}
+
+    response = await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json=patch_data,
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    response_data = response.json()
+    assert response_data["id"] == str(flow.id)
+    assert response_data["success"] is True
+    assert response_data["operations_applied"] == 1
+    assert "/name" in response_data["updated_fields"]
+
+
+async def test_patch_flow_json_patch_not_found(client: AsyncClient, logged_in_headers):
+    """Test patching a non-existent flow using JSON Patch."""
+    non_existent_id = uuid.uuid4()
+    patch_data = {"operations": [{"op": "replace", "path": "/name", "value": "Updated Flow Name"}]}
+
+    response = await client.patch(
+        f"api/v1/flows/{non_existent_id}/json-patch",
+        json=patch_data,
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Flow not found"
+
+
+async def test_patch_flow_json_patch_invalid_patch(client: AsyncClient, flow, logged_in_headers):
+    """Test patching a flow with an invalid JSON Patch."""
+    # Invalid patch: missing required fields
+    response = await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json={"operations": [{"op": "replace"}]},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 422  # Validation error
+
+
+async def test_patch_flow_json_patch_unauthorized(client: AsyncClient, flow):
+    """Test patching a flow without authentication using JSON Patch."""
+    patch_data = {"operations": [{"op": "replace", "path": "/name", "value": "Updated Flow Name"}]}
+
+    response = await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json=patch_data,
+    )
+
+    assert response.status_code == 403  # Forbidden (no API key provided)
+
+
+async def test_patch_flow_json_patch_complex_operations(client: AsyncClient, flow, logged_in_headers):
+    """Test patching a flow with multiple JSON Patch operations."""
+    patch_data = {
+        "operations": [
+            {"op": "replace", "path": "/name", "value": "Complex Update"},
+            {"op": "replace", "path": "/description", "value": "Updated description"},
+        ]
+    }
+
+    response = await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json=patch_data,
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    response_data = response.json()
+    assert response_data["success"] is True
+    assert response_data["operations_applied"] == 2
+    assert "/name" in response_data["updated_fields"]
+    assert "/description" in response_data["updated_fields"]
+
+    # Verify the changes by fetching the flow
+    verify_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    verify_data = verify_response.json()
+    assert verify_data["name"] == "Complex Update"
+    assert verify_data["description"] == "Updated description"
+
+
+async def test_patch_flow_json_patch_data_field(client: AsyncClient, flow, logged_in_headers):
+    """Test patching the data field of a flow using JSON Patch."""
+    new_data = {"nodes": [{"id": "1", "type": "test"}], "edges": []}
+    patch_data = {"operations": [{"op": "replace", "path": "/data", "value": new_data}]}
+
+    response = await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json=patch_data,
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    response_data = response.json()
+    assert response_data["success"] is True
+    assert response_data["operations_applied"] == 1
+    assert "/data" in response_data["updated_fields"]
+
+    # Verify the data was updated by fetching the flow
+    verify_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    assert verify_response.json()["data"] == new_data
+
+
+async def test_backward_compatibility_traditional_patch_still_works(client: AsyncClient, flow, logged_in_headers):
+    """Test that traditional PATCH endpoint remains backward compatible.
+
+    This test ensures that existing frontend code continues to work without modification.
+    The traditional PATCH endpoint should accept the FlowUpdate data directly in the body,
+    not wrapped in a 'flow' key.
+    """
+    # This is how the frontend currently sends updates - direct JSON body
+    update_data = {
+        "name": "Backward Compatible Update",
+        "description": "Updated via traditional PATCH",
+    }
+
+    response = await client.patch(
+        f"api/v1/flows/{flow.id}",
+        json=update_data,
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["name"] == "Backward Compatible Update"
+    assert response.json()["description"] == "Updated via traditional PATCH"
+
+
+async def test_json_patch_endpoint_is_separate(client: AsyncClient, flow, logged_in_headers):
+    """Test that JSON Patch uses a separate endpoint to maintain backward compatibility."""
+    # JSON Patch uses a different endpoint with 'operations' in the body
+    patch_data = {
+        "operations": [
+            {"op": "replace", "path": "/name", "value": "JSON Patch Update"},
+        ]
+    }
+
+    response = await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json=patch_data,
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    response_data = response.json()
+    assert response_data["success"] is True
+    assert response_data["operations_applied"] == 1
+    assert "/name" in response_data["updated_fields"]
+
+    # Verify the name was updated by fetching the flow
+    verify_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    assert verify_response.json()["name"] == "JSON Patch Update"

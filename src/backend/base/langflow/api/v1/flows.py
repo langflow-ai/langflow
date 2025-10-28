@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
+import jsonpatch
 import orjson
 from aiofile import async_open
 from anyio import Path
@@ -21,7 +22,7 @@ from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
-from langflow.api.v1.schemas import FlowListCreate
+from langflow.api.v1.schemas import FlowListCreate, JsonPatch, JsonPatchResponse
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import (
@@ -322,7 +323,10 @@ async def update_flow(
     flow: FlowUpdate,
     current_user: CurrentActiveUser,
 ):
-    """Update a flow."""
+    """Update a flow using traditional PATCH with FlowUpdate object.
+
+    For JSON Patch operations (RFC 6902), use the /json-patch endpoint instead.
+    """
     settings_service = get_settings_service()
     try:
         db_flow = await _read_flow(
@@ -334,6 +338,7 @@ async def update_flow(
         if not db_flow:
             raise HTTPException(status_code=404, detail="Flow not found")
 
+        # Traditional update using FlowUpdate
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
         # Specifically handle endpoint_name when it's explicitly set to null or empty string
@@ -348,8 +353,9 @@ async def update_flow(
 
         await _verify_fs_path(db_flow.fs_path)
 
-        webhook_component = get_webhook_component_in_flow(db_flow.data)
-        db_flow.webhook = webhook_component is not None
+        if db_flow.data:
+            webhook_component = get_webhook_component_in_flow(db_flow.data)
+            db_flow.webhook = webhook_component is not None
         db_flow.updated_at = datetime.now(timezone.utc)
 
         if db_flow.folder_id is None:
@@ -362,7 +368,6 @@ async def update_flow(
         await session.refresh(db_flow)
 
         await _save_flow_to_fs(db_flow)
-
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
@@ -378,8 +383,8 @@ async def update_flow(
         if hasattr(e, "status_code"):
             raise HTTPException(status_code=e.status_code, detail=str(e)) from e
         raise HTTPException(status_code=500, detail=str(e)) from e
-
-    return db_flow
+    else:
+        return db_flow
 
 
 @router.delete("/{flow_id}", status_code=200)
@@ -577,3 +582,140 @@ async def read_basic_examples(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+async def apply_json_patch_to_flow(flow: Flow, patch: JsonPatch) -> Flow:
+    """Apply JSON Patch operations to a flow.
+
+    Args:
+        flow: The flow to patch
+        patch: The JSON Patch operations to apply
+
+    Returns:
+        The patched flow
+
+    Raises:
+        HTTPException: If the patch operation is invalid
+    """
+    # Convert flow to dict for patching
+    flow_dict = flow.model_dump()
+
+    # Create a JSON patch object
+    patch_list = [op.model_dump(by_alias=True) for op in patch.operations]
+    json_patch_obj = jsonpatch.JsonPatch(patch_list)
+
+    try:
+        # Apply the patch
+        patched_flow_dict = json_patch_obj.apply(flow_dict)
+
+        # Convert back to Flow object
+        patched_flow = Flow.model_validate(patched_flow_dict)
+
+        # Update the updated_at timestamp
+        patched_flow.updated_at = datetime.now(timezone.utc)
+    except jsonpatch.JsonPatchException as e:
+        msg = f"Invalid JSON Patch: {e!s}"
+        raise HTTPException(status_code=400, detail=msg) from e
+    except ValueError as e:
+        msg = f"Error validating patched flow: {e!s}"
+        raise HTTPException(status_code=400, detail=msg) from e
+    else:
+        return patched_flow
+
+
+@router.patch("/{flow_id}/json-patch", response_model=JsonPatchResponse, status_code=200)
+async def patch_flow(
+    *,
+    session: DbSession,
+    flow_id: UUID,
+    patch: JsonPatch,
+    current_user: CurrentActiveUser,
+) -> JsonPatchResponse:
+    """Update a flow using JSON Patch operations (RFC 6902).
+
+    This endpoint allows for partial updates to a flow using JSON Patch operations.
+    The operations are applied in order, and the resulting flow is validated before saving.
+
+    Args:
+        session: The database session
+        flow_id: The ID of the flow to update
+        patch: The JSON Patch operations to apply
+        current_user: The current user
+
+    Returns:
+        The updated flow
+
+    Raises:
+        HTTPException: If the flow is not found or the patch operations are invalid
+    """
+    settings_service = get_settings_service()
+
+    # Get the flow
+    db_flow = await _read_flow(
+        session=session,
+        flow_id=flow_id,
+        user_id=current_user.id,
+    )
+
+    if not db_flow:
+        raise HTTPException(status_code=404, detail="Flow not found")
+
+    try:
+        # Apply the patch operations
+        patched_flow = await apply_json_patch_to_flow(db_flow, patch)
+
+        # Update the existing db_flow object with values from patched_flow
+        for key, value in patched_flow.model_dump(exclude_unset=True).items():
+            if key != "id":  # Don't update the ID
+                setattr(db_flow, key, value)
+
+        # Apply API key removal if configured
+        if settings_service.settings.remove_api_keys and db_flow.data:
+            db_flow.data = remove_api_keys(db_flow.data)
+
+        # Check for webhook component
+        if db_flow.data:
+            webhook_component = get_webhook_component_in_flow(db_flow.data)
+            db_flow.webhook = webhook_component is not None
+        db_flow.updated_at = datetime.now(timezone.utc)
+
+        # Ensure the flow has a folder
+        if db_flow.folder_id is None:
+            default_folder = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
+            if default_folder:
+                db_flow.folder_id = default_folder.id
+
+        # Save the flow
+        session.add(db_flow)
+        await session.commit()
+        await session.refresh(db_flow)
+
+        # Save to filesystem if path is set
+        await _save_flow_to_fs(db_flow)
+    except HTTPException:
+        raise
+    except Exception as e:
+        if "UNIQUE constraint failed" in str(e):
+            # Get the name of the column that failed
+            columns = str(e).split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
+            column_list = columns.split(",")
+            if len(column_list) > 1:
+                column = column_list[1].strip() if "id" in column_list[0] else column_list[0].strip()
+            else:
+                column = column_list[0].strip()
+            raise HTTPException(
+                status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
+            ) from e
+
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
+        # Create a lightweight response instead of returning the entire flow
+        updated_fields = [op.path for op in patch.operations]
+        return JsonPatchResponse(
+            id=db_flow.id,
+            success=True,
+            updated_at=db_flow.updated_at,
+            updated_fields=updated_fields,
+            operations_applied=len(patch.operations),
+            folder_id=db_flow.folder_id,
+        )
