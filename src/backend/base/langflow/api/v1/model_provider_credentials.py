@@ -8,7 +8,6 @@ from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.services.database.models.variable.model import VariableRead
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CATEGORY_LLM, CREDENTIAL_TYPE
 from langflow.services.variable.service import DatabaseVariableService
@@ -181,8 +180,7 @@ async def get_model_provider_credentials(
 
         # Convert to ModelProviderCredentialResponse
         return [
-            ModelProviderCredentialResponse.model_validate(cred, from_attributes=True)
-            for cred in filtered_credentials
+            ModelProviderCredentialResponse.model_validate(cred, from_attributes=True) for cred in filtered_credentials
         ]
     except Exception as e:
         raise HTTPException(
@@ -472,11 +470,10 @@ async def get_credentials_by_provider(
             and len(cred.default_fields) > 0
             and cred.default_fields[0].lower() == provider.lower()
         ]
-        
+
         # Convert to ModelProviderCredentialResponse
         return [
-            ModelProviderCredentialResponse.model_validate(cred, from_attributes=True)
-            for cred in filtered_credentials
+            ModelProviderCredentialResponse.model_validate(cred, from_attributes=True) for cred in filtered_credentials
         ]
 
     except Exception as e:
