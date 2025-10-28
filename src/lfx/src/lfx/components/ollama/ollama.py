@@ -239,11 +239,8 @@ class ChatOllamaComponent(LCModelComponent):
                 if not url.endswith("/"):
                     url = url + "/"
                 return (
-                    await client.get(
-                        url=urljoin(url, "api/tags"),
-                        headers=self.headers
-                        )
-                    ).status_code == HTTP_STATUS_OK
+                    await client.get(url=urljoin(url, "api/tags"), headers=self.headers)
+                ).status_code == HTTP_STATUS_OK
         except httpx.RequestError:
             return False
 

@@ -469,7 +469,6 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         headers = component.headers
         assert headers is None
 
-
     def test_headers_with_cloud_url_and_api_key(self):
         """Test that headers include Authorization for cloud URL with API key."""
         component = ChatOllamaComponent()
@@ -479,7 +478,6 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         headers = component.headers
         assert headers is not None
         assert headers["Authorization"] == "Bearer test-api-key-12345"
-
 
     def test_headers_with_local_url_no_api_key(self):
         """Test that headers return None for local URLs without API key."""
@@ -654,9 +652,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
 
         mock_post_response = AsyncMock()
         mock_post_response.raise_for_status.return_value = None
-        mock_post_response.json.return_value = {
-            component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]
-        }
+        mock_post_response.json.return_value = {component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]}
         mock_post.return_value = mock_post_response
 
         result = await component.get_models("http://localhost:11434")
@@ -672,14 +668,12 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
 
         assert result == ["llama3.1"]
 
-
     def test_get_base_url_cloud_no_transform(self):
         """Test that cloud URL is not transformed."""
         from lfx.utils.util import transform_localhost_url
 
         result = transform_localhost_url(DEFAULT_OLLAMA_API_URL)
         assert result == DEFAULT_OLLAMA_API_URL
-
 
     @patch("lfx.components.ollama.ollama.ChatOllama")
     def test_build_model_cloud_with_v1_suffix_stripped(self, mock_chat_ollama):
