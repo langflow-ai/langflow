@@ -9,6 +9,7 @@ class AssistantsGetAssistantName(ComponentWithCache):
     display_name = "Get Assistant name"
     description = "Assistant by id"
     icon = "AstraDB"
+    legacy = True
     inputs = [
         StrInput(
             name="assistant_id",
