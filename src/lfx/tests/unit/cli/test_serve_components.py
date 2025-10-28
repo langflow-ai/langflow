@@ -8,8 +8,6 @@ from unittest.mock import Mock, patch
 import pytest
 import typer
 from fastapi.testclient import TestClient
-from pydantic import ValidationError
-
 from lfx.cli.common import flow_id_from_path, load_graph_from_path, validate_script_path
 from lfx.cli.serve_app import (
     ErrorResponse,
@@ -21,6 +19,7 @@ from lfx.cli.serve_app import (
     create_multi_serve_app,
 )
 from lfx.graph import Graph
+from pydantic import ValidationError
 
 
 class TestDataModels:

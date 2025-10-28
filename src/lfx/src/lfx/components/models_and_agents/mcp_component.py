@@ -7,7 +7,12 @@ from typing import Any
 from langchain_core.tools import StructuredTool  # noqa: TC002
 
 from lfx.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cache_set
-from lfx.base.mcp.util import MCPSseClient, MCPStdioClient, create_input_schema_from_json_schema, update_tools
+from lfx.base.mcp.util import (
+    MCPStdioClient,
+    MCPStreamableHttpClient,
+    create_input_schema_from_json_schema,
+    update_tools,
+)
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from lfx.inputs.inputs import InputTypes  # noqa: TC001
 from lfx.io import BoolInput, DropdownInput, McpInput, MessageTextInput, Output
@@ -32,7 +37,9 @@ class MCPToolsComponent(ComponentWithCache):
 
         # Initialize clients with access to the component cache
         self.stdio_client: MCPStdioClient = MCPStdioClient(component_cache=self._shared_component_cache)
-        self.sse_client: MCPSseClient = MCPSseClient(component_cache=self._shared_component_cache)
+        self.streamable_http_client: MCPStreamableHttpClient = MCPStreamableHttpClient(
+            component_cache=self._shared_component_cache
+        )
 
     def _ensure_cache_structure(self):
         """Ensure the cache has the required structure."""
@@ -54,6 +61,7 @@ class MCPToolsComponent(ComponentWithCache):
         "mcp_server",
         "tool",
         "use_cache",
+        "verify_ssl",
     ]
 
     display_name = "MCP Tools"
@@ -77,6 +85,16 @@ class MCPToolsComponent(ComponentWithCache):
                 "Disable to always fetch fresh tools and server updates."
             ),
             value=False,
+            advanced=True,
+        ),
+        BoolInput(
+            name="verify_ssl",
+            display_name="Verify SSL Certificate",
+            info=(
+                "Enable SSL certificate verification for HTTPS connections. "
+                "Disable only for development/testing with self-signed certificates."
+            ),
+            value=True,
             advanced=True,
         ),
         DropdownInput(
@@ -203,11 +221,16 @@ class MCPToolsComponent(ComponentWithCache):
                 self.tools = []
                 return [], {"name": server_name, "config": server_config}
 
+            # Add verify_ssl option to server config if not present
+            if "verify_ssl" not in server_config:
+                verify_ssl = getattr(self, "verify_ssl", True)
+                server_config["verify_ssl"] = verify_ssl
+
             _, tool_list, tool_cache = await update_tools(
                 server_name=server_name,
                 server_config=server_config,
                 mcp_stdio_client=self.stdio_client,
-                mcp_sse_client=self.sse_client,
+                mcp_streamable_http_client=self.streamable_http_client,
             )
 
             self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
@@ -496,7 +519,7 @@ class MCPToolsComponent(ComponentWithCache):
                 session_context = self._get_session_context()
                 if session_context:
                     self.stdio_client.set_session_context(session_context)
-                    self.sse_client.set_session_context(session_context)
+                    self.streamable_http_client.set_session_context(session_context)
 
                 exec_tool = self._tool_cache[self.tool]
                 tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
