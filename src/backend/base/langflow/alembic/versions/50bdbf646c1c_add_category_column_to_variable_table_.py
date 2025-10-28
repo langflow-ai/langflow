@@ -35,10 +35,50 @@ def upgrade() -> None:
                 )
             )
 
+    # Migrate existing model provider credentials to LLM category
+    provider_keys = [
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GOOGLE_API_KEY",
+        "WATSONX_APIKEY",
+        "OLLAMA_BASE_URL",
+    ]
+    
+    for key in provider_keys:
+        op.execute(
+            sa.text(
+                "UPDATE variable "
+                "SET category = 'LLM' "
+                "WHERE name = :key "
+                "AND (category = 'Global' OR category IS NULL) "
+                "AND type = 'Credential'"
+            ).bindparams(key=key)
+        )
+
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
+    # Revert model provider credentials back to Global category
+    provider_keys = [
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GOOGLE_API_KEY",
+        "WATSONX_APIKEY",
+        "OLLAMA_BASE_URL",
+    ]
+    
+    for key in provider_keys:
+        op.execute(
+            sa.text(
+                "UPDATE variable "
+                "SET category = 'Global' "
+                "WHERE name = :key "
+                "AND category = 'LLM' "
+                "AND type = 'Credential'"
+            ).bindparams(key=key)
+        )
+    
     conn = op.get_bind()
     inspector = sa.inspect(conn)  # type: ignore[arg-type]
     column_names = [column["name"] for column in inspector.get_columns("variable")]

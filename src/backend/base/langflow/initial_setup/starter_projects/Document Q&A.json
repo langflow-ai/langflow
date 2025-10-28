@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-Bph6t",
+            "id": "File-g9fhE",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "Document",
-            "id": "Prompt-gvFY1",
+            "id": "Prompt-NAjf4",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,19 +23,20 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-File-Bph6t{œdataTypeœ:œFileœ,œidœ:œFile-Bph6tœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-gvFY1{œfieldNameœ:œDocumentœ,œidœ:œPrompt-gvFY1œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-File-g9fhE{œdataTypeœ:œFileœ,œidœ:œFile-g9fhEœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-NAjf4{œfieldNameœ:œDocumentœ,œidœ:œPrompt-NAjf4œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "File-Bph6t",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-Bph6tœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-gvFY1",
-        "targetHandle": "{œfieldNameœ: œDocumentœ, œidœ: œPrompt-gvFY1œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "File-g9fhE",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-g9fhEœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-NAjf4",
+        "targetHandle": "{œfieldNameœ: œDocumentœ, œidœ: œPrompt-NAjf4œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-RKlNi",
+            "id": "ChatInput-KdFuo",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,25 +44,27 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-5gOuk",
+            "id": "LanguageModelComponent-FtAXp",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-RKlNi{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RKlNiœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-5gOuk{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-5gOukœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-RKlNi",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-RKlNiœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-5gOuk",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-5gOukœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-KdFuo{œdataTypeœ:œChatInputœ,œidœ:œChatInput-KdFuoœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-FtAXp{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-FtAXpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-KdFuo",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-KdFuoœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-FtAXp",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-FtAXpœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-gvFY1",
+            "id": "Prompt-NAjf4",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -69,18 +72,47 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "LanguageModelComponent-5gOuk",
+            "id": "LanguageModelComponent-FtAXp",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-gvFY1{œdataTypeœ:œPromptœ,œidœ:œPrompt-gvFY1œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-5gOuk{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-5gOukœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-gvFY1",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-gvFY1œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-5gOuk",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-5gOukœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-NAjf4{œdataTypeœ:œPromptœ,œidœ:œPrompt-NAjf4œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-FtAXp{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-FtAXpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-NAjf4",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-NAjf4œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-FtAXp",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-FtAXpœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "LanguageModelComponent",
+            "id": "LanguageModelComponent-FtAXp",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-jLeK3",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__LanguageModelComponent-FtAXp{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-FtAXpœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-jLeK3{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-jLeK3œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "source": "LanguageModelComponent-FtAXp",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-FtAXpœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-jLeK3",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-jLeK3œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -88,7 +120,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-RKlNi",
+          "id": "ChatInput-KdFuo",
           "node": {
             "base_classes": [
               "Message"
@@ -328,7 +360,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-RKlNi",
+        "id": "ChatInput-KdFuo",
         "measured": {
           "height": 234,
           "width": 320
@@ -349,7 +381,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-N7tzN",
+          "id": "ChatOutput-jLeK3",
           "node": {
             "base_classes": [
               "Message"
@@ -609,7 +641,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-N7tzN",
+        "id": "ChatOutput-jLeK3",
         "measured": {
           "height": 234,
           "width": 320
@@ -628,7 +660,7 @@
       },
       {
         "data": {
-          "id": "note-Aw4bv",
+          "id": "note-0gkq8",
           "node": {
             "description": "# Document Q&A\n\nThis flow loads a file and uses an LLM to answer questions based on content from the loaded document. \n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Paste your OpenAI API key in the **OpenAI** model component.\n2.  In the **File** component, select a file  you want to load.\n3. Open the **Playground** and chat with your document.",
             "display_name": "",
@@ -639,7 +671,7 @@
         },
         "dragging": false,
         "height": 509,
-        "id": "note-Aw4bv",
+        "id": "note-0gkq8",
         "measured": {
           "height": 509,
           "width": 420
@@ -665,7 +697,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-gvFY1",
+          "id": "Prompt-NAjf4",
           "node": {
             "base_classes": [
               "Message"
@@ -805,7 +837,7 @@
         },
         "dragging": false,
         "height": 347,
-        "id": "Prompt-gvFY1",
+        "id": "Prompt-NAjf4",
         "measured": {
           "height": 347,
           "width": 320
@@ -824,7 +856,7 @@
       },
       {
         "data": {
-          "id": "File-Bph6t",
+          "id": "File-g9fhE",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -849,7 +881,7 @@
             ],
             "frozen": false,
             "icon": "file-text",
-            "last_updated": "2025-10-27T20:02:27.524Z",
+            "last_updated": "2025-10-27T22:12:39.357Z",
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
@@ -1275,7 +1307,7 @@
           "type": "File"
         },
         "dragging": false,
-        "id": "File-Bph6t",
+        "id": "File-g9fhE",
         "measured": {
           "height": 256,
           "width": 320
@@ -1289,7 +1321,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-5gOuk",
+          "id": "LanguageModelComponent-FtAXp",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2084,7 +2116,7 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-5gOuk",
+        "id": "LanguageModelComponent-FtAXp",
         "measured": {
           "height": 369,
           "width": 320
@@ -2098,14 +2130,14 @@
       }
     ],
     "viewport": {
-      "x": -163.96910614932415,
-      "y": 338.4971764272847,
-      "zoom": 0.584090310847885
+      "x": 24.541512984755514,
+      "y": 271.7620568645521,
+      "zoom": 0.7258765016233972
     }
   },
   "description": "Integrates PDF reading with a language model to answer document-specific questions. Ideal for small-scale texts, it facilitates direct queries with immediate insights.",
   "endpoint_name": null,
-  "id": "9314b19d-86e2-4d82-b222-be08f2605499",
+  "id": "2ac3ff71-cd76-4c81-b4c3-3428135214b0",
   "is_component": false,
   "last_tested_version": "1.6.4",
   "name": "Document Q&A",

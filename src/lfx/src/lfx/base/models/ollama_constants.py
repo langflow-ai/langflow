@@ -182,6 +182,12 @@ OLLAMA_EMBEDDING_MODELS = [
     "jina-embeddings-v2-base-en",
 ]
 
+# Embedding models as detailed metadata
+OLLAMA_EMBEDDING_MODELS_DETAILED = [
+    create_model_metadata(provider="Ollama", name=name, icon="Ollama", model_type="embeddings")
+    for name in OLLAMA_EMBEDDING_MODELS
+]
+
 # Connection URLs
 URL_LIST = [
     "http://localhost:11434",

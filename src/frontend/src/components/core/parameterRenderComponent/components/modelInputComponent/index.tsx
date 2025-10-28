@@ -117,8 +117,6 @@ export default function ModelInputComponent({
     }
   }, [options, searchTerm]);
 
-  console.log({ filteredOptions, options });
-
   // Group options by category
   const groupedOptions = useMemo(() => {
     const groups: Record<string, typeof options> = {};
@@ -193,11 +191,6 @@ export default function ModelInputComponent({
     },
     [options, handleOnNewValue, setErrorData],
   );
-
-  const handleApiKeyChange = useCallback((newApiKey: string) => {
-    // This could be used for future API key management
-    console.log("API Key changed:", newApiKey);
-  }, []);
 
   const handleSendApiKey = useCallback(() => {
     setOpenApiKeyDialog(true);
@@ -300,7 +293,6 @@ export default function ModelInputComponent({
       <CommandList className="max-h-[300px]">
         {groupedOptions.map(([category, categoryOptions]) => {
           const visibleOptions = categoryOptions;
-          console.log({ category, categoryOptions, groupedOptions });
 
           if (visibleOptions.length === 0) return null;
 
@@ -321,7 +313,6 @@ export default function ModelInputComponent({
                 )}
               </div>
               {visibleOptions.map((option) => {
-                console.log(option);
                 // Validate option before rendering
                 if (!option || !option.name) {
                   return null;
