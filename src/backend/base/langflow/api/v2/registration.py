@@ -7,6 +7,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 
 from langflow.logging import logger
+from langflow.services.deps import get_telemetry_service
+from langflow.services.telemetry.schema import EmailPayload
 
 router = APIRouter(tags=["Registration API"], prefix="/registration")
 
@@ -101,12 +103,42 @@ async def register_user(request: RegisterRequest):
         email = request.email
         # Save to local file (replace existing) not dealing with 201 status for simplicity.
         if await to_thread(save_registration, email):
+            await _send_email_telemetry(email=email)
             return RegisterResponse(email=email)
 
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Registration failed: {e!s}") from e
+
+
+async def _send_email_telemetry(email: str) -> None:
+    """Send the telemetry event for the registered email address."""
+    payload: EmailPayload | None = None
+
+    try:
+        payload = EmailPayload(email=email)
+    except ValueError as err:
+        logger.error(f"Email is not a valid email address: {email}: {err}.")
+        return
+
+    if not payload:
+        logger.debug(f"Aborted operation to send email telemetry event: {email}.")
+        return
+
+    logger.debug(f"Sending email telemetry event: {email}")
+
+    telemetry_service = get_telemetry_service()
+
+    try:
+        await telemetry_service.log_package_email(payload=payload)
+    except Exception as err:  # noqa: BLE001
+        logger.error(f"Failed to send email telemetry event: {payload.email}: {err}")
+        return
+
+    logger.debug(f"Successfully sent email telemetry event: {payload.email}")
+
+    return
 
 
 @router.get("/")
