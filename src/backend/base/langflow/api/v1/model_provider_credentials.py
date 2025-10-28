@@ -178,11 +178,7 @@ async def get_model_provider_credentials(
         )
 
         # Filter for model provider credentials
-        credentials = [
-            var
-            for var in all_variables
-            if var.name in api_key_fields
-        ]
+        credentials = [var for var in all_variables if var.name in api_key_fields]
 
         # Filter by provider if specified
         if provider:
@@ -484,11 +480,7 @@ async def get_credentials_by_provider(
         )
 
         # Filter for model provider credentials
-        credentials = [
-            var
-            for var in all_variables
-            if var.name in api_key_fields
-        ]
+        credentials = [var for var in all_variables if var.name in api_key_fields]
 
         # Filter by provider using list comprehension
         filtered_credentials = [
