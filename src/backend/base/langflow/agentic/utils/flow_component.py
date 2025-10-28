@@ -176,6 +176,7 @@ async def get_component_field_value(
             "required": field_config.get("required", False),
             "component_id": component_id,
             "flow_id": flow_id_str,
+            **field_config,
         }
 
     except Exception as e:
