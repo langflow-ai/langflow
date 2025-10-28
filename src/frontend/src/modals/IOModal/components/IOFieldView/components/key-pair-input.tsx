@@ -14,11 +14,13 @@ export type IOKeyPairInputProps = {
   testId?: string;
 };
 
-type Row = { id: string; key: string; value: string };
+type Row = { id: string; key: string; value: string; error?: boolean };
 
 const arrayToObject = (arr: Row[]) => {
   return arr.reduce((obj, item) => {
-    obj[item.key] = item.value;
+    if (!item.error && item.key) {
+      obj[item.key] = item.value;
+    }
     return obj;
   }, {});
 };
@@ -26,11 +28,13 @@ const arrayToObject = (arr: Row[]) => {
 const objectToArray = (obj: Record<string, string>, oldData: Row[] = []) => {
   const keys = Object.keys(obj || {});
   if (keys.length === 0) {
-    return [{ key: "", value: "", id: nanoid() }];
+    return [{ key: "", value: "", id: nanoid(), error: false }];
   }
   return keys.map((key) => {
     const oldItem = oldData.find((item) => item.key === key);
-    return oldItem || { key, value: obj[key] || "", id: nanoid() };
+    return (
+      oldItem || { key, value: obj[key] || "", id: nanoid(), error: false }
+    );
   });
 };
 
@@ -51,12 +55,18 @@ const IOKeyPairInput = ({
   const handleKeyChange = (id: string, newKey: string) => {
     const item = data.find((item) => item.id === id);
     if (item) {
-      const newData = data.map((item) =>
-        item.id === id ? { ...item, key: newKey } : item,
+      // Check for duplicate keys and empty key
+      const isDuplicate =
+        data.filter((kv) => kv.id !== id && kv.key === newKey).length > 0;
+      const isEmpty = newKey.trim() === "";
+      const newData = data.map((row) =>
+        row.id === id
+          ? { ...row, key: newKey, error: isDuplicate || isEmpty }
+          : row,
       );
       setData(newData);
-      if (newData.filter((kv) => kv.key === newKey).length > 1) {
-        return; // Prevent updating on duplicate keys
+      if (isDuplicate || isEmpty) {
+        return; // Don't update parent if error
       }
       onChange(arrayToObject(newData));
     }
@@ -65,12 +75,13 @@ const IOKeyPairInput = ({
   const handleValueChange = (id: string, newValue: string) => {
     const item = data.find((item) => item.id === id);
     if (item) {
-      const newData = data.map((item) =>
-        item.id === id ? { ...item, value: newValue } : item,
+      // Keep error state for value changes
+      const newData = data.map((row) =>
+        row.id === id ? { ...row, value: newValue } : row,
       );
       setData(newData);
-      if (newData.filter((kv) => kv.key === item.key).length > 1) {
-        return; // Prevent updating on duplicate keys
+      if (item.error) {
+        return; // Don't update parent if error
       }
       onChange(arrayToObject(newData));
     }
@@ -84,8 +95,10 @@ const IOKeyPairInput = ({
             <Input
               type="text"
               value={item.key.trim()}
-              className={classNames(duplicateKey ? "input-invalid" : "")}
-              placeholder="Type key..."
+              className={classNames(item.error ? "input-invalid" : "")}
+              placeholder={
+                item.error ? "Duplicate or empty key" : "Type key..."
+              }
               onChange={(event) => handleKeyChange(item.id, event.target.value)}
               disabled={!isInputField}
               data-testid={testId ? `${testId}-key-${idx}` : undefined}
@@ -108,7 +121,7 @@ const IOKeyPairInput = ({
                 onClick={() => {
                   const newData = [
                     ...data,
-                    { key: "", value: "", id: nanoid() },
+                    { key: "", value: "", id: nanoid(), error: false },
                   ];
                   setData(newData);
                   onChange(arrayToObject(newData));

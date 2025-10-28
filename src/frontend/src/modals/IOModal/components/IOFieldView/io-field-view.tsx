@@ -39,6 +39,7 @@ export default function IOFieldView({
   const node: AllNodeType | undefined = nodes.find(
     (node) => node.id === fieldId,
   );
+  console.log({ node });
   const flowPoolNode = (flowPool[node!.id] ?? [])[
     (flowPool[node!.id]?.length ?? 1) - 1
   ];
