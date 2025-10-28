@@ -277,7 +277,9 @@ async def test_create_credential_invalid_provider(client: AsyncClient, logged_in
         "description": "Test credential with invalid provider",
     }
 
-    response = await client.post("api/v1/model-provider-credentials/", json=invalid_credential, headers=logged_in_headers)
+    response = await client.post(
+        "api/v1/model-provider-credentials/", json=invalid_credential, headers=logged_in_headers
+    )
 
     # Should fail validation with 422
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

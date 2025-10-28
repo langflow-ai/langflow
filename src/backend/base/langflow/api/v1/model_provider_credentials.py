@@ -5,16 +5,15 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
-from pydantic import BaseModel, Field, field_validator
-
-from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.services.database.models.variable.model import VariableCreate, VariableRead, VariableUpdate
-from langflow.services.deps import get_variable_service
-from langflow.services.variable.constants import CATEGORY_LLM, CREDENTIAL_TYPE
-from langflow.services.variable.service import DatabaseVariableService
 
 # Import the provider metadata to get valid provider names
 from lfx.base.models.unified_models import get_model_provider_metadata
+from pydantic import BaseModel, Field, field_validator
+
+from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.services.deps import get_variable_service
+from langflow.services.variable.constants import CATEGORY_LLM, CREDENTIAL_TYPE
+from langflow.services.variable.service import DatabaseVariableService
 
 
 class ModelProviderCredentialRequest(BaseModel):
@@ -103,7 +102,7 @@ async def create_model_provider_credential(
                 name=credential_name,
                 session=session,
             )
-        except Exception:
+        except (ValueError, KeyError):
             existing_variable = None
 
         if existing_variable is not None:
@@ -120,7 +119,7 @@ async def create_model_provider_credential(
             )
             updated_var = await variable_service.update_variable_fields(
                 user_id=current_user.id,
-                variable_id=existing_variable.id,
+                variable_id=str(existing_variable.id),
                 variable=variable_update,
                 session=session,
             )
