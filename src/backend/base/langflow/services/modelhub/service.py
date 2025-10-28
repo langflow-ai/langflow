@@ -8,6 +8,8 @@ from typing import Any
 import aiohttp
 from langflow.services.base import Service
 from loguru import logger
+from modelhub.clients import InferenceClient
+from modelhub.core import ModelhubCredential
 
 from .settings import ModelHubSettings
 
@@ -21,6 +23,17 @@ class ModelHubService(Service):
         super().__init__()
         # Initialize settings from environment variables
         self.settings = ModelHubSettings()
+        self.credential = ModelhubCredential(
+            modelhub_url=self.settings.URI,
+            client_id=self.settings.AUTH_CLIENT_ID,
+            client_secret=self.settings.AUTH_CLIENT_SECRET,
+        )
+        self.client = InferenceClient(
+            credential=self.credential,
+            copilot_id=self.settings.GENESIS_COPILOT_ID,
+            client_id=self.settings.GENESIS_CLIENT_ID,
+            timeout=self.settings.TIMEOUT,
+        )
         self._http_client: aiohttp.ClientSession | None = None
         self._auth_token: str | None = None
         self._ready = False
@@ -87,9 +100,11 @@ class ModelHubService(Service):
     async def text_inference(self, model_name: str, text: str, json_data: dict | None = None):
         """Call ModelHub Sdk Text Inferencing."""
         try:
-            # For now, we'll return a mock response until the modelhub client is available
-            logger.debug(f"Mock text_inference for model: {model_name}, text: {text[:50]}...")
-            return {"result": "Mock response - ModelHub client not available"}
+            result = await self.client.arun_text_inference(
+                model_name, text, parameters=json_data
+            )
+            logger.debug(f"text_inference result: {result}")
+            return result
         except Exception as e:
             logger.error(f"Error calling Text Inferencing: {e!s}")
             raise
@@ -103,9 +118,9 @@ class ModelHubService(Service):
     ):
         """Call ModelHub Sdk File Inferencing."""
         try:
-            # For now, we'll return a mock response until the modelhub client is available
-            logger.debug(f"Mock file_inference for model: {model_name}, file: {file_path}")
-            return {"result": "Mock response - ModelHub client not available"}
+            return await self.client.arun_file_inference(
+                model_name, file_path, file_name, content_type
+            )
         except Exception as e:
             logger.error(f"Error in File Inferencing : {e!s}")
             raise

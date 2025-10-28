@@ -51,15 +51,30 @@ class ModelHubSettings(BaseSettings):
     AZURE_OPENAI_API_KEY: str | None = None
 
 
-    URI: str = "default_base_url"
+    URI: str = Field(
+        default=os.getenv("MODELHUB_URI", "https://api-genesis-modelhub.sprint.autonomize.dev"),
+        description="Base URI for ModelHub API"
+    )
     AUTH_URL: str = Field(
-        default=os.getenv("MODELHUB_AUTH_URL", "http://localhost:8004/auth/token"),
+        default=os.getenv("MODELHUB_AUTH_URL", "https://api-genesis-modelhub.sprint.autonomize.dev/auth/token"),
         description="Authentication URL for ModelHub"
     )
-    AUTH_CLIENT_ID: str = "default_sa_client_id"
-    AUTH_CLIENT_SECRET: str = "default_sa_client_secret"
-    GENESIS_COPILOT_ID: str = "default_copilot_id"
-    GENESIS_CLIENT_ID: str = "default_client_id"
+    AUTH_CLIENT_ID: str = Field(
+        default=os.getenv("MODELHUB_AUTH_CLIENT_ID", ""),
+        description="Service account client ID for ModelHub authentication"
+    )
+    AUTH_CLIENT_SECRET: str = Field(
+        default=os.getenv("MODELHUB_AUTH_CLIENT_SECRET", ""),
+        description="Service account client secret for ModelHub authentication"
+    )
+    GENESIS_COPILOT_ID: str = Field(
+        default=os.getenv("MODELHUB_GENESIS_COPILOT_ID", ""),
+        description="Genesis Copilot ID for ModelHub"
+    )
+    GENESIS_CLIENT_ID: str = Field(
+        default=os.getenv("MODELHUB_GENESIS_CLIENT_ID", ""),
+        description="Genesis Client ID for ModelHub"
+    )
     USER_AGENT: str = "genesis_studio"
     TIMEOUT: int = 120
 
@@ -76,7 +91,14 @@ class ModelHubSettings(BaseSettings):
 
     def is_configured(self) -> bool:
         """Check if required settings are configured."""
-        return all([self.AUTH_URL, self.AUTH_CLIENT_ID, self.AUTH_CLIENT_SECRET])
+        return all([
+            self.URI,
+            self.AUTH_URL,
+            self.AUTH_CLIENT_ID and self.AUTH_CLIENT_ID != "",
+            self.AUTH_CLIENT_SECRET and self.AUTH_CLIENT_SECRET != "",
+            self.GENESIS_COPILOT_ID and self.GENESIS_COPILOT_ID != "",
+            self.GENESIS_CLIENT_ID and self.GENESIS_CLIENT_ID != ""
+        ])
 
     model_config = SettingsConfigDict(
         env_prefix="MODELHUB_", case_sensitive=True, validate_assignment=True
