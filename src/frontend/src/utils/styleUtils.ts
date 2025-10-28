@@ -209,8 +209,8 @@ export const FILE_ICONS = {
 
 export const SIDEBAR_CATEGORIES = [
   { display_name: "Saved", name: "saved_components", icon: "GradientSave" },
-  { display_name: "Input / Output", name: "input_output", icon: "Cable" },
-  { display_name: "Data", name: "data", icon: "Database" },
+  { display_name: "Input & Output", name: "input_output", icon: "Cable" },
+  { display_name: "Data Sources", name: "data_source", icon: "Database" },
   ...(ENABLE_KNOWLEDGE_BASES
     ? [
         {

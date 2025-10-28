@@ -6,6 +6,8 @@ from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from lfx.components.models_and_agents.agent import AgentComponent
+    from lfx.components.models_and_agents.altk_agent import ALTKAgentComponent
+    from lfx.components.models_and_agents.cuga_agent import CugaComponent
     from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
     from lfx.components.models_and_agents.language_model import LanguageModelComponent
     from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
@@ -14,6 +16,8 @@ if TYPE_CHECKING:
 
 _dynamic_imports = {
     "AgentComponent": "agent",
+    "ALTKAgentComponent": "altk_agent",
+    "CugaComponent": "cuga_agent",
     "EmbeddingModelComponent": "embedding_model",
     "LanguageModelComponent": "language_model",
     "MCPToolsComponent": "mcp_component",
@@ -22,7 +26,9 @@ _dynamic_imports = {
 }
 
 __all__ = [
+    "ALTKAgentComponent",
     "AgentComponent",
+    "CugaComponent",
     "EmbeddingModelComponent",
     "LanguageModelComponent",
     "MCPToolsComponent",

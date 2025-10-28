@@ -9,7 +9,7 @@ from lfx.schema.table import EditMode
 class SmartRouterComponent(Component):
     display_name = "Smart Router"
     description = "Routes an input message using LLM-based categorization."
-    icon = "equal"
+    icon = "route"
     name = "SmartRouter"
 
     def __init__(self, **kwargs):

@@ -27,7 +27,7 @@ from lfx.base.models.model_input_constants import (
     MODEL_PROVIDERS_DICT,
     MODELS_METADATA,
 )
-from lfx.components.agents import AgentComponent
+from lfx.components.models_and_agents.agent import AgentComponent
 from lfx.inputs.inputs import BoolInput
 from lfx.io import DropdownInput, IntInput, Output
 from lfx.log.logger import logger

@@ -5,23 +5,35 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
+    from lfx.components.data_source.api_request import APIRequestComponent
     from lfx.components.data_source.csv_to_data import CSVToDataComponent
     from lfx.components.data_source.json_to_data import JSONToDataComponent
+    from lfx.components.data_source.mock_data import MockDataGeneratorComponent
     from lfx.components.data_source.news_search import NewsSearchComponent
     from lfx.components.data_source.rss import RSSReaderComponent
+    from lfx.components.data_source.url import URLComponent
+    from lfx.components.data_source.web_search import WebSearchComponent
 
 _dynamic_imports = {
+    "APIRequestComponent": "api_request",
     "CSVToDataComponent": "csv_to_data",
     "JSONToDataComponent": "json_to_data",
+    "MockDataGeneratorComponent": "mock_data",
     "NewsSearchComponent": "news_search",
     "RSSReaderComponent": "rss",
+    "URLComponent": "url",
+    "WebSearchComponent": "web_search",
 }
 
 __all__ = [
+    "APIRequestComponent",
     "CSVToDataComponent",
     "JSONToDataComponent",
+    "MockDataGeneratorComponent",
     "NewsSearchComponent",
     "RSSReaderComponent",
+    "URLComponent",
+    "WebSearchComponent",
 ]
 
 

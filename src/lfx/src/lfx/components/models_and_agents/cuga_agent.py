@@ -20,6 +20,7 @@ from langflow.schema.message import Message
 from langflow.schema.table import EditMode
 from pydantic import ValidationError
 
+from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.events import ExceptionWithMessageError
 from lfx.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
@@ -29,7 +30,6 @@ from lfx.base.models.model_input_constants import (
     MODELS_METADATA,
 )
 from lfx.base.models.model_utils import get_model_name
-from lfx.components.agents.agent import LCToolsAgentComponent
 from lfx.components.helpers.current_date import CurrentDateComponent
 from lfx.components.helpers.memory import MemoryComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
