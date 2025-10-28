@@ -56,7 +56,7 @@ class ChatOllamaComponent(LCModelComponent):
         SecretStrInput(
             name="api_key",
             display_name="Ollama API Key",
-            info="Your Ollama API key. (Only required for cloud Ollama)",
+            info="Your Ollama API key.",
             value=None,
             required=False,
             real_time_refresh=True,
