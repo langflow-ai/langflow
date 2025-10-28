@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.runnables import Runnable
 
 from lfx.base.agents.callback import AgentAsyncHandler
@@ -19,14 +19,13 @@ from lfx.log.logger import logger
 from lfx.memory import delete_message
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data
+from lfx.schema.log import OnTokenFunctionType
 from lfx.schema.message import Message
 from lfx.template.field.base import Output
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
-    from langchain_core.messages import BaseMessage
-
-    from lfx.schema.log import SendMessageFunctionType
+    from lfx.schema.log import SendMessageFunctionType, OnTokenFunctionType
 
 
 DEFAULT_TOOLS_DESCRIPTION = "A helpful assistant with access to the following tools:"
@@ -119,6 +118,24 @@ class LCAgentComponent(Component):
         # might be overridden in subclasses
         return None
 
+    def _data_to_messages_skip_empty(self, data: list[Data]) -> list[BaseMessage]:
+        """Convert data to messages, filtering only empty text while preserving non-text content.
+
+        Note: added to fix issue with certain providers failing when given empty text as input.
+        """
+        messages = []
+        for value in data:
+            # Only skip if the message has a text attribute that is empty/whitespace
+            text = getattr(value, "text", None)
+            if isinstance(text, str) and not text.strip():
+                # Skip only messages with empty/whitespace-only text strings
+                continue
+
+            lc_message = value.to_lc_message()
+            messages.append(lc_message)
+
+        return messages
+
     async def run_agent(
         self,
         agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
@@ -138,38 +155,41 @@ class LCAgentComponent(Component):
                 max_iterations=max_iterations,
             )
         # Convert input_value to proper format for agent
-        if hasattr(self.input_value, "to_lc_message") and callable(self.input_value.to_lc_message):
+        lc_message = None
+        if isinstance(self.input_value, Message):
             lc_message = self.input_value.to_lc_message()
-            input_text = lc_message.content if hasattr(lc_message, "content") else str(lc_message)
+            input_dict: dict[str, str | list[BaseMessage] | BaseMessage] = {"input": lc_message}
         else:
-            lc_message = None
-            input_text = self.input_value
+            input_dict = {"input": self.input_value}
 
-        input_dict: dict[str, str | list[BaseMessage]] = {}
         if hasattr(self, "system_prompt"):
             input_dict["system_prompt"] = self.system_prompt
+                
         if hasattr(self, "chat_history") and self.chat_history:
-            if (
-                hasattr(self.chat_history, "to_data")
-                and callable(self.chat_history.to_data)
-                and self.chat_history.__class__.__name__ == "Data"
+            if isinstance(self.chat_history, Data) or all(
+                hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data for m in self.chat_history
             ):
-                input_dict["chat_history"] = data_to_messages(self.chat_history)
-            # Handle both lfx.schema.message.Message and langflow.schema.message.Message types
-            if all(hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data for m in self.chat_history):
-                input_dict["chat_history"] = data_to_messages(self.chat_history)
-            if all(isinstance(m, Message) for m in self.chat_history):
-                input_dict["chat_history"] = data_to_messages([m.to_data() for m in self.chat_history])
+                input_dict["chat_history"] = self._data_to_messages_skip_empty(self.chat_history)
+            elif all(isinstance(m, Message) for m in self.chat_history):
+                input_dict["chat_history"] = self._data_to_messages_skip_empty([m.to_data() for m in self.chat_history])
+                
+
+        # Handle multimodal input (images + text)
+        # Note: Agent input must be a string, so we extract text and move images to chat_history 
         if hasattr(lc_message, "content") and isinstance(lc_message.content, list):
-            # ! Because the input has to be a string, we must pass the images in the chat_history
-
+            # Extract images and text from the text content items
             image_dicts = [item for item in lc_message.content if item.get("type") == "image"]
-            text_items = [item for item in lc_message.content if item.get("type") != "image"]
+            text_content = [item for item in lc_message.content if item.get("type") != "image"]
 
-            # Extract text content from remaining items
-            if text_items:
-                # If there are text items, extract their text content
-                input_text = " ".join(item.get("text", "") for item in text_items if item.get("type") == "text").strip()
+            text_strings = [
+                item.get("text", "")
+                for item in text_content
+                if item.get("type") == "text" and item.get("text", "").strip()
+            ]
+
+            # Set input to concatenated text or empty string
+            input_dict["input"] = " ".join(text_strings) if text_strings else ""
+
 
             # If input_text is still a list or empty, provide a default
             if isinstance(input_text, list) or not input_text:
@@ -177,18 +197,22 @@ class LCAgentComponent(Component):
 
             if "chat_history" not in input_dict:
                 input_dict["chat_history"] = []
+
             if isinstance(input_dict["chat_history"], list):
                 input_dict["chat_history"].extend(HumanMessage(content=[image_dict]) for image_dict in image_dicts)
             else:
                 input_dict["chat_history"] = [HumanMessage(content=[image_dict]) for image_dict in image_dicts]
 
         # Final safety check: ensure input_text is never empty (prevents Anthropic API errors)
-        if not input_text or (isinstance(input_text, (list, str)) and not str(input_text).strip()):
-            input_text = "Continue the conversation."
-        # Ensure the agent input is a string
-        if not isinstance(input_text, str):
-            input_text = " ".join(map(str, input_text)) if isinstance(input_text, list) else str(input_text)
+        if isinstance(input_text, list):
+            input_text = " ".join(map(str, input_text))
+        elif not isinstance(input_text, str):
+            input_text = str(input_text)
+
+        if not input_text.strip():
+            input_dict["input"] = "Continue the conversation."
         input_dict["input"] = input_text
+
         if hasattr(self, "graph"):
             session_id = self.graph.session_id
         elif hasattr(self, "_session_id"):
@@ -197,7 +221,6 @@ class LCAgentComponent(Component):
             session_id = None
 
         sender_name = get_chat_output_sender_name(self) or self.display_name or "AI"
-
         agent_message = Message(
             sender=MESSAGE_SENDER_AI,
             sender_name=sender_name,
@@ -205,6 +228,13 @@ class LCAgentComponent(Component):
             content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
             session_id=session_id or uuid.uuid4(),
         )
+
+        # Create token callback if event_manager is available
+        # This wraps the event_manager's on_token method to match OnTokenFunctionType Protocol
+        on_token_callback: OnTokenFunctionType | None = None
+        if self._event_manager:
+            on_token_callback = cast("OnTokenFunctionType", self._event_manager.on_token)
+
         try:
             result = await process_agent_events(
                 runnable.astream_events(
@@ -214,6 +244,7 @@ class LCAgentComponent(Component):
                 ),
                 agent_message,
                 cast("SendMessageFunctionType", self.send_message),
+                on_token_callback,
             )
         except ExceptionWithMessageError as e:
             if hasattr(e, "agent_message") and hasattr(e.agent_message, "id"):
