@@ -88,6 +88,10 @@ class SQLComponent(ComponentWithCache):
         self.maybe_create_db()
         try:
             cursor: Result[Any] = self.db.run(self.query, fetch="cursor")
+            # Check if cursor is already a list (happens with INSERT/UPDATE/DELETE)
+            if isinstance(cursor, list):
+                return cursor
+            # Otherwise, it's a cursor object and we need to fetch results
             return [x._asdict() for x in cursor.fetchall()]
         except SQLAlchemyError as e:
             msg = f"An error occurred while running the SQL Query: {e}"
