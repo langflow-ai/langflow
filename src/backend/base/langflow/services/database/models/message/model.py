@@ -9,7 +9,7 @@ from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.properties import Properties
-from langflow.schema.validators import str_to_timestamp_validator
+from langflow.schema.validators import TF_WITH_TZ_AND_MICROSECONDS, str_to_timestamp, str_to_timestamp_validator
 
 if TYPE_CHECKING:
     from langflow.schema.message import Message
@@ -37,11 +37,12 @@ class MessageBase(SQLModel):
         if isinstance(value, datetime):
             if value.tzinfo is None:
                 value = value.replace(tzinfo=timezone.utc)
-            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
+            return value.strftime(TF_WITH_TZ_AND_MICROSECONDS)
+
         if isinstance(value, str):
-            # Make sure the timestamp is in UTC
-            value = datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
-            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
+            dt = str_to_timestamp(value)  # unified, UTC-normalized
+            return dt.strftime(TF_WITH_TZ_AND_MICROSECONDS)
+
         return value
 
     @field_validator("files", mode="before")
@@ -77,9 +78,11 @@ class MessageBase(SQLModel):
                 message.files = image_paths
 
         if isinstance(message.timestamp, str):
-            # Convert timestamp string in format "YYYY-MM-DD HH:MM:SS UTC" to datetime
+            # Convert timestamp string in format "YYYY-MM-DD HH:MM:SS.FFFF UTC" to datetime
             try:
-                timestamp = datetime.strptime(message.timestamp, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+                timestamp = datetime.strptime(message.timestamp, TF_WITH_TZ_AND_MICROSECONDS).replace(
+                    tzinfo=timezone.utc
+                )
             except ValueError:
                 # Fallback for ISO format if the above fails
                 timestamp = datetime.fromisoformat(message.timestamp).replace(tzinfo=timezone.utc)
