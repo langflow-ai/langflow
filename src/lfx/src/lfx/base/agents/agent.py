@@ -10,7 +10,7 @@ from langchain_core.runnables import Runnable
 
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
-from lfx.base.agents.utils import data_to_messages, get_chat_output_sender_name
+from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.custom.custom_component.component import Component, _get_component_toolkit
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import InputTypes, MultilineInput
@@ -25,7 +25,7 @@ from lfx.template.field.base import Output
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
-    from lfx.schema.log import SendMessageFunctionType, OnTokenFunctionType
+    from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 
 
 DEFAULT_TOOLS_DESCRIPTION = "A helpful assistant with access to the following tools:"
@@ -164,7 +164,7 @@ class LCAgentComponent(Component):
 
         if hasattr(self, "system_prompt"):
             input_dict["system_prompt"] = self.system_prompt
-                
+
         if hasattr(self, "chat_history") and self.chat_history:
             if isinstance(self.chat_history, Data) or all(
                 hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data for m in self.chat_history
@@ -172,10 +172,9 @@ class LCAgentComponent(Component):
                 input_dict["chat_history"] = self._data_to_messages_skip_empty(self.chat_history)
             elif all(isinstance(m, Message) for m in self.chat_history):
                 input_dict["chat_history"] = self._data_to_messages_skip_empty([m.to_data() for m in self.chat_history])
-                
 
         # Handle multimodal input (images + text)
-        # Note: Agent input must be a string, so we extract text and move images to chat_history 
+        # Note: Agent input must be a string, so we extract text and move images to chat_history
         if hasattr(lc_message, "content") and isinstance(lc_message.content, list):
             # Extract images and text from the text content items
             image_dicts = [item for item in lc_message.content if item.get("type") == "image"]
@@ -190,10 +189,9 @@ class LCAgentComponent(Component):
             # Set input to concatenated text or empty string
             input_dict["input"] = " ".join(text_strings) if text_strings else ""
 
-
-            # If input_text is still a list or empty, provide a default
-            if isinstance(input_text, list) or not input_text:
-                input_text = "Process the provided images."
+            # If input is still a list or empty, provide a default
+            if isinstance(input_dict["input"], list) or not input_dict["input"]:
+                input_dict["input"] = "Process the provided images."
 
             if "chat_history" not in input_dict:
                 input_dict["chat_history"] = []
@@ -203,15 +201,17 @@ class LCAgentComponent(Component):
             else:
                 input_dict["chat_history"] = [HumanMessage(content=[image_dict]) for image_dict in image_dicts]
 
-        # Final safety check: ensure input_text is never empty (prevents Anthropic API errors)
-        if isinstance(input_text, list):
-            input_text = " ".join(map(str, input_text))
-        elif not isinstance(input_text, str):
-            input_text = str(input_text)
+        # Final safety check: ensure input is never empty (prevents Anthropic API errors)
+        current_input = input_dict.get("input", "")
+        if isinstance(current_input, list):
+            current_input = " ".join(map(str, current_input))
+        elif not isinstance(current_input, str):
+            current_input = str(current_input)
 
-        if not input_text.strip():
+        if not current_input.strip():
             input_dict["input"] = "Continue the conversation."
-        input_dict["input"] = input_text
+        else:
+            input_dict["input"] = current_input
 
         if hasattr(self, "graph"):
             session_id = self.graph.session_id

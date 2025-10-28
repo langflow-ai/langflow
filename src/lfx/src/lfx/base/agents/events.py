@@ -114,14 +114,15 @@ def _extract_output_text(output: str | list) -> str:
                 if "message" in item:
                     return str(item["message"])
 
-                
                 # Special case handling for non-text-like dicts
                 if (
-                    item.get("type") == "tool_use" # Handle tool use items
-                    or ("index" in item and len(item) == 1) # Handle index-only items
-                    or "partial_json" in item # Handle partial json items
-                    or ("index" in item and not any(k in item for k in ("text", "content", "message"))) # Handle index-only items
-                    or not any(key in item for key in ["text", "content", "message"]) # Handle other metadata-only chunks that don't contain meaningful text
+                    item.get("type") == "tool_use"  # Handle tool use items
+                    or ("index" in item and len(item) == 1)  # Handle index-only items
+                    or "partial_json" in item  # Handle partial json items
+                    # Handle index-only items
+                    or ("index" in item and not any(k in item for k in ("text", "content", "message")))
+                    # Handle other metadata-only chunks that don't contain meaningful text
+                    or not any(key in item for key in ["text", "content", "message"])
                 ):
                     return ""
 
@@ -322,7 +323,7 @@ async def handle_on_chain_stream(
                     "id": str(message_id),
                 },
             )
-        
+
         if not agent_message.text:
             # Starts the timer when the first message is starting to be generated
             start_time = perf_counter()
