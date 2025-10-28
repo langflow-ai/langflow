@@ -33,6 +33,7 @@ class DatabaseVariableService(VariableService, Service):
         # Import the provider mapping to set default_fields for known providers
         try:
             from lfx.base.models.unified_models import get_model_provider_variable_mapping
+
             provider_mapping = get_model_provider_variable_mapping()
             # Reverse the mapping to go from variable name to provider
             var_to_provider = {var_name: provider for provider, var_name in provider_mapping.items()}

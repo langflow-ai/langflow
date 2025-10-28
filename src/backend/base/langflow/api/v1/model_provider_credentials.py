@@ -15,7 +15,9 @@ from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 
-MIN_DEFAULT_FIELDS_FOR_CREDENTIAL = 2
+# Get all reserved fields for model provider API keys
+model_providers = get_model_provider_metadata()
+api_key_fields = {info["variable_name"] for info in model_providers.values()}
 
 
 class ModelProviderCredentialRequest(BaseModel):
@@ -111,6 +113,7 @@ async def create_model_provider_credential(
             from langflow.services.database.models.variable.model import VariableUpdate
 
             variable_update = VariableUpdate(
+                id=existing_variable.id,
                 name=credential_name,
                 value=request.value,
                 type=CREDENTIAL_TYPE,
@@ -174,13 +177,11 @@ async def get_model_provider_credentials(
             session=session,
         )
 
-        # Filter for model provider credentials (those with CREDENTIAL_TYPE and default_fields indicating a provider)
+        # Filter for model provider credentials
         credentials = [
             var
             for var in all_variables
-            if var.type == CREDENTIAL_TYPE
-            and var.default_fields
-            and len(var.default_fields) >= MIN_DEFAULT_FIELDS_FOR_CREDENTIAL
+            if var.name in api_key_fields
         ]
 
         # Filter by provider if specified
@@ -239,11 +240,7 @@ async def get_model_provider_credential(
         )
 
         # Verify it's a model provider credential
-        if (
-            credential.type != CREDENTIAL_TYPE
-            or not credential.default_fields
-            or len(credential.default_fields) < MIN_DEFAULT_FIELDS_FOR_CREDENTIAL
-        ):
+        if credential.name not in api_key_fields:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
@@ -300,11 +297,7 @@ async def get_model_provider_credential_value(
         )
 
         # Verify it's a model provider credential
-        if (
-            credential.type != CREDENTIAL_TYPE
-            or not credential.default_fields
-            or len(credential.default_fields) < MIN_DEFAULT_FIELDS_FOR_CREDENTIAL
-        ):
+        if credential.name not in api_key_fields:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
@@ -365,11 +358,7 @@ async def delete_model_provider_credential(
         )
 
         # Verify it's a model provider credential
-        if (
-            existing_credential.type != CREDENTIAL_TYPE
-            or not existing_credential.default_fields
-            or len(existing_credential.default_fields) < MIN_DEFAULT_FIELDS_FOR_CREDENTIAL
-        ):
+        if existing_credential.name not in api_key_fields:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
@@ -438,11 +427,7 @@ async def get_model_provider_credential_metadata(
             )
 
         # Verify it's a model provider credential
-        if (
-            credential.type != CREDENTIAL_TYPE
-            or not credential.default_fields
-            or len(credential.default_fields) < MIN_DEFAULT_FIELDS_FOR_CREDENTIAL
-        ):
+        if credential.name not in api_key_fields:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Model provider credential not found",
@@ -498,14 +483,11 @@ async def get_credentials_by_provider(
             session=session,
         )
 
-        # Filter for model provider credentials (those with CREDENTIAL_TYPE and default_fields indicating a provider)
+        # Filter for model provider credentials
         credentials = [
-            var for var in all_variables
-            if (
-                var.type == CREDENTIAL_TYPE
-                and var.default_fields
-                and len(var.default_fields) >= MIN_DEFAULT_FIELDS_FOR_CREDENTIAL
-            )
+            var
+            for var in all_variables
+            if var.name in api_key_fields
         ]
 
         # Filter by provider using list comprehension

@@ -104,16 +104,11 @@ async def get_enabled_providers(
                 detail="Variable service is not an instance of DatabaseVariableService",
             )
         # Get all credential variables for the user
-        all_variables = await variable_service.get_all(
-            user_id=current_user.id, session=session
-        )
+        all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
 
         # Get all credential variable names (regardless of default_fields)
         # This includes both env variables and explicitly created model provider credentials
-        credential_names = {
-            var.name for var in all_variables
-            if var.type == CREDENTIAL_TYPE
-        }
+        credential_names = {var.name for var in all_variables if var.type == CREDENTIAL_TYPE}
 
         if not credential_names:
             return {

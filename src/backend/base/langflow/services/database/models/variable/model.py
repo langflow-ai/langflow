@@ -67,6 +67,7 @@ class VariableRead(SQLModel):
 
 
 class VariableUpdate(SQLModel):
+    id: UUID
     name: str | None = Field(None, description="Name of the variable")
     value: str | None = Field(None, description="Encrypted value of the variable")
     default_fields: list[str] | None = Field(None, description="Default fields for the variable")
