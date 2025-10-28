@@ -1,41 +1,24 @@
 import _ from "lodash";
 import { nanoid } from "nanoid";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import IconComponent from "../../../../../components/common/genericIconComponent";
 import { Input } from "../../../../../components/ui/input";
 import { classNames } from "../../../../../utils/utils";
 
 export type IOKeyPairInputProps = {
-  value: Record<string, string>;
-  onChange: (value: Record<string, string>) => void;
+  value: KeyPairRow[];
+  onChange: (value: KeyPairRow[]) => void;
   duplicateKey: boolean;
   isList: boolean;
   isInputField?: boolean;
   testId?: string;
 };
 
-type Row = { id: string; key: string; value: string; error?: boolean };
-
-const arrayToObject = (arr: Row[]) => {
-  return arr.reduce((obj, item) => {
-    if (!item.error && item.key) {
-      obj[item.key] = item.value;
-    }
-    return obj;
-  }, {});
-};
-
-const objectToArray = (obj: Record<string, string>, oldData: Row[] = []) => {
-  const keys = Object.keys(obj || {});
-  if (keys.length === 0) {
-    return [{ key: "", value: "", id: nanoid(), error: false }];
-  }
-  return keys.map((key) => {
-    const oldItem = oldData.find((item) => item.key === key);
-    return (
-      oldItem || { key, value: obj[key] || "", id: nanoid(), error: false }
-    );
-  });
+export type KeyPairRow = {
+  id: string;
+  key: string;
+  value: string;
+  error: boolean;
 };
 
 const IOKeyPairInput = ({
@@ -46,50 +29,52 @@ const IOKeyPairInput = ({
   isInputField,
   testId,
 }: IOKeyPairInputProps) => {
-  const [data, setData] = useState<Row[]>(objectToArray(value, []));
-
-  useEffect(() => {
-    setData((oldData) => objectToArray(value, oldData));
-  }, [value, setData]);
-
   const handleKeyChange = (id: string, newKey: string) => {
-    const item = data.find((item) => item.id === id);
+    const item = value.find((item) => item.id === id);
     if (item) {
-      // Check for duplicate keys and empty key
       const isDuplicate =
-        data.filter((kv) => kv.id !== id && kv.key === newKey).length > 0;
-      const isEmpty = newKey.trim() === "";
-      const newData = data.map((row) =>
-        row.id === id
-          ? { ...row, key: newKey, error: isDuplicate || isEmpty }
-          : row,
+        value.filter((kv) => kv.id !== id && kv.key === newKey).length > 0;
+      const newValue = value.map((row) =>
+        row.id === id ? { ...row, key: newKey, error: isDuplicate } : row,
       );
-      setData(newData);
-      if (isDuplicate || isEmpty) {
-        return; // Don't update parent if error
-      }
-      onChange(arrayToObject(newData));
+      onChange(newValue);
     }
   };
 
   const handleValueChange = (id: string, newValue: string) => {
-    const item = data.find((item) => item.id === id);
+    const item = value.find((item) => item.id === id);
     if (item) {
       // Keep error state for value changes
-      const newData = data.map((row) =>
+      const newValues = value.map((row) =>
         row.id === id ? { ...row, value: newValue } : row,
       );
-      setData(newData);
-      if (item.error) {
-        return; // Don't update parent if error
-      }
-      onChange(arrayToObject(newData));
+      onChange(newValues);
     }
+  };
+
+  const handleAddRow = () => {
+    const newValue = [
+      ...value,
+      { key: "", value: "", id: nanoid(), error: false },
+    ];
+    onChange(newValue);
+  };
+
+  const handleDeleteRow = (item: KeyPairRow) => {
+    const seen = new Set<string>();
+    const newValue = value
+      .filter((value) => value.id !== item.id)
+      .map((row) => {
+        const isDuplicate = row.key !== "" && seen.has(row.key);
+        seen.add(row.key);
+        return { ...row, error: isDuplicate };
+      });
+    onChange(newValue);
   };
 
   return (
     <div className={classNames("flex h-full flex-col gap-3")}>
-      {data.map((item, idx) => {
+      {value.map((item, idx) => {
         return (
           <div key={item.id} className="flex w-full gap-2">
             <Input
@@ -115,17 +100,10 @@ const IOKeyPairInput = ({
               data-testid={testId ? `${testId}-value-${idx}` : undefined}
             />
 
-            {isList && isInputField && idx === data.length - 1 ? (
+            {isList && isInputField && idx === value.length - 1 ? (
               <button
                 type="button"
-                onClick={() => {
-                  const newData = [
-                    ...data,
-                    { key: "", value: "", id: nanoid(), error: false },
-                  ];
-                  setData(newData);
-                  onChange(arrayToObject(newData));
-                }}
+                onClick={handleAddRow}
                 data-testid={testId ? `${testId}-plus-btn-0` : undefined}
               >
                 <IconComponent
@@ -136,11 +114,7 @@ const IOKeyPairInput = ({
             ) : isList && isInputField ? (
               <button
                 type="button"
-                onClick={() => {
-                  const newData = data.filter((value) => value.id !== item.id);
-                  setData(newData);
-                  onChange(arrayToObject(newData));
-                }}
+                onClick={() => handleDeleteRow(item)}
                 data-testid={testId ? `${testId}-minus-btn-${idx}` : undefined}
               >
                 <IconComponent
