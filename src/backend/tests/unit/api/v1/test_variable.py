@@ -230,7 +230,7 @@ async def test_create_variable__openai_api_key_validation_success(client: AsyncC
     for var in all_vars.json():
         if var.get("name") == "OPENAI_API_KEY":
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-    
+
     openai_variable = {
         "name": "OPENAI_API_KEY",
         "value": "sk-test-key",
@@ -257,7 +257,7 @@ async def test_create_variable__openai_api_key_validation_failure(client: AsyncC
     for var in all_vars.json():
         if var.get("name") == "OPENAI_API_KEY":
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-    
+
     openai_variable = {
         "name": "OPENAI_API_KEY",
         "value": "invalid-key",
@@ -283,7 +283,7 @@ async def test_create_variable__anthropic_api_key_validation_success(client: Asy
     for var in all_vars.json():
         if var.get("name") == "ANTHROPIC_API_KEY":
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-    
+
     anthropic_variable = {
         "name": "ANTHROPIC_API_KEY",
         "value": "sk-ant-test-key",
@@ -310,7 +310,7 @@ async def test_create_variable__anthropic_api_key_validation_failure(client: Asy
     for var in all_vars.json():
         if var.get("name") == "ANTHROPIC_API_KEY":
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-    
+
     anthropic_variable = {
         "name": "ANTHROPIC_API_KEY",
         "value": "invalid-key",
@@ -336,7 +336,7 @@ async def test_create_variable__google_api_key_validation_success(client: AsyncC
     for var in all_vars.json():
         if var.get("name") == "GOOGLE_API_KEY":
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-    
+
     google_variable = {
         "name": "GOOGLE_API_KEY",
         "value": "test-google-key",
@@ -363,7 +363,7 @@ async def test_create_variable__ollama_base_url_validation_success(client: Async
     for var in all_vars.json():
         if var.get("name") == "OLLAMA_BASE_URL":
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-    
+
     ollama_variable = {
         "name": "OLLAMA_BASE_URL",
         "value": "http://localhost:11434",
@@ -390,7 +390,7 @@ async def test_create_variable__ollama_base_url_validation_failure(client: Async
     for var in all_vars.json():
         if var.get("name") == "OLLAMA_BASE_URL":
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-    
+
     ollama_variable = {
         "name": "OLLAMA_BASE_URL",
         "value": "http://invalid-url",
@@ -416,7 +416,7 @@ async def test_create_variable__model_provider_network_error_allows_creation(cli
     for var in all_vars.json():
         if var.get("name") == "OPENAI_API_KEY":
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-    
+
     openai_variable = {
         "name": "OPENAI_API_KEY",
         "value": "sk-test-key",
