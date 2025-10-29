@@ -20,7 +20,7 @@ jest.mock("@/utils/cookie-manager", () => ({
 jest.mock("@/utils/utils", () => ({
   getAuthCookie: jest.fn((_cookies, name) => mockCookiesInstance.get(name)),
   setAuthCookie: jest.fn((_cookies, name, value) =>
-    mockCookiesInstance.set(name, value)
+    mockCookiesInstance.set(name, value),
   ),
 }));
 
@@ -94,7 +94,7 @@ jest.mock(
     useGetGlobalVariablesMutation: () => ({
       mutate: mockMutateGetGlobalVariables,
     }),
-  })
+  }),
 );
 
 // Import AuthProvider after all mocks
@@ -144,8 +144,7 @@ describe("AuthContext - Login Fix for Race Condition", () => {
 
       // Simulate getUser completing first
       act(() => {
-        const getUserCallback =
-          mockMutateLoggedUser.mock.calls[0][1].onSuccess;
+        const getUserCallback = mockMutateLoggedUser.mock.calls[0][1].onSuccess;
         getUserCallback(mockUserData);
       });
 
@@ -165,7 +164,7 @@ describe("AuthContext - Login Fix for Race Condition", () => {
           expect(mockSetIsAuthenticated).toHaveBeenCalledWith(true);
           expect(mockSetIsAuthenticated).toHaveBeenCalledTimes(1);
         },
-        { timeout: 3000 } // Increased timeout for CI environments
+        { timeout: 3000 }, // Increased timeout for CI environments
       );
     });
 
@@ -200,8 +199,7 @@ describe("AuthContext - Login Fix for Race Condition", () => {
 
       // Simulate getUser completing SECOND
       await act(async () => {
-        const getUserCallback =
-          mockMutateLoggedUser.mock.calls[0][1].onSuccess;
+        const getUserCallback = mockMutateLoggedUser.mock.calls[0][1].onSuccess;
         getUserCallback(mockUserData);
       });
 
@@ -210,7 +208,7 @@ describe("AuthContext - Login Fix for Race Condition", () => {
         () => {
           expect(mockSetIsAuthenticated).toHaveBeenCalledWith(true);
         },
-        { timeout: 3000 }
+        { timeout: 3000 },
       );
     });
 
@@ -243,7 +241,7 @@ describe("AuthContext - Login Fix for Race Condition", () => {
         () => {
           expect(mockSetIsAuthenticated).toHaveBeenCalledWith(true);
         },
-        { timeout: 3000 }
+        { timeout: 3000 },
       );
     });
 
@@ -285,8 +283,7 @@ describe("AuthContext - Login Fix for Race Condition", () => {
 
       // Complete getUser - should call checkHasStore and fetchApiData
       act(() => {
-        const getUserCallback =
-          mockMutateLoggedUser.mock.calls[0][1].onSuccess;
+        const getUserCallback = mockMutateLoggedUser.mock.calls[0][1].onSuccess;
         getUserCallback(mockUserData);
       });
 
@@ -304,7 +301,7 @@ describe("AuthContext - Login Fix for Race Condition", () => {
         () => {
           expect(mockSetIsAuthenticated).toHaveBeenCalledWith(true);
         },
-        { timeout: 3000 }
+        { timeout: 3000 },
       );
     });
   });
@@ -323,15 +320,15 @@ describe("AuthContext - Login Fix for Race Condition", () => {
       // Verify all cookies were set
       expect(mockCookiesInstance.set).toHaveBeenCalledWith(
         "access_token_lf",
-        accessToken
+        accessToken,
       );
       expect(mockCookiesInstance.set).toHaveBeenCalledWith(
         "auto_login_lf",
-        "login"
+        "login",
       );
       expect(mockCookiesInstance.set).toHaveBeenCalledWith(
         "refresh_token_lf",
-        refreshToken
+        refreshToken,
       );
     });
 
@@ -344,7 +341,7 @@ describe("AuthContext - Login Fix for Race Condition", () => {
 
       // Should only set access_token and auto_login cookies
       const setCallArgs = mockCookiesInstance.set.mock.calls.map(
-        (call) => call[0]
+        (call) => call[0],
       );
 
       expect(setCallArgs).toContain("access_token_lf");
@@ -386,8 +383,7 @@ describe("AuthContext - Login Fix for Race Condition", () => {
 
       // Step 2: Complete getUser
       act(() => {
-        const getUserCallback =
-          mockMutateLoggedUser.mock.calls[0][1].onSuccess;
+        const getUserCallback = mockMutateLoggedUser.mock.calls[0][1].onSuccess;
         getUserCallback(mockUserData);
       });
 
@@ -411,7 +407,7 @@ describe("AuthContext - Login Fix for Race Condition", () => {
           expect(mockSetIsAuthenticated).toHaveBeenCalledWith(true);
           expect(mockSetIsAuthenticated).toHaveBeenCalledTimes(1);
         },
-        { timeout: 3000 }
+        { timeout: 3000 },
       );
     });
   });
@@ -441,7 +437,7 @@ describe("AuthContext - Login Fix for Race Condition", () => {
 
       expect(mockCookiesInstance.set).toHaveBeenCalledWith(
         "auto_login_lf",
-        "auto"
+        "auto",
       );
     });
   });
