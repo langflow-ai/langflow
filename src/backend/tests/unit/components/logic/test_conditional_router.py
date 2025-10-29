@@ -23,8 +23,8 @@ class TestConditionalRouterComponent(ComponentTestBaseWithoutClient):
             "operator": "equals",
             "match_text": "test input",
             "case_sensitive": True,
-            "true_case_message": Message(content="true result"),
-            "false_case_message": Message(content="false result"),
+            "true_case_message": Message(text="true result"),
+            "false_case_message": Message(text="false result"),
             "max_iterations": 10,
             "default_route": "true_result",
         }
@@ -223,7 +223,7 @@ class TestConditionalRouterComponent(ComponentTestBaseWithoutClient):
         component.match_text = "hello"
         component.operator = "equals"
         component.case_sensitive = True
-        component.true_case_message = Message(content="True case")
+        component.true_case_message = Message(text="True case")
 
         with (
             patch.object(component, "iterate_and_stop_once") as mock_iterate,
@@ -262,7 +262,7 @@ class TestConditionalRouterComponent(ComponentTestBaseWithoutClient):
         component.match_text = "world"
         component.operator = "equals"
         component.case_sensitive = True
-        component.false_case_message = Message(content="False case")
+        component.false_case_message = Message(text="False case")
 
         with patch.object(component, "iterate_and_stop_once") as mock_iterate:
             result = component.false_response()
