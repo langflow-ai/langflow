@@ -889,7 +889,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.119.1"
+                    "version": null
                   },
                   {
                     "name": "lfx",
@@ -1847,7 +1847,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.119.1"
+                    "version": null
                   },
                   {
                     "name": "lfx",
@@ -1863,7 +1863,7 @@
                   },
                   {
                     "name": "google",
-                    "version": "1.44.0"
+                    "version": "1.121.0"
                   },
                   {
                     "name": "googleapiclient",
