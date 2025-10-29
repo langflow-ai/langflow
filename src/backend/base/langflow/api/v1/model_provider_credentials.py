@@ -32,7 +32,7 @@ class ModelProviderCredentialRequest(BaseModel):
     @classmethod
     def validate_non_empty(cls, v: str) -> str:
         """Validate that string fields are not empty."""
-        if not v or not v.strip():
+        if not v or v.isspace():
             msg = "Field cannot be empty"
             raise ValueError(msg)
         return v
