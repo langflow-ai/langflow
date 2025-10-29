@@ -1,12 +1,10 @@
-import os
-
 import pytest
 from astrapy import DataAPIClient
 from langchain_astradb import AstraDBVectorStore, VectorServiceOptions
 from langchain_core.documents import Document
-from langflow.components.openai.openai import OpenAIEmbeddingsComponent
-from langflow.components.vectorstores import AstraDBVectorStoreComponent
-from langflow.schema.data import Data
+from lfx.components.datastax import AstraDBVectorStoreComponent
+from lfx.components.openai.openai import OpenAIEmbeddingsComponent
+from lfx.schema.data import Data
 
 from tests.api_keys import get_astradb_api_endpoint, get_astradb_application_token, get_openai_api_key
 from tests.integration.components.mock_components import TextToData
@@ -39,7 +37,7 @@ def astradb_client():
     for collection in ALL_COLLECTIONS:
         try:  # noqa: SIM105
             client.drop_collection(collection)
-        except Exception:  # noqa: BLE001, S110
+        except Exception:  # noqa: S110
             pass
 
 
@@ -151,7 +149,7 @@ def test_astra_vectorize_with_provider_api_key():
             api_endpoint=api_endpoint,
             token=application_token,
             collection_vector_service_options=VectorServiceOptions._from_dict(options),
-            collection_embedding_api_key=os.getenv("OPENAI_API_KEY"),
+            collection_embedding_api_key=get_openai_api_key(),
         )
         documents = [Document(page_content="test1"), Document(page_content="test2")]
         records = [Data.from_document(d) for d in documents]

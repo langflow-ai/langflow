@@ -1,3 +1,6 @@
+import type { Edge, Node } from "@xyflow/react";
+import type { AxiosError } from "axios";
+import { flushSync } from "react-dom";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   BUILD_POLLING_INTERVAL,
@@ -9,17 +12,15 @@ import {
   customCancelBuildUrl,
   customEventsUrl,
 } from "@/customization/utils/custom-buildUtils";
+import { customPollBuildEvents } from "@/customization/utils/custom-poll-build-events";
 import { useMessagesStore } from "@/stores/messagesStore";
-import { Edge, Node } from "@xyflow/react";
-import { AxiosError } from "axios";
-import { flushSync } from "react-dom";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
 import useFlowStore from "../stores/flowStore";
-import { VertexBuildTypeAPI } from "../types/api";
+import type { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
-import { VertexLayerElementType } from "../types/zustand/flow";
+import type { VertexLayerElementType } from "../types/zustand/flow";
 import { isStringArray, tryParseJson } from "./utils";
 
 type BuildVerticesParams = {
@@ -49,14 +50,14 @@ type BuildVerticesParams = {
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
   // Build VertexBuildTypeAPI
-  let inactiveData = {
+  const inactiveData = {
     results: {},
     outputs: {},
     messages: [],
     logs: {},
     inactive: true,
   };
-  let inactiveVertexData = {
+  const inactiveVertexData = {
     id: vertexId,
     data: inactiveData,
     inactivated_vertices: null,
@@ -75,7 +76,7 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
 }
 
 function logFlowLoad(message: string, data?: any) {
-  console.log(`[FlowLoad] ${message}`, data || "");
+  console.warn(`[FlowLoad] ${message}`, data || "");
 }
 
 export async function updateVerticesOrder(
@@ -115,7 +116,7 @@ export async function updateVerticesOrder(
     // orderResponse.data.ids,
     // for each id we need to build the VertexLayerElementType object as
     // {id: id, reference: id}
-    let verticesLayers: Array<Array<VertexLayerElementType>> =
+    const verticesLayers: Array<Array<VertexLayerElementType>> =
       orderResponse.data.ids.map((id: string) => {
         return [{ id: id, reference: id }];
       });
@@ -180,74 +181,14 @@ async function pollBuildEvents(
   },
   abortController: AbortController,
 ): Promise<void> {
-  let isDone = false;
-  while (!isDone) {
-    const response = await fetch(
-      `${url}?event_delivery=${EventDeliveryType.POLLING}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/x-ndjson",
-        },
-        signal: abortController.signal, // Add abort signal to fetch
-      },
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.detail ||
-          "Langflow was not able to connect to the server. Please make sure your connection is working properly.",
-      );
-    }
-
-    // Get the response text - will be NDJSON format (one JSON per line)
-    const responseText = await response.text();
-
-    // Skip if empty response
-    if (!responseText.trim()) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      continue;
-    }
-
-    // Split by newlines to get individual JSON objects
-    const eventLines = responseText.split("\n").filter((line) => line.trim());
-
-    // If no events, continue polling
-    if (eventLines.length === 0) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      continue;
-    }
-
-    // Process all events in the NDJSON response
-    for (const eventStr of eventLines) {
-      // Process the event
-      const event = JSON.parse(eventStr);
-      const result = await onEvent(
-        event.event,
-        event.data,
-        buildResults,
-        verticesStartTimeMs,
-        callbacks,
-      );
-
-      if (!result) {
-        isDone = true;
-        abortController.abort();
-        break;
-      }
-
-      // Check if this was the end event
-      if (event.event === "end") {
-        isDone = true;
-        break;
-      }
-    }
-
-    // Add a small delay between polls
-    await new Promise((resolve) => setTimeout(resolve, BUILD_POLLING_INTERVAL));
-  }
+  return customPollBuildEvents(
+    url,
+    buildResults,
+    verticesStartTimeMs,
+    callbacks,
+    abortController,
+    onEvent,
+  );
 }
 
 export async function buildFlowVertices({
@@ -362,7 +303,7 @@ export async function buildFlowVertices({
       });
     }
   } catch (e) {
-    console.log(e);
+    console.error(e);
   }
 
   try {
@@ -544,7 +485,7 @@ async function onEvent(
           if (onGetOrderSuccess) onGetOrderSuccess();
           useFlowStore.getState().setIsBuilding(true);
           return true;
-        } catch (e) {
+        } catch (_e) {
           useFlowStore.getState().setIsBuilding(false);
           return false;
         }
@@ -678,7 +619,7 @@ export async function buildVertices({
   if (startNodeId && stopNodeId) {
     return;
   }
-  let verticesOrderResponse = await updateVerticesOrder(
+  const verticesOrderResponse = await updateVerticesOrder(
     flowId,
     startNodeId,
     stopNodeId,
@@ -688,16 +629,16 @@ export async function buildVertices({
   if (onValidateNodes) {
     try {
       onValidateNodes(verticesOrderResponse.verticesToRun);
-    } catch (e) {
+    } catch (_e) {
       useFlowStore.getState().setIsBuilding(false);
       return;
     }
   }
   if (onGetOrderSuccess) onGetOrderSuccess();
-  let verticesBuild = useFlowStore.getState().verticesBuild;
+  const verticesBuild = useFlowStore.getState().verticesBuild;
 
   const verticesIds = verticesBuild?.verticesIds!;
-  const verticesLayers = verticesBuild?.verticesLayers!;
+  const _verticesLayers = verticesBuild?.verticesLayers!;
   const runId = verticesBuild?.runId!;
   let stop = false;
 

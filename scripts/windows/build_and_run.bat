@@ -1,6 +1,19 @@
 @echo off
 echo Starting Langflow build and run process...
 
+REM Check if .env file exists and set env file flag
+set "USE_ENV_FILE="
+REM Get the script directory and resolve project root
+for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
+set "ENV_PATH=%PROJECT_ROOT%\.env"
+if exist "%ENV_PATH%" (
+    echo Found .env file at: %ENV_PATH%
+    set "USE_ENV_FILE=1"
+) else (
+    echo .env file not found at: %ENV_PATH%
+    echo Langflow will use default configuration
+)
+
 echo.
 echo Step 1: Installing frontend dependencies...
 cd ..\..\src\frontend
@@ -72,7 +85,14 @@ echo Step 4: Running Langflow...
 echo.
 echo Attention: Wait until uvicorn is running before opening the browser
 echo.
-uv run langflow run
+REM Change to project root directory for uv
+cd "%PROJECT_ROOT%"
+if defined USE_ENV_FILE (
+    echo Using env file: .env
+    uv run --env-file ".env" langflow run
+) else (
+    uv run langflow run
+)
 if errorlevel 1 (
     echo Error: Failed to run langflow
     pause
@@ -81,4 +101,4 @@ if errorlevel 1 (
 
 echo.
 echo Langflow build and run process completed!
-pause 
+pause

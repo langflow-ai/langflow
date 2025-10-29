@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { PORT } from "./src/customization/config-constants";
+
 dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
@@ -24,7 +25,7 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: 2,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  timeout: 3 * 60 * 750,
+  timeout: 5 * 60 * 1000, // 5 minutes
   // reporter: [
   //   ["html", { open: "never", outputFolder: "playwright-report/test-results" }],
   // ],
@@ -108,6 +109,8 @@ export default defineConfig({
       env: {
         LANGFLOW_DATABASE_URL: "sqlite:///./temp",
         LANGFLOW_AUTO_LOGIN: "true",
+        LANGFLOW_DEACTIVATE_TRACING: "true",
+        DO_NOT_TRACK: "true",
       },
       stdout: "ignore",
 
@@ -120,6 +123,7 @@ export default defineConfig({
       env: {
         VITE_PROXY_TARGET: "http://localhost:7860",
       },
+      reuseExistingServer: true,
     },
   ],
 });

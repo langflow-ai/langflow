@@ -1,0 +1,39 @@
+---
+title: SearchApi
+slug: /bundles-searchapi
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **SearchApi** bundle.
+
+For more information, see the [SearchApi documentation](https://www.searchapi.io/docs/google).
+
+## SearchApi web search
+
+This component calls the SearchApi API to run Google, Bing, and DuckDuckGo web searches.
+
+It returns a list of search results as a [`DataFrame`](/data-types#dataframe).
+
+### SearchApi web search parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| engine | String | Input parameter. The search engine to use. Default: `google`. |
+| api_key | SecretString | Input parameter. The API key for authenticating with SearchApi. |
+| input_value | String | Input parameter. The search query or input for the API call. |
+| max_results | Integer | Input parameter. The maximum number of search results to return. Default: `5`. |
+| max_snippet_length | Integer | Input parameter. The maximum length of the snippet to return. Default: `100`. |
+| search_params | Dict | Input parameter. Additional key-value pairs to customize the request. |
+
+## See also
+
+* [**Web Search** component](/components-data#web-search)
+* [**Google** bundle](/bundles-google)
+* [**Bing** bundle](/bundles-bing)
+* [**DuckDuckGo** bundle](/bundles-duckduckgo)

@@ -119,7 +119,7 @@ class FlowRunUser(FastHttpUser):
                     error_msg = f"Unexpected status code: {response.status_code}, Response: {error_text[:200]}"
                     response.failure(error_msg)
                     self.log_error(endpoint, Exception(error_msg), response_time)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             response_time = (time.time() - start_time) * 1000
             self.log_error(endpoint, e, response_time)
             response.failure(f"Error: {e}")

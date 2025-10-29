@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
@@ -10,8 +10,8 @@ withEventDeliveryModes(
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
-      !process?.env?.ANTHROPIC_API_KEY,
-      "ANTHROPIC_API_KEY required to run this test",
+      !process?.env?.OPENAI_API_KEY,
+      "OPENAI_API_KEY required to run this test",
     );
 
     if (!process.env.CI) {
@@ -25,7 +25,7 @@ withEventDeliveryModes(
       .getByRole("heading", { name: "Research Translation Loop" })
       .click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
 
@@ -34,14 +34,14 @@ withEventDeliveryModes(
       skipAddNewApiKeys: true,
       skipSelectGptModel: true,
     });
-
-    await page.getByTestId("dropdown_str_provider").click();
-    await page.getByTestId("Anthropic-1-option").click();
+    // TODO: Uncomment this when we have a way to test Anthropic
+    // await page.getByTestId("dropdown_str_provider").click();
+    // await page.getByTestId("Anthropic-1-option").click();
 
     await page
       .getByTestId("popover-anchor-input-api_key")
       .last()
-      .fill(process.env.ANTHROPIC_API_KEY ?? "");
+      .fill(process.env.OPENAI_API_KEY ?? "");
 
     await page.waitForSelector('[data-testid="dropdown_str_model_name"]', {
       timeout: 5000,

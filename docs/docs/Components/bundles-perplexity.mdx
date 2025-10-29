@@ -1,0 +1,36 @@
+---
+title: Perplexity
+slug: /bundles-perplexity
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Perplexity** bundle.
+
+For more information about Perplexity features and functionality used by Perplexity components, see the [Perplexity documentation](https://perplexity.ai/).
+
+## Perplexity text generation
+
+This component generates text using Perplexity's language models.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a Perplexity model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
+
+For more information, see [Language model components](/components-models).
+
+### Perplexity text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| model_name | String | Input parameter. The name of the Perplexity model to use. Options include various Llama 3.1 models. |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. |
+| api_key | SecretString | Input parameter. The Perplexity API Key for authentication. |
+| temperature | Float | Input parameter. Controls randomness in the output. Default: 0.75. |
+| top_p | Float | Input parameter. The maximum cumulative probability of tokens to consider when sampling. |
+| n | Integer | Input parameter. Number of chat completions to generate for each prompt. |

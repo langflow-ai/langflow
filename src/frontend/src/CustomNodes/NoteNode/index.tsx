@@ -1,3 +1,6 @@
+import { NodeResizer } from "@xyflow/react";
+import { debounce } from "lodash";
+import { useMemo, useRef, useState } from "react";
 import {
   COLOR_OPTIONS,
   NOTE_NODE_MAX_HEIGHT,
@@ -7,15 +10,11 @@ import {
 } from "@/constants/constants";
 import { useAlternate } from "@/shared/hooks/use-alternate";
 import useFlowStore from "@/stores/flowStore";
-import { NoteDataType } from "@/types/flow";
+import type { NoteDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
-import { NodeResizer } from "@xyflow/react";
-import { debounce } from "lodash";
-import { useEffect, useMemo, useRef, useState } from "react";
 import NodeDescription from "../GenericNode/components/NodeDescription";
 import NoteToolbarComponent from "./NoteToolbarComponent";
 
-const NOTE_NODE_PADDING = 25;
 const CHAR_LIMIT = 2500;
 const DEFAULT_WIDTH = 324;
 const DEFAULT_HEIGHT = 324;
@@ -32,7 +31,7 @@ function NoteNode({
       (key) => key === data.node?.template.backgroundColor,
     ) ?? Object.keys(COLOR_OPTIONS)[0];
   const nodeDiv = useRef<HTMLDivElement>(null);
-  const [resizedNote, setResizedNote] = useState(false);
+  const [_resizedNote, setResizedNote] = useState(false);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const setNode = useFlowStore((state) => state.setNode);
   const [isResizing, setIsResizing] = useState(false);

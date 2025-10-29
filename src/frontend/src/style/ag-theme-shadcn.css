@@ -182,3 +182,13 @@
 .ag-tool-mode .ag-layout-auto-height .ag-center-cols-viewport {
   min-height: 0px !important;
 }
+
+/* Knowledge Base Table - Always show checkboxes */
+.ag-knowledge-table .ag-selection-checkbox .ag-checkbox {
+  width: 32px !important;
+  opacity: 1 !important;
+}
+
+.ag-knowledge-table .ag-header-checkbox {
+  opacity: 1 !important;
+}

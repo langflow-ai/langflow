@@ -1,4 +1,4 @@
-import { InputProps } from "../../types";
+import type { InputProps } from "../../types";
 
 export function EmptyParameterComponent({
   id,

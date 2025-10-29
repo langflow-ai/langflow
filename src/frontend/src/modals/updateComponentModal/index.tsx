@@ -1,13 +1,13 @@
+import type { ColDef } from "ag-grid-community";
+import type { AgGridReact } from "ag-grid-react";
+import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Checkbox } from "@/components/ui/checkbox";
 import useDuplicateFlows from "@/pages/MainPage/hooks/use-handle-duplicate";
 import useFlowStore from "@/stores/flowStore";
-import { ComponentsToUpdateType } from "@/types/zustand/flow";
+import type { ComponentsToUpdateType } from "@/types/zustand/flow";
 import { cn } from "@/utils/utils";
-import { ColDef } from "ag-grid-community";
-import { AgGridReact } from "ag-grid-react";
-import { useEffect, useRef, useState } from "react";
 import BaseModal from "../baseModal";
 
 export default function UpdateComponentModal({

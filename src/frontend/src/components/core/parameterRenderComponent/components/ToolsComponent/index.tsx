@@ -1,12 +1,14 @@
+import { useState } from "react";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
 import ToolsModal from "@/modals/toolsModal";
 import { cn, testIdCase } from "@/utils/utils";
-import { useState } from "react";
 import { ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Badge } from "../../../../ui/badge";
 import { Button } from "../../../../ui/button";
 import { Skeleton } from "../../../../ui/skeleton";
-import { InputProps, ToolsComponentType } from "../../types";
+import type { InputProps, ToolsComponentType } from "../../types";
 
 export default function ToolsComponent({
   description,
@@ -59,28 +61,36 @@ export default function ToolsComponent({
         icon={icon}
       />
       <div
-        className="relative flex w-full items-center gap-3"
+        className="relative flex items-center w-full gap-3"
         data-testid={"div-" + id}
       >
         {(visibleActions.length > 0 || isAction) && (
           <Button
-            variant={"ghost"}
+            variant={
+              ENABLE_MCP_COMPOSER && button_description ? "outline" : "ghost"
+            }
             disabled={!value || disabled}
-            size={"iconMd"}
-            className={cn(
-              "absolute -top-8 right-0 !text-mmd font-normal text-muted-foreground group-hover:text-primary",
-            )}
+            size="sm"
             data-testid="button_open_actions"
             onClick={() => setIsModalOpen(true)}
+            className={cn(
+              "absolute -top-8 right-0 !text-mmd font-normal group-hover:text-primary",
+              !button_description ? "text-muted-foreground" : "",
+            )}
           >
             <ForwardedIconComponent
-              name="Settings2"
+              name={
+                ENABLE_MCP_COMPOSER && button_description
+                  ? "wrench"
+                  : "Settings2"
+              }
               className="icon-size"
               strokeWidth={ICON_STROKE_WIDTH}
             />
             {button_description}
           </Button>
         )}
+
         {!value ? (
           <div className="flex w-full flex-wrap gap-1 overflow-hidden py-1.5">
             {[...Array(4)].map((_, index) => (

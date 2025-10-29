@@ -1,5 +1,5 @@
-import { EventDeliveryType } from "@/constants/enums";
-import { Pagination, Tag } from "@/types/utils/types";
+import type { EventDeliveryType } from "@/constants/enums";
+import type { Pagination, Tag } from "@/types/utils/types";
 
 export type UtilityStoreType = {
   selectedItems: any[];
@@ -28,4 +28,10 @@ export type UtilityStoreType = {
   setEventDelivery: (eventDelivery: EventDeliveryType) => void;
   serializationMaxItemsLength: number;
   setSerializationMaxItemsLength: (serializationMaxItemsLength: number) => void;
+  webhookAuthEnable: boolean;
+  setWebhookAuthEnable: (webhookAuthEnable: boolean) => void;
+  defaultFolderName: string;
+  setDefaultFolderName: (defaultFolderName: string) => void;
+  hideGettingStartedProgress: boolean;
+  setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) => void;
 };
