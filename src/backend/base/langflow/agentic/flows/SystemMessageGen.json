@@ -234,34 +234,6 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "GetUserID",
-            "id": "GetUserID-q0k6p",
-            "name": "output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "user_id",
-            "id": "MCPTools-f1oZO",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__GetUserID-q0k6p{œdataTypeœ:œGetUserIDœ,œidœ:œGetUserID-q0k6pœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}-MCPTools-f1oZO{œfieldNameœ:œuser_idœ,œidœ:œMCPTools-f1oZOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "GetUserID-q0k6p",
-        "sourceHandle": "{œdataTypeœ:œGetUserIDœ,œidœ:œGetUserID-q0k6pœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "MCPTools-f1oZO",
-        "targetHandle": "{œfieldNameœ:œuser_idœ,œidœ:œMCPTools-f1oZOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "ChatOutput",
             "id": "ChatOutput-2wtkk",
             "name": "message",
@@ -312,6 +284,31 @@
         "sourceHandle": "{œdataTypeœ:œGetUserIDœ,œidœ:œGetUserID-q0k6pœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}",
         "target": "MCPTools-vhSvs",
         "targetHandle": "{œfieldNameœ:œuser_idœ,œidœ:œMCPTools-vhSvsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "GetUserID",
+            "id": "GetUserID-q0k6p",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "user_id",
+            "id": "MCPTools-f1oZO",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__GetUserID-q0k6p{œdataTypeœ:œGetUserIDœ,œidœ:œGetUserID-q0k6pœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}-MCPTools-f1oZO{œfieldNameœ:œuser_idœ,œidœ:œMCPTools-f1oZOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "GetUserID-q0k6p",
+        "sourceHandle": "{œdataTypeœ:œGetUserIDœ,œidœ:œGetUserID-q0k6pœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "MCPTools-f1oZO",
+        "targetHandle": "{œfieldNameœ:œuser_idœ,œidœ:œMCPTools-f1oZOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "nodes": [
@@ -1084,7 +1081,7 @@
             ],
             "frozen": false,
             "icon": "bot",
-            "last_updated": "2025-10-29T16:34:03.165Z",
+            "last_updated": "2025-10-29T21:43:13.717Z",
             "legacy": false,
             "lf_version": "1.6.4",
             "metadata": {
@@ -2339,7 +2336,7 @@
             ],
             "frozen": false,
             "icon": "Mcp",
-            "last_updated": "2025-10-29T16:34:29.362Z",
+            "last_updated": "2025-10-29T21:43:13.719Z",
             "legacy": false,
             "lf_version": "1.6.4",
             "metadata": {
@@ -2666,7 +2663,7 @@
             ],
             "frozen": false,
             "icon": "Mcp",
-            "last_updated": "2025-10-29T16:35:01.677Z",
+            "last_updated": "2025-10-29T21:44:37.072Z",
             "legacy": false,
             "lf_version": "1.6.4",
             "metadata": {
@@ -2775,7 +2772,8 @@
                       "-m",
                       "langflow.agentic.mcp.server"
                     ],
-                    "command": "python"
+                    "command": "python",
+                    "verify_ssl": true
                   },
                   "name": "langflow-agentic"
                 }
@@ -2947,7 +2945,7 @@
             ],
             "frozen": false,
             "icon": "Mcp",
-            "last_updated": "2025-10-29T16:35:17.365Z",
+            "last_updated": "2025-10-29T21:43:13.722Z",
             "legacy": false,
             "lf_version": "1.6.4",
             "metadata": {
@@ -3272,18 +3270,18 @@
           "x": -10.590128381081541,
           "y": 2805.442822029959
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 1190.5885215769472,
-      "y": -798.4670948512023,
-      "zoom": 0.4056164980485469
+      "x": 1360.725854203382,
+      "y": -1046.560155373975,
+      "zoom": 0.49861562567603845
     }
   },
   "description": "Generate SystemMessage for a field",
-  "endpoint_name": null,
+  "endpoint_name":"SystemMessageGen",
   "id": "69aa447b-997e-4efd-bc33-909694cf9f02",
   "is_component": false,
   "last_tested_version": "1.6.4",
