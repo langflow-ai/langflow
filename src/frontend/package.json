@@ -6,7 +6,6 @@
     "@chakra-ui/number-input": "^2.1.2",
     "@headlessui/react": "^2.0.4",
     "@hookform/resolvers": "^3.6.0",
-    "@million/lint": "^1.0.0-rc.26",
     "@radix-ui/react-accordion": "^1.1.2",
     "@radix-ui/react-checkbox": "^1.0.4",
     "@radix-ui/react-dialog": "^1.1.2",
@@ -49,7 +48,6 @@
     "fuse.js": "^7.0.0",
     "lodash": "^4.17.21",
     "lucide-react": "^0.503.0",
-    "million": "^3.1.11",
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.48",
     "openseadragon": "^4.1.1",
@@ -87,6 +85,7 @@
     "vite-plugin-svgr": "^4.2.0",
     "vite-tsconfig-paths": "^4.3.2",
     "web-vitals": "^4.1.1",
+    "whatwg-fetch": "^3.6.20",
     "zod": "^3.23.8",
     "zustand": "^4.5.2"
   },
@@ -144,6 +143,6 @@
     "ts-jest": "^29.4.0",
     "typescript": "^5.4.5",
     "ua-parser-js": "^1.0.38",
-    "vite": "^5.4.19"
+    "vite": "^5.4.21"
   }
 }

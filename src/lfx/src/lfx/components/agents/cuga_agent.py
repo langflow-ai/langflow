@@ -185,7 +185,7 @@ class CugaComponent(ToolCallingAgentComponent):
                 },
             ],
         ),
-        *LCToolsAgentComponent._base_inputs,
+        *LCToolsAgentComponent.get_base_inputs(),
         BoolInput(
             name="add_current_date_tool",
             display_name="Current Date",

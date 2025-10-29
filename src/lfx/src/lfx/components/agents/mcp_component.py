@@ -62,6 +62,7 @@ class MCPToolsComponent(ComponentWithCache):
         "mcp_server",
         "tool",
         "use_cache",
+        "verify_ssl",
     ]
 
     display_name = "MCP Tools"
@@ -85,6 +86,16 @@ class MCPToolsComponent(ComponentWithCache):
                 "Disable to always fetch fresh tools and server updates."
             ),
             value=False,
+            advanced=True,
+        ),
+        BoolInput(
+            name="verify_ssl",
+            display_name="Verify SSL Certificate",
+            info=(
+                "Enable SSL certificate verification for HTTPS connections. "
+                "Disable only for development/testing with self-signed certificates."
+            ),
+            value=True,
             advanced=True,
         ),
         DropdownInput(
@@ -210,6 +221,11 @@ class MCPToolsComponent(ComponentWithCache):
             if not server_config:
                 self.tools = []
                 return [], {"name": server_name, "config": server_config}
+
+            # Add verify_ssl option to server config if not present
+            if "verify_ssl" not in server_config:
+                verify_ssl = getattr(self, "verify_ssl", True)
+                server_config["verify_ssl"] = verify_ssl
 
             _, tool_list, tool_cache = await update_tools(
                 server_name=server_name,

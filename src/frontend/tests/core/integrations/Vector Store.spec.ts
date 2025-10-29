@@ -8,7 +8,6 @@ import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 // Add this line to declare Node.js global variables
 declare const process: any;
 declare const __dirname: string;
-
 withEventDeliveryModes(
   "Vector Store RAG",
   { tag: ["@release", "@starter-projects"] },
