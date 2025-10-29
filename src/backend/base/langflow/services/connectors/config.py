@@ -297,7 +297,7 @@ def get_cached_config() -> ConnectorServiceConfig:
     Returns:
         Cached ConnectorServiceConfig instance
     """
-    global _connector_config
+    global _connector_config  # noqa: PLW0603
     if _connector_config is None:
         _connector_config = get_connector_config()
     return _connector_config
@@ -305,5 +305,5 @@ def get_cached_config() -> ConnectorServiceConfig:
 
 def reset_config():
     """Reset cached configuration (useful for testing)."""
-    global _connector_config
+    global _connector_config  # noqa: PLW0603
     _connector_config = None

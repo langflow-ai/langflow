@@ -41,7 +41,7 @@ class RetryConfig:
         initial_delay: float = 1.0,
         max_delay: float = 60.0,
         exponential_base: float = 2.0,
-        jitter: bool = True,
+        jitter: bool = True,  # noqa: FBT001, FBT002
     ):
         """Initialize retry configuration.
 
@@ -70,9 +70,9 @@ class RetryConfig:
         delay = min(self.initial_delay * (self.exponential_base**attempt), self.max_delay)
 
         if self.jitter:
-            # Add jitter up to 25% of the delay
+            # Add jitter up to 25% of the delay (not cryptographic, just timing variance)
             jitter_range = delay * 0.25
-            delay += random.uniform(-jitter_range, jitter_range)
+            delay += random.uniform(-jitter_range, jitter_range)  # noqa: S311
 
         return max(0, delay)  # Ensure non-negative
 
@@ -242,10 +242,11 @@ class CircuitBreaker:
             try:
                 result = await func(*args, **kwargs)
                 self.on_success()
-                return result
             except self.expected_exception_types:
                 self.on_failure()
                 raise
+            else:
+                return result
 
         return wrapper
 
