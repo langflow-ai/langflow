@@ -88,12 +88,20 @@ class MCPComposerService(Service):
         """Clear the last error message for a project."""
         self._last_errors.pop(project_id, None)
 
-    def _is_port_available(self, port: int) -> bool:
-        """Check if a port is available by trying to bind to it."""
+    def _is_port_available(self, port: int, host: str = "localhost") -> bool:
+        """Check if a port is available by trying to bind to it.
+
+        Args:
+            port: Port number to check
+            host: Host to check (default: localhost)
+
+        Returns:
+            True if port is available (not in use), False if in use
+        """
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                sock.bind(("0.0.0.0", port))  # noqa: S104
+                # Don't use SO_REUSEADDR here as it can give false positives
+                sock.bind((host, port))
                 return True  # Port is available
         except OSError:
             return False  # Port is in use/bound
@@ -337,8 +345,10 @@ class MCPComposerService(Service):
         """
         try:
             # Use asyncio.to_thread to avoid blocking the event loop
-            # Process was created with text=True, so communicate returns strings
-            stdout_content, stderr_content = await asyncio.to_thread(process.communicate, timeout=timeout)
+            # Process returns bytes, decode with error handling
+            stdout_bytes, stderr_bytes = await asyncio.to_thread(process.communicate, timeout=timeout)
+            stdout_content = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
+            stderr_content = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
         except subprocess.TimeoutExpired:
             process.kill()
             error_msg = self._extract_error_message("", "", oauth_server_url)
@@ -356,8 +366,10 @@ class MCPComposerService(Service):
         """
         if stream and select.select([stream], [], [], 0)[0]:
             try:
-                line = stream.readline()
-                if line:
+                line_bytes = stream.readline()
+                if line_bytes:
+                    # Decode bytes with error handling
+                    line = line_bytes.decode("utf-8", errors="replace") if isinstance(line_bytes, bytes) else line_bytes
                     stripped = line.strip()
                     if stripped:
                         # Log errors at error level, everything else at debug
@@ -582,23 +594,30 @@ class MCPComposerService(Service):
             List of command arguments with secrets replaced with ***REDACTED***
         """
         safe_cmd = []
-        skip_next = False
+        i = 0
 
-        for i, arg in enumerate(cmd):
-            if skip_next:
-                skip_next = False
-                safe_cmd.append("***REDACTED***")
-                continue
+        while i < len(cmd):
+            arg = cmd[i]
 
+            # Check if this is --env followed by a secret key
             if arg == "--env" and i + 2 < len(cmd):
-                # Check if next env var is a secret
                 env_key = cmd[i + 1]
+                env_value = cmd[i + 2]
+
                 if any(secret in env_key.lower() for secret in ["secret", "key", "token"]):
-                    safe_cmd.extend([arg, env_key])  # Keep env key, redact value
-                    skip_next = True
+                    # Redact the value
+                    safe_cmd.extend([arg, env_key, "***REDACTED***"])
+                    i += 3  # Skip all three: --env, key, and value
                     continue
 
+                # Not a secret, keep as-is
+                safe_cmd.extend([arg, env_key, env_value])
+                i += 3
+                continue
+
+            # Regular argument
             safe_cmd.append(arg)
+            i += 1
 
         return safe_cmd
 
@@ -900,6 +919,10 @@ class MCPComposerService(Service):
         cmd = [
             "uvx",
             f"mcp-composer{settings.mcp_composer_version}",
+            "--port",
+            str(port),
+            "--host",
+            host,
             "--mode",
             "sse",
             "--sse-url",
@@ -921,6 +944,8 @@ class MCPComposerService(Service):
                 cmd.extend(["--env", "ENABLE_OAUTH", "True"])
 
                 # Map auth config to environment variables for OAuth
+                # Note: oauth_host and oauth_port are passed both via --host/--port CLI args
+                # (for server binding) and as environment variables (for OAuth flow)
                 oauth_env_mapping = {
                     "oauth_host": "OAUTH_HOST",
                     "oauth_port": "OAUTH_PORT",
@@ -946,8 +971,8 @@ class MCPComposerService(Service):
         await logger.adebug(f"Starting MCP Composer with command: {' '.join(safe_cmd)}")
 
         # Start the subprocess with both stdout and stderr captured
-        # text=True for stream reading, but we'll decode manually in _read_process_output_and_extract_error
-        process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)  # noqa: ASYNC220, S603
+        # Use binary mode and decode manually to handle encoding errors gracefully
+        process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)  # noqa: ASYNC220, S603
 
         # Monitor the process startup with multiple checks
         process_running = False
