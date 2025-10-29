@@ -1808,11 +1808,11 @@
                   },
                   {
                     "name": "langchain_community",
-                    "version": "0.3.21"
+                    "version": null
                   },
                   {
                     "name": "langchain_ibm",
-                    "version": "0.3.19"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 5
