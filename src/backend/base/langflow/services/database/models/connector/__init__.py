@@ -9,10 +9,11 @@ from .crud import (
     update_connection,
     update_oauth_token,
 )
-from .model import ConnectorConnection, ConnectorOAuthToken, ConnectorSyncLog
+from .model import ConnectorConnection, ConnectorDeadLetterQueue, ConnectorOAuthToken, ConnectorSyncLog
 
 __all__ = [
     "ConnectorConnection",
+    "ConnectorDeadLetterQueue",
     "ConnectorOAuthToken",
     "ConnectorSyncLog",
     "create_connection",
