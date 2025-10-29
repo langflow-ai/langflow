@@ -31,8 +31,6 @@ const Providers = ({ type }: { type: "enabled" | "available" }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [providerToDelete, setProviderToDelete] = useState<string | null>(null);
 
-  console.log("Providers data:", providersData);
-
   const handleDeleteProvider = (providerName: string) => {
     if (!globalVariables) return;
 

@@ -26,15 +26,14 @@ import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import type { BaseInputProps } from "../../types";
 
 export type ModelInputComponentType = {
-  options: {
+  options?: {
     id?: string;
     name: string;
     icon: string;
-    category: string;
+    provider: string;
     metadata?: any;
-    provider?: string;
   }[];
-  placeholder: string;
+  placeholder?: string;
   providers?: string[];
 };
 
@@ -42,9 +41,8 @@ export type SelectedModel = {
   id?: string;
   name: string;
   icon: string;
-  category: string;
+  provider: string;
   metadata?: any;
-  provider?: string;
 };
 
 export default function ModelInputComponent({
@@ -61,7 +59,7 @@ export default function ModelInputComponent({
   const [selectedProvider, setSelectedProvider] = useState<string | null>(
     () => {
       if (value && Array.isArray(value) && value.length > 0) {
-        return value[0].provider || value[0].category || null;
+        return value[0].provider || null;
       }
       return null;
     },
@@ -90,14 +88,13 @@ export default function ModelInputComponent({
   useEffect(() => {
     if (value && Array.isArray(value) && value.length > 0) {
       setSelectedModel(value[0]);
-      setSelectedProvider(value[0].provider || value[0].category || null);
+      setSelectedProvider(value[0].provider || null);
     } else {
       setSelectedModel(null);
       setSelectedProvider(null);
     }
   }, [value]);
   const refButton = useRef<HTMLButtonElement>(null);
-  const isLoading = false;
   const { setErrorData } = useAlertStore();
 
   // Filter options based on search term
@@ -107,7 +104,7 @@ export default function ModelInputComponent({
       if (!searchTerm.trim()) return options;
 
       const fuse = new Fuse(options, {
-        keys: ["name", "category", "provider"],
+        keys: ["name", "provider"],
         threshold: 0.3,
       });
       return fuse.search(searchTerm).map((result) => result.item);
@@ -117,16 +114,16 @@ export default function ModelInputComponent({
     }
   }, [options, searchTerm]);
 
-  // Group options by category
+  // Group options by provider
   const groupedOptions = useMemo(() => {
     const groups: Record<string, typeof options> = {};
 
     filteredOptions.forEach((option) => {
-      const category = option.category || "Other";
-      if (!groups[category]) {
-        groups[category] = [];
+      const provider = option.provider || "Other";
+      if (!groups[provider]) {
+        groups[provider] = [];
       }
-      groups[category].push(option);
+      groups[provider].push(option);
     });
 
     // Sort by provider priority
@@ -150,13 +147,13 @@ export default function ModelInputComponent({
     }
 
     return sortedGroups;
-  }, [filteredOptions, providers]);
+  }, [filteredOptions, providers, options]);
 
   // Handle model selection
   const handleModelSelect = useCallback(
     (modelName: string) => {
       try {
-        // Find the selected option from the original options list
+        // Find the selected option from the options list
         const selectedOption = options.find(
           (option) => option.name === modelName,
         );
@@ -173,17 +170,13 @@ export default function ModelInputComponent({
             ...(selectedOption.id && { id: selectedOption.id }),
             name: selectedOption.name,
             icon: selectedOption.icon || "Bot",
-            category: selectedOption.category || "Other",
-            provider:
-              selectedOption.provider || selectedOption.category || "Unknown",
+            provider: selectedOption.provider || "Unknown",
             metadata: selectedOption.metadata || {},
           },
         ];
 
         handleOnNewValue({ value: newValue });
-        setSelectedProvider(
-          selectedOption.provider || selectedOption.category || null,
-        );
+        setSelectedProvider(selectedOption.provider || null);
         setSelectedModel(selectedOption);
       } catch (error) {
         setErrorData({ title: "Error selecting model" });
@@ -277,23 +270,21 @@ export default function ModelInputComponent({
     );
   };
 
-  console.log(groupedOptions);
-
   // Render the model options
   const renderModelOptions = () => (
     <>
       <CommandList className="max-h-[300px]">
-        {groupedOptions.map(([category, categoryOptions]) => {
-          const visibleOptions = categoryOptions;
+        {groupedOptions.map(([provider, providerOptions]) => {
+          const visibleOptions = providerOptions;
 
           if (visibleOptions.length === 0) return null;
 
           return (
-            <CommandGroup className="p-0 overflow-y-auto" key={`${category}`}>
+            <CommandGroup className="p-0 overflow-y-auto" key={`${provider}`}>
               <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center">
-                {category}
+                {provider}
                 {globalVariablesEntries?.includes(
-                  PROVIDER_VARIABLE_MAPPING[category] || "",
+                  PROVIDER_VARIABLE_MAPPING[provider] || "",
                 ) && (
                   <div className="ml-2 text-xs text-accent-emerald-foreground flex items-center gap-1">
                     <ForwardedIconComponent
@@ -311,6 +302,7 @@ export default function ModelInputComponent({
                 }
                 return (
                   <CommandItem
+                    key={option.name}
                     value={option.name}
                     onSelect={(currentValue) => {
                       handleModelSelect(currentValue);
@@ -340,7 +332,7 @@ export default function ModelInputComponent({
                   </CommandItem>
                 );
               })}
-              {category !== groupedOptions[groupedOptions.length - 1][0] &&
+              {provider !== groupedOptions[groupedOptions.length - 1][0] &&
                 visibleOptions.length > 0 && <CommandSeparator />}
             </CommandGroup>
           );
@@ -370,7 +362,7 @@ export default function ModelInputComponent({
   );
 
   // Loading state
-  if ((options.length === 0 && isLoading) || (!options && isLoading)) {
+  if ((options.length === 0 && !options) || !options) {
     return (
       <div className="w-full">
         <Button
@@ -386,7 +378,7 @@ export default function ModelInputComponent({
   }
 
   // Error state - no options available
-  if (!options || (options.length === 0 && !isLoading)) {
+  if (!options || options.length === 0) {
     return (
       <div className="w-full">
         <Button
@@ -407,17 +399,8 @@ export default function ModelInputComponent({
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
-        {isLoading ? (
-          <Button
-            className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
-            variant="primary"
-            size="xs"
-          >
-            <LoadingTextComponent text="Loading options" />
-          </Button>
-        ) : (
-          <div className="w-full truncate">{renderTriggerButton()}</div>
-        )}
+        <div className="w-full truncate">{renderTriggerButton()}</div>
+
         <PopoverContentWithoutPortal
           side="bottom"
           avoidCollisions={false}
