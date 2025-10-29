@@ -1817,7 +1817,7 @@
                 ],
                 "total_dependencies": 5
               },
-              "module": "lfx.components.models.embedding_model.EmbeddingModelComponent"
+              "module": "lfx.components.models_and_agents.embedding_model.EmbeddingModelComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -2501,7 +2501,7 @@
                 ],
                 "total_dependencies": 3
               },
-              "module": "lfx.components.agents.mcp_component.MCPToolsComponent"
+              "module": "lfx.components.models_and_agents.mcp_component.MCPToolsComponent"
             },
             "minimized": false,
             "output_types": [],
