@@ -167,8 +167,8 @@ export default function MarketplacePage() {
                         <SelectContent className="max-h-64 overflow-y-auto dark:bg-black dark:text-white">
                           <SelectItem value="all" className="dark:text-white">All Tags</SelectItem>
                           {MARKETPLACE_TAGS.map((tag) => (
-                            <SelectItem key={tag} value={tag} className="dark:text-white">
-                              {tag}
+                            <SelectItem key={tag.id} value={tag.id} className="dark:text-white">
+                              {tag.title}
                             </SelectItem>
                           ))}
                         </SelectContent>

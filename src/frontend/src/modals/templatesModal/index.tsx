@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
@@ -33,21 +34,11 @@ export default function TemplatesModal({
     },
     {
       title: "Use Cases",
-      items: [
-        {
-          title: "Prior Authorization",
-          icon: "BotMessageSquare",
-          id: "prior-auth",
-        },
-        { title: "Care Management", icon: "Tags", id: "classification" },
-        {
-          title: "Medical Record Review",
-          icon: "ChartBar",
-          id: "chart-review",
-        },
-        { title: "Document Analysis", icon: "FileText", id: "document-qa" },
-        { title: "Claims Operations", icon: "CreditCard", id: "claims" },
-      ],
+      items: MARKETPLACE_TAGS.map(tag => ({
+        title: tag.title,
+        icon: tag.icon,
+        id: tag.id
+      }))
     },
   ];
 
