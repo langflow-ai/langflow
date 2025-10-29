@@ -1872,7 +1872,7 @@
                 ],
                 "total_dependencies": 8
               },
-              "module": "lfx.components.files_and_knowledge.save_file.SaveToFileComponent"
+              "module": "lfx.components.data.save_file.SaveToFileComponent"
             },
             "minimized": false,
             "output_types": [],

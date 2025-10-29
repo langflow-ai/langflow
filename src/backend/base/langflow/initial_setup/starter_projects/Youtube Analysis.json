@@ -303,7 +303,7 @@
                 ],
                 "total_dependencies": 3
               },
-              "module": "lfx.components.llm_operations.batch_run.BatchRunComponent"
+              "module": "lfx.components.processing.batch_run.BatchRunComponent"
             },
             "minimized": false,
             "output_types": [],

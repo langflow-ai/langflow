@@ -11,6 +11,7 @@ from lfx.io import (
     Output,
     TableInput,
 )
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.table import EditMode
@@ -136,30 +137,27 @@ class StructuredOutputComponent(Component):
             raise ValueError(msg)
 
         output_model_ = build_model_from_schema(self.output_schema)
-
         output_model = create_model(
             schema_name,
             __doc__=f"A list of {schema_name}.",
-            objects=(list[output_model_], Field(description=f"A list of {schema_name}.")),  # type: ignore[valid-type]
+            objects=(
+                list[output_model_],
+                Field(
+                    description=f"A list of {schema_name}.",  # type: ignore[valid-type]
+                    min_length=1,  # help ensure non-empty output
+                ),
+            ),
         )
-
-        try:
-            llm_with_structured_output = create_extractor(self.llm, tools=[output_model])
-        except NotImplementedError as exc:
-            msg = f"{self.llm.__class__.__name__} does not support structured output."
-            raise TypeError(msg) from exc
-
+        # Tracing config
         config_dict = {
             "run_name": self.display_name,
             "project_name": self.get_project_name(),
             "callbacks": self.get_langchain_callbacks(),
         }
-        result = get_chat_result(
-            runnable=llm_with_structured_output,
-            system_message=self.system_prompt,
-            input_value=self.input_value,
-            config=config_dict,
-        )
+        # Generate structured output using Trustcall first, then fallback to Langchain if it fails
+        result = self._extract_output_with_trustcall(output_model, config_dict)
+        if result is None:
+            result = self._extract_output_with_langchain(output_model, config_dict)
 
         # OPTIMIZATION NOTE: Simplified processing based on trustcall response structure
         # Handle non-dict responses (shouldn't happen with trustcall, but defensive)
@@ -173,8 +171,9 @@ class StructuredOutputComponent(Component):
 
         # Convert BaseModel to dict (creates the "objects" key)
         first_response = responses[0]
-        structured_data = first_response.model_dump() if isinstance(first_response, BaseModel) else first_response
-
+        structured_data = first_response
+        if isinstance(first_response, BaseModel):
+            structured_data = first_response.model_dump()
         # Extract the objects array (guaranteed to exist due to our Pydantic model structure)
         return structured_data.get("objects", structured_data)
 
@@ -204,3 +203,42 @@ class StructuredOutputComponent(Component):
             # Multiple outputs - convert to DataFrame directly
             return DataFrame(output)
         return DataFrame()
+
+    def _extract_output_with_trustcall(self, schema: BaseModel, config_dict: dict) -> list[BaseModel] | None:
+        try:
+            llm_with_structured_output = create_extractor(self.llm, tools=[schema], tool_choice=schema.__name__)
+            result = get_chat_result(
+                runnable=llm_with_structured_output,
+                system_message=self.system_prompt,
+                input_value=self.input_value,
+                config=config_dict,
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                f"Trustcall extraction failed, falling back to Langchain: {e} "
+                "(Note: This may not be an error—some models or configurations do not support tool calling. "
+                "Falling back is normal in such cases.)"
+            )
+            return None
+        return result or None  # langchain fallback is used if error occurs or the result is empty
+
+    def _extract_output_with_langchain(self, schema: BaseModel, config_dict: dict) -> list[BaseModel] | None:
+        try:
+            llm_with_structured_output = self.llm.with_structured_output(schema)
+            result = get_chat_result(
+                runnable=llm_with_structured_output,
+                system_message=self.system_prompt,
+                input_value=self.input_value,
+                config=config_dict,
+            )
+            if isinstance(result, BaseModel):
+                result = result.model_dump()
+                result = result.get("objects", result)
+        except Exception as fallback_error:
+            msg = (
+                f"Model does not support tool calling (trustcall failed) "
+                f"and fallback with_structured_output also failed: {fallback_error}"
+            )
+            raise ValueError(msg) from fallback_error
+
+        return result or None
