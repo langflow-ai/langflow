@@ -539,10 +539,9 @@ class MCPToolsComponent(ComponentWithCache):
         if item_dict.get("type") == "text":
             text = item_dict.get("text")
             try:
-                json_dict = json.loads(text)
+                return json.loads(text)
                 # convert it to dict
-                return json_dict
-            except Exception:
+            except json.JSONDecodeError:
                 return item_dict
         return item_dict
 
