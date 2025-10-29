@@ -317,6 +317,29 @@ class Settings(BaseSettings):
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
 
+    # Connector OAuth Settings
+    google_drive_client_id: str | None = None
+    """Google Drive OAuth client ID for connector authentication."""
+    google_drive_client_secret: str | None = None
+    """Google Drive OAuth client secret for connector authentication."""
+    google_drive_redirect_uri: str | None = None
+    """Google Drive OAuth redirect URI for connector authentication."""
+
+    microsoft_client_id: str | None = None
+    """Microsoft OAuth client ID for OneDrive/SharePoint connector authentication."""
+    microsoft_client_secret: str | None = None
+    """Microsoft OAuth client secret for OneDrive/SharePoint connector authentication."""
+    microsoft_tenant_id: str = "common"
+    """Microsoft tenant ID. Use 'common' for multi-tenant, 'organizations' for any org, or specific tenant ID."""
+    microsoft_redirect_uri: str | None = None
+    """Microsoft OAuth redirect URI for connector authentication."""
+
+    # Connector Settings
+    connector_sync_max_files: int = 500
+    """Maximum number of files to sync in a single connector sync operation."""
+    connector_webhook_secret: str | None = None
+    """Secret key for validating webhook requests from cloud storage providers."""
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def validate_cors_origins(cls, value):

@@ -80,7 +80,9 @@ def import_all_services_into_a_dict():
             if service_name == "mcp_composer":
                 module_name = f"lfx.services.{service_name}.service"
             else:
-                module_name = f"langflow.services.{service_name}.service"
+                # Handle plural service names
+                service_dir = "connectors" if service_name == "connector" else service_name
+                module_name = f"langflow.services.{service_dir}.service"
 
             module = importlib.import_module(module_name)
             services.update(
