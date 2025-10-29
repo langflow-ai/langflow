@@ -196,3 +196,73 @@ def get_api_key_for_provider(user_id: UUID | str, provider: str, api_key: str | 
         # Handles: RuntimeError (async issues), ValueError (invalid UUID),
         # TypeError (None user_id), AttributeError (service issues)
         return None
+
+
+def validate_model_provider_key(variable_name: str, api_key: str) -> None:
+    """Validate a model provider API key by making a minimal test call.
+
+    Args:
+        variable_name: The variable name (e.g., OPENAI_API_KEY)
+        api_key: The API key to validate
+
+    Raises:
+        HTTPException: If the API key is invalid
+    """
+    # Map variable names to providers
+    provider_map = {
+        "OPENAI_API_KEY": "OpenAI",
+        "ANTHROPIC_API_KEY": "Anthropic",
+        "GOOGLE_API_KEY": "Google Generative AI",
+        "WATSONX_APIKEY": "IBM WatsonX",
+        "OLLAMA_BASE_URL": "Ollama",
+    }
+
+    provider = provider_map.get(variable_name)
+    if not provider:
+        return  # Not a model provider key we validate
+
+    # Get the first available model for this provider
+    try:
+        models = get_unified_models_detailed(providers=[provider])
+        if not models or not models[0].get("models"):
+            return  # No models available, skip validation
+
+        first_model = models[0]["models"][0]["model_name"]
+    except Exception:  # noqa: BLE001
+        return  # Can't get models, skip validation
+
+    # Test the API key based on provider
+    try:
+        if provider == "OpenAI":
+            from langchain_openai import ChatOpenAI
+            llm = ChatOpenAI(api_key=api_key, model_name=first_model, max_tokens=1)
+            llm.invoke("test")
+        elif provider == "Anthropic":
+            from langchain_anthropic import ChatAnthropic
+            llm = ChatAnthropic(anthropic_api_key=api_key, model=first_model, max_tokens=1)
+            llm.invoke("test")
+        elif provider == "Google Generative AI":
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=first_model, max_tokens=1)
+            llm.invoke("test")
+        elif provider == "IBM WatsonX":
+            # WatsonX validation would require additional parameters
+            # Skip for now as it needs project_id, url, etc.
+            return
+        elif provider == "Ollama":
+            # Ollama is local, just verify the URL is accessible
+            import requests
+            response = requests.get(f"{api_key}/api/tags", timeout=5)
+            if response.status_code != requests.codes.ok:
+                msg = "Invalid Ollama base URL"
+                raise ValueError(msg)
+    except ValueError:
+        # Re-raise ValueError (validation failed)
+        raise
+    except Exception as e:
+        error_msg = str(e)
+        if "401" in error_msg or "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+            msg = f"Invalid API key for {provider}"
+            raise ValueError(msg) from e
+        # For other errors, we'll allow the key to be saved (might be network issues, etc.)
+        return
