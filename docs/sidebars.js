@@ -305,6 +305,7 @@ module.exports = {
             "Components/bundles-clickhouse",
             "Components/bundles-cloudflare",
             "Components/bundles-cohere",
+            "Components/bundles-cometapi",
             "Components/bundles-couchbase",
             "Components/bundles-datastax",
             "Components/bundles-deepseek",
