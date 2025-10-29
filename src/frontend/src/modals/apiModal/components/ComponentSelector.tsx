@@ -1,3 +1,4 @@
+import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -6,7 +7,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import IconComponent from "@/components/common/genericIconComponent";
 import { useTweaksStore } from "@/stores/tweaksStore";
 import type { AllNodeType } from "@/types/flow";
 
@@ -15,16 +15,24 @@ interface ComponentSelectorProps {
   onComponentSelect: (componentId: string | null) => void;
 }
 
-export function ComponentSelector({ selectedComponentId, onComponentSelect }: ComponentSelectorProps) {
+export function ComponentSelector({
+  selectedComponentId,
+  onComponentSelect,
+}: ComponentSelectorProps) {
   const nodes = useTweaksStore((state) => state.nodes);
 
   // Filter out output components (ChatOutput, APIResponse, etc.)
-  const inputNodes = nodes?.filter((node: AllNodeType) => {
-    const nodeType = node.data?.node?.display_name || node.data?.type;
-    return nodeType && !nodeType.endsWith('Output') && !nodeType.includes('Response');
-  }) || [];
+  const inputNodes =
+    nodes?.filter((node: AllNodeType) => {
+      const nodeType = node.data?.node?.display_name || node.data?.type;
+      return (
+        nodeType &&
+        !nodeType.endsWith("Output") &&
+        !nodeType.includes("Response")
+      );
+    }) || [];
 
-  const selectedNode = selectedComponentId 
+  const selectedNode = selectedComponentId
     ? nodes?.find((node: AllNodeType) => node.data.id === selectedComponentId)
     : null;
 
@@ -41,13 +49,15 @@ export function ComponentSelector({ selectedComponentId, onComponentSelect }: Co
           {inputNodes.map((node: AllNodeType) => {
             const componentIcon = node.data?.node?.icon || node.data?.type;
             return (
-              <SelectItem key={node.data?.id || node.id} value={node.data?.id || node.id}>
+              <SelectItem
+                key={node.data?.id || node.id}
+                value={node.data?.id || node.id}
+              >
                 <div className="flex items-center gap-2">
-                  <IconComponent 
-                    name={componentIcon} 
-                    className="h-4 w-4" 
-                  />
-                  <span className="font-medium">{node.data?.id || node.id}</span>
+                  <IconComponent name={componentIcon} className="h-4 w-4" />
+                  <span className="font-medium">
+                    {node.data?.id || node.id}
+                  </span>
                 </div>
               </SelectItem>
             );

@@ -6,6 +6,7 @@ import {
 } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { useShallow } from "zustand/react/shallow";
 import IconComponent from "@/components/common/genericIconComponent";
+import ShadTooltipComponent from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
 import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
@@ -15,13 +16,12 @@ import { useTweaksStore } from "@/stores/tweaksStore";
 import { hasStreaming } from "@/utils/reactflowUtils";
 import { getOS } from "@/utils/utils";
 import { useDarkStore } from "../../../stores/darkStore";
+import { ComponentSelector } from "../components/ComponentSelector";
+import { FieldSelector } from "../components/FieldSelector";
 import { formatPayloadTweaks } from "../utils/filter-tweaks";
 import { getNewCurlCode } from "../utils/get-curl-code";
 import { getNewJsApiCode } from "../utils/get-js-api-code";
 import { getNewPythonApiCode } from "../utils/get-python-api-code";
-import ShadTooltipComponent from "@/components/common/shadTooltipComponent";
-import { ComponentSelector } from "../components/ComponentSelector";
-import { FieldSelector } from "../components/FieldSelector";
 
 const operatingSystemTabs = [
   {
@@ -35,7 +35,6 @@ const operatingSystemTabs = [
     icon: "FaWindows",
   },
 ];
-
 
 export default function APITabsComponent() {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
@@ -53,21 +52,24 @@ export default function APITabsComponent() {
   const hasAPIResponse = outputs.some(
     (output) => output.type === "APIResponse",
   );
-  
-  
+
   // Determine which tabs are enabled
   const chatEnabled = hasChatInput || hasChatOutput;
   const statelessEnabled = hasAPIResponse;
-  
+
   // API mode tabs (new)
   const [selectedApiMode, setSelectedApiMode] = useState(
-    statelessEnabled ? "stateless" : "chat"
+    statelessEnabled ? "stateless" : "chat",
   );
-  
+
   // Track selected component and code tab
-  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
-  const [selectedCodeTab, setSelectedCodeTab] = useState<"python" | "javascript" | "curl">("python");
-  
+  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(
+    null,
+  );
+  const [selectedCodeTab, setSelectedCodeTab] = useState<
+    "python" | "javascript" | "curl"
+  >("python");
+
   // Auto-select first component when nodes are available
   const tweaksNodes = useTweaksStore((state) => state.nodes);
   useEffect(() => {
@@ -75,15 +77,19 @@ export default function APITabsComponent() {
       // Filter to input nodes only (same logic as ComponentSelector)
       const inputNodes = tweaksNodes.filter((node) => {
         const nodeType = node.data?.node?.display_name || node.data?.type;
-        return nodeType && !nodeType.endsWith('Output') && !nodeType.includes('Response');
+        return (
+          nodeType &&
+          !nodeType.endsWith("Output") &&
+          !nodeType.includes("Response")
+        );
       });
-      
+
       if (inputNodes.length > 0 && inputNodes[0].data?.id) {
         setSelectedComponentId(inputNodes[0].data.id);
       }
     }
   }, [tweaksNodes, selectedComponentId]);
-  
+
   // Auto-select the enabled tab when conditions change
   useEffect(() => {
     if (!chatEnabled && statelessEnabled) {
@@ -92,7 +98,7 @@ export default function APITabsComponent() {
       setSelectedApiMode("chat");
     }
   }, [chatEnabled, statelessEnabled]);
-  
+
   let input_value = "hello world!";
   if (hasChatInput) {
     const chatInputId = inputs.find((input) => input.type === "ChatInput")?.id;
@@ -183,7 +189,6 @@ export default function APITabsComponent() {
     { id: "curl" as const, title: "cURL", icon: "TerminalSquare" },
   ];
 
-
   const copyToClipboard = (codeText?: string, stepId?: string) => {
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
       return;
@@ -222,7 +227,11 @@ export default function APITabsComponent() {
         {/* API mode tabs (Chat vs Stateless) */}
         <div className="flex flex-row border-b border-border">
           <ShadTooltipComponent
-            content={chatEnabled ? "" : "Add a Chat Input or Chat Output component to enable chat mode"}
+            content={
+              chatEnabled
+                ? ""
+                : "Add a Chat Input or Chat Output component to enable chat mode"
+            }
             side="bottom"
           >
             <Button
@@ -231,8 +240,8 @@ export default function APITabsComponent() {
                 selectedApiMode === "chat" && chatEnabled
                   ? "border-b-2 border-black dark:border-b-white"
                   : chatEnabled
-                  ? "text-muted-foreground hover:text-foreground"
-                  : "text-muted-foreground opacity-50 cursor-not-allowed"
+                    ? "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground opacity-50 cursor-not-allowed"
               } px-3 py-2 text-[13px]`}
               onClick={() => chatEnabled && setSelectedApiMode("chat")}
               disabled={!chatEnabled}
@@ -242,9 +251,13 @@ export default function APITabsComponent() {
               <span>Chat</span>
             </Button>
           </ShadTooltipComponent>
-          
+
           <ShadTooltipComponent
-            content={statelessEnabled ? "" : "Add an API Response component to enable stateless mode"}
+            content={
+              statelessEnabled
+                ? ""
+                : "Add an API Response component to enable stateless mode"
+            }
             side="bottom"
           >
             <Button
@@ -253,10 +266,12 @@ export default function APITabsComponent() {
                 selectedApiMode === "stateless" && statelessEnabled
                   ? "border-b-2 border-black dark:border-b-white"
                   : statelessEnabled
-                  ? "text-muted-foreground hover:text-foreground"
-                  : "text-muted-foreground opacity-50 cursor-not-allowed"
+                    ? "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground opacity-50 cursor-not-allowed"
               } px-3 py-2 text-[13px]`}
-              onClick={() => statelessEnabled && setSelectedApiMode("stateless")}
+              onClick={() =>
+                statelessEnabled && setSelectedApiMode("stateless")
+              }
               disabled={!statelessEnabled}
               data-testid="api_mode_stateless"
             >
@@ -268,7 +283,7 @@ export default function APITabsComponent() {
             </Button>
           </ShadTooltipComponent>
         </div>
-        
+
         {/* Main content area with 2-column layout */}
         <div className="flex h-full gap-4 overflow-hidden pt-2">
           {/* Panel 1: Component selection and field configuration */}
@@ -280,13 +295,13 @@ export default function APITabsComponent() {
                   Select which fields to expose in the API
                 </p>
               </div>
-              
+
               <ComponentSelector
                 selectedComponentId={selectedComponentId}
                 onComponentSelect={setSelectedComponentId}
               />
             </div>
-            
+
             {/* Field Selection */}
             <div className="flex-1 overflow-auto">
               {selectedComponentId ? (
@@ -295,13 +310,15 @@ export default function APITabsComponent() {
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground text-center">
                   <div className="flex flex-col gap-2">
                     <span>No input components available</span>
-                    <span className="text-xs">Add components to your flow to configure API inputs</span>
+                    <span className="text-xs">
+                      Add components to your flow to configure API inputs
+                    </span>
                   </div>
                 </div>
               )}
             </div>
           </div>
-          
+
           {/* Panel 2: Code Snippets */}
           <div className="flex-1 flex h-full flex-col gap-4 overflow-hidden pt-2">
             {/* Code Tab Selection */}
@@ -326,12 +343,15 @@ export default function APITabsComponent() {
                 </Button>
               ))}
             </div>
-            
+
             <div className="flex h-full flex-1 flex-col gap-4 overflow-hidden">
               {/* Platform selection for cURL */}
               {selectedCodeTab === "curl" && (
                 <div className="flex flex-col gap-4">
-                  <Tabs value={selectedPlatform} onValueChange={setSelectedPlatform}>
+                  <Tabs
+                    value={selectedPlatform}
+                    onValueChange={setSelectedPlatform}
+                  >
                     <TabsList>
                       {operatingSystemTabs.map((tab, index) => (
                         <TabsTrigger
@@ -373,7 +393,9 @@ export default function APITabsComponent() {
                                 : ""
                             }
                           >
-                            <h4 className="mb-2 text-sm font-medium">{step.title}</h4>
+                            <h4 className="mb-2 text-sm font-medium">
+                              {step.title}
+                            </h4>
                             <div
                               className={`relative flex ${
                                 index === steps.length - 1 ? "h-full" : ""

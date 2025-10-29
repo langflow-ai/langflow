@@ -295,4 +295,6 @@ export type FlowStoreType = {
   setNewChatOnPlayground: (newChat: boolean) => void;
   stopNodeId: string | undefined;
   setStopNodeId: (nodeId: string | undefined) => void;
+  hasApiRequest: boolean;
+  setHasApiRequest: (hasRequest: boolean) => void;
 };

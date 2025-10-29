@@ -31,6 +31,7 @@ import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils"
 import useFlowStore from "@/stores/flowStore";
 import getFieldTitle from "../CustomNodes/utils/get-field-title";
 import {
+  API_REQUEST_TYPE,
   INPUT_TYPES,
   IS_MAC,
   LANGFLOW_SUPPORTED_TYPES,
@@ -72,6 +73,15 @@ export function checkChatInput(nodes: Node[]) {
 
 export function checkWebhookInput(nodes: Node[]) {
   return nodes.some((node) => node.data.type === "Webhook");
+}
+
+export function checkApiRequest(nodes: Node[]) {
+  return nodes.some((node) => {
+    return (
+      typeof node?.data?.type === "string" &&
+      node?.data?.type?.toLowerCase() === API_REQUEST_TYPE
+    );
+  });
 }
 
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {

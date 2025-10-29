@@ -10,7 +10,7 @@ import { cloneDeep, zip } from "lodash";
 import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
-import { BROKEN_EDGES_WARNING } from "@/constants/constants";
+import { API_REQUEST_TYPE, BROKEN_EDGES_WARNING } from "@/constants/constants";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import {
   track,
@@ -36,6 +36,7 @@ import type {
 import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
 import {
   buildPositionDictionary,
+  checkApiRequest,
   checkChatInput,
   cleanEdges,
   detectBrokenEdgesEdges,
@@ -229,6 +230,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       dismissedNodesLegacy: JSON.parse(
         localStorage.getItem(`dismiss_legacy_${flow?.id}`) ?? "[]",
       ) as string[],
+      hasApiRequest: checkApiRequest(nodes),
     });
     unselectAllNodesEdges(nodes, newEdges);
     if (flow?.id) {
@@ -276,8 +278,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setNodes: (change) => {
     const newChange =
       typeof change === "function" ? change(get().nodes) : change;
+
     const newEdges = cleanEdges(newChange, get().edges);
     const { inputs, outputs } = getInputsAndOutputs(newChange);
+
+    const hasApiRequest = checkApiRequest(newChange);
+
     get().updateComponentsToUpdate(newChange);
     set({
       edges: newEdges,
@@ -286,6 +292,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       inputs,
       outputs,
       hasIO: inputs.length > 0 || outputs.length > 0,
+      hasApiRequest,
     });
     get().updateCurrentFlow({ nodes: newChange, edges: newEdges });
     if (get().autoSaveFlow) {
@@ -1104,6 +1111,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setStopNodeId: (nodeId: string | undefined) => {
     set({ stopNodeId: nodeId });
   },
+  setHasApiRequest: (hasApiRequest: boolean) => {
+    set({ hasApiRequest });
+  },
+  hasApiRequest: false,
 }));
 
 export default useFlowStore;

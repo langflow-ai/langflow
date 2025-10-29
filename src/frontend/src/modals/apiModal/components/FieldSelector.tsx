@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import IconComponent from "@/components/common/genericIconComponent";
 import sortFields from "@/CustomNodes/utils/sort-fields";
+import IconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
 import { useTweaksStore } from "@/stores/tweaksStore";
 import type { AllNodeType } from "@/types/flow";
 
@@ -32,7 +32,9 @@ export function FieldSelector({ componentId }: FieldSelectorProps) {
           )
         );
       })
-      .sort((a, b) => sortFields(a, b, selectedNode.data.node!.field_order ?? []))
+      .sort((a, b) =>
+        sortFields(a, b, selectedNode.data.node!.field_order ?? []),
+      )
       .map((key: string) => {
         const templateParam = selectedNode.data.node!.template[key] as any;
         return {
@@ -49,7 +51,7 @@ export function FieldSelector({ componentId }: FieldSelectorProps) {
 
     const fieldTemplate = selectedNode.data.node!.template[fieldKey];
     const isCurrentlySelected = !fieldTemplate.advanced;
-    
+
     // Create updated node with field toggle
     const updatedNode = {
       ...selectedNode,
@@ -70,7 +72,7 @@ export function FieldSelector({ componentId }: FieldSelectorProps) {
         },
       },
     };
-    
+
     // Update the node which will trigger updateTweaks
     setNode(componentId, updatedNode);
   };
@@ -86,21 +88,22 @@ export function FieldSelector({ componentId }: FieldSelectorProps) {
     return null;
   }
 
-  const componentDisplayName = selectedNode?.data.node?.display_name || selectedNode?.data.id || '';
+  const componentDisplayName =
+    selectedNode?.data.node?.display_name || selectedNode?.data.id || "";
 
   return (
     <div className="flex flex-col gap-3">
       <div className="space-y-2 pr-2">
         {availableFields.map((field) => {
           const isSelected = isFieldSelected(field.key);
-          
+
           return (
             <Button
               key={field.key}
               variant="ghost"
               className={`flex h-auto w-full justify-start gap-3 p-3 text-left border rounded-lg ${
-                isSelected 
-                  ? "bg-accent border-accent-foreground/20" 
+                isSelected
+                  ? "bg-accent border-accent-foreground/20"
                   : "bg-muted/50 border-border/50 hover:bg-muted/80"
               }`}
               onClick={() => handleFieldToggle(field.key)}
@@ -114,12 +117,15 @@ export function FieldSelector({ componentId }: FieldSelectorProps) {
                 )}
               </div>
               {isSelected && (
-                <IconComponent name="Check" className="h-4 w-4 text-accent-foreground" />
+                <IconComponent
+                  name="Check"
+                  className="h-4 w-4 text-accent-foreground"
+                />
               )}
             </Button>
           );
         })}
-        
+
         {availableFields.length === 0 && (
           <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
             No configurable fields available for this component
