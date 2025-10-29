@@ -1,7 +1,7 @@
-import { Cookies } from "react-cookie";
 import { IS_AUTO_LOGIN, LANGFLOW_REFRESH_TOKEN } from "@/constants/constants";
 import useAuthStore from "@/stores/authStore";
 import type { useMutationFunctionType } from "@/types/api";
+import { getCookiesInstance } from "@/utils/cookie-manager";
 import { setAuthCookie } from "@/utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -23,7 +23,7 @@ export const useRefreshAccessToken: useMutationFunctionType<
 
   async function refreshAccess(): Promise<IRefreshAccessToken> {
     const res = await api.post<IRefreshAccessToken>(`${getURL("REFRESH")}`);
-    const cookies = new Cookies();
+    const cookies = getCookiesInstance();
     setAuthCookie(cookies, LANGFLOW_REFRESH_TOKEN, res.data.refresh_token);
 
     return res.data;
