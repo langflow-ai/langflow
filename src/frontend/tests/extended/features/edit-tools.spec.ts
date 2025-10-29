@@ -27,7 +27,7 @@ test(
       '[data-testid="generic-node-title-arrangement"]',
       {
         timeout: 3000,
-      }
+      },
     );
 
     await page.getByTestId("generic-node-title-arrangement").click();
@@ -52,11 +52,11 @@ test(
     expect(rowsCount).toBeGreaterThan(2);
 
     expect(
-      await page.locator('input[data-ref="eInput"]').nth(0).isChecked()
+      await page.locator('input[data-ref="eInput"]').nth(0).isChecked(),
     ).toBe(true);
 
     expect(
-      await page.locator('input[data-ref="eInput"]').nth(3).isChecked()
+      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
     ).toBe(true);
 
     await page.locator('input[data-ref="eInput"]').nth(0).click();
@@ -64,7 +64,7 @@ test(
     await page.waitForTimeout(500);
 
     expect(
-      await page.locator('input[data-ref="eInput"]').nth(3).isChecked()
+      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
     ).toBe(false);
 
     await page.locator('input[data-ref="eInput"]').nth(0).click();
@@ -76,21 +76,23 @@ test(
     await page.waitForTimeout(500);
 
     expect(
-      await page.locator('[data-testid="sidebar_header_name"]').isHidden()
+      await page.locator('[data-testid="sidebar_header_name"]').isHidden(),
     ).toBe(true);
 
     expect(
       await page
         .locator('[data-testid="sidebar_header_description"]')
-        .isHidden()
+        .isHidden(),
     ).toBe(true);
 
     expect(
-      await page.locator('[data-testid="input_update_name"]').isVisible()
+      await page.locator('[data-testid="input_update_name"]').isVisible(),
     ).toBe(true);
 
     expect(
-      await page.locator('[data-testid="input_update_description"]').isVisible()
+      await page
+        .locator('[data-testid="input_update_description"]')
+        .isVisible(),
     ).toBe(true);
 
     await page.locator('[data-testid="input_update_name"]').fill("test name");
@@ -113,7 +115,7 @@ test(
       '[data-testid="generic-node-title-arrangement"]',
       {
         timeout: 3000,
-      }
+      },
     );
 
     await page.waitForSelector('[data-testid="div-tools_tools_metadata"]', {
@@ -121,7 +123,9 @@ test(
     });
 
     expect(
-      await page.locator('[data-testid="div-tools_tools_metadata"]').isVisible()
+      await page
+        .locator('[data-testid="div-tools_tools_metadata"]')
+        .isVisible(),
     ).toBe(true);
 
     await page.getByTestId("button_open_actions").click();
@@ -129,7 +133,7 @@ test(
     await page.waitForTimeout(500);
 
     expect(
-      await page.locator('input[data-ref="eInput"]').nth(3).isChecked()
+      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
     ).toBe(true);
 
     await page.waitForTimeout(500);
@@ -139,31 +143,33 @@ test(
     await page.waitForTimeout(500);
 
     expect(
-      await page.locator('[data-testid="sidebar_header_name"]').isHidden()
+      await page.locator('[data-testid="sidebar_header_name"]').isHidden(),
     ).toBe(true);
 
     expect(
       await page
         .locator('[data-testid="sidebar_header_description"]')
-        .isHidden()
+        .isHidden(),
     ).toBe(true);
 
     expect(
-      await page.locator('[data-testid="input_update_name"]').isVisible()
+      await page.locator('[data-testid="input_update_name"]').isVisible(),
     ).toBe(true);
 
     expect(
-      await page.locator('[data-testid="input_update_description"]').isVisible()
+      await page
+        .locator('[data-testid="input_update_description"]')
+        .isVisible(),
     ).toBe(true);
 
     expect(
-      await page.locator('[data-testid="input_update_name"]').inputValue()
+      await page.locator('[data-testid="input_update_name"]').inputValue(),
     ).toBe("test_name");
 
     expect(
       await page
         .locator('[data-testid="input_update_description"]')
-        .inputValue()
+        .inputValue(),
     ).toBe("test description");
 
     await page.locator('[data-testid="input_update_name"]').fill("");
@@ -185,7 +191,7 @@ test(
     await page.getByText("Close").last().click();
 
     expect(
-      await page.locator('[data-testid="tool_fetch_content"]').isVisible()
+      await page.locator('[data-testid="tool_fetch_content"]').isVisible(),
     ).toBe(true);
-  }
+  },
 );

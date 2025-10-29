@@ -53,7 +53,9 @@ export default function ToolsTable({
   const { setOpen: setSidebarOpen } = useSidebar();
 
   const getRowId = useMemo(() => {
-    return (params: any) => params.data._uniqueId || `${params.data.name}_${params.data.display_name}`;
+    return (params: any) =>
+      params.data._uniqueId ||
+      `${params.data.name}_${params.data.display_name}`;
   }, []);
 
   useEffect(() => {
@@ -237,7 +239,11 @@ export default function ToolsTable({
     if (!focusedRow) return;
 
     const originalUniqueId = focusedRow._uniqueId;
-    const updatedRow = { ...focusedRow, [field]: value, _uniqueId: originalUniqueId };
+    const updatedRow = {
+      ...focusedRow,
+      [field]: value,
+      _uniqueId: originalUniqueId,
+    };
 
     setFocusedRow(updatedRow);
 
@@ -256,10 +262,11 @@ export default function ToolsTable({
       setData(updatedData);
 
       // Update selectedRows to reflect the updated data
-      setSelectedRows((prevSelected) =>
-        prevSelected?.map((row) =>
-          row._uniqueId === originalUniqueId ? updatedRow : row,
-        ) || null,
+      setSelectedRows(
+        (prevSelected) =>
+          prevSelected?.map((row) =>
+            row._uniqueId === originalUniqueId ? updatedRow : row,
+          ) || null,
       );
     }
   };
