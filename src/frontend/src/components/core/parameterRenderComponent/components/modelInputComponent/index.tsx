@@ -264,16 +264,6 @@ export default function ModelInputComponent({
   const renderApiKeyInput = () => {
     if (!selectedModel) return null;
 
-    // If provider is already configured, show a green indicator
-    if (isProviderConfigured) {
-      return (
-        <div className="flex items-center gap-2 text-sm text-accent-emerald-foreground">
-          <ForwardedIconComponent name="CheckCircle2" className="h-4 w-4" />
-          <span>{selectedProvider} is configured</span>
-        </div>
-      );
-    }
-
     // Otherwise show the enable button
     return (
       <Button
@@ -286,6 +276,8 @@ export default function ModelInputComponent({
       </Button>
     );
   };
+
+  console.log(groupedOptions);
 
   // Render the model options
   const renderModelOptions = () => (
@@ -308,7 +300,7 @@ export default function ModelInputComponent({
                       name="CheckCircle2"
                       className="h-3 w-3"
                     />
-                    Configured
+                    Enabled
                   </div>
                 )}
               </div>
@@ -452,13 +444,12 @@ export default function ModelInputComponent({
           </Command>
         </PopoverContentWithoutPortal>
       </Popover>
-      {renderApiKeyInput()}
+      {!isProviderConfigured && renderApiKeyInput()}
       {openApiKeyDialog && (
         <ApiKeyModal
           open={openApiKeyDialog}
           onClose={() => setOpenApiKeyDialog(false)}
           provider={selectedProvider || "Provider"}
-          onSave={handleApiKeyChange}
         />
       )}
     </>

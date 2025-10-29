@@ -64,6 +64,7 @@ export default function ApiKeyModal({
           return;
         }
 
+        // TODO: Add validation for API key format if needed
         createGlobalVariable(
           {
             name: variableName,
