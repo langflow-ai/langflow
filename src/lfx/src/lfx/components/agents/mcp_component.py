@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import uuid
 from typing import Any
 
@@ -324,6 +325,17 @@ class MCPToolsComponent(ComponentWithCache):
 
                 current_server_name = field_value.get("name") if isinstance(field_value, dict) else field_value
                 _last_selected_server = safe_cache_get(self._shared_component_cache, "last_selected_server", "")
+                server_changed = current_server_name != _last_selected_server
+
+                # Determine if "Tool Mode" is active by checking if the tool dropdown is hidden.
+                is_in_tool_mode = build_config["tools_metadata"]["show"]
+
+                # Fast path: if server didn't change and we already have options, keep them as-is
+                existing_options = build_config.get("tool", {}).get("options") or []
+                if not server_changed and existing_options:
+                    if not is_in_tool_mode:
+                        build_config["tool"]["show"] = True
+                    return build_config
 
                 # To avoid unnecessary updates, only proceed if the server has actually changed
                 if (_last_selected_server in (current_server_name, "")) and build_config["tool"]["show"]:
@@ -338,9 +350,6 @@ class MCPToolsComponent(ComponentWithCache):
                                     return build_config
                     else:
                         return build_config
-
-                # Determine if "Tool Mode" is active by checking if the tool dropdown is hidden.
-                is_in_tool_mode = build_config["tools_metadata"]["show"]
                 safe_cache_set(self._shared_component_cache, "last_selected_server", current_server_name)
 
                 # Check if tools are already cached for this server before clearing
@@ -367,7 +376,9 @@ class MCPToolsComponent(ComponentWithCache):
                 if not cached_tools:
                     self.tools = []  # Clear previous tools only if no cache
 
-                self.remove_non_default_keys(build_config)  # Clear previous tool inputs
+                # Only clear previous tool inputs if the server actually changed
+                if server_changed:
+                    self.remove_non_default_keys(build_config)
 
                 # Only show the tool dropdown if not in tool_mode
                 if not is_in_tool_mode:
@@ -380,7 +391,9 @@ class MCPToolsComponent(ComponentWithCache):
                         # Show loading state only when we need to fetch tools
                         build_config["tool"]["placeholder"] = "Loading tools..."
                         build_config["tool"]["options"] = []
-                    build_config["tool"]["value"] = uuid.uuid4()
+                    # Only force a value refresh when server changed or we don't have cached tools
+                    if server_changed or not cached_tools:
+                        build_config["tool"]["value"] = uuid.uuid4()
                 else:
                     # Keep the tool dropdown hidden if in tool_mode
                     self._not_load_actions = True
@@ -520,7 +533,6 @@ class MCPToolsComponent(ComponentWithCache):
                 if session_context:
                     self.stdio_client.set_session_context(session_context)
                     self.streamable_http_client.set_session_context(session_context)
-
                 exec_tool = self._tool_cache[self.tool]
                 tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
                 kwargs = {}
@@ -535,17 +547,29 @@ class MCPToolsComponent(ComponentWithCache):
                 unflattened_kwargs = maybe_unflatten_dict(kwargs)
 
                 output = await exec_tool.coroutine(**unflattened_kwargs)
-
                 tool_content = []
                 for item in output.content:
                     item_dict = item.model_dump()
+                    item_dict = self.process_output_item(item_dict)
                     tool_content.append(item_dict)
+
+                if isinstance(tool_content, list) and all(isinstance(x, dict) for x in tool_content):
+                    return DataFrame(tool_content)
                 return DataFrame(data=tool_content)
             return DataFrame(data=[{"error": "You must select a tool"}])
         except Exception as e:
             msg = f"Error in build_output: {e!s}"
             await logger.aexception(msg)
             raise ValueError(msg) from e
+    def process_output_item(self, item_dict):
+        """Process the output of a tool."""
+        if item_dict.get("type") == "text":
+            text = item_dict.get("text")
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError:
+                return item_dict
+        return item_dict
 
     def _get_session_context(self) -> str | None:
         """Get the Langflow session ID for MCP session caching."""
