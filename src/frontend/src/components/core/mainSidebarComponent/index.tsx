@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Workflow, Package, Store, Play, ShoppingCart } from "lucide-react";
+import { Home, Workflow, Package, Store, Play, ShoppingCart, PanelLeftOpen, PanelLeftClose } from "lucide-react";
 import { useSidebar } from "@/contexts/sidebarContext";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 
@@ -22,7 +22,7 @@ const sidebarItems: SidebarItem[] = [
 export default function MainSidebar(): JSX.Element {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isCollapsed } = useSidebar();
+  const { isCollapsed, toggleSidebar } = useSidebar();
 
   const isActive = (path: string) => {
     if (path === '/') {
@@ -86,6 +86,29 @@ export default function MainSidebar(): JSX.Element {
 
           return buttonElement;
         })}
+      </div>
+
+      {/* Bottom Toggle */}
+      <div className={`mt-auto border-t ${isCollapsed ? 'items-center px-1.5' : 'px-3'} py-3`}>
+        {isCollapsed ? (
+          <ShadTooltip content="Expand sidebar" side="right">
+            <button
+              onClick={toggleSidebar}
+              className="h-11 w-11 flex items-center justify-center rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-accent hover:text-[#350E84] dark:hover:text-primary"
+              data-testid="main-sidebar-toggle"
+            >
+              <PanelLeftOpen className="h-5 w-5" />
+            </button>
+          </ShadTooltip>
+        ) : (
+          <button
+            onClick={toggleSidebar}
+            className="h-10 w-full flex items-center justify-start gap-3 px-3 rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-accent hover:text-[#350E84] dark:hover:text-primary"
+            data-testid="main-sidebar-toggle"
+          >
+            <PanelLeftClose className="h-5 w-5 flex-shrink-0" />
+          </button>
+        )}
       </div>
     </div>
   );

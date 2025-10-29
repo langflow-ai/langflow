@@ -66,7 +66,7 @@ const BreadcrumbPage = React.forwardRef<
     role="link"
     aria-disabled="true"
     aria-current="page"
-    className={cn("font-normal text-foreground text-white", className)}
+    className={cn("font-semibold text-foreground text-white", className)}
     {...props}
   />
 ));
