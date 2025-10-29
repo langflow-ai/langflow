@@ -61,8 +61,9 @@ jest.mock(
     default: React.forwardRef((props: any, ref: any) => (
       <div data-testid="table-component">
         <div data-testid="pagination-enabled">{String(props.pagination)}</div>
-        <div data-testid="pagination-auto-page-size">
-          {String(props.paginationAutoPageSize)}
+        <div data-testid="pagination-page-size">{props.paginationPageSize}</div>
+        <div data-testid="pagination-page-size-selector">
+          {JSON.stringify(props.paginationPageSizeSelector)}
         </div>
         <div data-testid="row-count">{props.rowData.length}</div>
       </div>
@@ -113,13 +114,29 @@ describe("ToolsTable - Pagination Tests", () => {
     expect(paginationEnabled.textContent).toBe("true");
   });
 
-  it("should enable automatic page size calculation", () => {
+  it("should set pagination page size to 50", () => {
     const rows = generateMockTools(100);
 
     render(<ToolsTable {...defaultProps} rows={rows} />);
 
-    const autoPageSize = screen.getByTestId("pagination-auto-page-size");
-    expect(autoPageSize.textContent).toBe("true");
+    const pageSize = screen.getByTestId("pagination-page-size");
+    expect(pageSize.textContent).toBe("50");
+  });
+
+  it("should use fixed page size without selector", () => {
+    const rows = generateMockTools(100);
+
+    render(<ToolsTable {...defaultProps} rows={rows} />);
+
+    // Verify fixed page size is set
+    const pageSize = screen.getByTestId("pagination-page-size");
+    expect(pageSize.textContent).toBe("50");
+
+    // Selector should not be present when using fixed page size
+    const pageSizeSelector = screen.queryByTestId(
+      "pagination-page-size-selector",
+    );
+    expect(pageSizeSelector?.textContent || "").toBe("");
   });
 
   it("should handle large datasets (400+ tools) efficiently", () => {
@@ -132,9 +149,9 @@ describe("ToolsTable - Pagination Tests", () => {
     const paginationEnabled = screen.getByTestId("pagination-enabled");
     expect(paginationEnabled.textContent).toBe("true");
 
-    // Verify auto page size is enabled for large datasets
-    const autoPageSize = screen.getByTestId("pagination-auto-page-size");
-    expect(autoPageSize.textContent).toBe("true");
+    // Verify pagination settings are appropriate for large datasets
+    const pageSize = screen.getByTestId("pagination-page-size");
+    expect(pageSize.textContent).toBe("50");
   });
 
   it("should handle small datasets with pagination", () => {
@@ -193,32 +210,32 @@ describe("ToolsTable - Pagination Tests", () => {
 
     // Verify all required pagination props are present
     expect(screen.getByTestId("pagination-enabled")).toBeInTheDocument();
-    expect(screen.getByTestId("pagination-auto-page-size")).toBeInTheDocument();
+    expect(screen.getByTestId("pagination-page-size")).toBeInTheDocument();
   });
 
-  it("should handle edge case with exactly 50 tools", () => {
+  it("should handle edge case with exactly 50 tools (one page)", () => {
     const rows = generateMockTools(50);
 
     render(<ToolsTable {...defaultProps} rows={rows} />);
 
-    // Pagination should be enabled and use auto page size
+    // With exactly 50 tools and page size of 50, should show all on one page
+    const pageSize = screen.getByTestId("pagination-page-size");
+    expect(pageSize.textContent).toBe("50");
+
     const paginationEnabled = screen.getByTestId("pagination-enabled");
     expect(paginationEnabled.textContent).toBe("true");
-
-    const autoPageSize = screen.getByTestId("pagination-auto-page-size");
-    expect(autoPageSize.textContent).toBe("true");
   });
 
-  it("should handle edge case with 51 tools", () => {
+  it("should handle edge case with 51 tools (two pages)", () => {
     const rows = generateMockTools(51);
 
     render(<ToolsTable {...defaultProps} rows={rows} />);
 
-    // Pagination should be enabled and use auto page size
+    // With 51 tools and page size of 50, should have 2 pages
     const paginationEnabled = screen.getByTestId("pagination-enabled");
     expect(paginationEnabled.textContent).toBe("true");
 
-    const autoPageSize = screen.getByTestId("pagination-auto-page-size");
-    expect(autoPageSize.textContent).toBe("true");
+    const pageSize = screen.getByTestId("pagination-page-size");
+    expect(pageSize.textContent).toBe("50");
   });
 });

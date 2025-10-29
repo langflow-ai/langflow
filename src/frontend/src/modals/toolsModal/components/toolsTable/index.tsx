@@ -52,7 +52,7 @@ export default function ToolsTable({
   const { setOpen: setSidebarOpen } = useSidebar();
 
   const getRowId = useMemo(() => {
-    return (params: any) => params.data.display_name ?? params.data.name;
+    return (params: any) => `${params.data.name}_${params.data.display_name}`;
   }, []);
 
   useEffect(() => {
@@ -67,21 +67,14 @@ export default function ToolsTable({
 
   useEffect(() => {
     if (!open || !selectedRows) return;
-    if (previousRowsCount.current === rows.length) {
-      return;
-    }
+    if (previousRowsCount.current === rows.length) return;
 
     previousRowsCount.current = rows.length;
-
     const updatedData = cloneDeep(rows);
     setData(updatedData);
 
     const updatedSelection = updatedData.filter((row) =>
-      selectedRows.some(
-        (selected) =>
-          (selected.display_name ?? selected.name) ===
-          (row.display_name ?? row.name)
-      )
+      selectedRows.some((selected) => selected.name === row.name),
     );
     setSelectedRows(updatedSelection);
   }, [rows]);
@@ -90,20 +83,21 @@ export default function ToolsTable({
     if (!agGrid.current?.api || !selectedRows || !open) return;
 
     applyingSelection.current = true;
+    agGrid.current.api.setGridOption("suppressRowClickSelection", true);
+    agGrid.current.api.deselectAll();
 
+    const selectedIds = new Set(selectedRows.map((row) => row.name));
     agGrid.current.api.forEachNode((node) => {
-      const isSelected = selectedRows.some(
-        (row) =>
-          (row.display_name ?? row.name) ===
-          (node.data.display_name ?? node.data.name)
-      );
-      node.setSelected(isSelected);
+      if (selectedIds.has(node.data.name)) {
+        node.setSelected(true, false);
+      }
     });
 
+    agGrid.current.api.setGridOption("suppressRowClickSelection", false);
     setTimeout(() => {
       applyingSelection.current = false;
-    }, 0);
-  }, [selectedRows, data, open]);
+    }, 50);
+  }, [selectedRows, open]);
 
   useEffect(() => {
     if (!open) {
@@ -123,8 +117,8 @@ export default function ToolsTable({
             name !== "" && name !== display_name
               ? name
               : isAction
-              ? sanitizeMcpName(display_name || row.name, 46)
-              : display_name
+                ? sanitizeMcpName(display_name || row.name, 46)
+                : display_name
           ).slice(0, 46);
 
           const processedDescription =
@@ -132,14 +126,10 @@ export default function ToolsTable({
             row.description !== row.display_description
               ? row.description
               : isAction
-              ? ""
-              : row.display_description;
+                ? ""
+                : row.display_description;
 
-          return selectedRows?.some(
-            (selected) =>
-              (selected.display_name ?? selected.name) ===
-              (row.display_name ?? row.name)
-          )
+          return selectedRows?.some((selected) => selected.name === row.name)
             ? {
                 ...row,
                 status: true,
@@ -178,7 +168,7 @@ export default function ToolsTable({
               params.data.display_name !== ""
                 ? params.data.display_name
                 : params.data.name,
-              ["space_case"]
+              ["space_case"],
             )
           : params.data.display_name,
     },
@@ -201,11 +191,11 @@ export default function ToolsTable({
               "uppercase",
             ])
           : isAction
-          ? sanitizeMcpName(params.data.display_name, 46).toUpperCase()
-          : parseString(params.data.tags.join(", "), [
-              "snake_case",
-              "uppercase",
-            ]),
+            ? sanitizeMcpName(params.data.display_name, 46).toUpperCase()
+            : parseString(params.data.tags.join(", "), [
+                "snake_case",
+                "uppercase",
+              ]),
       cellClass: "text-muted-foreground",
     },
     {
@@ -216,10 +206,8 @@ export default function ToolsTable({
     },
   ];
   const handleSelectionChanged = (event) => {
-    if (!open) return;
-    if (applyingSelection.current) {
-      return;
-    }
+    if (!open || applyingSelection.current) return;
+
     const selectedData = event.api.getSelectedRows();
     editedSelection.current = true;
     setSelectedRows(selectedData);
@@ -227,11 +215,11 @@ export default function ToolsTable({
 
   const handleSidebarInputChange = (
     field: "name" | "description",
-    value: string
+    value: string,
   ) => {
     if (!focusedRow) return;
 
-    const originalName = focusedRow.display_name ?? focusedRow.name;
+    const originalName = focusedRow.name;
 
     setFocusedRow((prev) => (prev ? { ...prev, [field]: value } : null));
 
@@ -243,7 +231,7 @@ export default function ToolsTable({
       });
 
       const updatedData = data.map((row) =>
-        (row.display_name ?? row.name) === originalName ? updatedRow : row
+        row.name === originalName ? updatedRow : row,
       );
       setData(updatedData);
     }
@@ -255,7 +243,7 @@ export default function ToolsTable({
         display_name: value.title,
         name: key,
         description: value.description ?? null,
-      })
+      }),
     );
   }, [focusedRow]);
 
@@ -321,7 +309,7 @@ export default function ToolsTable({
             onRowClicked={handleRowClicked}
             getRowId={getRowId}
             pagination={true}
-            paginationAutoPageSize={true}
+            paginationPageSize={50}
           />
         </div>
       </main>
