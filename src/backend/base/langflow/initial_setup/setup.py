@@ -34,7 +34,12 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
+from langflow.initial_setup.constants import (
+    ASSISTANT_FOLDER_DESCRIPTION,
+    ASSISTANT_FOLDER_NAME,
+    STARTER_FOLDER_DESCRIPTION,
+    STARTER_FOLDER_NAME,
+)
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.constants import (
@@ -716,6 +721,132 @@ async def get_or_create_starter_folder(session):
         return db_folder
     stmt = select(Folder).where(Folder.name == STARTER_FOLDER_NAME)
     return (await session.exec(stmt)).first()
+
+
+async def get_or_create_assistant_folder(session, user_id: UUID):
+    """Create or get the Langflow Assistant folder for a specific user.
+
+    This folder contains agentic flows and cannot be deleted.
+
+    Args:
+        session: Database session
+        user_id: The ID of the user who owns the folder
+
+    Returns:
+        The Langflow Assistant folder
+    """
+    stmt = select(Folder).where(Folder.user_id == user_id, Folder.name == ASSISTANT_FOLDER_NAME)
+    result = await session.exec(stmt)
+    folder = result.first()
+
+    if not folder:
+        new_folder = FolderCreate(name=ASSISTANT_FOLDER_NAME, description=ASSISTANT_FOLDER_DESCRIPTION)
+        db_folder = Folder.model_validate(new_folder, from_attributes=True)
+        db_folder.user_id = user_id
+        session.add(db_folder)
+        await session.commit()
+        await session.refresh(db_folder)
+        return db_folder
+    return folder
+
+
+async def load_agentic_flows() -> list[tuple[anyio.Path, dict]]:
+    """Load agentic flows from the agentic/flows directory.
+
+    Returns:
+        List of tuples containing (file_path, flow_data)
+    """
+    agentic_flows = []
+    # Get the path to the agentic/flows directory
+    folder = anyio.Path(__file__).parent.parent / "agentic" / "flows"
+
+    if not await folder.exists():
+        await logger.adebug(f"Agentic flows directory does not exist: {folder}")
+        return agentic_flows
+
+    await logger.adebug("Loading agentic flows")
+    async for file in folder.glob("*.json"):
+        try:
+            async with async_open(str(file), "r", encoding="utf-8") as f:
+                content = await f.read()
+            flow = orjson.loads(content)
+            agentic_flows.append((file, flow))
+            await logger.adebug(f"Loaded agentic flow: {file.name}")
+        except Exception as e:
+            await logger.aexception(f"Error loading agentic flow {file}: {e}")
+
+    await logger.adebug(f"Loaded {len(agentic_flows)} agentic flows")
+    return agentic_flows
+
+
+async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -> None:
+    """Create or update agentic flows in the Langflow Assistant folder for a user.
+
+    This function is called on user login to ensure that all agentic flows
+    are present in the user's Langflow Assistant folder.
+
+    Args:
+        session: Database session
+        user_id: The ID of the user
+    """
+    try:
+        # Get or create the Langflow Assistant folder
+        assistant_folder = await get_or_create_assistant_folder(session, user_id)
+
+        # Load all agentic flows from the directory
+        agentic_flows = await load_agentic_flows()
+
+        if not agentic_flows:
+            await logger.adebug("No agentic flows found to load")
+            return
+
+        # Get existing flows in the folder
+        existing_flows = await get_all_flows_similar_to_project(session, assistant_folder.id)
+        existing_flow_names = {flow.name for flow in existing_flows}
+
+        # Create flows that don't exist
+        flows_created = 0
+        for file_path, flow_data in agentic_flows:
+            (
+                flow_name,
+                flow_description,
+                flow_is_component,
+                updated_at_datetime,
+                project_data,
+                flow_icon,
+                flow_icon_bg_color,
+                flow_gradient,
+                flow_tags,
+            ) = get_project_data(flow_data)
+
+            if flow_name not in existing_flow_names:
+                try:
+                    await logger.adebug(f"Creating agentic flow: {flow_name}")
+                    create_new_project(
+                        session=session,
+                        project_name=flow_name,
+                        project_description=flow_description,
+                        project_is_component=flow_is_component,
+                        updated_at_datetime=updated_at_datetime,
+                        project_data=project_data,
+                        project_icon=flow_icon,
+                        project_icon_bg_color=flow_icon_bg_color,
+                        project_gradient=flow_gradient,
+                        project_tags=flow_tags,
+                        new_folder_id=assistant_folder.id,
+                    )
+                    flows_created += 1
+                except Exception:  # noqa: BLE001
+                    await logger.aexception(f"Error while creating agentic flow {flow_name}")
+
+        if flows_created > 0:
+            await session.commit()
+            await logger.adebug(f"Successfully created {flows_created} agentic flows")
+        else:
+            await logger.adebug("No new agentic flows to create")
+
+    except Exception:  # noqa: BLE001
+        await logger.aexception("Error in create_or_update_agentic_flows")
 
 
 def _is_valid_uuid(val):

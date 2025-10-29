@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from langflow.api.utils import DbSession
 from langflow.api.v1.schemas import Token
-from langflow.initial_setup.setup import get_or_create_default_folder
+from langflow.initial_setup.setup import create_or_update_agentic_flows, get_or_create_default_folder
 from langflow.services.auth.utils import (
     authenticate_user,
     create_refresh_token,
@@ -69,6 +69,8 @@ async def login_to_get_access_token(
         await get_variable_service().initialize_user_variables(user.id, db)
         # Create default project for user if it doesn't exist
         _ = await get_or_create_default_folder(db, user.id)
+        # Create or update Langflow Assistant folder with agentic flows
+        await create_or_update_agentic_flows(db, user.id)
         return tokens
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -108,6 +110,9 @@ async def auto_login(response: Response, db: DbSession):
                 expires=None,  # Set to None to make it a session cookie
                 domain=auth_settings.COOKIE_DOMAIN,
             )
+
+            # Create or update Langflow Assistant folder with agentic flows
+            await create_or_update_agentic_flows(db, user_id)
 
         return tokens
 
