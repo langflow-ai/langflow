@@ -16,7 +16,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 
 export interface MultiSelectProps {
-  options: readonly string[] | string[];
+  options: readonly string[] | string[] | readonly { title: string; id: string }[] | { title: string; id: string }[];
   selected: string[];
   onChange: (selected: string[]) => void;
   placeholder?: string;
@@ -31,6 +31,25 @@ export function MultiSelect({
   className,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
+
+  // Helper function to check if options are objects
+  const isObjectOptions = (opts: typeof options): opts is readonly { title: string; id: string }[] | { title: string; id: string }[] => {
+    return opts.length > 0 && typeof opts[0] === 'object' && 'id' in opts[0] && 'title' in opts[0];
+  };
+
+  // Helper to get value (id or string)
+  const getValue = (option: string | { title: string; id: string }): string => {
+    return typeof option === 'string' ? option : option.id;
+  };
+
+  // Helper to get display text (title or string)
+  const getDisplayText = (value: string): string => {
+    if (isObjectOptions(options)) {
+      const option = options.find(opt => opt.id === value);
+      return option ? option.title : value;
+    }
+    return value;
+  };
 
   const handleUnselect = (item: string) => {
     onChange(selected.filter((s) => s !== item));
@@ -64,7 +83,7 @@ export function MultiSelect({
                   variant="secondary"
                   className="mr-1 mb-1"
                 >
-                  {item}
+                  {getDisplayText(item)}
                   <button
                     className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     onKeyDown={(e) => {
@@ -99,20 +118,24 @@ export function MultiSelect({
           <CommandList>
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup>
-              {options.map((option) => (
-                <CommandItem
-                  key={option}
-                  onSelect={() => handleSelect(option)}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selected.includes(option) ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {option}
-                </CommandItem>
-              ))}
+              {options.map((option) => {
+                const value = getValue(option);
+                const displayText = typeof option === 'string' ? option : option.title;
+                return (
+                  <CommandItem
+                    key={value}
+                    onSelect={() => handleSelect(value)}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selected.includes(value) ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {displayText}
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

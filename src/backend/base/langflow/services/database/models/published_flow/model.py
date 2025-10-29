@@ -48,6 +48,7 @@ class PublishedFlowBase(SQLModel):
     # Denormalized fields for performance (avoid joins)
     flow_name: str | None = Field(default=None, nullable=True, max_length=255)
     flow_icon: str | None = Field(default=None, nullable=True, max_length=1000)
+    flow_icon_updated_at: datetime | None = Field(default=None, nullable=True)
     published_by_username: str | None = Field(default=None, nullable=True, max_length=255)
 
 

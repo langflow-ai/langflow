@@ -24,6 +24,7 @@ import { useGetAppConfig } from "@/controllers/API/queries/application-config";
 import { useGetPublishedFlow } from "@/controllers/API/queries/published-flows";
 import { useGetAgentByFlowId } from "@/controllers/API/queries/agent-marketplace/use-get-agent-by-flow-id";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { AppLogoDisplay } from "@/components/AppLogoDisplay";
 // import AutonomizeIcon from "@/icons/Autonomize";
 
 export default function AppHeader(): JSX.Element {

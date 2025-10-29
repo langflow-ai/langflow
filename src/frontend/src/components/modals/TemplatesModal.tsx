@@ -10,16 +10,10 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { cn, getNumberFromString } from "@/utils/utils";
 import { swatchColors } from "@/utils/styleUtils";
+import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
 
 // Use Case tabs from StudioHomePage
-const USE_CASES: { title: string; id: string }[] = [
-  { title: "Prior Authorization", id: "prior-auth" },
-  { title: "Care Management", id: "classification" },
-  { title: "Medical Record Review", id: "chart-review" },
-  { title: "Document Analysis", id: "document-qa" },
-  { title: "Claims Operations", id: "claims" },
-];
-
+const USE_CASES: { title: string; id: string }[] = MARKETPLACE_TAGS
 // Template name mapping for Quick Start
 const TEMPLATE_NAME_MAPPING = {
   "Basic Prompting Agent": "Create an Ask Auto Agent",

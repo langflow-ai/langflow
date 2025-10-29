@@ -60,6 +60,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
             logger.info("🔄 AuthMiddleware: Genesis auth disabled, delegating to Langflow auth")
 
         # Langflow-specific public routes
+        # NOTE: Do NOT include API key endpoints here. They must require authentication
+        # via Bearer token (Genesis JWT) or x-api-key to avoid 401 issues when JWT is valid.
         self.public_routes = [
             "/health_check",
             "/health",
@@ -70,7 +72,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/api/v1/auto_login",
             "/api/v1/config",
             "/api/v1/spec/",  # Allow spec endpoints to use Langflow auth
-            "/api/v1/api_key/",  # Allow API key endpoints
             # Add other public endpoints as needed
         ]
         self.client_id = "genesis-bff"  # Fixed client ID for BFF mode

@@ -1,23 +1,21 @@
 """Autonomize Document Model Component - Unified file/URL-based model component with dropdown selection."""
 
-import asyncio
-import concurrent.futures
+import json
 import mimetypes
 import os
 import tempfile
-import json
 from pathlib import Path
-from typing import Any, Dict, List
-from urllib.parse import unquote, urlparse
+from typing import Any
+from urllib.parse import urlparse
 
 import aiohttp
-from langflow.base.data import BaseFileComponent
-from langflow.base.data.utils import IMG_FILE_TYPES
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output
-from langflow.schema.data import Data
 from loguru import logger
 
+from langflow.base.data import BaseFileComponent
+from langflow.base.data.utils import IMG_FILE_TYPES
 from langflow.base.modelhub import ATModelComponent
+from langflow.io import DropdownInput, HandleInput, Output
+from langflow.schema.data import Data
 from langflow.services.modelhub.model_endpoint import ModelEndpoint
 
 
@@ -54,10 +52,10 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
 
     inputs = [
         DropdownInput(
-            name="model_name",
+            name="selected_model",
             display_name="Model",
             options=list(MODEL_OPTIONS.keys()),
-            value=list(MODEL_OPTIONS.keys())[0],
+            value=next(iter(MODEL_OPTIONS.keys())),
             info="Select the Autonomize document model to use",
             real_time_refresh=True,
         ),
@@ -113,13 +111,13 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
         self._modelhub_service = None
         self.temp_dir = tempfile.mkdtemp()
         self._downloaded_files = {}
-        # Initialize _model_name with the default model endpoint
-        self._model_name = self.MODEL_OPTIONS[list(self.MODEL_OPTIONS.keys())[0]]
+        # Initialize _model_name with the default model endpoint (required by ATModelComponent)
+        self._model_name = self.MODEL_OPTIONS[next(iter(self.MODEL_OPTIONS.keys()))]
 
     @property
     def model_endpoint(self) -> ModelEndpoint:
         """Get the current model endpoint based on selection."""
-        return self.MODEL_OPTIONS[self.model_name]
+        return self.MODEL_OPTIONS[self.selected_model]
 
     @property
     def model_name_from_endpoint(self) -> str:
@@ -135,15 +133,14 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
 
             local_path = os.path.join(self.temp_dir, filename)
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    response.raise_for_status()
-                    with open(local_path, "wb") as f:
-                        while True:
-                            chunk = await response.content.read(8192)
-                            if not chunk:
-                                break
-                            f.write(chunk)
+            async with aiohttp.ClientSession() as session, session.get(url) as response:
+                response.raise_for_status()
+                with open(local_path, "wb") as f:
+                    while True:
+                        chunk = await response.content.read(8192)
+                        if not chunk:
+                            break
+                        f.write(chunk)
 
             self._downloaded_files[url] = local_path
             logger.info(f"Successfully downloaded file to {local_path}")
@@ -185,7 +182,10 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
                             local_path = await self._download_file_from_url(path)
                             if local_path:
                                 file_obj = BaseFileComponent.BaseFile(
-                                    path=Path(local_path), is_temp=True
+                                    data=obj,
+                                    path=Path(local_path),
+                                    delete_after_processing=True,  # Mark downloaded files for deletion
+                                    silent_errors=self.silent_errors
                                 )
                                 resolved_files.append(file_obj)
                         else:
@@ -193,7 +193,10 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
                             path_obj = Path(path) if isinstance(path, str) else path
                             if path_obj.exists():
                                 file_obj = BaseFileComponent.BaseFile(
-                                    path=path_obj, is_temp=False
+                                    data=obj,
+                                    path=path_obj,
+                                    delete_after_processing=self.delete_server_file_after_processing,
+                                    silent_errors=self.silent_errors
                                 )
                                 resolved_files.append(file_obj)
                             elif not self.silent_errors:
@@ -211,7 +214,7 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
 
         return resolved_files
 
-    async def process_files(self, files: List[BaseFileComponent.BaseFile]) -> Dict[str, Any]:
+    async def process_files(self, files: list[BaseFileComponent.BaseFile]) -> dict[str, Any]:
         """Process files using the selected model."""
         results = []
 
@@ -219,12 +222,12 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
             file_path = file_obj.path
 
             # Validate file extension
-            valid_extensions = self.MODEL_EXTENSIONS.get(self.model_name, self.VALID_EXTENSIONS)
-            file_extension = file_path.suffix.lower().lstrip('.')
+            valid_extensions = self.MODEL_EXTENSIONS.get(self.selected_model, self.VALID_EXTENSIONS)
+            file_extension = file_path.suffix.lower().lstrip(".")
 
             if file_extension not in [ext.lower() for ext in valid_extensions]:
                 if not self.ignore_unsupported_extensions:
-                    raise ValueError(f"File extension '{file_extension}' not supported by {self.model_name}")
+                    raise ValueError(f"File extension '{file_extension}' not supported by {self.selected_model}")
                 continue
 
             try:
@@ -252,26 +255,26 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
 
                 result = {
                     "file_path": str(file_path),
-                    "model": self.model_name,
+                    "model": self.selected_model,
                     "response": response
                 }
                 results.append(result)
 
             except Exception as e:
-                error_msg = f"Error processing {file_path} with {self.model_name}: {e!s}"
+                error_msg = f"Error processing {file_path} with {self.selected_model}: {e!s}"
                 logger.error(error_msg)
                 if not self.silent_errors:
                     raise ValueError(error_msg) from e
 
                 results.append({
                     "file_path": str(file_path),
-                    "model": self.model_name,
+                    "model": self.selected_model,
                     "error": str(e)
                 })
 
         return {
-            "model": self.model_name,
-            "model_description": self.MODEL_DESCRIPTIONS.get(self.model_name, ""),
+            "model": self.selected_model,
+            "model_description": self.MODEL_DESCRIPTIONS.get(self.selected_model, ""),
             "processed_files": len(results),
             "results": results
         }
@@ -289,16 +292,16 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
             results = await self.process_files(files)
 
             # Clean up temporary files
-            if self.delete_server_file_after_processing:
-                for file_obj in files:
-                    if file_obj.is_temp and file_obj.path.exists():
-                        try:
-                            file_obj.path.unlink()
-                        except Exception as e:
-                            logger.warning(f"Failed to delete temporary file {file_obj.path}: {e}")
+            for file_obj in files:
+                if file_obj.delete_after_processing and file_obj.path.exists():
+                    try:
+                        file_obj.path.unlink()
+                        logger.debug(f"Deleted temporary file: {file_obj.path}")
+                    except Exception as e:
+                        logger.warning(f"Failed to delete temporary file {file_obj.path}: {e}")
 
             data = Data(value=results)
-            self.status = f"Processed {len(files)} files with {self.model_name}"
+            self.status = f"Processed {len(files)} files with {self.selected_model}"
             return data
 
         except Exception as e:
@@ -307,10 +310,11 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
             if not self.silent_errors:
                 raise ValueError(error_msg) from e
 
-            data = Data(value={"error": str(e), "model": self.model_name})
-            self.status = f"Error: {str(e)}"
+            data = Data(value={"error": str(e), "model": self.selected_model})
+            self.status = f"Error: {e!s}"
             return data
 
     def build(self):
         """Return the main build function for Langflow framework."""
         return self.process_document
+

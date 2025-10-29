@@ -85,6 +85,7 @@ dependencies = [
     "langchain-ibm>=0.3.8",
     "trustcall>=0.0.38",
     "langchain-chroma>=0.1.4",
+    "asyncpg>=0.30.0",
 ]
 
 [dependency-groups]

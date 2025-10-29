@@ -148,6 +148,8 @@ dependencies = [
     "autonomize-model-sdk[core]>=1.1.36",
     "azure-search-documents>=11.5.2",
     "azure-identity==1.23.1",
+    "asyncpg>=0.30.0",
+    "PyMuPDF>=1.24.0",
 ]
 
 [dependency-groups]

@@ -14,7 +14,6 @@ import { usePublishFlow, type PublishCheckResponse } from "@/controllers/API/que
 import {
   usePostUploadPresignedUrl,
   useUploadToBlob,
-  usePostReadPresignedUrl,
 } from "@/controllers/API/queries/flexstore";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -26,6 +25,7 @@ import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
 import { Upload, X } from "lucide-react";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { ALLOWED_IMAGE_INPUT_EXTENSIONS } from "@/constants/constants";
+import { AgentLogo } from "@/components/AgentLogo";
 
 interface PublishFlowModalProps {
   open: boolean;
@@ -60,14 +60,10 @@ export default function PublishFlowModal({
   const { mutate: publishFlow, isPending } = usePublishFlow();
   const { mutateAsync: getUploadUrl } = usePostUploadPresignedUrl();
   const { mutateAsync: uploadToBlob } = useUploadToBlob();
-  const { mutateAsync: getReadUrl } = usePostReadPresignedUrl();
   const { validateFileSize } = useFileSizeValidator();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
-  const currentFlowManager = useFlowsManagerStore(
-    (state) => state.currentFlow
-  );
 
   // Pre-fill form fields when modal opens
   useEffect(() => {
@@ -194,20 +190,11 @@ export default function PublishFlowModal({
         file: logoFile,
       });
 
-      // Step 3: Get presigned read URL
-      const readResponse = await getReadUrl({
-        sourceType: "azureblobstorage",
-        fileName: fileName,
-        sourceDetails: {
-          containerName: "ai-studio-v2",
-          storageAccount: "autonomizestorageaccount",
-        },
-      });
-
-      const logoReadUrl = readResponse.presignedUrl.data.signedUrl;
-      setLogoUrl(logoReadUrl);
+      // Step 3: Return blob path (not signed URL) to store in database
+      // Frontend will generate fresh signed URLs on-demand when displaying the logo
+      setLogoUrl(fileName);
       setIsUploadingLogo(false);
-      return logoReadUrl;
+      return fileName; // Return blob path like "agent-logos/logo-xxxxx.png"
     } catch (error: any) {
       console.error("Logo upload error:", error);
       setIsUploadingLogo(false);
@@ -376,11 +363,24 @@ export default function PublishFlowModal({
               {/* Logo Preview */}
               {!logoRemoved && (logoPreviewUrl || existingPublishedData?.flow_icon) && (
                 <div className="relative h-24 w-24 rounded-lg border bg-muted flex-shrink-0">
-                  <img
-                    src={logoPreviewUrl || existingPublishedData?.flow_icon || ""}
-                    alt="Agent logo preview"
-                    className="h-full w-full object-contain rounded-lg p-1"
-                  />
+                  {logoPreviewUrl ? (
+                    // Local file preview (before upload)
+                    <img
+                      src={logoPreviewUrl}
+                      alt="Agent logo preview"
+                      className="h-full w-full object-contain rounded-lg p-1"
+                    />
+                  ) : (
+                    // Existing published logo (blob path) - generate signed URL
+                    <div className="h-full w-full">
+                      <AgentLogo
+                        blobPath={existingPublishedData?.flow_icon || null}
+                        updatedAt={existingPublishedData?.flow_icon_updated_at || null}
+                        altText="Agent logo preview"
+                        className="h-full w-full"
+                      />
+                    </div>
+                  )}
                   <Button
                     type="button"
                     size="sm"

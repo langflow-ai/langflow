@@ -4,19 +4,19 @@ import traceback
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from langflow.custom import Component
-from langflow.base.langchain_utilities.model import LCToolComponent
+import aiohttp
 from loguru import logger
 
+from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.services.deps import get_modelhub_service
-from langflow.services.modelhub.model_endpoint import ModelEndpoint
 
 if TYPE_CHECKING:
+    from langflow.services.modelhub.model_endpoint import ModelEndpoint
     from langflow.services.modelhub.service import ModelHubService
 
 
 class ATModelComponent(LCToolComponent):
-    """Base class for ModelHub components"""
+    """Base class for ModelHub components."""
 
     _model_name: ModelEndpoint
 
@@ -30,9 +30,57 @@ class ATModelComponent(LCToolComponent):
         """Get the model name from the ModelEndpoint."""
         return self._model_name.get_model()
 
-    async def predict(self, **kwargs) -> Any:
-        """Make a prediction using the ModelHub service"""
+    def _get_direct_model_endpoint(self, model_name: str) -> str | None:
+        """Get direct model endpoint for file inference to bypass ModelHub service issues."""
+        # Mapping of model names to their direct endpoints (matching user's working curl commands)
+        direct_endpoints = {
+            "tolstoy-model": "https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/extraction:predict",
+            "tolstoy-identification": "https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/identification:predict",
+            # Add common SRF model names that might be used
+            "extraction": "https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/extraction:predict",
+            "identification": "https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/identification:predict",
+            "srf-extraction": "https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/extraction:predict",
+            "srf-identification": "https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/identification:predict"
+        }
+        return direct_endpoints.get(model_name)
 
+    async def _direct_file_inference(self, endpoint: str, file_path: Path, content_type: str) -> Any:
+        """Make direct file inference call to bypass ModelHub service issues."""
+        try:
+            # Use the modelhub client's credential directly to get the proper token
+            from langflow.services.deps import get_modelhub_service
+            service = get_modelhub_service()
+
+            # Access the credential and get token directly from the modelhub client
+            credential = service.client.credential
+            auth_token = credential.get_token()
+
+            # Read file content as raw binary data
+            file_content = file_path.read_bytes()
+
+            # Prepare headers for direct endpoint (matching working curl)
+            headers = {
+                "Content-Type": "application/octet-stream",
+                "Authorization": f"Bearer {auth_token}"
+            }
+
+            logger.debug(f"Making direct request to: {endpoint}")
+            logger.debug(f"Content length: {len(file_content)} bytes")
+
+            # Make request with raw binary data
+            async with aiohttp.ClientSession() as session:
+                async with session.post(endpoint, data=file_content, headers=headers) as response:
+                    response.raise_for_status()
+                    result = await response.json()
+                    logger.debug(f"Direct endpoint response: {result}")
+                    return result
+
+        except Exception as e:
+            logger.error(f"Direct file inference failed: {e}")
+            raise
+
+    async def predict(self, **kwargs) -> Any:
+        """Make a prediction using the ModelHub service."""
         logger.info("🔍 ATModelComponent.predict called")
         logger.info(f"🔍 Input kwargs: {kwargs}")
 
@@ -73,11 +121,7 @@ class ATModelComponent(LCToolComponent):
                     file_path = Path(file_path)
 
                 # Get the file name safely
-                if hasattr(file_path, 'name'):
-                    file_name = file_path.name
-                else:
-                    # Fallback to extracting from path string
-                    file_name = str(file_path).split('/')[-1]
+                file_name = file_path.name if hasattr(file_path, "name") else str(file_path).split("/")[-1]
 
                 logger.info("🔍 Making file inference call...")
                 logger.info(f"🔍 File path: {file_path}")
@@ -86,13 +130,21 @@ class ATModelComponent(LCToolComponent):
                 logger.info(f"🔍 Model: {resolved_model_name}")
 
                 try:
-                    response = await service.file_inference(
-                        resolved_model_name,
-                        file_path=str(file_path),
-                        file_name=file_name,
-                        content_type=content_type,
-                    )
-                    logger.info(f"✅ File inference successful")
+                    # Check if we have a direct endpoint for this model (to bypass ModelHub service issues)
+                    direct_endpoint = self._get_direct_model_endpoint(resolved_model_name)
+                    if direct_endpoint:
+                        logger.info(f"🔄 Using direct endpoint for file inference: {direct_endpoint}")
+                        response = await self._direct_file_inference(direct_endpoint, file_path, content_type)
+                    else:
+                        # Fallback to ModelHub service
+                        logger.info("🔄 Using ModelHub service for file inference")
+                        response = await service.file_inference(
+                            resolved_model_name,
+                            file_path=str(file_path),
+                            file_name=file_name,
+                            content_type=content_type,
+                        )
+                    logger.info("✅ File inference successful")
                 except Exception as e:
                     logger.error(f"❌ File inference failed: {e}")
                     logger.error(f"❌ Error type: {type(e).__name__}")
@@ -107,7 +159,7 @@ class ATModelComponent(LCToolComponent):
 
                 try:
                     response = await service.text_inference(resolved_model_name, text)
-                    logger.info(f"✅ Text inference successful")
+                    logger.info("✅ Text inference successful")
                 except Exception as e:
                     logger.error(f"❌ Text inference failed: {e}")
                     logger.error(f"❌ Error type: {type(e).__name__}")
@@ -125,7 +177,9 @@ class ATModelComponent(LCToolComponent):
                 logger.warning(f"⚠️ Response is not a dict: {type(response)}")
                 return {}
 
-            result = response.get("result", {})
+            # Handle different response formats
+            result = response.get("result", {}) if "result" in response else response
+
             logger.info(f"✅ Final result: {result}")
             return result
 

@@ -11,6 +11,17 @@ from pydantic import ValidationError
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 from langflow.logging.logger import logger
 
+# Global PyMuPDF availability check for dynamic code execution
+try:
+    import fitz  # PyMuPDF
+    HAS_PYMUPDF = True
+except ImportError:
+    HAS_PYMUPDF = False
+    fitz = None
+
+# Export for global availability
+__all__ = ["HAS_PYMUPDF", "validate_code", "create_function"]
+
 
 def add_type_ignores() -> None:
     if not hasattr(ast, "TypeIgnore"):
@@ -158,6 +169,9 @@ def execute_function(code, function_name, *args, **kwargs):
 
     module = ast.parse(code)
     exec_globals = globals().copy()
+    # Add PyMuPDF availability for dynamic code execution
+    exec_globals['HAS_PYMUPDF'] = HAS_PYMUPDF
+    exec_globals['fitz'] = fitz
 
     for node in module.body:
         if isinstance(node, ast.Import):
@@ -201,6 +215,9 @@ def create_function(code, function_name):
 
     module = ast.parse(code)
     exec_globals = globals().copy()
+    # Add PyMuPDF availability for dynamic code execution
+    exec_globals['HAS_PYMUPDF'] = HAS_PYMUPDF
+    exec_globals['fitz'] = fitz
 
     for node in module.body:
         if isinstance(node, ast.Import | ast.ImportFrom):
