@@ -510,7 +510,7 @@ class SaveToFileComponent(Component):
 
         # Handle special Google Drive formats
         if file_format in ["slides", "docs"]:
-            return await self._save_to_google_apps(drive_service, content, file_format)
+            return await self._save_to_google_apps(drive_service, credentials, content, file_format)
 
         # Create temporary file
         file_path = f"{self.file_name}.{file_format}"
@@ -533,14 +533,14 @@ class SaveToFileComponent(Component):
             if Path(temp_file_path).exists():
                 Path(temp_file_path).unlink()
 
-    async def _save_to_google_apps(self, drive_service, content: str, app_type: str) -> Message:
+    async def _save_to_google_apps(self, drive_service, credentials, content: str, app_type: str) -> Message:
         """Save content to Google Apps (Slides or Docs)."""
         import time
 
         if app_type == "slides":
             from googleapiclient.discovery import build
 
-            slides_service = build("slides", "v1", credentials=drive_service._http.credentials)
+            slides_service = build("slides", "v1", credentials=credentials)
 
             file_metadata = {
                 "name": self.file_name,
@@ -589,7 +589,7 @@ class SaveToFileComponent(Component):
         elif app_type == "docs":
             from googleapiclient.discovery import build
 
-            docs_service = build("docs", "v1", credentials=drive_service._http.credentials)
+            docs_service = build("docs", "v1", credentials=credentials)
 
             file_metadata = {
                 "name": self.file_name,
