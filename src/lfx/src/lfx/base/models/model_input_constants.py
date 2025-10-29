@@ -14,7 +14,7 @@ class ModelProvidersDict(TypedDict):
     is_active: bool
 
 
-def get_filtered_inputs(component_class, provider_name: str = None):
+def get_filtered_inputs(component_class, provider_name: str | None = None):
     base_input_names = {field.name for field in LCModelComponent.get_base_inputs()}
     component_instance = component_class()
 
@@ -25,7 +25,7 @@ def get_filtered_inputs(component_class, provider_name: str = None):
     ]
 
 
-def process_inputs(component_data: Input, provider_name: str = None):
+def process_inputs(component_data: Input, provider_name: str | None = None):
     """Processes and modifies an input configuration based on its type or name.
 
     Adjusts properties such as value, advanced status, real-time refresh, and additional information for specific
@@ -33,6 +33,7 @@ def process_inputs(component_data: Input, provider_name: str = None):
 
     Args:
         component_data: The input configuration to process.
+        provider_name: The name of the provider to process the inputs for.
 
     Returns:
         The modified input configuration.
