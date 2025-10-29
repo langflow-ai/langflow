@@ -235,14 +235,17 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
     try:
         if provider == "OpenAI":
             from langchain_openai import ChatOpenAI
+
             llm = ChatOpenAI(api_key=api_key, model_name=first_model, max_tokens=1)
             llm.invoke("test")
         elif provider == "Anthropic":
             from langchain_anthropic import ChatAnthropic
+
             llm = ChatAnthropic(anthropic_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
         elif provider == "Google Generative AI":
             from langchain_google_genai import ChatGoogleGenerativeAI
+
             llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
         elif provider == "IBM WatsonX":
@@ -252,6 +255,7 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
         elif provider == "Ollama":
             # Ollama is local, just verify the URL is accessible
             import requests
+
             response = requests.get(f"{api_key}/api/tags", timeout=5)
             if response.status_code != requests.codes.ok:
                 msg = "Invalid Ollama base URL"
