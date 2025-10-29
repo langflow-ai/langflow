@@ -42,32 +42,17 @@ class FlexStoreService(Service):
 
     @property
     def http_client(self) -> aiohttp.ClientSession:
-        """Get the HTTP client, initializing it if necessary."""
+        """Legacy property - now deprecated in favor of get_client() context manager."""
+        logger.warning(
+            "http_client property is deprecated. Use get_client() async context manager instead."
+        )
+        # Return a simple session for backward compatibility
+        # Note: This should not be used in new code
         if not self._http_client or self._http_client.closed:
-            # Configure connector with connection pooling
-            connector = aiohttp.TCPConnector(
-                limit=100,  # Total connection pool size
-                limit_per_host=20,  # Connections per host
-                keepalive_timeout=30,  # Keep connections alive
-                enable_cleanup_closed=True,
-            )
-
-            # Configure timeout
-            timeout = aiohttp.ClientTimeout(
-                total=self.settings.TIMEOUT,
-                connect=self.settings.CONNECT_TIMEOUT,
-                sock_read=self.settings.READ_TIMEOUT,
-            )
-
             self._http_client = aiohttp.ClientSession(
-                connector=connector,
-                timeout=timeout,
-                headers={
-                    "User-Agent": self.settings.USER_AGENT,
-                    "Content-Type": "application/json",
-                },
+                timeout=aiohttp.ClientTimeout(total=self.settings.TIMEOUT),
+                headers={"User-Agent": self.settings.USER_AGENT},
             )
-            logger.debug("FlexStore HTTP client initialized with connection pooling")
         return self._http_client
 
     async def cleanup(self) -> None:
@@ -90,9 +75,7 @@ class FlexStoreService(Service):
             # Simple health check - try to reach the base URL
             url = f"{self.settings.ENDPOINT_URL}/health"
             async with self.get_client() as client:
-                async with client.get(
-                    url, timeout=aiohttp.ClientTimeout(total=5)
-                ) as response:
+                async with client.get(url) as response:
                     return response.status == 200
         except Exception as e:
             logger.warning(f"FlexStore health check failed: {e}")
@@ -100,11 +83,33 @@ class FlexStoreService(Service):
 
     @asynccontextmanager
     async def get_client(self) -> AsyncGenerator[aiohttp.ClientSession, None]:
-        """Context manager for getting an HTTP client."""
-        try:
-            yield self.http_client
-        finally:
-            pass
+        """Context manager for getting an HTTP client with proper async lifecycle."""
+        # Create a fresh session within the async context to avoid event loop issues
+        connector = aiohttp.TCPConnector(
+            limit=100,  # Total connection pool size
+            limit_per_host=20,  # Connections per host
+            keepalive_timeout=30,  # Keep connections alive
+            enable_cleanup_closed=True,
+        )
+
+        # Configure timeout
+        timeout = aiohttp.ClientTimeout(
+            total=self.settings.TIMEOUT,
+            connect=self.settings.CONNECT_TIMEOUT,
+            sock_read=self.settings.READ_TIMEOUT,
+        )
+
+        # Create session within async context following aiohttp best practices
+        async with aiohttp.ClientSession(
+            connector=connector,
+            timeout=timeout,
+            headers={
+                "User-Agent": self.settings.USER_AGENT,
+                "Content-Type": "application/json",
+            },
+        ) as session:
+            logger.debug("FlexStore HTTP client created within async context")
+            yield session
 
     async def _make_request(self, method: str, url: str, **kwargs) -> dict[str, Any]:
         """Make an async HTTP request using aiohttp."""
@@ -214,7 +219,7 @@ class FlexStoreService(Service):
             except (
                 aiohttp.ClientConnectionError,
                 aiohttp.ServerTimeoutError,
-                aiohttp.AsyncTimeoutError,
+                asyncio.TimeoutError,
                 aiohttp.ClientResponseError,
             ) as e:
                 last_exception = e
