@@ -53,16 +53,18 @@ class TelemetryService(Service):
 
         # Initialize static telemetry fields
         version_info = get_version_info()
-        # TODO: FIXME: Relies On: Implement a utility / facility (singleton) to use to encapsulate the API call
-        #              to fetch the registered email address and cache it globally
-        # TODO: TEMP
-        email = "mpawlow@ca.ibm.com"
         self.common_telemetry_fields = {
             "langflow_version": version_info["version"],
             "platform": "desktop" if self._get_langflow_desktop() else "python_package",
             "os": platform.system().lower(),
-            "email": email,
         }
+
+        # TODO: FIXME: Relies On: Implement a utility / facility (singleton) to use to encapsulate the API call
+        #              to fetch the registered email address and cache it globally
+        # TODO: TEMP
+        email = "mpawlow@ca.ibm.com"
+        if self._get_langflow_desktop() and email is not None:
+            self.common_telemetry_fields["email"] = email
 
     async def telemetry_worker(self) -> None:
         while self.running:
