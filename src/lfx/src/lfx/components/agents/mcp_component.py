@@ -84,7 +84,7 @@ class MCPToolsComponent(ComponentWithCache):
                 "Enable caching of MCP Server and tools to improve performance. "
                 "Disable to always fetch fresh tools and server updates."
             ),
-            value=False,
+            value=True,
             advanced=True,
         ),
         DropdownInput(
@@ -309,6 +309,17 @@ class MCPToolsComponent(ComponentWithCache):
 
                 current_server_name = field_value.get("name") if isinstance(field_value, dict) else field_value
                 _last_selected_server = safe_cache_get(self._shared_component_cache, "last_selected_server", "")
+                server_changed = current_server_name != _last_selected_server
+
+                # Determine if "Tool Mode" is active by checking if the tool dropdown is hidden.
+                is_in_tool_mode = build_config["tools_metadata"]["show"]
+
+                # Fast path: if server didn't change and we already have options, keep them as-is
+                existing_options = build_config.get("tool", {}).get("options") or []
+                if not server_changed and existing_options:
+                    if not is_in_tool_mode:
+                        build_config["tool"]["show"] = True
+                    return build_config
 
                 # To avoid unnecessary updates, only proceed if the server has actually changed
                 if (_last_selected_server in (current_server_name, "")) and build_config["tool"]["show"]:
@@ -323,9 +334,6 @@ class MCPToolsComponent(ComponentWithCache):
                                     return build_config
                     else:
                         return build_config
-
-                # Determine if "Tool Mode" is active by checking if the tool dropdown is hidden.
-                is_in_tool_mode = build_config["tools_metadata"]["show"]
                 safe_cache_set(self._shared_component_cache, "last_selected_server", current_server_name)
 
                 # Check if tools are already cached for this server before clearing
@@ -352,7 +360,9 @@ class MCPToolsComponent(ComponentWithCache):
                 if not cached_tools:
                     self.tools = []  # Clear previous tools only if no cache
 
-                self.remove_non_default_keys(build_config)  # Clear previous tool inputs
+                # Only clear previous tool inputs if the server actually changed
+                if server_changed:
+                    self.remove_non_default_keys(build_config)
 
                 # Only show the tool dropdown if not in tool_mode
                 if not is_in_tool_mode:
@@ -365,7 +375,9 @@ class MCPToolsComponent(ComponentWithCache):
                         # Show loading state only when we need to fetch tools
                         build_config["tool"]["placeholder"] = "Loading tools..."
                         build_config["tool"]["options"] = []
-                    build_config["tool"]["value"] = uuid.uuid4()
+                    # Only force a value refresh when server changed or we don't have cached tools
+                    if server_changed or not cached_tools:
+                        build_config["tool"]["value"] = uuid.uuid4()
                 else:
                     # Keep the tool dropdown hidden if in tool_mode
                     self._not_load_actions = True
@@ -538,13 +550,11 @@ class MCPToolsComponent(ComponentWithCache):
         if item_dict.get("type") == "text":
             text = item_dict.get("text")
             try:
-                json_dict = json.loads(text)
-                # convert it to dict
-                return json_dict
-            except Exception:
+                return json.loads(text)
+            except json.JSONDecodeError:
                 return item_dict
         return item_dict
-            
+
     def _get_session_context(self) -> str | None:
         """Get the Langflow session ID for MCP session caching."""
         # Try to get session ID from the component's execution context
