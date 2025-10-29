@@ -48,17 +48,21 @@ export default function ToolsTable({
   const editedSelection = useRef<boolean>(false);
   const applyingSelection = useRef<boolean>(false);
   const previousRowsCount = useRef<number>(0);
+  const skipSelectionReapply = useRef<number>(0);
 
   const { setOpen: setSidebarOpen } = useSidebar();
 
   const getRowId = useMemo(() => {
-    return (params: any) => `${params.data.name}_${params.data.display_name}`;
+    return (params: any) => params.data._uniqueId || `${params.data.name}_${params.data.display_name}`;
   }, []);
 
   useEffect(() => {
     if (!open) return;
     previousRowsCount.current = rows.length;
-    const initialData = cloneDeep(rows);
+    const initialData = cloneDeep(rows).map((row, index) => ({
+      ...row,
+      _uniqueId: `${row.name}_${row.display_name}_${index}`,
+    }));
     setData(initialData);
     const filter = initialData.filter((row) => row.status === true);
     setSelectedRows(filter);
@@ -70,7 +74,14 @@ export default function ToolsTable({
     if (previousRowsCount.current === rows.length) return;
 
     previousRowsCount.current = rows.length;
-    const updatedData = cloneDeep(rows);
+    const updatedData = cloneDeep(rows).map((row, index) => ({
+      ...row,
+      _uniqueId: `${row.name}_${row.display_name}_${index}`,
+    }));
+
+    // Increment skip counter to prevent re-applying selection
+    skipSelectionReapply.current++;
+
     setData(updatedData);
 
     const updatedSelection = updatedData.filter((row) =>
@@ -82,14 +93,20 @@ export default function ToolsTable({
   useEffect(() => {
     if (!agGrid.current?.api || !selectedRows || !open) return;
 
+    // Don't re-apply selection if we're just editing data fields (slug/description)
+    if (skipSelectionReapply.current > 0) {
+      skipSelectionReapply.current--;
+      return;
+    }
+
     applyingSelection.current = true;
     agGrid.current.api.setGridOption("suppressRowClickSelection", true);
-    agGrid.current.api.deselectAll();
 
     const selectedIds = new Set(selectedRows.map((row) => row.name));
     agGrid.current.api.forEachNode((node) => {
-      if (selectedIds.has(node.data.name)) {
-        node.setSelected(true, false);
+      const shouldSelect = selectedIds.has(node.data.name);
+      if (node.isSelected() !== shouldSelect) {
+        node.setSelected(shouldSelect, false);
       }
     });
 
@@ -219,21 +236,31 @@ export default function ToolsTable({
   ) => {
     if (!focusedRow) return;
 
-    const originalName = focusedRow.name;
+    const originalUniqueId = focusedRow._uniqueId;
+    const updatedRow = { ...focusedRow, [field]: value, _uniqueId: originalUniqueId };
 
-    setFocusedRow((prev) => (prev ? { ...prev, [field]: value } : null));
+    setFocusedRow(updatedRow);
 
-    if (agGrid.current) {
-      const updatedRow = { ...focusedRow, [field]: value };
+    if (agGrid.current && originalUniqueId) {
+      // Increment skip counter to prevent re-applying selection
+      skipSelectionReapply.current++;
 
+      // Update only via applyTransaction
       agGrid.current.api.applyTransaction({
         update: [updatedRow],
       });
 
       const updatedData = data.map((row) =>
-        row.name === originalName ? updatedRow : row,
+        row._uniqueId === originalUniqueId ? updatedRow : row,
       );
       setData(updatedData);
+
+      // Update selectedRows to reflect the updated data
+      setSelectedRows((prevSelected) =>
+        prevSelected?.map((row) =>
+          row._uniqueId === originalUniqueId ? updatedRow : row,
+        ) || null,
+      );
     }
   };
 
