@@ -561,6 +561,7 @@ class MCPToolsComponent(ComponentWithCache):
             msg = f"Error in build_output: {e!s}"
             await logger.aexception(msg)
             raise ValueError(msg) from e
+
     def process_output_item(self, item_dict):
         """Process the output of a tool."""
         if item_dict.get("type") == "text":
