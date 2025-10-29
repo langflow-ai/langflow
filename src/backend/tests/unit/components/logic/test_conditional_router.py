@@ -252,7 +252,7 @@ class TestConditionalRouterComponent(ComponentTestBaseWithoutClient):
             result = component.true_response()
 
             assert isinstance(result, Message)
-            assert result.content == ""
+            assert result.text == ""
             mock_iterate.assert_called_once_with("true_result")
 
     async def test_false_response_condition_false(self, component_class, default_kwargs):
@@ -283,7 +283,7 @@ class TestConditionalRouterComponent(ComponentTestBaseWithoutClient):
             result = component.false_response()
 
             assert isinstance(result, Message)
-            assert result.content == ""
+            assert result.text == ""
             mock_iterate.assert_called_once_with("false_result")
 
     async def test_update_build_config_regex_operator(self, component_class, default_kwargs):
