@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
 import KnowledgeBaseDrawer from "../filesPage/components/KnowledgeBaseDrawer";
 import KnowledgeBasesTab from "../filesPage/components/KnowledgeBasesTab";
+import ConnectorsTab from "./components/ConnectorsTab";
 
 export const KnowledgePage = () => {
   const [selectedKnowledgeBases, setSelectedKnowledgeBases] = useState<any[]>(
@@ -117,7 +119,22 @@ export const KnowledgePage = () => {
                 Knowledge
               </div>
               <div className="flex h-full flex-col">
-                <KnowledgeBasesTab {...tabProps} />
+                <Tabs defaultValue="knowledge-bases" className="w-full">
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="knowledge-bases">
+                      Knowledge Bases
+                    </TabsTrigger>
+                    <TabsTrigger value="connectors">
+                      Data Connectors
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="knowledge-bases" className="h-full">
+                    <KnowledgeBasesTab {...tabProps} />
+                  </TabsContent>
+                  <TabsContent value="connectors" className="h-full">
+                    <ConnectorsTab />
+                  </TabsContent>
+                </Tabs>
               </div>
             </div>
           </div>
