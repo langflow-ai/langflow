@@ -22,6 +22,7 @@ from langflow.services.telemetry.schema import (
     ShutdownPayload,
     VersionPayload,
 )
+from langflow.utils.registered_email_util import get_registered_email_address
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -52,19 +53,20 @@ class TelemetryService(Service):
         self.client_type = self._get_client_type()
 
         # Initialize static telemetry fields
+        is_langflow_desktop = self._get_langflow_desktop()
         version_info = get_version_info()
         self.common_telemetry_fields = {
             "langflow_version": version_info["version"],
-            "platform": "desktop" if self._get_langflow_desktop() else "python_package",
+            "platform": "desktop" if is_langflow_desktop else "python_package",
             "os": platform.system().lower(),
         }
 
-        # TODO: FIXME: Relies On: Implement a utility / facility (singleton) to use to encapsulate the API call
-        #              to fetch the registered email address and cache it globally
-        # TODO: TEMP
-        email = "mpawlow@ca.ibm.com"
-        if self._get_langflow_desktop() and email is not None:
-            self.common_telemetry_fields["email"] = email
+        # Augment common telemetry fields with the registered email address
+        # Note: Only applicable in the Langflow Desktop context
+        if is_langflow_desktop:
+            email = get_registered_email_address()
+            if email:
+                self.common_telemetry_fields["email"] = email
 
     async def telemetry_worker(self) -> None:
         while self.running:
