@@ -18,8 +18,8 @@ from lfx.io import (
     FloatInput,
     IntInput,
     MessageTextInput,
-    SecretStrInput,
     Output,
+    SecretStrInput,
     SliderInput,
     TableInput,
 )
