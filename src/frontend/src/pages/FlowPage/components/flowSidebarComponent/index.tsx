@@ -22,7 +22,10 @@ import {
 } from "@/components/ui/sidebar";
 import SkeletonGroup from "@/components/ui/skeletonGroup";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
-import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
+import {
+  ENABLE_KNOWLEDGE_BASES,
+  ENABLE_NEW_SIDEBAR,
+} from "@/customization/feature-flags";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { setLocalStorage } from "@/utils/local-storage-util";
@@ -146,7 +149,35 @@ interface FlowSidebarComponentProps {
 }
 
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
-  const data = useTypesStore((state) => state.data);
+  const rawData = useTypesStore((state) => state.data);
+
+  // Filter out knowledge components from files_and_knowledge category when ENABLE_KNOWLEDGE_BASES is OFF
+  const data = useMemo(() => {
+    if (ENABLE_KNOWLEDGE_BASES) {
+      return rawData;
+    }
+
+    const knowledgeComponentNames = [
+      "KnowledgeIngestion",
+      "KnowledgeRetrieval",
+    ];
+
+    // Create a deep copy to avoid mutating the original
+    const filteredData = cloneDeep(rawData);
+
+    if (filteredData.files_and_knowledge) {
+      // Filter out knowledge components by creating a new object without them
+      const filteredCategory = Object.fromEntries(
+        Object.entries(filteredData.files_and_knowledge).filter(
+          ([componentName]) => !knowledgeComponentNames.includes(componentName),
+        ),
+      );
+
+      filteredData.files_and_knowledge = filteredCategory;
+    }
+
+    return filteredData;
+  }, [rawData]);
 
   const {
     getFilterEdge,

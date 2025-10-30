@@ -211,15 +211,6 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Saved", name: "saved_components", icon: "GradientSave" },
   { display_name: "Input & Output", name: "input_output", icon: "Cable" },
   { display_name: "Data Sources", name: "data_source", icon: "Database" },
-  ...(ENABLE_KNOWLEDGE_BASES
-    ? [
-        {
-          display_name: "Knowledge Bases",
-          name: "knowledge_bases",
-          icon: "Library",
-        },
-      ]
-    : []),
   { display_name: "Models & Agents", name: "models_and_agents", icon: "Bot" },
   {
     display_name: "LLM Operations",
@@ -227,7 +218,7 @@ export const SIDEBAR_CATEGORIES = [
     icon: "BrainCircuit",
   },
   {
-    display_name: "Files & Knowledge",
+    display_name: ENABLE_KNOWLEDGE_BASES ? "Files & Knowledge" : "Files",
     name: "files_and_knowledge",
     icon: "Layers",
   },
