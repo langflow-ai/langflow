@@ -55,12 +55,10 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
   const [currentUploadComponentId, setCurrentUploadComponentId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Mutation hooks for file operations
   const uploadPresignedUrlMutation = usePostUploadPresignedUrl();
   const uploadToBlobMutation = useUploadToBlob();
   const readPresignedUrlMutation = usePostReadPresignedUrl();
 
-  // Format file size
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -69,7 +67,6 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // File upload handler
   const handleFileUpload = async (componentId: string) => {
     if (!fileInputRef.current) return;
     
@@ -83,7 +80,6 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
       setUploadProgress({ [componentId]: 0 });
 
       try {
-        // Step 1: Generate upload presigned URL
         const fileName = `agent-sample-run/${uuid()}_${file.name}`;
         const uploadUrlResponse = await uploadPresignedUrlMutation.mutateAsync({
           sourceType: "azureblobstorage",
@@ -97,7 +93,6 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
         const uploadUrl = uploadUrlResponse.presignedUrl.data.signedUrl;
         setUploadProgress({ [componentId]: 25 });
 
-        // Step 2: Upload file to blob storage
         await uploadToBlobMutation.mutateAsync({
           presignedUrl: uploadUrl,
           file
@@ -105,7 +100,6 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
 
         setUploadProgress({ [componentId]: 75 });
 
-        // Step 3: Generate read presigned URL
         const readUrlResponse = await readPresignedUrlMutation.mutateAsync({
           sourceType: "azureblobstorage",
           fileName,
@@ -118,7 +112,6 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
         const readUrl = readUrlResponse.presignedUrl.data.signedUrl;
         setUploadProgress({ [componentId]: 100 });
 
-        // Step 4: Create uploaded file record
         const uploadedFile: UploadedFile = {
           id: uuid(),
           name: file.name,
@@ -128,7 +121,6 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
           uploadTimestamp: new Date()
         };
 
-        // Step 5: Update uploaded files and set the URL for the component
         setUploadedFiles(prev => ({
           ...prev,
           [componentId]: [...(prev[componentId] || []), uploadedFile]
@@ -143,7 +135,6 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
           fileType: file.type
         });
 
-        // Clear progress after a delay
         setTimeout(() => {
           setUploadProgress({});
         }, 1000);
@@ -164,7 +155,6 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
     fileInputRef.current.click();
   };
 
-  // Remove uploaded file
   const removeUploadedFile = (componentId: string, fileId: string) => {
     setUploadedFiles(prev => {
       const componentFiles = prev[componentId] || [];
@@ -176,14 +166,12 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
       };
     });
 
-    // If this was the active file URL, clear it
     const fileToRemove = uploadedFiles[componentId]?.find(f => f.id === fileId);
     if (fileToRemove && fileUrls[componentId] === fileToRemove.readUrl) {
       onClearFileUrl(componentId);
     }
   };
 
-  // Use uploaded file for component
   const useUploadedFile = (componentId: string, file: UploadedFile) => {
     onFileUrlChange(componentId, file.readUrl);
   };
@@ -211,10 +199,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
               <div key={component.id} className="space-y-3 border rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-medium">
-                    {component.display_name}
-                    <span className="text-xs text-muted-foreground ml-1">
-                      ({component.inputKey})
-                    </span>
+                    File Path
                   </Label>
                   
                   <Button
@@ -246,7 +231,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
                 {/* File URL Input */}
                 <div className="flex gap-2">
                   <Input
-                    placeholder="https://example.com/file.pdf"
+                    placeholder="Enter file URL (e.g., https://example.com/file.pdf)"
                     value={fileUrls[component.id] || ""}
                     onChange={(e) => onFileUrlChange(component.id, e.target.value)}
                     className="flex-1"
@@ -316,3 +301,4 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
     </>
   );
 };
+
