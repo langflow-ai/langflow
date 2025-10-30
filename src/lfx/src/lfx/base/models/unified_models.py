@@ -40,8 +40,6 @@ def get_model_classes():
     }
 
 
-
-
 @lru_cache(maxsize=1)
 def get_model_provider_metadata():
     return {
