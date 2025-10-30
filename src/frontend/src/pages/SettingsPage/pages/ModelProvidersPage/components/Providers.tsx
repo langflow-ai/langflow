@@ -96,7 +96,6 @@ const Providers = ({ type }: { type: 'enabled' | 'available' }) => {
   if (isLoading) {
     return <div className="text-muted-foreground">Loading providers...</div>;
   }
-  console.log('Filtered Providers:', filteredProviders);
 
   return (
     <>
