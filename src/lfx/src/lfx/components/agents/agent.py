@@ -195,10 +195,15 @@ class AgentComponent(ToolCallingAgentComponent):
             if not isinstance(self.tools, list):  # type: ignore[has-type]
                 self.tools = []
             current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
+
             if not isinstance(current_date_tool, StructuredTool):
                 msg = "CurrentDateComponent must be converted to a StructuredTool"
                 raise TypeError(msg)
             self.tools.append(current_date_tool)
+
+        # Set shared callbacks for tracing the tools used by the agent
+        self.set_tools_callbacks(self.tools, self._get_shared_callbacks())
+
         return llm_model, self.chat_history, self.tools
 
     async def message_response(self) -> Message:
@@ -599,11 +604,14 @@ class AgentComponent(ToolCallingAgentComponent):
         agent_description = self.get_tool_description()
         # TODO: Agent Description Depreciated Feature to be removed
         description = f"{agent_description}{tools_names}"
+
         tools = component_toolkit(component=self).get_tools(
             tool_name="Call_Agent",
             tool_description=description,
+            # here we do not use the shared callbacks as we are exposing the agent as a tool
             callbacks=self.get_langchain_callbacks(),
         )
         if hasattr(self, "tools_metadata"):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+
         return tools
