@@ -292,6 +292,7 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
         # For other errors, we'll allow the key to be saved (might be network issues, etc.)
         return
 
+
 def get_language_model_options() -> list[dict[str, Any]]:
     """Return a list of available language model providers with their configuration."""
     # OpenAI models
@@ -382,6 +383,7 @@ def get_language_model_options() -> list[dict[str, Any]]:
 
     # Combine all options and return
     return openai_options + anthropic_options + google_options + ollama_options + watsonx_options
+
 
 def get_embedding_model_options() -> list[dict[str, Any]]:
     """Return a list of available embedding model providers with their configuration."""
