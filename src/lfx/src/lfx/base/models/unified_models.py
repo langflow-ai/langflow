@@ -119,7 +119,7 @@ def get_unified_models_detailed(
         # Skip models flagged as not_supported unless explicitly included
         if (not include_unsupported) and md.get("not_supported", False):
             continue
-        
+
         # Skip models flagged as deprecated unless explicitly included
         if (not include_deprecated) and md.get("deprecated", False):
             continue
