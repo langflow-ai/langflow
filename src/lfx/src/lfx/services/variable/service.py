@@ -1,4 +1,4 @@
-"""Minimal variable service for lfx package - environment variables only."""
+"""Minimal variable service for lfx package with in-memory storage and environment fallback."""
 
 import os
 
@@ -7,10 +7,10 @@ from lfx.services.base import Service
 
 
 class VariableService(Service):
-    """Minimal variable service using environment variables.
+    """Minimal variable service with in-memory storage and environment fallback.
 
-    This is a lightweight implementation for LFX that only reads
-    from environment variables. No database storage.
+    This is a lightweight implementation for LFX that maintains in-memory
+    variables and falls back to environment variables for reads. No database storage.
     """
 
     name = "variable_service"

@@ -1,3 +1,5 @@
+"""LFX services module - pluggable service architecture for dependency injection."""
+
 from .interfaces import (
     CacheServiceProtocol,
     ChatServiceProtocol,
