@@ -34,7 +34,7 @@ class NoServiceRegisteredError(Exception):
 
 
 class NoServiceRegisteredError(Exception):
-    pass
+    """Raised when no service or factory is registered for a service type."""
 
 
 class ServiceManager:
