@@ -223,7 +223,7 @@ def get_chat_output_sender_name(self) -> str | None:
     """Get sender_name from ChatOutput component."""
     if not hasattr(self, "graph") or not self.graph:
         return None
-    
+
     # Check if graph has vertices attribute (PlaceholderGraph doesn't)
     if not hasattr(self.graph, "vertices"):
         return None

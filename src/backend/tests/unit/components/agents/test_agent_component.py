@@ -349,16 +349,18 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
             tools=tools,
             input_value=input_value,
             api_key=api_key,
-            model=[{
-                "name": "gpt-4o",
-                "provider": "OpenAI",
-                "icon": "OpenAI",
-                "metadata": {
-                    "model_class": "ChatOpenAI",
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            }],
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             temperature=temperature,
             _session_id=str(uuid4()),
         )
@@ -384,16 +386,18 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
                 tools=tools,
                 input_value=input_value,
                 api_key=api_key,
-                model=[{
-                    "name": model_name,
-                    "provider": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                        "model_class": "ChatOpenAI",
-                        "model_name_param": "model",
-                        "api_key_param": "api_key",
-                    },
-                }],
+                model=[
+                    {
+                        "name": model_name,
+                        "provider": "OpenAI",
+                        "icon": "OpenAI",
+                        "metadata": {
+                            "model_class": "ChatOpenAI",
+                            "model_name_param": "model",
+                            "api_key_param": "api_key",
+                        },
+                    }
+                ],
                 _session_id=str(uuid4()),
             )
 
@@ -421,16 +425,18 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
                     tools=tools,
                     input_value=input_value,
                     api_key=api_key,
-                    model=[{
-                        "name": model_name,
-                        "provider": "Anthropic",
-                        "icon": "Anthropic",
-                        "metadata": {
-                            "model_class": "ChatAnthropic",
-                            "model_name_param": "model",
-                            "api_key_param": "api_key",
-                        },
-                    }],
+                    model=[
+                        {
+                            "name": model_name,
+                            "provider": "Anthropic",
+                            "icon": "Anthropic",
+                            "metadata": {
+                                "model_class": "ChatAnthropic",
+                                "model_name_param": "model",
+                                "api_key_param": "api_key",
+                            },
+                        }
+                    ],
                     _session_id=str(uuid4()),
                 )
 
@@ -449,16 +455,18 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
                     tools=tools,
                     input_value=" ",
                     api_key=api_key,
-                    model=[{
-                        "name": model_name,
-                        "provider": "Anthropic",
-                        "icon": "Anthropic",
-                        "metadata": {
-                            "model_class": "ChatAnthropic",
-                            "model_name_param": "model",
-                            "api_key_param": "api_key",
-                        },
-                    }],
+                    model=[
+                        {
+                            "name": model_name,
+                            "provider": "Anthropic",
+                            "icon": "Anthropic",
+                            "metadata": {
+                                "model_class": "ChatAnthropic",
+                                "model_name_param": "model",
+                                "api_key_param": "api_key",
+                            },
+                        }
+                    ],
                     _session_id=str(uuid4()),
                 )
 
@@ -484,16 +492,18 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
             tools=tools,
             input_value="",
             api_key=api_key,
-            model=[{
-                "name": "gpt-4o",
-                "provider": "OpenAI",
-                "icon": "OpenAI",
-                "metadata": {
-                    "model_class": "ChatOpenAI",
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            }],
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             temperature=0.1,
             _session_id=str(uuid4()),
         )
@@ -515,16 +525,18 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
             tools=tools,
             input_value="   \n\t  ",
             api_key=api_key,
-            model=[{
-                "name": "gpt-4o",
-                "provider": "OpenAI",
-                "icon": "OpenAI",
-                "metadata": {
-                    "model_class": "ChatOpenAI",
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            }],
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             temperature=0.1,
             _session_id=str(uuid4()),
         )
@@ -550,16 +562,18 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
             tools=tools,
             input_value="",
             api_key=api_key,
-            model=[{
-                "name": "claude-3-5-sonnet-20241022",
-                "provider": "Anthropic",
-                "icon": "Anthropic",
-                "metadata": {
-                    "model_class": "ChatAnthropic",
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            }],
+            model=[
+                {
+                    "name": "claude-3-5-sonnet-20241022",
+                    "provider": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                        "model_class": "ChatAnthropic",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             _session_id=str(uuid4()),
         )
 
@@ -591,16 +605,18 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
             tools=tools,
             input_value="   \n\t  ",
             api_key=api_key,
-            model=[{
-                "name": ANTHROPIC_MODELS_DETAILED[0]["name"],
-                "provider": "Anthropic",
-                "icon": "Anthropic",
-                "metadata": {
-                    "model_class": "ChatAnthropic",
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            }],
+            model=[
+                {
+                    "name": ANTHROPIC_MODELS_DETAILED[0]["name"],
+                    "provider": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                        "model_class": "ChatAnthropic",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             _session_id=str(uuid4()),
         )
 
