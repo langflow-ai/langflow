@@ -2,6 +2,7 @@ import { ControlButton } from "@xyflow/react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { cn } from "@/utils/utils";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 
 type CanvasControlButtonProps = {
   iconName: string;
@@ -22,6 +23,8 @@ export const CanvasControlButton = ({
   iconClasses,
   testId,
 }: CanvasControlButtonProps): JSX.Element => {
+  if (LANGFLOW_ONLY_CANVAS) return <></>;
+
   return (
     <ControlButton
       data-testid={testId}
@@ -34,7 +37,7 @@ export const CanvasControlButton = ({
         <div
           className={cn(
             "rounded p-2.5 text-muted-foreground group-hover:text-primary",
-            backgroundClasses,
+            backgroundClasses
           )}
         >
           <ForwardedIconComponent
