@@ -20,12 +20,18 @@ class TelemetryService(BaseTelemetryService):
     """
 
     def __init__(self):
+        """Initialize the telemetry service with do-not-track enabled."""
         super().__init__()
         self.do_not_track = True  # Minimal implementation never sends data
         self.set_ready()
 
     @property
     def name(self) -> str:
+        """Service name identifier.
+
+        Returns:
+            str: The service name.
+        """
         return "telemetry_service"
 
     async def send_telemetry_data(self, payload: BaseModel, path: str | None = None) -> None:  # noqa: ARG002
