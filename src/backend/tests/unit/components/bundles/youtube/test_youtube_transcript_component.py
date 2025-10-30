@@ -245,9 +245,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         assert len(df_result) == 0
 
     @patch("lfx.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
-    def test_chunking_behavior(
-        self, mock_api_class, component_class, default_kwargs, mock_transcript_list
-    ):
+    def test_chunking_behavior(self, mock_api_class, component_class, default_kwargs, mock_transcript_list):
         """Test transcript chunking with custom chunk size."""
         # Create transcript data spanning 150 seconds
         mock_data = [
