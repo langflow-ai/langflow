@@ -3,7 +3,6 @@
 import os
 
 import pytest
-
 from lfx.services.storage.local import LocalStorageService
 from lfx.services.telemetry.service import TelemetryService
 from lfx.services.tracing.service import TracingService

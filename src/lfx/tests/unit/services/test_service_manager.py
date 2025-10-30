@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-
 from lfx.services.base import Service
 from lfx.services.manager import NoFactoryRegisteredError, ServiceManager
 from lfx.services.schema import ServiceType
