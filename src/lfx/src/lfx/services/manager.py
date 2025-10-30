@@ -25,17 +25,18 @@ if TYPE_CHECKING:
 
 
 class NoFactoryRegisteredError(Exception):
-    pass
+    """Raised when no factory is registered for a service type."""
 
 
 class NoServiceRegisteredError(Exception):
-    pass
+    """Raised when no service or factory is registered for a service type."""
 
 
 class ServiceManager:
     """Manages the creation of different services with pluggable discovery."""
 
     def __init__(self) -> None:
+        """Initialize the service manager with empty service and factory registries."""
         self.services: dict[str, Service] = {}
         self.factories: dict[str, ServiceFactory] = {}
         self.service_classes: dict[ServiceType, type[Service]] = {}  # New: direct service class registry
@@ -456,6 +457,11 @@ _service_manager = None
 
 
 def get_service_manager():
+    """Get the global ServiceManager instance, creating it if needed.
+
+    Returns:
+        ServiceManager: The global service manager instance.
+    """
     global _service_manager  # noqa: PLW0603
     if _service_manager is None:
         _service_manager = ServiceManager()

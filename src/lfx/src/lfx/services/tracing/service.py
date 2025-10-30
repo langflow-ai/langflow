@@ -27,12 +27,18 @@ class TracingService(BaseTracingService):
     """
 
     def __init__(self):
+        """Initialize the tracing service."""
         super().__init__()
         self.deactivated = False
         self.set_ready()
 
     @property
     def name(self) -> str:
+        """Service name identifier.
+
+        Returns:
+            str: The service name.
+        """
         return "tracing_service"
 
     async def start_tracers(
