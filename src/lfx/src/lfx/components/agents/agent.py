@@ -434,10 +434,10 @@ class AgentComponent(ToolCallingAgentComponent):
         api_key_param = metadata.get("api_key_param", "api_key")
 
         # Get API key from user input or global variables
-        api_key = get_api_key_for_provider(self.user_id, provider)
+        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
 
         # Build model kwargs
-        model_kwargs = {api_key_param: api_key}
+        model_kwargs = {api_key_param: api_key, "api_key": api_key}
         for input_ in inputs:
             if hasattr(self, f"{prefix}{input_.name}"):
                 model_kwargs[input_.name] = getattr(self, f"{prefix}{input_.name}")
@@ -458,11 +458,11 @@ class AgentComponent(ToolCallingAgentComponent):
         self,
         build_config: dotdict,
         field_value: list[dict],
-        field_name: str | None = None,  # noqa: ARG002
+        field_name: str | None = None,
     ) -> dotdict:
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
-        # Existing logic for updating build_config
         if field_name == "model":
+            self.log(field_name, field_value)
             # Update input types for all fields
             build_config = self.update_input_types(build_config)
 
