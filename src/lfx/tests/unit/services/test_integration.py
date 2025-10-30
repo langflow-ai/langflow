@@ -3,7 +3,6 @@
 import os
 
 import pytest
-
 from lfx.services.base import Service
 from lfx.services.manager import ServiceManager
 from lfx.services.schema import ServiceType
