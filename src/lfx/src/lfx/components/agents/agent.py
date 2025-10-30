@@ -455,7 +455,10 @@ class AgentComponent(ToolCallingAgentComponent):
         return build_config
 
     async def update_build_config(
-        self, build_config: dotdict, field_value: list[dict], field_name: str | None = None  # noqa: ARG002
+        self,
+        build_config: dotdict,
+        field_value: list[dict],
+        field_name: str | None = None,  # noqa: ARG002
     ) -> dotdict:
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
         # Existing logic for updating build_config
