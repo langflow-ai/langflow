@@ -5,6 +5,7 @@ import pytest
 from langchain_ollama import ChatOllama
 from lfx.base.models.ollama_constants import DEFAULT_OLLAMA_API_URL
 from lfx.components.ollama.ollama import ChatOllamaComponent
+from lfx.schema import Data, DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -56,7 +57,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         mock_chat_ollama.assert_called_once_with(
             base_url="http://localhost:11434",
             model="ollama-model",
-            mirostat=0,
+            # mirostat is not included when disabled (set to None and filtered out)
             format="json",
             metadata={"keywords": ["model", "llm", "language model", "large language model"]},
             num_ctx=2048,
@@ -83,6 +84,51 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         component.base_url = None
         with pytest.raises(ValueError, match=re.escape("Unable to connect to the Ollama API.")):
             component.build_model()
+
+    @patch("lfx.components.ollama.ollama.ChatOllama")
+    async def test_build_model_with_mirostat_enabled(self, mock_chat_ollama, component_class):
+        """Test that mirostat parameters are included when Mirostat is enabled."""
+        mock_instance = MagicMock()
+        mock_chat_ollama.return_value = mock_instance
+
+        component = component_class(
+            base_url="http://localhost:11434",
+            model_name="ollama-model",
+            mirostat="Mirostat",  # Setting to Mirostat (value 1)
+            mirostat_eta=0.1,
+            mirostat_tau=5.0,
+            temperature=0.1,
+        )
+        model = component.build_model()
+
+        # Verify that mirostat and its related params ARE passed
+        call_kwargs = mock_chat_ollama.call_args[1]
+        assert call_kwargs["mirostat"] == 1
+        assert call_kwargs["mirostat_eta"] == 0.1
+        assert call_kwargs["mirostat_tau"] == 5.0
+        assert model == mock_instance
+
+    @patch("lfx.components.ollama.ollama.ChatOllama")
+    async def test_build_model_with_mirostat_2_enabled(self, mock_chat_ollama, component_class):
+        """Test that mirostat parameters are included when Mirostat 2.0 is enabled."""
+        mock_instance = MagicMock()
+        mock_chat_ollama.return_value = mock_instance
+
+        component = component_class(
+            base_url="http://localhost:11434",
+            model_name="ollama-model",
+            mirostat="Mirostat 2.0",  # Setting to Mirostat 2.0 (value 2)
+            mirostat_eta=0.2,
+            mirostat_tau=10.0,
+            temperature=0.1,
+        )
+        model = component.build_model()
+        # Verify that mirostat and its related params ARE passed
+        call_kwargs = mock_chat_ollama.call_args[1]
+        assert call_kwargs["mirostat"] == 2
+        assert call_kwargs["mirostat_eta"] == 0.2
+        assert call_kwargs["mirostat_tau"] == 10.0
+        assert model == mock_instance
 
     @pytest.mark.asyncio
     @patch("lfx.components.ollama.ollama.httpx.AsyncClient.post")
@@ -188,6 +234,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert updated_config["keep_alive"]["value"] == "0"
         assert updated_config["keep_alive"]["advanced"] is True
 
+    @pytest.mark.integration
     @patch(
         "langchain_ollama.ChatOllama",
         return_value=ChatOllama(base_url="http://localhost:11434", model="llama3.1"),
@@ -459,6 +506,302 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         # Should not raise an error, just set empty options
         updated_config = await component.update_build_config(build_config, field_value, field_name)
         assert updated_config["model_name"]["options"] == []
+
+    @patch("lfx.components.ollama.ollama.ChatOllama")
+    def test_build_model_with_json_format_string(self, mock_chat_ollama, component_class, default_kwargs):
+        """Test that the format field works with 'json' string value (backward compatibility)."""
+        mock_instance = MagicMock()
+        mock_chat_ollama.return_value = mock_instance
+
+        # Use default_kwargs which has format="json"
+        component = component_class(**default_kwargs)
+        model = component.build_model()
+
+        # Verify ChatOllama was called with format="json"
+        call_args = mock_chat_ollama.call_args[1]
+        assert call_args["format"] == "json"
+        assert model == mock_instance
+
+    @patch("lfx.components.ollama.ollama.ChatOllama")
+    def test_build_model_with_json_schema_dict(self, mock_chat_ollama, component_class, default_kwargs):
+        """Test that the format field works with a JSON schema dictionary."""
+        mock_instance = MagicMock()
+        mock_chat_ollama.return_value = mock_instance
+
+        # Define a simple JSON schema
+        json_schema = {
+            "type": "object",
+            "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
+            "required": ["name"],
+        }
+
+        # Override format with the JSON schema dict
+        kwargs = default_kwargs.copy()
+        kwargs["format"] = json_schema
+
+        component = component_class(**kwargs)
+        model = component.build_model()
+
+        # Verify ChatOllama was called with the JSON schema dict
+        call_args = mock_chat_ollama.call_args[1]
+        assert call_args["format"] == json_schema
+        assert call_args["format"]["type"] == "object"
+        assert "name" in call_args["format"]["properties"]
+        assert "age" in call_args["format"]["properties"]
+        assert call_args["format"]["required"] == ["name"]
+        assert model == mock_instance
+
+    @patch("lfx.components.ollama.ollama.ChatOllama")
+    def test_build_model_with_complex_json_schema(self, mock_chat_ollama, component_class, default_kwargs):
+        """Test that the format field works with a complex/realistic JSON schema (e.g., from Pydantic)."""
+        mock_instance = MagicMock()
+        mock_chat_ollama.return_value = mock_instance
+
+        # Simulate a more complex schema like one generated by Pydantic's model_json_schema()
+        complex_schema = {
+            "type": "object",
+            "title": "Person",
+            "properties": {
+                "name": {"type": "string", "description": "The person's full name"},
+                "age": {"type": "integer", "minimum": 0, "maximum": 150},
+                "email": {"type": "string", "format": "email"},
+                "address": {
+                    "type": "object",
+                    "properties": {
+                        "street": {"type": "string"},
+                        "city": {"type": "string"},
+                        "zipcode": {"type": "string", "pattern": "^[0-9]{5}$"},
+                    },
+                    "required": ["city"],
+                },
+                "tags": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["name", "email"],
+            "additionalProperties": False,
+        }
+
+        # Override format with the complex JSON schema
+        kwargs = default_kwargs.copy()
+        kwargs["format"] = complex_schema
+
+        component = component_class(**kwargs)
+        model = component.build_model()
+
+        # Verify ChatOllama was called with the complex schema
+        call_args = mock_chat_ollama.call_args[1]
+        assert call_args["format"] == complex_schema
+        assert call_args["format"]["title"] == "Person"
+        assert call_args["format"]["properties"]["address"]["type"] == "object"
+        assert call_args["format"]["required"] == ["name", "email"]
+        assert call_args["format"]["additionalProperties"] is False
+        assert model == mock_instance
+
+    @patch("lfx.components.ollama.ollama.ChatOllama")
+    def test_build_model_with_pydantic_model_json_schema(self, mock_chat_ollama, component_class, default_kwargs):
+        """Test that the format field works with a schema generated from Pydantic's model_json_schema() method.
+
+        This test reproduces the exact use case described in issue #7122:
+        https://github.com/langflow-ai/langflow/issues/7122
+        """
+        from pydantic import BaseModel, Field
+
+        mock_instance = MagicMock()
+        mock_chat_ollama.return_value = mock_instance
+
+        # Create a Pydantic model exactly as a user would
+        class PersonInfo(BaseModel):
+            """Information about a person."""
+
+            name: str = Field(description="The person's full name")
+            age: int = Field(ge=0, le=150, description="The person's age")
+            email: str = Field(description="Email address")
+            city: str = Field(description="City of residence")
+
+        # Generate the schema using Pydantic's model_json_schema() as mentioned in the issue
+        pydantic_schema = PersonInfo.model_json_schema()
+
+        # Override format with the Pydantic-generated schema
+        kwargs = default_kwargs.copy()
+        kwargs["format"] = pydantic_schema
+
+        component = component_class(**kwargs)
+
+        # This should NOT raise an exception (was the bug in issue #7122)
+        model = component.build_model()
+
+        # Verify ChatOllama was called with the Pydantic-generated schema
+        call_args = mock_chat_ollama.call_args[1]
+        assert call_args["format"] == pydantic_schema
+        assert call_args["format"]["type"] == "object"
+        assert "name" in call_args["format"]["properties"]
+        assert "age" in call_args["format"]["properties"]
+        assert "email" in call_args["format"]["properties"]
+        assert "city" in call_args["format"]["properties"]
+        assert call_args["format"]["properties"]["name"]["description"] == "The person's full name"
+        assert model == mock_instance
+
+    @pytest.mark.asyncio
+    async def test_parse_json_response_valid_dict(self, component_class, default_kwargs):
+        """Test _parse_json_response with valid JSON dict response."""
+        mock_message = MagicMock()
+        mock_message.text = '{"name": "John", "age": 30}'
+
+        component = component_class(**default_kwargs)
+        component.text_response = AsyncMock(return_value=mock_message)
+
+        result = await component._parse_json_response()
+
+        assert result == {"name": "John", "age": 30}
+        assert isinstance(result, dict)
+
+    @pytest.mark.asyncio
+    async def test_parse_json_response_valid_list(self, component_class, default_kwargs):
+        """Test _parse_json_response with valid JSON list response."""
+        mock_message = MagicMock()
+        mock_message.text = '[{"id": 1}, {"id": 2}]'
+
+        component = component_class(**default_kwargs)
+        component.text_response = AsyncMock(return_value=mock_message)
+
+        result = await component._parse_json_response()
+
+        assert result == [{"id": 1}, {"id": 2}]
+        assert isinstance(result, list)
+
+    @pytest.mark.asyncio
+    async def test_parse_json_response_invalid_json(self, component_class, default_kwargs):
+        """Test _parse_json_response with invalid JSON raises ValueError."""
+        mock_message = MagicMock()
+        mock_message.text = "This is not JSON"
+
+        component = component_class(**default_kwargs)
+        component.text_response = AsyncMock(return_value=mock_message)
+
+        with pytest.raises(ValueError, match="Invalid JSON response"):
+            await component._parse_json_response()
+
+    @pytest.mark.asyncio
+    async def test_parse_json_response_empty_response(self, component_class, default_kwargs):
+        """Test _parse_json_response with empty response raises ValueError."""
+        mock_message = MagicMock()
+        mock_message.text = ""
+
+        component = component_class(**default_kwargs)
+        component.text_response = AsyncMock(return_value=mock_message)
+
+        with pytest.raises(ValueError, match="No response from model"):
+            await component._parse_json_response()
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    async def test_build_data_output_with_dict(self, mock_parse_json, component_class, default_kwargs):
+        """Test build_data_output with dict response."""
+        mock_parse_json.return_value = {"name": "Alice", "city": "NYC"}
+
+        component = component_class(**default_kwargs)
+        result = await component.build_data_output()
+
+        assert isinstance(result, Data)
+        assert result.data == {"name": "Alice", "city": "NYC"}
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    async def test_build_data_output_with_list_single_item(self, mock_parse_json, component_class, default_kwargs):
+        """Test build_data_output with single-item list response."""
+        mock_parse_json.return_value = [{"id": 1, "value": "test"}]
+
+        component = component_class(**default_kwargs)
+        result = await component.build_data_output()
+
+        assert isinstance(result, Data)
+        assert result.data == {"id": 1, "value": "test"}
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    async def test_build_data_output_with_list_multiple_items(self, mock_parse_json, component_class, default_kwargs):
+        """Test build_data_output with multiple-item list response."""
+        mock_parse_json.return_value = [{"id": 1}, {"id": 2}, {"id": 3}]
+
+        component = component_class(**default_kwargs)
+        result = await component.build_data_output()
+
+        assert isinstance(result, Data)
+        assert result.data == {"results": [{"id": 1}, {"id": 2}, {"id": 3}]}
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    async def test_build_data_output_with_primitive(self, mock_parse_json, component_class, default_kwargs):
+        """Test build_data_output with primitive value response."""
+        mock_parse_json.return_value = "simple string"
+
+        component = component_class(**default_kwargs)
+        result = await component.build_data_output()
+
+        assert isinstance(result, Data)
+        assert result.data == {"value": "simple string"}
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    async def test_build_dataframe_output_with_list_of_dicts(self, mock_parse_json, component_class, default_kwargs):
+        """Test build_dataframe_output with list of dicts."""
+        mock_parse_json.return_value = [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]
+
+        component = component_class(**default_kwargs)
+        result = await component.build_dataframe_output()
+
+        assert isinstance(result, DataFrame)
+        assert len(result) == 2
+        assert list(result.columns) == ["name", "age"]
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    async def test_build_dataframe_output_with_empty_list(self, mock_parse_json, component_class, default_kwargs):
+        """Test build_dataframe_output with empty list."""
+        mock_parse_json.return_value = []
+
+        component = component_class(**default_kwargs)
+        result = await component.build_dataframe_output()
+
+        assert isinstance(result, DataFrame)
+        assert len(result) == 0
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    async def test_build_dataframe_output_with_single_dict(self, mock_parse_json, component_class, default_kwargs):
+        """Test build_dataframe_output with single dict."""
+        mock_parse_json.return_value = {"name": "Charlie", "score": 95}
+
+        component = component_class(**default_kwargs)
+        result = await component.build_dataframe_output()
+
+        assert isinstance(result, DataFrame)
+        assert len(result) == 1
+        assert result.iloc[0]["name"] == "Charlie"
+        assert result.iloc[0]["score"] == 95
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    async def test_build_dataframe_output_with_primitive(self, mock_parse_json, component_class, default_kwargs):
+        """Test build_dataframe_output with primitive value."""
+        mock_parse_json.return_value = 42
+
+        component = component_class(**default_kwargs)
+        result = await component.build_dataframe_output()
+
+        assert isinstance(result, DataFrame)
+        assert len(result) == 1
+        assert result.iloc[0]["value"] == 42
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    async def test_build_dataframe_output_with_invalid_list(self, mock_parse_json, component_class, default_kwargs):
+        """Test build_dataframe_output with list of non-dicts raises ValueError."""
+        mock_parse_json.return_value = [1, 2, 3, "string"]
+
+        component = component_class(**default_kwargs)
+
+        with pytest.raises(ValueError, match="List items must be dictionaries"):
+            await component.build_dataframe_output()
 
     def test_headers_with_cloud_url_no_api_key(self):
         """Test that headers return None when cloud URL but no API key."""
