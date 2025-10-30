@@ -1,4 +1,6 @@
 import asyncio
+import json
+from contextlib import suppress
 from typing import Any
 from urllib.parse import urljoin
 
@@ -8,6 +10,7 @@ from langchain_ollama import ChatOllama
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
+from lfx.helpers.base_model import build_model_from_schema
 from lfx.io import (
     BoolInput,
     DictInput,
@@ -15,13 +18,19 @@ from lfx.io import (
     FloatInput,
     IntInput,
     MessageTextInput,
+    Output,
     SecretStrInput,
     SliderInput,
+    TableInput,
 )
 from lfx.log.logger import logger
+from lfx.schema.data import Data
+from lfx.schema.dataframe import DataFrame
+from lfx.schema.table import EditMode
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
+TABLE_ROW_PLACEHOLDER = {"name": "field", "description": "description of field", "type": "str", "multiple": "False"}
 
 
 class ChatOllamaComponent(LCModelComponent):
@@ -36,6 +45,46 @@ class ChatOllamaComponent(LCModelComponent):
     JSON_CAPABILITIES_KEY = "capabilities"
     DESIRED_CAPABILITY = "completion"
     TOOL_CALLING_CAPABILITY = "tools"
+
+    # Define the table schema for the format input
+    TABLE_SCHEMA = [
+        {
+            "name": "name",
+            "display_name": "Name",
+            "type": "str",
+            "description": "Specify the name of the output field.",
+            "default": "field",
+            "edit_mode": EditMode.INLINE,
+        },
+        {
+            "name": "description",
+            "display_name": "Description",
+            "type": "str",
+            "description": "Describe the purpose of the output field.",
+            "default": "description of field",
+            "edit_mode": EditMode.POPOVER,
+        },
+        {
+            "name": "type",
+            "display_name": "Type",
+            "type": "str",
+            "edit_mode": EditMode.INLINE,
+            "description": ("Indicate the data type of the output field (e.g., str, int, float, bool, dict)."),
+            "options": ["str", "int", "float", "bool", "dict"],
+            "default": "str",
+        },
+        {
+            "name": "multiple",
+            "display_name": "As List",
+            "type": "boolean",
+            "description": "Set to True if this output field should be a list of the specified type.",
+            "edit_mode": EditMode.INLINE,
+            "options": ["True", "False"],
+            "default": "False",
+        },
+    ]
+    default_table_row = {row["name"]: row.get("default", None) for row in TABLE_SCHEMA}
+    default_table_row_schema = build_model_from_schema([default_table_row]).model_json_schema()
 
     inputs = [
         MessageTextInput(
@@ -69,8 +118,13 @@ class ChatOllamaComponent(LCModelComponent):
             range_spec=RangeSpec(min=0, max=1, step=0.01),
             advanced=True,
         ),
-        MessageTextInput(
-            name="format", display_name="Format", info="Specify the format of the output (e.g., json).", advanced=True
+        TableInput(
+            name="format",
+            display_name="Format",
+            info="Specify the format of the output.",
+            advanced=False,
+            table_schema=TABLE_SCHEMA,
+            value=default_table_row,
         ),
         DictInput(name="metadata", display_name="Metadata", info="Metadata to add to the run trace.", advanced=True),
         DropdownInput(
@@ -164,6 +218,13 @@ class ChatOllamaComponent(LCModelComponent):
         *LCModelComponent.get_base_inputs(),
     ]
 
+    outputs = [
+        Output(display_name="Text", name="text_output", method="text_response"),
+        Output(display_name="Language Model", name="model_output", method="build_model"),
+        Output(display_name="Data", name="data_output", method="build_data_output"),
+        Output(display_name="DataFrame", name="dataframe_output", method="build_dataframe_output"),
+    ]
+
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         # Mapping mirostat settings to their corresponding values
         mirostat_options = {"Mirostat": 1, "Mirostat 2.0": 2}
@@ -192,12 +253,18 @@ class ChatOllamaComponent(LCModelComponent):
                 "Learn more at https://docs.ollama.com/openai#openai-compatibility"
             )
 
+        try:
+            output_format = self._parse_format_field(self.format)
+        except Exception as e:
+            msg = f"Failed to parse the format field: {e}"
+            raise ValueError(msg) from e
+
         # Mapping system settings to their corresponding values
         llm_params = {
             "base_url": transformed_base_url,
             "model": self.model_name,
             "mirostat": mirostat_value,
-            "format": self.format,
+            "format": output_format,
             "metadata": self.metadata,
             "tags": self.tags.split(",") if self.tags else None,
             "mirostat_eta": mirostat_eta,
@@ -355,6 +422,109 @@ class ChatOllamaComponent(LCModelComponent):
             raise ValueError(msg) from e
 
         return model_ids
+
+    def _parse_format_field(self, format_value: Any) -> Any:
+        """Parse the format field to handle both string and dict inputs.
+
+        The format field can be:
+        - A simple string like "json" (backward compatibility)
+        - A JSON string from NestedDictInput that needs parsing
+        - A dict/JSON schema (already parsed)
+        - None or empty
+
+        Args:
+            format_value: The raw format value from the input field
+
+        Returns:
+            Parsed format value as string, dict, or None
+        """
+        if not format_value:
+            return None
+
+        schema = format_value
+        if isinstance(format_value, list):
+            schema = build_model_from_schema(format_value).model_json_schema()
+            if schema == self.default_table_row_schema:
+                return None  # the rows are generic placeholder rows
+        elif isinstance(format_value, str):  # parse as json if string
+            with suppress(json.JSONDecodeError):  # e.g., literal "json" is valid for format field
+                schema = json.loads(format_value)
+
+        return schema or None
+
+    async def _parse_json_response(self) -> Any:
+        """Parse the JSON response from the model.
+
+        This method gets the text response and attempts to parse it as JSON.
+        Works with models that have format='json' or a JSON schema set.
+
+        Returns:
+            Parsed JSON (dict, list, or primitive type)
+
+        Raises:
+            ValueError: If the response is not valid JSON
+        """
+        message = await self.text_response()
+        text = message.text if hasattr(message, "text") else str(message)
+
+        if not text:
+            msg = "No response from model"
+            raise ValueError(msg)
+
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError as e:
+            msg = f"Invalid JSON response. Ensure model supports JSON output. Error: {e}"
+            raise ValueError(msg) from e
+
+    async def build_data_output(self) -> Data:
+        """Build a Data output from the model's JSON response.
+
+        Returns:
+            Data: A Data object containing the parsed JSON response
+        """
+        parsed = await self._parse_json_response()
+
+        # If the response is already a dict, wrap it in Data
+        if isinstance(parsed, dict):
+            return Data(data=parsed)
+
+        # If it's a list, wrap in a results container
+        if isinstance(parsed, list):
+            if len(parsed) == 1:
+                return Data(data=parsed[0])
+            return Data(data={"results": parsed})
+
+        # For primitive types, wrap in a value container
+        return Data(data={"value": parsed})
+
+    async def build_dataframe_output(self) -> DataFrame:
+        """Build a DataFrame output from the model's JSON response.
+
+        Returns:
+            DataFrame: A DataFrame containing the parsed JSON response
+
+        Raises:
+            ValueError: If the response cannot be converted to a DataFrame
+        """
+        parsed = await self._parse_json_response()
+
+        # If it's a list of dicts, convert directly to DataFrame
+        if isinstance(parsed, list):
+            if not parsed:
+                return DataFrame()
+            # Ensure all items are dicts for proper DataFrame conversion
+            if all(isinstance(item, dict) for item in parsed):
+                return DataFrame(parsed)
+            msg = "List items must be dictionaries to convert to DataFrame"
+            raise ValueError(msg)
+
+        # If it's a single dict, wrap in a list to create a single-row DataFrame
+        if isinstance(parsed, dict):
+            return DataFrame([parsed])
+
+        # For primitive types, create a single-column DataFrame
+        return DataFrame([{"value": parsed}])
 
     @property
     def headers(self) -> dict[str, str] | None:
