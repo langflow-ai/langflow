@@ -65,6 +65,7 @@ import { MetaIcon } from "@/icons/Meta";
 import { MidjourneyIcon } from "@/icons/Midjorney";
 import { MilvusIcon } from "@/icons/Milvus";
 import { MongoDBIcon } from "@/icons/MongoDB";
+import { MurfIcon } from "@/icons/Murf";
 import { MistralIcon } from "@/icons/mistral";
 import { NeedleIcon } from "@/icons/Needle";
 import { NotDiamondIcon } from "@/icons/NotDiamond";
@@ -185,6 +186,7 @@ export const eagerIconsMapping = {
   Milvus: MilvusIcon,
   Mistral: MistralIcon,
   MongoDB: MongoDBIcon,
+  Murf: MurfIcon,
   Needle: NeedleIcon,
   NotDiamond: NotDiamondIcon,
   Notion: NotionIcon,

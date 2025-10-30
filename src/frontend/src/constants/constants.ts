@@ -796,6 +796,7 @@ export const BUNDLES_SIDEBAR_FOLDER_NAMES = [
   "cassandra",
   "FAISS",
   "pgvector",
+  "Murf",
 ];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [
