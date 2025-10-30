@@ -17,6 +17,7 @@ import ListSkeleton from "../MainPage/components/listSkeleton";
 import { debounce } from "lodash";
 import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
 
+
 export default function MarketplacePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -29,7 +30,7 @@ export default function MarketplacePage() {
   const [sortBy, setSortBy] = useState<"name" | "date" | "tags">("name");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
 
-  // Auto-adjust sort order based on sort type
+
   useEffect(() => {
     if (sortBy === "name") {
       setOrder("asc");  // A → Z for names
@@ -40,7 +41,7 @@ export default function MarketplacePage() {
     }
   }, [sortBy]);
 
-  // Debounce search
+
   const debouncedSetSearchQuery = useCallback(
     debounce((value: string) => {
       setSearchQuery(value);
@@ -62,7 +63,7 @@ export default function MarketplacePage() {
     }
   }, [isFilterOpen, tagFilter]);
 
-  // Fetch published flows
+
   const { data, isLoading } = useGetAllPublishedFlows({
     page: pageIndex,
     limit: pageSize,

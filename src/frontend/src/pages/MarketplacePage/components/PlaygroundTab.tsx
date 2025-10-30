@@ -3,7 +3,6 @@ import { v4 as uuid } from "uuid";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -14,30 +13,11 @@ import {
 import LoadingIcon from "@/components/ui/loading";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { getURL } from "@/controllers/API/helpers/constants";
-import { Square, Paperclip, Link, Upload } from "lucide-react";
+import { Square, Paperclip, Link, Upload, X, File } from "lucide-react";
 import { hasMarkdownFormatting } from "@/utils/markdownUtils";
 import SvgAutonomize from "@/icons/Autonomize/Autonomize";
-import { FileUploadManager } from "./FileUploadManager"; // Import the new component
+import { FileUploadManager } from "./FileUploadManager";
 import { PlaygroundTabProps, Message, FileInputComponent } from "./Playground.types";
-
-// interface PlaygroundTabProps {
-//   publishedFlowData: any;
-// }
-
-// interface Message {
-//   id: string;
-//   type: "user" | "agent";
-//   text: string;
-//   timestamp: Date;
-//   isStreaming?: boolean;
-// }
-
-// interface FileInputComponent {
-//   id: string;
-//   type: string;
-//   display_name: string;
-//   inputKey: string;
-// }
 
 export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -52,7 +32,6 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
   const [leftPanelWidth, setLeftPanelWidth] = useState(33.33);
   const [isDragging, setIsDragging] = useState(false);
   
-  // Extract agent details from publishedFlowData
   const agentDetails = {
     createdOn: publishedFlowData?.created_at ? new Date(publishedFlowData.created_at).toLocaleString() : "N/A",
     lastUpdatedOn: publishedFlowData?.updated_at ? new Date(publishedFlowData.updated_at).toLocaleString() : "N/A",
@@ -62,7 +41,6 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
     name: publishedFlowData?.name || "Agent"
   };
 
-  // Analyze flow for file input components
   const fileInputComponents: FileInputComponent[] = useMemo(() => {
     const components: FileInputComponent[] = [];
     
@@ -87,7 +65,39 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
     return components;
   }, [publishedFlowData]);
 
-  // Handle resizable panel dragging
+  const selectedFiles = useMemo(() => {
+    return Object.entries(fileUrls)
+      .map(([componentId, url]) => {
+        const component = fileInputComponents.find(c => c.id === componentId);
+        if (!component || !url) return null;
+        
+
+        const getFilenameFromUrl = (url: string) => {
+          try {
+            const urlObj = new URL(url);
+            const pathname = urlObj.pathname;
+            const parts = pathname.split('/');
+            const filename = parts[parts.length - 1];
+            
+
+            const match = filename.match(/^[0-9a-f-]+_(.+)$/i);
+            return match ? match[1] : filename || 'Unknown file';
+          } catch {
+            return 'Unknown file';
+          }
+        };
+
+        return {
+          componentId,
+          componentName: component.display_name,
+          filename: getFilenameFromUrl(url),
+          url
+        };
+      })
+      .filter((file): file is NonNullable<typeof file> => file !== null);
+  }, [fileUrls, fileInputComponents]);
+
+
   const handleDragStart = () => {
     setIsDragging(true);
   };
@@ -126,7 +136,7 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
     };
   }, [isDragging]);
 
-  // Create tweaks for file inputs
+
   const createFileInputTweaks = (fileUrls: Record<string, string>) => {
     const tweaks: Record<string, any> = {};
 
@@ -142,18 +152,18 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
     return tweaks;
   };
 
-  // Typing animation state
+
   const [targetTexts, setTargetTexts] = useState<Map<string, string>>(new Map());
   const [displayedTexts, setDisplayedTexts] = useState<Map<string, string>>(new Map());
   const targetTextsRef = useRef<Map<string, string>>(new Map());
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Sync targetTexts to ref without restarting animation
+
   useEffect(() => {
     targetTextsRef.current = targetTexts;
   }, [targetTexts]);
 
-  // Animate "Working." dots when streaming with empty text
+
   useEffect(() => {
     const hasEmptyStreamingMessage = messages.some(
       msg => msg.isStreaming && !msg.text
@@ -170,7 +180,7 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
     }
   }, [messages]);
 
-  // Character-by-character typing animation effect
+
   useEffect(() => {
     const interval = setInterval(() => {
       setDisplayedTexts(prev => {
@@ -447,6 +457,10 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
     setIsFileModalOpen(true);
   };
 
+  const removeSelectedFile = (componentId: string) => {
+    clearFileUrl(componentId);
+  };
+
   return (
     <div className="p-4 flex h-full w-full flex-col bg-[#FBFAFF]">
       <div className="flex flex-1 overflow-hidden">
@@ -628,6 +642,36 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
             {error && (
               <div className="mb-2 text-sm text-destructive">
                 {error}
+              </div>
+            )}
+
+            {/* File Previews */}
+            {selectedFiles.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {selectedFiles.map((file) => (
+                  <div
+                    key={file.componentId}
+                    className="flex items-center gap-2 bg-muted/50 border rounded-lg px-3 py-2 text-sm"
+                  >
+                    <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-medium truncate max-w-[200px]" title={file.filename}>
+                        {file.filename}
+                      </span>
+                      <span className="text-xs text-muted-foreground truncate" title={file.componentName}>
+                        for {file.componentName}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeSelectedFile(file.componentId)}
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive ml-1 flex-shrink-0"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
 
