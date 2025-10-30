@@ -9,7 +9,6 @@ from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_MODELS,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
-from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
 from lfx.base.models.openai_constants import (
     OPENAI_CHAT_MODEL_NAMES,
@@ -30,6 +29,8 @@ def get_model_classes():
     from langchain_ibm import ChatWatsonx
     from langchain_ollama import ChatOllama
     from langchain_openai import ChatOpenAI
+
+    from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
 
     return {
         "ChatOpenAI": ChatOpenAI,
