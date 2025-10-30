@@ -51,9 +51,9 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
       const error = e as AxiosError;
       if (error.name !== "CanceledError") {
         setAutoLogin(false);
-        // if (!isLoginPage) {
-        //   await handleAutoLoginError();
-        // }
+        if (!isLoginPage) {
+          await handleAutoLoginError();
+        }
       }
     }
     return null;
