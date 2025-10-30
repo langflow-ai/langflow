@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.5b49702d.css">
-<script src="/assets/js/runtime~main.dc9112dc.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.f495a36a.js" defer="defer"></script>
 <script src="/assets/js/main.a09de144.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -52,9 +52,10 @@
 <!-- -->
 <p>This guide demonstrates how to <a href="/mcp-client">use Langflow as an MCP client</a> by using the <strong>MCP Tools</strong> component to run a <a href="https://github.com/datastax/astra-db-mcp" target="_blank" rel="noopener noreferrer">DataStax Astra DB MCP server</a> in an agent flow.</p>
 <ol>
-<li>
-<p>Install an LTS release of <a href="https://docs.npmjs.com/downloading-and-installing-node-js-and-npm" target="_blank" rel="noopener noreferrer">Node.js</a>.</p>
-</li>
+<li>Install an LTS release of <a href="https://docs.npmjs.com/downloading-and-installing-node-js-and-npm" target="_blank" rel="noopener noreferrer">Node.js</a>.</li>
+</ol>
+<div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>tip</div><div class="admonitionContent_BuS1"><p><code>uvx</code> is included with <code>uv</code> in the Langflow package.</p><p>To use <code>npx</code> server commands, you must first install an LTS release of <a href="https://docs.npmjs.com/downloading-and-installing-node-js-and-npm" target="_blank" rel="noopener noreferrer">Node.js</a>. If you run Langflow in Docker, install Node.js inside the container image and rebuild so that <code>npx</code>-based MCP servers are available at runtime. For more information, see <a href="/develop-application#package-management">Package management</a>.</p><p>For an example of an <code>npx</code> MCP server in Langflow, see <a href="/mcp-component-astra">Connect an Astra DB MCP server to Langflow</a>.</p></div></div>
+<ol start="2">
 <li>
 <p>Create an <a href="https://platform.openai.com/" target="_blank" rel="noopener noreferrer">OpenAI</a> API key.</p>
 </li>
