@@ -207,8 +207,9 @@ class TestVariableService:
         """Test service teardown clears variables."""
         variables.set_variable("test_key", "test_value")
         await variables.teardown()
-        # Variables should be cleared
-        assert len(variables._variables) == 0
+        # Variables should be cleared (verify via public API)
+        assert variables.list_variables() == []
+        assert variables.get_variable("test_key") is None
 
 
 class TestMinimalServicesIntegration:
