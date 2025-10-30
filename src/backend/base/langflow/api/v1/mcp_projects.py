@@ -445,12 +445,13 @@ async def update_project_mcp_settings(
                                 "uses_composer": True,
                             }
                         except MCPComposerError as e:
-                            # Rollback auth settings on composer failure
-                            await logger.awarning(
-                                f"MCP Composer failed to start for project {project_id}, "
-                                f"rolling back auth settings: {e.message}"
+                            # Don't rollback auth settings - persist them so UI can show the error
+                            await logger.awarning(f"MCP Composer failed to start for project {project_id}: {e.message}")
+                            # Store the error message so it can be retrieved via composer-url endpoint
+                            mcp_composer_service: MCPComposerService = cast(
+                                MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
                             )
-                            project.auth_settings = original_auth_settings
+                            mcp_composer_service.set_last_error(str(project_id), e.message)
                             response["result"] = {
                                 "project_id": str(project_id),
                                 "uses_composer": True,

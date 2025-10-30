@@ -84,6 +84,10 @@ class MCPComposerService(Service):
         """Get the last error message for a project, if any."""
         return self._last_errors.get(project_id)
 
+    def set_last_error(self, project_id: str, error_message: str) -> None:
+        """Set the last error message for a project."""
+        self._last_errors[project_id] = error_message
+
     def clear_last_error(self, project_id: str) -> None:
         """Clear the last error message for a project."""
         self._last_errors.pop(project_id, None)

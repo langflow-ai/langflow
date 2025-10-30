@@ -251,6 +251,11 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       auth_settings: authSettings,
     };
 
+    // Clear cached composer URL data BEFORE making the request to ensure fresh errors are fetched
+    queryClient.removeQueries({
+      queryKey: ["project-composer-url", projectId],
+    });
+
     // Set waiting state for OAuth before making the request
     if (authSettings.auth_type === "oauth") {
       setIsWaitingForComposer(true);
