@@ -1,6 +1,6 @@
 from typing import Any
 
-from lfx.base.models.unified_models import MODEL_CLASSES, get_language_model_options
+from lfx.base.models.unified_models import get_language_model_options, get_model_classes
 from lfx.custom import Component
 from lfx.io import (
     BoolInput,
@@ -319,7 +319,7 @@ class SmartRouterComponent(Component):
         metadata = model_selection.get("metadata", {})
 
         # Get model class and parameters from metadata
-        model_class = MODEL_CLASSES.get(metadata.get("model_class"))
+        model_class = get_model_classes().get(metadata.get("model_class"))
         if model_class is None:
             msg = f"No model class defined for {model_name}"
             raise ValueError(msg)

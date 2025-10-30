@@ -1,5 +1,5 @@
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.unified_models import MODEL_CLASSES, get_api_key_for_provider, get_language_model_options
+from lfx.base.models.unified_models import get_api_key_for_provider, get_language_model_options, get_model_classes
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput
@@ -93,7 +93,7 @@ class LanguageModelComponent(LCModelComponent):
             raise ValueError(msg)
 
         # Get model class from metadata
-        model_class = MODEL_CLASSES.get(metadata.get("model_class"))
+        model_class = get_model_classes().get(metadata.get("model_class"))
         if model_class is None:
             msg = f"No model class defined for {model_name}"
             raise ValueError(msg)

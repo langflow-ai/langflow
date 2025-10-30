@@ -1,11 +1,8 @@
+from __future__ import annotations
+
 from functools import lru_cache
 from typing import Any
 from uuid import UUID
-
-from langchain_anthropic import ChatAnthropic
-from langchain_ibm import ChatWatsonx
-from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS, ANTHROPIC_MODELS_DETAILED
 from lfx.base.models.google_generative_ai_constants import (
@@ -25,14 +22,24 @@ from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 
-# Mapping of class names to actual class objects
-MODEL_CLASSES = {
-    "ChatOpenAI": ChatOpenAI,
-    "ChatAnthropic": ChatAnthropic,
-    "ChatGoogleGenerativeAIFixed": ChatGoogleGenerativeAIFixed,
-    "ChatOllama": ChatOllama,
-    "ChatWatsonx": ChatWatsonx,
-}
+
+@lru_cache(maxsize=1)
+def get_model_classes():
+    """Lazy load model classes to avoid importing optional dependencies at module level."""
+    from langchain_anthropic import ChatAnthropic
+    from langchain_ibm import ChatWatsonx
+    from langchain_ollama import ChatOllama
+    from langchain_openai import ChatOpenAI
+
+    return {
+        "ChatOpenAI": ChatOpenAI,
+        "ChatAnthropic": ChatAnthropic,
+        "ChatGoogleGenerativeAIFixed": ChatGoogleGenerativeAIFixed,
+        "ChatOllama": ChatOllama,
+        "ChatWatsonx": ChatWatsonx,
+    }
+
+
 
 
 @lru_cache(maxsize=1)
