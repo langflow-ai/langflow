@@ -98,7 +98,7 @@ export default function MarketplacePage() {
           <div className="flex w-full items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <h1 className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic">
-                Agent Marketplace
+                Marketplace
               </h1>
               <span className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic">
                 ({total} Agents)

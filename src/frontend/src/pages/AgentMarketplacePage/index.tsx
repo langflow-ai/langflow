@@ -225,7 +225,7 @@ export default function AgentMarketplacePage() {
               <h1
                 className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic"
               >
-                Agent Marketplace
+                Marketplace
               </h1>
               <span className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic">({total} Agents)</span>
             </div>

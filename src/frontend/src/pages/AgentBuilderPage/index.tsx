@@ -73,9 +73,9 @@ const DeleteConfirmationModal = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
-              <ForwardedIconComponent 
-                name="AlertTriangle" 
-                className="h-5 w-5 text-destructive" 
+              <ForwardedIconComponent
+                name="AlertTriangle"
+                className="h-5 w-5 text-destructive"
               />
             </div>
             Delete Agent
@@ -83,15 +83,12 @@ const DeleteConfirmationModal = ({
         </DialogHeader>
         <div className="py-4">
           <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete "{agentName}"? This action cannot be undone.
+            Are you sure you want to delete "{agentName}"? This action cannot be
+            undone.
           </p>
         </div>
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={isDeleting}
-          >
+          <Button variant="outline" onClick={onClose} disabled={isDeleting}>
             Cancel
           </Button>
           <Button
@@ -101,11 +98,14 @@ const DeleteConfirmationModal = ({
           >
             {isDeleting ? (
               <>
-                <ForwardedIconComponent name="Loader2" className="mr-2 h-4 w-4 animate-spin" />
+                <ForwardedIconComponent
+                  name="Loader2"
+                  className="mr-2 h-4 w-4 animate-spin"
+                />
                 Deleting...
               </>
             ) : (
-              'Delete'
+              "Delete"
             )}
           </Button>
         </DialogFooter>
@@ -148,7 +148,7 @@ const AgentCard = ({
             <div
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-lg shrink-0",
-                swatchColors[swatchIndex],
+                swatchColors[swatchIndex]
               )}
             >
               <ForwardedIconComponent
@@ -236,7 +236,7 @@ const AgentListItem = ({
         <div
           className={cn(
             "item-center flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5",
-            swatchColors[swatchIndex],
+            swatchColors[swatchIndex]
           )}
         >
           <ForwardedIconComponent
@@ -330,7 +330,7 @@ export default function AgentBuilderPage() {
   const [view, setView] = useState<"list" | "grid">("list");
   const [sortOpen, setSortOpen] = useState(false);
   const [sortBy, setSortBy] = useState<"most_recent" | "recently_created">(
-    "most_recent",
+    "most_recent"
   );
 
   // Delete confirmation modal state
@@ -352,7 +352,7 @@ export default function AgentBuilderPage() {
       size: pageSize,
       is_flow: true,
     } as any,
-    { enabled: !!folderId },
+    { enabled: !!folderId }
   );
 
   // Query client for refetching after delete
@@ -462,7 +462,7 @@ export default function AgentBuilderPage() {
           setIsSavingProject(false);
           setNameError("Failed to create project. Please try again.");
         },
-      },
+      }
     );
   };
 
@@ -471,38 +471,40 @@ export default function AgentBuilderPage() {
       <div className="w-full p-4">
         {/* AI Agent Builder Title */}
         <div className="mb-6">
-          <div className="flex items-center justify-between gap-2">
-            <h1 className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic">
-              AI Studio
-            </h1>
-            {/* Project Selector */}
-            <div className="flex items-center gap-2">
-              <div className="text-sm text-muted-foreground">Project</div>
-              <Select onValueChange={handleSelectProject} value={folderId}>
-                <SelectTrigger className="w-[220px] h-9 dark:border-white/20 dark:text-white">
-                  <SelectValue placeholder="Select project" />
-                </SelectTrigger>
-                <SelectContent align="end" className="dark:bg-black dark:text-white">
-                  {folders
-                    .filter((f) => f.name !== "Builder Agent")
-                    .map((f) => (
-                      <SelectItem key={f.id} value={f.id!} className="text-sm dark:text-white">
-                        {f.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9"
-                onClick={handleOpenCreateProjectModal}
-                disabled={isCreatingFolder}
+          {/* Project Selector */}
+          <div className="flex items-center gap-2 justify-end">
+            <div className="text-sm text-muted-foreground">Project</div>
+            <Select onValueChange={handleSelectProject} value={folderId}>
+              <SelectTrigger className="w-[220px] h-9 dark:border-white/20 dark:text-white">
+                <SelectValue placeholder="Select project" />
+              </SelectTrigger>
+              <SelectContent
+                align="end"
+                className="dark:bg-black dark:text-white"
               >
-                <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
-                New Project
-              </Button>
-            </div>
+                {folders
+                  .filter((f) => f.name !== "Builder Agent")
+                  .map((f) => (
+                    <SelectItem
+                      key={f.id}
+                      value={f.id!}
+                      className="text-sm dark:text-white"
+                    >
+                      {f.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9"
+              onClick={handleOpenCreateProjectModal}
+              disabled={isCreatingFolder}
+            >
+              <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
+              New Project
+            </Button>
           </div>
         </div>
 
@@ -551,7 +553,9 @@ export default function AgentBuilderPage() {
               onClick={() => setShowTemplatesModal(true)}
               className="text-sm text-primary-blue dark:text-white font-medium"
             >
-              Or Get Started Step-by-Step
+              <span className="not-italic font-medium text-xs tracking-[0] text-[var(--text-link,#671EE3)]">
+                Or Get Started Step-by-Step
+              </span>
             </button>
           </div>
         </div>
@@ -571,7 +575,7 @@ export default function AgentBuilderPage() {
                     size="sm"
                     className={cn(
                       "h-8 px-2 text-sm gap-1 border border-solid border-[#efefef] dark:border-white/20 rounded-lg",
-                      sortOpen && "bg-muted text-foreground",
+                      sortOpen && "bg-muted text-foreground"
                     )}
                     aria-haspopup="menu"
                     aria-expanded={sortOpen}
@@ -587,11 +591,14 @@ export default function AgentBuilderPage() {
                     />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="p-1 dark:bg-black dark:text-white">
+                <DropdownMenuContent
+                  align="end"
+                  className="p-1 dark:bg-black dark:text-white"
+                >
                   <DropdownMenuItem
                     className={cn(
                       "flex items-center justify-between gap-4 text-sm dark:text-white dark:hover:text-white",
-                      sortBy === "most_recent" && "bg-accent",
+                      sortBy === "most_recent" && "bg-accent"
                     )}
                     onClick={() => setSortBy("most_recent")}
                     aria-selected={sortBy === "most_recent"}
@@ -611,7 +618,7 @@ export default function AgentBuilderPage() {
                   <DropdownMenuItem
                     className={cn(
                       "flex items-center justify-between gap-4 text-sm dark:text-white dark:hover:text-white",
-                      sortBy === "recently_created" && "bg-accent",
+                      sortBy === "recently_created" && "bg-accent"
                     )}
                     onClick={() => setSortBy("recently_created")}
                     aria-selected={sortBy === "recently_created"}

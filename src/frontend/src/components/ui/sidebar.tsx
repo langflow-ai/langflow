@@ -19,6 +19,9 @@ import { TooltipProvider } from "./tooltip";
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_SECTION_COOKIE_NAME = "sidebar:section";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+// Persist the preferred collapse mode. When set to "icon", collapsing will
+// keep the sidebar visible at icon width instead of fully hiding (offcanvas).
+const SIDEBAR_COLLAPSE_MODE_COOKIE = "sidebar:collapseMode";
 const SIDEBAR_WIDTH = "19rem";
 const SIDEBAR_WIDTH_ICON = "4rem";
 const SEGMENTED_SIDEBAR_ICON_WIDTH = "40px";
@@ -262,6 +265,14 @@ const Sidebar = React.forwardRef<
     const { state, setOpen, defaultOpen } = useSidebar();
     const isMobile = useIsMobile();
 
+    // Override collapse behavior to icon-only when requested by double-click.
+    const [collapseOverride, setCollapseOverride] = React.useState<
+      "icon" | null
+    >(() => {
+      const cookieValue = getCookie(SIDEBAR_COLLAPSE_MODE_COOKIE);
+      return cookieValue === "icon" ? "icon" : null;
+    });
+
     React.useEffect(() => {
       if (collapsible === "none") {
         setOpen(true);
@@ -301,12 +312,16 @@ const Sidebar = React.forwardRef<
       );
     }
 
+    // Effective collapsible mode: use override when collapsed, otherwise prop.
+    const effectiveCollapsible =
+      state === "collapsed" ? collapseOverride ?? collapsible : "";
+
     return (
       <div
         ref={ref}
         className="group peer relative block h-full flex-col"
         data-state={state}
-        data-collapsible={state === "collapsed" ? collapsible : ""}
+        data-collapsible={effectiveCollapsible}
         data-variant={variant}
         data-side={side}
       >
@@ -352,6 +367,19 @@ const Sidebar = React.forwardRef<
               // Add shadow on mobile
               "max-sm:shadow-lg",
             )}
+            // Double-click anywhere inside the sidebar toggles between
+            // expanded and icon-collapsed. Persist preference via cookie.
+            onDoubleClick={() => {
+              if (state === "expanded") {
+                setCollapseOverride("icon");
+                document.cookie = `${SIDEBAR_COLLAPSE_MODE_COOKIE}=icon; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+                setOpen(false);
+              } else {
+                setOpen(true);
+              }
+            }}
+            role="navigation"
+            aria-expanded={state === "expanded"}
           >
             {children}
           </div>
@@ -675,7 +703,15 @@ const SidebarMenuButton = React.forwardRef<
     ref,
   ) => {
     const Comp = asChild ? Slot : "button";
-    const { state } = useSidebar();
+    const { state, setOpen } = useSidebar();
+
+    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+      // Expand the sidebar on single click when collapsed to icon-only.
+      if (state === "collapsed") {
+        setOpen(true);
+      }
+      props.onClick?.(e);
+    };
 
     const button = (
       <Comp
@@ -684,6 +720,7 @@ const SidebarMenuButton = React.forwardRef<
         data-size={size}
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
+        onClick={handleClick}
         {...props}
       />
     );
@@ -696,6 +733,8 @@ const SidebarMenuButton = React.forwardRef<
       <ShadTooltip
         side="right"
         content={state == "collapsed" ? tooltip : undefined}
+        // Provide a visual indicator and accessible label when collapsed
+        aria-hidden={state !== "collapsed"}
       >
         {button}
       </ShadTooltip>
