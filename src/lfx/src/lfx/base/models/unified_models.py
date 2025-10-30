@@ -1,10 +1,20 @@
 from functools import lru_cache
+from typing import Any
 from uuid import UUID
 
-from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
-from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS_DETAILED
+from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS, ANTHROPIC_MODELS_DETAILED
+from lfx.base.models.google_generative_ai_constants import (
+    GOOGLE_GENERATIVE_AI_MODELS,
+    GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
+)
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
-from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODELS_DETAILED, OPENAI_MODELS_DETAILED
+from lfx.base.models.openai_constants import (
+    OPENAI_CHAT_MODEL_NAMES,
+    OPENAI_EMBEDDING_MODEL_NAMES,
+    OPENAI_EMBEDDING_MODELS_DETAILED,
+    OPENAI_MODELS_DETAILED,
+    OPENAI_REASONING_MODEL_NAMES,
+)
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
@@ -281,3 +291,179 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
             raise ValueError(msg) from e
         # For other errors, we'll allow the key to be saved (might be network issues, etc.)
         return
+
+def get_language_model_options() -> list[dict[str, Any]]:
+    """Return a list of available language model providers with their configuration."""
+    # OpenAI models
+    openai_options = [
+        {
+            "name": model_name,
+            "icon": "OpenAI",
+            "category": "OpenAI",
+            "provider": "OpenAI",
+            "metadata": {
+                "context_length": 128000,
+                "model_class": "ChatOpenAI",
+                "model_name_param": "model",
+                "api_key_param": "api_key",
+                "reasoning_models": OPENAI_REASONING_MODEL_NAMES,
+            },
+        }
+        for model_name in OPENAI_CHAT_MODEL_NAMES
+    ]
+
+    # Anthropic models
+    anthropic_options = [
+        {
+            "name": model_name,
+            "icon": "Anthropic",
+            "category": "Anthropic",
+            "provider": "Anthropic",
+            "metadata": {
+                "context_length": 200000,
+                "model_class": "ChatAnthropic",
+                "model_name_param": "model",
+                "api_key_param": "api_key",
+            },
+        }
+        for model_name in ANTHROPIC_MODELS
+    ]
+
+    # Google models
+    google_options = [
+        {
+            "name": model_name,
+            "icon": "GoogleGenerativeAI",
+            "category": "Google",
+            "provider": "Google",
+            "metadata": {
+                "context_length": 32768,
+                "model_class": "ChatGoogleGenerativeAIFixed",
+                "model_name_param": "model",
+                "api_key_param": "google_api_key",
+            },
+        }
+        for model_name in GOOGLE_GENERATIVE_AI_MODELS
+    ]
+
+    # Ollama models (local)
+    ollama_options = [
+        {
+            "name": "ChatOllama",
+            "icon": "Ollama",
+            "category": "Ollama",
+            "provider": "Ollama",
+            "metadata": {
+                "context_length": 8192,  # Varies by model
+                "model_class": "ChatOllama",
+                "model_name_param": "model",
+                "base_url_param": "base_url",
+            },
+        }
+    ]
+
+    # WatsonX models
+    watsonx_options = [
+        {
+            "name": "ChatWatsonx",
+            "icon": "WatsonxAI",
+            "category": "IBM WatsonX",
+            "provider": "IBM WatsonX",
+            "metadata": {
+                "context_length": 8192,  # Varies by model
+                "model_class": "ChatWatsonx",
+                "model_name_param": "model_id",
+                "api_key_param": "apikey",
+                "url_param": "url",
+                "project_id_param": "project_id",
+            },
+        }
+    ]
+
+    # Combine all options and return
+    return openai_options + anthropic_options + google_options + ollama_options + watsonx_options
+
+def get_embedding_model_options() -> list[dict[str, Any]]:
+    """Return a list of available embedding model providers with their configuration."""
+    openai_options = [
+        {
+            "name": model_name,
+            "icon": "OpenAI",
+            "category": "OpenAI",
+            "provider": "OpenAI",
+            "metadata": {
+                "embedding_class": "OpenAIEmbeddings",
+                "param_mapping": {
+                    "model": "model",
+                    "api_key": "api_key",
+                    "api_base": "base_url",
+                    "dimensions": "dimensions",
+                    "chunk_size": "chunk_size",
+                    "request_timeout": "timeout",
+                    "max_retries": "max_retries",
+                    "show_progress_bar": "show_progress_bar",
+                    "model_kwargs": "model_kwargs",
+                },
+            },
+        }
+        for model_name in OPENAI_EMBEDDING_MODEL_NAMES
+    ]
+
+    google_options = [
+        {
+            "name": "GoogleGenerativeAIEmbeddings",
+            "icon": "GoogleGenerativeAI",
+            "category": "Google",
+            "provider": "Google",
+            "metadata": {
+                "embedding_class": "GoogleGenerativeAIEmbeddings",
+                "param_mapping": {
+                    "model": "model",
+                    "api_key": "google_api_key",
+                    "request_timeout": "request_options",
+                    "model_kwargs": "client_options",
+                },
+            },
+        }
+    ]
+
+    ollama_options = [
+        {
+            "name": "OllamaEmbeddings",
+            "icon": "Ollama",
+            "category": "Ollama",
+            "provider": "Ollama",
+            "metadata": {
+                "embedding_class": "OllamaEmbeddings",
+                "param_mapping": {
+                    "model": "model",
+                    "base_url": "base_url",
+                    "num_ctx": "num_ctx",
+                    "request_timeout": "request_timeout",
+                    "model_kwargs": "model_kwargs",
+                },
+            },
+        }
+    ]
+
+    watsonx_options = [
+        {
+            "name": "WatsonxEmbeddings",
+            "icon": "WatsonxAI",
+            "category": "IBM WatsonX",
+            "provider": "IBM WatsonX",
+            "metadata": {
+                "embedding_class": "WatsonxEmbeddings",
+                "param_mapping": {
+                    "model_id": "model_id",
+                    "url": "url",
+                    "api_key": "apikey",
+                    "project_id": "project_id",
+                    "space_id": "space_id",
+                    "request_timeout": "request_timeout",
+                },
+            },
+        }
+    ]
+
+    return openai_options + google_options + ollama_options + watsonx_options

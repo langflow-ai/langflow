@@ -6,8 +6,7 @@ from langchain_ollama import OllamaEmbeddings
 from langchain_openai import OpenAIEmbeddings
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
-from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
-from lfx.base.models.unified_models import get_api_key_for_provider
+from lfx.base.models.unified_models import get_api_key_for_provider, get_embedding_model_options
 from lfx.field_typing import Embeddings
 from lfx.io import (
     BoolInput,
@@ -28,94 +27,8 @@ EMBEDDING_CLASSES = {
 }
 
 
-def _get_embedding_model_options() -> list[dict[str, Any]]:
-    """Return a list of available embedding model providers with their configuration."""
-    openai_options = [
-        {
-            "name": model_name,
-            "icon": "OpenAI",
-            "category": "OpenAI",
-            "provider": "OpenAI",
-            "metadata": {
-                "embedding_class": "OpenAIEmbeddings",
-                "param_mapping": {
-                    "model": "model",
-                    "api_key": "api_key",
-                    "api_base": "base_url",
-                    "dimensions": "dimensions",
-                    "chunk_size": "chunk_size",
-                    "request_timeout": "timeout",
-                    "max_retries": "max_retries",
-                    "show_progress_bar": "show_progress_bar",
-                    "model_kwargs": "model_kwargs",
-                },
-            },
-        }
-        for model_name in OPENAI_EMBEDDING_MODEL_NAMES
-    ]
-
-    google_options = [
-        {
-            "name": "GoogleGenerativeAIEmbeddings",
-            "icon": "GoogleGenerativeAI",
-            "category": "Google",
-            "provider": "Google",
-            "metadata": {
-                "embedding_class": "GoogleGenerativeAIEmbeddings",
-                "param_mapping": {
-                    "model": "model",
-                    "api_key": "google_api_key",
-                    "request_timeout": "request_options",
-                    "model_kwargs": "client_options",
-                },
-            },
-        }
-    ]
-
-    ollama_options = [
-        {
-            "name": "OllamaEmbeddings",
-            "icon": "Ollama",
-            "category": "Ollama",
-            "provider": "Ollama",
-            "metadata": {
-                "embedding_class": "OllamaEmbeddings",
-                "param_mapping": {
-                    "model": "model",
-                    "base_url": "base_url",
-                    "num_ctx": "num_ctx",
-                    "request_timeout": "request_timeout",
-                    "model_kwargs": "model_kwargs",
-                },
-            },
-        }
-    ]
-
-    watsonx_options = [
-        {
-            "name": "WatsonxEmbeddings",
-            "icon": "WatsonxAI",
-            "category": "IBM WatsonX",
-            "provider": "IBM WatsonX",
-            "metadata": {
-                "embedding_class": "WatsonxEmbeddings",
-                "param_mapping": {
-                    "model_id": "model_id",
-                    "url": "url",
-                    "api_key": "apikey",
-                    "project_id": "project_id",
-                    "space_id": "space_id",
-                    "request_timeout": "request_timeout",
-                },
-            },
-        }
-    ]
-
-    return openai_options + google_options + ollama_options + watsonx_options
-
-
 # Compute model options once at module level
-_MODEL_OPTIONS = _get_embedding_model_options()
+_MODEL_OPTIONS = get_embedding_model_options()
 _PROVIDERS = [option["provider"] for option in _MODEL_OPTIONS]
 
 
