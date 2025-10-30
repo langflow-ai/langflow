@@ -598,29 +598,26 @@ class MCPComposerService(Service):
             List of command arguments with secrets replaced with ***REDACTED***
         """
         safe_cmd = []
+        append = safe_cmd.append
+        extend = safe_cmd.extend
+        cmd_len = len(cmd)
         i = 0
 
-        while i < len(cmd):
+        # Lower, membership, and redact logic is fused for loop efficiency.
+        while i < cmd_len:
             arg = cmd[i]
-
-            # Check if this is --env followed by a secret key
-            if arg == "--env" and i + 2 < len(cmd):
+            if arg == "--env" and i + 2 < cmd_len:
                 env_key = cmd[i + 1]
                 env_value = cmd[i + 2]
-
-                if any(secret in env_key.lower() for secret in ["secret", "key", "token"]):
-                    # Redact the value
-                    safe_cmd.extend([arg, env_key, "***REDACTED***"])
-                    i += 3  # Skip all three: --env, key, and value
+                env_key_lower = env_key.lower()
+                if "secret" in env_key_lower or "key" in env_key_lower or "token" in env_key_lower:
+                    extend((arg, env_key, "***REDACTED***"))
+                    i += 3
                     continue
-
-                # Not a secret, keep as-is
-                safe_cmd.extend([arg, env_key, env_value])
+                extend((arg, env_key, env_value))
                 i += 3
                 continue
-
-            # Regular argument
-            safe_cmd.append(arg)
+            append(arg)
             i += 1
 
         return safe_cmd
