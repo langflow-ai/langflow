@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 import json
 import re
+from typing import TYPE_CHECKING
 
-from langchain_core.tools import StructuredTool, Tool
 from pydantic import ValidationError
+
+if TYPE_CHECKING:
+    from langchain_core.tools import Tool
 
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.events import ExceptionWithMessageError
@@ -51,6 +56,7 @@ class AgentComponent(ToolCallingAgentComponent):
             providers=_PROVIDERS,
             info="Select your model provider",
             real_time_refresh=True,
+            required=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -159,6 +165,8 @@ class AgentComponent(ToolCallingAgentComponent):
 
     async def get_agent_requirements(self):
         """Get the agent requirements for the agent."""
+        from langchain_core.tools import StructuredTool
+
         llm_model, display_name = await self.get_llm()
         if llm_model is None:
             msg = "No language model selected. Please choose a model to proceed."
@@ -442,10 +450,11 @@ class AgentComponent(ToolCallingAgentComponent):
         api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
 
         # Build model kwargs
-        model_kwargs = {api_key_param: api_key, "api_key": api_key}
+        model_kwargs = {}
         for input_ in inputs:
             if hasattr(self, f"{prefix}{input_.name}"):
                 model_kwargs[input_.name] = getattr(self, f"{prefix}{input_.name}")
+        model_kwargs = {api_key_param: api_key, "api_key": api_key}
 
         return component.set(**model_kwargs).build_model()
 
@@ -467,7 +476,7 @@ class AgentComponent(ToolCallingAgentComponent):
     ) -> dotdict:
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
         if field_name == "model":
-            self.log(field_name, field_value)
+            self.log(str(field_value))
             # Update input types for all fields
             build_config = self.update_input_types(build_config)
 

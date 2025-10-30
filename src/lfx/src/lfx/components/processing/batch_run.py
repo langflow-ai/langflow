@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING, Any, cast
 
 import toml  # type: ignore[import-untyped]
 
-from lfx.base.models.unified_models import MODEL_CLASSES, get_language_model_options
+from lfx.base.models.unified_models import get_language_model_options, get_model_classes
 from lfx.custom.custom_component.component import Component
-from lfx.io import BoolInput, DataFrameInput, MessageTextInput, ModelInput, MultilineInput, Output
+from lfx.io import BoolInput, DataFrameInput, MessageTextInput, ModelInput, MultilineInput, Output, SecretStrInput
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 
@@ -32,6 +32,14 @@ class BatchRunComponent(Component):
             options=_MODEL_OPTIONS,
             providers=_PROVIDERS,
             info="Select your model provider",
+            required=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Model Provider API key",
+            real_time_refresh=True,
+            advanced=True,
         ),
         MultilineInput(
             name="system_message",
@@ -125,7 +133,7 @@ class BatchRunComponent(Component):
         metadata = model_selection.get("metadata", {})
 
         # Get model class and parameters from metadata
-        model_class = MODEL_CLASSES.get(metadata.get("model_class"))
+        model_class = get_model_classes().get(metadata.get("model_class"))
         if model_class is None:
             msg = f"No model class defined for {model_name}"
             raise ValueError(msg)
@@ -136,7 +144,7 @@ class BatchRunComponent(Component):
         # Get API key from global variables
         from lfx.base.models.unified_models import get_api_key_for_provider
 
-        api_key = get_api_key_for_provider(self.user_id, provider)
+        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
 
         if not api_key and provider != "Ollama":
             msg = f"{provider} API key is required. Please configure it globally."
