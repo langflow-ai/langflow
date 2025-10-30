@@ -7,21 +7,19 @@ from pydantic import ValidationError
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.events import ExceptionWithMessageError
 from lfx.base.models.model_input_constants import (
-    ALL_PROVIDER_FIELDS,
     MODEL_DYNAMIC_UPDATE_FIELDS,
     MODEL_PROVIDERS_DICT,
-    MODEL_PROVIDERS_LIST,
-    MODELS_METADATA,
 )
 from lfx.base.models.model_utils import get_model_name
+from lfx.base.models.unified_models import get_language_model_options
 from lfx.components.helpers.current_date import CurrentDateComponent
 from lfx.components.helpers.memory import MemoryComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.custom.custom_component.component import get_component_toolkit
 from lfx.custom.utils import update_component_build_config
 from lfx.helpers.base_model import build_model_from_schema
-from lfx.inputs.inputs import BoolInput
-from lfx.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, TableInput
+from lfx.inputs.inputs import BoolInput, ModelInput
+from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, TableInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
@@ -34,6 +32,11 @@ def set_advanced_true(component_input):
     return component_input
 
 
+# Compute model options once at module level
+_MODEL_OPTIONS = get_language_model_options()
+_PROVIDERS = [provider["provider"] for provider in _MODEL_OPTIONS]
+
+
 class AgentComponent(ToolCallingAgentComponent):
     display_name: str = "Agent"
     description: str = "Define the agent's instructions, then enter a task to complete using tools."
@@ -44,40 +47,15 @@ class AgentComponent(ToolCallingAgentComponent):
 
     memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
 
-    # Filter out json_mode from OpenAI inputs since we handle structured output differently
-    if "OpenAI" in MODEL_PROVIDERS_DICT:
-        openai_inputs_filtered = [
-            input_field
-            for input_field in MODEL_PROVIDERS_DICT["OpenAI"]["inputs"]
-            if not (hasattr(input_field, "name") and input_field.name == "json_mode")
-        ]
-    else:
-        openai_inputs_filtered = []
-
     inputs = [
-        DropdownInput(
-            name="agent_llm",
-            display_name="Model Provider",
-            info="The provider of the language model that the agent will use to generate responses.",
-            options=[*MODEL_PROVIDERS_LIST],
-            value="OpenAI",
+        ModelInput(
+            name="model",
+            display_name="Language Model",
+            options=_MODEL_OPTIONS,
+            providers=_PROVIDERS,
+            info="Select your model provider",
             real_time_refresh=True,
-            refresh_button=False,
-            input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA],
-            external_options={
-                "fields": {
-                    "data": {
-                        "node": {
-                            "name": "connect_other_models",
-                            "display_name": "Connect other models",
-                            "icon": "CornerDownLeft",
-                        }
-                    }
-                },
-            },
         ),
-        *openai_inputs_filtered,
         MultilineInput(
             name="system_prompt",
             display_name="Agent Instructions",
@@ -426,16 +404,13 @@ class AgentComponent(ToolCallingAgentComponent):
         ]
 
     async def get_llm(self):
-        if not isinstance(self.agent_llm, str):
-            return self.agent_llm, None
-
         try:
-            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
-            if not provider_info:
-                msg = f"Invalid model provider: {self.agent_llm}"
-                raise ValueError(msg)
+            model = self.model[0]
+            provider = model.get("provider")
 
-            component_class = provider_info.get("component_class")
+            # Extract provider info
+            provider_info = MODEL_PROVIDERS_DICT.get(provider)
+            component_class = provider_info.get("model_class")
             display_name = component_class.display_name
             inputs = provider_info.get("inputs")
             prefix = provider_info.get("prefix", "")
@@ -443,7 +418,7 @@ class AgentComponent(ToolCallingAgentComponent):
             return self._build_llm_model(component_class, inputs, prefix), display_name
 
         except (AttributeError, ValueError, TypeError, RuntimeError) as e:
-            await logger.aerror(f"Error building {self.agent_llm} language model: {e!s}")
+            await logger.aerror(f"Error building {self.model} language model: {e!s}")
             msg = f"Failed to initialize language model: {e!s}"
             raise ValueError(msg) from e
 
@@ -455,7 +430,11 @@ class AgentComponent(ToolCallingAgentComponent):
         return component.set(**model_kwargs).build_model()
 
     def set_component_params(self, component):
-        provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
+        model = self.model[0]
+        provider = model.get("provider")
+
+        # Extract provider info
+        provider_info = MODEL_PROVIDERS_DICT.get(provider)
         if provider_info:
             inputs = provider_info.get("inputs")
             prefix = provider_info.get("prefix")
@@ -484,13 +463,14 @@ class AgentComponent(ToolCallingAgentComponent):
         return build_config
 
     async def update_build_config(
-        self, build_config: dotdict, field_value: str, field_name: str | None = None
+        self, build_config: dotdict, field_value: list[dict], field_name: str | None = None
     ) -> dotdict:
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
         # Existing logic for updating build_config
-        if field_name in ("agent_llm",):
-            build_config["agent_llm"]["value"] = field_value
-            provider_info = MODEL_PROVIDERS_DICT.get(field_value)
+        if field_name == "model":
+            model = self.model[0]
+            provider = model.get("provider")
+            provider_info = MODEL_PROVIDERS_DICT.get(provider)
             if provider_info:
                 component_class = provider_info.get("component_class")
                 if component_class and hasattr(component_class, "update_build_config"):
@@ -510,48 +490,22 @@ class AgentComponent(ToolCallingAgentComponent):
                 )
                 for provider in MODEL_PROVIDERS_DICT
             }
-            if field_value in provider_configs:
-                fields_to_add, fields_to_delete = provider_configs[field_value]
+            if provider in provider_configs:
+                fields_to_add, fields_to_delete = provider_configs[provider]
 
                 # Delete fields from other providers
                 for fields in fields_to_delete:
                     self.delete_fields(build_config, fields)
 
                 # Add provider-specific fields
-                if field_value == "OpenAI" and not any(field in build_config for field in fields_to_add):
+                if provider == "OpenAI" and not any(field in build_config for field in fields_to_add):
                     build_config.update(fields_to_add)
                 else:
                     build_config.update(fields_to_add)
-                # Reset input types for agent_llm
-                build_config["agent_llm"]["input_types"] = []
-                build_config["agent_llm"]["display_name"] = "Model Provider"
-            elif field_value == "connect_other_models":
-                # Delete all provider fields
-                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)
-                # # Update with custom component
-                custom_component = DropdownInput(
-                    name="agent_llm",
-                    display_name="Language Model",
-                    info="The provider of the language model that the agent will use to generate responses.",
-                    options=[*MODEL_PROVIDERS_LIST],
-                    real_time_refresh=True,
-                    refresh_button=False,
-                    input_types=["LanguageModel"],
-                    placeholder="Awaiting model input.",
-                    options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA],
-                    external_options={
-                        "fields": {
-                            "data": {
-                                "node": {
-                                    "name": "connect_other_models",
-                                    "display_name": "Connect other models",
-                                    "icon": "CornerDownLeft",
-                                },
-                            }
-                        },
-                    },
-                )
-                build_config.update({"agent_llm": custom_component.to_dict()})
+                # Reset input types for model
+                build_config["model"]["input_types"] = []
+                build_config["model"]["display_name"] = "Model Provider"
+
             # Update input types for all fields
             build_config = self.update_input_types(build_config)
 
@@ -559,7 +513,7 @@ class AgentComponent(ToolCallingAgentComponent):
             default_keys = [
                 "code",
                 "_type",
-                "agent_llm",
+                "model",
                 "tools",
                 "input_value",
                 "add_current_date_tool",
@@ -574,11 +528,11 @@ class AgentComponent(ToolCallingAgentComponent):
                 msg = f"Missing required keys in build_config: {missing_keys}"
                 raise ValueError(msg)
         if (
-            isinstance(self.agent_llm, str)
-            and self.agent_llm in MODEL_PROVIDERS_DICT
+            isinstance(self.model, str)
+            and self.model in MODEL_PROVIDERS_DICT
             and field_name in MODEL_DYNAMIC_UPDATE_FIELDS
         ):
-            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
+            provider_info = MODEL_PROVIDERS_DICT.get(self.model)
             if provider_info:
                 component_class = provider_info.get("component_class")
                 component_class = self.set_component_params(component_class)
