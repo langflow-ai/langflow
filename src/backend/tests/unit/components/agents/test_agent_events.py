@@ -2,9 +2,10 @@ from collections.abc import AsyncIterator
 from typing import Any
 from unittest.mock import AsyncMock
 
+import pytest
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessageChunk
-from lfx.base.agents.agent import process_agent_events
+from lfx.base.agents.events import process_agent_events
 from lfx.base.agents.events import (
     _extract_output_text,
     handle_on_chain_end,
@@ -26,6 +27,7 @@ async def create_event_iterator(events: list[dict[str, Any]]) -> AsyncIterator[d
         yield event
 
 
+@pytest.mark.asyncio
 async def test_chain_start_event():
     """Test handling of on_chain_start event."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -51,6 +53,7 @@ async def test_chain_start_event():
     assert result.content_blocks[0].title == "Agent Steps"
 
 
+@pytest.mark.asyncio
 async def test_chain_end_event():
     """Test handling of on_chain_end event."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -77,6 +80,7 @@ async def test_chain_end_event():
     assert result.text == "final output"
 
 
+@pytest.mark.asyncio
 async def test_tool_start_event():
     """Test handling of on_tool_start event."""
     send_message = AsyncMock()
@@ -116,6 +120,7 @@ async def test_tool_start_event():
     assert tool_content.tool_input == {"query": "tool input"}, tool_content
 
 
+@pytest.mark.asyncio
 async def test_tool_end_event():
     """Test handling of on_tool_end event."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -151,6 +156,7 @@ async def test_tool_end_event():
     assert tool_content.output == "tool output"
 
 
+@pytest.mark.asyncio
 async def test_tool_error_event():
     """Test handling of on_tool_error event."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -187,6 +193,7 @@ async def test_tool_error_event():
     assert tool_content.header["title"] == "Error using **test_tool**"
 
 
+@pytest.mark.asyncio
 async def test_chain_stream_event():
     """Test handling of on_chain_stream event."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -205,6 +212,7 @@ async def test_chain_stream_event():
     assert result.text == "streamed output"
 
 
+@pytest.mark.asyncio
 async def test_multiple_events():
     """Test handling of multiple events in sequence."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -248,6 +256,7 @@ async def test_multiple_events():
     assert result.text == "final output"
 
 
+@pytest.mark.asyncio
 async def test_unknown_event():
     """Test handling of unknown event type."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -273,6 +282,7 @@ async def test_unknown_event():
 # Additional tests for individual handler functions
 
 
+@pytest.mark.asyncio
 async def test_handle_on_chain_start_with_input():
     """Test handle_on_chain_start with input."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -292,6 +302,7 @@ async def test_handle_on_chain_start_with_input():
     assert isinstance(start_time, float)
 
 
+@pytest.mark.asyncio
 async def test_handle_on_chain_start_no_input():
     """Test handle_on_chain_start without input."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -311,6 +322,7 @@ async def test_handle_on_chain_start_no_input():
     assert isinstance(start_time, float)
 
 
+@pytest.mark.asyncio
 async def test_handle_on_chain_end_with_output():
     """Test handle_on_chain_end with output."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -332,6 +344,7 @@ async def test_handle_on_chain_end_with_output():
     assert isinstance(start_time, float)
 
 
+@pytest.mark.asyncio
 async def test_handle_on_chain_end_no_output():
     """Test handle_on_chain_end without output key in data."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -351,6 +364,7 @@ async def test_handle_on_chain_end_no_output():
     assert isinstance(start_time, float)
 
 
+@pytest.mark.asyncio
 async def test_handle_on_chain_end_empty_data():
     """Test handle_on_chain_end with empty data."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -370,6 +384,7 @@ async def test_handle_on_chain_end_empty_data():
     assert isinstance(start_time, float)
 
 
+@pytest.mark.asyncio
 async def test_handle_on_chain_end_with_empty_return_values():
     """Test handle_on_chain_end with empty return_values."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -394,6 +409,7 @@ async def test_handle_on_chain_end_with_empty_return_values():
     assert isinstance(start_time, float)
 
 
+@pytest.mark.asyncio
 async def test_handle_on_tool_start():
     """Test handle_on_tool_start event."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -426,6 +442,7 @@ async def test_handle_on_tool_start():
     assert isinstance(start_time, float)
 
 
+@pytest.mark.asyncio
 async def test_handle_on_tool_end():
     """Test handle_on_tool_end event."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -463,6 +480,7 @@ async def test_handle_on_tool_end():
     assert isinstance(start_time, float)
 
 
+@pytest.mark.asyncio
 async def test_handle_on_tool_error():
     """Test handle_on_tool_error event."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -502,6 +520,7 @@ async def test_handle_on_tool_error():
     assert isinstance(start_time, float)
 
 
+@pytest.mark.asyncio
 async def test_handle_on_chain_stream_with_output():
     """Test handle_on_chain_stream with output."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -523,6 +542,7 @@ async def test_handle_on_chain_stream_with_output():
     assert isinstance(start_time, float)
 
 
+@pytest.mark.asyncio
 async def test_handle_on_chain_stream_no_output():
     """Test handle_on_chain_stream without output."""
     send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
@@ -732,6 +752,7 @@ def test_extract_output_text_chatbedrockconverse_compatibility():
     assert _extract_output_text([{"text": "Hello"}, {"index": 0}]) == "Hello"
 
 
+@pytest.mark.asyncio
 async def test_agent_streaming_no_text_accumulation():
     """Test that agent streaming sends individual token events without accumulating text."""
     sent_messages = []
@@ -805,6 +826,7 @@ async def test_agent_streaming_no_text_accumulation():
     assert result.text == "Hello world!"
 
 
+@pytest.mark.asyncio
 async def test_agent_streaming_without_event_manager():
     """Test that agent streaming works without event_manager (backward compatibility)."""
     sent_messages = []
@@ -848,6 +870,7 @@ async def test_agent_streaming_without_event_manager():
     assert result.text == "Hello world!"
 
 
+@pytest.mark.asyncio
 async def test_agent_streaming_skips_empty_chunks():
     """Test that empty or whitespace-only chunks are skipped during streaming."""
     token_events = []
@@ -903,6 +926,7 @@ async def test_agent_streaming_skips_empty_chunks():
     assert result.properties.state == "complete"
 
 
+@pytest.mark.asyncio
 async def test_agent_streaming_preserves_message_id():
     """Test that agent streaming preserves message ID throughout event processing."""
     token_events = []

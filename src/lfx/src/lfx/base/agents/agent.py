@@ -166,7 +166,9 @@ class LCAgentComponent(Component):
             input_dict["system_prompt"] = self.system_prompt
 
         if hasattr(self, "chat_history") and self.chat_history:
-            if isinstance(self.chat_history, Data) or all(
+            if isinstance(self.chat_history, Data):
+                input_dict["chat_history"] = self._data_to_messages_skip_empty([self.chat_history])
+            elif all(
                 hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data for m in self.chat_history
             ):
                 input_dict["chat_history"] = self._data_to_messages_skip_empty(self.chat_history)
@@ -175,7 +177,7 @@ class LCAgentComponent(Component):
 
         # Handle multimodal input (images + text)
         # Note: Agent input must be a string, so we extract text and move images to chat_history
-        if hasattr(lc_message, "content") and isinstance(lc_message.content, list):
+        if lc_message is not None and hasattr(lc_message, "content") and isinstance(lc_message.content, list):
             # Extract images and text from the text content items
             image_dicts = [item for item in lc_message.content if item.get("type") == "image"]
             text_content = [item for item in lc_message.content if item.get("type") != "image"]
