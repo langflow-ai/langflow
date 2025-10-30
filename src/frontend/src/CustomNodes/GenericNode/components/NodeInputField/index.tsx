@@ -128,11 +128,6 @@ export default function NodeInputField({
     />
   );
 
-  console.log(
-    "____________________data.node?.template[name]",
-    data.node?.template[name],
-  );
-
   return !showNode ? (
     displayHandle ? (
       Handle
@@ -204,7 +199,7 @@ export default function NodeInputField({
               )}
             </div>
             {data.node?.template[name]?.ai_enabled && (
-              <AIButton compData={id} />
+              <AIButton compData={id} handleOnNewValue={handleOnNewValue} />
             )}
           </div>
           <CustomParameterLabel

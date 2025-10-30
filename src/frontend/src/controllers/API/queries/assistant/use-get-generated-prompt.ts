@@ -1,6 +1,7 @@
 import { keepPreviousData } from "@tanstack/react-query";
 import type { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
+import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export const useGetGeneratedPromptQuery: useQueryFunctionType<any, any> = (
@@ -11,10 +12,14 @@ export const useGetGeneratedPromptQuery: useQueryFunctionType<any, any> = (
 
   const getGeneratedPromptFn = async (compId, flowId, fieldName) => {
     return await api.post<any>(
-      "api/v1/responses",
+      getURL("RUN", {
+        // assistantFlowId: "69aa447b-997e-4efd-bc33-909694cf9f02",
+        assistantFlowId: "8cec93db-d495-43bf-951a-8f6b5e670006",
+      }),
       {
-        model: "19287914-c1cc-436f-a23e-e916cf65d23c",
-        input: "generate a valid input for this field",
+        input_value: "",
+        input_type: "chat",
+        output_type: "text",
       },
       {
         headers: {
@@ -36,6 +41,7 @@ export const useGetGeneratedPromptQuery: useQueryFunctionType<any, any> = (
     responseFn,
     {
       enabled: false,
+      retry: false,
       placeholderData: keepPreviousData,
       ...options,
     },

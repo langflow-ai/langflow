@@ -1,23 +1,27 @@
 import React, { useEffect, useRef, useState } from "react";
 import langflowLogo from "@/assets/LangflowLogoColor.svg";
+import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { useGetGeneratedPromptQuery } from "@/controllers/API/queries/assistant";
 import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
-import PromptModal from "@/modals/promptModal";
 import useFlowStore from "@/stores/flowStore";
 import { targetHandleType } from "@/types/flow";
+import ForwardedIconComponent from "../genericIconComponent";
 
 interface AIButtonProps {
   compData: targetHandleType;
+  handleOnNewValue: handleOnNewValueType;
 }
 
-export const AIButton: React.FC<AIButtonProps> = ({ compData }) => {
-  // const [promptValue, setPromptValue] = useState("");
+export const AIButton: React.FC<AIButtonProps> = ({
+  compData,
+  handleOnNewValue,
+}) => {
   const { setSelectedCompData } = useFlowStore();
   const flowId = useGetFlowId();
 
-  useEffect(() => {
-    setSelectedCompData(compData);
-  }, [compData, setSelectedCompData]);
+  // timer
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [clicked, setClicked] = useState(false);
 
   const { data, isFetching, refetch } = useGetGeneratedPromptQuery({
     compId: compData.id,
@@ -25,21 +29,45 @@ export const AIButton: React.FC<AIButtonProps> = ({ compData }) => {
     fieldName: compData.fieldName,
   });
 
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    if (isFetching) {
+      setElapsedTime(0);
+      interval = setInterval(() => {
+        setElapsedTime((prev) => prev + 1);
+      }, 1000);
+    } else if (!isFetching && elapsedTime > 0) {
+      // Cleanup when done
+      clearInterval(interval!);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isFetching]);
+
+  useEffect(() => {
+    setSelectedCompData(compData);
+  }, [compData, setSelectedCompData]);
+
   const onButtonClick = async () => {
     setSelectedCompData(compData);
+    setClicked(true);
+    // we use result instaed of data because data is undefined on first call
     const result = await refetch();
-    console.log("_____________________________result", result);
-
-    // setPromptValue(result.data);
+    handleOnNewValue({
+      value:
+        result.data?.data?.outputs[0]?.outputs[0]?.outputs?.message?.message,
+    });
   };
 
   return (
     <div className="relative flex items-center">
-      {/* <PromptModal value={promptValue} setValue={setPromptValue}> */}
       <button
         onClick={onButtonClick}
         title="Langflow assistant"
-        className="
+        className={`
           inline-flex items-center justify-center
           w-5 h-5
           rounded-md
@@ -52,15 +80,27 @@ export const AIButton: React.FC<AIButtonProps> = ({ compData }) => {
           focus-visible:ring-ring
           focus-visible:ring-offset-1
           focus-visible:ring-offset-background
-        "
+          ${isFetching ? "opacity-70 cursor-not-allowed" : ""}
+        `}
       >
-        <img
-          src={langflowLogo}
-          alt="Langflow logo"
-          className="w-3.5 h-3.5 object-contain"
-        />
+        {isFetching ? (
+          <ForwardedIconComponent
+            name={"Loader2"}
+            className={
+              "animate-spin w-3.5 h-3.5 text-primary cursor-not-allowed"
+            }
+          />
+        ) : (
+          <img
+            src={langflowLogo}
+            alt="Langflow logo"
+            className="w-3.5 h-3.5 object-contain"
+          />
+        )}
       </button>
-      {/* </PromptModal> */}
+      {clicked && (
+        <span className="text-xs text-muted-foreground">{elapsedTime}s</span>
+      )}
     </div>
   );
 };
