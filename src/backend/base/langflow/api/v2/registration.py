@@ -47,14 +47,15 @@ if not REGISTRATION_FILE.exists():
 
 def load_registration() -> dict | None:
     """Load the single registration from file."""
-    if REGISTRATION_FILE.exists():
-        try:
-            with REGISTRATION_FILE.open("r") as f:
-                return json.load(f)
-        except json.JSONDecodeError:
-            logger.error(f"Corrupted registration file: {REGISTRATION_FILE}")
-            return None
-    return None
+    if not REGISTRATION_FILE.is_file():
+        return None
+    try:
+        with REGISTRATION_FILE.open("rb") as f:  # use binary mode for faster file IO
+            content = f.read()
+        return json.loads(content)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.error(f"Corrupted registration file: {REGISTRATION_FILE}")
+        return None
 
 
 def save_registration(email: str) -> bool:
