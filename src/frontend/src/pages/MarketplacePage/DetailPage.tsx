@@ -103,26 +103,38 @@ export default function MarketplaceDetailPage() {
     >
       <div className="flex w-full flex-col gap-4 dark:text-white">
         <div className="flex flex-col">
-          <Tabs defaultValue="flow" className="w-full">
+          <Tabs defaultValue="playground" className="w-full">
             <div className="flex items-center justify-between">
               <TabsList className="justify-start gap-2 border-b border-border dark:border-white/20 p-0">
+                <TabsTrigger
+                  value="playground"
+                  className="px-3 py-2 text-sm dark:text-white"
+                >
+                  <ForwardedIconComponent
+                    name="Play"
+                    className="h-4 w-4 mr-2"
+                  />
+                  Playground
+                </TabsTrigger>
                 <TabsTrigger
                   value="flow"
                   className="px-3 py-2 text-sm dark:text-white"
                 >
+                  <ForwardedIconComponent
+                    name="Network"
+                    className="h-4 w-4 mr-2"
+                  />
                   Flow Visualization
                 </TabsTrigger>
                 <TabsTrigger
                   value="spec"
                   className="px-3 py-2 text-sm dark:text-white"
                 >
+                  <ForwardedIconComponent
+                    name="FileText"
+                    className="h-4 w-4 mr-2"
+                  />
                   Specification
-                </TabsTrigger>
-                <TabsTrigger
-                  value="playground"
-                  className="px-3 py-2 text-sm dark:text-white"
-                >
-                  Playground
                 </TabsTrigger>
               </TabsList>
 

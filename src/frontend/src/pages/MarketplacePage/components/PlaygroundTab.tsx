@@ -1,25 +1,43 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { v4 as uuid } from "uuid";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import LoadingIcon from "@/components/ui/loading";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { getURL } from "@/controllers/API/helpers/constants";
-import { Square } from "lucide-react";
+import { Square, Paperclip, Link, Upload } from "lucide-react";
 import { hasMarkdownFormatting } from "@/utils/markdownUtils";
+import SvgAutonomize from "@/icons/Autonomize/Autonomize";
+import { FileUploadManager } from "./FileUploadManager"; // Import the new component
+import { PlaygroundTabProps, Message, FileInputComponent } from "./Playground.types";
 
-interface PlaygroundTabProps {
-  publishedFlowData: any;
-}
+// interface PlaygroundTabProps {
+//   publishedFlowData: any;
+// }
 
-interface Message {
-  id: string;
-  type: "user" | "agent";
-  text: string;
-  timestamp: Date;
-  isStreaming?: boolean;
-}
+// interface Message {
+//   id: string;
+//   type: "user" | "agent";
+//   text: string;
+//   timestamp: Date;
+//   isStreaming?: boolean;
+// }
+
+// interface FileInputComponent {
+//   id: string;
+//   type: string;
+//   display_name: string;
+//   inputKey: string;
+// }
 
 export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -29,14 +47,105 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
   const [sessionId] = useState(() => uuid());
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [loadingDots, setLoadingDots] = useState(1);
+  const [fileUrls, setFileUrls] = useState<Record<string, string>>({});
+  const [isFileModalOpen, setIsFileModalOpen] = useState(false);
+  const [leftPanelWidth, setLeftPanelWidth] = useState(33.33);
+  const [isDragging, setIsDragging] = useState(false);
+  
+  // Extract agent details from publishedFlowData
+  const agentDetails = {
+    createdOn: publishedFlowData?.created_at ? new Date(publishedFlowData.created_at).toLocaleString() : "N/A",
+    lastUpdatedOn: publishedFlowData?.updated_at ? new Date(publishedFlowData.updated_at).toLocaleString() : "N/A",
+    description: publishedFlowData?.description || "No description available",
+    version: publishedFlowData?.version || "1.0",
+    tags: publishedFlowData?.tags || [],
+    name: publishedFlowData?.name || "Agent"
+  };
 
-  // Typing animation state - stores target text (from backend) and displayed text (animated)
+  // Analyze flow for file input components
+  const fileInputComponents: FileInputComponent[] = useMemo(() => {
+    const components: FileInputComponent[] = [];
+    
+    if (!publishedFlowData?.flow_data?.nodes) {
+      return components;
+    }
+
+    publishedFlowData.flow_data.nodes.forEach((node: any) => {
+      const nodeData = node.data?.node;
+      if (!nodeData?.template) return;
+
+      if (node.data.type === "FilePathInput") {
+        components.push({
+          id: node.id,
+          type: node.data.type,
+          display_name: nodeData.display_name || node.data.type,
+          inputKey: "input_value"
+        });
+      }
+    });
+
+    return components;
+  }, [publishedFlowData]);
+
+  // Handle resizable panel dragging
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+
+      const containerWidth = window.innerWidth;
+      const newLeftWidth = (e.clientX / containerWidth) * 100;
+
+      if (newLeftWidth >= 20 && newLeftWidth <= 60) {
+        setLeftPanelWidth(newLeftWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'col-resize';
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    } else {
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+  }, [isDragging]);
+
+  // Create tweaks for file inputs
+  const createFileInputTweaks = (fileUrls: Record<string, string>) => {
+    const tweaks: Record<string, any> = {};
+
+    fileInputComponents.forEach(component => {
+      const fileUrl = fileUrls[component.id];
+      if (fileUrl) {
+        tweaks[component.id] = {
+          "input_value": fileUrl
+        };
+      }
+    });
+
+    return tweaks;
+  };
+
+  // Typing animation state
   const [targetTexts, setTargetTexts] = useState<Map<string, string>>(new Map());
   const [displayedTexts, setDisplayedTexts] = useState<Map<string, string>>(new Map());
-
-  // Ref to access latest targetTexts without restarting animation
   const targetTextsRef = useRef<Map<string, string>>(new Map());
-
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Sync targetTexts to ref without restarting animation
@@ -46,7 +155,6 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
 
   // Animate "Working." dots when streaming with empty text
   useEffect(() => {
-    // Check if we have a streaming message with no text
     const hasEmptyStreamingMessage = messages.some(
       msg => msg.isStreaming && !msg.text
     );
@@ -58,24 +166,21 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
 
       return () => clearInterval(interval);
     } else {
-      setLoadingDots(1); // Reset when done
+      setLoadingDots(1);
     }
   }, [messages]);
 
-  // Character-by-character typing animation effect (runs continuously, never restarts)
+  // Character-by-character typing animation effect
   useEffect(() => {
     const interval = setInterval(() => {
       setDisplayedTexts(prev => {
         const next = new Map(prev);
         let hasChanges = false;
 
-        // Use ref to access latest targets without restarting interval
         targetTextsRef.current.forEach((target, messageId) => {
           const current = prev.get(messageId) || "";
 
-          // If we haven't shown all the text yet, reveal more characters
           if (current.length < target.length) {
-            // Reveal multiple characters at once for faster typing (5 chars per tick)
             const charsToAdd = Math.min(5, target.length - current.length);
             next.set(messageId, target.substring(0, current.length + charsToAdd));
             hasChanges = true;
@@ -84,78 +189,60 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
 
         return hasChanges ? next : prev;
       });
-    }, 20); // 20ms = ~250 characters per second for smooth, fast typing
+    }, 20);
 
     return () => clearInterval(interval);
-  }, []); // Empty deps - runs once, never restarts
+  }, []);
 
   const handleStreamEvent = (eventData: any, localAgentMessageId: string) => {
-    // Handle event wrapper format: {"event": "...", "data": {...}}
     const data = eventData?.data;
-
     if (!data) return;
 
-    // Handle add_message events
     if (eventData.event === "add_message") {
-      // Ignore User sender events (they just echo our input)
-      if (data.sender === "User") {
-        return;
-      }
+      if (data.sender === "User") return;
 
-      // Handle Machine/Agent sender events
       if (data.sender === "Machine") {
         const backendId = data.id;
         const text = data.text || "";
         const state = data.properties?.state || "partial";
         const isComplete = state === "complete";
 
-        // Store target text for typing animation
         setTargetTexts(prev => {
           const next = new Map(prev);
           next.set(backendId, text);
           return next;
         });
 
-        // Initialize displayedTexts on first chunk to prevent flicker
         setDisplayedTexts(prev => {
           if (!prev.has(backendId)) {
             const next = new Map(prev);
-            // Transfer from local ID to preserve "Working..." animation
             const currentDisplayed = prev.get(localAgentMessageId) || "";
             next.set(backendId, currentDisplayed);
-            // Clean up old local ID entry to avoid memory leak
             next.delete(localAgentMessageId);
             return next;
           }
           return prev;
         });
 
-        // Update or create Agent message using backend ID
         setMessages((prev) => {
-          // Check if we already have this message (by backend ID)
           const existingIndex = prev.findIndex(msg => msg.id === backendId);
 
           if (existingIndex !== -1) {
-            // Update streaming state - only set text when complete to avoid flicker
             return prev.map(msg =>
               msg.id === backendId
                 ? { ...msg, text: isComplete ? text : "", isStreaming: !isComplete }
                 : msg
             );
           } else {
-            // First time seeing this backend ID
-            // Check if we have a local placeholder to replace
             const placeholderIndex = prev.findIndex(msg => msg.id === localAgentMessageId);
 
             if (placeholderIndex !== -1) {
-              // Replace the local placeholder with backend ID
               return prev.map(msg =>
                 msg.id === localAgentMessageId
                   ? { ...msg, id: backendId, text: isComplete ? text : "", isStreaming: !isComplete }
                   : msg
               );
             } else {
-              // No placeholder found, create new message
               return [...prev, {
                 id: backendId,
                 type: "agent" as const,
@@ -167,7 +254,6 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
           }
         });
 
-        // When streaming completes, clean up the Maps after animation finishes
         if (isComplete) {
           setTimeout(() => {
             setTargetTexts(prev => {
@@ -180,16 +266,14 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
               next.delete(backendId);
               return next;
             });
-          }, 2000); // Wait 2 seconds for animation to complete
+          }, 2000);
         }
       }
     } else if (eventData.event === "end") {
-      // Stream completed - mark all messages as complete
       setMessages((prev) =>
         prev.map(msg => ({ ...msg, isStreaming: false }))
       );
     } else if (eventData.event === "error") {
-      // Handle error event
       const errorMsg = data?.error || "Stream error";
       throw new Error(errorMsg);
     }
@@ -199,8 +283,6 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
     if (!input.trim() || isLoading) return;
 
     const userInputText = input.trim();
-
-    // Create user message
     const userMessage: Message = {
       id: uuid(),
       type: "user",
@@ -208,7 +290,6 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
       timestamp: new Date(),
     };
 
-    // Create empty agent message placeholder for streaming
     const localAgentMessageId = uuid();
     const agentMessage: Message = {
       id: localAgentMessageId,
@@ -218,10 +299,9 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
       isStreaming: true,
     };
 
-    // Initialize displayedTexts with local ID to show "Working..." immediately
     setDisplayedTexts(prev => {
       const next = new Map(prev);
-      next.set(localAgentMessageId, ""); // Initialize with empty string
+      next.set(localAgentMessageId, "");
       return next;
     });
 
@@ -231,12 +311,20 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
     setError(null);
     setStreamingMessageId(localAgentMessageId);
 
-    // Create abort controller for stop functionality
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
     try {
-      // Use fetch for streaming support
+      const fileTweaks = createFileInputTweaks(fileUrls);
+      
+      const requestBody = {
+        output_type: "chat",
+        input_type: "chat",
+        input_value: userInputText,
+        session_id: sessionId,
+        ...(Object.keys(fileTweaks).length > 0 && { tweaks: fileTweaks })
+      };
+
       const response = await fetch(
         `${getURL("RUN")}/${publishedFlowData.flow_id}?stream=true`,
         {
@@ -244,10 +332,7 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            input_value: userInputText,
-            session_id: sessionId,
-          }),
+          body: JSON.stringify(requestBody),
           signal: abortController.signal,
         }
       );
@@ -256,7 +341,6 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Get streaming reader
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
 
@@ -266,7 +350,6 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
 
       let buffer = "";
 
-      // Read stream chunks
       while (true) {
         const { done, value } = await reader.read();
 
@@ -274,22 +357,15 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
           break;
         }
 
-        // Decode chunk and add to buffer
         buffer += decoder.decode(value, { stream: true });
-
-        // Split by double newline (SSE format) or single newline
         const lines = buffer.split("\n\n");
-        buffer = lines.pop() || ""; // Keep incomplete chunk
+        buffer = lines.pop() || "";
 
-        // Process each complete chunk
         for (const line of lines) {
           if (!line.trim()) continue;
 
           try {
-            // Parse the JSON event
             const eventData = JSON.parse(line);
-
-            // Handle the event using our new handler
             handleStreamEvent(eventData, localAgentMessageId);
           } catch (e) {
             console.error("[Playground] Error parsing chunk:", e, line);
@@ -297,7 +373,6 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
         }
       }
 
-      // Process any remaining buffer
       if (buffer.trim()) {
         try {
           const eventData = JSON.parse(buffer);
@@ -307,7 +382,6 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
         }
       }
 
-      // Mark streaming complete
       setMessages((prev) =>
         prev.map((msg) => ({ ...msg, isStreaming: false }))
       );
@@ -315,7 +389,6 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
       console.error("Streaming error:", err);
 
       if (err.name === "AbortError") {
-        // User clicked Stop button
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === localAgentMessageId
@@ -355,148 +428,285 @@ export default function PlaygroundTab({ publishedFlowData }: PlaygroundTabProps)
     }
   };
 
+  const handleFileUrlChange = (componentId: string, url: string) => {
+    setFileUrls(prev => ({
+      ...prev,
+      [componentId]: url
+    }));
+  };
+
+  const clearFileUrl = (componentId: string) => {
+    setFileUrls(prev => {
+      const newUrls = { ...prev };
+      delete newUrls[componentId];
+      return newUrls;
+    });
+  };
+
+  const handleFileUpload = () => {
+    setIsFileModalOpen(true);
+  };
+
   return (
-    <div className="flex h-full w-full flex-col bg-background">
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 && (
-          <div className="flex h-full items-center justify-center text-muted-foreground">
-            <div className="text-center">
-              <p className="text-lg font-medium">Start a conversation</p>
-              <p className="text-sm mt-2">Send a message to test this flow</p>
+    <div className="p-4 flex h-full w-full flex-col bg-[#FBFAFF]">
+      <div className="flex flex-1 overflow-hidden">
+        <div
+          className="flex flex-col border-r"
+          style={{ width: `${leftPanelWidth}%` }}
+        >
+          <div className="mb-2 flex items-center gap-2 justify-between border-b border-[#eee] w-full px-5 py-2 bg-white">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-medium text-[#444]">{agentDetails.name}</h2>
+              <Badge variant="secondary" className="bg-[#FFFBEB] text-[#C46E39] text-xs">
+                Published
+              </Badge>
             </div>
           </div>
-        )}
 
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                message.type === "user"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-foreground"
-              }`}
-            >
-              <div className="break-words">
-                {(() => {
-                  // For agent messages, use typing animation if available
-                  if (message.type === "agent") {
-                    const displayedText = displayedTexts.get(message.id);
-                    const textToRender = displayedText !== undefined
-                      ? (displayedText || `Working${'.'.repeat(loadingDots)}`)
-                      : (message.text || "");
-
-                    // Smart detection: Only render as Markdown if patterns detected
-                    if (hasMarkdownFormatting(textToRender)) {
-                      return (
-                        <Markdown
-                          remarkPlugins={[remarkGfm]}
-                          className="prose prose-sm dark:prose-invert max-w-none"
-                        >
-                          {textToRender}
-                        </Markdown>
-                      );
-                    } else {
-                      // Plain text response - keep as-is with whitespace preservation
-                      return <div className="whitespace-pre-wrap">{textToRender}</div>;
-                    }
-                  }
-
-                  // For user messages, always plain text
-                  return <div className="whitespace-pre-wrap">{message.text}</div>;
-                })()}
-                {message.isStreaming && message.type === "agent" && (() => {
-                  const displayedText = displayedTexts.get(message.id) || "";
-                  const targetText = targetTexts.get(message.id) || message.text;
-                  // Show cursor if we have text and still typing
-                  return displayedText && displayedText.length > 0 && displayedText.length <= targetText.length;
-                })() && (
-                  <span className="inline-block w-0.5 h-5 ml-0.5 bg-foreground animate-pulse"></span>
-                )}
+          {/* Agent Details Content */}
+          <div className="bg-white p-4 flex-1 overflow-y-auto">
+            <h3 className="font-medium mb-4 text-[#350E84]">Agent Details</h3>
+            <div className="text-sm space-y-4">
+              <div>
+                <p className="text-muted-foreground mb-1">Created On:</p>
+                <p className="text-[#444]">{agentDetails.createdOn}</p>
               </div>
-              {/* Timestamp - hide for agent messages during "Working..." state */}
-              {(() => {
-                // For user messages, always show timestamp
-                if (message.type === "user") {
-                  return (
-                    <div className="text-xs opacity-70 mt-1">
-                      {message.timestamp.toLocaleTimeString()}
-                    </div>
-                  );
-                }
-
-                // For agent messages, only show timestamp if we have actual text
-                if (message.type === "agent") {
-                  const displayedText = displayedTexts.get(message.id);
-
-                  // If message is in typing animation and has text, show timestamp
-                  if (displayedText !== undefined && displayedText.length > 0) {
-                    return (
-                      <div className="text-xs opacity-70 mt-1">
-                        {message.timestamp.toLocaleTimeString()}
-                      </div>
-                    );
-                  }
-
-                  // If message is completed (not in Map) and has text, show timestamp
-                  if (displayedText === undefined && message.text) {
-                    return (
-                      <div className="text-xs opacity-70 mt-1">
-                        {message.timestamp.toLocaleTimeString()}
-                      </div>
-                    );
-                  }
-
-                  // Hide during "Working..." state (no text yet)
-                  return null;
-                }
-
-                return null;
-              })()}
+              <div>
+                <p className="text-muted-foreground mb-1">Last Updated On:</p>
+                <p className="text-[#444]">{agentDetails.lastUpdatedOn}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground mb-1">Description:</p>
+                <p className="text-[#444]">{agentDetails.description}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground mb-1">Version:</p>
+                <p className="text-[#444]">{agentDetails.version}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground mb-1">Tags:</p>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {agentDetails.tags.map((tag: string, index: number) => (
+                    <span key={index} className="bg-muted text-xs px-2 py-1 rounded-md">{tag}</span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
 
-      {/* Input Area */}
-      <div className="border-t border-border p-4">
-        {error && (
-          <div className="mb-2 text-sm text-destructive">
-            {error}
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyPress}
-            placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
-            className="flex-1 min-h-[60px] max-h-[120px] resize-none"
-            disabled={isLoading || !!streamingMessageId}
-          />
-          <Button
-            onClick={streamingMessageId ? stopStreaming : sendMessage}
-            disabled={!streamingMessageId && (!input.trim() || isLoading)}
-            className="self-end"
-            variant={streamingMessageId ? "destructive" : "default"}
-          >
-            {streamingMessageId ? (
-              <>
-                <Square className="h-4 w-4 mr-2" />
-                Stop
-              </>
-            ) : isLoading ? (
-              <LoadingIcon />
-            ) : (
-              "Send"
+        {/* Resizable Divider */}
+        <div
+          className={`w-1 bg-border hover:bg-primary cursor-col-resize transition-colors ${
+            isDragging ? 'bg-primary' : ''
+          }`}
+          onMouseDown={handleDragStart}
+        />
+        
+        {/* Chat Panel */}
+        <div
+          className="flex flex-col bg-background overflow-hidden"
+          style={{
+            width: `${100 - leftPanelWidth}%`,
+            pointerEvents: isDragging ? 'none' : 'auto',
+          }}
+        >
+          {/* Chat Messages Area */}
+          <div className="bg-white p-3 flex-1 overflow-y-auto scrollbar-hide">
+            {messages.length === 0 && (
+              <div className="flex h-full items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <div className="mb-4">
+                    <SvgAutonomize
+                      title="Autonomize logo"
+                      className="h-10 w-10 scale-[1.5] mx-auto opacity-60"
+                    />
+                  </div>
+                  <p className="text-sm mt-2">Send a message to see how your agent responds</p>
+                  {fileInputComponents.length > 0 && (
+                    <p className="text-xs mt-2 text-muted-foreground">
+                      This agent accepts file inputs. Use the attachment button to provide files.
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
-          </Button>
+
+            <div className="space-y-4 max-w-full">
+              {messages.map((message) => (
+                <div key={message.id} className="space-y-2">
+                  {/* Message Content */}
+                  <div
+                    className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[80%] rounded-lg px-4 py-3 ${
+                        message.type === "user"
+                          ? "bg-[#350E84] text-white"
+                          : "bg-[#F8F9FA] text-[#444] border"
+                      }`}
+                    >
+                      <div className="break-words">
+                        {(() => {
+                          if (message.type === "agent") {
+                            const displayedText = displayedTexts.get(message.id);
+                            const textToRender = displayedText !== undefined
+                              ? (displayedText || `Working${'.'.repeat(loadingDots)}`)
+                              : (message.text || "");
+
+                            if (hasMarkdownFormatting(textToRender)) {
+                              return (
+                                <Markdown
+                                  remarkPlugins={[remarkGfm]}
+                                  className="prose prose-sm dark:prose-invert max-w-none"
+                                >
+                                  {textToRender}
+                                </Markdown>
+                              );
+                            } else {
+                              return <div className="whitespace-pre-wrap">{textToRender}</div>;
+                            }
+                          }
+                          return <div className="whitespace-pre-wrap">{message.text}</div>;
+                        })()}
+                        {message.isStreaming && message.type === "agent" && (() => {
+                          const displayedText = displayedTexts.get(message.id) || "";
+                          const targetText = targetTexts.get(message.id) || message.text;
+                          return displayedText && displayedText.length > 0 && displayedText.length <= targetText.length;
+                        })() && (
+                          <span className="inline-block w-0.5 h-5 ml-0.5 bg-foreground animate-pulse"></span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Timestamp */}
+                  <div className={`flex text-xs text-muted-foreground ${
+                    message.type === "user" ? "justify-end" : "justify-start"
+                  }`}>
+                    {(() => {
+                      if (message.type === "user") {
+                        return (
+                          <span className="px-4">
+                            {message.timestamp.toLocaleTimeString()}
+                          </span>
+                        );
+                      }
+
+                      if (message.type === "agent") {
+                        const displayedText = displayedTexts.get(message.id);
+
+                        if (displayedText !== undefined && displayedText.length > 0) {
+                          return (
+                            <span className="px-4">
+                              {message.timestamp.toLocaleTimeString()}
+                            </span>
+                          );
+                        }
+
+                        if (displayedText === undefined && message.text) {
+                          return (
+                            <span className="px-4">
+                              {message.timestamp.toLocaleTimeString()}
+                            </span>
+                          );
+                        }
+
+                        return null;
+                      }
+
+                      return null;
+                    })()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Input Section - Fixed at bottom */}
+          <div className="bg-background p-4 border-t">
+            {error && (
+              <div className="mb-2 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+
+            <div className="max-w-full">
+              <div className="relative">
+                <textarea
+                  value={input}
+                  rows={1}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Type your message..."
+                  className="w-full p-3 pr-20 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  onKeyDown={handleKeyPress}
+                  disabled={isLoading || !!streamingMessageId}
+                />
+                
+                {/* Buttons Container */}
+                <div className="absolute right-2 bottom-2 flex items-center gap-1">
+                  {/* File Attachment Button - Only show if file inputs exist */}
+                  {fileInputComponents.length > 0 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          disabled={isLoading || !!streamingMessageId}
+                          className="h-8 w-8 p-0 hover:bg-muted"
+                        >
+                          <Paperclip className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => setIsFileModalOpen(true)}>
+                          <Link className="h-4 w-4 mr-2" />
+                          File URL
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleFileUpload}>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload File
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+
+                  {/* Send Button */}
+                  <button
+                    onClick={streamingMessageId ? stopStreaming : sendMessage}
+                    disabled={!streamingMessageId && (!input.trim() || isLoading)}
+                    className={`p-2 rounded-md transition-colors ${
+                      streamingMessageId 
+                        ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        : "bg-primary text-primary-foreground hover:bg-primary/90"
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    aria-label={streamingMessageId ? "Stop generation" : "Submit message"}
+                  >
+                    {streamingMessageId ? (
+                      <Square className="h-4 w-4" />
+                    ) : isLoading ? (
+                      <LoadingIcon />
+                    ) : (
+                      <ForwardedIconComponent name="Send" className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* File Upload Manager */}
+      <FileUploadManager
+        isOpen={isFileModalOpen}
+        onClose={() => setIsFileModalOpen(false)}
+        fileInputComponents={fileInputComponents}
+        fileUrls={fileUrls}
+        onFileUrlChange={handleFileUrlChange}
+        onClearFileUrl={clearFileUrl}
+        onError={setError}
+      />
     </div>
   );
 }
