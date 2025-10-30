@@ -6,20 +6,16 @@ from pydantic import ValidationError
 
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.events import ExceptionWithMessageError
-from lfx.base.models.model_input_constants import (
-    MODEL_DYNAMIC_UPDATE_FIELDS,
-    MODEL_PROVIDERS_DICT,
-)
+from lfx.base.models.model_input_constants import MODEL_PROVIDERS_DICT
 from lfx.base.models.model_utils import get_model_name
-from lfx.base.models.unified_models import get_language_model_options
+from lfx.base.models.unified_models import get_api_key_for_provider, get_language_model_options
 from lfx.components.helpers.current_date import CurrentDateComponent
 from lfx.components.helpers.memory import MemoryComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.custom.custom_component.component import get_component_toolkit
-from lfx.custom.utils import update_component_build_config
 from lfx.helpers.base_model import build_model_from_schema
 from lfx.inputs.inputs import BoolInput, ModelInput
-from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, TableInput
+from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
@@ -55,6 +51,13 @@ class AgentComponent(ToolCallingAgentComponent):
             providers=_PROVIDERS,
             info="Select your model provider",
             real_time_refresh=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Model Provider API key",
+            real_time_refresh=True,
+            advanced=True,
         ),
         MultilineInput(
             name="system_prompt",
@@ -410,7 +413,7 @@ class AgentComponent(ToolCallingAgentComponent):
 
             # Extract provider info
             provider_info = MODEL_PROVIDERS_DICT.get(provider)
-            component_class = provider_info.get("model_class")
+            component_class = provider_info.get("component_class")
             display_name = component_class.display_name
             inputs = provider_info.get("inputs")
             prefix = provider_info.get("prefix", "")
@@ -423,34 +426,23 @@ class AgentComponent(ToolCallingAgentComponent):
             raise ValueError(msg) from e
 
     def _build_llm_model(self, component, inputs, prefix=""):
-        model_kwargs = {}
+        model = self.model[0]
+        provider = model.get("provider")
+        metadata = model.get("metadata", {})
+
+        # Get API key parameter name from metadata
+        api_key_param = metadata.get("api_key_param", "api_key")
+
+        # Get API key from user input or global variables
+        api_key = get_api_key_for_provider(self.user_id, provider)
+
+        # Build model kwargs
+        model_kwargs = {api_key_param: api_key}
         for input_ in inputs:
             if hasattr(self, f"{prefix}{input_.name}"):
                 model_kwargs[input_.name] = getattr(self, f"{prefix}{input_.name}")
+
         return component.set(**model_kwargs).build_model()
-
-    def set_component_params(self, component):
-        model = self.model[0]
-        provider = model.get("provider")
-
-        # Extract provider info
-        provider_info = MODEL_PROVIDERS_DICT.get(provider)
-        if provider_info:
-            inputs = provider_info.get("inputs")
-            prefix = provider_info.get("prefix")
-            # Filter out json_mode and only use attributes that exist on this component
-            model_kwargs = {}
-            for input_ in inputs:
-                if hasattr(self, f"{prefix}{input_.name}"):
-                    model_kwargs[input_.name] = getattr(self, f"{prefix}{input_.name}")
-
-            return component.set(**model_kwargs)
-        return component
-
-    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:
-        """Delete specified fields from build_config."""
-        for field in fields:
-            build_config.pop(field, None)
 
     def update_input_types(self, build_config: dotdict) -> dotdict:
         """Update input types for all fields in build_config."""
@@ -463,49 +455,11 @@ class AgentComponent(ToolCallingAgentComponent):
         return build_config
 
     async def update_build_config(
-        self, build_config: dotdict, field_value: list[dict], field_name: str | None = None
+        self, build_config: dotdict, field_value: list[dict], field_name: str | None = None  # noqa: ARG002
     ) -> dotdict:
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
         # Existing logic for updating build_config
         if field_name == "model":
-            model = self.model[0]
-            provider = model.get("provider")
-            provider_info = MODEL_PROVIDERS_DICT.get(provider)
-            if provider_info:
-                component_class = provider_info.get("component_class")
-                if component_class and hasattr(component_class, "update_build_config"):
-                    # Call the component class's update_build_config method
-                    build_config = await update_component_build_config(
-                        component_class, build_config, field_value, "model_name"
-                    )
-
-            provider_configs: dict[str, tuple[dict, list[dict]]] = {
-                provider: (
-                    MODEL_PROVIDERS_DICT[provider]["fields"],
-                    [
-                        MODEL_PROVIDERS_DICT[other_provider]["fields"]
-                        for other_provider in MODEL_PROVIDERS_DICT
-                        if other_provider != provider
-                    ],
-                )
-                for provider in MODEL_PROVIDERS_DICT
-            }
-            if provider in provider_configs:
-                fields_to_add, fields_to_delete = provider_configs[provider]
-
-                # Delete fields from other providers
-                for fields in fields_to_delete:
-                    self.delete_fields(build_config, fields)
-
-                # Add provider-specific fields
-                if provider == "OpenAI" and not any(field in build_config for field in fields_to_add):
-                    build_config.update(fields_to_add)
-                else:
-                    build_config.update(fields_to_add)
-                # Reset input types for model
-                build_config["model"]["input_types"] = []
-                build_config["model"]["display_name"] = "Model Provider"
-
             # Update input types for all fields
             build_config = self.update_input_types(build_config)
 
@@ -527,24 +481,7 @@ class AgentComponent(ToolCallingAgentComponent):
             if missing_keys:
                 msg = f"Missing required keys in build_config: {missing_keys}"
                 raise ValueError(msg)
-        if (
-            isinstance(self.model, str)
-            and self.model in MODEL_PROVIDERS_DICT
-            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS
-        ):
-            provider_info = MODEL_PROVIDERS_DICT.get(self.model)
-            if provider_info:
-                component_class = provider_info.get("component_class")
-                component_class = self.set_component_params(component_class)
-                prefix = provider_info.get("prefix")
-                if component_class and hasattr(component_class, "update_build_config"):
-                    # Call each component class's update_build_config method
-                    # remove the prefix from the field_name
-                    if isinstance(field_name, str) and isinstance(prefix, str):
-                        field_name = field_name.replace(prefix, "")
-                    build_config = await update_component_build_config(
-                        component_class, build_config, field_value, "model_name"
-                    )
+
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
 
     async def _get_tools(self) -> list[Tool]:

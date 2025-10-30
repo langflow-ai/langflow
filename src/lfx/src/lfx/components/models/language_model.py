@@ -1,25 +1,9 @@
-from langchain_anthropic import ChatAnthropic
-from langchain_ibm import ChatWatsonx
-from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
-
-from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.unified_models import get_api_key_for_provider, get_language_model_options
+from lfx.base.models.unified_models import MODEL_CLASSES, get_api_key_for_provider, get_language_model_options
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput
 from lfx.io import MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput
-
-# Mapping of class names to actual class objects
-MODEL_CLASSES = {
-    "ChatOpenAI": ChatOpenAI,
-    "ChatAnthropic": ChatAnthropic,
-    "ChatGoogleGenerativeAIFixed": ChatGoogleGenerativeAIFixed,
-    "ChatOllama": ChatOllama,
-    "ChatWatsonx": ChatWatsonx,
-}
-
 
 # Compute model options once at module level
 _MODEL_OPTIONS = get_language_model_options()
