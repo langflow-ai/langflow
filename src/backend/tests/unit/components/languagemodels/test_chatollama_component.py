@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
 from langchain_ollama import ChatOllama
+from lfx.base.models.ollama_constants import DEFAULT_OLLAMA_API_URL
 from lfx.components.ollama.ollama import ChatOllamaComponent
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -403,8 +404,8 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
 
         # Verify it called /api/tags without /v1
         mock_get.assert_called_once()
-        called_url = mock_get.call_args[0][0]
-        assert called_url == "http://localhost:11434/api/tags"
+        called_kwargs = mock_get.call_args[1]
+        assert called_kwargs["url"] == "http://localhost:11434/api/tags"
         assert result is True
 
     @pytest.mark.asyncio
@@ -432,8 +433,8 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
 
         # Verify it called /api/tags without /v1
         assert mock_get.call_count == 1
-        called_url = mock_get.call_args[0][0]
-        assert called_url == "http://localhost:11434/api/tags"
+        called_kwargs = mock_get.call_args[1]
+        assert called_kwargs["url"] == "http://localhost:11434/api/tags"
         assert result == ["model1"]
 
     @pytest.mark.asyncio
@@ -449,6 +450,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
             "base_url": {"load_from_db": False, "value": "http://localhost:11434"},
             "model_name": {"options": []},
             "tool_model_enabled": {"value": False},
+            "api_key": {"value": None, "advanced": True},
         }
         field_value = "http://localhost:11434"
         field_name = "base_url"
@@ -457,3 +459,238 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         # Should not raise an error, just set empty options
         updated_config = await component.update_build_config(build_config, field_value, field_name)
         assert updated_config["model_name"]["options"] == []
+
+    def test_headers_with_cloud_url_no_api_key(self):
+        """Test that headers return None when cloud URL but no API key."""
+        component = ChatOllamaComponent()
+        component.base_url = DEFAULT_OLLAMA_API_URL
+        component.api_key = None
+
+        headers = component.headers
+        assert headers is None
+
+    def test_headers_with_cloud_url_and_api_key(self):
+        """Test that headers include Authorization for cloud URL with API key."""
+        component = ChatOllamaComponent()
+        component.base_url = DEFAULT_OLLAMA_API_URL
+        component.api_key = "test-api-key-12345"
+
+        headers = component.headers
+        assert headers is not None
+        assert headers["Authorization"] == "Bearer test-api-key-12345"
+
+    def test_headers_with_local_url_no_api_key(self):
+        """Test that headers return None for local URLs without API key."""
+        component = ChatOllamaComponent()
+        component.base_url = "http://localhost:11434"
+        component.api_key = None
+
+        headers = component.headers
+        assert headers is None
+
+    @patch("lfx.components.ollama.ollama.ChatOllama")
+    def test_build_model_with_cloud_api_and_headers(self, mock_chat_ollama):
+        """Test that build_model passes headers for cloud API with API key."""
+        mock_model = MagicMock()
+        mock_chat_ollama.return_value = mock_model
+
+        component = ChatOllamaComponent()
+        component.base_url = DEFAULT_OLLAMA_API_URL
+        component.api_key = "test-cloud-api-key"
+        component.model_name = "qwen3-coder:480b-cloud"
+        component.mirostat = "Disabled"
+        component.temperature = 0.7
+
+        model = component.build_model()
+
+        # Verify client_kwargs with headers were passed
+        call_args = mock_chat_ollama.call_args[1]
+        assert "client_kwargs" in call_args
+        assert "headers" in call_args["client_kwargs"]
+        assert call_args["client_kwargs"]["headers"]["Authorization"] == "Bearer test-cloud-api-key"
+        assert call_args["base_url"] == DEFAULT_OLLAMA_API_URL
+        assert model == mock_model
+
+    @patch("lfx.components.ollama.ollama.ChatOllama")
+    def test_build_model_with_cloud_api_no_headers(self, mock_chat_ollama):
+        """Test that build_model works for cloud API without API key."""
+        mock_model = MagicMock()
+        mock_chat_ollama.return_value = mock_model
+
+        component = ChatOllamaComponent()
+        component.base_url = DEFAULT_OLLAMA_API_URL
+        component.api_key = None
+        component.model_name = "deepseek-v3.1:671b-cloud"
+        component.mirostat = "Disabled"
+
+        model = component.build_model()
+
+        # When headers is None, client_kwargs should not be passed
+        call_args = mock_chat_ollama.call_args[1]
+        assert "client_kwargs" not in call_args
+        assert model == mock_model
+
+    @patch("lfx.components.ollama.ollama.ChatOllama")
+    def test_build_model_local_no_headers(self, mock_chat_ollama):
+        """Test that build_model doesn't pass headers for local instances."""
+        mock_model = MagicMock()
+        mock_chat_ollama.return_value = mock_model
+
+        component = ChatOllamaComponent()
+        component.base_url = "http://localhost:11434"
+        component.api_key = None
+        component.model_name = "llama3.1"
+        component.mirostat = "Disabled"
+
+        model = component.build_model()
+
+        # Verify no client_kwargs were passed
+        call_args = mock_chat_ollama.call_args[1]
+        assert "client_kwargs" not in call_args
+        assert model == mock_model
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    async def test_is_valid_ollama_url_with_cloud_and_headers(self, mock_get):
+        """Test that is_valid_ollama_url passes headers for cloud URL."""
+        component = ChatOllamaComponent()
+        component.base_url = DEFAULT_OLLAMA_API_URL
+        component.api_key = "test-cloud-api-key"
+
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        result = await component.is_valid_ollama_url(DEFAULT_OLLAMA_API_URL)
+
+        # Verify headers were passed
+        assert mock_get.call_count == 1
+        call_kwargs = mock_get.call_args[1]
+        assert "headers" in call_kwargs
+        assert call_kwargs["headers"]["Authorization"] == "Bearer test-cloud-api-key"
+        assert result is True
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    async def test_is_valid_ollama_url_local_no_headers(self, mock_get):
+        """Test that is_valid_ollama_url doesn't pass headers for local URL."""
+        component = ChatOllamaComponent()
+        component.base_url = "http://localhost:11434"
+        component.api_key = None
+
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        result = await component.is_valid_ollama_url("http://localhost:11434")
+
+        # Verify headers were None
+        assert mock_get.call_count == 1
+        call_kwargs = mock_get.call_args[1]
+        assert call_kwargs["headers"] is None
+        assert result is True
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.post")
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    async def test_get_models_with_cloud_and_headers(self, mock_get, mock_post):
+        """Test that get_models passes headers for cloud API."""
+        component = ChatOllamaComponent()
+        component.base_url = DEFAULT_OLLAMA_API_URL
+        component.api_key = "test-cloud-api-key"
+
+        mock_get_response = AsyncMock()
+        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.json.return_value = {
+            component.JSON_MODELS_KEY: [
+                {component.JSON_NAME_KEY: "deepseek-v3.1:671b-cloud"},
+                {component.JSON_NAME_KEY: "qwen3-coder:480b-cloud"},
+            ]
+        }
+        mock_get.return_value = mock_get_response
+
+        mock_post_response = AsyncMock()
+        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.json.side_effect = [
+            {component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]},
+            {component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]},
+        ]
+        mock_post.return_value = mock_post_response
+
+        result = await component.get_models(DEFAULT_OLLAMA_API_URL)
+
+        # Verify headers were passed to both GET and POST
+        assert mock_get.call_count == 1
+        get_call_kwargs = mock_get.call_args[1]
+        assert "headers" in get_call_kwargs
+        assert get_call_kwargs["headers"]["Authorization"] == "Bearer test-cloud-api-key"
+
+        assert mock_post.call_count == 2
+        post_call_kwargs = mock_post.call_args[1]
+        assert "headers" in post_call_kwargs
+        assert post_call_kwargs["headers"]["Authorization"] == "Bearer test-cloud-api-key"
+
+        assert result == ["deepseek-v3.1:671b-cloud", "qwen3-coder:480b-cloud"]
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.post")
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    async def test_get_models_local_no_headers(self, mock_get, mock_post):
+        """Test that get_models doesn't pass headers for local instances (when api key is not provided)."""
+        component = ChatOllamaComponent()
+        component.base_url = "http://localhost:11434"
+        component.api_key = None
+
+        mock_get_response = AsyncMock()
+        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.json.return_value = {
+            component.JSON_MODELS_KEY: [
+                {component.JSON_NAME_KEY: "llama3.1"},
+            ]
+        }
+        mock_get.return_value = mock_get_response
+
+        mock_post_response = AsyncMock()
+        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.json.return_value = {component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]}
+        mock_post.return_value = mock_post_response
+
+        result = await component.get_models("http://localhost:11434")
+
+        # Verify headers were None for both GET and POST
+        assert mock_get.call_count == 1
+        get_call_kwargs = mock_get.call_args[1]
+        assert get_call_kwargs["headers"] is None
+
+        assert mock_post.call_count == 1
+        post_call_kwargs = mock_post.call_args[1]
+        assert post_call_kwargs["headers"] is None
+
+        assert result == ["llama3.1"]
+
+    def test_get_base_url_cloud_no_transform(self):
+        """Test that cloud URL is not transformed."""
+        from lfx.utils.util import transform_localhost_url
+
+        result = transform_localhost_url(DEFAULT_OLLAMA_API_URL)
+        assert result == DEFAULT_OLLAMA_API_URL
+
+    @patch("lfx.components.ollama.ollama.ChatOllama")
+    def test_build_model_cloud_with_v1_suffix_stripped(self, mock_chat_ollama):
+        """Test that /v1 suffix is stripped from cloud URL."""
+        mock_model = MagicMock()
+        mock_chat_ollama.return_value = mock_model
+
+        component = ChatOllamaComponent()
+        component.base_url = f"{DEFAULT_OLLAMA_API_URL}/v1"
+        component.api_key = "test-key"
+        component.model_name = "gpt-oss:20b-cloud"
+        component.mirostat = "Disabled"
+
+        model = component.build_model()
+
+        # Verify /v1 was stripped
+        call_args = mock_chat_ollama.call_args[1]
+        assert call_args["base_url"] == DEFAULT_OLLAMA_API_URL
+        assert "/v1" not in call_args["base_url"]
+        assert model == mock_model
