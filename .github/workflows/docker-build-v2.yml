@@ -232,22 +232,18 @@ jobs:
         component: [docker-backend, ghcr-backend]
         include:
           - component: docker-backend
-            dockerfile: ./docker/build_and_push_backend.Dockerfile
             arch: amd64
             runner: Langflow-runner
 
           - component: docker-backend
-            dockerfile: ./docker/build_and_push_backend.Dockerfile
             arch: arm64
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
 
           - component: ghcr-backend
-            dockerfile: ./docker/build_and_push_backend.Dockerfile
             arch: amd64
             runner: Langflow-runner
 
           - component: ghcr-backend
-            dockerfile: ./docker/build_and_push_backend.Dockerfile
             arch: arm64
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
@@ -307,8 +303,8 @@ jobs:
           context: .
           push: ${{ inputs.push_to_registry }}
           build-args: |
-            LANGFLOW_IMAGE=langflowai/langflow:${{ steps.version.outputs.version }}
-          file: ./docker/frontend/build_and_push_frontend.Dockerfile
+            LANGFLOW_IMAGE=langflowai/langflow:${{ steps.version.outputs.version }}-${{ matrix.arch }}
+          file: ./docker/build_and_push_backend.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
@@ -321,7 +317,7 @@ jobs:
           context: .
           push: ${{ inputs.push_to_registry }}
           build-args: |
-            LANGFLOW_IMAGE=ghcr.io/langflow-ai/langflow:${{ steps.version.outputs.version }}
+            LANGFLOW_IMAGE=ghcr.io/langflow-ai/langflow:${{ steps.version.outputs.version }}-${{ matrix.arch }}
           file: ./docker/build_and_push_backend.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -601,13 +597,14 @@ jobs:
     needs:
       [
         build-base,
+        build-main,
         build-main-backend,
         build-main-frontend,
         build-main-ep,
         build-main-all,
       ]
     runs-on: ubuntu-latest
-    if: ${{ always() && inputs.push_to_registry && (needs.build-base.result == 'success' || needs.build-main-backend.result == 'success' || needs.build-main-frontend.result == 'success' || needs.build-main-ep.result == 'success' || needs.build-main-all.result == 'success') }}
+    if: ${{ always() && inputs.push_to_registry && (needs.build-base.result == 'success' || needs.build-main.result == 'success' || needs.build-main-backend.result == 'success' || needs.build-main-frontend.result == 'success' || needs.build-main-ep.result == 'success' || needs.build-main-all.result == 'success') }}
     steps:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
