@@ -22,54 +22,69 @@ class RegisterResponse(BaseModel):
 
 
 # File to store registrations
-REGISTRATIONS_FILE = Path("data/users/registrations.json")
-REGISTRATIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
+REGISTRATION_FILE = Path("data/user/registration.json")
+
+try:
+    # Ensure the directory exists with secure permissions
+    REGISTRATION_FILE.parent.mkdir(parents=True, exist_ok=True)
+    # Set directory permissions to owner read/write/execute only (if possible)
+    REGISTRATION_FILE.parent.chmod(0o700)
+except Exception as e:
+    logger.error(f"Failed to create registration directory: {e}")
+    raise
+
+# Optionally, set file permissions to owner read/write only when file is created
+if not REGISTRATION_FILE.exists():
+    try:
+        REGISTRATION_FILE.touch(exist_ok=True)
+        REGISTRATION_FILE.chmod(0o600)
+    except Exception as e:
+        logger.error(f"Failed to create registration file: {e}")
+        raise
 
 # TODO: Move functions to a separate service module
 
 
-def load_registrations() -> list[dict]:
-    """Load existing registrations from file."""
-    if REGISTRATIONS_FILE.exists():
-        with REGISTRATIONS_FILE.open("r") as f:
-            return json.load(f)
-    return []
+def load_registration() -> dict | None:
+    """Load the single registration from file."""
+    if REGISTRATION_FILE.exists():
+        try:
+            with REGISTRATION_FILE.open("r") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            logger.error(f"Corrupted registration file: {REGISTRATION_FILE}")
+            return None
+    return None
 
 
 def save_registration(email: str) -> bool:
-    return _save_registration(email=email, append=False)
+    """Save the single registration to file.
 
+    Args:
+        email: Email to register
 
-def append_registration(email: str) -> bool:
-    return _save_registration(email=email, append=True)
-
-
-def _save_registration(email: str, append: bool) -> bool:  # noqa: FBT001
-    """Save a new registration to file with atomic write."""
+    Returns:
+        True if saved successfully
+    """
     try:
-        registrations = load_registrations()
+        # Check if registration already exists
+        existing = load_registration()
 
-        # Check if email already exists
-        if any(reg["email"] == email for reg in registrations):
-            return False
-
-        # Add new registration
+        # Create new registration (replaces any existing)
         registration = {
             "email": email,
             "registered_at": datetime.now(tz=timezone.utc).isoformat(),
-            "langflow_connected": False,
         }
 
-        if append:
-            registrations.append(registration)
-        else:
-            registrations = [registration]
+        # Log if replacing
+        if existing:
+            logger.info(f"Replacing registration: {existing.get('email')} -> {email}")
 
         # Save to file
-        temp_file = REGISTRATIONS_FILE.with_suffix(".tmp")
-        with temp_file.open("w") as f:
-            json.dump(registrations, f, indent=2)
-        temp_file.replace(REGISTRATIONS_FILE)
+        with REGISTRATION_FILE.open("w") as f:
+            json.dump(registration, f, indent=2)
+
+        logger.info(f"Registration saved: {email}")
 
     except Exception as e:
         logger.error(f"Error saving registration: {e}")
@@ -80,15 +95,17 @@ def _save_registration(email: str, append: bool) -> bool:  # noqa: FBT001
 
 @router.post("/", response_model=RegisterResponse)
 async def register_user(request: RegisterRequest):
-    """Register a new user with their email."""
+    """Register the single user with email.
+
+    Note: Only one registration is allowed.
+    """
     try:
         email = request.email
 
-        # Save to local file
+        # Save to local file (replace existing)
         if save_registration(email):
             return RegisterResponse(success=True, message="Registration successful", email=email)
 
-        raise HTTPException(status_code=400, detail="Email already registered")
     except HTTPException:
         raise
     except Exception as e:
@@ -96,19 +113,14 @@ async def register_user(request: RegisterRequest):
 
 
 @router.get("/")
-async def get_registrations():
-    """Get all registered users."""
+async def get_registration():
+    """Get the registered user (if any)."""
     try:
-        registrations = load_registrations()
-        return {"total": len(registrations), "registrations": registrations}
-    except (OSError, json.JSONDecodeError) as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load registrations: {e!r}") from e
+        registration = load_registration()
+        if registration:
+            return registration
 
+        return {"message": "No user registered"}  # noqa: TRY300
 
-@router.get("/info")
-async def root():
-    """Root endpoint."""
-    return {
-        "service": "Langflow Desktop Registration API",
-        "endpoints": [{"path": "/", "method": "POST"}, {"path": "/", "method": "GET"}],
-    }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load registration: {e!s}") from e

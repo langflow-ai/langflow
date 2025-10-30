@@ -16,11 +16,10 @@ interface IRegistrationResponse {
 }
 
 export const usePostRegistration: useMutationFunctionType<
-  IRegistrationResponse,
+  undefined,
   IRegistrationRequest
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
-  const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
   const postRegistrationFn = async (
     payload: IRegistrationRequest,
@@ -33,14 +32,14 @@ export const usePostRegistration: useMutationFunctionType<
 
   const mutation: UseMutationResult<
     IRegistrationResponse,
-    any,
+    Error | unknown,
     IRegistrationRequest
   > = mutate(["usePostRegistration"], postRegistrationFn, {
     ...options,
     onSettled: (response) => {
       if (response?.success) {
         queryClient.refetchQueries({
-          queryKey: ["useGetRegistrations"],
+          queryKey: ["useGetRegistration"],
         });
       }
     },
