@@ -1229,7 +1229,7 @@
                 ],
                 "total_dependencies": 1
               },
-              "module": "lfx.components.helpers.calculator_core.CalculatorComponent"
+              "module": "lfx.components.utilities.calculator_core.CalculatorComponent"
             },
             "minimized": false,
             "output_types": [],
