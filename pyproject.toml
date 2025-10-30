@@ -54,7 +54,7 @@ dependencies = [
     "litellm>=1.60.2,<2.0.0",
     "chromadb>=1.0.0,<2.0.0",
     "zep-python==2.0.2",
-    "youtube-transcript-api==0.6.3",
+    "youtube-transcript-api>=1.0.0,<2.0.0",
     "Markdown==3.7",
     "upstash-vector==0.6.0",
     "GitPython==3.1.43",
