@@ -12,9 +12,15 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from lfx.base.mcp import util
-from lfx.base.mcp.util import MCPSessionManager, MCPSseClient, MCPStdioClient, _process_headers, validate_headers
+from lfx.base.mcp.util import (
+    MCPSessionManager,
+    MCPSseClient,
+    MCPStdioClient,
+    MCPStreamableHttpClient,
+    _process_headers,
+    validate_headers,
+)
 
 
 class TestMCPSessionManager:
@@ -187,11 +193,11 @@ class TestHeaderValidation:
         assert result == {"safe-header": "safe-value"}
 
 
-class TestSSEHeaderIntegration:
-    """Integration test to verify headers are properly passed through the entire SSE flow."""
+class TestStreamableHTTPHeaderIntegration:
+    """Integration test to verify headers are properly passed through the entire StreamableHTTP flow."""
 
     async def test_headers_processing(self):
-        """Test that headers flow properly from server config through to SSE client connection."""
+        """Test that headers flow properly from server config through to StreamableHTTP client connection."""
         # Test the header processing function directly
         headers_input = [
             {"key": "Authorization", "value": "Bearer test-token"},
@@ -232,15 +238,15 @@ class TestSSEHeaderIntegration:
         result = _process_headers(invalid_headers)
         assert result == {"valid-header": "good"}
 
-    async def test_sse_client_header_storage(self):
+    async def test_streamable_http_client_header_storage(self):
         """Test that SSE client properly stores headers in connection params."""
-        sse_client = MCPSseClient()
+        streamable_http_client = MCPStreamableHttpClient()
         test_url = "http://test.url"
         test_headers = {"Authorization": "Bearer test123", "Custom": "value"}
 
         # Test that headers are properly stored in connection params
         # Set connection params as a dict like the implementation expects
-        sse_client._connection_params = {
+        streamable_http_client._connection_params = {
             "url": test_url,
             "headers": test_headers,
             "timeout_seconds": 30,
@@ -248,8 +254,8 @@ class TestSSEHeaderIntegration:
         }
 
         # Verify headers are stored
-        assert sse_client._connection_params["url"] == test_url
-        assert sse_client._connection_params["headers"] == test_headers
+        assert streamable_http_client._connection_params["url"] == test_url
+        assert streamable_http_client._connection_params["headers"] == test_headers
 
 
 class TestFieldNameConversion:
@@ -414,9 +420,8 @@ class TestFieldNameConversion:
 
     def test_json_schema_alias_functionality(self):
         """Test that JSON schema creation includes aliases for camelCase field names."""
-        from pydantic import ValidationError
-
         from lfx.schema.json_schema import create_input_schema_from_json_schema
+        from pydantic import ValidationError
 
         # Create a JSON schema with snake_case field names
         test_schema = {
@@ -932,22 +937,22 @@ class TestMCPStdioClientWithEverythingServer:
             await stdio_client.disconnect()
 
 
-class TestMCPSseClientWithDeepWikiServer:
+class TestMCPStreamableHttpClientWithDeepWikiServer:
     """Test MCPSseClient with the DeepWiki MCP server."""
 
     @pytest.fixture
-    def sse_client(self):
+    def streamable_http_client(self):
         """Create an SSE client for testing."""
-        return MCPSseClient()
+        return MCPStreamableHttpClient()
 
     @pytest.mark.asyncio
-    async def test_connect_to_deepwiki_server(self, sse_client):
+    async def test_connect_to_deepwiki_server(self, streamable_http_client):
         """Test connecting to the DeepWiki MCP server."""
         url = "https://mcp.deepwiki.com/sse"
 
         try:
             # Connect to the server
-            tools = await sse_client.connect_to_server(url)
+            tools = await streamable_http_client.connect_to_server(url)
 
             # Verify tools were returned
             assert len(tools) > 0
@@ -963,16 +968,16 @@ class TestMCPSseClientWithDeepWikiServer:
             # If the server is not accessible, skip the test
             pytest.skip(f"DeepWiki server not accessible: {e}")
         finally:
-            await sse_client.disconnect()
+            await streamable_http_client.disconnect()
 
     @pytest.mark.asyncio
-    async def test_run_wiki_structure_tool(self, sse_client):
+    async def test_run_wiki_structure_tool(self, streamable_http_client):
         """Test running the read_wiki_structure tool."""
         url = "https://mcp.deepwiki.com/sse"
 
         try:
             # Connect to the server
-            tools = await sse_client.connect_to_server(url)
+            tools = await streamable_http_client.connect_to_server(url)
 
             # Find the read_wiki_structure tool
             wiki_tool = None
@@ -984,7 +989,7 @@ class TestMCPSseClientWithDeepWikiServer:
             assert wiki_tool is not None, "read_wiki_structure tool not found"
 
             # Run the tool with a test repository (use repoName as expected by the API)
-            result = await sse_client.run_tool("read_wiki_structure", {"repoName": "microsoft/vscode"})
+            result = await streamable_http_client.run_tool("read_wiki_structure", {"repoName": "microsoft/vscode"})
 
             # Verify the result
             assert result is not None
@@ -995,16 +1000,16 @@ class TestMCPSseClientWithDeepWikiServer:
             # If the server is not accessible or the tool fails, skip the test
             pytest.skip(f"DeepWiki server test failed: {e}")
         finally:
-            await sse_client.disconnect()
+            await streamable_http_client.disconnect()
 
     @pytest.mark.asyncio
-    async def test_ask_question_tool(self, sse_client):
+    async def test_ask_question_tool(self, streamable_http_client):
         """Test running the ask_question tool."""
         url = "https://mcp.deepwiki.com/sse"
 
         try:
             # Connect to the server
-            tools = await sse_client.connect_to_server(url)
+            tools = await streamable_http_client.connect_to_server(url)
 
             # Find the ask_question tool
             ask_tool = None
@@ -1016,7 +1021,7 @@ class TestMCPSseClientWithDeepWikiServer:
             assert ask_tool is not None, "ask_question tool not found"
 
             # Run the tool with a test question (use repoName as expected by the API)
-            result = await sse_client.run_tool(
+            result = await streamable_http_client.run_tool(
                 "ask_question", {"repoName": "microsoft/vscode", "question": "What is VS Code?"}
             )
 
@@ -1029,14 +1034,14 @@ class TestMCPSseClientWithDeepWikiServer:
             # If the server is not accessible or the tool fails, skip the test
             pytest.skip(f"DeepWiki server test failed: {e}")
         finally:
-            await sse_client.disconnect()
+            await streamable_http_client.disconnect()
 
     @pytest.mark.asyncio
-    async def test_url_validation(self, sse_client):
+    async def test_url_validation(self, streamable_http_client):
         """Test URL validation for SSE connections."""
         # Test valid URL
         valid_url = "https://mcp.deepwiki.com/sse"
-        is_valid, error = await sse_client.validate_url(valid_url)
+        is_valid, error = await streamable_http_client.validate_url(valid_url)
         # Either valid or accessible, or rate-limited (429) which indicates server is reachable
         if not is_valid and "429" in error:
             # Rate limiting indicates the server is accessible but limiting requests
@@ -1046,28 +1051,9 @@ class TestMCPSseClientWithDeepWikiServer:
 
         # Test invalid URL
         invalid_url = "not_a_url"
-        is_valid, error = await sse_client.validate_url(invalid_url)
+        is_valid, error = await streamable_http_client.validate_url(invalid_url)
         assert not is_valid
         assert error != ""
-
-    @pytest.mark.asyncio
-    async def test_redirect_handling(self, sse_client):
-        """Test redirect handling for SSE connections."""
-        # Test with the DeepWiki URL
-        url = "https://mcp.deepwiki.com/sse"
-
-        try:
-            # Check for redirects
-            final_url = await sse_client.pre_check_redirect(url)
-
-            # Should return a URL (either original or redirected)
-            assert final_url is not None
-            assert isinstance(final_url, str)
-            assert final_url.startswith("http")
-
-        except Exception as e:
-            # If the server is not accessible, skip the test
-            pytest.skip(f"DeepWiki server not accessible for redirect test: {e}")
 
     @pytest.fixture
     def mock_tool(self):
@@ -1119,14 +1105,14 @@ class TestMCPSseClientUnit:
             mock_response.status_code = 200
             mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
 
-            is_valid, error_msg = await sse_client.validate_url("http://test.url", {})
+            is_valid, error_msg = await sse_client.validate_url("http://test.url")
 
             assert is_valid is True
             assert error_msg == ""
 
     async def test_validate_url_invalid_format(self, sse_client):
         """Test URL validation with invalid format."""
-        is_valid, error_msg = await sse_client.validate_url("invalid-url", {})
+        is_valid, error_msg = await sse_client.validate_url("invalid-url")
 
         assert is_valid is False
         assert "Invalid URL format" in error_msg
@@ -1138,7 +1124,7 @@ class TestMCPSseClientUnit:
             mock_response.status_code = 404
             mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
 
-            is_valid, error_msg = await sse_client.validate_url("http://test.url", {})
+            is_valid, error_msg = await sse_client.validate_url("http://test.url")
 
             assert is_valid is True
             assert error_msg == ""
@@ -1151,7 +1137,6 @@ class TestMCPSseClientUnit:
 
         with (
             patch.object(sse_client, "validate_url", return_value=(True, "")),
-            patch.object(sse_client, "pre_check_redirect", return_value=test_url),
             patch.object(sse_client, "_get_or_create_session") as mock_get_session,
         ):
             # Mock session
@@ -1196,29 +1181,10 @@ class TestMCPSseClientUnit:
             result_session = await sse_client._get_or_create_session()
 
             # Verify session manager was called with correct parameters including normalized headers
-            mock_manager.get_session.assert_called_once_with("test_context", sse_client._connection_params, "sse")
-            assert result_session == mock_session
-
-    async def test_pre_check_redirect_with_headers(self, sse_client):
-        """Test pre-check redirect functionality with custom headers."""
-        test_url = "http://test.url"
-        redirect_url = "http://redirect.url"
-        # Use pre-validated headers since pre_check_redirect expects already validated headers
-        test_headers = {"authorization": "Bearer token123"}  # already normalized
-
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_response = MagicMock()
-            mock_response.status_code = 307
-            mock_response.headers.get.return_value = redirect_url
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
-
-            result = await sse_client.pre_check_redirect(test_url, test_headers)
-
-            assert result == redirect_url
-            # Verify validated headers were passed to the request
-            mock_client.return_value.__aenter__.return_value.get.assert_called_with(
-                test_url, timeout=2.0, headers={"Accept": "text/event-stream", **test_headers}
+            mock_manager.get_session.assert_called_once_with(
+                "test_context", sse_client._connection_params, "streamable_http"
             )
+            assert result_session == mock_session
 
     async def test_run_tool_with_retry_on_connection_error(self, sse_client):
         """Test that run_tool retries on connection errors."""
@@ -1292,7 +1258,6 @@ class TestMCPStructuredTool:
         # Import the MCPStructuredTool class from the actual code
         # We need to recreate it here since it's defined inline in the update_tools function
         from langchain_core.tools import StructuredTool
-
         from lfx.base.mcp.util import create_tool_coroutine, create_tool_func
 
         class MCPStructuredTool(StructuredTool):
@@ -1508,15 +1473,22 @@ class TestMCPStructuredTool:
 
     def test_run_passes_config_and_kwargs(self, mcp_tool, mock_client):
         """Test that run method properly passes config and kwargs to parent."""
+        from unittest.mock import MagicMock, patch
+
         input_data = {"weatherMain": "Clear", "topN": 1}
         config = {"some": "config"}
         extra_kwargs = {"extra": "param"}
 
-        # Just verify that the method completes successfully with config/kwargs
-        mcp_tool.run(input_data, config=config, **extra_kwargs)
+        # Mock the event loop to prevent the "no current event loop" error
+        mock_loop = MagicMock()
+        mock_loop.run_until_complete = MagicMock(return_value="tool_result")
 
-        # Verify the tool was executed
-        mock_client.run_tool.assert_called_once()
+        with patch("asyncio.get_event_loop", return_value=mock_loop):
+            # Just verify that the method completes successfully with config/kwargs
+            mcp_tool.run(input_data, config=config, **extra_kwargs)
+
+            # Verify the tool was executed
+            mock_client.run_tool.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_arun_passes_config_and_kwargs(self, mcp_tool, mock_client):

@@ -28,6 +28,9 @@ from langflow.services.database.models.user.model import User, UserCreate, UserR
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, session_scope
+from lfx.components.input_output import ChatInput
+from lfx.graph import Graph
+from lfx.log.logger import logger
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -35,9 +38,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
-from lfx.components.input_output import ChatInput
-from lfx.graph import Graph
-from lfx.log.logger import logger
 from tests.api_keys import get_openai_api_key
 
 load_dotenv()
@@ -150,6 +150,18 @@ def get_text():
         pytest.LOOP_TEST,
     ]:
         assert path.exists(), f"File {path} does not exist. Available files: {list(data_path.iterdir())}"
+
+
+# def _has_nonempty_env(var: str) -> bool:
+#     return bool((os.getenv(var) or "").strip())
+
+
+# def pytest_runtest_setup(item):
+#     """Auto-skip tests marked with `api_key_required` when no valid OPENAI_API_KEY is provided."""
+#     if item.get_closest_marker("api_key_required") and not _has_nonempty_env("OPENAI_API_KEY"):
+#         import pytest as _pytest
+
+#         _pytest.skip("OPENAI_API_KEY is not set or is empty")
 
 
 def pytest_collection_modifyitems(config, items):  # noqa: ARG001

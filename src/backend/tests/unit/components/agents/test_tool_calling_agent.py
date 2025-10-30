@@ -1,7 +1,4 @@
-import os
-
 import pytest
-
 from lfx.components.langchain_utilities import ToolCallingAgentComponent
 from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.tools.calculator import CalculatorToolComponent
@@ -13,7 +10,9 @@ async def test_tool_calling_agent_component():
     tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
     input_value = "What is 2 + 2?"
     chat_history = []
-    api_key = os.environ["OPENAI_API_KEY"]
+    from tests.api_keys import get_openai_api_key
+
+    api_key = get_openai_api_key()
     temperature = 0.1
 
     # Default OpenAI Model Component
