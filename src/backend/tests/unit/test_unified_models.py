@@ -29,17 +29,16 @@ def test_default_excludes_deprecated():
         assert model["metadata"].get("deprecated", False) is False
 
 
-def test_include_deprecated_parameter():
-    # Test that deprecated models are included when explicitly requested
+def test_include_deprecated_parameter_returns_deprecated_models():
+    # When explicitly requested, at least one deprecated model should be present.
     result = get_unified_models_detailed(include_deprecated=True)
-    deprecated_found = False
-    for model in _flatten_models(result):
-        if model["metadata"].get("deprecated", False):
-            deprecated_found = True
-            break
-    # This test assumes there are some deprecated models in the constants
-    # If no deprecated models exist, this test will pass but not verify the functionality
-    # In a real scenario, we'd want to ensure there are deprecated models to test against
+    deprecated_models = [m for m in _flatten_models(result) if m["metadata"].get("deprecated", False)]
+    assert deprecated_models, "Expected at least one deprecated model when include_deprecated=True"
+
+    # Sanity check: restricting by provider that is known to have deprecated entries (e.g., Anthropic)
+    result_anthropic = get_unified_models_detailed(providers=["Anthropic"], include_deprecated=True)
+    anthropic_deprecated = [m for m in _flatten_models(result_anthropic) if m["metadata"].get("deprecated", False)]
+    assert anthropic_deprecated, "Expected deprecated Anthropic models when include_deprecated=True"
 
 
 def test_filter_by_provider():
