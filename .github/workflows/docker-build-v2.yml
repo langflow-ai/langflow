@@ -233,25 +233,21 @@ jobs:
         include:
           - component: docker-backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
-            langflow_image: langflowai/langflow:${{ inputs.ref }}
             arch: amd64
             runner: Langflow-runner
 
           - component: docker-backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
-            langflow_image: langflowai/langflow:${{ inputs.ref }}
             arch: arm64
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
 
           - component: ghcr-backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
-            langflow_image: ghcr.io/langflow-ai/langflow:${{ inputs.ref }}
             arch: amd64
             runner: Langflow-runner
 
           - component: ghcr-backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
-            langflow_image: ghcr.io/langflow-ai/langflow:${{ inputs.ref }}
             arch: arm64
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
@@ -311,8 +307,8 @@ jobs:
           context: .
           push: ${{ inputs.push_to_registry }}
           build-args: |
-            LANGFLOW_IMAGE=${{ matrix.langflow_image }}
-          file: ${{ matrix.dockerfile }}
+            LANGFLOW_IMAGE=ghcr.io/langflow-ai/langflow:${{ steps.version.outputs.version }}-${{ matrix.arch }}
+          file: ./docker/frontend/build_and_push_frontend.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
@@ -325,8 +321,8 @@ jobs:
           context: .
           push: ${{ inputs.push_to_registry }}
           build-args: |
-            LANGFLOW_IMAGE=${{ matrix.langflow_image }}
-          file: ${{ matrix.dockerfile }}
+            LANGFLOW_IMAGE=langflowai/langflow:${{ steps.version.outputs.version }}-${{ matrix.arch }}
+          file: ./docker/build_and_push_backend.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
@@ -341,22 +337,18 @@ jobs:
         component: [docker-frontend, ghcr-frontend]
         include:
           - component: docker-frontend
-            dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
             arch: amd64
             runner: Langflow-runner
 
           - component: docker-frontend
-            dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
             arch: arm64
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
 
           - component: ghcr-frontend
-            dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
             arch: amd64
             runner: Langflow-runner
 
           - component: ghcr-frontend
-            dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
             arch: arm64
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
@@ -415,7 +407,7 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
-          file: ${{ matrix.dockerfile }}
+          file: ./docker/frontend/build_and_push_frontend.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
@@ -427,7 +419,7 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
-          file: ${{ matrix.dockerfile }}
+          file: ./docker/frontend/build_and_push_frontend.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
           provenance: false
