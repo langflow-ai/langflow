@@ -104,7 +104,6 @@ class AgentComponent(ToolCallingAgentComponent):
             show=False,
         ),
         *openai_inputs_filtered,
-        # *watsonx_inputs_filtered,
         MultilineInput(
             name="system_prompt",
             display_name="Agent Instructions",
