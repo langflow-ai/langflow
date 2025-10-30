@@ -97,9 +97,11 @@
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
     "serve": "vite preview",
-    "format": "npx @biomejs/biome check --write",
+    "format": "npx @biomejs/biome format --write",
+    "lint": "npx @biomejs/biome lint",
+    "lint:types": "npx @biomejs/biome lint --diagnostic-level=error",
+    "lint:types:staged": "npx @biomejs/biome lint --staged --diagnostic-level=error",
     "check-format": "npx @biomejs/biome check",
-    "check-format:staged": "npx @biomejs/biome check --staged",
     "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite"
   },
   "browserslist": {
