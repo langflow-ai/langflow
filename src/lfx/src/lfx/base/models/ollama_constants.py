@@ -198,3 +198,4 @@ URL_LIST = [
 
 # Backwards compatibility
 OLLAMA_MODEL_NAMES = OLLAMA_TOOL_MODELS_BASE
+DEFAULT_OLLAMA_API_URL = "https://ollama.com"
