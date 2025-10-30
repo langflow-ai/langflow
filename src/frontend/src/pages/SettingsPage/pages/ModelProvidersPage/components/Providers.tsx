@@ -96,6 +96,7 @@ const Providers = ({ type }: { type: 'enabled' | 'available' }) => {
   if (isLoading) {
     return <div className="text-muted-foreground">Loading providers...</div>;
   }
+  console.log('Filtered Providers:', filteredProviders);
 
   return (
     <>
@@ -220,25 +221,41 @@ const Providers = ({ type }: { type: 'enabled' | 'available' }) => {
                         ) : (
                           <div className="mr-4" />
                         )}
-                        <div className={cn('text-sm py-1 pr-2 pl-5')}>
+                        <div
+                          className={cn('text-sm py-1 pr-2 pl-5 font-medium')}
+                        >
                           {model.model_name}
                         </div>
                         {model.metadata.reasoning && (
                           <div className="flex items-center space-x-1 text-muted-foreground">
+                            •
                             <ForwardedIconComponent
                               name="Brain"
-                              className="w-4 h-4"
+                              className="w-4 h-4 mx-1"
                             />
-                            <span className="italic pl-1">Reasoning</span>
+                            <span className="italic pr-2">Reasoning</span>
                           </div>
                         )}
+
                         {model.metadata.model_type === 'embeddings' && (
                           <div className="flex items-center space-x-1 text-muted-foreground">
+                            •
                             <ForwardedIconComponent
-                              name="layers"
-                              className="w-4 h-4"
+                              name="Layers"
+                              className="w-4 h-4 mx-1"
                             />
-                            <span className="italic pl-1">Embeddings</span>
+                            <span className="italic pr-2">Embedding</span>
+                          </div>
+                        )}
+
+                        {model.metadata.tool_calling && (
+                          <div className="flex items-center space-x-1 text-muted-foreground">
+                            <span className="text-muted-foreground"> • </span>
+                            <ForwardedIconComponent
+                              name="Hammer"
+                              className="w-4 h-4 mx-1"
+                            />
+                            <span className="italic pr-2">Tooling</span>
                           </div>
                         )}
                       </div>
