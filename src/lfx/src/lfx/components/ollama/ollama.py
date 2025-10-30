@@ -8,7 +8,16 @@ from langchain_ollama import ChatOllama
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
-from lfx.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SliderInput
+from lfx.io import (
+    BoolInput,
+    DictInput,
+    DropdownInput,
+    FloatInput,
+    IntInput,
+    MessageTextInput,
+    SecretStrInput,
+    SliderInput,
+)
 from lfx.log.logger import logger
 from lfx.utils.util import transform_localhost_url
 
@@ -31,8 +40,8 @@ class ChatOllamaComponent(LCModelComponent):
     inputs = [
         MessageTextInput(
             name="base_url",
-            display_name="Base URL",
-            info="Endpoint of the Ollama API. Defaults to http://localhost:11434 .",
+            display_name="Ollama API URL",
+            info="Endpoint of the Ollama API. Defaults to http://localhost:11434.",
             value="http://localhost:11434",
             real_time_refresh=True,
         ),
@@ -43,6 +52,15 @@ class ChatOllamaComponent(LCModelComponent):
             info="Refer to https://ollama.com/library for more models.",
             refresh_button=True,
             real_time_refresh=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="Ollama API Key",
+            info="Your Ollama API key.",
+            value=None,
+            required=False,
+            real_time_refresh=True,
+            advanced=True,
         ),
         SliderInput(
             name="temperature",
@@ -194,6 +212,9 @@ class ChatOllamaComponent(LCModelComponent):
             "verbose": self.verbose,
             "template": self.template,
         }
+        headers = self.headers
+        if headers is not None:
+            llm_params["client_kwargs"] = {"headers": headers}
 
         # Remove parameters with None values
         llm_params = {k: v for k, v in llm_params.items() if v is not None}
@@ -219,7 +240,9 @@ class ChatOllamaComponent(LCModelComponent):
                 url = url.rstrip("/").removesuffix("/v1")
                 if not url.endswith("/"):
                     url = url + "/"
-                return (await client.get(urljoin(url, "api/tags"))).status_code == HTTP_STATUS_OK
+                return (
+                    await client.get(url=urljoin(url, "api/tags"), headers=self.headers)
+                ).status_code == HTTP_STATUS_OK
         except httpx.RequestError:
             return False
 
@@ -292,8 +315,9 @@ class ChatOllamaComponent(LCModelComponent):
             show_url = urljoin(base_url, "api/show")
 
             async with httpx.AsyncClient() as client:
+                headers = self.headers
                 # Fetch available models
-                tags_response = await client.get(tags_url)
+                tags_response = await client.get(url=tags_url, headers=headers)
                 tags_response.raise_for_status()
                 models = tags_response.json()
                 if asyncio.iscoroutine(models):
@@ -307,11 +331,12 @@ class ChatOllamaComponent(LCModelComponent):
                     await logger.adebug(f"Checking model: {model_name}")
 
                     payload = {"model": model_name}
-                    show_response = await client.post(show_url, json=payload)
+                    show_response = await client.post(url=show_url, json=payload, headers=headers)
                     show_response.raise_for_status()
                     json_data = show_response.json()
                     if asyncio.iscoroutine(json_data):
                         json_data = await json_data
+
                     capabilities = json_data.get(self.JSON_CAPABILITIES_KEY, [])
                     await logger.adebug(f"Model: {model_name}, Capabilities: {capabilities}")
 
@@ -325,3 +350,10 @@ class ChatOllamaComponent(LCModelComponent):
             raise ValueError(msg) from e
 
         return model_ids
+
+    @property
+    def headers(self) -> dict[str, str] | None:
+        """Get the headers for the Ollama API."""
+        if self.api_key and self.api_key.strip():
+            return {"Authorization": f"Bearer {self.api_key}"}
+        return None
