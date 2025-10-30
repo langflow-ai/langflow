@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from lfx.components.gigachat.gigachat_embeddings import GigaChatEmbeddingsComponent
 
 _dynamic_imports = {
-    "GigaChatModelComponent": "gigachat",
+    "GigaChatModelComponent": "gigachat_chat_model",
     "GigaChatEmbeddingsComponent": "gigachat_embeddings",
 }
 
