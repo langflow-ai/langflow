@@ -5,7 +5,6 @@ from lfx.components.processing.batch_run import BatchRunComponent
 from lfx.schema import DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
-from tests.unit.mock_language_model import MockLanguageModel
 
 
 class TestBatchRunComponent(ComponentTestBaseWithoutClient):
@@ -18,16 +17,18 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
     def default_kwargs(self):
         """Return the default kwargs for the component."""
         return {
-            "model": [{
-                "name": "gpt-4o",
-                "provider": "OpenAI",
-                "icon": "OpenAI",
-                "metadata": {
-                    "model_class": "ChatOpenAI",
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            }],
+            "model": [
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             "df": DataFrame({"text": ["Hello"]}),
             "column_name": "text",
             "enable_metadata": True,
@@ -44,16 +45,18 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         test_df = DataFrame({"text": ["Hello", "World", "Test"]})
 
         component = BatchRunComponent(
-            model=[{
-                "name": "gpt-4o",
-                "provider": "OpenAI",
-                "icon": "OpenAI",
-                "metadata": {
-                    "model_class": "ChatOpenAI",
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            }],
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             system_message="You are a helpful assistant",
             df=test_df,
             column_name="text",
@@ -81,16 +84,18 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         test_df = DataFrame({"text": ["Hello", "World"]})
 
         component = BatchRunComponent(
-            model=[{
-                "name": "gpt-4o",
-                "provider": "OpenAI",
-                "icon": "OpenAI",
-                "metadata": {
-                    "model_class": "ChatOpenAI",
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            }],
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             df=test_df,
             column_name="text",
             enable_metadata=False,
@@ -106,16 +111,18 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
     @pytest.mark.skip(reason="Requires API key after ModelInput migration - needs mocking refactor")
     async def test_batch_run_error_with_metadata(self):
         component = BatchRunComponent(
-            model=[{
-                "name": "gpt-4o",
-                "provider": "OpenAI",
-                "icon": "OpenAI",
-                "metadata": {
-                    "model_class": "ChatOpenAI",
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            }],
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             df="not_a_dataframe",  # This will cause a TypeError
             column_name="text",
             enable_metadata=True,
@@ -127,16 +134,18 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
     @pytest.mark.skip(reason="Requires API key after ModelInput migration - needs mocking refactor")
     async def test_batch_run_error_without_metadata(self):
         component = BatchRunComponent(
-            model=[{
-                "name": "gpt-4o",
-                "provider": "OpenAI",
-                "icon": "OpenAI",
-                "metadata": {
-                    "model_class": "ChatOpenAI",
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            }],
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             df="not_a_dataframe",  # This will cause a TypeError
             column_name="text",
             enable_metadata=False,
@@ -157,16 +166,18 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
                 raise AttributeError(msg)
 
         component = BatchRunComponent(
-            model=[{
-                "name": "gpt-4o",
-                "provider": "OpenAI",
-                "icon": "OpenAI",
-                "metadata": {
-                    "model_class": "ErrorModel",
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            }],
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ErrorModel",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             df=DataFrame({"text": ["test1", "test2"]}),
             column_name="text",
             enable_metadata=True,
@@ -196,16 +207,18 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
                 raise AttributeError(msg)
 
         component = BatchRunComponent(
-            model=[{
-                "name": "gpt-4o",
-                "provider": "OpenAI",
-                "icon": "OpenAI",
-                "metadata": {
-                    "model_class": "ErrorModel",
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            }],
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ErrorModel",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             df=DataFrame({"text": ["test1", "test2"]}),
             column_name="text",
             enable_metadata=False,
@@ -283,16 +296,18 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
     @pytest.mark.skip(reason="Requires API key after ModelInput migration - needs mocking refactor")
     async def test_invalid_column_name(self):
         component = BatchRunComponent(
-            model=[{
-                "name": "gpt-4o",
-                "provider": "OpenAI",
-                "icon": "OpenAI",
-                "metadata": {
-                    "model_class": "ChatOpenAI",
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            }],
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             df=DataFrame({"text": ["Hello"]}),
             column_name="nonexistent_column",
             enable_metadata=True,
@@ -307,16 +322,18 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
     @pytest.mark.skip(reason="Requires API key after ModelInput migration - needs mocking refactor")
     async def test_empty_dataframe(self):
         component = BatchRunComponent(
-            model=[{
-                "name": "gpt-4o",
-                "provider": "OpenAI",
-                "icon": "OpenAI",
-                "metadata": {
-                    "model_class": "ChatOpenAI",
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            }],
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             df=DataFrame({"text": []}),
             column_name="text",
             enable_metadata=True,
@@ -331,16 +348,18 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         test_df = DataFrame({"text": [123, 456, 789]})  # Numeric values
 
         component = BatchRunComponent(
-            model=[{
-                "name": "gpt-4o",
-                "provider": "OpenAI",
-                "icon": "OpenAI",
-                "metadata": {
-                    "model_class": "ChatOpenAI",
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            }],
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
             df=test_df,
             column_name="text",
             enable_metadata=True,
