@@ -75,6 +75,7 @@ def get_unified_models_detailed(
     model_type: str | None = None,
     *,
     include_unsupported: bool | None = None,
+    include_deprecated: bool | None = None,
     **metadata_filters,
 ):
     """Return a list of providers and their models, optionally filtered.
@@ -90,6 +91,9 @@ def get_unified_models_detailed(
     include_unsupported : bool
         When False (default) models whose metadata contains ``not_supported=True``
         are filtered out.
+    include_deprecated : bool
+        When False (default) models whose metadata contains ``deprecated=True``
+        are filtered out.
     **metadata_filters
         Arbitrary key/value pairs to match against the model's metadata.
         Example: ``get_unified_models_detailed(size="4k", context_window=8192)``
@@ -97,9 +101,12 @@ def get_unified_models_detailed(
     Notes:
     • Filtering is exact-match on the metadata values.
     • If you *do* want to see unsupported models set ``include_unsupported=True``.
+    • If you *do* want to see deprecated models set ``include_deprecated=True``.
     """
     if include_unsupported is None:
         include_unsupported = False
+    if include_deprecated is None:
+        include_deprecated = False
 
     # Gather all models from imported *_MODELS_DETAILED lists
     all_models: list[dict] = []
@@ -111,6 +118,10 @@ def get_unified_models_detailed(
     for md in all_models:
         # Skip models flagged as not_supported unless explicitly included
         if (not include_unsupported) and md.get("not_supported", False):
+            continue
+        
+        # Skip models flagged as deprecated unless explicitly included
+        if (not include_deprecated) and md.get("deprecated", False):
             continue
 
         if providers and md.get("provider") not in providers:
