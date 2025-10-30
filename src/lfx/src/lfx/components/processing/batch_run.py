@@ -135,6 +135,7 @@ class BatchRunComponent(Component):
 
         # Get API key from global variables
         from lfx.base.models.unified_models import get_api_key_for_provider
+
         api_key = get_api_key_for_provider(self.user_id, provider)
 
         if not api_key and provider != "Ollama":
