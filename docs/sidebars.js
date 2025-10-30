@@ -193,7 +193,7 @@ module.exports = {
       className: "sidebar-category-with-icon sidebar-icon-cloud",
       items: [
         {
-          type:"doc",
+          type: "doc",
           id: "Deployment/deployment-overview",
           label: "Langflow deployment overview"
         },
@@ -444,6 +444,7 @@ module.exports = {
             "Components/bundles-milvus",
             "Components/bundles-mistralai",
             "Components/bundles-mongodb",
+            "Components/bundles-murf",
             "Components/bundles-notion",
             "Components/bundles-novita",
             "Components/bundles-nvidia",

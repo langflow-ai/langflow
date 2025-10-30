@@ -7035,6 +7035,8 @@ dev = [
     { name = "mcp-server-fetch", specifier = ">=2025.1.17" },
     { name = "onnxruntime", marker = "python_full_version < '3.14'", specifier = ">=1.20,<1.24" },
     { name = "onnxruntime", marker = "python_full_version >= '3.14'", specifier = ">=1.26" },
+    { name = "murf", specifier = ">=2.1.0" },
+    { name = "mypy", specifier = ">=1.11.0" },
     { name = "packaging", specifier = ">=24.1,<25.0" },
     { name = "pre-commit", specifier = ">=3.7.0" },
     { name = "pyleak", specifier = ">=0.1.14" },
