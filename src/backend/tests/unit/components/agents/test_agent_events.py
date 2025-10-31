@@ -859,8 +859,6 @@ async def test_agent_streaming_without_event_manager():
         )
         return message
 
-    send_message = AsyncMock(side_effect=mock_send_message)
-
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
