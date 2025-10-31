@@ -22,6 +22,7 @@ from langflow.services.telemetry.schema import (
     ShutdownPayload,
     VersionPayload,
 )
+from langflow.utils.registered_email_util import get_email
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -87,7 +88,14 @@ class TelemetryService(Service):
             # Add common fields to all payloads except VersionPayload
             if not isinstance(payload, VersionPayload):
                 payload_dict.update(self.common_telemetry_fields)
-                # Add timestamp dynamically
+
+                # If in the Langflow Desktop context, augment the payload with the registered email address
+                if self._get_langflow_desktop():
+                    email = get_email()
+                    if email:
+                        payload_dict["email"] = email
+
+            # Add timestamp dynamically
             if "timestamp" not in payload_dict:
                 payload_dict["timestamp"] = datetime.now(timezone.utc).isoformat()
 
