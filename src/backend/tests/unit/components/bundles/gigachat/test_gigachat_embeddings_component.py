@@ -39,7 +39,7 @@ class TestGigaChatEmbeddingsComponent(ComponentTestBaseWithoutClient):
             credentials="test-api-key",
             scope="GIGACHAT_API_PERS",
             model="EmbeddingsGigaR",
-            user="USERNAME",
+            user=None,
             password=None,
             timeout=700,
             verify_ssl_certs=False,

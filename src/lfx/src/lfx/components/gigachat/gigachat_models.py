@@ -70,15 +70,15 @@ class GigaChatComponent(LCModelComponent):
         StrInput(
             name="user",
             display_name="GigaChat User",
-            info="The GigaChat API Username to use.",
+            info="The GigaChat API Username to use (if required by your authentication method).",
             advanced=True,
-            value="USERNAME",
+            value=None,
             required=False,
         ),
         SecretStrInput(
             name="password",
             display_name="GigaChat Password",
-            info="The GigaChat API Password to use.",
+            info="The GigaChat API Password to use (if required by your authentication method).",
             advanced=True,
             value=None,
             required=False,
