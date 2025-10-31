@@ -268,6 +268,24 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Allows the server to start first to avoid race conditions with MCP Server startup
             mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
 
+            # Auto-configure Agentic MCP server if enabled
+            if get_settings_service().settings.agentic_experience:
+                from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
+
+                try:
+                    current_time = asyncio.get_event_loop().time()
+                    await logger.ainfo("Agentic experience is enabled, configuring Agentic MCP server...")
+
+                    async with session_scope() as session:
+                        await auto_configure_agentic_mcp_server(session)
+
+                    await logger.adebug(
+                        f"Agentic MCP server configured in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                    )
+                except Exception as e:
+                    await logger.aexception(f"Failed to configure Agentic MCP server: {e}")
+                    # Don't fail the entire startup if agentic server configuration fails
+
             yield
 
         except asyncio.CancelledError:
