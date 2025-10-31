@@ -5,7 +5,6 @@ from lfx.components.processing.lambda_filter import LambdaFilterComponent
 from lfx.schema import Data
 
 from tests.base import ComponentTestBaseWithoutClient
-from tests.unit.mock_language_model import MockLanguageModel
 
 
 class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
@@ -65,7 +64,9 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
             await component.process_as_data()
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    async def test_successful_lambda_generation(self, mock_get_model_classes, component_class, default_kwargs, mock_llm):
+    async def test_successful_lambda_generation(
+        self, mock_get_model_classes, component_class, default_kwargs, mock_llm
+    ):
         """Test that a lambda function is successfully generated and applied."""
         # Mock get_model_classes to return MockLanguageModel factory
         mock_model_class = MagicMock(return_value=mock_llm)

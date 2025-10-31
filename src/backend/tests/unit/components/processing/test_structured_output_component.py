@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 
 import openai
 import pytest
-from langchain_openai import ChatOpenAI
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs.inputs import TableInput
 from lfx.components.processing.structured_output import StructuredOutputComponent
@@ -55,10 +54,12 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def mock_model_classes(self):
         """Helper fixture to mock get_model_classes for MockLanguageModel."""
+
         def _create_mock_model_classes(mock_llm_instance):
             """Create a mock model classes dict that returns the provided mock LLM."""
             mock_model_class = MagicMock(return_value=mock_llm_instance)
             return {"MockLanguageModel": mock_model_class}
+
         return _create_mock_model_classes
 
     @pytest.fixture
@@ -284,7 +285,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
     @patch("lfx.components.processing.structured_output.get_chat_result")
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_nested_output_schema(self, mock_get_model_classes, mock_get_chat_result, mock_llm, mock_model_classes, model_metadata):
+    def test_nested_output_schema(
+        self, mock_get_model_classes, mock_get_chat_result, mock_llm, mock_model_classes, model_metadata
+    ):
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
 
@@ -328,7 +331,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
     @patch("lfx.components.processing.structured_output.get_chat_result")
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_large_input_value(self, mock_get_model_classes, mock_get_chat_result, mock_llm, mock_model_classes, model_metadata):
+    def test_large_input_value(
+        self, mock_get_model_classes, mock_get_chat_result, mock_llm, mock_model_classes, model_metadata
+    ):
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
 
@@ -466,7 +471,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert expected_age in ages
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_multiple_patterns_with_duplicates_and_variations(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_multiple_patterns_with_duplicates_and_variations(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that multiple patterns are extracted while removing exact duplicates but keeping variations."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -748,7 +755,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             ), f"Unexpected error: {error_msg}"
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_structured_output_returns_dict_when_no_objects_key(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_structured_output_returns_dict_when_no_objects_key(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that when trustcall returns a dict without 'objects' key, we return the dict directly."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -779,7 +788,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert result == {"field": "value", "another_field": "another_value"}
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_structured_output_returns_direct_response_when_not_dict(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_structured_output_returns_direct_response_when_not_dict(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that when trustcall returns a non-dict response, we return it directly."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -805,7 +816,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert result == "Simple string response"
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_structured_output_handles_empty_responses_array(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_structured_output_handles_empty_responses_array(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that when trustcall returns empty responses array, we return the result dict."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -839,7 +852,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert "fallback_data" in result
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_build_structured_output_fails_when_base_returns_non_list(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_build_structured_output_fails_when_base_returns_non_list(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that build_structured_output() fails when base method returns non-list."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -870,7 +885,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             component.build_structured_output()
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_build_structured_output_returns_data_with_dict(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_build_structured_output_returns_data_with_dict(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that build_structured_output() returns Data object with dict data."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -922,7 +939,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert result.data["number"] == 24
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_build_structured_output_returns_multiple_objects(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_build_structured_output_returns_multiple_objects(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that build_structured_output() returns Data object with multiple objects wrapped in results."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -977,7 +996,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert result.data["results"][2] == {"name": "Bob", "age": 35}
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_build_structured_output_returns_data_with_single_item(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_build_structured_output_returns_data_with_single_item(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that build_structured_output() returns Data object when only one item in objects."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -1022,7 +1043,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert result.data == {"name": "John Doe", "age": 30}
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_build_structured_output_data_object_properties(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_build_structured_output_data_object_properties(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that the returned Data object has proper properties."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -1079,7 +1102,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
                 assert isinstance(text_repr, str)
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_build_structured_dataframe_returns_dataframe_with_single_data(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_build_structured_dataframe_returns_dataframe_with_single_data(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that build_structured_dataframe() returns DataFrame object with single Data item."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -1126,7 +1151,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert data_list[0].data == {"field": "value2", "number": 24}
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_build_structured_dataframe_returns_dataframe_with_multiple_data(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_build_structured_dataframe_returns_dataframe_with_multiple_data(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that build_structured_dataframe() returns DataFrame object with multiple Data items."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -1185,7 +1212,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert data_list[2].data == {"name": "Bob", "age": 35}
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_build_structured_dataframe_fails_when_base_returns_non_list(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_build_structured_dataframe_fails_when_base_returns_non_list(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that build_structured_dataframe() fails when base method returns non-list."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -1215,7 +1244,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             component.build_structured_dataframe()
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_build_structured_dataframe_fails_when_empty_output(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_build_structured_dataframe_fails_when_empty_output(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that build_structured_dataframe() fails when base method returns empty list."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -1249,7 +1280,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             component.build_structured_dataframe()
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_fallback_to_langchain_on_trustcall_generic_exception(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_fallback_to_langchain_on_trustcall_generic_exception(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that when trustcall fails with a generic exception, it falls back to langchain."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -1280,7 +1313,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             mock_langchain.assert_called_once()
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_fallback_both_methods_fail_raises_value_error(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_fallback_both_methods_fail_raises_value_error(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that when both trustcall and langchain fail, a ValueError is raised."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -1318,7 +1353,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert "Langchain parsing error" in error_msg
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_langchain_fallback_processes_basemodel_response(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_langchain_fallback_processes_basemodel_response(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that langchain fallback correctly processes BaseModel responses."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -1345,7 +1382,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert result == [{"field": "test_value"}]
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_langchain_fallback_processes_dict_response(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_langchain_fallback_processes_dict_response(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that langchain fallback correctly processes dict responses without BaseModel conversion."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -1371,7 +1410,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert result == {"field": "dict_value"}
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_fallback_error_message_includes_both_errors(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_fallback_error_message_includes_both_errors(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that the error message when both methods fail includes context about both failures."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
@@ -1409,7 +1450,9 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert "Langchain parsing error" in error_msg
 
     @patch("lfx.base.models.unified_models.get_model_classes")
-    def test_trustcall_success_no_fallback_attempted(self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata):
+    def test_trustcall_success_no_fallback_attempted(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
         """Test that when trustcall succeeds, langchain fallback is not attempted."""
         # Mock get_model_classes
         mock_get_model_classes.return_value = mock_model_classes(mock_llm)
