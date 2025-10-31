@@ -287,6 +287,7 @@ export const lazyIconsMapping = {
     import("@/icons/mistral").then((mod) => ({ default: mod.MistralIcon })),
   MongoDB: () =>
     import("@/icons/MongoDB").then((mod) => ({ default: mod.MongoDBIcon })),
+  Murf: () => import("@/icons/Murf").then((mod) => ({ default: mod.MurfIcon })),
   Needle: () =>
     import("@/icons/Needle").then((mod) => ({ default: mod.NeedleIcon })),
   Neon: () => import("@/icons/Neon").then((mod) => ({ default: mod.NeonIcon })),

@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     # These imports are only for type checking and match _dynamic_imports
     from lfx.components import (
         FAISS,
+        Murf,
         Notion,
         agentql,
         agents,
@@ -167,6 +168,7 @@ _dynamic_imports = {
     "mistral": "__module__",
     "models": "__module__",
     "mongodb": "__module__",
+    "Murf": "__module__",
     "needle": "__module__",
     "notdiamond": "__module__",
     "Notion": "__module__",
@@ -240,6 +242,7 @@ def _discover_components_from_module(module_name):
 # Static base __all__ with module names
 __all__ = [
     "FAISS",
+    "Murf",
     "Notion",
     "agentql",
     "agents",
