@@ -40,6 +40,7 @@ def get_model_classes():
         "ChatWatsonx": ChatWatsonx,
     }
 
+
 @lru_cache(maxsize=1)
 def get_embedding_classes():
     """Lazy load embedding classes to avoid importing optional dependencies at module level."""
@@ -54,6 +55,7 @@ def get_embedding_classes():
         "OllamaEmbeddings": OllamaEmbeddings,
         "WatsonxEmbeddings": WatsonxEmbeddings,
     }
+
 
 @lru_cache(maxsize=1)
 def get_model_provider_metadata():
