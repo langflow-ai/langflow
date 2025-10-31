@@ -16,6 +16,7 @@ import { useShortcutsStore } from "@/stores/shortcuts";
 import type { NoteDataType } from "@/types/flow";
 import { classNames, cn } from "@/utils/utils";
 import IconComponent from "../../../components/common/genericIconComponent";
+import { resolveColorValue } from "../color-utils";
 import { ColorPickerButtons } from "../components/color-picker-buttons";
 import { SelectItems } from "../components/select-items";
 
@@ -100,7 +101,7 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
   // Memoize the color picker background style
   const colorPickerStyle = useMemo(
     () => ({
-      backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000",
+      backgroundColor: resolveColorValue(bgColor) ?? "#00000000",
     }),
     [bgColor],
   );
@@ -120,14 +121,14 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
                     style={colorPickerStyle}
                     className={cn(
                       "h-4 w-4 rounded-full",
-                      COLOR_OPTIONS[bgColor] === null && "border",
+                      resolveColorValue(bgColor) === null && "border",
                     )}
                   />
                 </div>
               </div>
             </PopoverTrigger>
           </ShadTooltip>
-          <PopoverContent side="top" className="w-fit px-2 py-2">
+          <PopoverContent side="top" className="w-auto min-w-[200px] px-3 py-3">
             <ColorPickerButtons
               bgColor={bgColor}
               data={data}
