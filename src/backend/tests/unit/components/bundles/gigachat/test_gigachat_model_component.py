@@ -3,16 +3,14 @@ from langchain_gigachat import GigaChat
 from lfx.components.gigachat.gigachat_models import GigaChatComponent
 from lfx.custom import Component
 from lfx.custom.utils import build_custom_component_template
-
 from tests.base import ComponentTestBaseWithoutClient
 
 
 class TestGigaChatComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
-        """
-        Provide the GigaChatComponent class for test fixtures.
-        
+        """Provide the GigaChatComponent class for test fixtures.
+
         Returns:
             GigaChatComponent: The component class used to instantiate test instances in the test suite.
         """
@@ -20,9 +18,8 @@ class TestGigaChatComponent(ComponentTestBaseWithoutClient):
 
     @pytest.fixture
     def default_kwargs(self):
-        """
-        Provide the default initialization keyword arguments used to construct a GigaChatComponent in tests.
-        
+        """Provide the default initialization keyword arguments used to construct a GigaChatComponent in tests.
+
         Returns:
             dict: A mapping of default component initialization parameters:
                 - "model": default model name ("GigaChat-2")
@@ -43,9 +40,8 @@ class TestGigaChatComponent(ComponentTestBaseWithoutClient):
 
     @pytest.fixture
     def file_names_mapping(self):
-        """
-        Provide file-name mappings used by tests.
-        
+        """Provide file-name mappings used by tests.
+
         Returns:
             list: An empty list — no file-name mappings are required for these tests.
         """

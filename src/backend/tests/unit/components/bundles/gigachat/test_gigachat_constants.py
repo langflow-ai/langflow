@@ -38,9 +38,8 @@ class TestGigaChatConstants:
 
     @pytest.mark.parametrize("model_name", ["GigaChat-2", "GigaChat-2-Pro", "GigaChat-2-Max"])
     def test_specific_model_in_list(self, model_name):
-        """
-        Verify that a given model name is present in GIGACHAT_CHAT_MODEL_NAMES.
-        
+        """Verify that a given model name is present in GIGACHAT_CHAT_MODEL_NAMES.
+
         Parameters:
             model_name (str): Model name expected to be contained in the constant list.
         """

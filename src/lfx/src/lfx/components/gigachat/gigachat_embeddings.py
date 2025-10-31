@@ -89,9 +89,8 @@ class GigaChatEmbeddingsComponent(LCEmbeddingsModel):
     ]
 
     def build_embeddings(self) -> Embeddings:
-        """
-        Create a GigaChatEmbeddings client configured from this component's input values.
-        
+        """Create a GigaChatEmbeddings client configured from this component's input values.
+
         Returns:
             GigaChatEmbeddings: An embeddings client instantiated with the component's configuration (base_url, auth_url, credentials, scope, model, user, password, timeout, verify_ssl_certs).
         """

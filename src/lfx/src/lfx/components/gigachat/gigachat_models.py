@@ -126,9 +126,8 @@ class GigaChatComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        """
-        Create and return a configured GigaChat language model instance using the component's inputs.
-        
+        """Create and return a configured GigaChat language model instance using the component's inputs.
+
         Returns:
             LanguageModel: A GigaChat instance configured with the component's credentials, model, URLs, timeout, safety and sampling parameters.
         """

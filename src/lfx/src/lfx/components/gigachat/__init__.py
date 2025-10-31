@@ -17,15 +17,14 @@ __all__ = ["GigaChatComponent", "GigaChatEmbeddingsComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:
-    """
-    Lazily import and cache a GigaChat component when accessed as a module attribute.
-    
+    """Lazily import and cache a GigaChat component when accessed as a module attribute.
+
     Parameters:
         attr_name (str): The attribute name to resolve and import.
-    
+
     Returns:
         Any: The imported component object.
-    
+
     Raises:
         AttributeError: If attr_name is not a recognized public component name or if importing the component fails.
     """
@@ -42,9 +41,8 @@ def __getattr__(attr_name: str) -> Any:
 
 
 def __dir__() -> list[str]:
-    """
-    Return the list of public attribute names exported by this module.
-    
+    """Return the list of public attribute names exported by this module.
+
     Returns:
         list[str]: Public attribute names as defined in __all__.
     """
