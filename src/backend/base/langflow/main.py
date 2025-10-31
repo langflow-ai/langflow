@@ -47,6 +47,10 @@ if TYPE_CHECKING:
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 
+# Suppress ResourceWarning from anyio streams (SSE connections)
+warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObjectReceiveStream.*")
+warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObjectSendStream.*")
+
 _tasks: list[asyncio.Task] = []
 
 MAX_PORT = 65535
@@ -458,6 +462,17 @@ def create_app():
                 status_code=exc.status_code,
                 content={"message": str(exc.detail)},
             )
+
+        # Suppress known SSE streaming errors that are harmless
+        exc_str = str(exc)
+        if "Unexpected message" in exc_str and "http.response.start" in exc_str:
+            # This is a known issue with SSE connections being closed
+            await logger.adebug(f"SSE connection closed: {exc_str}")
+            return JSONResponse(
+                status_code=200,
+                content={"message": "Connection closed"},
+            )
+
         await logger.aerror(f"unhandled error: {exc}", exc_info=exc)
 
         await log_exception_to_telemetry(exc, "handler")

@@ -45,7 +45,7 @@ export const usePatchFlowsMCP: useMutationFunctionType<
     PatchFlowMCPResponse,
     any,
     PatchFlowMCPRequest
-  > = mutate(["usePatchFlowsMCP"], patchFlowMCP, {
+  > = mutate(["usePatchFlowsMCP", params.project_id], patchFlowMCP, {
     onSuccess: (data, variables, context) => {
       const authSettings = (variables as unknown as PatchFlowMCPRequest)
         .auth_settings;
@@ -73,9 +73,10 @@ export const usePatchFlowsMCP: useMutationFunctionType<
       }
     },
     onSettled: () => {
-      // Use invalidateQueries instead of refetchQueries to avoid race conditions
-      // This marks the queries as stale but doesn't immediately refetch them
-      queryClient.invalidateQueries({ queryKey: ["useGetFlowsMCP"] });
+      // Invalidate only this specific project's queries to avoid affecting other projects
+      queryClient.invalidateQueries({
+        queryKey: ["useGetFlowsMCP", params.project_id],
+      });
     },
     ...options,
   });

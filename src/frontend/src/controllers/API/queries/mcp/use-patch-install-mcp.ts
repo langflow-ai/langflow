@@ -47,7 +47,7 @@ export const usePatchInstallMCP: useMutationFunctionType<
     PatchInstallMCPResponse,
     any,
     PatchInstallMCPBody
-  > = mutate(["usePatchInstallMCP"], patchInstallMCP, {
+  > = mutate(["usePatchInstallMCP", params.project_id], patchInstallMCP, {
     ...options,
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({
