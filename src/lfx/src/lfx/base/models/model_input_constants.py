@@ -14,14 +14,18 @@ class ModelProvidersDict(TypedDict):
     is_active: bool
 
 
-def get_filtered_inputs(component_class,provider_name: str = None):
+def get_filtered_inputs(component_class, provider_name: str | None = None):
     base_input_names = {field.name for field in LCModelComponent.get_base_inputs()}
     component_instance = component_class()
 
-    return [process_inputs(input_,provider_name) for input_ in component_instance.inputs if input_.name not in base_input_names]
+    return [
+        process_inputs(input_, provider_name)
+        for input_ in component_instance.inputs
+        if input_.name not in base_input_names
+    ]
 
 
-def process_inputs(component_data: Input,provider_name: str = None):
+def process_inputs(component_data: Input, provider_name: str | None = None):
     """Processes and modifies an input configuration based on its type or name.
 
     Adjusts properties such as value, advanced status, real-time refresh, and additional information for specific
@@ -29,6 +33,7 @@ def process_inputs(component_data: Input,provider_name: str = None):
 
     Args:
         component_data: The input configuration to process.
+        provider_name: The name of the provider to process the inputs for.
 
     Returns:
         The modified input configuration.
@@ -43,7 +48,7 @@ def process_inputs(component_data: Input,provider_name: str = None):
         component_data.advanced = True
         component_data.value = True
     elif component_data.name in {"temperature", "base_url"}:
-        if provider_name not in ["IBM watsonx.ai","Ollama"]:
+        if provider_name not in ["IBM watsonx.ai", "Ollama"]:
             component_data = set_advanced_true(component_data)
     elif component_data.name == "model_name":
         if provider_name not in ["IBM watsonx.ai"]:
@@ -85,21 +90,23 @@ def _get_ollama_inputs_and_fields():
     try:
         from lfx.components.ollama.ollama import ChatOllamaComponent
 
-        ollama_inputs = get_filtered_inputs(ChatOllamaComponent,provider_name="Ollama")
+        ollama_inputs = get_filtered_inputs(ChatOllamaComponent, provider_name="Ollama")
     except ImportError as e:
         msg = "Ollama is not installed. Please install it with `pip install langchain-ollama`."
         raise ImportError(msg) from e
     return ollama_inputs, create_input_fields_dict(ollama_inputs, "")
 
+
 def _get_watsonx_inputs_and_fields():
     try:
         from lfx.components.ibm.watsonx import WatsonxAIComponent
 
-        watsonx_inputs = get_filtered_inputs(WatsonxAIComponent,provider_name="IBM watsonx.ai")
+        watsonx_inputs = get_filtered_inputs(WatsonxAIComponent, provider_name="IBM watsonx.ai")
     except ImportError as e:
         msg = "IBM watsonx.ai is not installed. Please install it with `pip install langchain-ibm-watsonx`."
         raise ImportError(msg) from e
     return watsonx_inputs, create_input_fields_dict(watsonx_inputs, "")
+
 
 def _get_google_generative_ai_inputs_and_fields():
     try:
@@ -317,6 +324,7 @@ except ImportError:
 
 try:
     from lfx.components.ibm.watsonx import WatsonxAIComponent
+
     watsonx_inputs, watsonx_fields = _get_watsonx_inputs_and_fields()
     MODEL_PROVIDERS_DICT["IBM watsonx.ai"] = {
         "fields": watsonx_fields,
@@ -331,6 +339,7 @@ except ImportError:
 
 try:
     from lfx.components.ollama.ollama import ChatOllamaComponent
+
     ollama_inputs, ollama_fields = _get_ollama_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Ollama"] = {
         "fields": ollama_fields,
@@ -352,10 +361,18 @@ MODEL_PROVIDERS: list[str] = list(ACTIVE_MODEL_PROVIDERS_DICT.keys())
 
 ALL_PROVIDER_FIELDS: list[str] = [field for prov in ACTIVE_MODEL_PROVIDERS_DICT.values() for field in prov["fields"]]
 
-MODEL_DYNAMIC_UPDATE_FIELDS = ["api_key", "model", "tool_model_enabled", "base_url", "model_name","watsonx_endpoint","url"]
+MODEL_DYNAMIC_UPDATE_FIELDS = [
+    "api_key",
+    "model",
+    "tool_model_enabled",
+    "base_url",
+    "model_name",
+    "watsonx_endpoint",
+    "url",
+]
 
 MODELS_METADATA = {name: {"icon": prov["icon"]} for name, prov in ACTIVE_MODEL_PROVIDERS_DICT.items()}
 
-MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "OpenAI","IBM watsonx.ai","Ollama"]
+MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "OpenAI", "IBM watsonx.ai", "Ollama"]
 
 MODEL_OPTIONS_METADATA = [MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA]
