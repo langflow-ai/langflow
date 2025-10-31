@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
+    from .nemo_guardrails import NVIDIANeMoGuardrailsComponent
     from .nvidia import NVIDIAModelComponent
     from .nvidia_embedding import NVIDIAEmbeddingsComponent
     from .nvidia_ingest import NvidiaIngestComponent
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
         from .system_assist import NvidiaSystemAssistComponent
 
 _dynamic_imports = {
+    "NVIDIANeMoGuardrailsComponent": "nemo_guardrails",
     "NVIDIAModelComponent": "nvidia",
     "NVIDIAEmbeddingsComponent": "nvidia_embedding",
     "NvidiaIngestComponent": "nvidia_ingest",
@@ -26,6 +28,7 @@ if sys.platform == "win32":
     __all__ = [
         "NVIDIAEmbeddingsComponent",
         "NVIDIAModelComponent",
+        "NVIDIANeMoGuardrailsComponent",
         "NvidiaIngestComponent",
         "NvidiaRerankComponent",
         "NvidiaSystemAssistComponent",
@@ -34,6 +37,7 @@ else:
     __all__ = [
         "NVIDIAEmbeddingsComponent",
         "NVIDIAModelComponent",
+        "NVIDIANeMoGuardrailsComponent",
         "NvidiaIngestComponent",
         "NvidiaRerankComponent",
     ]

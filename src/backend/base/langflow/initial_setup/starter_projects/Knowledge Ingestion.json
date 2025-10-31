@@ -358,7 +358,7 @@
                 "dependencies": [
                   {
                     "name": "requests",
-                    "version": "2.32.5"
+                    "version": "2.32.4"
                   },
                   {
                     "name": "bs4",
