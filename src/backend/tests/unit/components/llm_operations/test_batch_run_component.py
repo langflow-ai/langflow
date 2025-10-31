@@ -1,7 +1,7 @@
 import re
 
 import pytest
-from lfx.components.processing.batch_run import BatchRunComponent
+from lfx.components.llm_operations.batch_run import BatchRunComponent
 from lfx.schema import DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient

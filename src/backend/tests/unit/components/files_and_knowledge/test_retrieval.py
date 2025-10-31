@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
-from langflow.components.knowledge_bases.retrieval import KnowledgeRetrievalComponent
+from lfx.components.knowledge_bases.retrieval import KnowledgeRetrievalComponent
 from pydantic import SecretStr
 
 from tests.base import ComponentTestBaseWithClient
@@ -145,7 +145,7 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         metadata = {
             "embedding_provider": "OpenAI",
             "embedding_model": "text-embedding-ada-002",
-            "api_key": "encrypted_key",
+            "api_key": "encrypted_key",  # pragma:allowlist secret
             "chunk_size": 1000,
         }
         (kb_path / "embedding_metadata.json").write_text(json.dumps(metadata))
@@ -184,7 +184,7 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         metadata = {
             "embedding_provider": "OpenAI",
             "embedding_model": "text-embedding-ada-002",
-            "api_key": "test-api-key",
+            "api_key": "test-api-key",  # pragma:allowlist secret
             "chunk_size": 1000,
         }
 
@@ -194,7 +194,9 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         result = component._build_embeddings(metadata)
 
         mock_openai_embeddings.assert_called_once_with(
-            model="text-embedding-ada-002", api_key="test-api-key", chunk_size=1000
+            model="text-embedding-ada-002",
+            api_key="test-api-key",  # pragma:allowlist secret
+            chunk_size=1000,  # pragma:allowlist secret
         )
         assert result == mock_embeddings
 
@@ -220,7 +222,7 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         metadata = {
             "embedding_provider": "Cohere",
             "embedding_model": "embed-english-v3.0",
-            "api_key": "test-api-key",
+            "api_key": "test-api-key",  # pragma:allowlist secret
             "chunk_size": 1000,
         }
 
@@ -229,7 +231,10 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
 
         result = component._build_embeddings(metadata)
 
-        mock_cohere_embeddings.assert_called_once_with(model="embed-english-v3.0", cohere_api_key="test-api-key")
+        mock_cohere_embeddings.assert_called_once_with(
+            model="embed-english-v3.0",
+            cohere_api_key="test-api-key",  # pragma:allowlist secret
+        )  # pragma:allowlist secret
         assert result == mock_embeddings
 
     def test_build_embeddings_cohere_no_key(self, component_class, default_kwargs):
@@ -250,7 +255,11 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         """Test building custom embeddings raises NotImplementedError."""
         component = component_class(**default_kwargs)
 
-        metadata = {"embedding_provider": "Custom", "embedding_model": "custom-model", "api_key": "test-key"}
+        metadata = {
+            "embedding_provider": "Custom",
+            "embedding_model": "custom-model",
+            "api_key": "test-key",  # pragma:allowlist secret
+        }  # pragma:allowlist secret
 
         with pytest.raises(NotImplementedError, match="Custom embedding models not yet supported"):
             component._build_embeddings(metadata)
@@ -259,7 +268,11 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         """Test building embeddings with unsupported provider raises NotImplementedError."""
         component = component_class(**default_kwargs)
 
-        metadata = {"embedding_provider": "UnsupportedProvider", "embedding_model": "some-model", "api_key": "test-key"}
+        metadata = {
+            "embedding_provider": "UnsupportedProvider",
+            "embedding_model": "some-model",
+            "api_key": "test-key",  # pragma:allowlist secret
+        }  # pragma:allowlist secret
 
         with pytest.raises(NotImplementedError, match="Embedding provider 'UnsupportedProvider' is not supported"):
             component._build_embeddings(metadata)
@@ -275,7 +288,7 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         metadata = {
             "embedding_provider": "OpenAI",
             "embedding_model": "text-embedding-ada-002",
-            "api_key": "stored-key",  # This should be overridden by the user-provided key
+            "api_key": "stored-key",  # pragma:allowlist secret
             "chunk_size": 1000,
         }
 
@@ -288,7 +301,7 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
             # The user-provided key should override the stored key in metadata
             mock_openai.assert_called_once_with(
                 model="text-embedding-ada-002",
-                api_key="user-provided-key",  # Should use the user-provided key, not "stored-key"
+                api_key="user-provided-key",  # pragma:allowlist secret
                 chunk_size=1000,
             )
 

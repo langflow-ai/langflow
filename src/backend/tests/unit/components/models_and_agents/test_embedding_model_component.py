@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from lfx.components.models.embedding_model import (
+from lfx.components.models_and_agents.embedding_model import (
     OLLAMA_EMBEDDING_MODELS,
     OPENAI_EMBEDDING_MODEL_NAMES,
     WATSONX_EMBEDDING_MODEL_NAMES,
@@ -22,7 +22,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         return {
             "provider": "OpenAI",
             "model": "text-embedding-3-small",
-            "api_key": "test-api-key",
+            "api_key": "test-api-key",  # pragma:allowlist secret
             "chunk_size": 1000,
             "max_retries": 3,
             "show_progress_bar": False,
@@ -85,7 +85,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         assert updated_config["api_base"]["value"] == "https://us-south.ml.cloud.ibm.com"
         assert updated_config["project_id"]["show"] is True
 
-    @patch("lfx.components.models.embedding_model.OpenAIEmbeddings")
+    @patch("lfx.components.models_and_agents.embedding_model.OpenAIEmbeddings")
     async def test_build_embeddings_openai(self, mock_openai_embeddings, component_class, default_kwargs):
         # Setup mock
         mock_instance = MagicMock()
@@ -95,7 +95,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         component = component_class(**default_kwargs)
         component.provider = "OpenAI"
         component.model = "text-embedding-3-small"
-        component.api_key = "test-key"
+        component.api_key = "test-key"  # pragma:allowlist secret
         component.chunk_size = 1000
         component.max_retries = 3
         component.show_progress_bar = False
@@ -108,7 +108,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
             model="text-embedding-3-small",
             dimensions=None,
             base_url=None,
-            api_key="test-key",
+            api_key="test-key",  # pragma:allowlist secret
             chunk_size=1000,
             max_retries=3,
             timeout=None,
@@ -160,7 +160,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         mock_watsonx_embeddings.assert_called_once_with(
             model_id="ibm/granite-embedding-125m-english",
             url="https://us-south.ml.cloud.ibm.com",
-            apikey="test-api-key",
+            apikey="test-api-key",  # pragma:allowlist secret
             project_id="test-project-id",
         )
         assert embeddings == mock_instance

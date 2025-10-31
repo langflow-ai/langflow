@@ -55,6 +55,32 @@ def __getattr__(attr_name: str) -> Any:
         result = import_module("lfx.components.files_and_knowledge.file")
         globals()[attr_name] = result
         return result
+    # Data source components were moved to data_source
+    if attr_name == "news_search":
+        from importlib import import_module
+
+        result = import_module("lfx.components.data_source.news_search")
+        globals()[attr_name] = result
+        return result
+    if attr_name == "rss":
+        from importlib import import_module
+
+        result = import_module("lfx.components.data_source.rss")
+        globals()[attr_name] = result
+        return result
+    if attr_name == "web_search":
+        from importlib import import_module
+
+        result = import_module("lfx.components.data_source.web_search")
+        globals()[attr_name] = result
+        return result
+    # SQLComponent was moved to utilities
+    if attr_name == "sql_executor":
+        from importlib import import_module
+
+        result = import_module("lfx.components.utilities.sql_executor")
+        globals()[attr_name] = result
+        return result
 
     if attr_name not in _dynamic_imports:
         msg = f"module '{__name__}' has no attribute '{attr_name}'"

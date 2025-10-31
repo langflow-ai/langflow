@@ -7,7 +7,7 @@ from langchain_openai import ChatOpenAI
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
 from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
 from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
-from lfx.components.models.language_model import LanguageModelComponent
+from lfx.components.models_and_agents.language_model import LanguageModelComponent
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -22,7 +22,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         return {
             "provider": "OpenAI",
             "model_name": "gpt-3.5-turbo",
-            "api_key": "test-api-key",
+            "api_key": "test-api-key",  # pragma:allowlist secret
             "temperature": 0.1,
             "system_message": "You are a helpful assistant.",
             "input_value": "Hello, how are you?",
@@ -97,7 +97,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         component.provider = "OpenAI"
         component.model_name = "gpt-3.5-turbo"
-        component.api_key = "sk-test-key"  # Use a fake but correctly formatted key
+        component.api_key = "sk-test-key"  # pragma:allowlist secret
         component.temperature = 0.5
         component.stream = False
 
@@ -114,7 +114,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         component.provider = "Anthropic"
         component.model_name = ANTHROPIC_MODELS[0]
-        component.api_key = "sk-ant-test-key"  # Use a fake but plausible key
+        component.api_key = "sk-ant-test-key"  # pragma:allowlist secret
         component.temperature = 0.7
         component.stream = False
 
@@ -131,7 +131,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         component.provider = "Google"
         component.model_name = GOOGLE_GENERATIVE_AI_MODELS[0]
-        component.api_key = "google-test-key"  # Use a fake but plausible key
+        component.api_key = "google-test-key"  # pragma:allowlist secret
         component.temperature = 0.7
         component.stream = False
 

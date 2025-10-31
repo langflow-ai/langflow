@@ -1,6 +1,6 @@
 import pytest
-from langflow.components.logic.pass_message import PassMessageComponent
 from langflow.schema.message import Message
+from lfx.components.flow_controls.pass_message import PassMessageComponent
 
 from tests.base import ComponentTestBaseWithoutClient
 

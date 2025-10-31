@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
-from lfx.components.data.save_file import SaveToFileComponent
+from lfx.components.files_and_knowledge.save_file import SaveToFileComponent
 from lfx.schema import Data, Message
 
 from tests.base import ComponentTestBaseWithoutClient

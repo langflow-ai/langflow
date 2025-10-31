@@ -2,7 +2,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
-from lfx.components.data.news_search import NewsSearchComponent
+from lfx.components.data_source.news_search import NewsSearchComponent
 from lfx.schema import DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient

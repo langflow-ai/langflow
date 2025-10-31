@@ -1,4 +1,4 @@
-"""Knowledge bases module - backwards compatibility alias for files_and_knowledge.
+"""Langflow knowledge bases module - forwards to lfx.components.files_and_knowledge.
 
 This module provides backwards compatibility by forwarding all imports
 to files_and_knowledge where the actual knowledge base components are located.
@@ -7,26 +7,17 @@ to files_and_knowledge where the actual knowledge base components are located.
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from lfx.components._importing import import_mod
+from lfx.components.files_and_knowledge import __all__ as _lfx_all
 
-if TYPE_CHECKING:
-    from lfx.components.files_and_knowledge.ingestion import KnowledgeIngestionComponent
-    from lfx.components.files_and_knowledge.retrieval import KnowledgeRetrievalComponent
-
-_dynamic_imports = {
-    "KnowledgeIngestionComponent": "ingestion",
-    "KnowledgeRetrievalComponent": "retrieval",
-}
-
-__all__ = ["KnowledgeIngestionComponent", "KnowledgeRetrievalComponent"]
+__all__: list[str] = list(_lfx_all)
 
 # Register redirected submodules in sys.modules for direct importlib.import_module() calls
-# This allows imports like: import lfx.components.knowledge_bases.ingestion
+# This allows imports like: import langflow.components.knowledge_bases.ingestion
 _redirected_submodules = {
-    "lfx.components.knowledge_bases.ingestion": "lfx.components.files_and_knowledge.ingestion",
-    "lfx.components.knowledge_bases.retrieval": "lfx.components.files_and_knowledge.retrieval",
+    "langflow.components.knowledge_bases.ingestion": "lfx.components.files_and_knowledge.ingestion",
+    "langflow.components.knowledge_bases.retrieval": "lfx.components.files_and_knowledge.retrieval",
 }
 
 for old_path, new_path in _redirected_submodules.items():
@@ -54,7 +45,7 @@ for old_path, new_path in _redirected_submodules.items():
 
 
 def __getattr__(attr_name: str) -> Any:
-    """Forward attribute access to files_and_knowledge components."""
+    """Forward attribute access to lfx.components.files_and_knowledge."""
     # Handle submodule access for backwards compatibility
     if attr_name == "ingestion":
         from importlib import import_module
@@ -69,21 +60,11 @@ def __getattr__(attr_name: str) -> Any:
         globals()[attr_name] = result
         return result
 
-    if attr_name not in _dynamic_imports:
-        msg = f"module '{__name__}' has no attribute '{attr_name}'"
-        raise AttributeError(msg)
+    from lfx.components import files_and_knowledge
 
-    # Import from files_and_knowledge using the correct package path
-    package = "lfx.components.files_and_knowledge"
-    try:
-        result = import_mod(attr_name, _dynamic_imports[attr_name], package)
-    except (ModuleNotFoundError, ImportError, AttributeError) as e:
-        msg = f"Could not import '{attr_name}' from '{__name__}': {e}"
-        raise AttributeError(msg) from e
-    globals()[attr_name] = result
-    return result
+    return getattr(files_and_knowledge, attr_name)
 
 
 def __dir__() -> list[str]:
-    """Return directory of available components."""
+    """Forward dir() to lfx.components.files_and_knowledge."""
     return list(__all__)

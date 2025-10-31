@@ -3,9 +3,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
-from langflow.components.knowledge_bases.ingestion import KnowledgeIngestionComponent
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
+from lfx.components.knowledge_bases.ingestion import KnowledgeIngestionComponent
 
 from tests.base import ComponentTestBaseWithClient
 
@@ -136,7 +136,9 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         result = component._build_embeddings("text-embedding-ada-002", "test-api-key")
 
         mock_openai_embeddings.assert_called_once_with(
-            model="text-embedding-ada-002", api_key="test-api-key", chunk_size=1000
+            model="text-embedding-ada-002",
+            api_key="test-api-key",  # pragma:allowlist secret
+            chunk_size=1000,  # pragma:allowlist secret
         )
         assert result == mock_embeddings
 
@@ -157,7 +159,10 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
 
         result = component._build_embeddings("embed-english-v3.0", "test-api-key")
 
-        mock_cohere_embeddings.assert_called_once_with(model="embed-english-v3.0", cohere_api_key="test-api-key")
+        mock_cohere_embeddings.assert_called_once_with(
+            model="embed-english-v3.0",
+            cohere_api_key="test-api-key",  # pragma:allowlist secret
+        )  # pragma:allowlist secret
         assert result == mock_embeddings
 
     def test_build_embeddings_cohere_no_key(self, component_class, default_kwargs):
@@ -188,7 +193,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
 
         assert metadata["embedding_provider"] == "HuggingFace"
         assert metadata["embedding_model"] == "sentence-transformers/all-MiniLM-L6-v2"
-        assert metadata["api_key"] == "encrypted_key"
+        assert metadata["api_key"] == "encrypted_key"  # pragma:allowlist secret
         assert metadata["api_key_used"] is True
         assert metadata["chunk_size"] == 1000
         assert "created_at" in metadata
@@ -283,7 +288,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         # Mock metadata loading
         mock_json_loads.return_value = {
             "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "api_key": "encrypted_key",
+            "api_key": "encrypted_key",  # pragma:allowlist secret
         }
         mock_decrypt.return_value = "decrypted_key"
 
@@ -320,7 +325,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         field_value = {
             "01_new_kb_name": "new_test_kb",
             "02_embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "03_api_key": "abc123",  # Mock API key
+            "03_api_key": "abc123",  # pragma:allowlist secret
         }
 
         # Mock embedding validation

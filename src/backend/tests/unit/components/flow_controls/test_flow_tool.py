@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 import pytest
-from lfx.components.logic.flow_tool import FlowToolComponent
+from lfx.components.flow_controls.flow_tool import FlowToolComponent
 from lfx.schema.data import Data
 
 from tests.base import ComponentTestBaseWithClient

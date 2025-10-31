@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from lfx.components.data import DirectoryComponent
+from lfx.components.files_and_knowledge.directory import DirectoryComponent
 from lfx.schema import Data, DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient

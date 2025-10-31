@@ -1,6 +1,6 @@
 import pytest
-from langflow.components.logic.notify import NotifyComponent
 from langflow.schema.data import Data
+from lfx.components.flow_controls.notify import NotifyComponent
 
 from tests.base import ComponentTestBaseWithoutClient
 

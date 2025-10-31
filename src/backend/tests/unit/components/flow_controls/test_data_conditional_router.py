@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
 import pytest
-from langflow.components.logic.data_conditional_router import DataConditionalRouterComponent
 from langflow.schema.data import Data
+from lfx.components.flow_controls.data_conditional_router import DataConditionalRouterComponent
 
 from tests.base import ComponentTestBaseWithoutClient
 

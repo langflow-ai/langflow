@@ -6,15 +6,15 @@ import pytest
 from httpx import AsyncClient
 from langflow.memory import aget_messages
 from langflow.services.database.models.flow import FlowCreate
-from lfx.components.data.url import URLComponent
+from lfx.components.data_source.url import URLComponent
+from lfx.components.flow_controls import LoopComponent
 from lfx.components.input_output import ChatOutput
-from lfx.components.logic import LoopComponent
+from lfx.components.llm_operations import StructuredOutputComponent
+from lfx.components.models_and_agents import PromptComponent
 from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.processing import (
     ParserComponent,
-    PromptComponent,
     SplitTextComponent,
-    StructuredOutputComponent,
 )
 from lfx.graph import Graph
 from lfx.schema.data import Data

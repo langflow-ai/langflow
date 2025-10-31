@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
 import pytest
-from langflow.components.logic.listen import ListenComponent
 from langflow.schema.data import Data
+from lfx.components.flow_controls.listen import ListenComponent
 
 from tests.base import ComponentTestBaseWithoutClient
 

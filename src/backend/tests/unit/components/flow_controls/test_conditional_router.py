@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
-from lfx.components.logic.conditional_router import ConditionalRouterComponent
+from lfx.components.flow_controls.conditional_router import ConditionalRouterComponent
 from lfx.schema.message import Message
 
 from tests.base import ComponentTestBaseWithoutClient

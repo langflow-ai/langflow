@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.base.mcp.util import MCPSessionManager, MCPStdioClient, MCPStreamableHttpClient
-from lfx.components.agents import MCPToolsComponent
+from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
@@ -122,6 +122,27 @@ class TestMCPToolsComponentIntegration:
     @pytest.mark.asyncio
     async def test_session_manager_sharing(self, component):
         """Test that session managers are shared through component cache."""
+        # Ensure the component has a shared cache set up
+        # If _shared_component_cache is None, clients will create separate instance managers
+        if component._shared_component_cache is None:
+            # Create a mock cache dict to ensure sharing
+            from lfx.services.cache.utils import CacheMiss
+
+            cache_dict = {}
+
+            class MockCache:
+                def get(self, key):
+                    return cache_dict.get(key, CacheMiss())
+
+                def set(self, key, value):
+                    cache_dict[key] = value
+                    return value
+
+            mock_cache = MockCache()
+            component._shared_component_cache = mock_cache
+            component.stdio_client._component_cache = mock_cache
+            component.streamable_http_client._component_cache = mock_cache
+
         # Get session managers from both clients
         stdio_manager = component.stdio_client._get_session_manager()
         http_manager = component.streamable_http_client._get_session_manager()
