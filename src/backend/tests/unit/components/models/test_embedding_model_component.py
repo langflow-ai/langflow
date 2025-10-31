@@ -48,10 +48,12 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
 
     @patch("lfx.components.models.embedding_model.get_api_key_for_provider")
     @patch("lfx.components.models.embedding_model.get_embedding_classes")
-    async def test_build_embeddings_openai(self, mock_get_embedding_classes, mock_get_api_key, component_class, default_kwargs):
+    async def test_build_embeddings_openai(
+        self, mock_get_embedding_classes, mock_get_api_key, component_class, default_kwargs
+    ):
         # Setup mock for get_api_key_for_provider
         mock_get_api_key.return_value = "test-key"
-        
+
         # Setup mock
         mock_openai_class = MagicMock()
         mock_instance = MagicMock()
@@ -123,7 +125,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
     async def test_build_embeddings_google(self, mock_get_embedding_classes, mock_get_api_key, component_class):
         # Setup mock for get_api_key_for_provider
         mock_get_api_key.return_value = "test-google-key"
-        
+
         # Setup mock
         mock_google_class = MagicMock()
         mock_instance = MagicMock()
