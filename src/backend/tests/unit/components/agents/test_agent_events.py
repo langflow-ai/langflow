@@ -27,10 +27,28 @@ async def create_event_iterator(events: list[dict[str, Any]]) -> AsyncIterator[d
         yield event
 
 
+def create_mock_send_message():
+    """Create a mock send_message callback that simulates database ID assignment.
+
+    In production, the first call to send_message persists to the database and assigns an ID.
+    This mock simulates that behavior for testing.
+    """
+    call_count = [0]
+
+    def mock_send_message(message, skip_db_update=False):  # noqa: ARG001, FBT002
+        call_count[0] += 1
+        if call_count[0] == 1:
+            # Simulate production: add ID on first call (when persisting to DB)
+            message.data["id"] = "test-message-id"
+        return message
+
+    return AsyncMock(side_effect=mock_send_message)
+
+
 @pytest.mark.asyncio
 async def test_chain_start_event():
     """Test handling of on_chain_start event."""
-    send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
+    send_message = create_mock_send_message()
 
     events = [
         {"event": "on_chain_start", "data": {"input": {"input": "test input", "chat_history": []}}, "start_time": 0}
@@ -44,7 +62,6 @@ async def test_chain_start_event():
         content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
         session_id="test_session_id",
     )
-    send_message.return_value = agent_message
 
     result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
 
@@ -56,7 +73,7 @@ async def test_chain_start_event():
 @pytest.mark.asyncio
 async def test_chain_end_event():
     """Test handling of on_chain_end event."""
-    send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
+    send_message = create_mock_send_message()
 
     # Create a mock AgentFinish output
     output = AgentFinish(return_values={"output": "final output"}, log="test log")
@@ -71,7 +88,6 @@ async def test_chain_end_event():
         content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
         session_id="test_session_id",
     )
-    send_message.return_value = agent_message
 
     result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
 
@@ -83,14 +99,17 @@ async def test_chain_end_event():
 @pytest.mark.asyncio
 async def test_tool_start_event():
     """Test handling of on_tool_start event."""
-    send_message = AsyncMock()
+    call_count = [0]
 
-    # Set up the send_message mock to return the modified message
     def update_message(message, skip_db_update=False):  # noqa: ARG001, FBT002
+        call_count[0] += 1
+        if call_count[0] == 1:
+            # Simulate production: add ID on first call (when persisting to DB)
+            message.data["id"] = "test-message-id"
         # Return a copy of the message to simulate real behavior
         return Message(**message.model_dump())
 
-    send_message.side_effect = update_message
+    send_message = AsyncMock(side_effect=update_message)
 
     events = [
         {
@@ -123,7 +142,7 @@ async def test_tool_start_event():
 @pytest.mark.asyncio
 async def test_tool_end_event():
     """Test handling of on_tool_end event."""
-    send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
+    send_message = create_mock_send_message()
 
     events = [
         {
@@ -159,7 +178,7 @@ async def test_tool_end_event():
 @pytest.mark.asyncio
 async def test_tool_error_event():
     """Test handling of on_tool_error event."""
-    send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
+    send_message = create_mock_send_message()
 
     events = [
         {
@@ -196,7 +215,7 @@ async def test_tool_error_event():
 @pytest.mark.asyncio
 async def test_chain_stream_event():
     """Test handling of on_chain_stream event."""
-    send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
+    send_message = create_mock_send_message()
 
     events = [{"event": "on_chain_stream", "data": {"chunk": {"output": "streamed output"}}, "start_time": 0}]
     agent_message = Message(
@@ -215,7 +234,7 @@ async def test_chain_stream_event():
 @pytest.mark.asyncio
 async def test_multiple_events():
     """Test handling of multiple events in sequence."""
-    send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
+    send_message = create_mock_send_message()
 
     # Create a mock AgentFinish output instead of MockOutput
     output = AgentFinish(return_values={"output": "final output"}, log="test log")
@@ -246,7 +265,6 @@ async def test_multiple_events():
         properties={"icon": "Bot", "state": "partial"},
         content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
     )
-    send_message.return_value = agent_message
 
     result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
 
@@ -259,14 +277,13 @@ async def test_multiple_events():
 @pytest.mark.asyncio
 async def test_unknown_event():
     """Test handling of unknown event type."""
-    send_message = AsyncMock(side_effect=lambda message, skip_db_update=False: message)  # noqa: ARG005
+    send_message = create_mock_send_message()
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
         content_blocks=[ContentBlock(title="Agent Steps", contents=[])],  # Initialize with empty content block
     )
-    send_message.return_value = agent_message
 
     events = [{"event": "unknown_event", "data": {"some": "data"}, "start_time": 0}]
 
@@ -830,12 +847,19 @@ async def test_agent_streaming_no_text_accumulation():
 async def test_agent_streaming_without_event_manager():
     """Test that agent streaming works without event_manager (backward compatibility)."""
     sent_messages = []
+    call_count = [0]
 
     async def mock_send_message(message):
+        call_count[0] += 1
+        if call_count[0] == 1:
+            # Simulate production: add ID on first call (when persisting to DB)
+            message.data["id"] = "test-message-id"
         sent_messages.append(
             {"text": message.text, "state": message.properties.state, "id": getattr(message, "id", None)}
         )
         return message
+
+    send_message = AsyncMock(side_effect=mock_send_message)
 
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
