@@ -6,7 +6,7 @@ from lfx.base.models.gigachat_constants import GIGACHAT_CHAT_MODEL_NAMES
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
-from lfx.io import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
+from lfx.io import BoolInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
 from lfx.logging import logger
 
 
@@ -23,14 +23,8 @@ class GigaChatComponent(LCModelComponent):
             name="max_tokens",
             display_name="Max Tokens",
             advanced=True,
-            info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+            info="The maximum number of tokens to generate.",
             range_spec=RangeSpec(min=0, max=128000),
-        ),
-        DictInput(
-            name="model_kwargs",
-            display_name="Model Kwargs",
-            advanced=True,
-            info="Additional keyword arguments to pass to the model.",
         ),
         DropdownInput(
             name="model",
@@ -58,7 +52,8 @@ class GigaChatComponent(LCModelComponent):
             display_name="GigaChat Scope",
             advanced=False,
             value=None,
-            info="The scope of the GigaChat API.",
+            info="Version of the API you are getting access to. "
+            "You can find the value of the scope field in your profile after you create a project.",
         ),
         SecretStrInput(
             name="credentials",

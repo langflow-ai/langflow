@@ -28,11 +28,25 @@ For more information, see [Language model components](/components-models).
 
 | Name | Type | Description |
 |------|------|-------------|
-| max_tokens | Integer | Input parameter. Maximum number of tokens to generate. Set to `0` for unlimited. Range: `0-128000`. |
-| model_kwargs | Dictionary | Input parameter. Additional keyword arguments for the model. |
-| json_mode | Boolean | Input parameter. If `true`, outputs JSON regardless of passing a schema. |
-| model_name | String | Input parameter. The DeepSeek model to use. Default: `deepseek-chat`. |
-| api_base | String | Input parameter. Base URL for API requests. Default: `https://api.deepseek.com`. |
-| api_key | SecretString | Input parameter. Your DeepSeek API key for authentication. |
-| temperature | Float | Input parameter. Controls randomness in responses. Range: `[0.0, 2.0]`. Default: `1.0`. |
-| seed | Integer | Input parameter. Number initialized for random number generation. Use the same seed integer for more reproducible results, and use a different seed number for more random results. |
+| Stream | Boolean | Input parameter. Whether to stream the response. Only works in chat. Default: `false`. |
+| max_tokens | Integer | Input parameter. Maximum number of tokens to generate. Range: `0-128000`. |
+| model_name | String | Input parameter. The GigaChat model to use. Default: `GigaChat-2`. |
+| scope | String | Input parameter. Version of the API you are getting access to. |
+| credentials | SecretString | Input parameter. Your GigaChat API key for authentication. |
+| temperature | Float | Input parameter. Controls randomness in responses. Range: `[0.0, 2.0]`. Default: `0.1`. |
+
+## GigaChat Embeddings
+
+The **GigaChat Embeddings** component is used to load embedding models from GigaChat.
+
+For more information about using embedding model components in flows, see [Embedding model components](/components-embedding-models).
+
+### GigaChat Embeddings parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| model_name | String | Input parameter. The GigaChat model to use. Default: `EmbeddingsGigaR`. |
+| scope | String | Input parameter. Version of the API you are getting access to. |
+| credentials | SecretString | Input parameter. Your GigaChat API key for authentication. |
