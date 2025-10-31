@@ -2,7 +2,11 @@ import { useState, useCallback, useEffect } from "react";
 import { Search, Grid3x3, List, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -17,6 +21,9 @@ import ListSkeleton from "../MainPage/components/listSkeleton";
 import { debounce } from "lodash";
 import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
 
+const sortedTags = [...MARKETPLACE_TAGS].sort((a, b) => 
+  a.title.localeCompare(b.title)
+);
 
 export default function MarketplacePage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -30,17 +37,15 @@ export default function MarketplacePage() {
   const [sortBy, setSortBy] = useState<"name" | "date" | "tags">("name");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
 
-
   useEffect(() => {
     if (sortBy === "name") {
-      setOrder("asc");  // A → Z for names
+      setOrder("asc");
     } else if (sortBy === "date") {
-      setOrder("desc"); // Newest first for dates
+      setOrder("desc");
     } else if (sortBy === "tags") {
-      setOrder("asc");  // Alphabetical by tags
+      setOrder("asc");
     }
   }, [sortBy]);
-
 
   const debouncedSetSearchQuery = useCallback(
     debounce((value: string) => {
@@ -62,7 +67,6 @@ export default function MarketplacePage() {
       setPendingTag(tagFilter);
     }
   }, [isFilterOpen, tagFilter]);
-
 
   const { data, isLoading } = useGetAllPublishedFlows({
     page: pageIndex,
@@ -92,10 +96,9 @@ export default function MarketplacePage() {
   }, []);
 
   return (
-    <div className="flex h-full w-full flex-col overflow-y-auto bg-[#FBFAFF] dark:bg-black dark:text-white">
+    <div className="flex h-full w-full overflow-y-auto dark:bg-black dark:text-white">
       <div className="flex h-full w-full flex-col">
-        <div className="flex w-full flex-1 flex-col gap-4 p-4 md:p-6">
-          {/* Header */}
+        <div className="flex w-full flex-1 flex-col gap-4">
           <div className="flex w-full items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <h1 className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic">
@@ -106,9 +109,7 @@ export default function MarketplacePage() {
               </span>
             </div>
 
-            {/* Controls */}
             <div className="flex items-center gap-3">
-              {/* Search */}
               <div className="relative w-[500px] max-w-[500px]">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -116,11 +117,10 @@ export default function MarketplacePage() {
                   placeholder="Search Agents..."
                   value={debouncedSearch}
                   onChange={(e) => setDebouncedSearch(e.target.value)}
-                  className="pl-10 h-9 rounded-md border border-[#EBE8FF] dark:border-white/20 dark:bg-black dark:text-white placeholder:text-muted-foreground dark:placeholder:text-white/60"
+                  className="h-9 rounded-md border border-[#EBE8FF] dark:border-white/20 dark:bg-black dark:text-white placeholder:text-muted-foreground dark:placeholder:text-white/60 focus:border-1 focus:border-primary"
                 />
               </div>
 
-              {/* Sort */}
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Sort By</span>
                 <Select
@@ -131,14 +131,19 @@ export default function MarketplacePage() {
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent className="dark:bg-black dark:text-white">
-                    <SelectItem value="name" className="dark:text-white">Name</SelectItem>
-                    <SelectItem value="date" className="dark:text-white">Published Date</SelectItem>
-                    <SelectItem value="tags" className="dark:text-white">Tags</SelectItem>
+                    <SelectItem value="name" className="dark:text-white">
+                      Name
+                    </SelectItem>
+                    <SelectItem value="date" className="dark:text-white">
+                      Published Date
+                    </SelectItem>
+                    <SelectItem value="tags" className="dark:text-white">
+                      Domain Area
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Filter Button + Popover */}
               <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -157,18 +162,24 @@ export default function MarketplacePage() {
                 >
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <div className="text-base font-semibold">Tags</div>
+                      <div className="text-base font-semibold">Domain</div>
                       <Select
                         value={pendingTag}
                         onValueChange={(v) => setPendingTag(v as string)}
                       >
                         <SelectTrigger className="h-10 w-full rounded-md border border-[#EBE8FF] dark:border-white/20 text-sm dark:text-white">
-                          <SelectValue placeholder="All Tags" />
+                          <SelectValue placeholder="Domain Area" />
                         </SelectTrigger>
                         <SelectContent className="max-h-64 overflow-y-auto dark:bg-black dark:text-white">
-                          <SelectItem value="all" className="dark:text-white">All Tags</SelectItem>
-                          {MARKETPLACE_TAGS.map((tag) => (
-                            <SelectItem key={tag.id} value={tag.id} className="dark:text-white">
+                          <SelectItem value="all" className="dark:text-white">
+                            Domain Area
+                          </SelectItem>
+                          {sortedTags.map((tag) => (
+                            <SelectItem
+                              key={tag.id}
+                              value={tag.id}
+                              className="dark:text-white"
+                            >
                               {tag.title}
                             </SelectItem>
                           ))}
@@ -204,7 +215,6 @@ export default function MarketplacePage() {
                 </PopoverContent>
               </Popover>
 
-              {/* View Toggle */}
               <div className="flex items-center gap-1 rounded-md border border-[#EBE8FF] dark:border-white/20 p-1">
                 <Button
                   variant={viewMode === "list" ? "secondary" : "ghost"}
@@ -226,12 +236,11 @@ export default function MarketplacePage() {
             </div>
           </div>
 
-          {/* Loading State */}
           {isLoading ? (
             <div
               className={
                 viewMode === "grid"
-                  ? "grid auto-rows-fr grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 min-h-[calc(100vh-280px)]"
+                  ? "grid auto-rows-fr grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 max-h-[calc(100vh-212px)] overflow-auto place-items-start"
                   : "flex flex-col gap-4 flex-1 min-h-[calc(100vh-280px)]"
               }
             >
@@ -241,45 +250,48 @@ export default function MarketplacePage() {
             </div>
           ) : (
             <>
-              {/* Flow Grid */}
-              <div
-                className={
-                  viewMode === "grid"
-                    ? `grid ${expandCards ? "auto-rows-fr" : "auto-rows-auto"} grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 min-h-[calc(100vh-280px)]`
-                    : "flex flex-col gap-4 flex-1 min-h-[calc(100vh-280px)]"
-                }
-              >
-                {visibleItems.map((item: any) => (
-                  <MarketplaceFlowCard
-                    key={item.id}
-                    item={item}
-                    viewMode={viewMode}
-                    expand={viewMode === "grid" && expandCards}
-                  />
-                ))}
-              </div>
+              {items.length > 0 && (
+                <div
+                  className={
+                    viewMode === "grid"
+                      ? `grid ${
+                          expandCards ? "auto-rows-fr" : "auto-rows-auto"
+                        } grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 max-h-[calc(100vh-212px)] overflow-auto place-items-start`
+                      : "flex flex-col gap-4 flex-1 min-h-[calc(100vh-280px)]"
+                  }
+                >
+                  {visibleItems.map((item: any) => (
+                    <MarketplaceFlowCard
+                      key={item.id}
+                      item={item}
+                      viewMode={viewMode}
+                      expand={viewMode === "grid" && expandCards}
+                    />
+                  ))}
+                </div>
+              )}
 
-              {/* Empty State */}
               {items.length === 0 && (
-                <div className="flex h-64 items-center justify-center text-muted-foreground">
+                <div className="flex h-full items-center justify-center text-[24px] font-medium text-muted-foreground/60">
                   {searchQuery
                     ? "No marketplace flows match your search."
                     : "No marketplace flows available yet."}
                 </div>
               )}
-
-              {/* Results Counter */}
-              {!isLoading && total > 0 && (
-                <div className="mt-2 flex items-center justify-end text-xs text-[#444444] dark:text-white/60">
-                  {`Showing ${start + 1} - ${Math.min(end, total)} results of ${total}`}
-                </div>
-              )}
             </>
           )}
 
-          {/* Pagination */}
           {!isLoading && total > 0 && (
-            <div className="mt-6 flex justify-end border-t dark:border-white/20 pt-4">
+            <div className="flex justify-between gap-4 pt-4">
+              {!isLoading && total > 0 && (
+                <div className="flex items-center justify-end text-xs text-[#444444] dark:text-white/60">
+                  {`Showing ${start + 1} - ${Math.min(
+                    end,
+                    total
+                  )} results of ${total}`}
+                </div>
+              )}
+
               <FlowPagination
                 currentPage={currentPage}
                 pageSize={pageSize}

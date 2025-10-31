@@ -1,7 +1,6 @@
 import React, { useState, useRef } from "react";
 import { v4 as uuid } from "uuid";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -125,7 +124,6 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
           ...prev,
           [componentId]: [...(prev[componentId] || []), uploadedFile]
         }));
-
         onFileUrlChange(componentId, readUrl);
 
         console.log(`File uploaded successfully for component ${componentId}:`, {
@@ -172,10 +170,6 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
     }
   };
 
-  const useUploadedFile = (componentId: string, file: UploadedFile) => {
-    onFileUrlChange(componentId, file.readUrl);
-  };
-
   return (
     <>
       {/* Hidden file input */}
@@ -190,7 +184,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
           <DialogHeader>
             <DialogTitle>Manage File Inputs</DialogTitle>
             <DialogDescription>
-              Provide file URLs or upload files for components that require file inputs.
+              Upload files for components that require file inputs.
             </DialogDescription>
           </DialogHeader>
 
@@ -199,7 +193,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
               <div key={component.id} className="space-y-3 border rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-medium">
-                    File Path
+                    {component.display_name}
                   </Label>
                   
                   <Button
@@ -228,25 +222,6 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
                   </div>
                 )}
 
-                {/* File URL Input */}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Enter file URL (e.g., https://example.com/file.pdf)"
-                    value={fileUrls[component.id] || ""}
-                    onChange={(e) => onFileUrlChange(component.id, e.target.value)}
-                    className="flex-1"
-                  />
-                  {fileUrls[component.id] && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onClearFileUrl(component.id)}
-                    >
-                      Clear
-                    </Button>
-                  )}
-                </div>
-
                 {/* Uploaded Files List */}
                 {uploadedFiles[component.id] && uploadedFiles[component.id].length > 0 && (
                   <div className="space-y-2">
@@ -261,15 +236,6 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
                             </p>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => useUploadedFile(component.id, file)}
-                              className="text-xs px-2 py-1 h-auto"
-                              disabled={fileUrls[component.id] === file.readUrl}
-                            >
-                              {fileUrls[component.id] === file.readUrl ? "Active" : "Use"}
-                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -301,4 +267,3 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
     </>
   );
 };
-

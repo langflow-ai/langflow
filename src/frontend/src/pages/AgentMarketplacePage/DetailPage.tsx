@@ -44,7 +44,7 @@ export default function AgentMarketplaceDetailPage() {
     {
       enabled: !!flowId && !hasNoFlow,
       refetchOnWindowFocus: false,
-    },
+    }
   );
 
   // Use fetched data if available, otherwise fall back to navigation state
@@ -83,7 +83,9 @@ export default function AgentMarketplaceDetailPage() {
         .map((item) => {
           if (item && typeof item === "object") {
             const nested = jsonToYaml(item, nextIndent);
-            return `${spacer}- ${nested.startsWith("\n") ? nested.substring(1) : `\n${nested}`}`;
+            return `${spacer}- ${
+              nested.startsWith("\n") ? nested.substring(1) : `\n${nested}`
+            }`;
           }
           return `${spacer}- ${formatScalar(item)}`;
         })
@@ -99,7 +101,9 @@ export default function AgentMarketplaceDetailPage() {
           if (val && typeof val === "object") {
             const nested = jsonToYaml(val, nextIndent);
             if (Array.isArray(val)) {
-              return `${spacer}${key}: ${nested.includes("\n") ? `\n${nested}` : nested}`;
+              return `${spacer}${key}: ${
+                nested.includes("\n") ? `\n${nested}` : nested
+              }`;
             }
             return `${spacer}${key}:\n${nested}`;
           }
@@ -147,10 +151,16 @@ export default function AgentMarketplaceDetailPage() {
           <Tabs defaultValue="flow" className="w-full">
             <div className="flex items-center justify-between">
               <TabsList className="justify-start gap-2 border-b border-border dark:border-white/20 p-0">
-                <TabsTrigger value="flow" className="px-3 py-2 text-sm dark:text-white">
+                <TabsTrigger
+                  value="flow"
+                  className="px-3 py-2 text-sm dark:text-white"
+                >
                   Flow Visualization
                 </TabsTrigger>
-                <TabsTrigger value="spec" className="px-3 py-2 text-sm dark:text-white">
+                <TabsTrigger
+                  value="spec"
+                  className="px-3 py-2 text-sm dark:text-white"
+                >
                   Specification
                 </TabsTrigger>
               </TabsList>
@@ -269,7 +279,7 @@ export default function AgentMarketplaceDetailPage() {
                     <SyntaxHighlighter
                       language="yaml"
                       style={dark ? oneDark : oneLight}
-                      customStyle={{ margin: 0, background: "transparent" }}
+                      customStyle={{ margin: 0, background: "#fff" }}
                       wrapLongLines
                     >
                       {specYaml}

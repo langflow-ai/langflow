@@ -105,7 +105,7 @@ const router = createBrowserRouter(
                   )}
                   <Route
                     path="agent-builder/"
-                    element={<AgentBuilderPage key="agent-builder"/>}
+                    element={<AgentBuilderPage key="agent-builder" />}
                   />
                   <Route
                     path="agent-marketplace/"
@@ -142,10 +142,16 @@ const router = createBrowserRouter(
                       element={<HomePage key="mcp" type="mcp" />}
                     />
                   </Route>
+                  <Route path="marketplace" element={<MarketplacePage />} />
+                  <Route
+                    path="marketplace/detail/:publishedFlowId"
+                    element={<MarketplaceDetailPage />}
+                  />
                 </Route>
-                <Route path="agent-marketplace/detail/:flowId" element={<AgentMarketplaceDetailPage />} />
-                <Route path="marketplace" element={<MarketplacePage />} />
-                <Route path="marketplace/detail/:publishedFlowId" element={<MarketplaceDetailPage />} />
+                <Route
+                  path="agent-marketplace/detail/:flowId"
+                  element={<AgentMarketplaceDetailPage />}
+                />
                 <Route path="settings" element={<SettingsPage />}>
                   <Route
                     index
@@ -171,7 +177,10 @@ const router = createBrowserRouter(
                 </Route>
                 {CustomRoutesStorePages()}
                 <Route path="agent-builder" element={<AgentBuilderPage />} />
-                <Route path="agent-builder/conversation/:sessionId" element={<ConversationPage />} />
+                <Route
+                  path="agent-builder/conversation/:sessionId"
+                  element={<ConversationPage />}
+                />
                 <Route path="account">
                   <Route path="delete" element={<DeleteAccountPage />}></Route>
                 </Route>
@@ -221,7 +230,7 @@ const router = createBrowserRouter(
       <Route path="*" element={<CustomNavigate replace to="/" />} />
     </Route>,
   ]),
-  { basename: BASENAME || undefined },
+  { basename: BASENAME || undefined }
 );
 
 export default router;

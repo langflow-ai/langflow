@@ -27,7 +27,13 @@ interface FlowPageProps {
   folderId?: string;
 }
 
-export default function FlowPage({ view, readOnly, viewOnly, flowId: propFlowId, folderId: propFolderId }: FlowPageProps): JSX.Element {
+export default function FlowPage({
+  view,
+  readOnly,
+  viewOnly,
+  flowId: propFlowId,
+  folderId: propFolderId,
+}: FlowPageProps): JSX.Element {
   const types = useTypesStore((state) => state.types);
 
   useGetTypes({
@@ -42,18 +48,21 @@ export default function FlowPage({ view, readOnly, viewOnly, flowId: propFlowId,
 
   // Skip change tracking for read-only/view mode
   const changesNotSaved =
-    !view && !readOnly &&
+    !view &&
+    !readOnly &&
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
     (currentFlow?.data?.nodes?.length ?? 0) > 0;
 
   const isBuilding = useFlowStore((state) => state.isBuilding);
   // Don't block navigation in view/read-only mode
-  const blocker = useBlocker(view || readOnly ? false : (changesNotSaved || isBuilding));
+  const blocker = useBlocker(
+    view || readOnly ? false : changesNotSaved || isBuilding
+  );
 
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
   const { id: paramId } = useParams();
   const navigate = useCustomNavigate();
-  
+
   // Use flowId from props if provided, otherwise use URL param
   const id = propFlowId || paramId;
   const saveFlow = useSaveFlow();
@@ -91,7 +100,9 @@ export default function FlowPage({ view, readOnly, viewOnly, flowId: propFlowId,
       })
       .catch((error) => {
         // Check if this is just a "flow not ready" guard vs actual error
-        const isFlowNotReady = error?.message?.includes("Cannot save flow without ID");
+        const isFlowNotReady = error?.message?.includes(
+          "Cannot save flow without ID"
+        );
 
         if (!isFlowNotReady) {
           // Actual save error - show error message
@@ -244,7 +255,7 @@ export default function FlowPage({ view, readOnly, viewOnly, flowId: propFlowId,
 
   return (
     <>
-      <div className="flow-page-positioning">
+      <div className="flow-page-positioning bg-white">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
             <SidebarProvider
@@ -255,10 +266,17 @@ export default function FlowPage({ view, readOnly, viewOnly, flowId: propFlowId,
               <FlowSearchProvider>
                 <main className="flex w-full overflow-hidden">
                   <div className="h-full w-full">
-                    <Page view={view} readOnly={readOnly} viewOnly={viewOnly} setIsLoading={setIsLoading} />
+                    <Page
+                      view={view}
+                      readOnly={readOnly}
+                      viewOnly={viewOnly}
+                      setIsLoading={setIsLoading}
+                    />
                   </div>
                 </main>
-                {!view && !viewOnly && <FlowSidebarComponent isLoading={isLoading} />}
+                {!view && !viewOnly && (
+                  <FlowSidebarComponent isLoading={isLoading} />
+                )}
               </FlowSearchProvider>
             </SidebarProvider>
           </div>

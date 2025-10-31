@@ -61,7 +61,9 @@ export default function MarketplaceDetailPage() {
         .map((item) => {
           if (item && typeof item === "object") {
             const nested = jsonToYaml(item, nextIndent);
-            return `${spacer}- ${nested.startsWith("\n") ? nested.substring(1) : `\n${nested}`}`;
+            return `${spacer}- ${
+              nested.startsWith("\n") ? nested.substring(1) : `\n${nested}`
+            }`;
           }
           return `${spacer}- ${formatScalar(item)}`;
         })
@@ -77,7 +79,9 @@ export default function MarketplaceDetailPage() {
           if (val && typeof val === "object") {
             const nested = jsonToYaml(val, nextIndent);
             if (Array.isArray(val)) {
-              return `${spacer}${key}: ${nested.includes("\n") ? `\n${nested}` : nested}`;
+              return `${spacer}${key}: ${
+                nested.includes("\n") ? `\n${nested}` : nested
+              }`;
             }
             return `${spacer}${key}:\n${nested}`;
           }
@@ -102,13 +106,13 @@ export default function MarketplaceDetailPage() {
       showSeparator={false}
     >
       <div className="flex w-full flex-col gap-4 dark:text-white">
-        <div className="flex flex-col">
-          <Tabs defaultValue="playground" className="w-full">
-            <div className="flex items-center justify-between">
+        <div className="flex flex-col h-full">
+          <Tabs defaultValue="playground" className="w-full h-full">
+            <div className="flex items-center justify-between mt-1 relative">
               <TabsList className="justify-start gap-2 border-b border-border dark:border-white/20 p-0">
                 <TabsTrigger
                   value="playground"
-                  className="px-3 py-2 text-sm dark:text-white"
+                  className="px-4 py-2.5 text-sm dark:text-white"
                 >
                   <ForwardedIconComponent
                     name="Play"
@@ -118,7 +122,7 @@ export default function MarketplaceDetailPage() {
                 </TabsTrigger>
                 <TabsTrigger
                   value="flow"
-                  className="px-3 py-2 text-sm dark:text-white"
+                  className="px-4 py-2.5 text-sm dark:text-white"
                 >
                   <ForwardedIconComponent
                     name="Network"
@@ -128,7 +132,7 @@ export default function MarketplaceDetailPage() {
                 </TabsTrigger>
                 <TabsTrigger
                   value="spec"
-                  className="px-3 py-2 text-sm dark:text-white"
+                  className="px-4 py-2.5 text-sm dark:text-white"
                 >
                   <ForwardedIconComponent
                     name="FileText"
@@ -143,7 +147,7 @@ export default function MarketplaceDetailPage() {
                 <Button
                   onClick={handleEditClick}
                   size="sm"
-                  className="shrink-0"
+                  className="shrink-0 absolute right-0 -top-1"
                 >
                   <ForwardedIconComponent
                     name="Pencil"
@@ -154,9 +158,9 @@ export default function MarketplaceDetailPage() {
               )}
             </div>
 
-            <TabsContent value="flow" className="mt-4 w-full">
+            <TabsContent value="flow" className="mt-3 w-full">
               {isLoadingPublishedFlow ? (
-                <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center rounded-lg border border-border dark:border-white/20 bg-card dark:bg-black dark:text-white">
+                <div className="flex h-[calc(100vh-164px)] w-full items-center justify-center rounded-lg border border-border dark:border-white/20 bg-card dark:bg-black dark:text-white">
                   <div className="flex flex-col items-center gap-3">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                     <p className="text-sm text-muted-foreground dark:text-white/70">
@@ -165,7 +169,7 @@ export default function MarketplaceDetailPage() {
                   </div>
                 </div>
               ) : publishedFlowData?.flow_id ? (
-                <div className="h-[calc(100vh-200px)] w-full overflow-hidden rounded-lg border border-border dark:border-white/20">
+                <div className="h-[calc(100vh-164px)] w-full overflow-hidden rounded-lg border border-border dark:border-white/20">
                   <FlowPage
                     flowId={publishedFlowData.flow_id}
                     view={true}
@@ -174,7 +178,7 @@ export default function MarketplaceDetailPage() {
                   />
                 </div>
               ) : (
-                <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center rounded-lg border border-border dark:border-white/20 bg-card dark:bg-black dark:text-white">
+                <div className="flex h-[calc(100vh-164px)] w-full items-center justify-center rounded-lg border border-border dark:border-white/20 bg-card dark:bg-black dark:text-white">
                   <p className="text-sm text-muted-foreground dark:text-white/70">
                     No published flow found
                   </p>
@@ -182,15 +186,15 @@ export default function MarketplaceDetailPage() {
               )}
             </TabsContent>
 
-            <TabsContent value="spec" className="mt-4 w-full">
-              <div className="flex h-[calc(100vh-200px)] w-full flex-col overflow-hidden rounded-lg border border-border dark:border-white/20">
+            <TabsContent value="spec" className="mt-3 w-full">
+              <div className="flex h-[calc(100vh-164px)] w-full flex-col overflow-hidden rounded-lg border border-border dark:border-white/20 bg-white">
                 <div className="flex items-center justify-between border-b border-border dark:border-white/20 px-3 py-2">
-                  <div className="text-sm font-medium dark:text-white">
+                  <p className="text-xs font-medium text-[#444] dark:text-white">
                     YAML Specification
-                  </div>
+                  </p>
                   <div className="flex items-center gap-2">
                     <Button
-                      size="sm"
+                      size="xs"
                       variant="outline"
                       onClick={() => {
                         if (specYaml) {
@@ -198,7 +202,7 @@ export default function MarketplaceDetailPage() {
                         }
                       }}
                       disabled={isLoadingSpec}
-                      className="dark:border-white/20 dark:text-white"
+                      className="dark:border-white/20 dark:text-white text-xs !px-2 !py-1"
                     >
                       Copy YAML
                     </Button>
@@ -228,8 +232,8 @@ export default function MarketplaceDetailPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="playground" className="mt-4 w-full">
-              <div className="h-[calc(100vh-200px)] w-full overflow-hidden rounded-lg border border-border dark:border-white/20">
+            <TabsContent value="playground" className="mt-3 w-full">
+              <div className="h-[calc(100vh-164px)] w-full overflow-hidden">
                 <PlaygroundTab publishedFlowData={publishedFlowData} />
               </div>
             </TabsContent>
