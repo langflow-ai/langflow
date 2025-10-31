@@ -423,6 +423,11 @@ async def update_project_mcp_settings(
 
             # Handle MCP Composer start/stop before committing auth settings
             if should_handle_mcp_composer:
+                # Get MCP Composer service once for all branches
+                mcp_composer_service: MCPComposerService = cast(
+                    MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+                )
+
                 if should_start_composer:
                     await logger.adebug(
                         f"Auth settings changed to OAuth for project {project.name} ({project_id}), "
@@ -435,9 +440,6 @@ async def update_project_mcp_settings(
                             await get_or_start_mcp_composer(auth_config, project.name, project_id)
                             composer_sse_url = await get_composer_sse_url(project)
                             # Clear any previous error on success
-                            mcp_composer_service: MCPComposerService = cast(
-                                MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
-                            )
                             mcp_composer_service.clear_last_error(str(project_id))
                             response["result"] = {
                                 "project_id": str(project_id),
@@ -448,9 +450,6 @@ async def update_project_mcp_settings(
                             # Don't rollback auth settings - persist them so UI can show the error
                             await logger.awarning(f"MCP Composer failed to start for project {project_id}: {e.message}")
                             # Store the error message so it can be retrieved via composer-url endpoint
-                            mcp_composer_service: MCPComposerService = cast(
-                                MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
-                            )
                             mcp_composer_service.set_last_error(str(project_id), e.message)
                             response["result"] = {
                                 "project_id": str(project_id),
@@ -481,9 +480,6 @@ async def update_project_mcp_settings(
                     await logger.adebug(
                         f"Auth settings changed from OAuth for project {project.name} ({project_id}), "
                         "stopping MCP Composer"
-                    )
-                    mcp_composer_service: MCPComposerService = cast(
-                        MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
                     )
                     await mcp_composer_service.stop_project_composer(str(project_id))
                     # Clear any error when user explicitly disables OAuth

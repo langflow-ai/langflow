@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import AuthModal from "../index";
 
 // Mock utilities
@@ -34,6 +35,11 @@ jest.mock("@/customization/components/custom-link", () => ({
   ),
 }));
 
+// Custom render function with TooltipProvider
+const renderWithTooltip = (ui: React.ReactElement) => {
+  return render(<TooltipProvider>{ui}</TooltipProvider>);
+};
+
 describe("AuthModal OAuth Port Synchronization", () => {
   const mockOnSave = jest.fn();
   const mockSetOpen = jest.fn();
@@ -53,7 +59,7 @@ describe("AuthModal OAuth Port Synchronization", () => {
   it("should auto-sync Server URL when Port is changed", async () => {
     const user = userEvent.setup();
 
-    render(<AuthModal {...defaultProps} />);
+    renderWithTooltip(<AuthModal {...defaultProps} />);
 
     // Select OAuth auth type
     const oauthRadio = screen.getByLabelText(/OAuth/i);
@@ -72,7 +78,7 @@ describe("AuthModal OAuth Port Synchronization", () => {
   it("should auto-sync Server URL when Host is changed", async () => {
     const user = userEvent.setup();
 
-    render(<AuthModal {...defaultProps} />);
+    renderWithTooltip(<AuthModal {...defaultProps} />);
 
     // Select OAuth auth type
     const oauthRadio = screen.getByLabelText(/OAuth/i);
@@ -96,7 +102,7 @@ describe("AuthModal OAuth Port Synchronization", () => {
   it("should auto-sync Callback Path when Port is changed", async () => {
     const user = userEvent.setup();
 
-    render(<AuthModal {...defaultProps} />);
+    renderWithTooltip(<AuthModal {...defaultProps} />);
 
     // Select OAuth auth type
     const oauthRadio = screen.getByLabelText(/OAuth/i);
@@ -117,7 +123,7 @@ describe("AuthModal OAuth Port Synchronization", () => {
   it("should auto-sync both Server URL and Callback Path when Host changes", async () => {
     const user = userEvent.setup();
 
-    render(<AuthModal {...defaultProps} />);
+    renderWithTooltip(<AuthModal {...defaultProps} />);
 
     // Select OAuth auth type
     const oauthRadio = screen.getByLabelText(/OAuth/i);
@@ -146,7 +152,7 @@ describe("AuthModal OAuth Port Synchronization", () => {
   it("should save correctly synced OAuth settings", async () => {
     const user = userEvent.setup();
 
-    render(<AuthModal {...defaultProps} />);
+    renderWithTooltip(<AuthModal {...defaultProps} />);
 
     // Select OAuth auth type
     const oauthRadio = screen.getByLabelText(/OAuth/i);
@@ -196,7 +202,7 @@ describe("AuthModal OAuth Port Synchronization", () => {
   it("should preserve existing Server URL if manually edited after port change", async () => {
     const user = userEvent.setup();
 
-    render(<AuthModal {...defaultProps} />);
+    renderWithTooltip(<AuthModal {...defaultProps} />);
 
     // Select OAuth auth type
     const oauthRadio = screen.getByLabelText(/OAuth/i);
@@ -238,7 +244,7 @@ describe("AuthModal OAuth Port Synchronization", () => {
       oauth_provider_scope: "openid",
     };
 
-    render(<AuthModal {...defaultProps} authSettings={existingAuthSettings} />);
+    renderWithTooltip(<AuthModal {...defaultProps} authSettings={existingAuthSettings} />);
 
     // Verify fields are populated
     expect(screen.getByLabelText(/^Host$/i)).toHaveValue("existing.host.com");
@@ -254,7 +260,7 @@ describe("AuthModal OAuth Port Synchronization", () => {
   it("should not auto-sync if auth type is not OAuth", async () => {
     const user = userEvent.setup();
 
-    render(<AuthModal {...defaultProps} />);
+    renderWithTooltip(<AuthModal {...defaultProps} />);
 
     // Select API Key auth type
     const apikeyRadio = screen.getByLabelText(/API Key/i);

@@ -139,20 +139,20 @@ class MCPComposerService(Service):
                 if result.returncode == 0:
                     # Parse netstat output to find PID
                     # Format: TCP    0.0.0.0:PORT    0.0.0.0:0    LISTENING    PID
-                    pids = []
+                    windows_pids: list[int] = []
                     for line in result.stdout.split("\n"):
                         if f":{port}" in line and "LISTENING" in line:
                             parts = line.split()
                             if parts:
                                 try:
                                     pid = int(parts[-1])
-                                    pids.append(pid)
+                                    windows_pids.append(pid)
                                 except (ValueError, IndexError):
                                     continue
 
-                    await logger.adebug(f"Found {len(pids)} process(es) using port {port}: {pids}")
+                    await logger.adebug(f"Found {len(windows_pids)} process(es) using port {port}: {windows_pids}")
 
-                    for pid in pids:
+                    for pid in windows_pids:
                         try:
                             await logger.adebug(f"Attempting to kill process {pid} on port {port}...")
                             # Use taskkill on Windows
@@ -195,10 +195,10 @@ class MCPComposerService(Service):
                     await logger.adebug(f"lsof stderr: {lsof_errors}")
 
                 if result.returncode == 0 and lsof_output:
-                    pids = lsof_output.split("\n")
-                    await logger.adebug(f"Found {len(pids)} process(es) using port {port}: {pids}")
+                    unix_pids = lsof_output.split("\n")
+                    await logger.adebug(f"Found {len(unix_pids)} process(es) using port {port}: {unix_pids}")
 
-                    for pid_str in pids:
+                    for pid_str in unix_pids:
                         try:
                             pid = int(pid_str.strip())
                             await logger.adebug(f"Attempting to kill process {pid} on port {port}...")
@@ -224,10 +224,10 @@ class MCPComposerService(Service):
                     return False
                 await logger.adebug(f"No process found using port {port}")
                 return False
-
         except Exception as e:  # noqa: BLE001
             await logger.aerror(f"Error finding/killing process on port {port}: {e}")
             return False
+        return False
 
     def _is_port_used_by_another_project(self, port: int, current_project_id: str) -> tuple[bool, str | None]:
         """Check if a port is being used by another project.
@@ -401,7 +401,7 @@ class MCPComposerService(Service):
             # Check if the port is being used by a tracked project
             is_used_by_other, other_project_id = self._is_port_used_by_another_project(port, current_project_id)
 
-            if is_used_by_other:
+            if is_used_by_other and other_project_id:
                 # Port is being used by another tracked project
                 # Check if we can take ownership (e.g., the other project is failing)
                 other_composer = self.project_composers.get(other_project_id)
