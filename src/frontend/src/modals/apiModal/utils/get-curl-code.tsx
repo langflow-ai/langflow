@@ -113,7 +113,7 @@ curl.exe --request POST \`
         .join("\n\t\t");
 
       const authHeader = shouldDisplayApiKey
-        ? `     --header "x-api-key: YOUR_API_KEY_HERE" \\ `
+        ? `     --header "x-api-key: YOUR_API_KEY_HERE" \\`
         : "";
 
       return `curl --request POST \\
