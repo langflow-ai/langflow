@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock
 import pytest
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessageChunk
-from lfx.base.agents.events import process_agent_events
 from lfx.base.agents.events import (
     _extract_output_text,
     handle_on_chain_end,
@@ -14,6 +13,7 @@ from lfx.base.agents.events import (
     handle_on_tool_end,
     handle_on_tool_error,
     handle_on_tool_start,
+    process_agent_events,
 )
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.content_types import ToolContent

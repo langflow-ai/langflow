@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
-from langchain_core.messages import BaseMessage, HumanMessage
 from langchain.callbacks.base import BaseCallbackHandler
+from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.runnables import Runnable
 
 from lfx.base.agents.callback import AgentAsyncHandler
@@ -175,9 +175,7 @@ class LCAgentComponent(Component):
         if hasattr(self, "chat_history") and self.chat_history:
             if isinstance(self.chat_history, Data):
                 input_dict["chat_history"] = self._data_to_messages_skip_empty([self.chat_history])
-            elif all(
-                hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data for m in self.chat_history
-            ):
+            elif all(hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data for m in self.chat_history):
                 input_dict["chat_history"] = self._data_to_messages_skip_empty(self.chat_history)
             elif all(isinstance(m, Message) for m in self.chat_history):
                 input_dict["chat_history"] = self._data_to_messages_skip_empty([m.to_data() for m in self.chat_history])
