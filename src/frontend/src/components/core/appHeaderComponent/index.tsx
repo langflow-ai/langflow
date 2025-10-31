@@ -292,13 +292,11 @@ export default function AppHeader(): JSX.Element {
           <Button
             unstyled
             onClick={() => navigate("/")}
-            aria-label="Go to Home"
-            className="flex h-8 w-16 md:w-24 items-center"
+            className="flex h-8 w-24 items-center"
             data-testid="custom-logo-button"
           >
-            <img
-              src={customLogoUrl}
-              alt="Custom Logo"
+            <AppLogoDisplay
+              blobPath={customLogoUrl}
               className="h-full w-full object-contain"
             />
           </Button>
