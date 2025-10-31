@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, cast
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
 from langchain_core.messages import BaseMessage, HumanMessage
+from langchain.callbacks.base import BaseCallbackHandler
 from langchain_core.runnables import Runnable
 
 from lfx.base.agents.callback import AgentAsyncHandler
@@ -73,6 +74,12 @@ class LCAgentComponent(Component):
         Output(display_name="Agent", name="agent", method="build_agent", hidden=True, tool_mode=False),
         Output(display_name="Response", name="response", method="message_response"),
     ]
+
+    # Get shared callbacks for tracing and save them to self.shared_callbacks
+    def _get_shared_callbacks(self) -> list[BaseCallbackHandler]:
+        if not hasattr(self, "shared_callbacks"):
+            self.shared_callbacks = self.get_langchain_callbacks()
+        return self.shared_callbacks
 
     @abstractmethod
     def build_agent(self) -> AgentExecutor:
@@ -241,7 +248,8 @@ class LCAgentComponent(Component):
             result = await process_agent_events(
                 runnable.astream_events(
                     input_dict,
-                    config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
+                    # here we use the shared callbacks because the AgentExecutor uses the tools
+                    config={"callbacks": [AgentAsyncHandler(self.log), *self._get_shared_callbacks()]},
                     version="v2",
                 ),
                 agent_message,
@@ -318,15 +326,40 @@ class LCToolsAgentComponent(LCAgentComponent):
             tools_names = ", ".join([tool.name for tool in self.tools])
         return tools_names
 
+    # Set shared callbacks for tracing
+    def set_tools_callbacks(self, tools_list: list[Tool], callbacks_list: list[BaseCallbackHandler]):
+        """Set shared callbacks for tracing to the tools.
+
+        If we do not pass down the same callbacks to each tool
+        used by the agent, then each tool will instantiate a new callback.
+        For some tracing services, this will cause
+        the callback handler to lose the id of its parent run (Agent)
+        and thus throw an error in the tracing service client.
+
+        Args:
+            tools_list: list of tools to set the callbacks for
+            callbacks_list: list of callbacks to set for the tools
+        Returns:
+            None
+        """
+        for tool in tools_list or []:
+            if hasattr(tool, "callbacks"):
+                tool.callbacks = callbacks_list
+
     async def _get_tools(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
         tools_names = self._build_tools_names()
         agent_description = self.get_tool_description()
         # TODO: Agent Description Depreciated Feature to be removed
         description = f"{agent_description}{tools_names}"
+
         tools = component_toolkit(component=self).get_tools(
-            tool_name=self.get_tool_name(), tool_description=description, callbacks=self.get_langchain_callbacks()
+            tool_name=self.get_tool_name(),
+            tool_description=description,
+            # here we do not use the shared callbacks as we are exposing the agent as a tool
+            callbacks=self.get_langchain_callbacks(),
         )
         if hasattr(self, "tools_metadata"):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+
         return tools
