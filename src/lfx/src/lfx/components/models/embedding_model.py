@@ -136,7 +136,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 raise ImportError(msg) from None
 
             if not api_key:
-                msg = "Watson AI API key is required when using IBM watsonx.ai provider"
+                msg = "IBM watsonx.ai API key is required when using IBM watsonx.ai provider"
                 raise ValueError(msg)
 
             project_id = self.project_id
@@ -184,10 +184,10 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             elif field_value == "IBM watsonx.ai":
                 build_config["model"]["options"] = WATSONX_EMBEDDING_MODEL_NAMES
                 build_config["model"]["value"] = WATSONX_EMBEDDING_MODEL_NAMES[0]
-                build_config["api_key"]["display_name"] = "IBM watsonx.ai AI API Key"
+                build_config["api_key"]["display_name"] = "IBM watsonx.ai API Key"
                 build_config["api_key"]["required"] = True
                 build_config["api_key"]["show"] = True
-                build_config["api_base"]["display_name"] = "IBM watsonx.ai AI URL"
+                build_config["api_base"]["display_name"] = "IBM watsonx.ai URL"
                 build_config["api_base"]["value"] = "https://us-south.ml.cloud.ibm.com"
                 build_config["api_base"]["advanced"] = False
                 build_config["project_id"]["show"] = True
