@@ -25,7 +25,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
 
     inputs = [
         MessageTextInput(
-            name="database_name", display_name="Db2 database name to connect", info="Db2 database name to connect"
+            name="database_name", display_name="Db2 database name", info="Db2 database name for connection"
         ),
         MessageTextInput(name="username", display_name="Username", info="Username for the Db2 database."),
         SecretStrInput(name="password", display_name="Password", info="User password for the Db2 database."),
@@ -45,7 +45,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         DropdownInput(
             name="distance_strategy",
             display_name="Distance Strategy",
-            info="Configuration the Distance Strategy of the vector store",
+            info="Configure the distance strategy for the vector store",
             options=["DOT_PRODUCT", "COSINE", "EUCLIDEAN_DISTANCE"],
             required=True,
         ),
@@ -76,7 +76,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         FloatInput(
             name="lambda_mult",
             display_name="lambda_mult for Max Marginal Relevance Search",
-            info="the degree of diversity among the results with 0 corresponding"
+            info="the degree of diversity among the results with 0 corresponding "
             "to maximum diversity and 1 to minimum diversity",
             value=0.5,
             advanced=True,
@@ -103,7 +103,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         password = self.password
         conn_str = self.conn_str
 
-        if conn_str is not None:
+        if conn_str:
             self.client = ibm_db_dbi.connect(conn_str, "", "")
         else:
             self.client = ibm_db_dbi.connect(database_name, username, password)
@@ -121,6 +121,10 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         documents = [
             Document(page_content=doc.page_content, metadata=serialize(doc.metadata, to_str=True)) for doc in documents
         ]
+
+        if not self.embedding:
+            msg = "Embedding model is required to create a vector store."
+            raise ValueError(msg)
 
         distance_strategy = DistanceStrategy[self.distance_strategy]
         if documents:
@@ -151,9 +155,14 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             try:
                 if self.search_type == "Similarity with score":
-                    docs = vector_store.similarity_search_with_score(
-                        query=self.search_query, k=self.number_of_results, filter=self.search_filter
+                    docs_with_scores = vector_store.similarity_search_with_score(
+                        query=self.search_query, k=self.number_of_results, filter=self.search_filter 
                     )
+                    # Add scores to document metadata
+                    docs = [] 
+                    for doc, score in docs_with_scores:
+                        doc.metadata["similarity_score"] = score 
+                        docs.append(doc)
                 elif self.search_type == "Max Marginal Relevance Search":
                     docs = vector_store.max_marginal_relevance_search(
                         query=self.search_query,
