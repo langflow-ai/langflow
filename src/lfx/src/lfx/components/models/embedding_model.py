@@ -1,12 +1,7 @@
 from typing import Any
 
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain_ibm import WatsonxEmbeddings
-from langchain_ollama import OllamaEmbeddings
-from langchain_openai import OpenAIEmbeddings
-
 from lfx.base.embeddings.model import LCEmbeddingsModel
-from lfx.base.models.unified_models import get_api_key_for_provider, get_embedding_model_options
+from lfx.base.models.unified_models import get_api_key_for_provider, get_embedding_classes, get_embedding_model_options
 from lfx.field_typing import Embeddings
 from lfx.io import (
     BoolInput,
@@ -17,15 +12,6 @@ from lfx.io import (
     ModelInput,
     SecretStrInput,
 )
-
-# Mapping of class names to actual class objects
-EMBEDDING_CLASSES = {
-    "GoogleGenerativeAIEmbeddings": GoogleGenerativeAIEmbeddings,
-    "OpenAIEmbeddings": OpenAIEmbeddings,
-    "OllamaEmbeddings": OllamaEmbeddings,
-    "WatsonxEmbeddings": WatsonxEmbeddings,
-}
-
 
 # Compute model options once at module level
 _MODEL_OPTIONS = get_embedding_model_options()
@@ -133,7 +119,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             msg = f"No embedding class defined in metadata for {model_name}"
             raise ValueError(msg)
 
-        embedding_class = EMBEDDING_CLASSES.get(embedding_class_name)
+        embedding_class = get_embedding_classes().get(embedding_class_name)
         if not embedding_class:
             msg = f"Unknown embedding class: {embedding_class_name}"
             raise ValueError(msg)

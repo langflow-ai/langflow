@@ -11,9 +11,7 @@ if TYPE_CHECKING:
 
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.events import ExceptionWithMessageError
-from lfx.base.models.model_input_constants import MODEL_PROVIDERS_DICT
-from lfx.base.models.model_utils import get_model_name
-from lfx.base.models.unified_models import get_api_key_for_provider, get_language_model_options
+from lfx.base.models.unified_models import get_language_model_options, get_llm
 from lfx.components.helpers.current_date import CurrentDateComponent
 from lfx.components.helpers.memory import MemoryComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
@@ -167,11 +165,14 @@ class AgentComponent(ToolCallingAgentComponent):
         """Get the agent requirements for the agent."""
         from langchain_core.tools import StructuredTool
 
-        llm_model, display_name = await self.get_llm()
+        llm_model = get_llm(
+            model=self.model,
+            user_id=self.user_id,
+            api_key=self.api_key,
+        )
         if llm_model is None:
             msg = "No language model selected. Please choose a model to proceed."
             raise ValueError(msg)
-        self.model_name = get_model_name(llm_model, display_name=display_name)
 
         # Get memory data
         self.chat_history = await self.get_memory_data()
@@ -418,45 +419,6 @@ class AgentComponent(ToolCallingAgentComponent):
         return [
             message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
         ]
-
-    async def get_llm(self):
-        try:
-            model = self.model[0]
-            provider = model.get("provider")
-
-            # Extract provider info
-            provider_info = MODEL_PROVIDERS_DICT.get(provider)
-            component_class = provider_info.get("component_class")
-            display_name = component_class.display_name
-            inputs = provider_info.get("inputs")
-            prefix = provider_info.get("prefix", "")
-
-            return self._build_llm_model(component_class, inputs, prefix), display_name
-
-        except (AttributeError, ValueError, TypeError, RuntimeError) as e:
-            await logger.aerror(f"Error building {self.model} language model: {e!s}")
-            msg = f"Failed to initialize language model: {e!s}"
-            raise ValueError(msg) from e
-
-    def _build_llm_model(self, component, inputs, prefix=""):
-        model = self.model[0]
-        provider = model.get("provider")
-        metadata = model.get("metadata", {})
-
-        # Get API key parameter name from metadata
-        api_key_param = metadata.get("api_key_param", "api_key")
-
-        # Get API key from user input or global variables
-        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
-
-        # Build model kwargs
-        model_kwargs = {}
-        for input_ in inputs:
-            if hasattr(self, f"{prefix}{input_.name}"):
-                model_kwargs[input_.name] = getattr(self, f"{prefix}{input_.name}")
-        model_kwargs = {api_key_param: api_key, "api_key": api_key}
-
-        return component.set(**model_kwargs).build_model()
 
     def update_input_types(self, build_config: dotdict) -> dotdict:
         """Update input types for all fields in build_config."""
