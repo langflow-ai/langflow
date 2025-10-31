@@ -81,7 +81,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         assert updated_config["api_key"]["display_name"] == "IBM watsonx.ai API Key"
         assert updated_config["api_key"]["required"] is True
         assert updated_config["api_key"]["show"] is True
-        assert updated_config["api_base"]["display_name"] == "Watson AI URL"
+        assert updated_config["api_base"]["display_name"] == "IBM watsonx.ai URL"
         assert updated_config["api_base"]["value"] == "https://us-south.ml.cloud.ibm.com"
         assert updated_config["project_id"]["show"] is True
 
