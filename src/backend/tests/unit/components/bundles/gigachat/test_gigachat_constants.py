@@ -7,7 +7,7 @@ from lfx.base.models.gigachat_constants import (
 
 
 class TestGigaChatConstants:
-    """Test CometAPI constants and model lists."""
+    """Test GigaChat constants and model lists."""
 
     def test_gigachat_models_not_empty(self):
         """Test that GIGACHAT_CHAT_MODEL_NAMES list is not empty."""

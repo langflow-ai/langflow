@@ -77,7 +77,7 @@ class GigaChatEmbeddingsComponent(LCEmbeddingsModel):
             display_name="verify_ssl_certs",
             value=False,
             advanced=True,
-            info="Проверка SSL сертов",
+            info="Check certificates for all requests",
         ),
         IntInput(
             name="timeout",

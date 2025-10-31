@@ -47,8 +47,8 @@ class TestGigaChatComponent(ComponentTestBaseWithoutClient):
     def test_build_model_integration(self, component_class):
         component = component_class()
         component.model = "GigaChat-2-Max"
-        component.base_url = "https://api.openai.com/v1"
+        component.base_url = "https://gigachat.devices.sberbank.ru/api/v1"
         model = component.build_model()
         assert isinstance(model, GigaChat)
         assert model.model == "GigaChat-2-Max"
-        assert model.base_url == "https://api.openai.com/v1"
+        assert model.base_url == "https://gigachat.devices.sberbank.ru/api/v1"
