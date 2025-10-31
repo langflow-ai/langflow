@@ -42,7 +42,7 @@ OPENAI_MODELS_DETAILED = [
     ),
     create_model_metadata(provider="OpenAI", name="gpt-4-turbo", icon="OpenAI", tool_calling=True),
     create_model_metadata(
-        provider="OpenAI", name="gpt-4-turbo-preview", icon="OpenAI", tool_calling=True, preview=True
+        provider="OpenAI", name="gpt-4-turbo-preview", icon="OpenAI", tool_calling=True, preview=True, deprecated=True
     ),
     create_model_metadata(provider="OpenAI", name="gpt-4", icon="OpenAI", tool_calling=True),
     create_model_metadata(provider="OpenAI", name="gpt-3.5-turbo", icon="OpenAI", tool_calling=True),
@@ -115,6 +115,12 @@ OPENAI_EMBEDDING_MODEL_NAMES = [
     "text-embedding-3-small",
     "text-embedding-3-large",
     "text-embedding-ada-002",
+]
+
+# Embedding models as detailed metadata
+OPENAI_EMBEDDING_MODELS_DETAILED = [
+    create_model_metadata(provider="OpenAI", name=name, icon="OpenAI", model_type="embeddings")
+    for name in OPENAI_EMBEDDING_MODEL_NAMES
 ]
 
 # Backwards compatibility

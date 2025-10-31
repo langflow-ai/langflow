@@ -1,9 +1,23 @@
 from typing import Any
 
+from lfx.base.models.unified_models import get_language_model_options, get_llm
 from lfx.custom import Component
-from lfx.io import BoolInput, HandleInput, MessageInput, MessageTextInput, MultilineInput, Output, TableInput
+from lfx.io import (
+    BoolInput,
+    MessageInput,
+    MessageTextInput,
+    ModelInput,
+    MultilineInput,
+    Output,
+    SecretStrInput,
+    TableInput,
+)
 from lfx.schema.message import Message
 from lfx.schema.table import EditMode
+
+# Compute model options once at module level
+_MODEL_OPTIONS = get_language_model_options()
+_PROVIDERS = [provider["provider"] for provider in _MODEL_OPTIONS]
 
 
 class SmartRouterComponent(Component):
@@ -17,12 +31,20 @@ class SmartRouterComponent(Component):
         self._matched_category = None
 
     inputs = [
-        HandleInput(
-            name="llm",
+        ModelInput(
+            name="model",
             display_name="Language Model",
-            info="LLM to use for categorization.",
-            input_types=["LanguageModel"],
+            options=_MODEL_OPTIONS,
+            providers=_PROVIDERS,
+            info="Select your model provider",
             required=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Model Provider API key",
+            real_time_refresh=True,
+            advanced=True,
         ),
         MessageTextInput(
             name="input_text",
@@ -153,7 +175,7 @@ class SmartRouterComponent(Component):
 
         # Find the matching category using LLM-based categorization
         matched_category = None
-        llm = getattr(self, "llm", None)
+        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
 
         if llm and categories:
             # Create prompt for categorization
@@ -315,7 +337,7 @@ class SmartRouterComponent(Component):
 
         # Check if any category matches using LLM categorization
         has_match = False
-        llm = getattr(self, "llm", None)
+        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
 
         if llm and categories:
             try:

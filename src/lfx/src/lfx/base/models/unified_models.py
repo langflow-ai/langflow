@@ -1,0 +1,562 @@
+from __future__ import annotations
+
+from functools import lru_cache
+from typing import Any
+from uuid import UUID
+
+from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS, ANTHROPIC_MODELS_DETAILED
+from lfx.base.models.google_generative_ai_constants import (
+    GOOGLE_GENERATIVE_AI_MODELS,
+    GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
+)
+from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
+from lfx.base.models.openai_constants import (
+    OPENAI_CHAT_MODEL_NAMES,
+    OPENAI_EMBEDDING_MODEL_NAMES,
+    OPENAI_EMBEDDING_MODELS_DETAILED,
+    OPENAI_MODELS_DETAILED,
+    OPENAI_REASONING_MODEL_NAMES,
+)
+from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
+from lfx.services.deps import get_variable_service, session_scope
+from lfx.utils.async_helpers import run_until_complete
+
+
+@lru_cache(maxsize=1)
+def get_model_classes():
+    """Lazy load model classes to avoid importing optional dependencies at module level."""
+    from langchain_anthropic import ChatAnthropic
+    from langchain_ibm import ChatWatsonx
+    from langchain_ollama import ChatOllama
+    from langchain_openai import ChatOpenAI
+
+    from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
+
+    return {
+        "ChatOpenAI": ChatOpenAI,
+        "ChatAnthropic": ChatAnthropic,
+        "ChatGoogleGenerativeAIFixed": ChatGoogleGenerativeAIFixed,
+        "ChatOllama": ChatOllama,
+        "ChatWatsonx": ChatWatsonx,
+    }
+
+
+@lru_cache(maxsize=1)
+def get_embedding_classes():
+    """Lazy load embedding classes to avoid importing optional dependencies at module level."""
+    from langchain_google_genai import GoogleGenerativeAIEmbeddings
+    from langchain_ibm import WatsonxEmbeddings
+    from langchain_ollama import OllamaEmbeddings
+    from langchain_openai import OpenAIEmbeddings
+
+    return {
+        "GoogleGenerativeAIEmbeddings": GoogleGenerativeAIEmbeddings,
+        "OpenAIEmbeddings": OpenAIEmbeddings,
+        "OllamaEmbeddings": OllamaEmbeddings,
+        "WatsonxEmbeddings": WatsonxEmbeddings,
+    }
+
+
+@lru_cache(maxsize=1)
+def get_model_provider_metadata():
+    return {
+        "OpenAI": {
+            "icon": "OpenAI",
+            "variable_name": "OPENAI_API_KEY",
+        },
+        "Anthropic": {
+            "icon": "Anthropic",
+            "variable_name": "ANTHROPIC_API_KEY",
+        },
+        "Google Generative AI": {
+            "icon": "GoogleGenerativeAI",
+            "variable_name": "GOOGLE_API_KEY",
+        },
+        "Google": {
+            "icon": "GoogleGenerativeAI",
+            "variable_name": "GOOGLE_API_KEY",
+        },
+        "Ollama": {
+            "icon": "Ollama",
+            "variable_name": "OLLAMA_BASE_URL",  # Ollama is local but can have custom URL
+        },
+        "IBM WatsonX": {
+            "icon": "WatsonxAI",
+            "variable_name": "WATSONX_APIKEY",
+        },
+    }
+
+
+model_provider_metadata = get_model_provider_metadata()
+
+
+@lru_cache(maxsize=1)
+def get_models_detailed():
+    return [
+        ANTHROPIC_MODELS_DETAILED,
+        OPENAI_MODELS_DETAILED,
+        OPENAI_EMBEDDING_MODELS_DETAILED,
+        GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
+        OLLAMA_MODELS_DETAILED,
+        OLLAMA_EMBEDDING_MODELS_DETAILED,
+        WATSONX_MODELS_DETAILED,
+    ]
+
+
+MODELS_DETAILED = get_models_detailed()
+
+
+@lru_cache(maxsize=1)
+def get_model_provider_variable_mapping() -> dict[str, str]:
+    return {provider: meta["variable_name"] for provider, meta in model_provider_metadata.items()}
+
+
+def get_model_providers() -> list[str]:
+    """Return a sorted list of unique provider names."""
+    return sorted({md.get("provider", "Unknown") for group in MODELS_DETAILED for md in group})
+
+
+def get_unified_models_detailed(
+    providers: list[str] | None = None,
+    model_name: str | None = None,
+    model_type: str | None = None,
+    *,
+    include_unsupported: bool | None = None,
+    include_deprecated: bool | None = None,
+    **metadata_filters,
+):
+    """Return a list of providers and their models, optionally filtered.
+
+    Parameters
+    ----------
+    providers : list[str] | None
+        If given, only models from these providers are returned.
+    model_name : str | None
+        If given, only the model with this exact name is returned.
+    model_type : str | None
+        Optional. Restrict to models whose metadata "model_type" matches this value.
+    include_unsupported : bool
+        When False (default) models whose metadata contains ``not_supported=True``
+        are filtered out.
+    include_deprecated : bool
+        When False (default) models whose metadata contains ``deprecated=True``
+        are filtered out.
+    **metadata_filters
+        Arbitrary key/value pairs to match against the model's metadata.
+        Example: ``get_unified_models_detailed(size="4k", context_window=8192)``
+
+    Notes:
+    • Filtering is exact-match on the metadata values.
+    • If you *do* want to see unsupported models set ``include_unsupported=True``.
+    • If you *do* want to see deprecated models set ``include_deprecated=True``.
+    """
+    if include_unsupported is None:
+        include_unsupported = False
+    if include_deprecated is None:
+        include_deprecated = False
+
+    # Gather all models from imported *_MODELS_DETAILED lists
+    all_models: list[dict] = []
+    for models_detailed in MODELS_DETAILED:
+        all_models.extend(models_detailed)
+
+    # Apply filters
+    filtered_models: list[dict] = []
+    for md in all_models:
+        # Skip models flagged as not_supported unless explicitly included
+        if (not include_unsupported) and md.get("not_supported", False):
+            continue
+
+        # Skip models flagged as deprecated unless explicitly included
+        if (not include_deprecated) and md.get("deprecated", False):
+            continue
+
+        if providers and md.get("provider") not in providers:
+            continue
+        if model_name and md.get("name") != model_name:
+            continue
+        if model_type and md.get("model_type") != model_type:
+            continue
+        # Match arbitrary metadata key/value pairs
+        if any(md.get(k) != v for k, v in metadata_filters.items()):
+            continue
+
+        filtered_models.append(md)
+
+    # Group by provider
+    provider_map: dict[str, list[dict]] = {}
+    for metadata in filtered_models:
+        prov = metadata.get("provider", "Unknown")
+        provider_map.setdefault(prov, []).append(
+            {
+                "model_name": metadata.get("name"),
+                "metadata": {k: v for k, v in metadata.items() if k not in ("provider", "name")},
+            }
+        )
+
+    # Format as requested
+    return [
+        {
+            "provider": prov,
+            "models": models,
+            "num_models": len(models),
+            **model_provider_metadata.get(prov, {}),
+        }
+        for prov, models in provider_map.items()
+    ]
+
+
+def get_api_key_for_provider(user_id: UUID | str, provider: str, api_key: str | None = None) -> str | None:
+    """Get API key from self.api_key or global variables.
+
+    Args:
+        user_id: The user ID to look up global variables for
+        provider: The provider name (e.g., "OpenAI", "Anthropic")
+        api_key: An optional API key provided directly
+
+    Returns:
+        The API key if found, None otherwise
+    """
+    # First check if user provided an API key directly
+    if api_key:
+        return api_key
+
+    # Map provider to global variable name
+    provider_variable_map = {
+        "OpenAI": "OPENAI_API_KEY",
+        "Anthropic": "ANTHROPIC_API_KEY",
+        "Google": "GOOGLE_API_KEY",
+        "IBM WatsonX": "WATSONX_APIKEY",
+    }
+
+    variable_name = provider_variable_map.get(provider)
+    if not variable_name:
+        return None
+
+    # Try to get from global variables
+    try:
+
+        async def _get_variable():
+            async with session_scope() as session:
+                variable_service = get_variable_service()
+                if variable_service is None:
+                    return None
+                return await variable_service.get_variable(
+                    user_id=UUID(user_id),
+                    name=variable_name,
+                    field="",
+                    session=session,
+                )
+
+        return run_until_complete(_get_variable())
+    except (RuntimeError, ValueError, TypeError, AttributeError):
+        # If we can't get the global variable, return None
+        # Handles: RuntimeError (async issues), ValueError (invalid UUID),
+        # TypeError (None user_id), AttributeError (service issues)
+        return None
+
+
+def validate_model_provider_key(variable_name: str, api_key: str) -> None:
+    """Validate a model provider API key by making a minimal test call.
+
+    Args:
+        variable_name: The variable name (e.g., OPENAI_API_KEY)
+        api_key: The API key to validate
+
+    Raises:
+        HTTPException: If the API key is invalid
+    """
+    # Map variable names to providers
+    provider_map = {
+        "OPENAI_API_KEY": "OpenAI",
+        "ANTHROPIC_API_KEY": "Anthropic",
+        "GOOGLE_API_KEY": "Google Generative AI",
+        "WATSONX_APIKEY": "IBM WatsonX",
+        "OLLAMA_BASE_URL": "Ollama",
+    }
+
+    provider = provider_map.get(variable_name)
+    if not provider:
+        return  # Not a model provider key we validate
+
+    # Get the first available model for this provider
+    try:
+        models = get_unified_models_detailed(providers=[provider])
+        if not models or not models[0].get("models"):
+            return  # No models available, skip validation
+
+        first_model = models[0]["models"][0]["model_name"]
+    except Exception:  # noqa: BLE001
+        return  # Can't get models, skip validation
+
+    # Test the API key based on provider
+    try:
+        if provider == "OpenAI":
+            from langchain_openai import ChatOpenAI
+
+            llm = ChatOpenAI(api_key=api_key, model_name=first_model, max_tokens=1)
+            llm.invoke("test")
+        elif provider == "Anthropic":
+            from langchain_anthropic import ChatAnthropic
+
+            llm = ChatAnthropic(anthropic_api_key=api_key, model=first_model, max_tokens=1)
+            llm.invoke("test")
+        elif provider == "Google Generative AI":
+            from langchain_google_genai import ChatGoogleGenerativeAI
+
+            llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=first_model, max_tokens=1)
+            llm.invoke("test")
+        elif provider == "IBM WatsonX":
+            # WatsonX validation would require additional parameters
+            # Skip for now as it needs project_id, url, etc.
+            return
+        elif provider == "Ollama":
+            # Ollama is local, just verify the URL is accessible
+            import requests
+
+            response = requests.get(f"{api_key}/api/tags", timeout=5)
+            if response.status_code != requests.codes.ok:
+                msg = "Invalid Ollama base URL"
+                raise ValueError(msg)
+    except ValueError:
+        # Re-raise ValueError (validation failed)
+        raise
+    except Exception as e:
+        error_msg = str(e)
+        if "401" in error_msg or "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+            msg = f"Invalid API key for {provider}"
+            raise ValueError(msg) from e
+        # For other errors, we'll allow the key to be saved (might be network issues, etc.)
+        return
+
+
+def get_language_model_options() -> list[dict[str, Any]]:
+    """Return a list of available language model providers with their configuration."""
+    # OpenAI models
+    openai_options = [
+        {
+            "name": model_name,
+            "icon": "OpenAI",
+            "category": "OpenAI",
+            "provider": "OpenAI",
+            "metadata": {
+                "context_length": 128000,
+                "model_class": "ChatOpenAI",
+                "model_name_param": "model",
+                "api_key_param": "api_key",
+                "reasoning_models": OPENAI_REASONING_MODEL_NAMES,
+            },
+        }
+        for model_name in OPENAI_CHAT_MODEL_NAMES
+    ]
+
+    # Anthropic models
+    anthropic_options = [
+        {
+            "name": model_name,
+            "icon": "Anthropic",
+            "category": "Anthropic",
+            "provider": "Anthropic",
+            "metadata": {
+                "context_length": 200000,
+                "model_class": "ChatAnthropic",
+                "model_name_param": "model",
+                "api_key_param": "api_key",
+            },
+        }
+        for model_name in ANTHROPIC_MODELS
+    ]
+
+    # Google models
+    google_options = [
+        {
+            "name": model_name,
+            "icon": "GoogleGenerativeAI",
+            "category": "Google",
+            "provider": "Google",
+            "metadata": {
+                "context_length": 32768,
+                "model_class": "ChatGoogleGenerativeAIFixed",
+                "model_name_param": "model",
+                "api_key_param": "google_api_key",
+            },
+        }
+        for model_name in GOOGLE_GENERATIVE_AI_MODELS
+    ]
+
+    # Ollama models (local)
+    ollama_options = [
+        {
+            "name": "ChatOllama",
+            "icon": "Ollama",
+            "category": "Ollama",
+            "provider": "Ollama",
+            "metadata": {
+                "context_length": 8192,  # Varies by model
+                "model_class": "ChatOllama",
+                "model_name_param": "model",
+                "base_url_param": "base_url",
+            },
+        }
+    ]
+
+    # WatsonX models
+    watsonx_options = [
+        {
+            "name": "ChatWatsonx",
+            "icon": "WatsonxAI",
+            "category": "IBM WatsonX",
+            "provider": "IBM WatsonX",
+            "metadata": {
+                "context_length": 8192,  # Varies by model
+                "model_class": "ChatWatsonx",
+                "model_name_param": "model_id",
+                "api_key_param": "apikey",
+                "url_param": "url",
+                "project_id_param": "project_id",
+            },
+        }
+    ]
+
+    # Combine all options and return
+    return openai_options + anthropic_options + google_options + ollama_options + watsonx_options
+
+
+def get_embedding_model_options() -> list[dict[str, Any]]:
+    """Return a list of available embedding model providers with their configuration."""
+    openai_options = [
+        {
+            "name": model_name,
+            "icon": "OpenAI",
+            "category": "OpenAI",
+            "provider": "OpenAI",
+            "metadata": {
+                "embedding_class": "OpenAIEmbeddings",
+                "param_mapping": {
+                    "model": "model",
+                    "api_key": "api_key",
+                    "api_base": "base_url",
+                    "dimensions": "dimensions",
+                    "chunk_size": "chunk_size",
+                    "request_timeout": "timeout",
+                    "max_retries": "max_retries",
+                    "show_progress_bar": "show_progress_bar",
+                    "model_kwargs": "model_kwargs",
+                },
+            },
+        }
+        for model_name in OPENAI_EMBEDDING_MODEL_NAMES
+    ]
+
+    google_options = [
+        {
+            "name": "GoogleGenerativeAIEmbeddings",
+            "icon": "GoogleGenerativeAI",
+            "category": "Google",
+            "provider": "Google",
+            "metadata": {
+                "embedding_class": "GoogleGenerativeAIEmbeddings",
+                "param_mapping": {
+                    "model": "model",
+                    "api_key": "google_api_key",
+                    "request_timeout": "request_options",
+                    "model_kwargs": "client_options",
+                },
+            },
+        }
+    ]
+
+    ollama_options = [
+        {
+            "name": "OllamaEmbeddings",
+            "icon": "Ollama",
+            "category": "Ollama",
+            "provider": "Ollama",
+            "metadata": {
+                "embedding_class": "OllamaEmbeddings",
+                "param_mapping": {
+                    "model": "model",
+                    "base_url": "base_url",
+                    "num_ctx": "num_ctx",
+                    "request_timeout": "request_timeout",
+                    "model_kwargs": "model_kwargs",
+                },
+            },
+        }
+    ]
+
+    watsonx_options = [
+        {
+            "name": "WatsonxEmbeddings",
+            "icon": "WatsonxAI",
+            "category": "IBM WatsonX",
+            "provider": "IBM WatsonX",
+            "metadata": {
+                "embedding_class": "WatsonxEmbeddings",
+                "param_mapping": {
+                    "model_id": "model_id",
+                    "url": "url",
+                    "api_key": "apikey",
+                    "project_id": "project_id",
+                    "space_id": "space_id",
+                    "request_timeout": "request_timeout",
+                },
+            },
+        }
+    ]
+
+    return openai_options + google_options + ollama_options + watsonx_options
+
+
+def get_llm(model, user_id: UUID | str, api_key=None, temperature=None, *, stream=False) -> Any:
+    # Safely extract model configuration
+    if not model or not isinstance(model, list) or len(model) == 0:
+        msg = "A model selection is required"
+        raise ValueError(msg)
+
+    # Extract the first model (only one expected)
+    model = model[0]
+
+    # Extract model configuration from metadata
+    model_name = model.get("name")
+    provider = model.get("provider")
+    metadata = model.get("metadata", {})
+
+    # Get model class and parameter names from metadata
+    api_key_param = metadata.get("api_key_param", "api_key")
+
+    # Get API key from user input or global variables
+    api_key = get_api_key_for_provider(user_id, provider, api_key)
+
+    # Validate API key (Ollama doesn't require one)
+    if not api_key and provider != "Ollama":
+        msg = (
+            f"{provider} API key is required when using {provider} provider. "
+            f"Please provide it in the component or configure it globally as "
+            f"{provider.upper().replace(' ', '_')}_API_KEY."
+        )
+        raise ValueError(msg)
+
+    # Get model class from metadata
+    model_class = get_model_classes().get(metadata.get("model_class"))
+    if model_class is None:
+        msg = f"No model class defined for {model_name}"
+        raise ValueError(msg)
+    model_name_param = metadata.get("model_name_param", "model")
+
+    # Check if this is a reasoning model that doesn't support temperature
+    reasoning_models = metadata.get("reasoning_models", [])
+    if model_name in reasoning_models:
+        temperature = None
+
+    # Build kwargs dynamically
+    kwargs = {
+        model_name_param: model_name,
+        "streaming": stream,
+        api_key_param: api_key,
+    }
+
+    if temperature is not None:
+        kwargs["temperature"] = temperature
+
+    return model_class(**kwargs)

@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
+from lfx.base.models.unified_models import get_model_provider_variable_mapping, validate_model_provider_key
 from sqlalchemy.exc import NoResultFound
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -10,6 +11,7 @@ from langflow.services.variable.constants import CREDENTIAL_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 
 router = APIRouter(prefix="/variables", tags=["Variables"])
+model_provider_variable_mapping = get_model_provider_variable_mapping()
 
 
 @router.post("/", response_model=VariableRead, status_code=201)
@@ -32,6 +34,15 @@ async def create_variable(
 
     if variable.name in await variable_service.list_variables(user_id=current_user.id, session=session):
         raise HTTPException(status_code=400, detail="Variable name already exists")
+
+    # Check if the variable is a reserved model provider variable
+    if variable.name in model_provider_variable_mapping.values():
+        # Validate that the key actually works using the Language Model Service
+        try:
+            validate_model_provider_key(variable.name, variable.value)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+
     try:
         return await variable_service.create_variable(
             user_id=current_user.id,

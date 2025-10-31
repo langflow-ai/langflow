@@ -1,22 +1,21 @@
 from typing import Any
 
-from langchain_openai import OpenAIEmbeddings
-
 from lfx.base.embeddings.model import LCEmbeddingsModel
-from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS
-from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
-from lfx.base.models.watsonx_constants import WATSONX_EMBEDDING_MODEL_NAMES
+from lfx.base.models.unified_models import get_api_key_for_provider, get_embedding_classes, get_embedding_model_options
 from lfx.field_typing import Embeddings
 from lfx.io import (
     BoolInput,
     DictInput,
-    DropdownInput,
     FloatInput,
     IntInput,
     MessageTextInput,
+    ModelInput,
     SecretStrInput,
 )
-from lfx.schema.dotdict import dotdict
+
+# Compute model options once at module level
+_MODEL_OPTIONS = get_embedding_model_options()
+_PROVIDERS = [option["provider"] for option in _MODEL_OPTIONS]
 
 
 class EmbeddingModelComponent(LCEmbeddingsModel):
@@ -28,42 +27,26 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
     category = "models"
 
     inputs = [
-        DropdownInput(
-            name="provider",
-            display_name="Model Provider",
-            options=["OpenAI", "Ollama", "WatsonX"],
-            value="OpenAI",
-            info="Select the embedding model provider",
-            real_time_refresh=True,
-            options_metadata=[{"icon": "OpenAI"}, {"icon": "Ollama"}, {"icon": "WatsonxAI"}],
-        ),
-        DropdownInput(
+        ModelInput(
             name="model",
-            display_name="Model Name",
-            options=OPENAI_EMBEDDING_MODEL_NAMES,
-            value=OPENAI_EMBEDDING_MODEL_NAMES[0],
-            info="Select the embedding model to use",
+            display_name="Embedding Model",
+            options=_MODEL_OPTIONS,
+            providers=_PROVIDERS,
+            info="Select your model provider",
+            real_time_refresh=True,
         ),
         SecretStrInput(
             name="api_key",
-            display_name="OpenAI API Key",
+            display_name="API Key",
             info="Model Provider API key",
-            required=True,
-            show=True,
             real_time_refresh=True,
+            advanced=True,
         ),
         MessageTextInput(
             name="api_base",
             display_name="API Base URL",
             info="Base URL for the API. Leave empty for default.",
             advanced=True,
-        ),
-        # Watson-specific inputs
-        MessageTextInput(
-            name="project_id",
-            display_name="Project ID",
-            info="Watson AI Project ID (required for WatsonX)",
-            show=False,
         ),
         IntInput(
             name="dimensions",
@@ -72,10 +55,28 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             "Only supported by certain models.",
             advanced=True,
         ),
-        IntInput(name="chunk_size", display_name="Chunk Size", advanced=True, value=1000),
-        FloatInput(name="request_timeout", display_name="Request Timeout", advanced=True),
-        IntInput(name="max_retries", display_name="Max Retries", advanced=True, value=3),
-        BoolInput(name="show_progress_bar", display_name="Show Progress Bar", advanced=True),
+        IntInput(
+            name="chunk_size",
+            display_name="Chunk Size",
+            advanced=True,
+            value=1000,
+        ),
+        FloatInput(
+            name="request_timeout",
+            display_name="Request Timeout",
+            advanced=True,
+        ),
+        IntInput(
+            name="max_retries",
+            display_name="Max Retries",
+            advanced=True,
+            value=3,
+        ),
+        BoolInput(
+            name="show_progress_bar",
+            display_name="Show Progress Bar",
+            advanced=True,
+        ),
         DictInput(
             name="model_kwargs",
             display_name="Model Kwargs",
@@ -85,108 +86,90 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
     ]
 
     def build_embeddings(self) -> Embeddings:
-        provider = self.provider
-        model = self.model
-        api_key = self.api_key
-        api_base = self.api_base
-        dimensions = self.dimensions
-        chunk_size = self.chunk_size
-        request_timeout = self.request_timeout
-        max_retries = self.max_retries
-        show_progress_bar = self.show_progress_bar
-        model_kwargs = self.model_kwargs or {}
+        """Build and return an embeddings instance based on the selected model."""
+        # Safely extract model configuration
+        if not self.model or not isinstance(self.model, list):
+            msg = "Model must be a non-empty list"
+            raise ValueError(msg)
 
-        if provider == "OpenAI":
-            if not api_key:
-                msg = "OpenAI API key is required when using OpenAI provider"
-                raise ValueError(msg)
-            return OpenAIEmbeddings(
-                model=model,
-                dimensions=dimensions or None,
-                base_url=api_base or None,
-                api_key=api_key,
-                chunk_size=chunk_size,
-                max_retries=max_retries,
-                timeout=request_timeout or None,
-                show_progress_bar=show_progress_bar,
-                model_kwargs=model_kwargs,
+        model = self.model[0]
+        model_name = model.get("name")
+        provider = model.get("provider")
+        metadata = model.get("metadata", {})
+
+        # Get API key from user input or global variables
+        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
+
+        # Validate required fields (Ollama doesn't require API key)
+        if not api_key and provider != "Ollama":
+            msg = (
+                f"{provider} API key is required. "
+                f"Please provide it in the component or configure it globally as "
+                f"{provider.upper().replace(' ', '_')}_API_KEY."
+            )
+            raise ValueError(msg)
+
+        if not model_name:
+            msg = "Model name is required"
+            raise ValueError(msg)
+
+        # Get embedding class
+        embedding_class_name = metadata.get("embedding_class")
+        if not embedding_class_name:
+            msg = f"No embedding class defined in metadata for {model_name}"
+            raise ValueError(msg)
+
+        embedding_class = get_embedding_classes().get(embedding_class_name)
+        if not embedding_class:
+            msg = f"Unknown embedding class: {embedding_class_name}"
+            raise ValueError(msg)
+
+        # Build kwargs using parameter mapping
+        kwargs = self._build_kwargs(model, metadata)
+
+        return embedding_class(**kwargs)
+
+    def _build_kwargs(self, model: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
+        """Build kwargs dictionary using parameter mapping."""
+        param_mapping = metadata.get("param_mapping", {})
+        if not param_mapping:
+            msg = "Parameter mapping not found in metadata"
+            raise ValueError(msg)
+
+        kwargs = {}
+
+        # Required parameters
+        if "model" in param_mapping:
+            kwargs[param_mapping["model"]] = model.get("name")
+        if "api_key" in param_mapping:
+            kwargs[param_mapping["api_key"]] = get_api_key_for_provider(
+                self.user_id,
+                model.get("provider"),
+                self.api_key,
             )
 
-        if provider == "Ollama":
-            try:
-                from langchain_ollama import OllamaEmbeddings
-            except ImportError:
-                try:
-                    from langchain_community.embeddings import OllamaEmbeddings
-                except ImportError:
-                    msg = "Please install langchain-ollama: pip install langchain-ollama"
-                    raise ImportError(msg) from None
+        # Optional parameters with their values
+        optional_params = {
+            "api_base": self.api_base if self.api_base else None,
+            "dimensions": int(self.dimensions) if self.dimensions else None,
+            "chunk_size": int(self.chunk_size) if self.chunk_size else None,
+            "request_timeout": float(self.request_timeout) if self.request_timeout else None,
+            "max_retries": int(self.max_retries) if self.max_retries else None,
+            "show_progress_bar": self.show_progress_bar if hasattr(self, "show_progress_bar") else None,
+            "model_kwargs": self.model_kwargs if self.model_kwargs else None,
+        }
 
-            return OllamaEmbeddings(
-                model=model,
-                base_url=api_base or "http://localhost:11434",
-                **model_kwargs,
-            )
+        # Add optional parameters if they have values and are mapped
+        for param_name, param_value in optional_params.items():
+            if param_value is not None and param_name in param_mapping:
+                # Special handling for request_timeout with Google provider
+                if param_name == "request_timeout":
+                    provider = model.get("provider")
+                    if provider == "Google" and isinstance(param_value, (int, float)):
+                        kwargs[param_mapping[param_name]] = {"timeout": param_value}
+                    else:
+                        kwargs[param_mapping[param_name]] = param_value
+                else:
+                    kwargs[param_mapping[param_name]] = param_value
 
-        if provider == "WatsonX":
-            try:
-                from langchain_ibm import WatsonxEmbeddings
-            except ImportError:
-                msg = "Please install langchain-ibm: pip install langchain-ibm"
-                raise ImportError(msg) from None
-
-            if not api_key:
-                msg = "Watson AI API key is required when using WatsonX provider"
-                raise ValueError(msg)
-
-            project_id = self.project_id
-
-            if not project_id:
-                msg = "Project ID is required for WatsonX"
-                raise ValueError(msg)
-
-            params = {
-                "model_id": model,
-                "url": api_base or "https://us-south.ml.cloud.ibm.com",
-                "apikey": api_key,
-            }
-
-            params["project_id"] = project_id
-
-            return WatsonxEmbeddings(**params)
-
-        msg = f"Unknown provider: {provider}"
-        raise ValueError(msg)
-
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
-        if field_name == "provider":
-            if field_value == "OpenAI":
-                build_config["model"]["options"] = OPENAI_EMBEDDING_MODEL_NAMES
-                build_config["model"]["value"] = OPENAI_EMBEDDING_MODEL_NAMES[0]
-                build_config["api_key"]["display_name"] = "OpenAI API Key"
-                build_config["api_key"]["required"] = True
-                build_config["api_key"]["show"] = True
-                build_config["api_base"]["display_name"] = "OpenAI API Base URL"
-                build_config["project_id"]["show"] = False
-
-            elif field_value == "Ollama":
-                build_config["model"]["options"] = OLLAMA_EMBEDDING_MODELS
-                build_config["model"]["value"] = OLLAMA_EMBEDDING_MODELS[0]
-                build_config["api_key"]["display_name"] = "API Key (Optional)"
-                build_config["api_key"]["required"] = False
-                build_config["api_key"]["show"] = False
-                build_config["api_base"]["display_name"] = "Ollama Base URL"
-                build_config["api_base"]["value"] = "http://localhost:11434"
-                build_config["project_id"]["show"] = False
-
-            elif field_value == "WatsonX":
-                build_config["model"]["options"] = WATSONX_EMBEDDING_MODEL_NAMES
-                build_config["model"]["value"] = WATSONX_EMBEDDING_MODEL_NAMES[0]
-                build_config["api_key"]["display_name"] = "Watson AI API Key"
-                build_config["api_key"]["required"] = True
-                build_config["api_key"]["show"] = True
-                build_config["api_base"]["display_name"] = "Watson AI URL"
-                build_config["api_base"]["value"] = "https://us-south.ml.cloud.ibm.com"
-                build_config["project_id"]["show"] = True
-
-        return build_config
+        return kwargs

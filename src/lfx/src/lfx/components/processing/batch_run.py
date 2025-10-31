@@ -4,13 +4,19 @@ from typing import TYPE_CHECKING, Any, cast
 
 import toml  # type: ignore[import-untyped]
 
+from lfx.base.models.unified_models import get_language_model_options, get_model_classes
 from lfx.custom.custom_component.component import Component
-from lfx.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output
+from lfx.io import BoolInput, DataFrameInput, MessageTextInput, ModelInput, MultilineInput, Output, SecretStrInput
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 
 if TYPE_CHECKING:
     from langchain_core.runnables import Runnable
+
+
+# Compute model options once at module level
+_MODEL_OPTIONS = get_language_model_options()
+_PROVIDERS = [provider["provider"] for provider in _MODEL_OPTIONS]
 
 
 class BatchRunComponent(Component):
@@ -20,12 +26,20 @@ class BatchRunComponent(Component):
     icon = "List"
 
     inputs = [
-        HandleInput(
+        ModelInput(
             name="model",
             display_name="Language Model",
-            info="Connect the 'Language Model' output from your LLM component here.",
-            input_types=["LanguageModel"],
+            options=_MODEL_OPTIONS,
+            providers=_PROVIDERS,
+            info="Select your model provider",
             required=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Model Provider API key",
+            real_time_refresh=True,
+            advanced=True,
         ),
         MultilineInput(
             name="system_message",
@@ -111,20 +125,38 @@ class BatchRunComponent(Component):
             }
 
     async def run_batch(self) -> DataFrame:
-        """Process each row in df[column_name] with the language model asynchronously.
+        """Process each row in df[column_name] with the language model asynchronously."""
+        # Extract model configuration
+        model_selection = self.model[0]
+        model_name = model_selection.get("name")
+        provider = model_selection.get("provider")
+        metadata = model_selection.get("metadata", {})
 
-        Returns:
-            DataFrame: A new DataFrame containing:
-                - All original columns
-                - The model's response column (customizable name)
-                - 'batch_index' column for processing order
-                - 'metadata' (optional)
+        # Get model class and parameters from metadata
+        model_class = get_model_classes().get(metadata.get("model_class"))
+        if model_class is None:
+            msg = f"No model class defined for {model_name}"
+            raise ValueError(msg)
 
-        Raises:
-            ValueError: If the specified column is not found in the DataFrame
-            TypeError: If the model is not compatible or input types are wrong
-        """
-        model: Runnable = self.model
+        api_key_param = metadata.get("api_key_param", "api_key")
+        model_name_param = metadata.get("model_name_param", "model")
+
+        # Get API key from global variables
+        from lfx.base.models.unified_models import get_api_key_for_provider
+
+        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
+
+        if not api_key and provider != "Ollama":
+            msg = f"{provider} API key is required. Please configure it globally."
+            raise ValueError(msg)
+
+        # Instantiate the model
+        kwargs = {
+            model_name_param: model_name,
+            api_key_param: api_key,
+        }
+        model: Runnable = model_class(**kwargs)
+
         system_msg = self.system_message or ""
         df: DataFrame = self.df
         col_name = self.column_name or ""
