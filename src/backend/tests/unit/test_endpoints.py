@@ -145,7 +145,7 @@ async def test_get_all(client: AsyncClient, logged_in_headers):
         files
     )  # Less or equal because we might have some files that don't have the dependencies installed
     assert "ChatInput" in json_response["input_output"]
-    assert "Prompt Template" in json_response["processing"]
+    assert "Prompt Template" in json_response["models_and_agents"]
     assert "ChatOutput" in json_response["input_output"]
 
 

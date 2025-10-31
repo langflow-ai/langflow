@@ -151,11 +151,14 @@ test(
     //---------------------------------- PROMPT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
-    await page.waitForSelector('[data-testid="processingPrompt Template"]', {
-      timeout: 2000,
-    });
+    await page.waitForSelector(
+      '[data-testid="models_and_agentsPrompt Template"]',
+      {
+        timeout: 2000,
+      },
+    );
     await page
-      .getByTestId("processingPrompt Template")
+      .getByTestId("models_and_agentsPrompt Template")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 350, y: 300 },
       });

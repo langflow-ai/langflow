@@ -21,7 +21,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("api request");
 
-    await page.waitForSelector('[data-testid="dataAPI Request"]', {
+    await page.waitForSelector('[data-testid="data_sourceAPI Request"]', {
       timeout: 3000,
     });
     await page
@@ -56,7 +56,7 @@ test(
           .isVisible();
       });
 
-    await expect(page.getByTestId("disclosure-input / output")).toBeVisible();
+    await expect(page.getByTestId("disclosure-input & output")).toBeVisible();
     await expect(page.getByTestId("disclosure-models")).toBeVisible();
     await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
     await expect(page.getByTestId("disclosure-agents")).toBeVisible();
@@ -70,7 +70,9 @@ test(
 
     await expect(page.getByTestId("input_outputChat Input")).toBeVisible();
     await expect(page.getByTestId("input_outputChat Output")).toBeVisible();
-    await expect(page.getByTestId("processingPrompt Template")).toBeVisible();
+    await expect(
+      page.getByTestId("models_and_agentsPrompt Template"),
+    ).toBeVisible();
     await expect(
       page.getByTestId("langchain_utilitiesCSV Agent"),
     ).toBeVisible();
@@ -97,7 +99,7 @@ test(
     await expect(page.getByTestId("input_outputChat Input")).not.toBeVisible();
     await expect(page.getByTestId("input_outputChat Output")).not.toBeVisible();
     await expect(
-      page.getByTestId("processingPrompt Template"),
+      page.getByTestId("models_and_agentsPrompt Template"),
     ).not.toBeVisible();
     await expect(
       page.getByTestId("agentsTool Calling Agent"),

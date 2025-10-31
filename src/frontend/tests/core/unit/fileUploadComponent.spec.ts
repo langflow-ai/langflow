@@ -35,7 +35,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("file");
 
-    await page.waitForSelector('[data-testid="dataRead File"]', {
+    await page.waitForSelector('[data-testid="data_sourceRead File"]', {
       timeout: 10000,
     });
 
@@ -406,7 +406,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("file");
 
-    await page.waitForSelector('[data-testid="dataRead File"]', {
+    await page.waitForSelector('[data-testid="data_sourceRead File"]', {
       timeout: 10000,
     });
 
@@ -717,7 +717,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("file");
 
-    await page.waitForSelector('[data-testid="dataRead File"]', {
+    await page.waitForSelector('[data-testid="data_sourceRead File"]', {
       timeout: 10000,
     });
 

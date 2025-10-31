@@ -8,7 +8,7 @@ import sys
 import time
 
 import pytest
-from langflow.components.agents import AgentComponent
+from langflow.components.agents import AgentComponent  # Backwards compatibility alias
 from langflow.components.data import APIRequestComponent
 from langflow.components.openai import OpenAIModelComponent
 
@@ -175,7 +175,8 @@ class TestDynamicImportIntegration:
         main_dir = dir(components)
         assert "openai" in main_dir
         assert "data" in main_dir
-        assert "agents" in main_dir
+        assert "agents" in main_dir  # Backwards compatibility alias for models_and_agents
+        assert "models_and_agents" in main_dir
 
         openai_dir = dir(openai_components)
         assert "OpenAIModelComponent" in openai_dir

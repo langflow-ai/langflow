@@ -16,7 +16,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("directory");
 
-    await page.waitForSelector('[data-testid="dataDirectory"]', {
+    await page.waitForSelector('[data-testid="data_sourceDirectory"]', {
       timeout: 30000,
     });
     await page

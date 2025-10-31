@@ -787,7 +787,7 @@
                 ],
                 "total_dependencies": 4
               },
-              "module": "lfx.components.data.api_request.APIRequestComponent"
+              "module": "lfx.components.data_source.api_request.APIRequestComponent"
             },
             "minimized": false,
             "output_types": [],
