@@ -36,6 +36,10 @@ GIGACHAT_MODELS_DETAILED = [
 GIGACHAT_CHAT_MODEL_NAMES = [
     metadata["name"] for metadata in GIGACHAT_MODELS_DETAILED if not metadata.get("deprecated", False)
 ]
-
+GIGACHAT_SCOPES = [
+    "GIGACHAT_API_PERS",
+    "GIGACHAT_API_CORP",
+    "GIGACHAT_API_B2B",
+]
 GIGACHAT_EMBEDDING_MODEL_NAMES = ["EmbeddingsGigaR", "Embeddings", "Embeddings-2"]
 MODEL_NAMES = GIGACHAT_CHAT_MODEL_NAMES

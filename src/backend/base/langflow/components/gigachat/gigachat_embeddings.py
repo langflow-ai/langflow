@@ -2,7 +2,7 @@ from typing import Any
 
 from langchain_gigachat import GigaChatEmbeddings
 from lfx.base.embeddings.model import LCEmbeddingsModel
-from lfx.base.models.gigachat_constants import GIGACHAT_EMBEDDING_MODEL_NAMES
+from lfx.base.models.gigachat_constants import GIGACHAT_EMBEDDING_MODEL_NAMES, GIGACHAT_SCOPES
 from lfx.field_typing import Embeddings
 from lfx.io import BoolInput, DropdownInput, IntInput, SecretStrInput, StrInput
 
@@ -19,6 +19,8 @@ class GigaChatEmbeddingsComponent(LCEmbeddingsModel):
             advanced=False,
             options=GIGACHAT_EMBEDDING_MODEL_NAMES,
             value=GIGACHAT_EMBEDDING_MODEL_NAMES[0],
+            real_time_refresh=True,
+            combobox=True,
         ),
         StrInput(
             name="base_url",
@@ -32,11 +34,16 @@ class GigaChatEmbeddingsComponent(LCEmbeddingsModel):
             advanced=True,
             info="The auth URL of the GigaChat API. ",
         ),
-        StrInput(
+        DropdownInput(
             name="scope",
             display_name="GigaChat Scope",
             advanced=False,
-            info="The scope of the GigaChat API. ",
+            options=GIGACHAT_SCOPES,
+            real_time_refresh=True,
+            value=GIGACHAT_SCOPES[0],
+            info="Version of the API you are getting access to. "
+            "You can find the value of the scope field in your profile after you create a project.",
+            combobox=True,
         ),
         SecretStrInput(
             name="credentials",
