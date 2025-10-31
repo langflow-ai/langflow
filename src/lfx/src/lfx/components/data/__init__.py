@@ -41,6 +41,21 @@ __all__ = [
 
 def __getattr__(attr_name: str) -> Any:
     """Forward attribute access to data_source components."""
+    # Handle submodule access for backwards compatibility
+    # e.g., lfx.components.data.directory -> lfx.components.files_and_knowledge.directory
+    if attr_name == "directory":
+        from importlib import import_module
+
+        result = import_module("lfx.components.files_and_knowledge.directory")
+        globals()[attr_name] = result
+        return result
+    if attr_name == "file":
+        from importlib import import_module
+
+        result = import_module("lfx.components.files_and_knowledge.file")
+        globals()[attr_name] = result
+        return result
+
     if attr_name not in _dynamic_imports:
         msg = f"module '{__name__}' has no attribute '{attr_name}'"
         raise AttributeError(msg)

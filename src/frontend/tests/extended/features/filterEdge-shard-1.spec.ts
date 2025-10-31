@@ -55,7 +55,7 @@ test(
     });
 
     const disclosureTestIds = [
-      "disclosure-input / output",
+      "disclosure-input & output",
       "disclosure-data",
       "disclosure-models",
       "disclosure-helpers",

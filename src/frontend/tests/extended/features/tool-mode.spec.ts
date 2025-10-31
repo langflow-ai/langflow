@@ -16,7 +16,7 @@ test(
     });
 
     await page.getByTestId("disclosure-data").click();
-    await page.waitForSelector('[data-testid="dataURL"]', {
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,
       state: "visible",
     });

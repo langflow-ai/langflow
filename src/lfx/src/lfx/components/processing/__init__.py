@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from lfx.components.processing.dataframe_operations import DataFrameOperationsComponent
     from lfx.components.processing.dataframe_to_toolset import DataFrameToToolsetComponent
     from lfx.components.processing.output_parser import OutputParserComponent
+    from lfx.components.processing.parse_data import ParseDataComponent
     from lfx.components.processing.parser import ParserComponent
     from lfx.components.processing.split_text import SplitTextComponent
     from lfx.components.processing.store_message import MessageStoreComponent
@@ -26,6 +27,7 @@ _dynamic_imports = {
     "DataFrameOperationsComponent": "dataframe_operations",
     "DataFrameToToolsetComponent": "dataframe_to_toolset",
     "OutputParserComponent": "output_parser",
+    "ParseDataComponent": "parse_data",
     "ParserComponent": "parser",
     "SplitTextComponent": "split_text",
     "MessageStoreComponent": "store_message",
@@ -39,6 +41,7 @@ __all__ = [
     "DataOperationsComponent",
     "MessageStoreComponent",
     "OutputParserComponent",
+    "ParseDataComponent",
     "ParserComponent",
     "SplitTextComponent",
     "TypeConverterComponent",

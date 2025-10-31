@@ -25,7 +25,7 @@ test(
     // Add URL component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("url");
-    await page.waitForSelector('[data-testid="dataURL"]', {
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 1000,
     });
 
@@ -80,7 +80,7 @@ test(
     //This one is for testing the wrong loop message
 
     await page.getByTestId("sidebar-search-input").fill("Read File");
-    await page.waitForSelector('[data-testid="dataRead File"]', {
+    await page.waitForSelector('[data-testid="data_sourceRead File"]', {
       timeout: 1000,
     });
 

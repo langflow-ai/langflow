@@ -21,7 +21,7 @@ test(
         await page.getByTestId("sidebar-search-input").click();
         await page.getByTestId("sidebar-search-input").fill("api request");
 
-        await page.waitForSelector('[data-testid="dataAPI Request"]', {
+        await page.waitForSelector('[data-testid="data_sourceAPI Request"]', {
           timeout: 3000,
         });
 
