@@ -42,7 +42,7 @@ OPENAI_MODELS_DETAILED = [
     ),
     create_model_metadata(provider="OpenAI", name="gpt-4-turbo", icon="OpenAI", tool_calling=True),
     create_model_metadata(
-        provider="OpenAI", name="gpt-4-turbo-preview", icon="OpenAI", tool_calling=True, preview=True
+        provider="OpenAI", name="gpt-4-turbo-preview", icon="OpenAI", tool_calling=True, preview=True, deprecated=True
     ),
     create_model_metadata(provider="OpenAI", name="gpt-4", icon="OpenAI", tool_calling=True),
     create_model_metadata(provider="OpenAI", name="gpt-3.5-turbo", icon="OpenAI", tool_calling=True),

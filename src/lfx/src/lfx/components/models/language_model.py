@@ -1,125 +1,12 @@
-from typing import Any
-
-from langchain_anthropic import ChatAnthropic
-from langchain_ibm import ChatWatsonx
-from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
-
-from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
-from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
-from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
-from lfx.base.models.unified_models import get_api_key_for_provider
+from lfx.base.models.unified_models import get_api_key_for_provider, get_language_model_options, get_model_classes
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput
 from lfx.io import MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput
 
-# Mapping of class names to actual class objects
-MODEL_CLASSES = {
-    "ChatOpenAI": ChatOpenAI,
-    "ChatAnthropic": ChatAnthropic,
-    "ChatGoogleGenerativeAIFixed": ChatGoogleGenerativeAIFixed,
-    "ChatOllama": ChatOllama,
-    "ChatWatsonx": ChatWatsonx,
-}
-
-
-def _get_language_model_options() -> list[dict[str, Any]]:
-    """Return a list of available language model providers with their configuration."""
-    # OpenAI models
-    openai_options = [
-        {
-            "name": model_name,
-            "icon": "OpenAI",
-            "category": "OpenAI",
-            "provider": "OpenAI",
-            "metadata": {
-                "context_length": 128000,
-                "model_class": "ChatOpenAI",
-                "model_name_param": "model",
-                "api_key_param": "api_key",
-                "reasoning_models": OPENAI_REASONING_MODEL_NAMES,
-            },
-        }
-        for model_name in OPENAI_CHAT_MODEL_NAMES
-    ]
-
-    # Anthropic models
-    anthropic_options = [
-        {
-            "name": model_name,
-            "icon": "Anthropic",
-            "category": "Anthropic",
-            "provider": "Anthropic",
-            "metadata": {
-                "context_length": 200000,
-                "model_class": "ChatAnthropic",
-                "model_name_param": "model",
-                "api_key_param": "api_key",
-            },
-        }
-        for model_name in ANTHROPIC_MODELS
-    ]
-
-    # Google models
-    google_options = [
-        {
-            "name": model_name,
-            "icon": "GoogleGenerativeAI",
-            "category": "Google",
-            "provider": "Google",
-            "metadata": {
-                "context_length": 32768,
-                "model_class": "ChatGoogleGenerativeAIFixed",
-                "model_name_param": "model",
-                "api_key_param": "google_api_key",
-            },
-        }
-        for model_name in GOOGLE_GENERATIVE_AI_MODELS
-    ]
-
-    # Ollama models (local)
-    ollama_options = [
-        {
-            "name": "ChatOllama",
-            "icon": "Ollama",
-            "category": "Ollama",
-            "provider": "Ollama",
-            "metadata": {
-                "context_length": 8192,  # Varies by model
-                "model_class": "ChatOllama",
-                "model_name_param": "model",
-                "base_url_param": "base_url",
-            },
-        }
-    ]
-
-    # WatsonX models
-    watsonx_options = [
-        {
-            "name": "ChatWatsonx",
-            "icon": "WatsonxAI",
-            "category": "IBM WatsonX",
-            "provider": "IBM WatsonX",
-            "metadata": {
-                "context_length": 8192,  # Varies by model
-                "model_class": "ChatWatsonx",
-                "model_name_param": "model_id",
-                "api_key_param": "apikey",
-                "url_param": "url",
-                "project_id_param": "project_id",
-            },
-        }
-    ]
-
-    # Combine all options and return
-    return openai_options + anthropic_options + google_options + ollama_options + watsonx_options
-
-
 # Compute model options once at module level
-_MODEL_OPTIONS = _get_language_model_options()
+_MODEL_OPTIONS = get_language_model_options()
 _PROVIDERS = [provider["provider"] for provider in _MODEL_OPTIONS]
 
 
@@ -206,7 +93,7 @@ class LanguageModelComponent(LCModelComponent):
             raise ValueError(msg)
 
         # Get model class from metadata
-        model_class = MODEL_CLASSES.get(metadata.get("model_class"))
+        model_class = get_model_classes().get(metadata.get("model_class"))
         if model_class is None:
             msg = f"No model class defined for {model_name}"
             raise ValueError(msg)

@@ -1,9 +1,23 @@
 from typing import Any
 
+from lfx.base.models.unified_models import get_language_model_options, get_model_classes
 from lfx.custom import Component
-from lfx.io import BoolInput, HandleInput, MessageInput, MessageTextInput, MultilineInput, Output, TableInput
+from lfx.io import (
+    BoolInput,
+    MessageInput,
+    MessageTextInput,
+    ModelInput,
+    MultilineInput,
+    Output,
+    SecretStrInput,
+    TableInput,
+)
 from lfx.schema.message import Message
 from lfx.schema.table import EditMode
+
+# Compute model options once at module level
+_MODEL_OPTIONS = get_language_model_options()
+_PROVIDERS = [provider["provider"] for provider in _MODEL_OPTIONS]
 
 
 class SmartRouterComponent(Component):
@@ -17,12 +31,20 @@ class SmartRouterComponent(Component):
         self._matched_category = None
 
     inputs = [
-        HandleInput(
-            name="llm",
+        ModelInput(
+            name="model",
             display_name="Language Model",
-            info="LLM to use for categorization.",
-            input_types=["LanguageModel"],
+            options=_MODEL_OPTIONS,
+            providers=_PROVIDERS,
+            info="Select your model provider",
             required=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Model Provider API key",
+            real_time_refresh=True,
+            advanced=True,
         ),
         MessageTextInput(
             name="input_text",
@@ -153,7 +175,7 @@ class SmartRouterComponent(Component):
 
         # Find the matching category using LLM-based categorization
         matched_category = None
-        llm = getattr(self, "llm", None)
+        llm = self.get_llm()
 
         if llm and categories:
             # Create prompt for categorization
@@ -289,6 +311,38 @@ class SmartRouterComponent(Component):
         self.status = "No match found and Else output is disabled"
         return Message(text="")
 
+    def get_llm(self):
+        """Get the LLM model from the selected model input."""
+        model_selection = self.model[0]
+        model_name = model_selection.get("name")
+        provider = model_selection.get("provider")
+        metadata = model_selection.get("metadata", {})
+
+        # Get model class and parameters from metadata
+        model_class = get_model_classes().get(metadata.get("model_class"))
+        if model_class is None:
+            msg = f"No model class defined for {model_name}"
+            raise ValueError(msg)
+
+        api_key_param = metadata.get("api_key_param", "api_key")
+        model_name_param = metadata.get("model_name_param", "model")
+
+        # Get API key from global variables
+        from lfx.base.models.unified_models import get_api_key_for_provider
+
+        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
+
+        if not api_key and provider != "Ollama":
+            msg = f"{provider} API key is required. Please configure it globally."
+            raise ValueError(msg)
+
+        # Instantiate the model
+        kwargs = {
+            model_name_param: model_name,
+            api_key_param: api_key,
+        }
+        return model_class(**kwargs)
+
     def default_response(self) -> Message:
         """Handle the else case when no conditions match."""
         # Check if else output is enabled
@@ -315,7 +369,7 @@ class SmartRouterComponent(Component):
 
         # Check if any category matches using LLM categorization
         has_match = False
-        llm = getattr(self, "llm", None)
+        llm = self.get_llm()
 
         if llm and categories:
             try:

@@ -22,6 +22,25 @@ def test_default_excludes_not_supported():
         assert model["metadata"].get("not_supported", False) is False
 
 
+def test_default_excludes_deprecated():
+    result = get_unified_models_detailed()
+    for model in _flatten_models(result):
+        # By default, models flagged deprecated should be absent
+        assert model["metadata"].get("deprecated", False) is False
+
+
+def test_include_deprecated_parameter_returns_deprecated_models():
+    # When explicitly requested, at least one deprecated model should be present.
+    result = get_unified_models_detailed(include_deprecated=True)
+    deprecated_models = [m for m in _flatten_models(result) if m["metadata"].get("deprecated", False)]
+    assert deprecated_models, "Expected at least one deprecated model when include_deprecated=True"
+
+    # Sanity check: restricting by provider that is known to have deprecated entries (e.g., Anthropic)
+    result_anthropic = get_unified_models_detailed(providers=["Anthropic"], include_deprecated=True)
+    anthropic_deprecated = [m for m in _flatten_models(result_anthropic) if m["metadata"].get("deprecated", False)]
+    assert anthropic_deprecated, "Expected deprecated Anthropic models when include_deprecated=True"
+
+
 def test_filter_by_provider():
     result = get_unified_models_detailed(provider="Anthropic")
     # Only one provider should be returned

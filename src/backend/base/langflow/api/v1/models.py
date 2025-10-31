@@ -29,6 +29,7 @@ async def list_models(
     model_name: str | None = None,
     model_type: str | None = None,
     include_unsupported: bool = False,
+    include_deprecated: bool = False,
     # common metadata filters
     tool_calling: bool | None = None,
     reasoning: bool | None = None,
@@ -65,6 +66,7 @@ async def list_models(
     filtered_models = get_unified_models_detailed(
         model_name=model_name,
         include_unsupported=include_unsupported,
+        include_deprecated=include_deprecated,
         model_type=model_type,
         **metadata_filters,
     )
