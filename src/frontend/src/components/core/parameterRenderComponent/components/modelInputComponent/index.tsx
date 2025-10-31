@@ -1,29 +1,29 @@
-import Fuse from 'fuse.js';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import LoadingTextComponent from '@/components/common/loadingTextComponent';
-import { RECEIVING_INPUT_VALUE } from '@/constants/constants';
-import { PROVIDER_VARIABLE_MAPPING } from '@/constants/providerConstants';
-import { useGetGlobalVariables } from '@/controllers/API/queries/variables';
-import ApiKeyModal from '@/modals/apiKeyModal';
-import useAlertStore from '@/stores/alertStore';
-import { useGlobalVariablesStore } from '@/stores/globalVariablesStore/globalVariables';
-import { convertStringToHTML } from '@/utils/stringManipulation';
-import { cn } from '@/utils/utils';
-import { default as ForwardedIconComponent } from '../../../../common/genericIconComponent';
-import { Button } from '../../../../ui/button';
+import Fuse from "fuse.js";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import LoadingTextComponent from "@/components/common/loadingTextComponent";
+import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
+import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
+import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import ApiKeyModal from "@/modals/apiKeyModal";
+import useAlertStore from "@/stores/alertStore";
+import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
+import { convertStringToHTML } from "@/utils/stringManipulation";
+import { cn } from "@/utils/utils";
+import { default as ForwardedIconComponent } from "../../../../common/genericIconComponent";
+import { Button } from "../../../../ui/button";
 import {
   Command,
   CommandGroup,
   CommandItem,
   CommandList,
   CommandSeparator,
-} from '../../../../ui/command';
+} from "../../../../ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '../../../../ui/popover';
-import type { BaseInputProps } from '../../types';
+} from "../../../../ui/popover";
+import type { BaseInputProps } from "../../types";
 
 export type ModelInputComponentType = {
   options?: {
@@ -51,14 +51,14 @@ export default function ModelInputComponent({
   disabled,
   handleOnNewValue,
   options = [],
-  placeholder = 'Select a Model',
-  providers = ['OpenAI', 'Anthropic'],
+  placeholder = "Select a Model",
+  providers = ["OpenAI", "Anthropic"],
   helperText,
 }: BaseInputProps<any> & ModelInputComponentType): JSX.Element {
   // Initialize state and refs
   const [open, setOpen] = useState(false);
   const [openApiKeyDialog, setOpenApiKeyDialog] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const refButton = useRef<HTMLButtonElement>(null);
   const { setErrorData } = useAlertStore();
 
@@ -68,7 +68,7 @@ export default function ModelInputComponent({
         return value[0].provider || null;
       }
       return null;
-    }
+    },
   );
   const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(
     () => {
@@ -76,13 +76,13 @@ export default function ModelInputComponent({
         return value[0];
       }
       return null;
-    }
+    },
   );
 
   useGetGlobalVariables();
 
   const globalVariablesEntries = useGlobalVariablesStore(
-    state => state.globalVariablesEntries
+    (state) => state.globalVariablesEntries,
   );
 
   // Initialize utilities and memoized values
@@ -92,12 +92,12 @@ export default function ModelInputComponent({
       if (!searchTerm.trim()) return options;
 
       const fuse = new Fuse(options, {
-        keys: ['name', 'provider'],
+        keys: ["name", "provider"],
         threshold: 0.3,
       });
-      return fuse.search(searchTerm).map(result => result.item);
+      return fuse.search(searchTerm).map((result) => result.item);
     } catch (error) {
-      console.warn('Error filtering options:', error);
+      console.warn("Error filtering options:", error);
       return options || [];
     }
   }, [options, searchTerm]);
@@ -105,8 +105,8 @@ export default function ModelInputComponent({
   const groupedOptions = useMemo(() => {
     const groups: Record<string, typeof options> = {};
 
-    filteredOptions.forEach(option => {
-      const provider = option.provider || 'Other';
+    filteredOptions.forEach((option) => {
+      const provider = option.provider || "Other";
       if (!groups[provider]) {
         groups[provider] = [];
       }
@@ -145,11 +145,11 @@ export default function ModelInputComponent({
     (modelName: string) => {
       try {
         const selectedOption = options.find(
-          option => option.name === modelName
+          (option) => option.name === modelName,
         );
 
         if (!selectedOption) {
-          setErrorData({ title: 'Model not found' });
+          setErrorData({ title: "Model not found" });
           return;
         }
 
@@ -157,8 +157,8 @@ export default function ModelInputComponent({
           {
             ...(selectedOption.id && { id: selectedOption.id }),
             name: selectedOption.name,
-            icon: selectedOption.icon || 'Bot',
-            provider: selectedOption.provider || 'Unknown',
+            icon: selectedOption.icon || "Bot",
+            provider: selectedOption.provider || "Unknown",
             metadata: selectedOption.metadata || {},
           },
         ];
@@ -167,10 +167,10 @@ export default function ModelInputComponent({
         setSelectedProvider(selectedOption.provider || null);
         setSelectedModel(selectedOption);
       } catch (error) {
-        setErrorData({ title: 'Error selecting model' });
+        setErrorData({ title: "Error selecting model" });
       }
     },
-    [options, handleOnNewValue, setErrorData]
+    [options, handleOnNewValue, setErrorData],
   );
 
   const handleSendApiKey = useCallback(() => {
@@ -220,8 +220,8 @@ export default function ModelInputComponent({
           aria-expanded={open}
           data-testid={id}
           className={cn(
-            'dropdown-component-false-outline py-2',
-            'no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground'
+            "dropdown-component-false-outline py-2",
+            "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
           )}
         >
           <span
@@ -235,8 +235,8 @@ export default function ModelInputComponent({
               ) : (
                 <div
                   className={cn(
-                    'truncate',
-                    !selectedModel?.name && 'text-muted-foreground'
+                    "truncate",
+                    !selectedModel?.name && "text-muted-foreground",
                   )}
                 >
                   {selectedModel?.name || placeholder}
@@ -245,12 +245,12 @@ export default function ModelInputComponent({
             </span>
           </span>
           <ForwardedIconComponent
-            name={disabled ? 'Lock' : 'ChevronsUpDown'}
+            name={disabled ? "Lock" : "ChevronsUpDown"}
             className={cn(
-              'ml-2 h-4 w-4 shrink-0 text-foreground',
+              "ml-2 h-4 w-4 shrink-0 text-foreground",
               disabled
-                ? 'text-placeholder-foreground hover:text-placeholder-foreground'
-                : 'hover:text-foreground'
+                ? "text-placeholder-foreground hover:text-placeholder-foreground"
+                : "hover:text-foreground",
             )}
           />
         </Button>
@@ -270,7 +270,7 @@ export default function ModelInputComponent({
         className="mr-2 h-4 w-4 shrink-0 opacity-50"
       />
       <input
-        onChange={event => setSearchTerm(event.target.value)}
+        onChange={(event) => setSearchTerm(event.target.value)}
         placeholder="Search models..."
         className="flex h-9 w-full rounded-md bg-transparent py-3 text-[13px] outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
         autoComplete="off"
@@ -291,7 +291,7 @@ export default function ModelInputComponent({
             <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center">
               {provider}
               {globalVariablesEntries?.includes(
-                PROVIDER_VARIABLE_MAPPING[provider] || ''
+                PROVIDER_VARIABLE_MAPPING[provider] || "",
               ) && (
                 <div className="ml-2 text-xs text-accent-emerald-foreground flex items-center gap-1">
                   <ForwardedIconComponent
@@ -302,7 +302,7 @@ export default function ModelInputComponent({
                 </div>
               )}
             </div>
-            {visibleOptions.map(option => {
+            {visibleOptions.map((option) => {
               if (!option || !option.name) {
                 return null;
               }
@@ -310,7 +310,7 @@ export default function ModelInputComponent({
                 <CommandItem
                   key={option.name}
                   value={option.name}
-                  onSelect={currentValue => {
+                  onSelect={(currentValue) => {
                     handleModelSelect(currentValue);
                     setOpen(false);
                   }}
@@ -319,7 +319,7 @@ export default function ModelInputComponent({
                 >
                   <div className="flex w-full items-center gap-2">
                     <ForwardedIconComponent
-                      name={option.icon || 'Bot'}
+                      name={option.icon || "Bot"}
                       className="h-4 w-4 shrink-0 text-primary ml-2"
                     />
                     <div className="truncate text-[13px]">{option.name}</div>
@@ -327,10 +327,10 @@ export default function ModelInputComponent({
                       <ForwardedIconComponent
                         name="Check"
                         className={cn(
-                          'h-4 w-4 shrink-0 text-primary',
+                          "h-4 w-4 shrink-0 text-primary",
                           selectedModel?.name === option.name
-                            ? 'opacity-100'
-                            : 'opacity-0'
+                            ? "opacity-100"
+                            : "opacity-0",
                         )}
                       />
                     </div>
@@ -353,7 +353,7 @@ export default function ModelInputComponent({
           className="w-full"
           unstyled
           onClick={() => {
-            window.open('/settings/model-providers', '_blank');
+            window.open("/settings/model-providers", "_blank");
           }}
           data-testid="manage-model-providers"
         >
@@ -361,7 +361,7 @@ export default function ModelInputComponent({
             Manage Model Providers
             <ForwardedIconComponent
               name="arrow-up-right"
-              className={cn('ml-auto w-4 h-4 text-muted-foreground')}
+              className={cn("ml-auto w-4 h-4 text-muted-foreground")}
             />
           </div>
         </Button>
@@ -374,7 +374,7 @@ export default function ModelInputComponent({
       side="bottom"
       avoidCollisions={true}
       className="noflow nowheel nopan nodelete nodrag p-0"
-      style={{ minWidth: refButton?.current?.clientWidth ?? '200px' }}
+      style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
     >
       <Command className="flex flex-col">
         {options?.length > 0 && renderSearchInput()}
@@ -394,7 +394,7 @@ export default function ModelInputComponent({
         className="whitespace-nowrap"
         data-testid="enable-provider-button"
       >
-        {`Enable ${selectedProvider || 'Provider'}`}
+        {`Enable ${selectedProvider || "Provider"}`}
       </Button>
     );
   };
@@ -434,7 +434,7 @@ export default function ModelInputComponent({
         <ApiKeyModal
           open={openApiKeyDialog}
           onClose={() => setOpenApiKeyDialog(false)}
-          provider={selectedProvider || 'Provider'}
+          provider={selectedProvider || "Provider"}
         />
       )}
     </>
