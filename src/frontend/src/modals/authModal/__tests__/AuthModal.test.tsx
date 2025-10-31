@@ -244,7 +244,9 @@ describe("AuthModal OAuth Port Synchronization", () => {
       oauth_provider_scope: "openid",
     };
 
-    renderWithTooltip(<AuthModal {...defaultProps} authSettings={existingAuthSettings} />);
+    renderWithTooltip(
+      <AuthModal {...defaultProps} authSettings={existingAuthSettings} />,
+    );
 
     // Verify fields are populated
     expect(screen.getByLabelText(/^Host$/i)).toHaveValue("existing.host.com");
