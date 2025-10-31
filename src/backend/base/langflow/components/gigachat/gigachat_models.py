@@ -6,7 +6,7 @@ from lfx.base.models.gigachat_constants import GIGACHAT_CHAT_MODEL_NAMES, GIGACH
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
-from lfx.io import BoolInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
+from lfx.io import BoolInput, DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput, StrInput
 from lfx.logging import logger
 
 
@@ -82,13 +82,6 @@ class GigaChatComponent(LCModelComponent):
             value=None,
             required=False,
         ),
-        SliderInput(
-            name="temperature",
-            display_name="Temperature",
-            value=0.1,
-            range_spec=RangeSpec(min=0, max=1, step=0.01),
-            show=True,
-        ),
         IntInput(
             name="timeout",
             display_name="Timeout",
@@ -110,20 +103,42 @@ class GigaChatComponent(LCModelComponent):
             advanced=True,
             info="Check certificates for all requests ",
         ),
+        SliderInput(
+            name="temperature",
+            display_name="Temperature",
+            value=None,
+            range_spec=RangeSpec(min=0, max=2, step=0.01),
+            show=True,
+        ),
+        FloatInput(
+            name="top_p",
+            display_name="top_p",
+            value=1,
+            advanced=True,
+        ),
+        FloatInput(
+            name="repetition_penalty",
+            display_name="repetition_penalty",
+            value=1,
+            advanced=True,
+        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         logger.debug(f"Executing request with model: {self.model}")
         parameters: dict[str, Any] = {
-            "base_url": self.base_url,
-            "auth_url": self.auth_url,
             "credentials": self.credentials,
             "scope": self.scope,
             "model": self.model,
+            "base_url": self.base_url,
+            "auth_url": self.auth_url,
             "profanity_check": self.profanity_check,
             "user": self.user,
             "password": self.password,
             "timeout": self.timeout,
             "verify_ssl_certs": self.verify_ssl_certs,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "repetition_penalty": self.repetition_penalty,
         }
         return GigaChat(**parameters)

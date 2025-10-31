@@ -28,12 +28,14 @@ class GigaChatEmbeddingsComponent(LCEmbeddingsModel):
             display_name="GigaChat API Base",
             advanced=True,
             info="The base URL of the GigaChat API. ",
+            value=None,
         ),
         StrInput(
             name="auth_url",
             display_name="GigaChat Auth URL",
             advanced=True,
             info="The auth URL of the GigaChat API. ",
+            value=None,
         ),
         DropdownInput(
             name="scope",
