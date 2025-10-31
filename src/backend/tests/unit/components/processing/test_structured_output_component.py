@@ -54,10 +54,12 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def mock_model_classes(self):
         """Helper fixture to mock get_model_classes for MockLanguageModel."""
+
         def _create_mock_model_classes(mock_llm_instance):
             """Create a mock model classes dict that returns the provided mock LLM."""
             mock_model_class = MagicMock(return_value=mock_llm_instance)
             return {"MockLanguageModel": mock_model_class}
+
         return _create_mock_model_classes
 
     @pytest.fixture
