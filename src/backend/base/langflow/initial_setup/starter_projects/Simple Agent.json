@@ -25,9 +25,9 @@
         "id": "xy-edge__URLComponent-bo3ms{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-bo3msœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-MymU9{œfieldNameœ:œtoolsœ,œidœ:œAgent-MymU9œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "URLComponent-bo3ms",
-        "sourceHandle": "{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-bo3msœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-bo3msœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-MymU9",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-MymU9œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-MymU9œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "xy-edge__CalculatorComponent-KIrnp{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-KIrnpœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-MymU9{œfieldNameœ:œtoolsœ,œidœ:œAgent-MymU9œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "CalculatorComponent-KIrnp",
-        "sourceHandle": "{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-KIrnpœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-KIrnpœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-MymU9",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-MymU9œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-MymU9œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "xy-edge__ChatInput-68qCG{œdataTypeœ:œChatInputœ,œidœ:œChatInput-68qCGœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-MymU9{œfieldNameœ:œinput_valueœ,œidœ:œAgent-MymU9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-68qCG",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-68qCGœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-68qCGœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-MymU9",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-MymU9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-MymU9œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -111,9 +111,9 @@
         "id": "xy-edge__Agent-MymU9{œdataTypeœ:œAgentœ,œidœ:œAgent-MymU9œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-eVl4j{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-eVl4jœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "Agent-MymU9",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-MymU9œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-MymU9œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-eVl4j",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-eVl4jœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-eVl4jœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -1382,8 +1382,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "response",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1463,7 +1461,6 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
