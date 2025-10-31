@@ -13,7 +13,7 @@ from uuid import uuid4
 
 import pytest
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
-from lfx.components.agents.mcp_component import MCPToolsComponent
+from lfx.components.agents import MCPToolsComponent
 from lfx.schema.dataframe import DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient

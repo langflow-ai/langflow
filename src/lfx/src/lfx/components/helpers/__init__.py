@@ -39,6 +39,46 @@ def __getattr__(attr_name: str) -> Any:
     if attr_name not in _dynamic_imports:
         msg = f"module '{__name__}' has no attribute '{attr_name}'"
         raise AttributeError(msg)
+
+    # CurrentDateComponent, CalculatorComponent, and IDGeneratorComponent were moved to utilities
+    # Forward them to utilities for backwards compatibility
+    if attr_name in ("CurrentDateComponent", "CalculatorComponent", "IDGeneratorComponent"):
+        from lfx.components import utilities
+
+        result = getattr(utilities, attr_name)
+        globals()[attr_name] = result
+        return result
+
+    # MemoryComponent was moved to models_and_agents
+    # Forward it to models_and_agents for backwards compatibility
+    if attr_name == "MemoryComponent":
+        from lfx.components import models_and_agents
+
+        result = getattr(models_and_agents, attr_name)
+        globals()[attr_name] = result
+        return result
+
+    # CreateListComponent, MessageStoreComponent, and OutputParserComponent were moved to processing
+    # Forward them to processing for backwards compatibility
+    if attr_name == "CreateListComponent":
+        from lfx.components import processing
+
+        result = getattr(processing, attr_name)
+        globals()[attr_name] = result
+        return result
+    if attr_name == "MessageStoreComponent":
+        from lfx.components import processing
+
+        result = processing.MessageStoreComponent
+        globals()[attr_name] = result
+        return result
+    if attr_name == "OutputParserComponent":
+        from lfx.components import processing
+
+        result = getattr(processing, attr_name)
+        globals()[attr_name] = result
+        return result
+
     try:
         result = import_mod(attr_name, _dynamic_imports[attr_name], __spec__.parent)
     except (ModuleNotFoundError, ImportError, AttributeError) as e:

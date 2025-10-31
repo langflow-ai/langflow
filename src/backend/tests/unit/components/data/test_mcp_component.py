@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.base.mcp.util import MCPSessionManager, MCPStdioClient, MCPStreamableHttpClient
-from lfx.components.agents.mcp_component import MCPToolsComponent
+from lfx.components.agents import MCPToolsComponent
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 

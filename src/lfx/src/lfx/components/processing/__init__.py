@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from lfx.components.processing.output_parser import OutputParserComponent
     from lfx.components.processing.parser import ParserComponent
     from lfx.components.processing.split_text import SplitTextComponent
-    from lfx.components.processing.store_message import StoreMessageComponent
+    from lfx.components.processing.store_message import MessageStoreComponent
 
 _dynamic_imports = {
     "CombineTextComponent": "combine_text",
@@ -28,7 +28,7 @@ _dynamic_imports = {
     "OutputParserComponent": "output_parser",
     "ParserComponent": "parser",
     "SplitTextComponent": "split_text",
-    "StoreMessageComponent": "store_message",
+    "MessageStoreComponent": "store_message",
 }
 
 __all__ = [
@@ -37,10 +37,10 @@ __all__ = [
     "DataFrameOperationsComponent",
     "DataFrameToToolsetComponent",
     "DataOperationsComponent",
+    "MessageStoreComponent",
     "OutputParserComponent",
     "ParserComponent",
     "SplitTextComponent",
-    "StoreMessageComponent",
     "TypeConverterComponent",
 ]
 
