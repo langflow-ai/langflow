@@ -1,7 +1,6 @@
 from typing import Any
 
 from langchain_gigachat import GigaChatEmbeddings
-
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.base.models.gigachat_constants import GIGACHAT_EMBEDDING_MODEL_NAMES
 from lfx.field_typing import Embeddings

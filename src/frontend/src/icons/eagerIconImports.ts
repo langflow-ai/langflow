@@ -155,6 +155,7 @@ export const eagerIconsMapping = {
   FacebookMessenger: FBIcon,
   Firecrawl: FirecrawlIcon,
   FreezeAll: freezeAllIcon,
+  GigaChat: GigaChatIcon,
   GitBook: GitBookIcon,
   GitLoader: GitLoaderIcon,
   Glean: GleanIcon,

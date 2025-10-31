@@ -1,7 +1,5 @@
-import os
 from typing import Any
 
-from gigachat.settings import AUTH_URL, BASE_URL, SCOPE
 from langchain_gigachat import GigaChat
 
 from lfx.base.constants import STREAM_INFO_TEXT
@@ -13,11 +11,11 @@ from lfx.io import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput
 from lfx.logging import logger
 
 
-class GigaChatModelComponent(LCModelComponent):
-    display_name = "GigaChat"
+class GigaChatComponent(LCModelComponent):
+    display_name = "GigaChat Language Model"
     description = "Generates text using GigaChat LLMs."
     icon = "GigaChat"
-    name = "GigaChat"
+    name = "GigaChatModel"
 
     inputs = [
         *LCModelComponent.get_base_inputs(),
@@ -46,22 +44,22 @@ class GigaChatModelComponent(LCModelComponent):
             name="base_url",
             display_name="GigaChat API Base",
             advanced=True,
-            value=BASE_URL,
-            info=f"The base URL of the GigaChat API. Defaults to {BASE_URL}. ",
+            value=None,
+            info="The base URL of the GigaChat API.",
         ),
         StrInput(
             name="auth_url",
             display_name="GigaChat Auth URL",
             advanced=True,
-            value=AUTH_URL,
-            info=f"The auth URL of the GigaChat API. Defaults to {AUTH_URL}. ",
+            value=None,
+            info="The auth URL of the GigaChat API.",
         ),
         StrInput(
             name="scope",
             display_name="GigaChat Scope",
             advanced=False,
-            value=SCOPE,
-            info=f"The scope of the GigaChat API. Defaults to {SCOPE}. ",
+            value=None,
+            info="The scope of the GigaChat API.",
         ),
         SecretStrInput(
             name="credentials",
@@ -123,7 +121,7 @@ class GigaChatModelComponent(LCModelComponent):
             "base_url": self.base_url,
             "auth_url": self.auth_url,
             "credentials": self.credentials,
-            "scope": os.environ.get("GIGACHAT_SCOPE", self.scope),
+            "scope": self.scope,
             "model": self.model,
             "profanity_check": self.profanity_check,
             "user": self.user,
@@ -132,22 +130,3 @@ class GigaChatModelComponent(LCModelComponent):
             "verify_ssl_certs": self.verify_ssl_certs,
         }
         return GigaChat(**parameters)
-
-    def _get_exception_message(self, e: Exception):
-        """Get a message from an OpenAI exception.
-
-        Args:
-            e (Exception): The exception to get the message from.
-
-        Returns:
-            str: The message from the exception.
-        """
-        try:
-            from gigachat.exceptions import ResponseError
-        except ImportError:
-            return None
-        if isinstance(e, ResponseError):
-            message = e.body.get("message")
-            if message:
-                return message
-        return None

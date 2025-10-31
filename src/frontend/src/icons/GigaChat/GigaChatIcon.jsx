@@ -1,4 +1,4 @@
-const GigaChatIconSVG = ({ ...props }) => (
+const GigaChatSVG = ({ ...props }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     xmlSpace="preserve"
@@ -16,4 +16,4 @@ const GigaChatIconSVG = ({ ...props }) => (
   </svg>
 );
 
-export default GigaChatIconSVG;
+export default GigaChatSVG;

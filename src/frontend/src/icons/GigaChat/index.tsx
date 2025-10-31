@@ -1,9 +1,10 @@
-import React, { forwardRef } from "react";
-import GigaChatIconSVG from "./GigaChat";
+import type React from "react";
+import { forwardRef } from "react";
+import GigaChatSVG from "./GigaChatIcon";
 
 export const GigaChatIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <GigaChatIconSVG ref={ref} {...props} />;
+  return <GigaChatSVG ref={ref} {...props} />;
 });
