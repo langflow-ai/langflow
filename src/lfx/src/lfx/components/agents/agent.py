@@ -484,7 +484,7 @@ class AgentComponent(ToolCallingAgentComponent):
             if hasattr(self, f"{prefix}{input_.name}"):
                 attr = getattr(self, f"{prefix}{input_.name}")
                 if attr is not None:
-                    model_kwargs[input_.name] = getattr(self, f"{prefix}{input_.name}")
+                    model_kwargs[input_.name] = attr
         return component.set(**model_kwargs).build_model()
 
     def set_component_params(self, component):
