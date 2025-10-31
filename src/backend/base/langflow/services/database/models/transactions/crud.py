@@ -6,6 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.database.models.transactions.model import (
     TransactionBase,
+    TransactionLogsResponse,
     TransactionReadResponse,
     TransactionTable,
 )
@@ -18,7 +19,7 @@ async def get_transactions_by_flow_id(
     stmt = (
         select(TransactionTable)
         .where(TransactionTable.flow_id == flow_id)
-        .order_by(col(TransactionTable.timestamp))
+        .order_by(col(TransactionTable.timestamp).desc())
         .limit(limit)
     )
 
@@ -80,3 +81,12 @@ def transform_transaction_table(
     if isinstance(transaction, list):
         return [TransactionReadResponse.model_validate(t, from_attributes=True) for t in transaction]
     return TransactionReadResponse.model_validate(transaction, from_attributes=True)
+
+
+def transform_transaction_table_for_logs(
+    transaction: list[TransactionTable] | TransactionTable,
+) -> list[TransactionLogsResponse]:
+    """Transform transaction data for logs view, excluding error and flow_id fields."""
+    if isinstance(transaction, list):
+        return [TransactionLogsResponse.model_validate(t, from_attributes=True) for t in transaction]
+    return TransactionLogsResponse.model_validate(transaction, from_attributes=True)
