@@ -156,12 +156,12 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             try:
                 if self.search_type == "Similarity with score":
                     docs_with_scores = vector_store.similarity_search_with_score(
-                        query=self.search_query, k=self.number_of_results, filter=self.search_filter 
+                        query=self.search_query, k=self.number_of_results, filter=self.search_filter
                     )
                     # Add scores to document metadata
-                    docs = [] 
+                    docs = []
                     for doc, score in docs_with_scores:
-                        doc.metadata["similarity_score"] = score 
+                        doc.metadata["similarity_score"] = score
                         docs.append(doc)
                 elif self.search_type == "Max Marginal Relevance Search":
                     docs = vector_store.max_marginal_relevance_search(
