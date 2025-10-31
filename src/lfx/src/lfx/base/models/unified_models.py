@@ -42,6 +42,22 @@ def get_model_classes():
 
 
 @lru_cache(maxsize=1)
+def get_embedding_classes():
+    """Lazy load embedding classes to avoid importing optional dependencies at module level."""
+    from langchain_google_genai import GoogleGenerativeAIEmbeddings
+    from langchain_ibm import WatsonxEmbeddings
+    from langchain_ollama import OllamaEmbeddings
+    from langchain_openai import OpenAIEmbeddings
+
+    return {
+        "GoogleGenerativeAIEmbeddings": GoogleGenerativeAIEmbeddings,
+        "OpenAIEmbeddings": OpenAIEmbeddings,
+        "OllamaEmbeddings": OllamaEmbeddings,
+        "WatsonxEmbeddings": WatsonxEmbeddings,
+    }
+
+
+@lru_cache(maxsize=1)
 def get_model_provider_metadata():
     return {
         "OpenAI": {
@@ -490,3 +506,57 @@ def get_embedding_model_options() -> list[dict[str, Any]]:
     ]
 
     return openai_options + google_options + ollama_options + watsonx_options
+
+
+def get_llm(model, user_id: UUID | str, api_key=None, temperature=None, *, stream=False) -> Any:
+    # Safely extract model configuration
+    if not model or not isinstance(model, list) or len(model) == 0:
+        msg = "A model selection is required"
+        raise ValueError(msg)
+
+    # Extract the first model (only one expected)
+    model = model[0]
+
+    # Extract model configuration from metadata
+    model_name = model.get("name")
+    provider = model.get("provider")
+    metadata = model.get("metadata", {})
+
+    # Get model class and parameter names from metadata
+    api_key_param = metadata.get("api_key_param", "api_key")
+
+    # Get API key from user input or global variables
+    api_key = get_api_key_for_provider(user_id, provider, api_key)
+
+    # Validate API key (Ollama doesn't require one)
+    if not api_key and provider != "Ollama":
+        msg = (
+            f"{provider} API key is required when using {provider} provider. "
+            f"Please provide it in the component or configure it globally as "
+            f"{provider.upper().replace(' ', '_')}_API_KEY."
+        )
+        raise ValueError(msg)
+
+    # Get model class from metadata
+    model_class = get_model_classes().get(metadata.get("model_class"))
+    if model_class is None:
+        msg = f"No model class defined for {model_name}"
+        raise ValueError(msg)
+    model_name_param = metadata.get("model_name_param", "model")
+
+    # Check if this is a reasoning model that doesn't support temperature
+    reasoning_models = metadata.get("reasoning_models", [])
+    if model_name in reasoning_models:
+        temperature = None
+
+    # Build kwargs dynamically
+    kwargs = {
+        model_name_param: model_name,
+        "streaming": stream,
+        api_key_param: api_key,
+    }
+
+    if temperature is not None:
+        kwargs["temperature"] = temperature
+
+    return model_class(**kwargs)

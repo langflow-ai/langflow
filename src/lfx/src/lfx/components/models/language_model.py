@@ -1,5 +1,5 @@
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.unified_models import get_api_key_for_provider, get_language_model_options, get_model_classes
+from lfx.base.models.unified_models import get_language_model_options, get_llm
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput
@@ -63,55 +63,10 @@ class LanguageModelComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:
-        # Safely extract model configuration
-        if not self.model or not isinstance(self.model, list) or len(self.model) == 0:
-            msg = "A model selection is required"
-            raise ValueError(msg)
-
-        model = self.model[0]
-        temperature = self.temperature
-        stream = self.stream
-
-        # Extract model configuration from metadata
-        model_name = model.get("name")
-        provider = model.get("provider")
-        metadata = model.get("metadata", {})
-
-        # Get model class and parameter names from metadata
-        api_key_param = metadata.get("api_key_param", "api_key")
-
-        # Get API key from user input or global variables
-        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
-
-        # Validate API key (Ollama doesn't require one)
-        if not api_key and provider != "Ollama":
-            msg = (
-                f"{provider} API key is required when using {provider} provider. "
-                f"Please provide it in the component or configure it globally as "
-                f"{provider.upper().replace(' ', '_')}_API_KEY."
-            )
-            raise ValueError(msg)
-
-        # Get model class from metadata
-        model_class = get_model_classes().get(metadata.get("model_class"))
-        if model_class is None:
-            msg = f"No model class defined for {model_name}"
-            raise ValueError(msg)
-        model_name_param = metadata.get("model_name_param", "model")
-
-        # Check if this is a reasoning model that doesn't support temperature
-        reasoning_models = metadata.get("reasoning_models", [])
-        if model_name in reasoning_models:
-            temperature = None
-
-        # Build kwargs dynamically
-        kwargs = {
-            model_name_param: model_name,
-            "streaming": stream,
-            api_key_param: api_key,
-        }
-
-        if temperature is not None:
-            kwargs["temperature"] = temperature
-
-        return model_class(**kwargs)
+        return get_llm(
+            model=self.model,
+            user_id=self.user_id,
+            api_key=self.api_key,
+            temperature=self.temperature,
+            stream=self.stream,
+        )
