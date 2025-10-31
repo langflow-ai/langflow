@@ -465,12 +465,11 @@ async def update_project_mcp_settings(
                             project.auth_settings = original_auth_settings
                             raise HTTPException(status_code=500, detail=str(e)) from e
                     else:
-                        # This shouldn't happen - we determined we should start composer but now we can't use it
+                        # OAuth is set but MCP Composer is disabled - save settings but return error
                         await logger.aerror(
                             f"PATCH: OAuth set but MCP Composer is disabled in settings for project {project_id}"
                         )
-                        # Rollback since we can't use composer
-                        project.auth_settings = original_auth_settings
+                        # Don't rollback - keep the auth settings so they can be used when composer is enabled
                         response["result"] = {
                             "project_id": str(project_id),
                             "uses_composer": False,
