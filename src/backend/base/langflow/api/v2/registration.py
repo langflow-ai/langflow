@@ -24,23 +24,18 @@ class RegisterResponse(BaseModel):
 # File to store registrations
 REGISTRATION_FILE = Path("data/user/registration.json")
 
-try:
-    # Ensure the directory exists with secure permissions
-    REGISTRATION_FILE.parent.mkdir(parents=True, exist_ok=True)
-    # Set directory permissions to owner read/write/execute only (if possible)
-    REGISTRATION_FILE.parent.chmod(0o700)
-except Exception as e:
-    logger.error(f"Failed to create registration directory: {e}")
-    raise
 
-# Optionally, set file permissions to owner read/write only when file is created
-if not REGISTRATION_FILE.exists():
+def _ensure_registration_file():
+    """Ensure registration file and directory exist with proper permissions."""
     try:
-        REGISTRATION_FILE.touch(exist_ok=True)
-        REGISTRATION_FILE.chmod(0o600)
+        # Ensure the directory exists with secure permissions
+        REGISTRATION_FILE.parent.mkdir(parents=True, exist_ok=True)
+        # Set directory permissions to owner read/write/execute only (if possible)
+        REGISTRATION_FILE.parent.chmod(0o700)
     except Exception as e:
-        logger.error(f"Failed to create registration file: {e}")
+        logger.error(f"Failed to create registration file/directory: {e}")
         raise
+
 
 # TODO: Move functions to a separate service module
 
@@ -50,6 +45,9 @@ def load_registration() -> dict | None:
     if REGISTRATION_FILE.exists():
         try:
             with REGISTRATION_FILE.open("r") as f:
+                # The file is empty
+                if REGISTRATION_FILE.stat().st_size == 0:
+                    return None
                 return json.load(f)
         except json.JSONDecodeError:
             logger.error(f"Corrupted registration file: {REGISTRATION_FILE}")
@@ -67,6 +65,9 @@ def save_registration(email: str) -> bool:
         True if saved successfully
     """
     try:
+        # Ensure the registration file and directory exist
+        _ensure_registration_file()
+
         # Check if registration already exists
         existing = load_registration()
 
