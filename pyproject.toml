@@ -441,6 +441,13 @@ external = ["RUF027"]
     "SLF001",
     "BLE001",  # allow broad-exception catching in tests
 ]
+"src/backend/base/langflow/tests/*" = [
+    "D1",
+    "PLR2004",
+    "S101",
+    "SLF001",
+    "BLE001",  # allow broad-exception catching in tests
+]
 "src/lfx/tests/*" = [
     "D1",
     "PLR2004",
