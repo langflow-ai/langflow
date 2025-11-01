@@ -186,12 +186,10 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
         )
 
         await session.exec(delete_stmt)
-        await session.commit()
         logger.debug("Successfully cleaned up old transactions")
     except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
         logger.error(f"Error cleaning up transactions: {exc!s}")
-        await session.rollback()
-        # Don't re-raise since this is a cleanup task
+        raise
 
 
 async def clean_vertex_builds(settings_service: SettingsService, session: AsyncSession) -> None:
