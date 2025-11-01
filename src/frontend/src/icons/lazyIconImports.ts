@@ -314,6 +314,10 @@ export const lazyIconsMapping = {
     import("@/icons/OpenRouter").then((mod) => ({
       default: mod.OpenRouterIcon,
     })),
+  QueryRouter: () =>
+    import("@/icons/QueryRouter").then((mod) => ({
+      default: mod.QueryRouterIcon,
+    })),
   OpenSearch: () =>
     import("@/icons/OpenSearch").then((mod) => ({ default: mod.OpenSearch })),
   Perplexity: () =>

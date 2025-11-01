@@ -10,6 +10,7 @@ RUN apt-get update \
     curl \
     npm \
     git \
+    libpq-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
