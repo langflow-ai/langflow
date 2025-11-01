@@ -15,6 +15,8 @@ from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 
+_VALID_PROVIDERS = set(get_model_provider_metadata().keys())
+
 # Get all reserved fields for model provider API keys
 model_providers = get_model_provider_metadata()
 api_key_fields = {info["variable_name"] for info in model_providers.values()}
@@ -41,9 +43,9 @@ class ModelProviderCredentialRequest(BaseModel):
     @classmethod
     def validate_provider(cls, v: str) -> str:
         """Validate that provider is in the valid list of supported providers."""
-        valid_providers = list(get_model_provider_metadata().keys())
-        if v not in valid_providers:
-            msg = f"Invalid provider '{v}'. Must be one of: {', '.join(valid_providers)}"
+        # Use the cached set for membership test
+        if v not in _VALID_PROVIDERS:
+            msg = f"Invalid provider '{v}'. Must be one of: {', '.join(_VALID_PROVIDERS)}"
             raise ValueError(msg)
         return v
 
