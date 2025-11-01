@@ -240,7 +240,8 @@ async def sso_login(
             password=get_password_hash(str(uuid4())),  # Random password, never used
         )
         lf_user = User.model_validate(user_create, from_attributes=True)
-        lf_user.is_active = auth_settings.NEW_USER_IS_ACTIVE
+        # Users created via SSO should be active regardless of NEW_USER_IS_ACTIVE
+        lf_user.is_active = True
         db.add(lf_user)
         await db.commit()
         await db.refresh(lf_user)
