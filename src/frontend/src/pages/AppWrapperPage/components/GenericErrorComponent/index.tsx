@@ -1,8 +1,8 @@
 import TimeoutErrorComponent from "@/components/common/timeoutErrorComponent";
 import {
-  FETCH_ERROR_DESCRIPION,
+  FETCH_ERROR_DESCRIPTION,
   FETCH_ERROR_MESSAGE,
-  TIMEOUT_ERROR_DESCRIPION,
+  TIMEOUT_ERROR_DESCRIPTION,
   TIMEOUT_ERROR_MESSAGE,
 } from "@/constants/constants";
 import CustomFetchErrorComponent from "@/customization/components/custom-fetch-error-component";
@@ -12,7 +12,7 @@ export function GenericErrorComponent({ healthCheckTimeout, fetching, retry }) {
     case "serverDown":
       return (
         <CustomFetchErrorComponent
-          description={FETCH_ERROR_DESCRIPION}
+          description={FETCH_ERROR_DESCRIPTION}
           message={FETCH_ERROR_MESSAGE}
           openModal={true}
           setRetry={retry}
@@ -23,7 +23,7 @@ export function GenericErrorComponent({ healthCheckTimeout, fetching, retry }) {
       return (
         <TimeoutErrorComponent
           description={TIMEOUT_ERROR_MESSAGE}
-          message={TIMEOUT_ERROR_DESCRIPION}
+          message={TIMEOUT_ERROR_DESCRIPTION}
           openModal={true}
           setRetry={retry}
           isLoadingHealth={fetching}

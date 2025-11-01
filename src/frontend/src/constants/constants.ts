@@ -7,7 +7,10 @@ import {
 import { customDefaultShortcuts } from "../customization/constants";
 import type { languageMap } from "../types/components";
 
-const getEnvVar = (key: string, defaultValue: any = undefined) => {
+const getEnvVar = <T>(
+  key: string,
+  defaultValue?: T,
+): string | T | undefined => {
   if (typeof process !== "undefined" && process.env) {
     return process.env[key] ?? defaultValue;
   }
@@ -647,12 +650,12 @@ export const CONTROL_NEW_USER = {
 export const tabsCode = [];
 
 export const FETCH_ERROR_MESSAGE = "Couldn't establish a connection.";
-export const FETCH_ERROR_DESCRIPION =
+export const FETCH_ERROR_DESCRIPTION =
   "Check if everything is working properly and try again.";
 
 export const TIMEOUT_ERROR_MESSAGE =
   "Please wait a few moments while the server processes your request.";
-export const TIMEOUT_ERROR_DESCRIPION = "Server is busy.";
+export const TIMEOUT_ERROR_DESCRIPTION = "Server is busy.";
 
 export const SIGN_UP_SUCCESS = "Account created! Await admin activation. ";
 
