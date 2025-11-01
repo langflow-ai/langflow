@@ -23,16 +23,18 @@ ENV UV_LINK_MODE=copy
 # Set RUSTFLAGS for reqwest unstable features needed by apify-client v2.0.0
 ENV RUSTFLAGS='--cfg reqwest_unstable'
 
+# Build argument to control whether frontend is pre-built
+ARG FRONTEND_PREBUILT=0
+
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \
-    # deps for building python deps
     build-essential \
     git \
-    # npm
-    npm \
-    # gcc
     gcc \
+    && if [ "$FRONTEND_PREBUILT" = "0" ]; then \
+         apt-get install --no-install-recommends -y npm; \
+       fi \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -50,11 +52,18 @@ COPY ./src /app/src
 
 COPY src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --no-audit --no-fund \
-    && ESBUILD_BINARY_PATH="" NODE_OPTIONS="--max-old-space-size=12288" JOBS=1 npm run build \
-    && cp -r build /app/src/backend/langflow/frontend \
-    && rm -rf /tmp/src/frontend
+
+# Build frontend or copy pre-built version
+RUN if [ "$FRONTEND_PREBUILT" = "1" ] && [ -d "build" ]; then \
+      echo "Using pre-built frontend"; \
+      cp -r build /app/src/backend/langflow/frontend; \
+    else \
+      echo "Building frontend in Docker"; \
+      npm ci --no-audit --no-fund && \
+      ESBUILD_BINARY_PATH="" NODE_OPTIONS="--max-old-space-size=12288" JOBS=1 npm run build && \
+      cp -r build /app/src/backend/langflow/frontend; \
+    fi && \
+    rm -rf /tmp/src/frontend
 
 WORKDIR /app
 
