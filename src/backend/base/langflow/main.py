@@ -34,7 +34,7 @@ from langflow.initial_setup.setup import (
     sync_flows_from_fs,
 )
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.deps import get_queue_service, get_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import get_queue_service, get_service, get_settings_service, get_telemetry_service, session_scope
 from langflow.services.schema import ServiceType
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
 
@@ -157,6 +157,7 @@ def get_lifespan(*, fix_migration=False, version=None):
         temp_dirs: list[TemporaryDirectory] = []
         sync_flows_from_fs_task = None
         mcp_init_task = None
+        agentic_mcp_init_task = None
 
         try:
             start_time = asyncio.get_event_loop().time()
@@ -272,19 +273,34 @@ def get_lifespan(*, fix_migration=False, version=None):
             if get_settings_service().settings.agentic_experience:
                 from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
 
-                try:
+                async def delayed_init_agentic_mcp_server():
+                    """Initialize agentic MCP server in background after a delay."""
+                    await asyncio.sleep(15.0)  # Wait for server to be fully ready
                     current_time = asyncio.get_event_loop().time()
-                    await logger.ainfo("Agentic experience is enabled, configuring Agentic MCP server...")
+                    await logger.ainfo("Configuring Agentic MCP server...")
+                    try:
+                        async with session_scope() as session:
+                            await auto_configure_agentic_mcp_server(session)
+                        await logger.adebug(
+                            f"Agentic MCP server configured in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                        )
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(f"First agentic MCP server initialization attempt failed: {e}")
+                        await asyncio.sleep(5.0)
+                        current_time = asyncio.get_event_loop().time()
+                        await logger.adebug("Retrying agentic MCP server initialization")
+                        try:
+                            async with session_scope() as session:
+                                await auto_configure_agentic_mcp_server(session)
+                            await logger.adebug(
+                                f"Agentic MCP server configured on retry in "
+                                f"{asyncio.get_event_loop().time() - current_time:.2f}s"
+                            )
+                        except Exception as e2:  # noqa: BLE001
+                            await logger.aexception(f"Failed to configure agentic MCP server after retry: {e2}")
 
-                    async with session_scope() as session:
-                        await auto_configure_agentic_mcp_server(session)
-
-                    await logger.adebug(
-                        f"Agentic MCP server configured in {asyncio.get_event_loop().time() - current_time:.2f}s"
-                    )
-                except Exception as e:
-                    await logger.aexception(f"Failed to configure Agentic MCP server: {e}")
-                    # Don't fail the entire startup if agentic server configuration fails
+                # Start the delayed agentic MCP initialization as a background task
+                agentic_mcp_init_task = asyncio.create_task(delayed_init_agentic_mcp_server())
 
             yield
 
@@ -324,6 +340,9 @@ def get_lifespan(*, fix_migration=False, version=None):
                     if mcp_init_task and not mcp_init_task.done():
                         mcp_init_task.cancel()
                         tasks_to_cancel.append(mcp_init_task)
+                    if agentic_mcp_init_task and not agentic_mcp_init_task.done():
+                        agentic_mcp_init_task.cancel()
+                        tasks_to_cancel.append(agentic_mcp_init_task)
                     if tasks_to_cancel:
                         # Wait for all tasks to complete, capturing exceptions
                         results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)

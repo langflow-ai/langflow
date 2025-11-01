@@ -93,7 +93,7 @@ async def auto_configure_agentic_mcp_server(session: AsyncSession) -> None:
                 await update_server(
                     server_name=server_name,
                     server_config=server_config,
-                    user=user,
+                    current_user=user,
                     session=session,
                     storage_service=storage_service,
                     settings_service=settings_service,
@@ -152,7 +152,7 @@ async def remove_agentic_mcp_server(session: AsyncSession) -> None:
                 await update_server(
                     server_name=server_name,
                     server_config={},  # Empty config removes the server
-                    user=user,
+                    current_user=user,
                     session=session,
                     storage_service=storage_service,
                     settings_service=settings_service,
