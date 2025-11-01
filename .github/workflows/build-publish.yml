@@ -60,6 +60,13 @@ jobs:
           name: frontend-build
           path: src/frontend/build
 
+      - name: Allow frontend build in Docker context
+        run: |
+          # Temporarily remove src/frontend/build from .dockerignore for this build
+          sed -i.bak '/^src\/frontend\/build$/d' .dockerignore
+          echo "Modified .dockerignore:"
+          cat .dockerignore
+
       - name: Free disk space
         run: |
           echo "=== Disk space before cleanup ==="
