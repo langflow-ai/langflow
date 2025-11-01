@@ -1,0 +1,40 @@
+---
+title: QueryRouter
+slug: /bundles-queryrouter
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **QueryRouter** bundle.
+
+For more information about QueryRouter features and functionality, see your service’s API documentation (OpenAI-compatible).
+
+## QueryRouter text generation
+
+This component generates text using QueryRouter’s OpenAI-compatible API.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a QueryRouter model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
+
+For more information, see [Language model components](/components-models).
+
+### QueryRouter text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your QueryRouter API key for authentication. |
+| openai_api_base | String | Fixed to `https://api.queryrouter.ru/v1` in this bundle. |
+| model_name | String | Input parameter. The model to use for generation. Loaded dynamically from `/v1/models`. |
+| model_kwargs | Dict | Input parameter. Additional keyword arguments passed to the model. |
+| temperature | Float | Input parameter. Controls randomness in the output. |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. |
+| json_mode | Bool | Input parameter. If true, enforces JSON output. |
+| seed | Integer | Input parameter. Seed for reproducibility. |
+| max_retries | Integer | Input parameter. Maximum number of request retries. |
+| timeout | Integer | Input parameter. Request timeout (seconds). |
