@@ -1,5 +1,4 @@
 import { createContext, useEffect, useState } from "react";
-import { Cookies } from "react-cookie";
 import {
   LANGFLOW_ACCESS_TOKEN,
   LANGFLOW_API_TOKEN,
@@ -9,6 +8,7 @@ import {
 import { useGetUserData } from "@/controllers/API/queries/auth";
 import { useGetGlobalVariablesMutation } from "@/controllers/API/queries/variables/use-get-mutation-global-variables";
 import useAuthStore from "@/stores/authStore";
+import { getCookiesInstance } from "@/utils/cookie-manager";
 import { setLocalStorage } from "@/utils/local-storage-util";
 import { getAuthCookie, setAuthCookie } from "@/utils/utils";
 import { useStoreStore } from "../stores/storeStore";
@@ -30,7 +30,7 @@ const initialValue: AuthContextType = {
 export const AuthContext = createContext<AuthContextType>(initialValue);
 
 export function AuthProvider({ children }): React.ReactElement {
-  const cookies = new Cookies();
+  const cookies = getCookiesInstance();
   const [accessToken, setAccessToken] = useState<string | null>(
     getAuthCookie(cookies, LANGFLOW_ACCESS_TOKEN) ?? null,
   );
@@ -91,17 +91,49 @@ export function AuthProvider({ children }): React.ReactElement {
       setAuthCookie(cookies, LANGFLOW_REFRESH_TOKEN, refreshToken);
     }
     setAccessToken(newAccessToken);
-    setIsAuthenticated(true);
-    getUser();
-    getGlobalVariables();
+
+    let userLoaded = false;
+    let variablesLoaded = false;
+
+    const checkAndSetAuthenticated = () => {
+      if (userLoaded && variablesLoaded) {
+        setIsAuthenticated(true);
+      }
+    };
+
+    mutateLoggedUser(
+      {},
+      {
+        onSuccess: async (user) => {
+          setUserData(user);
+          const isSuperUser = user!.is_superuser;
+          useAuthStore.getState().setIsAdmin(isSuperUser);
+          checkHasStore();
+          fetchApiData();
+          userLoaded = true;
+          checkAndSetAuthenticated();
+        },
+        onError: () => {
+          setUserData(null);
+          userLoaded = true;
+          checkAndSetAuthenticated();
+        },
+      },
+    );
+
+    mutateGetGlobalVariables(
+      {},
+      {
+        onSettled: () => {
+          variablesLoaded = true;
+          checkAndSetAuthenticated();
+        },
+      },
+    );
   }
 
   function storeApiKey(apikey: string) {
     setApiKey(apikey);
-  }
-
-  function getGlobalVariables() {
-    mutateGetGlobalVariables({});
   }
 
   return (

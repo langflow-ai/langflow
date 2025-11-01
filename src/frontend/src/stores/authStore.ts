@@ -1,14 +1,14 @@
 // authStore.js
 
-import { Cookies } from "react-cookie";
 import { create } from "zustand";
 import {
   LANGFLOW_ACCESS_TOKEN,
   LANGFLOW_API_TOKEN,
 } from "@/constants/constants";
 import type { AuthStoreType } from "@/types/zustand/auth";
+import { getCookiesInstance } from "@/utils/cookie-manager";
 
-const cookies = new Cookies();
+const cookies = getCookiesInstance();
 const useAuthStore = create<AuthStoreType>((set, get) => ({
   isAdmin: false,
   isAuthenticated: !!cookies.get(LANGFLOW_ACCESS_TOKEN),
