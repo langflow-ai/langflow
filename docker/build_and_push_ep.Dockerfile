@@ -53,14 +53,19 @@ COPY ./src /app/src
 COPY src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
 
-# Build frontend or copy pre-built version
-RUN if [ "$FRONTEND_PREBUILT" = "1" ]; then \
-      if [ ! -d "build" ]; then \
-        echo "ERROR: FRONTEND_PREBUILT=1 but build directory not found!" >&2; \
+# Build frontend or use pre-built version via bind mount
+# When FRONTEND_PREBUILT=1, expects src/frontend/build to be bind-mounted
+RUN --mount=type=bind,source=src/frontend/build,target=/tmp/prebuilt-frontend \
+    if [ "$FRONTEND_PREBUILT" = "1" ]; then \
+      if [ -d "/tmp/prebuilt-frontend" ] && [ "$(ls -A /tmp/prebuilt-frontend 2>/dev/null)" ]; then \
+        echo "Using pre-built frontend from bind mount"; \
+        mkdir -p /app/src/backend/langflow/frontend; \
+        cp -r /tmp/prebuilt-frontend/* /app/src/backend/langflow/frontend/; \
+      else \
+        echo "ERROR: FRONTEND_PREBUILT=1 but no build found in bind mount!" >&2; \
+        echo "Expected bind mount at: src/frontend/build" >&2; \
         exit 1; \
       fi; \
-      echo "Using pre-built frontend"; \
-      cp -r build /app/src/backend/langflow/frontend; \
     else \
       echo "Building frontend in Docker"; \
       npm ci --no-audit --no-fund && \
