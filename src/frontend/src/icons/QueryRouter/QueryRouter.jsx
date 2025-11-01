@@ -28,4 +28,3 @@ const SvgQueryRouter = (props) => (
 );
 
 export default SvgQueryRouter;
-

@@ -7,4 +7,3 @@ export const QueryRouterIcon = forwardRef<
 >((props, ref) => {
   return <SvgQueryRouter ref={ref} {...props} />;
 });
-
