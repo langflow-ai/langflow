@@ -53,17 +53,16 @@ COPY ./src /app/src
 COPY src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
 
-# Build frontend or use pre-built version via bind mount
-# When FRONTEND_PREBUILT=1, expects src/frontend/build to be bind-mounted
-RUN --mount=type=bind,source=src/frontend/build,target=/tmp/prebuilt-frontend \
-    if [ "$FRONTEND_PREBUILT" = "1" ]; then \
-      if [ -d "/tmp/prebuilt-frontend" ] && [ "$(ls -A /tmp/prebuilt-frontend 2>/dev/null)" ]; then \
-        echo "Using pre-built frontend from bind mount"; \
+# Build frontend or use pre-built version
+# When FRONTEND_PREBUILT=1, expects src/frontend/build to exist in context
+RUN if [ "$FRONTEND_PREBUILT" = "1" ]; then \
+      if [ -d "build" ] && [ "$(ls -A build 2>/dev/null)" ]; then \
+        echo "Using pre-built frontend"; \
         mkdir -p /app/src/backend/langflow/frontend; \
-        cp -r /tmp/prebuilt-frontend/* /app/src/backend/langflow/frontend/; \
+        cp -r build/* /app/src/backend/langflow/frontend/; \
       else \
-        echo "ERROR: FRONTEND_PREBUILT=1 but no build found in bind mount!" >&2; \
-        echo "Expected bind mount at: src/frontend/build" >&2; \
+        echo "ERROR: FRONTEND_PREBUILT=1 but no build directory found!" >&2; \
+        echo "Expected: src/frontend/build/" >&2; \
         exit 1; \
       fi; \
     else \
