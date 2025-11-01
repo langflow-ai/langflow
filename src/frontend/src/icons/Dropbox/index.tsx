@@ -6,5 +6,17 @@ export const DropboxIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <SvgDropbox ref={ref} {...props} />;
+  return (
+    <span
+      style={{
+        display: "inline-grid",
+        width: 22,
+        height: 22,
+        placeItems: "center",
+        flexShrink: 0,
+      }}
+    >
+      <SvgDropbox ref={ref} {...props} />
+    </span>
+  );
 });
