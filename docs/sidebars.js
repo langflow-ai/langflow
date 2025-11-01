@@ -240,6 +240,11 @@ module.exports = {
             },
             {
               type: "doc",
+              id: "Deployment/deployment-northflank",
+              label: "Northflank"
+            },
+            {
+              type: "doc",
               id: "Deployment/deployment-railway",
               label: "Railway"
             },
