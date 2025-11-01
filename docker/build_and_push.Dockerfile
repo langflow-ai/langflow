@@ -54,7 +54,11 @@ COPY src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
 
 # Build frontend or copy pre-built version
-RUN if [ "$FRONTEND_PREBUILT" = "1" ] && [ -d "build" ]; then \
+RUN if [ "$FRONTEND_PREBUILT" = "1" ]; then \
+      if [ ! -d "build" ]; then \
+        echo "ERROR: FRONTEND_PREBUILT=1 but build directory not found!" >&2; \
+        exit 1; \
+      fi; \
       echo "Using pre-built frontend"; \
       cp -r build /app/src/backend/langflow/frontend; \
     else \
