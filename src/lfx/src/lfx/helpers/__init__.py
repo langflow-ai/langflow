@@ -36,8 +36,11 @@ if has_langflow_memory():
         from langflow.helpers.flow import (
             build_schema_from_inputs,
             get_arg_names,
+            get_flow_by_id_or_name,
             get_flow_inputs,
             list_flows,
+            list_flows_by_flow_folder,
+            list_flows_by_folder_id,
             load_flow,
             run_flow,
         )
@@ -69,8 +72,11 @@ if has_langflow_memory():
         from lfx.helpers.flow import (
             build_schema_from_inputs,
             get_arg_names,
+            get_flow_by_id_or_name,
             get_flow_inputs,
             list_flows,
+            list_flows_by_flow_folder,
+            list_flows_by_folder_id,
             load_flow,
             run_flow,
         )
@@ -102,8 +108,11 @@ else:
     from lfx.helpers.flow import (
         build_schema_from_inputs,
         get_arg_names,
+        get_flow_by_id_or_name,
         get_flow_inputs,
         list_flows,
+        list_flows_by_flow_folder,
+        list_flows_by_folder_id,
         load_flow,
         run_flow,
     )
@@ -121,8 +130,11 @@ __all__ = [
     "docs_to_data",
     "format_type",
     "get_arg_names",
+    "get_flow_by_id_or_name",
     "get_flow_inputs",
     "list_flows",
+    "list_flows_by_flow_folder",
+    "list_flows_by_folder_id",
     "load_flow",
     "run_flow",
     "safe_convert",
