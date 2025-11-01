@@ -86,7 +86,13 @@ class LanguageModelComponent(LCModelComponent):
             value="OpenAI",
             info="Select the model provider",
             real_time_refresh=True,
-            options_metadata=[{"icon": "OpenAI"}, {"icon": "Anthropic"}, {"icon": "GoogleGenerativeAI"}, {"icon": "WatsonxAI"}, {"icon": "Ollama"}],
+            options_metadata=[
+                {"icon": "OpenAI"},
+                {"icon": "Anthropic"},
+                {"icon": "GoogleGenerativeAI"},
+                {"icon": "WatsonxAI"},
+                {"icon": "Ollama"},
+            ],
         ),
         DropdownInput(
             name="model_name",
@@ -290,7 +296,9 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["base_url"]["show"] = False
                 build_config["project_id"]["show"] = False
                 build_config["ollama_base_url"]["show"] = True
-        elif field_name == "base_url" and field_value and hasattr(self, "provider") and self.provider == "IBM watsonx.ai":
+        elif (
+            field_name == "base_url" and field_value and hasattr(self, "provider") and self.provider == "IBM watsonx.ai"
+        ):
             # Fetch IBM models when base_url changes
             try:
                 models = self.fetch_ibm_models(base_url=field_value)
@@ -300,7 +308,9 @@ class LanguageModelComponent(LCModelComponent):
                 logger.info(info_message)
             except Exception:  # noqa: BLE001
                 logger.exception("Error updating IBM model options.")
-        elif field_name == "ollama_base_url" and field_value and hasattr(self, "provider") and self.provider == "Ollama":
+        elif (
+            field_name == "ollama_base_url" and field_value and hasattr(self, "provider") and self.provider == "Ollama"
+        ):
             # Fetch Ollama models when ollama_base_url changes
             try:
                 models = self.fetch_ollama_models(base_url=field_value)
