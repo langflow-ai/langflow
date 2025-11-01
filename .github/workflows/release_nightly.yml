@@ -288,7 +288,7 @@ jobs:
           ref: ${{ inputs.nightly_tag_main }}
           persist-credentials: true
       - name: Download LFX artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: dist-nightly-lfx
           path: src/lfx/dist
@@ -316,7 +316,7 @@ jobs:
           ref: ${{ inputs.nightly_tag_main }}
           persist-credentials: true
       - name: Download base artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: dist-nightly-base
           path: src/backend/base/dist
@@ -344,7 +344,7 @@ jobs:
           ref: ${{ inputs.nightly_tag_main }}
           persist-credentials: true
       - name: Download main artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: dist-nightly-main
           path: dist

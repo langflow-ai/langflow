@@ -20,7 +20,7 @@ jobs:
     name: Create Release Job
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: dist-main
           path: dist

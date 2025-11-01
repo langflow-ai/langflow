@@ -148,21 +148,21 @@ jobs:
       # Download artifacts for wheel installation
       - name: Download LFX package artifact
         if: steps.install-method.outputs.method == 'wheel' && inputs.lfx-artifact-name != ''
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: ${{ inputs.lfx-artifact-name }}
           path: ./lfx-dist
 
       - name: Download base package artifact
         if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
           path: ./base-dist
 
       - name: Download main package artifact
         if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}
           path: ./main-dist
@@ -436,21 +436,21 @@ jobs:
       # Download artifacts for wheel installation
       - name: Download LFX package artifact
         if: steps.install-method.outputs.method == 'wheel' && inputs.lfx-artifact-name != ''
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: ${{ inputs.lfx-artifact-name }}
           path: ./lfx-dist
 
       - name: Download base package artifact
         if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
           path: ./base-dist
 
       - name: Download main package artifact
         if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}
           path: ./main-dist
