@@ -1,5 +1,7 @@
 import json
+import os
 import re
+import ssl
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,10 +20,13 @@ from lfx.io import (
     BoolInput,
     DataInput,
     DropdownInput,
+    FileInput,
     IntInput,
     MessageTextInput,
     MultilineInput,
     Output,
+    SecretStrInput,
+    StrInput,
     TableInput,
 )
 from lfx.schema.data import Data
@@ -166,6 +171,67 @@ class APIRequestComponent(Component):
             ),
             advanced=True,
         ),
+        BoolInput(
+            name="use_mtls",
+            display_name="Enable mTLS",
+            value=False,
+            info="Enable mutual TLS authentication for this request.",
+            advanced=True,
+        ),
+        DropdownInput(
+            name="cert_source",
+            display_name="Certificate Source",
+            options=["File Path", "Environment Variable", "Secrets Manager"],
+            value="File Path",
+            info="Select where to load client certificates from.",
+            advanced=True,
+        ),
+        FileInput(
+            name="client_cert_file",
+            display_name="Client Certificate File",
+            info="Path to client certificate file (.pem, .crt). Can contain both cert and key.",
+            advanced=True,
+            file_types=["pem", "crt", "cert"],
+        ),
+        FileInput(
+            name="client_key_file",
+            display_name="Client Key File (Optional)",
+            info="Path to private key file if separate from certificate (.key, .pem).",
+            advanced=True,
+            file_types=["key", "pem"],
+        ),
+        SecretStrInput(
+            name="key_password",
+            display_name="Key Password (Optional)",
+            info="Password for encrypted private key.",
+            advanced=True,
+        ),
+        StrInput(
+            name="cert_env_var",
+            display_name="Certificate Env Var",
+            info="Environment variable name containing path to certificate (e.g., CLIENT_CERT_PATH).",
+            advanced=True,
+        ),
+        StrInput(
+            name="key_env_var",
+            display_name="Key Env Var",
+            info="Environment variable name containing path to private key (e.g., CLIENT_KEY_PATH).",
+            advanced=True,
+        ),
+        BoolInput(
+            name="verify_server_cert",
+            display_name="Verify Server Certificate",
+            value=True,
+            info="Verify the server's SSL certificate.",
+            advanced=True,
+        ),
+        FileInput(
+            name="ca_bundle_file",
+            display_name="CA Bundle File (Optional)",
+            info="Path to custom CA bundle for server certificate verification.",
+            advanced=True,
+            file_types=["pem", "crt", "cert"],
+        ),
     ]
 
     outputs = [
@@ -235,6 +301,161 @@ class APIRequestComponent(Component):
     def _is_valid_key_value_item(self, item: Any) -> bool:
         """Check if an item is a valid key-value dictionary."""
         return isinstance(item, dict) and "key" in item and "value" in item
+
+    def validate_mtls_config(self) -> None:
+        """Validate mTLS configuration before building SSL context.
+
+        Ensures that all required mTLS parameters are properly configured based on the
+        selected certificate source (file path, environment variable, or secrets manager).
+
+        Raises:
+            ValueError: If mTLS is enabled but required configuration is missing:
+                - When cert_source is "File Path" but no client_cert_file is provided
+                - When cert_source is "Environment Variable" but no cert_env_var is provided
+
+        Warnings:
+            Logs a warning when verify_server_cert is disabled, as this creates an insecure connection.
+
+        Example:
+            >>> component.use_mtls = True
+            >>> component.cert_source = "File Path"
+            >>> component.client_cert_file = "/path/to/cert.pem"
+            >>> component.validate_mtls_config()  # Passes validation
+        """
+        if not self.use_mtls:
+            return
+
+        cert_source = getattr(self, "cert_source", "File Path")
+
+        if cert_source == "File Path" and not self.client_cert_file:
+            msg = "mTLS enabled but no client certificate file provided"
+            raise ValueError(msg)
+        if cert_source == "Environment Variable" and not self.cert_env_var:
+            msg = "mTLS enabled with env vars but no certificate environment variable name provided"
+            raise ValueError(msg)
+
+        if not self.verify_server_cert:
+            self.log("WARNING: Server certificate verification is disabled. This is insecure!")
+
+    def build_ssl_context(self) -> ssl.SSLContext | None:
+        """Build SSL context for mTLS authentication.
+
+        Constructs an SSL context configured with client certificates for mutual TLS authentication.
+        Supports multiple certificate sources (local files, environment variables) and custom CA bundles.
+
+        Certificate Loading:
+            - File Path: Loads certificates from local filesystem paths
+            - Environment Variable: Reads paths from environment variables
+            - Secrets Manager: Reserved for future implementation
+
+        Returns:
+            ssl.SSLContext: Configured SSL context with client certificates loaded, or
+            None: If mTLS is disabled (use_mtls=False)
+
+        Raises:
+            ValueError: If mTLS configuration is invalid:
+                - Certificate environment variable not found or empty
+                - SSL error while loading certificates (wrapped SSLError)
+                - General configuration errors
+            FileNotFoundError: If certificate or key files don't exist at specified paths
+
+        Example:
+            >>> # Using local certificate files
+            >>> component.use_mtls = True
+            >>> component.cert_source = "File Path"
+            >>> component.client_cert_file = "/path/to/client.pem"
+            >>> component.client_key_file = "/path/to/client.key"  # Optional if combined
+            >>> ssl_ctx = component.build_ssl_context()
+
+            >>> # Using environment variables (e.g., in Docker/K8s)
+            >>> import os
+            >>> os.environ['CLIENT_CERT_PATH'] = '/path/to/cert.pem'
+            >>> component.use_mtls = True
+            >>> component.cert_source = "Environment Variable"
+            >>> component.cert_env_var = "CLIENT_CERT_PATH"
+            >>> ssl_ctx = component.build_ssl_context()
+
+        Note:
+            - Passwords for encrypted keys should be provided via key_password attribute
+            - Custom CA bundles can be specified via ca_bundle_file for internal CAs
+            - Server certificate verification can be disabled via verify_server_cert (not recommended)
+        """
+        if not self.use_mtls:
+            return None
+
+        try:
+            cert_source = getattr(self, "cert_source", "File Path")
+            cert_path = None
+            key_path = None
+
+            if cert_source == "File Path":
+                cert_path = self.client_cert_file
+                key_path = self.client_key_file if self.client_key_file else None
+            elif cert_source == "Environment Variable":
+                cert_env = self.cert_env_var
+                key_env = self.key_env_var
+
+                if not cert_env:
+                    msg = "Certificate environment variable name not provided"
+                    raise ValueError(msg)
+
+                cert_path = os.environ.get(cert_env)
+                if not cert_path:
+                    msg = f"Environment variable '{cert_env}' not found or empty"
+                    raise ValueError(msg)
+
+                if key_env:
+                    key_path = os.environ.get(key_env)
+                    if not key_path:
+                        msg = f"Environment variable '{key_env}' not found or empty"
+                        raise ValueError(msg)
+
+            if not cert_path or not Path(cert_path).exists():
+                msg = f"Certificate file not found: {cert_path}"
+                raise FileNotFoundError(msg)
+
+            if key_path and not Path(key_path).exists():
+                msg = f"Private key file not found: {key_path}"
+                raise FileNotFoundError(msg)
+
+            ssl_context = ssl.create_default_context()
+
+            if not self.verify_server_cert:
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+            else:
+                ca_bundle = self.ca_bundle_file
+                if ca_bundle:
+                    if Path(ca_bundle).exists():
+                        ssl_context.load_verify_locations(cafile=ca_bundle)
+                    else:
+                        self.log(f"WARNING: CA bundle file not found: {ca_bundle}")
+
+            password = self.key_password if hasattr(self, "key_password") and self.key_password else None
+            if password:
+                password = password.encode("utf-8")
+
+            ssl_context.load_cert_chain(
+                certfile=cert_path,
+                keyfile=key_path,
+                password=password,
+            )
+
+        except ssl.SSLError as e:
+            msg = f"SSL error while configuring mTLS: {e}"
+            self.log(msg)
+            raise ValueError(msg) from e
+        except FileNotFoundError as e:
+            msg = f"Certificate file not found: {e}"
+            self.log(msg)
+            raise
+        except Exception as e:
+            msg = f"Failed to configure mTLS: {e}"
+            self.log(msg)
+            raise ValueError(msg) from e
+        else:
+            self.log(f"mTLS enabled: Loaded certificate from {cert_path}")
+            return ssl_context
 
     def parse_curl(self, curl: str, build_config: dotdict) -> dotdict:
         """Parse a cURL command and update build configuration."""
@@ -437,18 +658,25 @@ class APIRequestComponent(Component):
             msg = f"Invalid URL provided: {url}"
             raise ValueError(msg)
 
-        # Process query parameters
+        self.validate_mtls_config()
+        ssl_context = self.build_ssl_context()
+
         if isinstance(self.query_params, str):
             query_params = dict(parse_qsl(self.query_params))
         else:
             query_params = self.query_params.data if self.query_params else {}
 
-        # Process headers and body
         headers = self._process_headers(headers)
         body = self._process_body(body)
         url = self.add_query_params(url, query_params)
 
-        async with httpx.AsyncClient() as client:
+        verify_param = ssl_context if ssl_context else self.verify_server_cert
+
+        async with httpx.AsyncClient(
+            verify=verify_param,
+            timeout=timeout or 30.0,
+            follow_redirects=follow_redirects,
+        ) as client:
             result = await self.make_request(
                 client,
                 method,
