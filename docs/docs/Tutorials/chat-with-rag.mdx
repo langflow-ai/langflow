@@ -40,7 +40,7 @@ This tutorial demonstrates how you can use Langflow to create a chatbot applicat
 3. Optional: Replace both **Astra DB** vector store components with a **Chroma DB** or another vector store component of your choice.
 This tutorial uses Chroma DB.
 
-    The **Load Data Flow** should have **File**, **Split Text**, **Embedding Model**, vector store (such as **Chroma DB**), and **Chat Output** components:
+    The **Load Data Flow** should have **Read File**, **Split Text**, **Embedding Model**, vector store (such as **Chroma DB**), and **Chat Output** components:
 
     ![File loader chat flow](/img/tutorial-chatbot-embed-files.png)
 
@@ -62,7 +62,7 @@ In situations where many users load data or you need to load data programmatical
 <Tabs>
 <TabItem value="visual" label="Visual editor" default>
 
-1. In your RAG chatbot flow, click the **File** component, and then click **File**.
+1. In your RAG chatbot flow, click the **Read File** component, and then click **File**.
 2. Select the local file you want to upload, and then click **Open**.
     The file is loaded to your Langflow server.
 3. To load the data into your vector database, click the vector store component, and then click <Icon name="Play" aria-hidden="true" /> **Run component** to run the selected component and all prior dependent components.
@@ -140,6 +140,7 @@ This tutorial uses JavaScript for demonstration purposes.
     const readline = require('readline');
     const { LangflowClient } = require('@datastax/langflow-client');
 
+    # pragma: allowlist nextline secret
     const API_KEY = 'LANGFLOW_API_KEY';
     const SERVER = 'LANGFLOW_SERVER_ADDRESS';
     const FLOW_ID = 'FLOW_ID';
