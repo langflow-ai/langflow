@@ -9,9 +9,7 @@ from lfx.schema.data import Data
 from tests.base import ComponentTestBaseWithoutClient
 
 
-@pytest.mark.skipif(
-    not os.environ.get("DB2_CONN_STR"), reason="Environment variable DB2_CONN_STR is not defined."
-)
+@pytest.mark.skipif(not os.environ.get("DB2_CONN_STR"), reason="Environment variable DB2_CONN_STR is not defined.")
 class TestDB2VectorStoreComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self) -> type[Any]:
