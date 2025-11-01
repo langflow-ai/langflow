@@ -1,3 +1,4 @@
+import contextlib
 from typing import Any
 
 import httpx
@@ -13,7 +14,6 @@ from lfx.inputs.inputs import (
     IntInput,
     SecretStrInput,
     SliderInput,
-    StrInput,
 )
 from lfx.log.logger import logger
 
@@ -131,16 +131,12 @@ class QueryRouterModelComponent(LCModelComponent):
             logger.error(f"Error fetching QueryRouter models: {e}")
             return []
 
-    def update_build_config(
-        self, build_config: dict, field_value: str, field_name: str | None = None
-    ) -> dict:  # noqa: ARG002
+    def update_build_config(self, build_config: dict) -> dict:
         """Populate model_name dropdown with models fetched from QueryRouter."""
         models = self.fetch_models()
         if models:
             build_config["model_name"]["options"] = [m["id"] for m in models]
-            build_config["model_name"]["tooltips"] = {
-                m["id"]: f"{m['name']} ({m['context']} tokens)" for m in models
-            }
+            build_config["model_name"]["tooltips"] = {m["id"]: f"{m['name']} ({m['context']} tokens)" for m in models}
             # Preserve current value if still valid; otherwise set default
             current = build_config["model_name"].get("value")
             if not current or current not in build_config["model_name"]["options"]:
@@ -175,11 +171,8 @@ class QueryRouterModelComponent(LCModelComponent):
 
         # Only pass max_tokens if set to a valid integer
         if getattr(self, "max_tokens", None) not in (None, "", 0):
-            try:
+            with contextlib.suppress(TypeError, ValueError):
                 kwargs["max_tokens"] = int(self.max_tokens)
-            except (TypeError, ValueError):
-                # Ignore invalid input and let the model use its default behavior
-                pass
 
         model = ChatOpenAI(**kwargs)
 

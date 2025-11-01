@@ -1,13 +1,13 @@
-import httpx
+import contextlib
 from typing import Any
 
+import httpx
 from langchain_openai import ChatOpenAI
-from pydantic.v1 import SecretStr
-
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
-from lfx.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
+from lfx.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput
 from lfx.log.logger import logger
+from pydantic.v1 import SecretStr
 
 
 class QueryRouterModelComponent(LCModelComponent):
@@ -97,15 +97,14 @@ class QueryRouterModelComponent(LCModelComponent):
                     api_key_value = self.api_key.get_secret_value()
                 else:
                     api_key_value = str(self.api_key)
-            
+
             if not api_key_value:
                 from lfx.services.deps import get_variable_service
+
                 variable_service = get_variable_service()
                 if variable_service:
-                    try:
+                    with contextlib.suppress(ValueError):
                         api_key_value = variable_service.get_variable(name="queryrouter_api_key")
-                    except ValueError:
-                        pass # It's okay if it's not found here, we'll log later
 
             headers = {}
             if api_key_value:
@@ -150,12 +149,13 @@ class QueryRouterModelComponent(LCModelComponent):
                 api_key_value = self.api_key.get_secret_value()
             else:
                 api_key_value = str(self.api_key)
-        
+
         if not api_key_value:
             # If no API key is provided in the component's input,
             # try to get it from the variable service, where it should
             # have been stored after SSO.
             from lfx.services.deps import get_variable_service
+
             variable_service = get_variable_service()
             if variable_service:
                 # The variable name 'queryrouter_api_key' is a convention
@@ -163,11 +163,15 @@ class QueryRouterModelComponent(LCModelComponent):
                 try:
                     api_key_value = variable_service.get_variable(name="queryrouter_api_key")
                 except ValueError:
-                    logger.warning("QueryRouter API Key not found in variables. Please configure it manually or perform SSO.")
+                    logger.warning(
+                        "QueryRouter API Key not found in variables. Please configure it manually or perform SSO."
+                    )
 
         if not api_key_value:
-            raise ValueError("QueryRouter API Key is required. Please provide one in the component settings or perform SSO.")
-
+            error_message = (
+                "QueryRouter API Key is required. Please provide one in the component settings or perform SSO."
+            )
+            raise ValueError(error_message)
 
         # Build the model
         # Assemble kwargs like OpenRouter: only pass max_tokens if valid integer
@@ -182,10 +186,8 @@ class QueryRouterModelComponent(LCModelComponent):
             "model_kwargs": self.model_kwargs or {},
         }
         if getattr(self, "max_tokens", None) not in (None, "", 0):
-            try:
+            with contextlib.suppress(TypeError, ValueError):
                 kwargs["max_tokens"] = int(self.max_tokens)
-            except (TypeError, ValueError):
-                pass
 
         model = ChatOpenAI(**kwargs)
 

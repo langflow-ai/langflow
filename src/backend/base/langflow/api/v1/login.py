@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import jwt
 from typing import Annotated
 from uuid import uuid4
 
+import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -176,8 +176,8 @@ async def sso_login(
     response: Response,
     db: DbSession,
 ):
-    """
-    SSO login endpoint for QueryRouter integration.
+    """SSO login endpoint for QueryRouter integration.
+
     Accepts QueryRouter JWT token and creates/finds corresponding Langflow user.
     """
     auth_settings = get_settings_service().auth_settings
@@ -209,7 +209,6 @@ async def sso_login(
         # Extract user info from QueryRouter JWT
         qr_user_id = qr_payload.get("sub")
         qr_email = qr_payload.get("email")
-        qr_name = qr_payload.get("name")
 
         if not qr_user_id or not qr_email:
             raise HTTPException(
@@ -217,16 +216,16 @@ async def sso_login(
                 detail="Invalid QueryRouter JWT payload",
             )
 
-    except jwt.ExpiredSignatureError:
+    except jwt.ExpiredSignatureError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="QueryRouter JWT token expired",
-        )
-    except jwt.InvalidTokenError:
+        ) from exc
+    except jwt.InvalidTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid QueryRouter JWT token",
-        )
+        ) from exc
 
     # Generate Langflow username from QueryRouter email
     lf_username = f"qr-{qr_email.replace('@', '_').replace('.', '_')}"
