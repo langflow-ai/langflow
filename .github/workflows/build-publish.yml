@@ -28,8 +28,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          # Adjust if you need a specific Dockerfile (e.g., docker/build_and_push.Dockerfile)
-          # dockerfile: docker/build_and_push.Dockerfile
+          file: ./docker/build_and_push.Dockerfile
           push: true
           tags: |
             ghcr.io/queryrouter/langflow:${{ github.sha }}
