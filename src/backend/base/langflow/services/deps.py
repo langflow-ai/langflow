@@ -252,3 +252,14 @@ def get_queue_service() -> JobQueueService:
     from langflow.services.job_queue.factory import JobQueueServiceFactory
 
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
+
+
+def get_connector_service():
+    """Retrieves the ConnectorService instance from the service manager.
+
+    Returns:
+        ConnectorService: The ConnectorService instance.
+    """
+    from langflow.services.connectors.factory import ConnectorServiceFactory
+
+    return get_service(ServiceType.CONNECTOR_SERVICE, ConnectorServiceFactory())
