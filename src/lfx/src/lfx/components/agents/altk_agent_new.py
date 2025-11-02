@@ -42,6 +42,7 @@ from lfx.log.logger import logger
 from lfx.memory import delete_message
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data
+from lfx.schema.log import SendMessageFunctionType
 from lfx.schema.message import Message
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
@@ -105,19 +106,80 @@ class BaseToolWrapper(ABC):
         return True
 
 
-class ValidatedTool(BaseTool):
+class ALTKBaseTool(BaseTool):
+    """Base class for tools that need agent interaction and ALTK LLM access.
+    
+    Provides common functionality for tool execution and ALTK LLM object creation.
+    """
+    
+    name: str = Field(...)
+    description: str = Field(...)
+    wrapped_tool: BaseTool = Field(...)
+    agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor = Field(...)
+    
+    def _execute_tool(self, *args, **kwargs) -> str:
+        """Execute the wrapped tool with proper error handling."""
+        try:
+            # Try with config parameter first (newer LangChain versions)
+            if hasattr(self.wrapped_tool, "_run"):
+                # Ensure config is provided for StructuredTool
+                if "config" not in kwargs:
+                    kwargs["config"] = {}
+                return self.wrapped_tool._run(*args, **kwargs)
+            return self.wrapped_tool.run(*args, **kwargs)
+        except TypeError as e:
+            if "config" in str(e):
+                # Fallback: try without config for older tools
+                kwargs.pop("config", None)
+                if hasattr(self.wrapped_tool, "_run"):
+                    return self.wrapped_tool._run(*args, **kwargs)
+                return self.wrapped_tool.run(*args, **kwargs)
+            raise e
+
+    def _get_altk_llm_object(self, use_output_val: bool = True) -> Any:
+        """Extract the LLM model and map it to altk model inputs.
+        
+        Args:
+            use_output_val: If True, use .output_val variants for compatibility.
+                           If False, use base variants (for PostToolProcessor).
+        """
+        llm_object: BaseChatModel | None = None
+        steps = getattr(self.agent, "steps", None)
+        if steps:
+            for step in steps:
+                if isinstance(step, RunnableBinding) and isinstance(step.bound, BaseChatModel):
+                    llm_object = step.bound
+                    break
+        
+        if isinstance(llm_object, ChatAnthropic):
+            # litellm needs the prefix to the model name for anthropic
+            model_name = f"anthropic/{llm_object.model}"
+            api_key = llm_object.anthropic_api_key.get_secret_value()
+            llm_client_type = "litellm.output_val" if use_output_val else "litellm"
+            llm_client = get_llm(llm_client_type)
+            llm_client_obj = llm_client(model_name=model_name, api_key=api_key)
+        elif isinstance(llm_object, ChatOpenAI):
+            model_name = llm_object.model_name
+            api_key = llm_object.openai_api_key.get_secret_value()
+            llm_client_type = "openai.sync.output_val" if use_output_val else "openai.sync"
+            llm_client = get_llm(llm_client_type)
+            llm_client_obj = llm_client(model=model_name, api_key=api_key)
+        else:
+            logger.info("ALTK currently only supports OpenAI and Anthropic models through Langflow.")
+            llm_client_obj = None
+
+        return llm_client_obj
+
+
+class ValidatedTool(ALTKBaseTool):
     """A wrapper tool that validates calls before execution using SPARC reflection.
     Falls back to simple validation if SPARC is not available.
     """
 
-    name: str = Field(...)
-    description: str = Field(...)
-    wrapped_tool: BaseTool = Field(...)
     sparc_component: Any | None = Field(default=None)
     conversation_context: list[BaseMessage] = Field(default_factory=list)
     tool_specs: list[dict] = Field(default_factory=list)
     validation_attempts: dict[str, int] = Field(default_factory=dict)
-    agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor = Field(...)
 
     def __init__(
         self, wrapped_tool: BaseTool, agent, sparc_component=None, conversation_context=None, tool_specs=None, **kwargs
@@ -239,54 +301,9 @@ class ValidatedTool(BaseTool):
         error_parts.append("\nPlease adjust your approach and try again.")
         return "\n".join(error_parts)
 
-    def _execute_tool(self, *args, **kwargs) -> str:
-        """Execute the wrapped tool with proper error handling."""
-        try:
-            # Try with config parameter first (newer LangChain versions)
-            if hasattr(self.wrapped_tool, "_run"):
-                # Ensure config is provided for StructuredTool
-                if "config" not in kwargs:
-                    kwargs["config"] = {}
-                return self.wrapped_tool._run(*args, **kwargs)
-            return self.wrapped_tool.run(*args, **kwargs)
-        except TypeError as e:
-            if "config" in str(e):
-                # Fallback: try without config for older tools
-                kwargs.pop("config", None)
-                if hasattr(self.wrapped_tool, "_run"):
-                    return self.wrapped_tool._run(*args, **kwargs)
-                return self.wrapped_tool.run(*args, **kwargs)
-            raise e
-
     def update_context(self, conversation_context: list[BaseMessage]):
         """Update the conversation context."""
         self.conversation_context = conversation_context
-
-    def _get_altk_llm_object(self) -> Any:
-        # Extract the LLM model and map it to altk model inputs
-        llm_object: BaseChatModel | None = None
-        steps = getattr(self.agent, "steps", None)
-        if steps:
-            for step in steps:
-                if isinstance(step, RunnableBinding) and isinstance(step.bound, BaseChatModel):
-                    llm_object = step.bound
-                    break
-        if isinstance(llm_object, ChatAnthropic):
-            # litellm needs the prefix to the model name for anthropic
-            model_name = f"anthropic/{llm_object.model}"
-            api_key = llm_object.anthropic_api_key.get_secret_value()
-            llm_client = get_llm("litellm.output_val")
-            llm_client_obj = llm_client(model_name=model_name, api_key=api_key)
-        elif isinstance(llm_object, ChatOpenAI):
-            model_name = llm_object.model_name
-            api_key = llm_object.openai_api_key.get_secret_value()
-            llm_client = get_llm("openai.sync.output_val")
-            llm_client_obj = llm_client(model=model_name, api_key=api_key)
-        else:
-            logger.info("ALTK currently only supports OpenAI and Anthropic models through Langflow.")
-            llm_client_obj = None
-
-        return llm_client_obj
 
 
 class PreToolValidationWrapper(BaseToolWrapper):
@@ -436,15 +453,6 @@ class ToolPipelineManager:
     def __init__(self):
         self.wrappers: list[BaseToolWrapper] = []
 
-    @property
-    def has_wrappers(self) -> bool:
-        """Check if any wrappers are registered.
-
-        Returns:
-            bool: True if wrappers are available, False otherwise
-        """
-        return len(self.wrappers) > 0
-
     def add_wrapper(self, wrapper: BaseToolWrapper):
         """Add a wrapper to the pipeline.
 
@@ -481,7 +489,7 @@ class ToolPipelineManager:
 # === Post Tool Processing Implementation ===
 
 
-class PostToolProcessor(BaseTool):
+class PostToolProcessor(ALTKBaseTool):
     """A tool output processor to process tool outputs.
 
     This wrapper intercepts the tool execution output and
@@ -489,11 +497,7 @@ class PostToolProcessor(BaseTool):
     to extract information from the JSON by generating Python code.
     """
 
-    name: str = Field(...)
-    description: str = Field(...)
-    wrapped_tool: BaseTool = Field(...)
     user_query: str = Field(...)
-    agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor = Field(...)
     response_processing_size_threshold: int = Field(...)
 
     def __init__(
@@ -508,25 +512,6 @@ class PostToolProcessor(BaseTool):
             response_processing_size_threshold=response_processing_size_threshold,
             **kwargs,
         )
-
-    def _execute_tool(self, *args, **kwargs) -> str:
-        """Execute the wrapped tool with proper error handling."""
-        try:
-            # Try with config parameter first (newer LangChain versions)
-            if hasattr(self.wrapped_tool, "_run"):
-                # Ensure config is provided for StructuredTool
-                if "config" not in kwargs:
-                    kwargs["config"] = {}
-                return self.wrapped_tool._run(*args, **kwargs)
-            return self.wrapped_tool.run(*args, **kwargs)
-        except TypeError as e:
-            if "config" in str(e):
-                # Fallback: try without config for older tools
-                kwargs.pop("config", None)
-                if hasattr(self.wrapped_tool, "_run"):
-                    return self.wrapped_tool._run(*args, **kwargs)
-                return self.wrapped_tool.run(*args, **kwargs)
-            raise
 
     def _run(self, *args: Any, **kwargs: Any) -> str:
         # Run the wrapped tool
@@ -561,32 +546,6 @@ class PostToolProcessor(BaseTool):
 
         return tool_response_str
 
-    def _get_altk_llm_object(self) -> Any:
-        # Extract the LLM model and map it to altk model inputs
-        llm_object: BaseChatModel | None = None
-        steps = getattr(self.agent, "steps", None)
-        if steps:
-            for step in steps:
-                if isinstance(step, RunnableBinding) and isinstance(step.bound, BaseChatModel):
-                    llm_object = step.bound
-                    break
-        if isinstance(llm_object, ChatAnthropic):
-            # litellm needs the prefix to the model name for anthropic
-            model_name = f"anthropic/{llm_object.model}"
-            api_key = llm_object.anthropic_api_key.get_secret_value()
-            llm_client = get_llm("litellm")
-            llm_client_obj = llm_client(model_name=model_name, api_key=api_key)
-        elif isinstance(llm_object, ChatOpenAI):
-            model_name = llm_object.model_name
-            api_key = llm_object.openai_api_key.get_secret_value()
-            llm_client = get_llm("openai.sync")
-            llm_client_obj = llm_client(model=model_name, api_key=api_key)
-        else:
-            logger.info("ALTK currently only supports OpenAI and Anthropic models through Langflow.")
-            llm_client_obj = None
-
-        return llm_client_obj
-
     def process_tool_response(self, tool_response: str, **_kwargs) -> str:
         logger.info("Calling process_tool_response of PostToolProcessor")
         tool_response_str = self._get_tool_response_str(tool_response)
@@ -613,7 +572,7 @@ class PostToolProcessor(BaseTool):
             tool_response_json = None
 
         if tool_response_json is not None and len(str(tool_response_json)) > self.response_processing_size_threshold:
-            llm_client_obj = self._get_altk_llm_object()
+            llm_client_obj = self._get_altk_llm_object(use_output_val=False)
             if llm_client_obj is not None:
                 config = CodeGenerationComponentConfig(llm_client=llm_client_obj, use_docker_sandbox=False)
 
@@ -685,7 +644,7 @@ class EnhancedAgentComponent(AgentComponent):
     additional capabilities in the future.
     """
 
-    display_name: str = "Enhanced Agent"
+    display_name: str = "ALTK Enhanced Agent"
     description: str = "Advanced agent with both pre-tool validation and post-tool processing capabilities."
     documentation: str = "https://docs.langflow.org/agents"
     icon = "zap"
