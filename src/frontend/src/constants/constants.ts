@@ -1,5 +1,5 @@
 // src/constants/constants.ts
-
+// This file contains all the constants used in the frontend.
 import {
   BASE_URL_API as CUSTOM_BASE_URL_API,
   BASE_URL_API_V2 as CUSTOM_BASE_URL_API_V2,
