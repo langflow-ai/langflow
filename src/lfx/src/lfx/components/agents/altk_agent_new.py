@@ -314,9 +314,7 @@ class PreToolValidationWrapper(BaseToolWrapper):
     """
 
     def __init__(self):
-        self.sparc_component = None
         self.tool_specs = []
-        self.available = True
 
     def wrap_tool(self, tool: BaseTool, **kwargs) -> BaseTool:
         """Wrap a tool with validation functionality.
@@ -324,49 +322,34 @@ class PreToolValidationWrapper(BaseToolWrapper):
         Args:
             tool: The BaseTool to wrap
             **kwargs: May contain 'conversation_context' for improved validation
-                      and 'enable_validation' to determine if validation should be applied
 
         Returns:
             A wrapped BaseTool with validation capabilities
         """
-        # Check if validation is explicitly disabled
-        enable_validation = kwargs.get("enable_validation", True)
-        if not enable_validation:
-            logger.info(f"Tool validation explicitly disabled for {tool.name}")
-            return tool
-        logger.info(f"Tool validation enabled for {tool.name}")
-
-        agent = kwargs.get("agent")
-
         if isinstance(tool, ValidatedTool):
             # Already wrapped, update context and tool specs
-            tool.sparc_component = self.sparc_component
             tool.tool_specs = self.tool_specs
             if "conversation_context" in kwargs:
                 tool.update_context(kwargs["conversation_context"])
             logger.debug(f"Updated existing ValidatedTool {tool.name} with {len(self.tool_specs)} tool specs")
             return tool
+        
+        agent = kwargs.get("agent")
+        
+        if not agent:
+            logger.warning("Cannot wrap tool with PostToolProcessor: missing 'agent'")
+            return tool
+
 
         # Wrap with validation
         validated_tool = ValidatedTool(
             wrapped_tool=tool,
             agent=agent,
-            sparc_component=self.sparc_component,
             tool_specs=self.tool_specs,
             conversation_context=kwargs.get("conversation_context", []),
         )
 
-        if self.sparc_component:
-            logger.info(f"Wrapped tool '{tool.name}' with SPARC validation ({len(self.tool_specs)} tool specs)")
-        else:
-            logger.info(f"Wrapped tool '{tool.name}' with fallback validation")
-
         return validated_tool
-
-    @property
-    def is_available(self) -> bool:
-        """Check if the SPARC component is available."""
-        return self.available
 
     @staticmethod
     def convert_langchain_tools_to_sparc_tool_specs_format(tools: list[BaseTool]) -> list[dict]:
@@ -610,6 +593,7 @@ class PostToolProcessingWrapper(BaseToolWrapper):
         Returns:
             A wrapped BaseTool with post-processing capabilities
         """
+        logger.info(f"Post-tool reflection enabled for {tool.name}")
         if isinstance(tool, PostToolProcessor):
             # Already wrapped with this wrapper, just return it
             return tool
@@ -704,12 +688,12 @@ class EnhancedAgentComponent(AgentComponent):
         # Default values for configuration flags
         super().__init__(**kwargs)
         self.pipeline_manager = ToolPipelineManager()
-        self._initialize_tool_wrappers()
 
     def _initialize_tool_wrappers(self):
         """Initialize tool wrappers based on enabled features."""
         # Add post-tool processing first (innermost wrapper)
         if self.enable_post_tool_reflection:
+            logger.info("Enabling Post-Tool Processing Wrapper!")
             post_processor = PostToolProcessingWrapper(
                 response_processing_size_threshold=self.response_processing_size_threshold
             )
@@ -717,6 +701,7 @@ class EnhancedAgentComponent(AgentComponent):
 
         # Add pre-tool validation last (outermost wrapper)
         if self.enable_tool_validation:
+            logger.info("Enabling Pre-Tool Validation Wrapper!")
             pre_validator = PreToolValidationWrapper()
             self.pipeline_manager.add_wrapper(pre_validator)
 
@@ -739,13 +724,14 @@ class EnhancedAgentComponent(AgentComponent):
             elif all(isinstance(m, Message) for m in self.chat_history):
                 conversation_context.extend([m.to_lc_message() for m in self.chat_history])
 
+        self._initialize_tool_wrappers()
+
         # Process tools through the pipeline
         processed_tools = self.pipeline_manager.process_tools(
             tools or [],
             agent=agent,
             user_query=user_query,
             conversation_context=conversation_context,
-            enable_validation=self.enable_tool_validation,
         )
 
         runnable.tools = processed_tools
