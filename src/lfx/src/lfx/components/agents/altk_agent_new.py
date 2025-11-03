@@ -15,11 +15,7 @@ from altk.post_tool.code_generation.code_generation import (
 )
 
 from altk.pre_tool.sparc import SPARCReflectionComponent
-from altk.pre_tool.core import (
-    SPARCExecutionMode,
-    Track,
-    SPARCReflectionRunInput
-)
+from altk.pre_tool.core import SPARCExecutionMode, Track, SPARCReflectionRunInput
 from altk.post_tool.core.toolkit import CodeGenerationRunInput
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain_anthropic.chat_models import ChatAnthropic
@@ -60,7 +56,9 @@ INPUT_NAMES_TO_BE_OVERRIDDEN = ["agent_llm"]
 
 def get_parent_agent_inputs():
     return [
-        input_field for input_field in AgentComponent.inputs if input_field.name not in INPUT_NAMES_TO_BE_OVERRIDDEN
+        input_field
+        for input_field in AgentComponent.inputs
+        if input_field.name not in INPUT_NAMES_TO_BE_OVERRIDDEN
     ]
 
 
@@ -109,15 +107,17 @@ class BaseToolWrapper(ABC):
 
 class ALTKBaseTool(BaseTool):
     """Base class for tools that need agent interaction and ALTK LLM access.
-    
+
     Provides common functionality for tool execution and ALTK LLM object creation.
     """
-    
+
     name: str = Field(...)
     description: str = Field(...)
     wrapped_tool: BaseTool = Field(...)
-    agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor = Field(...)
-    
+    agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor = (
+        Field(...)
+    )
+
     def _execute_tool(self, *args, **kwargs) -> str:
         """Execute the wrapped tool with proper error handling."""
         try:
@@ -139,7 +139,7 @@ class ALTKBaseTool(BaseTool):
 
     def _get_altk_llm_object(self, use_output_val: bool = True) -> Any:
         """Extract the LLM model and map it to altk model inputs.
-        
+
         Args:
             use_output_val: If True, use .output_val variants for compatibility.
                            If False, use base variants (for PostToolProcessor).
@@ -148,10 +148,12 @@ class ALTKBaseTool(BaseTool):
         steps = getattr(self.agent, "steps", None)
         if steps:
             for step in steps:
-                if isinstance(step, RunnableBinding) and isinstance(step.bound, BaseChatModel):
+                if isinstance(step, RunnableBinding) and isinstance(
+                    step.bound, BaseChatModel
+                ):
                     llm_object = step.bound
                     break
-        
+
         if isinstance(llm_object, ChatAnthropic):
             # litellm needs the prefix to the model name for anthropic
             model_name = f"anthropic/{llm_object.model}"
@@ -162,11 +164,15 @@ class ALTKBaseTool(BaseTool):
         elif isinstance(llm_object, ChatOpenAI):
             model_name = llm_object.model_name
             api_key = llm_object.openai_api_key.get_secret_value()
-            llm_client_type = "openai.sync.output_val" if use_output_val else "openai.sync"
+            llm_client_type = (
+                "openai.sync.output_val" if use_output_val else "openai.sync"
+            )
             llm_client = get_llm(llm_client_type)
             llm_client_obj = llm_client(model=model_name, api_key=api_key)
         else:
-            logger.info("ALTK currently only supports OpenAI and Anthropic models through Langflow.")
+            logger.info(
+                "ALTK currently only supports OpenAI and Anthropic models through Langflow."
+            )
             llm_client_obj = None
 
         return llm_client_obj
@@ -183,7 +189,13 @@ class ValidatedTool(ALTKBaseTool):
     validation_attempts: dict[str, int] = Field(default_factory=dict)
 
     def __init__(
-        self, wrapped_tool: BaseTool, agent, sparc_component=None, conversation_context=None, tool_specs=None, **kwargs
+        self,
+        wrapped_tool: BaseTool,
+        agent,
+        sparc_component=None,
+        conversation_context=None,
+        tool_specs=None,
+        **kwargs,
     ):
         super().__init__(
             name=wrapped_tool.name,
@@ -199,19 +211,19 @@ class ValidatedTool(ALTKBaseTool):
     def _run(self, *args, **kwargs) -> str:
         """Execute the tool with validation."""
         self.sparc_component = SPARCReflectionComponent(
-                config=ComponentConfig(llm_client=self._get_altk_llm_object()),
-                track=Track.FAST_TRACK,  # Use fast track for performance
-                execution_mode=SPARCExecutionMode.SYNC,  # Use SYNC to avoid event loop conflicts
-            )
+            config=ComponentConfig(llm_client=self._get_altk_llm_object()),
+            track=Track.FAST_TRACK,  # Use fast track for performance
+            execution_mode=SPARCExecutionMode.SYNC,  # Use SYNC to avoid event loop conflicts
+        )
         return self._validate_and_run(*args, **kwargs)
 
     async def _arun(self, *args, **kwargs) -> str:
         """Async execute the tool with validation."""
         self.sparc_component = SPARCReflectionComponent(
-                config=ComponentConfig(llm_client=self._get_altk_llm_object()),
-                track=Track.FAST_TRACK,  # Use fast track for performance
-                execution_mode=SPARCExecutionMode.SYNC,  # Use SYNC to avoid event loop conflicts
-            )
+            config=ComponentConfig(llm_client=self._get_altk_llm_object()),
+            track=Track.FAST_TRACK,  # Use fast track for performance
+            execution_mode=SPARCExecutionMode.SYNC,  # Use SYNC to avoid event loop conflicts
+        )
         return self._validate_and_run(*args, **kwargs)
 
     def _validate_and_run(self, *args, **kwargs) -> str:
@@ -224,22 +236,37 @@ class ValidatedTool(ALTKBaseTool):
         tool_call = {
             "id": str(uuid.uuid4()),
             "type": "function",
-            "function": {"name": self.name, "arguments": json.dumps(self._prepare_arguments(*args, **kwargs))},
+            "function": {
+                "name": self.name,
+                "arguments": json.dumps(self._prepare_arguments(*args, **kwargs)),
+            },
         }
 
-        if (isinstance(self.conversation_context, list) and self.conversation_context and isinstance(self.conversation_context[0], BaseMessage)):
-            logger.debug("Converting BaseMessages to list of dictionaries for conversation context of SPARC")
-            self.conversation_context = [message_to_dict(msg) for msg in self.conversation_context]
+        if (
+            isinstance(self.conversation_context, list)
+            and self.conversation_context
+            and isinstance(self.conversation_context[0], BaseMessage)
+        ):
+            logger.debug(
+                "Converting BaseMessages to list of dictionaries for conversation context of SPARC"
+            )
+            self.conversation_context = [
+                message_to_dict(msg) for msg in self.conversation_context
+            ]
 
         try:
             # Run SPARC validation
             run_input = SPARCReflectionRunInput(
-                messages=self.conversation_context, tool_specs=self.tool_specs, tool_calls=[tool_call]
+                messages=self.conversation_context,
+                tool_specs=self.tool_specs,
+                tool_calls=[tool_call],
             )
 
             # Check for missing tool specs and bypass if necessary
             if not self.tool_specs:
-                logger.warning(f"No tool specs available for SPARC validation of {self.name}, executing directly")
+                logger.warning(
+                    f"No tool specs available for SPARC validation of {self.name}, executing directly"
+                )
                 return self._execute_tool(*args, **kwargs)
 
             result = self.sparc_component.process(run_input, phase=AgentPhase.RUNTIME)
@@ -291,10 +318,16 @@ class ValidatedTool(ALTKBaseTool):
                     correction_data = issue.correction
                     if isinstance(correction_data, dict):
                         if "corrected_function_name" in correction_data:
-                            error_parts.append(f"  💡 Suggested function: {correction_data['corrected_function_name']}")
+                            error_parts.append(
+                                f"  💡 Suggested function: {correction_data['corrected_function_name']}"
+                            )
                         elif "tool_call" in correction_data:
-                            suggested_args = correction_data["tool_call"].get("arguments", {})
-                            error_parts.append(f"  💡 Suggested parameters: {suggested_args}")
+                            suggested_args = correction_data["tool_call"].get(
+                                "arguments", {}
+                            )
+                            error_parts.append(
+                                f"  💡 Suggested parameters: {suggested_args}"
+                            )
                 except Exception:
                     # If correction parsing fails, skip it
                     pass
@@ -332,15 +365,16 @@ class PreToolValidationWrapper(BaseToolWrapper):
             tool.tool_specs = self.tool_specs
             if "conversation_context" in kwargs:
                 tool.update_context(kwargs["conversation_context"])
-            logger.debug(f"Updated existing ValidatedTool {tool.name} with {len(self.tool_specs)} tool specs")
+            logger.debug(
+                f"Updated existing ValidatedTool {tool.name} with {len(self.tool_specs)} tool specs"
+            )
             return tool
-        
+
         agent = kwargs.get("agent")
-        
+
         if not agent:
             logger.warning("Cannot wrap tool with PostToolProcessor: missing 'agent'")
             return tool
-
 
         # Wrap with validation
         validated_tool = ValidatedTool(
@@ -353,7 +387,9 @@ class PreToolValidationWrapper(BaseToolWrapper):
         return validated_tool
 
     @staticmethod
-    def convert_langchain_tools_to_sparc_tool_specs_format(tools: list[BaseTool]) -> list[dict]:
+    def convert_langchain_tools_to_sparc_tool_specs_format(
+        tools: list[BaseTool],
+    ) -> list[dict]:
         """Convert LangChain tools to SPARC tool specifications."""
         tool_specs = []
 
@@ -364,7 +400,9 @@ class PreToolValidationWrapper(BaseToolWrapper):
                 wrapper_count = 0
 
                 # Unwrap to get to the actual tool
-                while hasattr(unwrapped_tool, "wrapped_tool") and not isinstance(unwrapped_tool, ValidatedTool):
+                while hasattr(unwrapped_tool, "wrapped_tool") and not isinstance(
+                    unwrapped_tool, ValidatedTool
+                ):
                     unwrapped_tool = unwrapped_tool.wrapped_tool
                     wrapper_count += 1
                     if wrapper_count > 10:  # Prevent infinite loops
@@ -375,19 +413,29 @@ class PreToolValidationWrapper(BaseToolWrapper):
                     "type": "function",
                     "function": {
                         "name": unwrapped_tool.name,
-                        "description": unwrapped_tool.description or f"Tool: {unwrapped_tool.name}",
-                        "parameters": {"type": "object", "properties": {}, "required": []},
+                        "description": unwrapped_tool.description
+                        or f"Tool: {unwrapped_tool.name}",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {},
+                            "required": [],
+                        },
                     },
                 }
 
                 # Extract parameters from tool schema if available
-                if hasattr(unwrapped_tool, "args_schema") and unwrapped_tool.args_schema:
+                if (
+                    hasattr(unwrapped_tool, "args_schema")
+                    and unwrapped_tool.args_schema
+                ):
                     schema = unwrapped_tool.args_schema
                     if hasattr(schema, "__fields__"):
                         for field_name, field_info in schema.__fields__.items():
                             param_spec = {
                                 "type": "string",  # Default type
-                                "description": getattr(field_info, "description", f"Parameter {field_name}"),
+                                "description": getattr(
+                                    field_info, "description", f"Parameter {field_name}"
+                                ),
                             }
 
                             # Try to infer type from field info
@@ -399,29 +447,48 @@ class PreToolValidationWrapper(BaseToolWrapper):
                                 elif field_info.type_ == bool:
                                     param_spec["type"] = "boolean"
 
-                            tool_spec["function"]["parameters"]["properties"][field_name] = param_spec
+                            tool_spec["function"]["parameters"]["properties"][
+                                field_name
+                            ] = param_spec
 
                             # Check if field is required
-                            if hasattr(field_info, "is_required") and field_info.is_required():
-                                tool_spec["function"]["parameters"]["required"].append(field_name)
+                            if (
+                                hasattr(field_info, "is_required")
+                                and field_info.is_required()
+                            ):
+                                tool_spec["function"]["parameters"]["required"].append(
+                                    field_name
+                                )
 
                 tool_specs.append(tool_spec)
 
             except Exception as e:
-                logger.warning(f"Could not convert tool {getattr(tool, 'name', 'unknown')} to spec: {e}")
+                logger.warning(
+                    f"Could not convert tool {getattr(tool, 'name', 'unknown')} to spec: {e}"
+                )
                 # Create minimal spec
                 minimal_spec = {
                     "type": "function",
                     "function": {
                         "name": getattr(tool, "name", f"unknown_tool_{i}"),
-                        "description": getattr(tool, "description", f"Tool: {getattr(tool, 'name', 'unknown')}"),
-                        "parameters": {"type": "object", "properties": {}, "required": []},
+                        "description": getattr(
+                            tool,
+                            "description",
+                            f"Tool: {getattr(tool, 'name', 'unknown')}",
+                        ),
+                        "parameters": {
+                            "type": "object",
+                            "properties": {},
+                            "required": [],
+                        },
                     },
                 }
                 tool_specs.append(minimal_spec)
 
         if not tool_specs:
-            logger.error("⚠️ No tool specs were generated! This will cause SPARC validation to fail")
+            logger.error(
+                "⚠️ No tool specs were generated! This will cause SPARC validation to fail"
+            )
         return tool_specs
 
 
@@ -457,8 +524,12 @@ class ToolPipelineManager:
         """Update tool specs for validation wrappers with the actual tools."""
         for wrapper in self.wrappers:
             if isinstance(wrapper, PreToolValidationWrapper) and tools:
-                wrapper.tool_specs = wrapper.convert_langchain_tools_to_sparc_tool_specs_format(tools)
-                logger.info(f"Updated tool specs for validation: {len(wrapper.tool_specs)} tools")
+                wrapper.tool_specs = (
+                    wrapper.convert_langchain_tools_to_sparc_tool_specs_format(tools)
+                )
+                logger.info(
+                    f"Updated tool specs for validation: {len(wrapper.tool_specs)} tools"
+                )
 
     def _apply_wrappers_to_tool(self, tool: BaseTool, **kwargs) -> BaseTool:
         """Apply all available wrappers to a tool in reverse order."""
@@ -485,7 +556,12 @@ class PostToolProcessor(ALTKBaseTool):
     response_processing_size_threshold: int = Field(...)
 
     def __init__(
-        self, wrapped_tool: BaseTool, user_query: str, agent, response_processing_size_threshold: int, **kwargs
+        self,
+        wrapped_tool: BaseTool,
+        user_query: str,
+        agent,
+        response_processing_size_threshold: int,
+        **kwargs,
     ):
         super().__init__(
             name=wrapped_tool.name,
@@ -519,7 +595,9 @@ class PostToolProcessor(ALTKBaseTool):
             tool_response_str = tool_response
         elif isinstance(tool_response, Data):
             tool_response_str = str(tool_response.data)
-        elif isinstance(tool_response, list) and all(isinstance(item, Data) for item in tool_response):
+        elif isinstance(tool_response, list) and all(
+            isinstance(item, Data) for item in tool_response
+        ):
             # get only the first element, not 100% sure if it should be the first or the last
             tool_response_str = str(tool_response[0].data)
         elif isinstance(tool_response, (dict, list)):
@@ -536,12 +614,16 @@ class PostToolProcessor(ALTKBaseTool):
 
         # First check if this looks like an error message with bullet points (SPARC rejection)
         if "❌" in tool_response_str or "•" in tool_response_str:
-            logger.info("Detected error message with special characters, skipping JSON parsing")
+            logger.info(
+                "Detected error message with special characters, skipping JSON parsing"
+            )
             return tool_response_str
 
         try:
             # Only attempt to parse content that looks like JSON
-            if (tool_response_str.startswith("{") and tool_response_str.endswith("}")) or (
+            if (
+                tool_response_str.startswith("{") and tool_response_str.endswith("}")
+            ) or (
                 tool_response_str.startswith("[") and tool_response_str.endswith("]")
             ):
                 tool_response_json = ast.literal_eval(tool_response_str)
@@ -555,14 +637,21 @@ class PostToolProcessor(ALTKBaseTool):
             )
             tool_response_json = None
 
-        if tool_response_json is not None and len(str(tool_response_json)) > self.response_processing_size_threshold:
+        if (
+            tool_response_json is not None
+            and len(str(tool_response_json)) > self.response_processing_size_threshold
+        ):
             llm_client_obj = self._get_altk_llm_object(use_output_val=False)
             if llm_client_obj is not None:
-                config = CodeGenerationComponentConfig(llm_client=llm_client_obj, use_docker_sandbox=False)
+                config = CodeGenerationComponentConfig(
+                    llm_client=llm_client_obj, use_docker_sandbox=False
+                )
 
                 middleware = CodeGenerationComponent(config=config)
                 input_data = CodeGenerationRunInput(
-                    messages=[], nl_query=self.user_query, tool_response=tool_response_json
+                    messages=[],
+                    nl_query=self.user_query,
+                    tool_response=tool_response_json,
                 )
                 output = None
                 try:
@@ -631,13 +720,18 @@ class EnhancedAgentComponent(AgentComponent):
     """
 
     display_name: str = "ALTK Enhanced Agent"
-    description: str = "Advanced agent with both pre-tool validation and post-tool processing capabilities."
+    description: str = (
+        "Advanced agent with both pre-tool validation and post-tool processing capabilities."
+    )
     documentation: str = "https://docs.langflow.org/agents"
     icon = "zap"
     beta = True
     name = "ALTK Enhanced Agent"
 
-    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
+    memory_inputs = [
+        set_advanced_true(component_input)
+        for component_input in MemoryComponent().inputs
+    ]
 
     # Filter out json_mode from OpenAI inputs since we handle structured output differently
     if "OpenAI" in MODEL_PROVIDERS_DICT:
@@ -659,7 +753,11 @@ class EnhancedAgentComponent(AgentComponent):
             real_time_refresh=True,
             refresh_button=False,
             input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA],
+            options_metadata=[
+                MODELS_METADATA[key]
+                for key in MODEL_PROVIDERS_LIST
+                if key in MODELS_METADATA
+            ],
         ),
         *get_parent_agent_inputs(),
         BoolInput(
@@ -711,7 +809,11 @@ class EnhancedAgentComponent(AgentComponent):
     def update_runnable_instance(
         self, agent: AgentExecutor, runnable: AgentExecutor, tools: Sequence[BaseTool]
     ) -> AgentExecutor:
-        user_query = self.input_value.get_text() if hasattr(self.input_value, "get_text") else self.input_value
+        user_query = (
+            self.input_value.get_text()
+            if hasattr(self.input_value, "get_text")
+            else self.input_value
+        )
 
         # Prepare conversation context for tool validation
         conversation_context = []
@@ -725,7 +827,9 @@ class EnhancedAgentComponent(AgentComponent):
             if isinstance(self.chat_history, Data):
                 conversation_context.extend(data_to_messages(self.chat_history))
             elif all(isinstance(m, Message) for m in self.chat_history):
-                conversation_context.extend([m.to_lc_message() for m in self.chat_history])
+                conversation_context.extend(
+                    [m.to_lc_message() for m in self.chat_history]
+                )
 
         self._initialize_tool_wrappers()
 
@@ -749,7 +853,9 @@ class EnhancedAgentComponent(AgentComponent):
             runnable = agent
         else:
             # note the tools are not required to run the agent, hence the validation removed.
-            handle_parsing_errors = hasattr(self, "handle_parsing_errors") and self.handle_parsing_errors
+            handle_parsing_errors = (
+                hasattr(self, "handle_parsing_errors") and self.handle_parsing_errors
+            )
             verbose = hasattr(self, "verbose") and self.verbose
             max_iterations = hasattr(self, "max_iterations") and self.max_iterations
             runnable = AgentExecutor.from_agent_and_tools(
@@ -762,9 +868,15 @@ class EnhancedAgentComponent(AgentComponent):
         runnable = self.update_runnable_instance(agent, runnable, self.tools)
 
         # Convert input_value to proper format for agent
-        if hasattr(self.input_value, "to_lc_message") and callable(self.input_value.to_lc_message):
+        if hasattr(self.input_value, "to_lc_message") and callable(
+            self.input_value.to_lc_message
+        ):
             lc_message = self.input_value.to_lc_message()
-            input_text = lc_message.content if hasattr(lc_message, "content") else str(lc_message)
+            input_text = (
+                lc_message.content
+                if hasattr(lc_message, "content")
+                else str(lc_message)
+            )
         else:
             lc_message = None
             input_text = self.input_value
@@ -780,22 +892,35 @@ class EnhancedAgentComponent(AgentComponent):
             ):
                 input_dict["chat_history"] = data_to_messages(self.chat_history)
             # Handle both lfx.schema.message.Message and langflow.schema.message.Message types
-            if all(hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data for m in self.chat_history):
+            if all(
+                hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data
+                for m in self.chat_history
+            ):
                 input_dict["chat_history"] = data_to_messages(self.chat_history)
             if all(isinstance(m, Message) for m in self.chat_history):
-                input_dict["chat_history"] = data_to_messages([m.to_data() for m in self.chat_history])
+                input_dict["chat_history"] = data_to_messages(
+                    [m.to_data() for m in self.chat_history]
+                )
         if hasattr(lc_message, "content") and isinstance(lc_message.content, list):
             # ! Because the input has to be a string, we must pass the images in the chat_history
 
-            image_dicts = [item for item in lc_message.content if item.get("type") == "image"]
-            lc_message.content = [item for item in lc_message.content if item.get("type") != "image"]
+            image_dicts = [
+                item for item in lc_message.content if item.get("type") == "image"
+            ]
+            lc_message.content = [
+                item for item in lc_message.content if item.get("type") != "image"
+            ]
 
             if "chat_history" not in input_dict:
                 input_dict["chat_history"] = []
             if isinstance(input_dict["chat_history"], list):
-                input_dict["chat_history"].extend(HumanMessage(content=[image_dict]) for image_dict in image_dicts)
+                input_dict["chat_history"].extend(
+                    HumanMessage(content=[image_dict]) for image_dict in image_dicts
+                )
             else:
-                input_dict["chat_history"] = [HumanMessage(content=[image_dict]) for image_dict in image_dicts]
+                input_dict["chat_history"] = [
+                    HumanMessage(content=[image_dict]) for image_dict in image_dicts
+                ]
         input_dict["input"] = input_text
         if hasattr(self, "graph"):
             session_id = self.graph.session_id
@@ -820,7 +945,12 @@ class EnhancedAgentComponent(AgentComponent):
             result = await process_agent_events(
                 runnable.astream_events(
                     input_dict,
-                    config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
+                    config={
+                        "callbacks": [
+                            AgentAsyncHandler(self.log),
+                            *self.get_langchain_callbacks(),
+                        ]
+                    },
                     version="v2",
                 ),
                 agent_message,
