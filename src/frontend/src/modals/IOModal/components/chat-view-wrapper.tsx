@@ -33,7 +33,7 @@ export const ChatViewWrapper = ({
     >
       <div
         className={cn(
-          "mb-4 flex h-[5%] items-center text-base font-semibold",
+          "flex h-10 shrink-0 items-center text-base font-semibold",
           playgroundPage ? "justify-between" : "lg:justify-start",
         )}
       >

@@ -5,7 +5,9 @@ import type { FieldParserType } from "../types/api";
 function toSnakeCase(str: string): string {
   return str.trim().replace(/[-\s]+/g, "_");
 }
-
+function toMcpNameCase(str: string): string {
+  return str.trim().replace(/\s+/g, "_");
+}
 function toCamelCase(str: string): string {
   return str
     .replace(/[-_\s]+(.)?/g, (_, c) => (c ? c.toUpperCase() : ""))
@@ -94,9 +96,6 @@ function sanitizeMcpName(str: string, maxLength: number = 46): string {
   name = name.replace(/[-\s]+/g, "_"); // Replace spaces and hyphens with underscores
   name = name.replace(/_+/g, "_"); // Collapse multiple underscores
 
-  // Remove leading/trailing underscores
-  name = name.replace(/^_+|_+$/g, "");
-
   // Ensure it starts with a letter or underscore (not a number)
   if (name && /^\d/.test(name)) {
     name = `_${name}`;
@@ -143,6 +142,9 @@ export function parseString(
   for (const parser of parsersArray) {
     try {
       switch (parser) {
+        case "mcp_name_case":
+          result = toMcpNameCase(result);
+          break;
         case "snake_case":
           result = toSnakeCase(result);
           break;

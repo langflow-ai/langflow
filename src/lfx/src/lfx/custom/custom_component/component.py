@@ -154,7 +154,7 @@ class Component(CustomComponent):
             self.trace_type = "chain"
 
         # Setup inputs and outputs
-        self._reset_all_output_values()
+        self.reset_all_output_values()
         if self.inputs is not None:
             self.map_inputs(self.inputs)
         self.map_outputs()
@@ -330,7 +330,8 @@ class Component(CustomComponent):
     def set_event_manager(self, event_manager: EventManager | None = None) -> None:
         self._event_manager = event_manager
 
-    def _reset_all_output_values(self) -> None:
+    def reset_all_output_values(self) -> None:
+        """Reset all output values to UNDEFINED."""
         if isinstance(self._outputs_map, dict):
             for output in self._outputs_map.values():
                 output.value = UNDEFINED
@@ -1325,7 +1326,11 @@ class Component(CustomComponent):
                 - tags: List of tags associated with the tool
         """
         # Get tools from subclass implementation
-        tools = await self._get_tools()
+        # Handle both sync and async _get_tools methods
+        if asyncio.iscoroutinefunction(self._get_tools):
+            tools = await self._get_tools()
+        else:
+            tools = self._get_tools()
 
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             tools = self._filter_tools_by_status(tools=tools, metadata=self.tools_metadata)
@@ -1544,7 +1549,16 @@ class Component(CustomComponent):
         if not message.sender_name:
             message.sender_name = MESSAGE_SENDER_NAME_AI
 
-    async def send_message(self, message: Message, id_: str | None = None):
+    async def send_message(self, message: Message, id_: str | None = None, *, skip_db_update: bool = False):
+        """Send a message with optional database update control.
+
+        Args:
+            message: The message to send
+            id_: Optional message ID
+            skip_db_update: If True, only update in-memory and send event, skip DB write.
+                           Useful during streaming to avoid excessive DB round-trips.
+                           Note: This assumes the message already exists in the database with message.id set.
+        """
         if self._should_skip_message(message):
             return message
 
@@ -1554,26 +1568,37 @@ class Component(CustomComponent):
         # Ensure required fields for message storage are set
         self._ensure_message_required_fields(message)
 
-        stored_message = await self._store_message(message)
+        # If skip_db_update is True and message already has an ID, skip the DB write
+        # This path is used during agent streaming to avoid excessive DB round-trips
+        if skip_db_update and message.id:
+            # Create a fresh Message instance for consistency with normal flow
+            stored_message = await Message.create(**message.model_dump())
+            self._stored_message_id = stored_message.id
+            # Still send the event to update the client in real-time
+            # Note: If this fails, we don't need DB cleanup since we didn't write to DB
+            await self._send_message_event(stored_message, id_=id_)
+        else:
+            # Normal flow: store/update in database
+            stored_message = await self._store_message(message)
 
-        self._stored_message_id = stored_message.id
-        try:
-            complete_message = ""
-            if (
-                self._should_stream_message(stored_message, message)
-                and message is not None
-                and isinstance(message.text, AsyncIterator | Iterator)
-            ):
-                complete_message = await self._stream_message(message.text, stored_message)
-                stored_message.text = complete_message
-                stored_message = await self._update_stored_message(stored_message)
-            else:
-                # Only send message event for non-streaming messages
-                await self._send_message_event(stored_message, id_=id_)
-        except Exception:
-            # remove the message from the database
-            await delete_message(stored_message.id)
-            raise
+            self._stored_message_id = stored_message.id
+            try:
+                complete_message = ""
+                if (
+                    self._should_stream_message(stored_message, message)
+                    and message is not None
+                    and isinstance(message.text, AsyncIterator | Iterator)
+                ):
+                    complete_message = await self._stream_message(message.text, stored_message)
+                    stored_message.text = complete_message
+                    stored_message = await self._update_stored_message(stored_message)
+                else:
+                    # Only send message event for non-streaming messages
+                    await self._send_message_event(stored_message, id_=id_)
+            except Exception:
+                # remove the message from the database
+                await delete_message(stored_message.id)
+                raise
         self.status = stored_message
         return stored_message
 

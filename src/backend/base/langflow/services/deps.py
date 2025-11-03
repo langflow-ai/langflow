@@ -108,6 +108,17 @@ def get_variable_service() -> VariableService:
     return get_service(ServiceType.VARIABLE_SERVICE, VariableServiceFactory())
 
 
+def is_settings_service_initialized() -> bool:
+    """Check if the SettingsService is already initialized without triggering initialization.
+
+    Returns:
+        bool: True if the SettingsService is already initialized, False otherwise.
+    """
+    from lfx.services.manager import get_service_manager
+
+    return ServiceType.SETTINGS_SERVICE in get_service_manager().services
+
+
 def get_settings_service() -> SettingsService:
     """Retrieves the SettingsService instance.
 
@@ -167,8 +178,8 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
             await session.commit()
-        except Exception:
-            await logger.aexception("An error occurred during the session scope.")
+        except Exception as e:
+            await logger.aexception("An error occurred during the session scope.", exception=e)
             await session.rollback()
             raise
 

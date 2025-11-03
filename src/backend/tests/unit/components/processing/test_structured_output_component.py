@@ -7,9 +7,9 @@ import pytest
 from langchain_openai import ChatOpenAI
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs.inputs import TableInput
+from lfx.components.processing.structured_output import StructuredOutputComponent
 from pydantic import BaseModel
 
-from lfx.components.processing.structured_output import StructuredOutputComponent
 from tests.base import ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 
@@ -252,8 +252,8 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         mock_get_chat_result.assert_called_once()
 
     @pytest.mark.skipif(
-        "OPENAI_API_KEY" not in os.environ,
-        reason="OPENAI_API_KEY environment variable not set",
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
+        reason="OPENAI_API_KEY is not set or is empty",
     )
     def test_with_real_openai_model_simple_schema(self):
         # Create a real OpenAI model
@@ -284,7 +284,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result[0]["age"] == 30
 
     @pytest.mark.skipif(
-        "OPENAI_API_KEY" not in os.environ,
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
     )
     def test_with_real_openai_model_multiple_patterns(self):
@@ -397,7 +397,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert 899.99 in prices
 
     @pytest.mark.skipif(
-        "OPENAI_API_KEY" not in os.environ,
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
     )
     def test_with_real_openai_model_simple_schema_fail(self):
@@ -433,7 +433,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         ), f"Expected max_tokens error but got: {error_message}"
 
     @pytest.mark.skipif(
-        "OPENAI_API_KEY" not in os.environ,
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
     )
     def test_with_real_openai_model_complex_schema(self):
@@ -482,7 +482,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result[0]["rating"] == 4.0
 
     @pytest.mark.skipif(
-        "OPENAI_API_KEY" not in os.environ,
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
     )
     def test_with_real_openai_model_nested_schema(self):
@@ -547,7 +547,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result[0]["would_return"] is True
 
     @pytest.mark.skipif(
-        "NVIDIA_API_KEY" not in os.environ,
+        not (os.getenv("NVIDIA_API_KEY") or "").strip(),
         reason="NVIDIA_API_KEY environment variable not set",
     )
     def test_with_real_nvidia_model_simple_schema(self):
@@ -1038,3 +1038,174 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             pytest.raises(ValueError, match="No structured output returned"),
         ):
             component.build_structured_dataframe()
+
+    def test_fallback_to_langchain_on_trustcall_generic_exception(self):
+        """Test that when trustcall fails with a generic exception, it falls back to langchain."""
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        with (
+            patch.object(component, "_extract_output_with_trustcall", return_value=None) as mock_trustcall,
+            patch.object(
+                component, "_extract_output_with_langchain", return_value=[{"field": "langchain_value"}]
+            ) as mock_langchain,
+        ):
+            result = component.build_structured_output_base()
+
+            # Verify fallback was successful
+            assert isinstance(result, list)
+            assert result == [{"field": "langchain_value"}]
+
+            # Verify both methods were called
+            mock_trustcall.assert_called_once()
+            mock_langchain.assert_called_once()
+
+    def test_fallback_both_methods_fail_raises_value_error(self):
+        """Test that when both trustcall and langchain fail, a ValueError is raised."""
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        # Mock trustcall to return None (indicating failure)
+        # Mock langchain to raise an exception
+        with (
+            patch.object(component, "_extract_output_with_trustcall", return_value=None),
+            patch.object(
+                component,
+                "_extract_output_with_langchain",
+                side_effect=ValueError(
+                    "Model does not support tool calling (trustcall failed) and fallback "
+                    "with_structured_output also failed: Langchain parsing error"
+                ),
+            ),
+        ):
+            with pytest.raises(ValueError, match="trustcall failed") as exc_info:
+                component.build_structured_output_base()
+
+            error_msg = str(exc_info.value)
+            # Verify error message mentions both failures
+            assert "Model does not support tool calling" in error_msg
+            assert "trustcall failed" in error_msg
+            assert "fallback with_structured_output also failed" in error_msg
+            assert "Langchain parsing error" in error_msg
+
+    def test_langchain_fallback_processes_basemodel_response(self):
+        """Test that langchain fallback correctly processes BaseModel responses."""
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        # Mock trustcall to return None (fail)
+        # Mock langchain to return list with dict
+        with (
+            patch.object(component, "_extract_output_with_trustcall", return_value=None),
+            patch.object(component, "_extract_output_with_langchain", return_value=[{"field": "test_value"}]),
+        ):
+            result = component.build_structured_output_base()
+
+            # Verify it extracted the objects
+            assert isinstance(result, list)
+            assert result == [{"field": "test_value"}]
+
+    def test_langchain_fallback_processes_dict_response(self):
+        """Test that langchain fallback correctly processes dict responses without BaseModel conversion."""
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        # Mock trustcall to return None (fail)
+        # Mock langchain to return dict directly
+        with (
+            patch.object(component, "_extract_output_with_trustcall", return_value=None),
+            patch.object(component, "_extract_output_with_langchain", return_value={"field": "dict_value"}),
+        ):
+            result = component.build_structured_output_base()
+
+            # When langchain returns dict, it's returned as-is
+            assert result == {"field": "dict_value"}
+
+    def test_fallback_error_message_includes_both_errors(self):
+        """Test that the error message when both methods fail includes context about both failures."""
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        # Mock trustcall to return None (fail)
+        # Mock langchain to raise an exception with full error message
+        with (
+            patch.object(component, "_extract_output_with_trustcall", return_value=None),
+            patch.object(
+                component,
+                "_extract_output_with_langchain",
+                side_effect=ValueError(
+                    "Model does not support tool calling (trustcall failed) and fallback "
+                    "with_structured_output also failed: Langchain parsing error"
+                ),
+            ),
+        ):
+            with pytest.raises(ValueError, match="trustcall failed") as exc_info:
+                component.build_structured_output_base()
+
+            error_msg = str(exc_info.value)
+            # Verify error message mentions both failures
+            assert "Model does not support tool calling" in error_msg
+            assert "trustcall failed" in error_msg
+            assert "fallback with_structured_output also failed" in error_msg
+            assert "Langchain parsing error" in error_msg
+
+    def test_trustcall_success_no_fallback_attempted(self):
+        """Test that when trustcall succeeds, langchain fallback is not attempted."""
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {"objects": [{"field": "trustcall_value"}]}
+
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        with (
+            patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result),
+            patch.object(component, "_extract_output_with_langchain") as mock_lc_fallback,
+        ):
+            result = component.build_structured_output_base()
+
+            # Verify trustcall succeeded
+            assert isinstance(result, list)
+            assert result == [{"field": "trustcall_value"}]
+
+            # Verify langchain was NOT called
+            mock_lc_fallback.assert_not_called()

@@ -1,5 +1,4 @@
 import json
-import os
 from uuid import UUID
 
 import orjson
@@ -7,7 +6,6 @@ import pytest
 from httpx import AsyncClient
 from langflow.memory import aget_messages
 from langflow.services.database.models.flow import FlowCreate
-
 from lfx.components.data.url import URLComponent
 from lfx.components.input_output import ChatOutput
 from lfx.components.logic import LoopComponent
@@ -20,6 +18,8 @@ from lfx.components.processing import (
 )
 from lfx.graph import Graph
 from lfx.schema.data import Data
+
+from tests.api_keys import get_openai_api_key, has_api_key
 from tests.base import ComponentTestBaseWithClient
 from tests.unit.build_utils import build_flow, get_build_events
 
@@ -129,7 +129,7 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
         assert len(data["outputs"][-1]["outputs"]) > 0
 
 
-@pytest.mark.skipif(os.getenv("OPENAI_API_KEY") in {None, "dummy"}, reason="OPENAI_API_KEY is not set")
+@pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY is not set")
 def loop_flow():
     """Complete loop flow that processes multiple URLs through a loop."""
     # Create URL component to fetch content from multiple sources
@@ -167,7 +167,7 @@ def loop_flow():
     # Create OpenAI model component for processing
     openai_component = OpenAIModelComponent()
     openai_component.set(
-        api_key=os.getenv("OPENAI_API_KEY"),
+        api_key=get_openai_api_key(),
         model_name="gpt-4.1-mini",
         temperature=0.7,
     )

@@ -1,16 +1,22 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import uuid
 from typing import Any
 
 from langchain_core.tools import StructuredTool  # noqa: TC002
 
 from lfx.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cache_set
-from lfx.base.mcp.util import MCPSseClient, MCPStdioClient, create_input_schema_from_json_schema, update_tools
+from lfx.base.mcp.util import (
+    MCPStdioClient,
+    MCPStreamableHttpClient,
+    create_input_schema_from_json_schema,
+    update_tools,
+)
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from lfx.inputs.inputs import InputTypes  # noqa: TC001
-from lfx.io import DropdownInput, McpInput, MessageTextInput, Output
+from lfx.io import BoolInput, DropdownInput, McpInput, MessageTextInput, Output
 from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
@@ -32,7 +38,9 @@ class MCPToolsComponent(ComponentWithCache):
 
         # Initialize clients with access to the component cache
         self.stdio_client: MCPStdioClient = MCPStdioClient(component_cache=self._shared_component_cache)
-        self.sse_client: MCPSseClient = MCPSseClient(component_cache=self._shared_component_cache)
+        self.streamable_http_client: MCPStreamableHttpClient = MCPStreamableHttpClient(
+            component_cache=self._shared_component_cache
+        )
 
     def _ensure_cache_structure(self):
         """Ensure the cache has the required structure."""
@@ -53,6 +61,8 @@ class MCPToolsComponent(ComponentWithCache):
         "tool_placeholder",
         "mcp_server",
         "tool",
+        "use_cache",
+        "verify_ssl",
     ]
 
     display_name = "MCP Tools"
@@ -67,6 +77,26 @@ class MCPToolsComponent(ComponentWithCache):
             display_name="MCP Server",
             info="Select the MCP Server that will be used by this component",
             real_time_refresh=True,
+        ),
+        BoolInput(
+            name="use_cache",
+            display_name="Use Cached Server",
+            info=(
+                "Enable caching of MCP Server and tools to improve performance. "
+                "Disable to always fetch fresh tools and server updates."
+            ),
+            value=False,
+            advanced=True,
+        ),
+        BoolInput(
+            name="verify_ssl",
+            display_name="Verify SSL Certificate",
+            info=(
+                "Enable SSL certificate verification for HTTPS connections. "
+                "Disable only for development/testing with self-signed certificates."
+            ),
+            value=True,
+            advanced=True,
         ),
         DropdownInput(
             name="tool",
@@ -132,16 +162,32 @@ class MCPToolsComponent(ComponentWithCache):
             self.tools = []
             return [], {"name": server_name, "config": server_config_from_value}
 
-        # Use shared cache if available
-        servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
-        cached = servers_cache.get(server_name) if isinstance(servers_cache, dict) else None
+        # Check if caching is enabled, default to False
+        use_cache = getattr(self, "use_cache", False)
+
+        # Use shared cache if available and caching is enabled
+        cached = None
+        if use_cache:
+            servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+            cached = servers_cache.get(server_name) if isinstance(servers_cache, dict) else None
 
         if cached is not None:
-            self.tools = cached["tools"]
-            self.tool_names = cached["tool_names"]
-            self._tool_cache = cached["tool_cache"]
-            server_config_from_value = cached["config"]
-            return self.tools, {"name": server_name, "config": server_config_from_value}
+            try:
+                self.tools = cached["tools"]
+                self.tool_names = cached["tool_names"]
+                self._tool_cache = cached["tool_cache"]
+                server_config_from_value = cached["config"]
+            except (TypeError, KeyError, AttributeError) as e:
+                # Handle corrupted cache data by clearing it and continuing to fetch fresh tools
+                msg = f"Unable to use cached data for MCP Server{server_name}: {e}"
+                await logger.awarning(msg)
+                # Clear the corrupted cache entry
+                current_servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+                if isinstance(current_servers_cache, dict) and server_name in current_servers_cache:
+                    current_servers_cache.pop(server_name)
+                    safe_cache_set(self._shared_component_cache, "servers", current_servers_cache)
+            else:
+                return self.tools, {"name": server_name, "config": server_config_from_value}
 
         try:
             try:
@@ -176,29 +222,36 @@ class MCPToolsComponent(ComponentWithCache):
                 self.tools = []
                 return [], {"name": server_name, "config": server_config}
 
+            # Add verify_ssl option to server config if not present
+            if "verify_ssl" not in server_config:
+                verify_ssl = getattr(self, "verify_ssl", True)
+                server_config["verify_ssl"] = verify_ssl
+
             _, tool_list, tool_cache = await update_tools(
                 server_name=server_name,
                 server_config=server_config,
                 mcp_stdio_client=self.stdio_client,
-                mcp_sse_client=self.sse_client,
+                mcp_streamable_http_client=self.streamable_http_client,
             )
 
             self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
             self._tool_cache = tool_cache
             self.tools = tool_list
-            # Cache the result using shared cache
-            cache_data = {
-                "tools": tool_list,
-                "tool_names": self.tool_names,
-                "tool_cache": tool_cache,
-                "config": server_config,
-            }
 
-            # Safely update the servers cache
-            current_servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
-            if isinstance(current_servers_cache, dict):
-                current_servers_cache[server_name] = cache_data
-                safe_cache_set(self._shared_component_cache, "servers", current_servers_cache)
+            # Cache the result only if caching is enabled
+            if use_cache:
+                cache_data = {
+                    "tools": tool_list,
+                    "tool_names": self.tool_names,
+                    "tool_cache": tool_cache,
+                    "config": server_config,
+                }
+
+                # Safely update the servers cache
+                current_servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+                if isinstance(current_servers_cache, dict):
+                    current_servers_cache[server_name] = cache_data
+                    safe_cache_set(self._shared_component_cache, "servers", current_servers_cache)
 
         except (TimeoutError, asyncio.TimeoutError) as e:
             msg = f"Timeout updating tool list: {e!s}"
@@ -275,7 +328,17 @@ class MCPToolsComponent(ComponentWithCache):
 
                 # To avoid unnecessary updates, only proceed if the server has actually changed
                 if (_last_selected_server in (current_server_name, "")) and build_config["tool"]["show"]:
-                    return build_config
+                    if current_server_name:
+                        servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+                        if isinstance(servers_cache, dict):
+                            cached = servers_cache.get(current_server_name)
+                            if cached is not None and cached.get("tool_names"):
+                                cached_tools = cached["tool_names"]
+                                current_tools = build_config["tool"]["options"]
+                                if current_tools == cached_tools:
+                                    return build_config
+                    else:
+                        return build_config
 
                 # Determine if "Tool Mode" is active by checking if the tool dropdown is hidden.
                 is_in_tool_mode = build_config["tools_metadata"]["show"]
@@ -284,14 +347,22 @@ class MCPToolsComponent(ComponentWithCache):
                 # Check if tools are already cached for this server before clearing
                 cached_tools = None
                 if current_server_name:
-                    servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
-                    if isinstance(servers_cache, dict):
-                        cached = servers_cache.get(current_server_name)
-                        if cached is not None:
-                            cached_tools = cached["tools"]
-                            self.tools = cached_tools
-                            self.tool_names = cached["tool_names"]
-                            self._tool_cache = cached["tool_cache"]
+                    use_cache = getattr(self, "use_cache", True)
+                    if use_cache:
+                        servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+                        if isinstance(servers_cache, dict):
+                            cached = servers_cache.get(current_server_name)
+                            if cached is not None:
+                                try:
+                                    cached_tools = cached["tools"]
+                                    self.tools = cached_tools
+                                    self.tool_names = cached["tool_names"]
+                                    self._tool_cache = cached["tool_cache"]
+                                except (TypeError, KeyError, AttributeError) as e:
+                                    # Handle corrupted cache data by ignoring it
+                                    msg = f"Unable to use cached data for MCP Server,{current_server_name}: {e}"
+                                    await logger.awarning(msg)
+                                    cached_tools = None
 
                 # Only clear tools if we don't have cached tools for the current server
                 if not cached_tools:
@@ -449,8 +520,7 @@ class MCPToolsComponent(ComponentWithCache):
                 session_context = self._get_session_context()
                 if session_context:
                     self.stdio_client.set_session_context(session_context)
-                    self.sse_client.set_session_context(session_context)
-
+                    self.streamable_http_client.set_session_context(session_context)
                 exec_tool = self._tool_cache[self.tool]
                 tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
                 kwargs = {}
@@ -465,17 +535,31 @@ class MCPToolsComponent(ComponentWithCache):
                 unflattened_kwargs = maybe_unflatten_dict(kwargs)
 
                 output = await exec_tool.coroutine(**unflattened_kwargs)
-
                 tool_content = []
                 for item in output.content:
                     item_dict = item.model_dump()
+                    item_dict = self.process_output_item(item_dict)
                     tool_content.append(item_dict)
+
+                if isinstance(tool_content, list) and all(isinstance(x, dict) for x in tool_content):
+                    return DataFrame(tool_content)
                 return DataFrame(data=tool_content)
             return DataFrame(data=[{"error": "You must select a tool"}])
         except Exception as e:
             msg = f"Error in build_output: {e!s}"
             await logger.aexception(msg)
             raise ValueError(msg) from e
+
+    def process_output_item(self, item_dict):
+        """Process the output of a tool."""
+        if item_dict.get("type") == "text":
+            text = item_dict.get("text")
+            try:
+                return json.loads(text)
+                # convert it to dict
+            except json.JSONDecodeError:
+                return item_dict
+        return item_dict
 
     def _get_session_context(self) -> str | None:
         """Get the Langflow session ID for MCP session caching."""
