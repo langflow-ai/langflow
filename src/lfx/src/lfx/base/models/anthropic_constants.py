@@ -43,8 +43,20 @@ ANTHROPIC_MODELS_DETAILED = [
         provider="Anthropic", name="claude-3-sonnet-20240229", icon="Anthropic", tool_calling=True, deprecated=True
     ),
     # Old Claude 2 models (deprecated)
-    create_model_metadata(provider="Anthropic", name="claude-2.1", icon="Anthropic", tool_calling=False, deprecated=True),
-    create_model_metadata(provider="Anthropic", name="claude-2.0", icon="Anthropic", tool_calling=False, deprecated=True),
+    create_model_metadata(
+        provider="Anthropic",
+        name="claude-2.1",
+        icon="Anthropic",
+        tool_calling=False,
+        deprecated=True,
+    ),
+    create_model_metadata(
+        provider="Anthropic",
+        name="claude-2.0",
+        icon="Anthropic",
+        tool_calling=False,
+        deprecated=True,
+    ),
     # Deprecated models
     create_model_metadata(
         provider="Anthropic", name="claude-3-5-sonnet-20240620", icon="Anthropic", tool_calling=True, deprecated=True

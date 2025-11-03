@@ -67,7 +67,14 @@ OPENAI_MODELS_DETAILED = [
     create_model_metadata(
         provider="OpenAI", name="o3-mini", icon="OpenAI", reasoning=True, preview=True, not_supported=True
     ),
-    create_model_metadata(provider="OpenAI", name="o3", icon="OpenAI", reasoning=True, preview=True, not_supported=True),
+    create_model_metadata(
+        provider="OpenAI",
+        name="o3",
+        icon="OpenAI",
+        reasoning=True,
+        preview=True,
+        not_supported=True,
+    ),
     create_model_metadata(
         provider="OpenAI", name="o3-pro", icon="OpenAI", reasoning=True, preview=True, not_supported=True
     ),
