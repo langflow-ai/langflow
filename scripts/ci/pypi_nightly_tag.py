@@ -50,7 +50,7 @@ def create_tag(build_type: str):
     latest_base_version = get_latest_published_version(build_type, is_nightly=False)
     latest_nightly_version = get_latest_published_version(build_type, is_nightly=True)
     try:
-        current_nightly_version = get_latest_published_version(is_nightly=True)
+        current_nightly_version = get_latest_published_version(build_type, is_nightly=True)
         nightly_base_version = current_nightly_version.base_version
     except (requests.RequestException, KeyError, ValueError):
         # If main tag nightly doesn't exist on PyPI yet, this is the first nightly
