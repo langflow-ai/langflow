@@ -343,12 +343,14 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
     disabled_models = set()
     if user_id:
         try:
+
             async def _get_disabled():
                 async with session_scope() as session:
                     variable_service = get_variable_service()
                     if variable_service is None:
                         return set()
                     from langflow.services.variable.service import DatabaseVariableService
+
                     if not isinstance(variable_service, DatabaseVariableService):
                         return set()
                     all_vars = await variable_service.get_all(
@@ -358,11 +360,13 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
                     for var in all_vars:
                         if var.name == "__disabled_models__" and var.value:
                             import json
+
                             try:
                                 return set(json.loads(var.value))
                             except (json.JSONDecodeError, TypeError):
                                 return set()
                     return set()
+
             disabled_models = run_until_complete(_get_disabled())
         except Exception:  # noqa: BLE001, S110
             # If we can't get disabled models, continue without filtering
@@ -372,6 +376,7 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
     enabled_providers = set()
     if user_id:
         try:
+
             async def _get_enabled_providers():
                 async with session_scope() as session:
                     variable_service = get_variable_service()
@@ -379,6 +384,7 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
                         return set()
                     from langflow.services.variable.constants import CREDENTIAL_TYPE
                     from langflow.services.variable.service import DatabaseVariableService
+
                     if not isinstance(variable_service, DatabaseVariableService):
                         return set()
                     all_vars = await variable_service.get_all(
@@ -388,10 +394,9 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
                     credential_names = {var.name for var in all_vars if var.type == CREDENTIAL_TYPE}
                     provider_variable_map = get_model_provider_variable_mapping()
                     return {
-                        provider
-                        for provider, var_name in provider_variable_map.items()
-                        if var_name in credential_names
+                        provider for provider, var_name in provider_variable_map.items() if var_name in credential_names
                     }
+
             enabled_providers = run_until_complete(_get_enabled_providers())
         except Exception:  # noqa: BLE001, S110
             # If we can't get enabled providers, show all
@@ -486,12 +491,14 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
     disabled_models = set()
     if user_id:
         try:
+
             async def _get_disabled():
                 async with session_scope() as session:
                     variable_service = get_variable_service()
                     if variable_service is None:
                         return set()
                     from langflow.services.variable.service import DatabaseVariableService
+
                     if not isinstance(variable_service, DatabaseVariableService):
                         return set()
                     all_vars = await variable_service.get_all(
@@ -501,11 +508,13 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                     for var in all_vars:
                         if var.name == "__disabled_models__" and var.value:
                             import json
+
                             try:
                                 return set(json.loads(var.value))
                             except (json.JSONDecodeError, TypeError):
                                 return set()
                     return set()
+
             disabled_models = run_until_complete(_get_disabled())
         except Exception:  # noqa: BLE001, S110
             # If we can't get disabled models, continue without filtering
@@ -515,6 +524,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
     enabled_providers = set()
     if user_id:
         try:
+
             async def _get_enabled_providers():
                 async with session_scope() as session:
                     variable_service = get_variable_service()
@@ -522,6 +532,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                         return set()
                     from langflow.services.variable.constants import CREDENTIAL_TYPE
                     from langflow.services.variable.service import DatabaseVariableService
+
                     if not isinstance(variable_service, DatabaseVariableService):
                         return set()
                     all_vars = await variable_service.get_all(
@@ -531,10 +542,9 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                     credential_names = {var.name for var in all_vars if var.type == CREDENTIAL_TYPE}
                     provider_variable_map = get_model_provider_variable_mapping()
                     return {
-                        provider
-                        for provider, var_name in provider_variable_map.items()
-                        if var_name in credential_names
+                        provider for provider, var_name in provider_variable_map.items() if var_name in credential_names
                     }
+
             enabled_providers = run_until_complete(_get_enabled_providers())
         except Exception:  # noqa: BLE001, S110
             # If we can't get enabled providers, show all
