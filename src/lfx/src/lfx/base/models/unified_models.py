@@ -4,19 +4,12 @@ from functools import lru_cache
 from typing import Any
 from uuid import UUID
 
-from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS, ANTHROPIC_MODELS_DETAILED
+from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
 from lfx.base.models.google_generative_ai_constants import (
-    GOOGLE_GENERATIVE_AI_MODELS,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
-from lfx.base.models.openai_constants import (
-    OPENAI_CHAT_MODEL_NAMES,
-    OPENAI_EMBEDDING_MODEL_NAMES,
-    OPENAI_EMBEDDING_MODELS_DETAILED,
-    OPENAI_MODELS_DETAILED,
-    OPENAI_REASONING_MODEL_NAMES,
-)
+from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODELS_DETAILED, OPENAI_MODELS_DETAILED
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
@@ -332,10 +325,10 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
 
 def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[str, Any]]:
     """Return a list of available language model providers with their configuration.
-    
+
     This function uses get_unified_models_detailed() which respects the enabled/disabled
     status from the settings page and automatically filters out deprecated/unsupported models.
-    
+
     Args:
         user_id: Optional user ID to filter by user-specific enabled/disabled models
     """
@@ -345,7 +338,7 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
         include_deprecated=False,
         include_unsupported=False,
     )
-    
+
     # Get disabled models for this user if user_id is provided
     disabled_models = set()
     if user_id:
@@ -358,7 +351,10 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
                     from langflow.services.variable.service import DatabaseVariableService
                     if not isinstance(variable_service, DatabaseVariableService):
                         return set()
-                    all_vars = await variable_service.get_all(user_id=UUID(user_id) if isinstance(user_id, str) else user_id, session=session)
+                    all_vars = await variable_service.get_all(
+                        user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                        session=session,
+                    )
                     for var in all_vars:
                         if var.name == "__disabled_models__" and var.value:
                             import json
@@ -368,10 +364,10 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
                                 return set()
                     return set()
             disabled_models = run_until_complete(_get_disabled())
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S110
             # If we can't get disabled models, continue without filtering
             pass
-    
+
     # Get enabled providers (those with credentials configured)
     enabled_providers = set()
     if user_id:
@@ -381,19 +377,26 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
                     variable_service = get_variable_service()
                     if variable_service is None:
                         return set()
-                    from langflow.services.variable.service import DatabaseVariableService
                     from langflow.services.variable.constants import CREDENTIAL_TYPE
+                    from langflow.services.variable.service import DatabaseVariableService
                     if not isinstance(variable_service, DatabaseVariableService):
                         return set()
-                    all_vars = await variable_service.get_all(user_id=UUID(user_id) if isinstance(user_id, str) else user_id, session=session)
+                    all_vars = await variable_service.get_all(
+                        user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                        session=session,
+                    )
                     credential_names = {var.name for var in all_vars if var.type == CREDENTIAL_TYPE}
                     provider_variable_map = get_model_provider_variable_mapping()
-                    return {provider for provider, var_name in provider_variable_map.items() if var_name in credential_names}
+                    return {
+                        provider
+                        for provider, var_name in provider_variable_map.items()
+                        if var_name in credential_names
+                    }
             enabled_providers = run_until_complete(_get_enabled_providers())
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S110
             # If we can't get enabled providers, show all
             pass
-    
+
     options = []
     model_class_mapping = {
         "OpenAI": "ChatOpenAI",
@@ -402,7 +405,7 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
         "Ollama": "ChatOllama",
         "IBM WatsonX": "ChatWatsonx",
     }
-    
+
     api_key_param_mapping = {
         "OpenAI": "api_key",
         "Anthropic": "api_key",
@@ -410,24 +413,24 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
         "Ollama": "base_url",
         "IBM WatsonX": "apikey",
     }
-    
+
     for provider_data in all_models:
         provider = provider_data.get("provider")
         models = provider_data.get("models", [])
         icon = provider_data.get("icon", "Bot")
-        
+
         # Skip provider if user_id is provided and provider is not enabled
         if user_id and enabled_providers and provider not in enabled_providers:
             continue
-        
+
         for model_data in models:
             model_name = model_data.get("model_name")
             metadata = model_data.get("metadata", {})
-            
+
             # Skip if model is in disabled list
             if model_name in disabled_models:
                 continue
-            
+
             # Build the option dict
             option = {
                 "name": model_name,
@@ -441,34 +444,34 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
                     "api_key_param": api_key_param_mapping.get(provider, "api_key"),
                 },
             }
-            
+
             # Add reasoning models list for OpenAI
             if provider == "OpenAI" and metadata.get("reasoning"):
                 if "reasoning_models" not in option["metadata"]:
                     option["metadata"]["reasoning_models"] = []
                 option["metadata"]["reasoning_models"].append(model_name)
-            
+
             # Add base_url_param for Ollama
             if provider == "Ollama":
                 option["metadata"]["base_url_param"] = "base_url"
-            
+
             # Add extra params for WatsonX
             if provider == "IBM WatsonX":
                 option["metadata"]["model_name_param"] = "model_id"
                 option["metadata"]["url_param"] = "url"
                 option["metadata"]["project_id_param"] = "project_id"
-            
+
             options.append(option)
-    
+
     return options
 
 
 def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[str, Any]]:
     """Return a list of available embedding model providers with their configuration.
-    
+
     This function uses get_unified_models_detailed() which respects the enabled/disabled
     status from the settings page and automatically filters out deprecated/unsupported models.
-    
+
     Args:
         user_id: Optional user ID to filter by user-specific enabled/disabled models
     """
@@ -478,7 +481,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
         include_deprecated=False,
         include_unsupported=False,
     )
-    
+
     # Get disabled models for this user if user_id is provided
     disabled_models = set()
     if user_id:
@@ -491,7 +494,10 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                     from langflow.services.variable.service import DatabaseVariableService
                     if not isinstance(variable_service, DatabaseVariableService):
                         return set()
-                    all_vars = await variable_service.get_all(user_id=UUID(user_id) if isinstance(user_id, str) else user_id, session=session)
+                    all_vars = await variable_service.get_all(
+                        user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                        session=session,
+                    )
                     for var in all_vars:
                         if var.name == "__disabled_models__" and var.value:
                             import json
@@ -501,10 +507,10 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                                 return set()
                     return set()
             disabled_models = run_until_complete(_get_disabled())
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S110
             # If we can't get disabled models, continue without filtering
             pass
-    
+
     # Get enabled providers (those with credentials configured)
     enabled_providers = set()
     if user_id:
@@ -514,19 +520,26 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                     variable_service = get_variable_service()
                     if variable_service is None:
                         return set()
-                    from langflow.services.variable.service import DatabaseVariableService
                     from langflow.services.variable.constants import CREDENTIAL_TYPE
+                    from langflow.services.variable.service import DatabaseVariableService
                     if not isinstance(variable_service, DatabaseVariableService):
                         return set()
-                    all_vars = await variable_service.get_all(user_id=UUID(user_id) if isinstance(user_id, str) else user_id, session=session)
+                    all_vars = await variable_service.get_all(
+                        user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                        session=session,
+                    )
                     credential_names = {var.name for var in all_vars if var.type == CREDENTIAL_TYPE}
                     provider_variable_map = get_model_provider_variable_mapping()
-                    return {provider for provider, var_name in provider_variable_map.items() if var_name in credential_names}
+                    return {
+                        provider
+                        for provider, var_name in provider_variable_map.items()
+                        if var_name in credential_names
+                    }
             enabled_providers = run_until_complete(_get_enabled_providers())
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S110
             # If we can't get enabled providers, show all
             pass
-    
+
     options = []
     embedding_class_mapping = {
         "OpenAI": "OpenAIEmbeddings",
@@ -534,7 +547,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
         "Ollama": "OllamaEmbeddings",
         "IBM WatsonX": "WatsonxEmbeddings",
     }
-    
+
     # Provider-specific param mappings
     param_mappings = {
         "OpenAI": {
@@ -570,23 +583,23 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
             "request_timeout": "request_timeout",
         },
     }
-    
+
     for provider_data in all_models:
         provider = provider_data.get("provider")
         models = provider_data.get("models", [])
         icon = provider_data.get("icon", "Bot")
-        
+
         # Skip provider if user_id is provided and provider is not enabled
         if user_id and enabled_providers and provider not in enabled_providers:
             continue
-        
+
         for model_data in models:
             model_name = model_data.get("model_name")
-            
+
             # Skip if model is in disabled list
             if model_name in disabled_models:
                 continue
-            
+
             # Build the option dict
             option = {
                 "name": model_name,
@@ -598,9 +611,9 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                     "param_mapping": param_mappings.get(provider, param_mappings["OpenAI"]),
                 },
             }
-            
+
             options.append(option)
-    
+
     return options
 
 
