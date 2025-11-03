@@ -30,6 +30,7 @@ import { Upload, X, AlertCircle } from "lucide-react";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { ALLOWED_IMAGE_INPUT_EXTENSIONS } from "@/constants/constants";
 import { AgentLogo } from "@/components/AgentLogo";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 interface PublishFlowModalProps {
   open: boolean;
@@ -52,6 +53,9 @@ export default function PublishFlowModal({
   const [tags, setTags] = useState<string[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
+  // Debounce marketplace name to avoid excessive API calls while typing
+  const debouncedMarketplaceName = useDebouncedValue(marketplaceName, 500);
+
   // Logo upload state
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
@@ -69,14 +73,14 @@ export default function PublishFlowModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
 
-  // Validate marketplace name in real-time
+  // Validate marketplace name with debouncing to reduce API calls
   const {
     data: nameValidation,
     isLoading: isValidatingName,
   } = useValidateMarketplaceName({
-    marketplaceName: marketplaceName,
+    marketplaceName: debouncedMarketplaceName,
     excludeFlowId: flowId, // Exclude current flow when re-publishing
-    enabled: open && marketplaceName.trim().length > 0,
+    enabled: open && debouncedMarketplaceName.trim().length > 0,
   });
 
   // Pre-fill form fields when modal opens
@@ -338,23 +342,25 @@ export default function PublishFlowModal({
                     : ""
                 }
               />
-              {isValidatingName && marketplaceName.trim().length > 0 && (
+              {(isValidatingName || marketplaceName !== debouncedMarketplaceName) && marketplaceName.trim().length > 0 && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 </div>
               )}
             </div>
-            {nameValidation && !nameValidation.available && (
-              <div className="flex items-start gap-2 text-sm text-destructive">
-                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>{nameValidation.message}</span>
-              </div>
-            )}
-            {nameValidation && nameValidation.available && marketplaceName.trim().length > 0 && (
-              <p className="text-xs text-green-600 dark:text-green-500">
-                ✓ This name is available
-              </p>
-            )}
+            <div className="h-4">
+              {nameValidation && !nameValidation.available && (
+                <div className="flex items-start gap-2 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>{nameValidation.message}</span>
+                </div>
+              )}
+              {nameValidation && nameValidation.available && marketplaceName.trim().length > 0 && (
+                <p className="text-sm text-green-600 dark:text-green-500">
+                  ✓ This name is available
+                </p>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
               Name for workflow in the marketplace
             </p>
