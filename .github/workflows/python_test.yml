@@ -40,7 +40,6 @@ env:
 
 jobs:
   build:
-
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ubuntu-latest
     strategy:
@@ -104,7 +103,6 @@ jobs:
             coverage.xml
             htmlcov/
           retention-days: 30
-
 
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}
@@ -198,4 +196,3 @@ jobs:
           else
             echo "Server terminated successfully"
           fi
-

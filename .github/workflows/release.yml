@@ -44,8 +44,6 @@ on:
         type: boolean
         default: true
 
-
-
 jobs:
   echo-inputs:
     name: Echo Workflow Inputs
@@ -102,7 +100,6 @@ jobs:
       release: true
       runs-on: ${{ (inputs['runs_on'] && startsWith(format('{0}', inputs['runs_on']), '[') && fromJSON(inputs['runs_on'])) || inputs['runs_on'] || inputs['runs_on'] || 'ubuntu-latest' }}
     secrets: inherit
-
 
   build-base:
     name: Build Langflow Base
@@ -350,6 +347,43 @@ jobs:
       ref: ${{ inputs.release_tag }}
       release_type: main
       pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
+    secrets: inherit
+
+  call_docker_build_main_backend:
+    name: Call Docker Build Workflow for Langflow Backend
+    if: ${{ inputs.build_docker_main }}
+    needs: [ci]
+    uses: ./.github/workflows/docker-build-v2.yml
+    with:
+      ref: ${{ inputs.release_tag }}
+      release_type: main-backend
+      pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
+    secrets: inherit
+
+  call_docker_build_main_frontend:
+    name: Call Docker Build Workflow for Langflow Frontend
+    if: ${{ inputs.build_docker_main }}
+    needs: [ci]
+    uses: ./.github/workflows/docker-build-v2.yml
+    with:
+      ref: ${{ inputs.release_tag }}
+      release_type: main-frontend
+      pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
+    secrets: inherit
+
+  call_docker_build_main_ep:
+    name: Call Docker Build Workflow for Langflow with Entrypoint
+    if: ${{ inputs.build_docker_main }}
+    needs: [ci]
+    uses: ./.github/workflows/docker-build-v2.yml
+    with:
+      ref: ${{ inputs.release_tag }}
+      release_type: main-ep
+      pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
   call_docker_build_main_all:
@@ -362,8 +396,6 @@ jobs:
       release_type: main-all
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
-
-
 
   create_release:
     name: Create Release
