@@ -11,9 +11,19 @@ const mockCookiesInstance = {
 jest.mock("@/utils/cookie-manager", () => ({
   getCookiesInstance: jest.fn(() => mockCookiesInstance),
   cookieManager: {
-    get: jest.fn(),
-    set: jest.fn(),
+    get: jest.fn((name) => mockCookiesInstance.get(name)),
+    set: jest.fn((name, value, options) => {
+      // Simulate the actual cookieManager behavior of always passing options
+      const defaultOptions = {
+        path: "/",
+        secure: false, // HTTP in test environment
+        sameSite: "lax",
+        ...options,
+      };
+      return mockCookiesInstance.set(name, value, defaultOptions);
+    }),
     getCookies: jest.fn(() => mockCookiesInstance),
+    clearAuthCookies: jest.fn(),
   },
 }));
 
@@ -103,7 +113,13 @@ import { AuthContext, AuthProvider } from "../authContext";
 describe("AuthContext - Login Fix for Race Condition", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
     mockCookiesInstance.get.mockReturnValue(null);
+  });
+
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
   });
 
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -128,6 +144,12 @@ describe("AuthContext - Login Fix for Race Condition", () => {
         updated_at: new Date(),
       };
 
+      // Mock cookie getter to return the access token
+      mockCookiesInstance.get.mockImplementation((name) => {
+        if (name === "access_token_lf") return accessToken;
+        return null;
+      });
+
       // Track when setIsAuthenticated is called
       let authSetCallCount = 0;
       mockSetIsAuthenticated.mockImplementation(() => {
@@ -139,7 +161,16 @@ describe("AuthContext - Login Fix for Race Condition", () => {
         result.current.login(accessToken, "login", refreshToken);
       });
 
-      // At this point, isAuthenticated should NOT be set yet
+      // Advance timers to trigger the verifyAndProceed function
+      act(() => {
+        jest.advanceTimersByTime(50);
+      });
+
+      // At this point, mutations should have been called
+      expect(mockMutateLoggedUser).toHaveBeenCalledTimes(1);
+      expect(mockMutateGetGlobalVariables).toHaveBeenCalledTimes(1);
+
+      // But isAuthenticated should NOT be set yet
       expect(mockSetIsAuthenticated).not.toHaveBeenCalled();
 
       // Simulate getUser completing first
@@ -152,20 +183,15 @@ describe("AuthContext - Login Fix for Race Condition", () => {
       expect(mockSetIsAuthenticated).not.toHaveBeenCalled();
 
       // Simulate getGlobalVariables completing
-      await act(async () => {
+      act(() => {
         const getVarsCallback =
           mockMutateGetGlobalVariables.mock.calls[0][1].onSettled;
         getVarsCallback();
       });
 
       // NOW isAuthenticated should be set
-      await waitFor(
-        () => {
-          expect(mockSetIsAuthenticated).toHaveBeenCalledWith(true);
-          expect(mockSetIsAuthenticated).toHaveBeenCalledTimes(1);
-        },
-        { timeout: 3000 }, // Increased timeout for CI environments
-      );
+      expect(mockSetIsAuthenticated).toHaveBeenCalledWith(true);
+      expect(mockSetIsAuthenticated).toHaveBeenCalledTimes(1);
     });
 
     it("should set isAuthenticated when globalVariables completes before getUser", async () => {
@@ -182,9 +208,20 @@ describe("AuthContext - Login Fix for Race Condition", () => {
         updated_at: new Date(),
       };
 
+      // Mock cookie getter to return the access token
+      mockCookiesInstance.get.mockImplementation((name) => {
+        if (name === "access_token_lf") return accessToken;
+        return null;
+      });
+
       // Start login
       act(() => {
         result.current.login(accessToken, "login");
+      });
+
+      // Advance timers to trigger the verifyAndProceed function
+      act(() => {
+        jest.advanceTimersByTime(50);
       });
 
       // Simulate getGlobalVariables completing FIRST
@@ -198,18 +235,13 @@ describe("AuthContext - Login Fix for Race Condition", () => {
       expect(mockSetIsAuthenticated).not.toHaveBeenCalled();
 
       // Simulate getUser completing SECOND
-      await act(async () => {
+      act(() => {
         const getUserCallback = mockMutateLoggedUser.mock.calls[0][1].onSuccess;
         getUserCallback(mockUserData);
       });
 
       // NOW should be set
-      await waitFor(
-        () => {
-          expect(mockSetIsAuthenticated).toHaveBeenCalledWith(true);
-        },
-        { timeout: 3000 },
-      );
+      expect(mockSetIsAuthenticated).toHaveBeenCalledWith(true);
     });
 
     it("should still set isAuthenticated even if getUser fails", async () => {
@@ -217,9 +249,20 @@ describe("AuthContext - Login Fix for Race Condition", () => {
 
       const accessToken = "test_access_token";
 
+      // Mock cookie getter to return the access token
+      mockCookiesInstance.get.mockImplementation((name) => {
+        if (name === "access_token_lf") return accessToken;
+        return null;
+      });
+
       // Start login
       act(() => {
         result.current.login(accessToken, "login");
+      });
+
+      // Advance timers to trigger the verifyAndProceed function
+      act(() => {
+        jest.advanceTimersByTime(50);
       });
 
       // Simulate getUser FAILING
@@ -230,19 +273,14 @@ describe("AuthContext - Login Fix for Race Condition", () => {
       });
 
       // Simulate getGlobalVariables completing
-      await act(async () => {
+      act(() => {
         const getVarsCallback =
           mockMutateGetGlobalVariables.mock.calls[0][1].onSettled;
         getVarsCallback();
       });
 
       // Should still set isAuthenticated (fail-safe behavior)
-      await waitFor(
-        () => {
-          expect(mockSetIsAuthenticated).toHaveBeenCalledWith(true);
-        },
-        { timeout: 3000 },
-      );
+      expect(mockSetIsAuthenticated).toHaveBeenCalledWith(true);
     });
 
     it("should handle cookies being set synchronously before API calls", async () => {
@@ -251,12 +289,24 @@ describe("AuthContext - Login Fix for Race Condition", () => {
       const accessToken = "test_access_token";
       const refreshToken = "test_refresh_token";
 
+      // Mock cookie getter to return the access token
+      mockCookiesInstance.get.mockImplementation((name) => {
+        if (name === "access_token_lf") return accessToken;
+        return null;
+      });
+
       act(() => {
         result.current.login(accessToken, "login", refreshToken);
       });
 
       // Verify cookies were set BEFORE mutations started
       expect(mockCookiesInstance.set).toHaveBeenCalledTimes(3); // access, auto_login, refresh
+
+      // Advance timers to trigger the verifyAndProceed function
+      act(() => {
+        jest.advanceTimersByTime(50);
+      });
+
       expect(mockMutateLoggedUser).toHaveBeenCalledTimes(1);
       expect(mockMutateGetGlobalVariables).toHaveBeenCalledTimes(1);
     });
@@ -266,6 +316,7 @@ describe("AuthContext - Login Fix for Race Condition", () => {
     it("should complete user data loading before allowing redirect", async () => {
       const { result } = renderHook(() => useTestContext(), { wrapper });
 
+      const accessToken = "token";
       const mockUserData = {
         id: "user123",
         username: "testuser",
@@ -276,9 +327,20 @@ describe("AuthContext - Login Fix for Race Condition", () => {
         updated_at: new Date(),
       };
 
+      // Mock cookie getter to return the access token
+      mockCookiesInstance.get.mockImplementation((name) => {
+        if (name === "access_token_lf") return accessToken;
+        return null;
+      });
+
       // Login
       act(() => {
-        result.current.login("token", "login");
+        result.current.login(accessToken, "login");
+      });
+
+      // Advance timers to trigger the verifyAndProceed function
+      act(() => {
+        jest.advanceTimersByTime(50);
       });
 
       // Complete getUser - should call checkHasStore and fetchApiData
@@ -291,18 +353,13 @@ describe("AuthContext - Login Fix for Race Condition", () => {
       expect(mockFetchApiData).toHaveBeenCalled();
 
       // Complete globalVariables
-      await act(async () => {
+      act(() => {
         const getVarsCallback =
           mockMutateGetGlobalVariables.mock.calls[0][1].onSettled;
         getVarsCallback();
       });
 
-      await waitFor(
-        () => {
-          expect(mockSetIsAuthenticated).toHaveBeenCalledWith(true);
-        },
-        { timeout: 3000 },
-      );
+      expect(mockSetIsAuthenticated).toHaveBeenCalledWith(true);
     });
   });
 
@@ -317,18 +374,21 @@ describe("AuthContext - Login Fix for Race Condition", () => {
         result.current.login(accessToken, "login", refreshToken);
       });
 
-      // Verify all cookies were set
+      // Verify all cookies were set (with options parameter)
       expect(mockCookiesInstance.set).toHaveBeenCalledWith(
         "access_token_lf",
         accessToken,
+        expect.any(Object),
       );
       expect(mockCookiesInstance.set).toHaveBeenCalledWith(
         "auto_login_lf",
         "login",
+        expect.any(Object),
       );
       expect(mockCookiesInstance.set).toHaveBeenCalledWith(
         "refresh_token_lf",
         refreshToken,
+        expect.any(Object),
       );
     });
 
@@ -366,6 +426,12 @@ describe("AuthContext - Login Fix for Race Condition", () => {
         updated_at: new Date(),
       };
 
+      // Mock cookie getter to return the access token
+      mockCookiesInstance.get.mockImplementation((name) => {
+        if (name === "access_token_lf") return accessToken;
+        return null;
+      });
+
       // Step 1: Start login
       act(() => {
         result.current.login(accessToken, "login", refreshToken);
@@ -374,12 +440,17 @@ describe("AuthContext - Login Fix for Race Condition", () => {
       // Verify cookies set
       expect(mockCookiesInstance.set).toHaveBeenCalledTimes(3);
 
+      // Verify isAuthenticated NOT set yet
+      expect(mockSetIsAuthenticated).not.toHaveBeenCalled();
+
+      // Advance timers to trigger the verifyAndProceed function
+      act(() => {
+        jest.advanceTimersByTime(50);
+      });
+
       // Verify mutations triggered
       expect(mockMutateLoggedUser).toHaveBeenCalledTimes(1);
       expect(mockMutateGetGlobalVariables).toHaveBeenCalledTimes(1);
-
-      // Verify isAuthenticated NOT set yet
-      expect(mockSetIsAuthenticated).not.toHaveBeenCalled();
 
       // Step 2: Complete getUser
       act(() => {
@@ -395,20 +466,15 @@ describe("AuthContext - Login Fix for Race Condition", () => {
       expect(mockSetIsAuthenticated).not.toHaveBeenCalled();
 
       // Step 3: Complete getGlobalVariables
-      await act(async () => {
+      act(() => {
         const getVarsCallback =
           mockMutateGetGlobalVariables.mock.calls[0][1].onSettled;
         getVarsCallback();
       });
 
       // Step 4: NOW isAuthenticated should be set
-      await waitFor(
-        () => {
-          expect(mockSetIsAuthenticated).toHaveBeenCalledWith(true);
-          expect(mockSetIsAuthenticated).toHaveBeenCalledTimes(1);
-        },
-        { timeout: 3000 },
-      );
+      expect(mockSetIsAuthenticated).toHaveBeenCalledWith(true);
+      expect(mockSetIsAuthenticated).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -416,11 +482,22 @@ describe("AuthContext - Login Fix for Race Condition", () => {
     it("should handle rapid multiple login calls", async () => {
       const { result } = renderHook(() => useTestContext(), { wrapper });
 
+      // Mock cookie getter to return tokens
+      mockCookiesInstance.get.mockImplementation((name) => {
+        if (name === "access_token_lf") return "token3"; // Last token set
+        return null;
+      });
+
       // Rapidly call login multiple times
       act(() => {
         result.current.login("token1", "login");
         result.current.login("token2", "login");
         result.current.login("token3", "login");
+      });
+
+      // Advance timers to trigger the verifyAndProceed function for all logins
+      act(() => {
+        jest.advanceTimersByTime(150); // 50ms x 3 logins
       });
 
       // Should trigger mutations for each login
@@ -438,6 +515,7 @@ describe("AuthContext - Login Fix for Race Condition", () => {
       expect(mockCookiesInstance.set).toHaveBeenCalledWith(
         "auto_login_lf",
         "auto",
+        expect.any(Object),
       );
     });
   });
