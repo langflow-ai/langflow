@@ -137,6 +137,7 @@ dependencies = [
     "cuga==0.1.2",
     "agent-lifecycle-toolkit",
     "astrapy>=2.1.0,<3.0.0",
+    "APScheduler>=3.10.4,<4.0.0",
 ]
 
 

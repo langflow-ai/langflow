@@ -1,4 +1,5 @@
 from langflow.api.v1.api_key import router as api_key_router
+from langflow.api.v1.background_agents import router as background_agents_router
 from langflow.api.v1.chat import router as chat_router
 from langflow.api.v1.endpoints import router as endpoints_router
 from langflow.api.v1.files import router as files_router
@@ -20,6 +21,7 @@ from langflow.api.v1.voice_mode import router as voice_mode_router
 
 __all__ = [
     "api_key_router",
+    "background_agents_router",
     "chat_router",
     "endpoints_router",
     "files_router",
