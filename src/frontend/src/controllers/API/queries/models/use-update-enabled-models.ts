@@ -20,9 +20,9 @@ export const useUpdateEnabledModels: useMutationFunctionType<
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
 
-  const updateEnabledModelsFn = async (
-    data: { updates: ModelStatusUpdate[] },
-  ): Promise<UpdateEnabledModelsResponse> => {
+  const updateEnabledModelsFn = async (data: {
+    updates: ModelStatusUpdate[];
+  }): Promise<UpdateEnabledModelsResponse> => {
     const response = await api.post<UpdateEnabledModelsResponse>(
       `${getURL("MODELS")}/enabled_models`,
       data.updates,
