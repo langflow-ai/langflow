@@ -999,6 +999,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
+    console.log("[flowStore] updateBuildStatus called with:", nodeIdList, "status:", status);
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     nodeIdList.forEach((id) => {
       newFlowBuildStatus[id] = {
@@ -1009,7 +1010,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         newFlowBuildStatus[id].timestamp = timestamp_string;
       }
     });
+    console.log("[flowStore] Setting new flowBuildStatus:", newFlowBuildStatus);
     set({ flowBuildStatus: newFlowBuildStatus });
+    console.log("[flowStore] flowBuildStatus set complete");
   },
   revertBuiltStatusFromBuilding: () => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };

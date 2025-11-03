@@ -742,6 +742,25 @@ class Vertex:
                 # and we are just getting the result for the requester
                 return await self.get_requester_result(requester)
             self._reset()
+
+            # Emit build_start event for webhook real-time feedback
+            try:
+                from langflow.services.event_manager import webhook_event_manager
+
+                if self.graph and self.graph.flow_id:
+                    flow_id_str = str(self.graph.flow_id)
+                    has_listeners = webhook_event_manager.has_listeners(flow_id_str)
+
+                    if has_listeners:
+                        logger.debug(f"Emitting build_start for {self.id}")
+                        await webhook_event_manager.emit(
+                            flow_id_str,
+                            "build_start",
+                            {"id": self.id}
+                        )
+            except Exception as e:  # noqa: BLE001
+                logger.debug(f"Error emitting build_start event: {e}")
+
             # inject session_id if it is not None
             if inputs is not None and "session" in inputs and inputs["session"] is not None and self.has_session_id:
                 session_id_value = self.get_value_from_template_dict("session_id")

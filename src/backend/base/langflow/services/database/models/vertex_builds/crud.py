@@ -85,6 +85,40 @@ async def log_vertex_build(
     """
     table = VertexBuildTable(**vertex_build.model_dump())
 
+    # Emit SSE events for webhook real-time feedback if UI is connected
+    try:
+        from langflow.services.event_manager import webhook_event_manager
+        from lfx.log.logger import logger
+        import asyncio
+
+        flow_id_str = str(vertex_build.flow_id)
+        has_listeners = webhook_event_manager.has_listeners(flow_id_str)
+
+        await logger.adebug(f"log_vertex_build called: vertex={vertex_build.id}, flow={flow_id_str}, has_listeners={has_listeners}")
+
+        if has_listeners:
+            # Emit end_vertex event with build data
+            await logger.adebug(f"Emitting end_vertex for {vertex_build.id}")
+            await webhook_event_manager.emit(
+                flow_id_str,
+                "end_vertex",
+                {
+                    "build_data": {
+                        "id": vertex_build.id,
+                        "valid": vertex_build.valid,
+                        "params": vertex_build.params,
+                        "data": vertex_build.data,
+                        "artifacts": vertex_build.artifacts,
+                        "timestamp": vertex_build.timestamp.isoformat() if vertex_build.timestamp else None,
+                    }
+                },
+            )
+            await logger.adebug(f"end_vertex emitted for {vertex_build.id}")
+    except Exception as e:
+        # Don't fail the build logging if SSE emission fails
+        from lfx.log.logger import logger
+        await logger.aerror(f"Error emitting SSE event: {e}")
+
     try:
         settings = get_settings_service().settings
         max_global = max_builds_to_keep or settings.max_vertex_builds_to_keep

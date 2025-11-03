@@ -7,6 +7,7 @@ import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useWebhookEvents } from "@/hooks/useWebhookEvents";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
@@ -52,6 +53,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const { mutateAsync: getFlow } = useGetFlow();
+
+  // Connect to webhook events SSE for real-time feedback
+  // When a webhook is triggered externally, this provides live build updates
+  useWebhookEvents();
 
   const handleSave = () => {
     let saving = true;
