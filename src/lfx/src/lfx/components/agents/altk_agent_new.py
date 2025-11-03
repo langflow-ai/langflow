@@ -25,6 +25,7 @@ from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActi
 from langchain_anthropic.chat_models import ChatAnthropic
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages.base import message_to_dict
 from langchain_core.runnables import Runnable, RunnableBinding
 from langchain_core.tools import BaseTool
 from langchain_openai.chat_models.base import ChatOpenAI
@@ -226,9 +227,9 @@ class ValidatedTool(ALTKBaseTool):
             "function": {"name": self.name, "arguments": json.dumps(self._prepare_arguments(*args, **kwargs))},
         }
 
-        if isinstance(self.conversation_context, list) and isinstance(self.conversation_context[0], BaseMessage):
+        if (isinstance(self.conversation_context, list) and self.conversation_context and isinstance(self.conversation_context[0], BaseMessage)):
             logger.debug("Converting BaseMessages to list of dictionaries for conversation context of SPARC")
-            self.conversation_context = [dict(msg) for msg in self.conversation_context]
+            self.conversation_context = [message_to_dict(msg) for msg in self.conversation_context]
 
         try:
             # Run SPARC validation
@@ -568,8 +569,9 @@ class PostToolProcessor(ALTKBaseTool):
                     output = middleware.process(input_data, AgentPhase.RUNTIME)
                 except Exception as e:  # noqa: BLE001
                     logger.error(f"Exception in executing CodeGenerationComponent: {e}")
-                logger.info(f"Output of CodeGenerationComponent: {output.result}")
-                return output.result
+                if output is not None and hasattr(output, "result"):
+                    logger.info(f"Output of CodeGenerationComponent: {output.result}")
+                    return output.result
         return tool_response
 
 
@@ -691,6 +693,7 @@ class EnhancedAgentComponent(AgentComponent):
 
     def _initialize_tool_wrappers(self):
         """Initialize tool wrappers based on enabled features."""
+        self.pipeline_manager.wrappers.clear()
         # Add post-tool processing first (innermost wrapper)
         if self.enable_post_tool_reflection:
             logger.info("Enabling Post-Tool Processing Wrapper!")
