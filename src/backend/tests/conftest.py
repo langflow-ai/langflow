@@ -176,12 +176,12 @@ def pytest_collection_modifyitems(config, items):  # noqa: ARG001
 
 
 async def delete_transactions_by_flow_id(db: AsyncSession, flow_id: UUID):
+    """Delete transactions for a flow using CRUD layer."""
     if not flow_id:
         return
-    stmt = select(TransactionTable).where(TransactionTable.flow_id == flow_id)
-    transactions = await db.exec(stmt)
-    for transaction in transactions:
-        await db.delete(transaction)
+    from langflow.services.database.crud import transaction_crud
+
+    await transaction_crud.delete_by_flow_id(db, flow_id)
 
 
 async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
