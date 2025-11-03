@@ -47,55 +47,34 @@ def create_tag(build_type: str):
     current_version_str = pyproject_data["project"]["version"]
     current_version = Version(current_version_str)
 
-    latest_base_version = get_latest_published_version(build_type, is_nightly=False)
     try:
         current_nightly_version = get_latest_published_version(build_type, is_nightly=True)
         nightly_base_version = current_nightly_version.base_version
     except (requests.RequestException, KeyError, ValueError):
-        # If main tag nightly doesn't exist on PyPI yet, this is the first nightly
+        # If LFX nightly doesn't exist on PyPI yet, this is the first nightly
         current_nightly_version = None
         nightly_base_version = None
 
     build_number = "0"
     latest_base_version = current_version.base_version
-    latest_nightly_version = get_latest_published_version(build_type, is_nightly=True)
+    nightly_base_version = current_nightly_version.base_version
 
-    if current_nightly_version and latest_base_version == nightly_base_version:
+    if latest_base_version == nightly_base_version:
         # If the latest version is the same as the nightly version, increment the build number
         build_number = str(current_nightly_version.dev + 1)
 
-    new_nightly_version = latest_nightly_version + ".dev" + build_number
+    new_nightly_version = latest_base_version + ".dev" + build_number
 
     # Prepend "v" to the version, if DNE.
     # This is an update to the nightly version format.
     if not new_nightly_version.startswith("v"):
-        new_nightly_version = current_version_str + ".dev" + new_nightly_version
-
-    # Verify if version is PEP440 compliant.
-    packaging.version.Version(new_nightly_version)
-
-    return new_nightly_version
-
-    # build_number = "0"
-    # latest_base_version = current_version.base_version
-    # nightly_base_version = current_nightly_version.base_version
-
-    # if latest_base_version == nightly_base_version:
-    #     # If the latest version is the same as the nightly version, increment the build number
-    #     build_number = str(current_nightly_version.dev + 1)
-
-    # new_nightly_version = latest_base_version + ".dev" + build_number
-
-    # # Prepend "v" to the version, if DNE.
-    # # This is an update to the nightly version format.
-    # if not new_nightly_version.startswith("v"):
-    #     new_nightly_version = "v" + new_nightly_version
+        new_nightly_version = "v" + new_nightly_version
 
     # X.Y.Z.dev.YYYYMMDD
     # This takes the base version of the current version and appends the
     # current date. If the last release was on the same day, we exit, as
     # pypi does not allow for overwriting the same version.
-    #
+
     # We could use a different versioning scheme, such as just incrementing
     # an integer.
     # version_with_date = (
@@ -106,9 +85,9 @@ def create_tag(build_type: str):
     # )
 
     # Verify if version is PEP440 compliant.
-    # packaging.version.Version(new_nightly_version)
+    packaging.version.Version(new_nightly_version)
 
-    # return new_nightly_version
+    return new_nightly_version
 
 
 if __name__ == "__main__":
