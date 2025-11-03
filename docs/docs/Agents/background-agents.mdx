@@ -1,0 +1,523 @@
+---
+title: Background Agents
+sidebar_position: 6
+---
+
+import Admonition from '@theme/Admonition';
+
+# Background Agents
+
+Background Agents enable persistent, autonomous execution of Langflow flows without requiring the UI to be open or manual intervention. They support scheduled execution, event-driven triggers, and webhook integrations for always-on automation.
+
+## Overview
+
+Background Agents transform your Langflow flows into autonomous services that can:
+
+- **Run on a schedule** - Execute flows at specific times or intervals
+- **Respond to events** - Trigger automatically based on system events
+- **Handle webhooks** - Process external API calls asynchronously
+- **Operate independently** - Continue running even when the UI is closed
+- **Provide monitoring** - Track execution history and agent status
+
+## Key Features
+
+### Scheduling Capabilities
+
+Background Agents support multiple scheduling options:
+
+**Cron Expressions**
+- Run at specific times using familiar cron syntax
+- Example: Every day at 9 AM, every Monday at noon, etc.
+
+**Fixed Intervals**
+- Run at regular intervals (every N seconds/minutes/hours/days)
+- Example: Every 30 minutes, every 2 hours, etc.
+
+**One-Time Execution**
+- Schedule a flow to run once at a specific datetime
+- Perfect for deferred or delayed operations
+
+### Trigger Types
+
+Background Agents can be triggered in multiple ways:
+
+- **Scheduled**: Automatic execution based on cron or interval
+- **Webhook**: Triggered by external API calls
+- **Event**: Responds to system events
+- **Manual**: On-demand execution via API
+
+### Lifecycle Management
+
+Control your agents with full lifecycle operations:
+
+- **Start**: Activate an agent and begin scheduling
+- **Stop**: Deactivate an agent and stop all scheduling
+- **Pause**: Temporarily suspend execution without losing configuration
+- **Resume**: Reactivate a paused agent
+- **Trigger**: Manually execute an agent on demand
+
+## Getting Started
+
+### Prerequisites
+
+- A Langflow flow that you want to run in the background
+- API access to Langflow (authentication token)
+- Understanding of your flow's input requirements
+
+### Creating Your First Background Agent
+
+#### Step 1: Prepare Your Flow
+
+Ensure your flow is properly configured and tested:
+
+1. Create or open a flow in Langflow
+2. Test the flow manually to verify it works as expected
+3. Note the flow's ID (visible in the URL or flow settings)
+4. Document the required inputs for the flow
+
+#### Step 2: Create the Background Agent
+
+Use the Langflow API to create a background agent:
+
+```bash
+curl -X POST http://localhost:7860/api/v1/background_agents/ \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My First Background Agent",
+    "description": "Processes data every hour",
+    "flow_id": "your-flow-id",
+    "trigger_type": "INTERVAL",
+    "trigger_config": {
+      "hours": 1
+    },
+    "input_config": {
+      "input_value": "Process data",
+      "input_type": "chat"
+    },
+    "enabled": true
+  }'
+```
+
+#### Step 3: Start the Agent
+
+Activate the agent to begin execution:
+
+```bash
+curl -X POST http://localhost:7860/api/v1/background_agents/{agent_id}/start \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+#### Step 4: Monitor Execution
+
+Check the agent's status and execution history:
+
+```bash
+# Get agent status
+curl -X GET http://localhost:7860/api/v1/background_agents/{agent_id}/status \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# Get execution history
+curl -X GET http://localhost:7860/api/v1/background_agents/{agent_id}/executions \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+## Use Cases
+
+### Daily Reports
+
+Generate and distribute reports automatically:
+
+```json
+{
+  "name": "Daily Sales Report",
+  "trigger_type": "CRON",
+  "trigger_config": {
+    "minute": "0",
+    "hour": "8",
+    "day": "*",
+    "month": "*",
+    "day_of_week": "1-5"  // Weekdays only
+  },
+  "input_config": {
+    "input_value": "Generate sales report for yesterday"
+  }
+}
+```
+
+### Data Synchronization
+
+Keep data in sync between systems:
+
+```json
+{
+  "name": "Hourly Data Sync",
+  "trigger_type": "INTERVAL",
+  "trigger_config": {
+    "hours": 1
+  },
+  "input_config": {
+    "input_value": "Sync customer data"
+  }
+}
+```
+
+### Monitoring and Alerts
+
+Monitor systems and send alerts:
+
+```json
+{
+  "name": "System Health Monitor",
+  "trigger_type": "INTERVAL",
+  "trigger_config": {
+    "minutes": 5
+  },
+  "input_config": {
+    "input_value": "Check system health and alert if issues found"
+  }
+}
+```
+
+### Webhook Processing
+
+Handle webhook events from external services:
+
+```json
+{
+  "name": "Webhook Processor",
+  "trigger_type": "WEBHOOK",
+  "trigger_config": {},
+  "input_config": {
+    "input_value": "Process incoming webhook data"
+  }
+}
+```
+
+### Scheduled Maintenance
+
+Perform periodic maintenance tasks:
+
+```json
+{
+  "name": "Weekly Database Cleanup",
+  "trigger_type": "CRON",
+  "trigger_config": {
+    "minute": "0",
+    "hour": "2",
+    "day": "*",
+    "month": "*",
+    "day_of_week": "0"  // Sunday
+  },
+  "input_config": {
+    "input_value": "Clean up old database records"
+  }
+}
+```
+
+## Configuration Reference
+
+### Trigger Configuration
+
+#### CRON Trigger
+
+Use cron expressions for precise scheduling:
+
+```json
+{
+  "trigger_type": "CRON",
+  "trigger_config": {
+    "minute": "0",        // 0-59
+    "hour": "*/2",        // 0-23 (*/2 = every 2 hours)
+    "day": "*",           // 1-31
+    "month": "*",         // 1-12
+    "day_of_week": "1-5"  // 0-6 (0=Sunday, 1-5=Mon-Fri)
+  }
+}
+```
+
+Common cron patterns:
+- Every hour: `"minute": "0", "hour": "*"`
+- Every day at 9 AM: `"minute": "0", "hour": "9"`
+- Every Monday: `"day_of_week": "1"`
+- Twice a day: `"minute": "0", "hour": "9,18"`
+
+#### INTERVAL Trigger
+
+Run at fixed intervals:
+
+```json
+{
+  "trigger_type": "INTERVAL",
+  "trigger_config": {
+    "seconds": 0,
+    "minutes": 30,
+    "hours": 0,
+    "days": 0,
+    "weeks": 0
+  }
+}
+```
+
+#### DATE Trigger
+
+Run once at a specific time:
+
+```json
+{
+  "trigger_type": "DATE",
+  "trigger_config": {
+    "run_date": "2025-12-31T23:59:59Z"  // ISO 8601 format
+  }
+}
+```
+
+#### WEBHOOK/EVENT Triggers
+
+These triggers don't use scheduling:
+
+```json
+{
+  "trigger_type": "WEBHOOK",  // or "EVENT"
+  "trigger_config": {}
+}
+```
+
+Trigger manually or via events:
+```bash
+curl -X POST http://localhost:7860/api/v1/background_agents/{agent_id}/trigger \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Input Configuration
+
+Configure how inputs are passed to your flow:
+
+```json
+{
+  "input_config": {
+    "input_value": "Your input text or data",
+    "input_type": "chat",     // or "text", "json", etc.
+    "output_type": "all",      // or "specific_output"
+    "tweaks": {                // Optional flow modifications
+      "ComponentID": {
+        "parameter": "value"
+      }
+    }
+  }
+}
+```
+
+## Monitoring and Troubleshooting
+
+### Checking Agent Status
+
+Monitor your agents regularly:
+
+```python
+import requests
+
+def check_agent_status(agent_id, token):
+    response = requests.get(
+        f"http://localhost:7860/api/v1/background_agents/{agent_id}/status",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    status = response.json()
+    
+    print(f"Agent: {status['name']}")
+    print(f"Status: {status['status']}")
+    print(f"Last Run: {status['last_run_at']}")
+    print(f"Next Run: {status['next_run_at']}")
+```
+
+### Reviewing Execution History
+
+Check past executions to identify issues:
+
+```python
+def get_execution_history(agent_id, token, limit=10):
+    response = requests.get(
+        f"http://localhost:7860/api/v1/background_agents/{agent_id}/executions",
+        params={"limit": limit},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    executions = response.json()["executions"]
+    
+    for exec in executions:
+        print(f"Execution {exec['execution_id']}")
+        print(f"  Status: {exec['status']}")
+        print(f"  Started: {exec['started_at']}")
+        print(f"  Completed: {exec['completed_at']}")
+        if exec['error_message']:
+            print(f"  Error: {exec['error_message']}")
+```
+
+### Common Issues
+
+#### Agent Not Executing
+
+**Problem**: Agent shows as ACTIVE but doesn't execute
+
+**Solutions**:
+- Verify `next_run_at` timestamp is correct
+- Check system logs for scheduler errors
+- Ensure the flow is not paused or disabled
+- Confirm trigger configuration is valid
+
+#### Execution Failures
+
+**Problem**: Executions show FAILED status
+
+**Solutions**:
+- Review error messages in execution history
+- Test the flow manually with same inputs
+- Verify flow has all required components
+- Check for timeout or resource issues
+
+#### Permission Errors
+
+**Problem**: Agent fails with permission errors
+
+**Solutions**:
+- Verify you own the flow
+- Check API token has proper permissions
+- Ensure flow is not in a restricted folder
+
+## Best Practices
+
+### 1. Start with Manual Triggers
+
+Test your agent with manual triggers before enabling scheduling:
+
+```bash
+# Create agent with WEBHOOK trigger
+# Test thoroughly with manual triggers
+# Once validated, update to scheduled trigger
+```
+
+### 2. Use Appropriate Intervals
+
+Choose scheduling intervals based on your use case:
+
+- **High frequency** (minutes): For monitoring, real-time sync
+- **Medium frequency** (hours): For periodic updates, data processing
+- **Low frequency** (days): For reports, cleanup tasks
+
+<Admonition type="warning" title="Resource Considerations">
+Very frequent executions (every minute or less) can impact system performance. Use appropriately based on your infrastructure.
+</Admonition>
+
+### 3. Implement Error Handling
+
+Design your flows with error handling:
+
+- Use try-catch patterns in components
+- Add conditional logic for failure scenarios
+- Include notification components for errors
+
+### 4. Monitor Regularly
+
+Set up monitoring for your background agents:
+
+- Check execution history weekly
+- Set up alerts for repeated failures
+- Review performance metrics
+
+### 5. Document Agent Configuration
+
+Keep documentation for each agent:
+
+- Purpose and use case
+- Trigger schedule and timing
+- Input requirements
+- Expected outputs
+- Contact person for issues
+
+### 6. Clean Up Unused Agents
+
+Remove agents that are no longer needed:
+
+```bash
+curl -X DELETE http://localhost:7860/api/v1/background_agents/{agent_id} \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+## Security Considerations
+
+### Authentication
+
+- Always use authentication tokens for API access
+- Rotate tokens regularly
+- Use environment variables for tokens, never hardcode
+
+### Authorization
+
+- Background agents run with the creating user's permissions
+- Ensure flows don't access unauthorized resources
+- Review agent permissions regularly
+
+### Input Validation
+
+- Validate and sanitize input data
+- Use flow-level validation components
+- Be cautious with webhook triggers accepting external data
+
+## Advanced Topics
+
+### Programmatic Agent Management
+
+Create a Python script to manage multiple agents:
+
+```python
+class BackgroundAgentManager:
+    def __init__(self, base_url, token):
+        self.base_url = base_url
+        self.headers = {"Authorization": f"Bearer {token}"}
+    
+    def create_agent(self, agent_config):
+        response = requests.post(
+            f"{self.base_url}/api/v1/background_agents/",
+            json=agent_config,
+            headers=self.headers
+        )
+        return response.json()
+    
+    def list_agents(self, flow_id=None):
+        params = {"flow_id": flow_id} if flow_id else {}
+        response = requests.get(
+            f"{self.base_url}/api/v1/background_agents/",
+            params=params,
+            headers=self.headers
+        )
+        return response.json()
+    
+    def start_all_agents(self):
+        agents = self.list_agents()
+        for agent in agents:
+            if agent["status"] != "ACTIVE":
+                self.start_agent(agent["id"])
+```
+
+### Integration with External Systems
+
+Use background agents to integrate Langflow with external systems:
+
+1. **CI/CD Pipelines**: Trigger flows on deployment
+2. **Monitoring Tools**: Alert on system events
+3. **Data Warehouses**: Schedule data extraction and loading
+4. **Third-party APIs**: Process webhooks from external services
+
+### High Availability
+
+For mission-critical agents:
+
+1. Monitor execution success rates
+2. Set up backup agents with similar configuration
+3. Implement fallback mechanisms
+4. Use database replication for execution history
+
+## Conclusion
+
+Background Agents enable powerful automation capabilities in Langflow. By running flows autonomously, you can build always-on systems that respond to events, handle scheduled tasks, and integrate with external services without manual intervention.
+
+For more details on the API, see the [Background Agents API Reference](/docs/API-Reference/api-background-agents).
