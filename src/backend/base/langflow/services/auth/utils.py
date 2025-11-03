@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette.websockets import WebSocket
 
+from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User, UserRead
@@ -275,8 +276,6 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
     Raises:
         HTTPException: If authentication fails or user doesn't have permission
     """
-    from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
-
     settings_service = get_settings_service()
 
     if not settings_service.auth_settings.WEBHOOK_AUTH_ENABLE:
