@@ -12,8 +12,7 @@ from sqlmodel import col, select
 from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.cache.base import ExternalAsyncBaseCacheService
 from langflow.services.cache.factory import CacheServiceFactory
-from langflow.services.database.models.transactions.model import TransactionTable
-from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+from langflow.services.database.crud import user_crud
 from langflow.services.database.utils import initialize_database
 from langflow.services.schema import ServiceType
 
@@ -25,11 +24,7 @@ if TYPE_CHECKING:
 
 
 async def get_or_create_super_user(session: AsyncSession, username, password, is_default):
-    from langflow.services.database.models.user.model import User
-
-    stmt = select(User).where(User.username == username)
-    result = await session.exec(stmt)
-    user = result.first()
+    user = await user_crud.get_by_username(session, username)
 
     if user and user.is_superuser:
         return None  # Superuser already exists
@@ -110,11 +105,7 @@ async def teardown_superuser(settings_service, session: AsyncSession) -> None:
         try:
             await logger.adebug("AUTO_LOGIN is set to False. Removing default superuser if exists.")
             username = DEFAULT_SUPERUSER
-            from langflow.services.database.models.user.model import User
-
-            stmt = select(User).where(User.username == username)
-            result = await session.exec(stmt)
-            user = result.first()
+            user = await user_crud.get_by_username(session, username)
             # Check if super was ever logged in, if not delete it
             # if it has logged in, it means the user is using it to login
             if user and user.is_superuser is True and not user.last_login_at:
@@ -176,6 +167,9 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
         session: The database session to use for the deletion
     """
     try:
+        # Import here to avoid circular dependency
+        from langflow.services.database.models.transactions.model import TransactionTable
+
         # Delete transactions using bulk delete
         delete_stmt = delete(TransactionTable).where(
             col(TransactionTable.id).in_(
@@ -205,6 +199,9 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
         session: The database session to use for the deletion
     """
     try:
+        # Import here to avoid circular dependency
+        from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+
         # Delete vertex builds using bulk delete
         delete_stmt = delete(VertexBuildTable).where(
             col(VertexBuildTable.id).in_(
