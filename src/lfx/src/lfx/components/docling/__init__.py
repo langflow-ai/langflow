@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from .chunk_docling_document import ChunkDoclingDocumentComponent
     from .docling_inline import DoclingInlineComponent
     from .docling_remote import DoclingRemoteComponent
+    from .docling_remote_vlm import DoclingRemoteVLMComponent
     from .export_docling_document import ExportDoclingDocumentComponent
 
 _dynamic_imports = {
@@ -15,12 +16,14 @@ _dynamic_imports = {
     "DoclingInlineComponent": "docling_inline",
     "DoclingRemoteComponent": "docling_remote",
     "ExportDoclingDocumentComponent": "export_docling_document",
+    "DoclingRemoteVLMComponent": "docling_remote_vlm",
 }
 
 __all__ = [
     "ChunkDoclingDocumentComponent",
     "DoclingInlineComponent",
     "DoclingRemoteComponent",
+    "DoclingRemoteVLMComponent",
     "ExportDoclingDocumentComponent",
 ]
 
