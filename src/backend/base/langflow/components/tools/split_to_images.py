@@ -289,9 +289,12 @@ class SplitToImagesComponent(LCToolComponent):
             for item in file_urls_input:
                 if isinstance(item, Data):
                     # Extract from Data object
-                    path = item.data.get("file_path") or item.data.get("path")
-                    if path:
-                        file_paths.append(path)
+                    path=""
+                    if hasattr(item, "text"):
+                        path = item.text
+                    else: 
+                        path = item.data.get("file_path") or item.data.get("path")
+                    file_paths.append(path)
                 elif hasattr(item, "text"):
                     # Extract from Message object
                     file_paths.append(item.text)
