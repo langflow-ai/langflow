@@ -10,15 +10,12 @@ from fastapi import Depends, HTTPException, Query
 from fastapi_pagination import Params
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
-from sqlalchemy import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth.utils import get_current_active_user, get_current_active_user_mcp
+from langflow.services.database.crud import flow_crud, message_crud, transaction_crud, vertex_build_crud
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.message.model import MessageTable
-from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User
-from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import get_session, session_scope
 from langflow.services.store.utils import get_lf_version_from_pypi
 from langflow.utils.constants import LANGFLOW_GLOBAL_VAR_HEADER_PREFIX
@@ -152,7 +149,7 @@ def format_elapsed_time(elapsed_time: float) -> str:
 
 async def _get_flow_name(flow_id: uuid.UUID) -> str:
     async with session_scope() as session:
-        flow = await session.get(Flow, flow_id)
+        flow = await flow_crud.get(session, flow_id)
         if flow is None:
             msg = f"Flow {flow_id} not found"
             raise ValueError(msg)
@@ -185,7 +182,7 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
 
 async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession, **kwargs):
     """Build and cache the graph."""
-    flow: Flow | None = await session.get(Flow, flow_id)
+    flow: Flow | None = await flow_crud.get(session, flow_id)
     if not flow or not flow.data:
         msg = "Invalid flow ID"
         raise ValueError(msg)
@@ -304,10 +301,10 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
         # If we delete messages directly, rather than setting flow_id to null,
         # it might cause unexpected behaviors because the session id could still be
         # used elsewhere to search for these messages.
-        await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
-        await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
-        await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
-        await session.exec(delete(Flow).where(Flow.id == flow_id))
+        await message_crud.delete_by_flow_id(session, flow_id)
+        await transaction_crud.delete_by_flow_id(session, flow_id)
+        await vertex_build_crud.delete_by_flow_id(session, flow_id)
+        await flow_crud.delete(session, id=flow_id)
     except Exception as e:
         msg = f"Unable to cascade delete flow: {flow_id}"
         raise RuntimeError(msg, e) from e

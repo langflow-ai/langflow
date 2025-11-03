@@ -12,7 +12,8 @@ from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.schema.message import Message
-from langflow.services.database.models.message.model import MessageRead, MessageTable
+from langflow.services.database.crud import message_crud
+from langflow.services.database.models.message.model import MessageRead
 from langflow.services.deps import session_scope
 
 
@@ -26,6 +27,9 @@ def _get_variable_query(
     flow_id: UUID | None = None,
     limit: int | None = None,
 ):
+    # Import here to avoid circular dependency
+    from langflow.services.database.models.message.model import MessageTable
+
     stmt = select(MessageTable).where(MessageTable.error == False)  # noqa: E712
     if sender:
         stmt = stmt.where(MessageTable.sender == sender)
@@ -38,8 +42,8 @@ def _get_variable_query(
     if flow_id:
         stmt = stmt.where(MessageTable.flow_id == flow_id)
     if order_by:
-        col = getattr(MessageTable, order_by).desc() if order == "DESC" else getattr(MessageTable, order_by).asc()
-        stmt = stmt.order_by(col)
+        col_obj = getattr(MessageTable, order_by).desc() if order == "DESC" else getattr(MessageTable, order_by).asc()
+        stmt = stmt.order_by(col_obj)
     if limit:
         stmt = stmt.limit(limit)
     return stmt

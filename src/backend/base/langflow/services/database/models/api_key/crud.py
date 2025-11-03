@@ -1,3 +1,9 @@
+"""API Key CRUD operations.
+
+Most operations should use langflow.services.database.crud.api_key_crud.
+This module contains specialized API key operations.
+"""
+
 import datetime
 import secrets
 from typing import TYPE_CHECKING
@@ -7,6 +13,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.services.database.crud import api_key_crud
 from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
@@ -16,8 +23,16 @@ if TYPE_CHECKING:
 
 
 async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]:
-    query: SelectOfScalar = select(ApiKey).where(ApiKey.user_id == user_id)
-    api_keys = (await session.exec(query)).all()
+    """Get API keys for a user.
+
+    Args:
+        session: Database session
+        user_id: User identifier
+
+    Returns:
+        List of API key read schemas
+    """
+    api_keys = await api_key_crud.get_by_user_id(session, user_id)
     return [ApiKeyRead.model_validate(api_key) for api_key in api_keys]
 
 
@@ -41,16 +56,28 @@ async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, us
 
 
 async def delete_api_key(session: AsyncSession, api_key_id: UUID) -> None:
-    api_key = await session.get(ApiKey, api_key_id)
-    if api_key is None:
-        msg = "API Key not found"
-        raise ValueError(msg)
-    await session.delete(api_key)
-    await session.commit()
+    """Delete an API key.
+
+    Args:
+        session: Database session
+        api_key_id: API key identifier
+
+    Raises:
+        ValueError: If API key not found
+    """
+    await api_key_crud.delete(session, id=api_key_id)
 
 
 async def check_key(session: AsyncSession, api_key: str) -> User | None:
-    """Check if the API key is valid."""
+    """Check if the API key is valid.
+
+    Args:
+        session: Database session
+        api_key: API key string
+
+    Returns:
+        User associated with the key or None if invalid
+    """
     query: SelectOfScalar = select(ApiKey).options(selectinload(ApiKey.user)).where(ApiKey.api_key == api_key)
     api_key_object: ApiKey | None = (await session.exec(query)).first()
     if api_key_object is not None:
@@ -62,9 +89,16 @@ async def check_key(session: AsyncSession, api_key: str) -> User | None:
 
 
 async def update_total_uses(api_key_id: UUID):
-    """Update the total uses and last used at."""
+    """Update the total uses and last used at.
+
+    Args:
+        api_key_id: API key identifier
+
+    Raises:
+        ValueError: If API key not found
+    """
     async with session_scope() as session:
-        new_api_key = await session.get(ApiKey, api_key_id)
+        new_api_key = await api_key_crud.get(session, api_key_id)
         if new_api_key is None:
             msg = "API Key not found"
             raise ValueError(msg)
