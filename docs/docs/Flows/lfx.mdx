@@ -3,6 +3,9 @@ title: Run flows with Langflow Executor (LFX)
 slug: /lfx-stateless-flows
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 The Langflow Executor (LFX) is a command-line tool that serves and runs flows statelessly from [flow JSON files](/concepts-flows-import) with minimal dependencies.
 
 Flows are run without the flow builder UI or database, and any flow dependencies are automatically added to complete the run.
@@ -18,61 +21,142 @@ LFX includes two commands for executing flows:
 
 ## Prerequisites
 
-- [Python](https://www.python.org/downloads/release/python-3100/)
-- [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- A [flow JSON file](/concepts-flows)
-- A Langflow API key
+- Install [Python](https://www.python.org/downloads/release/python-3100/)
+- Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- Create or download a [flow JSON file](/concepts-flows)
+- Create an [OpenAI API key](https://platform.openai.com/api-keys)
+- Create a [Langflow API key](/api-keys-and-authentication)
 
 ## Install LFX
 
-LFX is included with the [Langflow installation](/get-started-installation) in the`langflow/src/lfx` directory, or can be installed as a [PyPI package](https://pypi.org/project/lfx/).
+<Tabs>
+<TabItem value="source" label="Clone Repository" default>
 
-If you already have the Langflow OSS package installed, you don't need to install any additional dependencies.
-To use LFX commands, change directory to `langflow/src/lfx` and run the `uv run lfx` commands from there.
-For example:
+1. Clone the Langflow repository:
+   ```bash
+   git clone https://github.com/langflow-ai/langflow
+   ```
 
+2. Change directory to `langflow/src/lfx`:
+   ```bash
+   cd langflow/src/lfx
+   ```
+
+3. Run LFX commands using `uv run`:
+   ```bash
+   uv run lfx serve my_flow.json
+   ```
+
+</TabItem>
+<TabItem value="pypi" label="Install from PyPI">
+
+1. Create and activate a virtual environment.
+
+   ```bash
+   uv venv lfx-venv
+   source lfx-venv/bin/activate  # On Windows: lfx-venv\Scripts\activate
+   ```
+
+2. Install the LFX package from PyPI:
+
+   ```bash
+   uv pip install lfx
+   ```
+
+3. Run LFX commands directly:
+
+   ```bash
+   uv lfx serve simple-agent-flow.json
+   ```
+
+</TabItem>
+<TabItem value="uvx" label="Run without installing">
+
+Run LFX without installing it using `uvx`:
+
+```bash
+uvx lfx serve simple-agent-flow.json
 ```
-cd langflow/src/lfx
-uv run lfx serve my_flow.json
-```
 
-To install the LFX Python package from PyPI, see the [lfx PyPI page](https://pypi.org/project/lfx/).
+This automatically downloads and runs LFX in a temporary environment without permanent installation.
 
-## Serve a flow with `lfx serve` {#serve}
+</TabItem>
+</Tabs>
 
-To serve your flow as a REST API endpoint, set your `LANGFLOW_API_KEY` and run the flow JSON.
+## Serve the simple agent starter flow with `lfx serve` {#serve}
+
+To serve a flow as a REST API endpoint, set a `LANGFLOW_API_KEY` and run the flow JSON.
 The API key is required for security because `lfx serve` can create a publicly accessible FastAPI server.
-Client-side API users must provide this same API key through HTTP header or query parameter.
-If you want to run the flow locally, use [`lfx run`](#lfx-run).
 For more information, see [API keys and authentication](/api-keys-and-authentication).
 
-By default, the server binds to `127.0.0.1` (localhost), making it accessible only on your local machine.
-To make the server publicly accessible from other machines, use `--host 0.0.0.0`.
+This example uses the **Agent** component's built-in OpenAI model, which requires an OpenAI API key.
+If you want to use a different provider, edit the model provider, model name, and credentials accordingly.
 
-1. Change directory to `langflow/src/lfx`.
-2. Export your API key.
+1. Set up your environment variables.
+
+    <Tabs>
+    <TabItem value="env-file" label=".env file" default>
+
+    Create a `.env` file and populate it with your flow's variables.
+    The `LANGFLOW_API_KEY` is required.
+    This example assumes the flow requires an OpenAI API key.
+
+    ```bash
+    LANGFLOW_API_KEY="sk..."
+    OPENAI_API_KEY="sk-..."
     ```
+
+    </TabItem>
+    <TabItem value="export" label="Export variables">
+
+    Export your variables in the same terminal session where you'll start the server.
+    You must declare your variables before the server starts for the server to pick them up.
+
+    ```bash
     export LANGFLOW_API_KEY="sk..."
-    ```
-3. Start the server.
-    For local access only (default):
-    ```
-    uv run lfx serve simple_chat.json
+    export OPENAI_API_KEY="sk-..."
     ```
 
-    For public access (accessible from other machines):
+    </TabItem>
+    </Tabs>
+
+2. Start the server with your variable values.
+
+    <Tabs>
+    <TabItem value="env-file" label=".env file" default>
+
+    This example assumes your flow file and `.env` file are in the current directory:
+
     ```
-    uv run lfx serve simple_chat.json --host 0.0.0.0 --port 8000
+    uv run lfx serve simple-agent-flow.json --env-file .env
     ```
 
-    **Security Note:** When using `--host 0.0.0.0`, the server is accessible from any machine that can reach your network. Ensure you:
-    - Use a strong API key
-    - Configure firewall rules appropriately
-    - Consider using a reverse proxy (like nginx) with TLS/SSL for production deployments
+    If your `.env` file is in a different location, provide the full or relative path:
 
-4. The startup process returns a `flow_id` value.
-Copy the value to use in the test API call in the next step.
-The default
+    ```
+    uv run lfx serve simple-agent-flow.json --env-file /path/to/.env
+    ```
+
+    </TabItem>
+    <TabItem value="export" label="Export variables">
+
+    If you exported your variables, the command to start the server automatically picks up the values when it starts.
+
+    ```
+    uv run lfx serve simple-agent-flow.json
+    ```
+
+    To export new values, stop the server, export the variables, and start the server again.
+
+    </TabItem>
+    </Tabs>
+
+
+
+3. The startup process displays a `flow_id` value in the output.
+   Copy the `flow_id` to use in the test API call in the next step.
+   In this example, the `flow_id` is `c1dab29d-3364-58ef-8fef-99311d32ee42`.
+
     ```bash
      ╭───────────────────────────── LFX Server ─────────────────────────────╮
      │ 🎯 Single Flow Served Successfully!                                  │
@@ -94,26 +178,31 @@ The default
      │ {'input_value': 'Your input message'}                                │
      ╰──────────────────────────────────────────────────────────────────────╯
     ```
-4. Test the server with an API call to the `/flows/flow_id/run` endpoint printed in the response.
-Replace **FLOW_ID** with the value from your
+
+4. In a new terminal, export your `flow_id` and Langflow API key values as variables.
+    ```bash
+    export LANGFLOW_API_KEY="sk..."
+    export FLOW_ID="c1dab29d-3364-58ef-8fef-99311d32ee42"
     ```
-    curl -X POST http://localhost:8000/flows/FLOW_ID/run \
+
+5. Test the server with an API call to the `/flows/flow_id/run` endpoint.
+
+    ```bash
+    curl -X POST http://localhost:8000/flows/$FLOW_ID/run \
       -H "Content-Type: application/json" \
-      -H "x-api-key: LANGFLOW_API_KEY" \
+      -H "x-api-key: $LANGFLOW_API_KEY" \
       -d '{"input_value": "Hello, world!"}'
     ```
 
-    If your exported flow includes [global variables](/configuration-global-variables), such as an Open AI API key, you need to create a variable in your `.env` file with the same name, and add your value to the `.env` file.
-
-    ```bash
-    OPENAI_API_KEY="sk..."
+    Successful response:
+    ```
+    {"result":"Hello world! 👋\n\nHow can I help you today? If you have any questions or need assistance, just let me know!","success":true,"logs":"\n\n\u001b[1m> Entering new None chain...\u001b[0m\n\u001b[32;1m\u001b[1;3mHello world! 👋\n\nHow can I help you today? If you have any questions or need assistance, just let me know!\u001b[0m\n\n\u001b[1m> Finished chain.\u001b[0m\n","type":"message","component":"Chat Output"}%
     ```
 
-    Start LFX with the path to your `.env` file:
+Your flow is now running as a lightweight API endpoint, with only the flow's required dependencies and no visual builder installed.
+Users who call your endpoint don't need to install Langflow or configure their own LLM provider keys.
 
-    ```
-    uv run lfx serve --env-file .env
-    ```
+To make your server publicly accessible, use a [tunneling service like ngrok](/deployment-public-server), or deploy to a public cloud provider such as [DigitalOcean](/deployment-nginx-ssl).
 
 ### LFX serve options
 
