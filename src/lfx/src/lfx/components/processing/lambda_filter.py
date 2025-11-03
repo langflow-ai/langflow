@@ -4,13 +4,18 @@ import json
 import re
 from typing import TYPE_CHECKING, Any
 
+from lfx.base.models.unified_models import get_language_model_options, get_llm
 from lfx.custom.custom_component.component import Component
-from lfx.io import DataInput, HandleInput, IntInput, MultilineInput, Output
+from lfx.io import DataInput, IntInput, ModelInput, MultilineInput, Output, SecretStrInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+# Compute model options once at module level
+_MODEL_OPTIONS = get_language_model_options()
+_PROVIDERS = [provider["provider"] for provider in _MODEL_OPTIONS]
 
 
 class LambdaFilterComponent(Component):
@@ -29,12 +34,21 @@ class LambdaFilterComponent(Component):
             is_list=True,
             required=True,
         ),
-        HandleInput(
-            name="llm",
+        ModelInput(
+            name="model",
             display_name="Language Model",
-            info="Connect the 'Language Model' output from your LLM component here.",
-            input_types=["LanguageModel"],
+            options=_MODEL_OPTIONS,
+            providers=_PROVIDERS,
+            info="Select your model provider",
+            real_time_refresh=True,
             required=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Model Provider API key",
+            real_time_refresh=True,
+            advanced=True,
         ),
         MultilineInput(
             name="filter_instruction",
@@ -129,7 +143,7 @@ class LambdaFilterComponent(Component):
         dump = json.dumps(data)
         self.log(str(data))
 
-        llm = self.llm
+        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
         instruction = self.filter_instruction
         sample_size = self.sample_size
 
