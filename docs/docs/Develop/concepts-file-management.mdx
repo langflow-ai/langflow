@@ -46,28 +46,28 @@ To modify this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment va
 
 ## Use files in a flow
 
-To use files in your Langflow file management system in a flow, add a component that accepts file input to your flow, such as the **File** component.
+To use files in your Langflow file management system in a flow, add a component that accepts file input to your flow, such as the **Read File** component.
 
-For example, add a **File** component to your flow, click **Select files**, and then select files from the **My Files** list.
+For example, add a **Read File** component to your flow, click **Select files**, and then select files from the **My Files** list.
 
-This list includes all files in your server's file management system, but you can only select [file types that are supported by the **File** component](/components-data#file).
+This list includes all files in your server's file management system, but you can only select [file types that are supported by the **Read File** component](/components-data#file).
 If you need another file type, you must use a different component that supports that file type, or you need to convert it to a supported type before uploading it.
 
-For more information about the **File** component and other data loading components, see [Data components](/components-data).
+For more information about the **Read File** component and other data loading components, see [Data components](/components-data).
 
 ### Load files at runtime
 
 You can use preloaded files in your flows, and you can load files at runtime, if your flow accepts file input.
 To enable file input in your flow, do the following:
 
-1. Add a [**File** component](/components-data#file) to your flow.
+1. Add a [**Read File** component](/components-data#file) to your flow.
 
 2. Click **Share**, select **API access**, and then click **Input Schema** to add [`tweaks`](/concepts-publish#input-schema) to the request payload in the flow's automatically generated code snippets.
 
 3. Expand the **File** section, find the **Files** row, and then enable **Expose Input** to allow the parameter to be set at runtime through the Langflow API.
 
 4. Close the **Input Schema** pane to return to the **API access** pane.
-The payload in each code snippet now includes `tweaks` with your **File** component's ID and the `path` key that you enabled in **Input Schema**:
+The payload in each code snippet now includes `tweaks` with your **Read File** component's ID and the `path` key that you enabled in **Input Schema**:
 
     ```json
     "tweaks": {

@@ -310,6 +310,7 @@ module.exports = {
             "Components/bundles-clickhouse",
             "Components/bundles-cloudflare",
             "Components/bundles-cohere",
+            "Components/bundles-cometapi",
             "Components/bundles-couchbase",
             "Components/bundles-datastax",
             "Components/bundles-deepseek",
@@ -430,9 +431,9 @@ module.exports = {
         "Contributing/contributing-community",
         "Contributing/contributing-how-to-contribute",
         "Contributing/contributing-components",
+        "Contributing/contributing-bundles",
         "Contributing/contributing-component-tests",
         "Contributing/contributing-templates",
-        "Contributing/contributing-bundles",
       ],
     },
     {
