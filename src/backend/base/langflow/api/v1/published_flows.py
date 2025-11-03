@@ -41,6 +41,11 @@ async def publish_flow(
 
     - First publish: Creates clone in target folder + published_flow record
     - Re-publish: Updates existing clone with new data from original
+
+    Naming convention:
+    - Original flow: "{marketplace_name}-Original"
+    - Cloned flow: "{marketplace_name}-Published"
+    - Published table: "{marketplace_name}" (base name only)
     """
     # 1. Fetch original flow
     original_flow = await session.get(Flow, flow_id)
@@ -55,11 +60,32 @@ async def publish_flow(
             detail="You don't have permission to publish this flow",
         )
 
-    # 3. Use Marketplace Agent folder for the cloned flow
+    # 3. Validate marketplace name doesn't already exist
+    marketplace_name = payload.marketplace_flow_name.strip()
+    if not marketplace_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Marketplace flow name is required",
+        )
+
+    # Check for duplicate names (exclude current flow if re-publishing)
+    duplicate_query = select(PublishedFlow).where(
+        PublishedFlow.flow_name == marketplace_name,
+        PublishedFlow.status == PublishStatusEnum.PUBLISHED,
+        PublishedFlow.flow_cloned_from != flow_id,  # Exclude current flow
+    )
+    duplicate_result = await session.exec(duplicate_query)
+    if duplicate_result.first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"A flow with the name '{marketplace_name}' already exists in the marketplace",
+        )
+
+    # 4. Use Marketplace Agent folder for the cloned flow
     marketplace_folder = await get_or_create_marketplace_agent_folder(session)
     target_folder_id = marketplace_folder.id
 
-    # 4. Check if already published (by flow_cloned_from)
+    # 5. Check if already published (by flow_cloned_from)
     existing_result = await session.exec(
         select(PublishedFlow).where(PublishedFlow.flow_cloned_from == flow_id)
     )
@@ -81,16 +107,18 @@ async def publish_flow(
         cloned_flow.description = payload.description or original_flow.description  # Use payload description if provided
         cloned_flow.tags = payload.tags  # Use marketplace tags from publish modal
         cloned_flow.icon = original_flow.icon
-        cloned_flow.name = payload.marketplace_flow_name  # Update cloned flow name from modal
+        # Naming convention: "{marketplace_name}-Published" (NO SPACES)
+        cloned_flow.name = f"{marketplace_name}-Published"
 
-        # Also update original flow's tags
-        original_flow.tags = payload.tags
+        # Update original flow name: "{marketplace_name}-Original" (NO SPACES)
+        original_flow.name = f"{marketplace_name}-Original"
+        original_flow.tags = payload.tags  # Also update original flow's tags
 
-        # Update published_flow record (copy description for pagination, tags from payload)
+        # Update published_flow record (store base marketplace name without suffix)
         existing.version = payload.version
         existing.tags = payload.tags  # User-selected tags from publish modal
         existing.description = payload.description or original_flow.description  # Use payload description if provided, else denormalized
-        existing.flow_name = cloned_flow.name  # Denormalized
+        existing.flow_name = marketplace_name  # Store base name only (e.g., "Call Summarization Agent")
         existing.flow_icon = payload.flow_icon or existing.flow_icon  # Use uploaded logo or keep existing
         # Update flow_icon_updated_at timestamp when logo changes
         if payload.flow_icon and payload.flow_icon != existing.flow_icon:
@@ -102,30 +130,32 @@ async def publish_flow(
 
         session.add(cloned_flow)
         session.add(existing)
-        session.add(original_flow)  # Save original flow tags
+        session.add(original_flow)  # Save original flow with new name
         await session.commit()
         await session.refresh(existing)
         await session.refresh(cloned_flow)
 
-        logger.info(f"Re-published flow '{original_flow.name}' (ID: {flow_id}) to marketplace")
+        logger.info(f"Re-published flow '{original_flow.name}' (ID: {flow_id}) to marketplace as '{marketplace_name}'")
 
         # Return response (denormalized fields already in PublishedFlow)
         result_data = PublishedFlowRead.model_validate(existing, from_attributes=True)
         return result_data
 
     # NEW PUBLISH: Clone flow and create published_flow record
+    # Pass "{marketplace_name}-Published" to clone function
     cloned_flow = await clone_flow_for_marketplace(
         session=session,
         original_flow=original_flow,
         target_folder_id=target_folder_id,
         user_id=current_user.id,
-        marketplace_flow_name=payload.marketplace_flow_name,
+        marketplace_flow_name=f"{marketplace_name}-Published",  # Cloned flow name with suffix
         tags=payload.tags,  # Pass marketplace tags to clone
         description=payload.description,  # Pass description from publish modal to clone
     )
 
-    # Update original flow's tags to match marketplace tags
-    original_flow.tags = payload.tags
+    # Update original flow name: "{marketplace_name}-Original" (NO SPACES)
+    original_flow.name = f"{marketplace_name}-Original"
+    original_flow.tags = payload.tags  # Update original flow's tags to match marketplace tags
 
     # Create published_flow record (with denormalized description, tags from payload)
     published_flow = PublishedFlow(
@@ -137,7 +167,7 @@ async def publish_flow(
         version=payload.version,
         tags=payload.tags,  # User-selected tags from publish modal
         description=payload.description or original_flow.description,  # Use payload description if provided, else denormalized for pagination
-        flow_name=cloned_flow.name,  # Denormalized
+        flow_name=marketplace_name,  # Store base name only (e.g., "Call Summarization Agent")
         flow_icon=payload.flow_icon,  # Uploaded agent logo from marketplace modal
         flow_icon_updated_at=datetime.now(timezone.utc) if payload.flow_icon else None,  # Set timestamp when logo is uploaded
         published_by_username=current_user.username,  # Denormalized
@@ -147,11 +177,11 @@ async def publish_flow(
     )
 
     session.add(published_flow)
-    session.add(original_flow)  # Save original flow tags
+    session.add(original_flow)  # Save original flow with new name
     await session.commit()
     await session.refresh(published_flow)
 
-    logger.info(f"Published flow '{original_flow.name}' (ID: {flow_id}) to marketplace")
+    logger.info(f"Published flow as '{marketplace_name}' (Original ID: {flow_id})")
 
     # Return response (denormalized fields already in PublishedFlow)
     result_data = PublishedFlowRead.model_validate(published_flow, from_attributes=True)
@@ -289,6 +319,48 @@ async def list_all_published_flows(
     return {"items": items, "total": total, "page": page, "pages": pages}
 
 
+@router.post("/validate-name", status_code=status.HTTP_200_OK)
+async def validate_marketplace_name(
+    payload: dict,
+    session: DbSession,
+):
+    """
+    Validate if a marketplace flow name already exists.
+    Returns whether the name is available for use.
+    """
+    marketplace_name = payload.get("marketplace_flow_name", "").strip()
+    exclude_flow_id = payload.get("exclude_flow_id")  # Flow ID to exclude (for re-publishing)
+
+    if not marketplace_name:
+        return {"exists": False, "available": True}
+
+    # Check if name exists in published flows (only check PUBLISHED status)
+    query = select(PublishedFlow).where(
+        PublishedFlow.flow_name == marketplace_name,
+        PublishedFlow.status == PublishStatusEnum.PUBLISHED,
+    )
+
+    # If re-publishing, exclude the current flow
+    if exclude_flow_id:
+        try:
+            exclude_uuid = UUID(exclude_flow_id)
+            query = query.where(PublishedFlow.flow_cloned_from != exclude_uuid)
+        except (ValueError, TypeError):
+            pass  # Invalid UUID, ignore
+
+    result = await session.exec(query)
+    existing = result.first()
+
+    if existing:
+        return {
+            "exists": True,
+            "available": False,
+            "message": f"A flow with the name '{marketplace_name}' already exists in the marketplace",
+        }
+
+    return {"exists": False, "available": True}
+
+
 @router.get("/check/{flow_id}", status_code=status.HTTP_200_OK)
 async def check_flow_published(
     flow_id: UUID,
@@ -298,29 +370,26 @@ async def check_flow_published(
     Check if a flow is published (by original flow ID).
     Returns publication status, IDs, and metadata for pre-filling re-publish modal.
     """
-    # Query by flow_cloned_from (original flow ID) and join with Flow to get cloned flow name
+    # Query by flow_cloned_from (original flow ID)
     # Include both PUBLISHED and UNPUBLISHED to allow pre-filling data for re-publishing
-    query = (
-        select(PublishedFlow, Flow)
-        .join(Flow, PublishedFlow.flow_id == Flow.id)
-        .where(PublishedFlow.flow_cloned_from == flow_id)
-    )
+    query = select(PublishedFlow).where(PublishedFlow.flow_cloned_from == flow_id)
     result = await session.exec(query)
-    row = result.first()
+    published_flow = result.first()
 
-    if row:
-        published_flow, cloned_flow = row
+    if published_flow:
         return {
             "is_published": published_flow.status == PublishStatusEnum.PUBLISHED,
             "published_flow_id": str(published_flow.id),
             "cloned_flow_id": str(published_flow.flow_id),
             "published_at": published_flow.published_at.isoformat(),
             # Additional data for pre-filling modal on re-publish (works for both published and unpublished)
-            "marketplace_flow_name": cloned_flow.name,
+            # Use flow_name from published_flow table, not the cloned flow's actual name
+            "marketplace_flow_name": published_flow.flow_name,
             "version": published_flow.version,
             "tags": published_flow.tags,
             "description": published_flow.description,
             "flow_icon": published_flow.flow_icon,
+            "flow_icon_updated_at": published_flow.flow_icon_updated_at.isoformat() if published_flow.flow_icon_updated_at else None,
         }
 
     return {
@@ -355,8 +424,9 @@ async def get_published_flow(
     published_flow, flow, user = row
 
     item = PublishedFlowRead.model_validate(published_flow, from_attributes=True)
-    item.flow_name = flow.name
-    item.flow_icon = flow.icon if flow.icon else None
+    item.flow_name = published_flow.flow_name
+    item.flow_icon = published_flow.flow_icon or (flow.icon if flow.icon else None)
+    # item.flow_icon = published_flow.icon if published_flow.icon else None
     item.published_by_username = user.username
     item.flow_data = flow.data if flow.data else {}  # Include flow data from cloned flow
 

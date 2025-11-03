@@ -5,3 +5,4 @@ export { useCheckFlowPublished, type PublishCheckResponse } from "./use-check-fl
 export { useGetPublishedFlow } from "./use-get-published-flow";
 export { useGetPublishedFlowSpec } from "./use-get-published-flow-spec";
 export { useDeletePublishedFlow } from "./use-delete-published-flow";
+export { useValidateMarketplaceName } from "./use-validate-marketplace-name";

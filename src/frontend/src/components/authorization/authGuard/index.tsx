@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useContext, useEffect } from "react";
 import {
   IS_AUTO_LOGIN,
   AI_STUDIO_ACCESS_TOKEN_EXPIRE_SECONDS,
@@ -7,6 +7,7 @@ import {
 import { useRefreshAccessToken } from "@/controllers/API/queries/auth";
 import { CustomNavigate } from "@/customization/components/custom-navigate";
 import useAuthStore from "@/stores/authStore";
+import { AuthContext } from "@/contexts/authContext";
 
 export const ProtectedRoute = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -14,8 +15,12 @@ export const ProtectedRoute = ({ children }) => {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const isAutoLoginEnv = IS_AUTO_LOGIN;
   const testMockAutoLogin = sessionStorage.getItem("testMockAutoLogin");
+  const { keycloakInitializing } = useContext(AuthContext);
 
+  // Wait for Keycloak initialization before checking authentication
+  // This prevents race condition where ProtectedRoute checks auth before Keycloak init completes
   const shouldRedirect =
+    !keycloakInitializing &&
     !isAuthenticated &&
     autoLogin !== undefined &&
     (!autoLogin || !isAutoLoginEnv);
@@ -38,6 +43,12 @@ export const ProtectedRoute = ({ children }) => {
       return () => clearInterval(intervalId);
     }
   }, [isAuthenticated]);
+
+  // Show loading/nothing while Keycloak is initializing
+  // This prevents premature redirect to login page
+  if (keycloakInitializing) {
+    return null; // or return a loading spinner component
+  }
 
   if (shouldRedirect || testMockAutoLogin) {
     const currentPath = window.location.pathname;

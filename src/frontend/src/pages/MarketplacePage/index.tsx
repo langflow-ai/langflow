@@ -138,7 +138,7 @@ export default function MarketplacePage() {
                       Published Date
                     </SelectItem>
                     <SelectItem value="tags" className="dark:text-white">
-                      Domain Area
+                      All Domain
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -168,11 +168,11 @@ export default function MarketplacePage() {
                         onValueChange={(v) => setPendingTag(v as string)}
                       >
                         <SelectTrigger className="h-10 w-full rounded-md border border-[#EBE8FF] dark:border-white/20 text-sm dark:text-white">
-                          <SelectValue placeholder="Domain Area" />
+                          <SelectValue placeholder="All Domain" />
                         </SelectTrigger>
                         <SelectContent className="max-h-64 overflow-y-auto dark:bg-black dark:text-white">
                           <SelectItem value="all" className="dark:text-white">
-                            Domain Area
+                            All Domain
                           </SelectItem>
                           {sortedTags.map((tag) => (
                             <SelectItem

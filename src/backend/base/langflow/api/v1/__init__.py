@@ -2,9 +2,11 @@ from langflow.api.v1.agent_builder import router as agent_builder_router
 from langflow.api.v1.agent_marketplace import router as agent_marketplace_router
 from langflow.api.v1.api_key import router as api_key_router
 from langflow.api.v1.application_config import router as application_config_router
+from langflow.api.v1.auth_proxy import auth_proxy_router
 from langflow.api.v1.chat import router as chat_router
 from langflow.api.v1.endpoints import router as endpoints_router
 from langflow.api.v1.files import router as files_router
+from langflow.api.v1.flexstore import router as flexstore_router
 from langflow.api.v1.flows import router as flows_router
 from langflow.api.v1.folders import router as folders_router
 from langflow.api.v1.knowledge_bases import router as knowledge_bases_router
@@ -29,9 +31,11 @@ __all__ = [
     "agent_marketplace_router",
     "api_key_router",
     "application_config_router",
+    "auth_proxy_router",
     "chat_router",
     "endpoints_router",
     "files_router",
+    "flexstore_router",
     "flows_router",
     "folders_router",
     "knowledge_bases_router",

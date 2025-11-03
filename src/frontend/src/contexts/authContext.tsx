@@ -27,6 +27,7 @@ const initialValue: AuthContextType = {
   apiKey: null,
   storeApiKey: () => {},
   getUser: () => {},
+  keycloakInitializing: false,
 };
 
 export const AuthContext = createContext<AuthContextType>(initialValue);
@@ -41,6 +42,9 @@ export function AuthProvider({ children }): React.ReactElement {
     getAuthCookie(cookies, AI_STUDIO_API_TOKEN),
   );
   const [keycloakInitialized, setKeycloakInitialized] = useState(false);
+  const [keycloakInitializing, setKeycloakInitializing] = useState(
+    envConfig.keycloakEnabled ?? false
+  );
 
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const fetchApiData = useStoreStore((state) => state.fetchApiData);
@@ -53,6 +57,7 @@ export function AuthProvider({ children }): React.ReactElement {
   useEffect(() => {
     const initializeKeycloak = async () => {
       if (envConfig.keycloakEnabled && envConfig.keycloakUrl && envConfig.keycloakRealm && envConfig.keycloakClientId) {
+        setKeycloakInitializing(true);
         try {
           const keycloakService = KeycloakService.getInstance();
           const authenticated = await keycloakService.initialize({
@@ -74,12 +79,15 @@ export function AuthProvider({ children }): React.ReactElement {
           }
 
           setKeycloakInitialized(true);
+          setKeycloakInitializing(false);
         } catch (error) {
           console.error("Failed to initialize Keycloak:", error);
           setKeycloakInitialized(true);
+          setKeycloakInitializing(false);
         }
       } else {
         setKeycloakInitialized(true);
+        setKeycloakInitializing(false);
       }
     };
 
@@ -166,6 +174,7 @@ export function AuthProvider({ children }): React.ReactElement {
         apiKey,
         storeApiKey,
         getUser,
+        keycloakInitializing,
       }}
     >
       {children}

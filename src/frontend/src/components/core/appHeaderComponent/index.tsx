@@ -21,7 +21,7 @@ import Breadcrumb from "@/components/common/Breadcrumb";
 import { useLocation } from "react-router-dom";
 import { useDarkStore } from "@/stores/darkStore";
 import { useGetAppConfig } from "@/controllers/API/queries/application-config";
-import { useGetPublishedFlow } from "@/controllers/API/queries/published-flows";
+import { useGetPublishedFlow, useCheckFlowPublished } from "@/controllers/API/queries/published-flows";
 import { useGetAgentByFlowId } from "@/controllers/API/queries/agent-marketplace/use-get-agent-by-flow-id";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { AppLogoDisplay } from "@/components/AppLogoDisplay";
@@ -54,6 +54,7 @@ export default function AppHeader(): JSX.Element {
   const tail = segments.slice(1);
   const agentFlowId = head === "agent-marketplace" && tail[0] === "detail" ? tail[1] : undefined;
   const publishedFlowId = head === "marketplace" && tail[0] === "detail" ? tail[1] : undefined;
+  const flowId = head === "flow" && tail[0] ? tail[0] : undefined;
 
   // Fetch names for detail pages (disabled unless route matches)
   const { data: agentData } = useGetAgentByFlowId(
@@ -61,6 +62,9 @@ export default function AppHeader(): JSX.Element {
     { enabled: !!agentFlowId && agentFlowId !== "no-flow", refetchOnWindowFocus: false }
   );
   const { data: publishedFlowData } = useGetPublishedFlow(publishedFlowId);
+
+  // Check if current flow is published (to show marketplace name in breadcrumb)
+  const { data: currentFlowPublishedData } = useCheckFlowPublished(flowId);
 
   // Load logo from database on mount
   const { data: logoConfig } = useGetAppConfig(
@@ -183,7 +187,9 @@ export default function AppHeader(): JSX.Element {
       case "flow": {
         // Show AI Studio and the current flow name (if available)
         items.push({ label: "AI Studio", href: "/agent-builder" });
-        items.push({ label: currentFlowName || detailLabel });
+        // If flow is published, show marketplace name. Otherwise, show actual flow name.
+        const displayName = currentFlowPublishedData?.marketplace_flow_name || currentFlowName || detailLabel;
+        items.push({ label: displayName });
         break;
       }
       case "settings": {

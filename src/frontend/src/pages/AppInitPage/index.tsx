@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
+import { envConfig } from "@/config/env";
 import { useGetAutoLogin } from "@/controllers/API/queries/auth";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useGetBasicExamplesQuery } from "@/controllers/API/queries/flows/use-get-basic-examples";
@@ -22,7 +23,14 @@ export function AppInitPage() {
 
   const { isFetched: isLoaded } = useCustomPrimaryLoading();
 
-  const { isFetched, refetch } = useGetAutoLogin({ enabled: isLoaded });
+  // Only use auto-login when Keycloak is NOT enabled
+  const autoLoginEnabled = !envConfig.keycloakEnabled;
+  const { isFetched: autoLoginFetched, refetch } = useGetAutoLogin({
+    enabled: isLoaded && autoLoginEnabled
+  });
+
+  // When Keycloak is enabled, skip auto-login and mark as "fetched" immediately
+  const isFetched = autoLoginEnabled ? autoLoginFetched : isLoaded;
   useGetVersionQuery({ enabled: isFetched });
   const { isFetched: isConfigFetched } = useGetConfig({ enabled: isFetched });
   useGetGlobalVariables({ enabled: isFetched });
@@ -33,15 +41,18 @@ export function AppInitPage() {
 
   useEffect(() => {
     if (isFetched) {
-      refreshStars();
-      refreshDiscordCount();
+      // refreshStars();
+      // refreshDiscordCount();
     }
 
     if (isConfigFetched) {
-      refetch();
+      // Only refetch auto-login when it's enabled (not using Keycloak)
+      if (autoLoginEnabled) {
+        refetch();
+      }
       refetchExamples();
     }
-  }, [isFetched, isConfigFetched]);
+  }, [isFetched, isConfigFetched, autoLoginEnabled]);
 
   return (
     //need parent component with width and height

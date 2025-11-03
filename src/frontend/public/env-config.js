@@ -1,6 +1,6 @@
 window._env_ = Object.freeze({
-  VITE_BACKEND_URL: "http://localhost:3001/genesis-platform/bff",
-  VITE_API_PREFIX: "",
+  VITE_BACKEND_URL: "http://localhost:7860",
+  VITE_API_PREFIX: "/api/v1",
   VITE_APP_TITLE: "",
   VITE_BUILD_VERSION: "",
   VITE_ENABLE_CHAT: "",

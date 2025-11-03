@@ -6,9 +6,11 @@ from langflow.api.v1 import (
     agent_marketplace_router,
     api_key_router,
     application_config_router,
+    auth_proxy_router,
     chat_router,
     endpoints_router,
     files_router,
+    flexstore_router,
     flows_router,
     folders_router,
     knowledge_bases_router,
@@ -43,9 +45,11 @@ router_v1.include_router(agent_builder_router)
 router_v1.include_router(agent_marketplace_router)
 router_v1.include_router(api_key_router)
 router_v1.include_router(application_config_router)
+router_v1.include_router(auth_proxy_router)
 router_v1.include_router(chat_router)
 router_v1.include_router(endpoints_router)
 router_v1.include_router(files_router)
+router_v1.include_router(flexstore_router)
 router_v1.include_router(flows_router)
 router_v1.include_router(folders_router)
 router_v1.include_router(knowledge_bases_router)

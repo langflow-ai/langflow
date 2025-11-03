@@ -10,7 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { usePublishFlow, type PublishCheckResponse } from "@/controllers/API/queries/published-flows";
+import {
+  usePublishFlow,
+  useValidateMarketplaceName,
+  type PublishCheckResponse,
+} from "@/controllers/API/queries/published-flows";
 import {
   usePostUploadPresignedUrl,
   useUploadToBlob,
@@ -22,7 +26,7 @@ import { validateFlowForPublish } from "@/utils/flowValidation";
 import { incrementPatchVersion } from "@/utils/versionUtils";
 import type { AllNodeType, EdgeType } from "@/types/flow";
 import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
-import { Upload, X } from "lucide-react";
+import { Upload, X, AlertCircle } from "lucide-react";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { ALLOWED_IMAGE_INPUT_EXTENSIONS } from "@/constants/constants";
 import { AgentLogo } from "@/components/AgentLogo";
@@ -64,6 +68,16 @@ export default function PublishFlowModal({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
+
+  // Validate marketplace name in real-time
+  const {
+    data: nameValidation,
+    isLoading: isValidatingName,
+  } = useValidateMarketplaceName({
+    marketplaceName: marketplaceName,
+    excludeFlowId: flowId, // Exclude current flow when re-publishing
+    enabled: open && marketplaceName.trim().length > 0,
+  });
 
   // Pre-fill form fields when modal opens
   useEffect(() => {
@@ -216,6 +230,15 @@ export default function PublishFlowModal({
       return;
     }
 
+    // Check if name is available
+    if (nameValidation && !nameValidation.available) {
+      setErrorData({
+        title: "Cannot publish flow",
+        list: [nameValidation.message || "This marketplace name is already taken"],
+      });
+      return;
+    }
+
     // Validate flow before publishing
     if (!currentFlow) {
       setErrorData({
@@ -302,13 +325,36 @@ export default function PublishFlowModal({
             <Label htmlFor="marketplace-name">
               Marketplace Flow Name <span className="text-destructive">*</span>
             </Label>
-            <Input
-              id="marketplace-name"
-              placeholder={flowName}
-              value={marketplaceName}
-              onChange={(e) => setMarketplaceName(e.target.value)}
-              required
-            />
+            <div className="relative">
+              <Input
+                id="marketplace-name"
+                placeholder={flowName}
+                value={marketplaceName}
+                onChange={(e) => setMarketplaceName(e.target.value)}
+                required
+                className={
+                  nameValidation && !nameValidation.available
+                    ? "border-destructive focus-visible:ring-destructive"
+                    : ""
+                }
+              />
+              {isValidatingName && marketplaceName.trim().length > 0 && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              )}
+            </div>
+            {nameValidation && !nameValidation.available && (
+              <div className="flex items-start gap-2 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>{nameValidation.message}</span>
+              </div>
+            )}
+            {nameValidation && nameValidation.available && marketplaceName.trim().length > 0 && (
+              <p className="text-xs text-green-600 dark:text-green-500">
+                ✓ This name is available
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
               Name for workflow in the marketplace
             </p>
@@ -464,7 +510,13 @@ export default function PublishFlowModal({
           </Button>
           <Button
             onClick={handlePublish}
-            disabled={isPending || isUploadingLogo || validationErrors.length > 0}
+            disabled={
+              isPending ||
+              isUploadingLogo ||
+              validationErrors.length > 0 ||
+              isValidatingName ||
+              (nameValidation && !nameValidation.available)
+            }
           >
             {isUploadingLogo
               ? "Uploading Logo..."
