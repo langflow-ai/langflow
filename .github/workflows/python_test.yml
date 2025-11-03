@@ -164,7 +164,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           prune-cache: false
       - name: Run lfx tests
-        run: make lfx_tests
+        run: uv run make lfx_tests
         env:
           DO_NOT_TRACK: true # disable telemetry reporting
 
