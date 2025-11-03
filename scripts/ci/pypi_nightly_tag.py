@@ -51,7 +51,7 @@ def create_tag(build_type: str):
         current_nightly_version = get_latest_published_version(build_type, is_nightly=True)
         nightly_base_version = current_nightly_version.base_version
     except (requests.RequestException, KeyError, ValueError):
-        # If LFX nightly doesn't exist on PyPI yet, this is the first nightly
+        # If MAIN_TAG nightly doesn't exist on PyPI yet, this is the first nightly
         current_nightly_version = None
         nightly_base_version = None
 
