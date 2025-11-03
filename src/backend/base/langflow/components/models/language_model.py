@@ -149,16 +149,36 @@ class LanguageModelComponent(LCModelComponent):
                 streaming=stream,
                 anthropic_api_key=self.api_key,
             )
+        # if provider == "Google":
+        #     if not self.api_key:
+        #         msg = "Google API key is required when using Google provider"
+        #         raise ValueError(msg)
+        #     return ChatGoogleGenerativeAI(
+        #         model=model_name,
+        #         temperature=temperature,
+        #         streaming=stream,
+        #         google_api_key=self.api_key,
+        #     )
         if provider == "Google":
-            if not self.api_key:
-                msg = "Google API key is required when using Google provider"
-                raise ValueError(msg)
-            return ChatGoogleGenerativeAI(
-                model=model_name,
-                temperature=temperature,
-                streaming=stream,
-                google_api_key=self.api_key,
-            )
+            # Allow both API key and service account (managed identity) authentication
+            if self.api_key:
+                # Use API Key authentication (for local or quick setup)
+                return ChatGoogleGenerativeAI(
+                    model=model_name,
+                    temperature=temperature,
+                    streaming=stream,
+                    google_api_key=self.api_key,
+                )
+            else:
+                # Use default Google credentials (service account or managed identity)
+                # This will automatically pick up credentials from environment or GCP runtime
+                return ChatGoogleGenerativeAI(
+                    model=model_name,
+                    temperature=temperature,
+                    streaming=stream,
+                )
+
+
         msg = f"Unknown provider: {provider}"
         raise ValueError(msg)
 

@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from langflow.components.processing.combine_text import CombineTextComponent
     from langflow.components.processing.converter import TypeConverterComponent
     from langflow.components.processing.create_data import CreateDataComponent
+    from langflow.components.processing.image_message_builder import ImageMessageBuilderComponent
     from langflow.components.processing.data_operations import DataOperationsComponent
     from langflow.components.processing.data_to_dataframe import DataToDataFrameComponent
     from langflow.components.processing.dataframe_operations import DataFrameOperationsComponent
@@ -43,6 +44,7 @@ _dynamic_imports = {
     "CombineTextComponent": "combine_text",
     "TypeConverterComponent": "converter",
     "CreateDataComponent": "create_data",
+    "ImageMessageBuilderComponent": "image_message_builder",
     "DataOperationsComponent": "data_operations",
     "DataToDataFrameComponent": "data_to_dataframe",
     "DataFrameOperationsComponent": "dataframe_operations",
@@ -74,6 +76,7 @@ __all__ = [
     "BatchRunComponent",
     "CombineTextComponent",
     "CreateDataComponent",
+    "ImageMessageBuilderComponent",
     "DataFilterComponent",
     "DataFrameOperationsComponent",
     "DataOperationsComponent",
