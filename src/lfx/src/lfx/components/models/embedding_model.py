@@ -22,7 +22,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
     name = "EmbeddingModel"
     category = "models"
 
-    def update_build_config(self, build_config: dict, field_value: any, field_name: str | None = None):
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
         """Dynamically update build config with user-filtered model options."""
         # Fetch options based on user's enabled models and providers
         try:
@@ -30,9 +30,9 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             providers = list({opt["provider"] for opt in options})
             build_config["model"]["options"] = options
             build_config["model"]["providers"] = providers
-        except Exception:
+        except KeyError as exc:
             # If we can't get user-specific options, fall back to empty
-            pass
+            self.log("Failed to fetch user-specific model options: %s", exc)
         return build_config
 
     inputs = [

@@ -12,20 +12,6 @@ class LanguageModelComponent(LCModelComponent):
     documentation: str = "https://docs.langflow.org/components-models"
     icon = "brain-circuit"
     category = "models"
-    priority = 0  # Set priority to 0 to make it appear first
-
-    def update_build_config(self, build_config: dict, field_value: any, field_name: str | None = None):
-        """Dynamically update build config with user-filtered model options."""
-        # Fetch options based on user's enabled models and providers
-        try:
-            options = get_language_model_options(user_id=self.user_id)
-            providers = list({opt["provider"] for opt in options})
-            build_config["model"]["options"] = options
-            build_config["model"]["providers"] = providers
-        except Exception:
-            # If we can't get user-specific options, fall back to empty
-            pass
-        return build_config
 
     inputs = [
         ModelInput(
@@ -80,3 +66,16 @@ class LanguageModelComponent(LCModelComponent):
             temperature=self.temperature,
             stream=self.stream,
         )
+
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
+        """Dynamically update build config with user-filtered model options."""
+        # Fetch options based on user's enabled models and providers
+        try:
+            options = get_language_model_options(user_id=self.user_id)
+            providers = list({opt["provider"] for opt in options})
+            build_config["model"]["options"] = options
+            build_config["model"]["providers"] = providers
+        except KeyError as exc:
+            # If we can't get user-specific options, fall back to empty
+            self.log("Failed to fetch user-specific model options: %s", exc)
+        return build_config
