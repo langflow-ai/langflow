@@ -105,10 +105,14 @@ class BackgroundAgentService(Service):
                     try:
                         await self._schedule_agent(agent)
                         await logger.ainfo(f"Loaded and scheduled agent: {agent.name} (ID: {agent.id})")
-                    except Exception as e:  # noqa: BLE001
+                    except (ValueError, RuntimeError) as e:
                         await logger.aerror(f"Failed to schedule agent {agent.id}: {e}")
-        except Exception as e:  # noqa: BLE001
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Unexpected error scheduling agent {agent.id}: {e}")
+        except (ValueError, RuntimeError) as e:
             await logger.aerror(f"Failed to load active agents: {e}")
+        except Exception as e:  # noqa: BLE001
+            await logger.aerror(f"Unexpected error loading active agents: {e}")
 
     async def start_agent(self, agent_id: UUID) -> dict[str, Any]:
         """Start a background agent.

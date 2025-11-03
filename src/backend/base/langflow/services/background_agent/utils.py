@@ -72,6 +72,12 @@ async def execute_flow_background(
             "result": result,
         }
 
+    except ValueError as e:
+        await logger.aerror(f"Invalid configuration for flow {flow_id}: {e}")
+        raise
+    except RuntimeError as e:
+        await logger.aerror(f"Runtime error executing flow {flow_id}: {e}")
+        raise
     except Exception as e:  # noqa: BLE001
-        await logger.aerror(f"Background execution failed for flow {flow_id}: {e}")
+        await logger.aerror(f"Unexpected error executing flow {flow_id}: {e}")
         raise

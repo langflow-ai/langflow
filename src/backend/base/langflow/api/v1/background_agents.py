@@ -219,8 +219,12 @@ async def delete_background_agent(
     if agent.status == AgentStatus.ACTIVE:
         try:
             await background_agent_service.stop_agent(agent_id)
-        except Exception:  # noqa: BLE001, S110
-            pass  # Continue with deletion even if stop fails
+        except Exception as e:  # noqa: BLE001
+            # Log but continue with deletion even if stop fails
+            from lfx.log.logger import logger
+            
+            await logger.awarning(f"Failed to stop agent {agent_id} during deletion: {e}")
+            pass  # noqa: S110
 
     # Delete from database
     await session.delete(agent)

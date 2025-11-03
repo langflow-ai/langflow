@@ -1,6 +1,6 @@
 """Add background agent tables
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: kcl7kwcp1upb
 Revises: 1b8b740a6fa3
 Create Date: 2025-01-03 00:00:00.000000
 
@@ -13,7 +13,7 @@ from alembic import op
 from sqlalchemy import Enum as SQLEnum
 
 # revision identifiers, used by Alembic.
-revision: str = "a1b2c3d4e5f6"
+revision: str = "kcl7kwcp1upb"
 down_revision: str | None = "1b8b740a6fa3"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
