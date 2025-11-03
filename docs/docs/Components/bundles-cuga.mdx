@@ -1,0 +1,50 @@
+---
+title: CUGA Agent
+slug: /bundles-cuga
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the **CUGA** bundled agent component.
+
+The CUGA (ConfigUrable Generalist Agent) component is an advanced AI agent that can execute complex tasks using tools, optional browser automation, and structured output generation. For more information, see the [CUGA project repository](https://github.com/cuga-project/cuga-agent).
+
+### Parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent_llm | Dropdown | Model Provider for the agent. |
+| policies | Multiline String | Custom instructions called "policies" that define the agent's planning and answers.|
+| n_messages | Integer | Number of chat history messages to retrieve. Default: `100`. |
+| format_instructions | Multiline String | Template for structured output. |
+| output_schema | Table | When `output_schema` is provided, structured responses are validated against a dynamically built schema. Invalid items are returned alongside validation errors. Fields: `name`, `description`, `type` (`str`, `int`, `float`, `bool`, `dict`), `multiple` (as list).|
+| add_current_date_tool | Boolean | If true, adds a tool that returns the current date. Default: `true`. |
+| browser_enabled | Boolean | Enable a built-in browser for web scraping/search. Default: `false`. |
+| web_apps | Multiline String | When `browser_enabled` is true, the agent initializes a browser-only environment and can open the URL from `web_apps`. |
+| API | Boolean | Enable API sub-agent specialized for API interactions. Default: `false`. |
+
+The CUGA component's **Policies** field allows custom policies to be loaded for the agent to execute.
+To load a policy, connect a [**File** component](/components-data#file) to the CUGA component's **Policies** input.
+Alternatively, click <Icon name="Scan" aria-hidden="true" /> to open the **Edit text content** pane, and enter your policy directly.
+The `policy.md` file is formatted in Markdown.
+
+```markdown
+## Plan
+
+- Break down complex queries into subtasks
+- Prioritize information gathering before execution
+- Consider dependencies between actions
+- Validate intermediate results before proceeding
+
+## Answer
+
+- Provide concise summaries with key findings
+- Include relevant data points and metrics
+- Cite sources when using MCP tool results
+- Use clear structure and formatting for readability
+```
