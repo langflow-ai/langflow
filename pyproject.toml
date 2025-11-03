@@ -45,7 +45,7 @@ dependencies = [
     "numexpr==2.10.2",
     "qianfan==0.3.5",
     "pgvector==0.3.6",
-    "langchain==0.3.23",
+    "langchain==0.3.26",
     "elasticsearch==8.16.0",
     "pytube==15.0.0",
     "dspy-ai==2.5.41",
@@ -150,6 +150,9 @@ dependencies = [
     "azure-identity==1.23.1",
     "asyncpg>=0.30.0",
     "PyMuPDF>=1.24.0",
+    "mlflow>=3.1.0",
+    "autonomize-observer>=0.0.10",
+    "kafka-python>=2.0.0,<3.0.0",
 ]
 
 [dependency-groups]
