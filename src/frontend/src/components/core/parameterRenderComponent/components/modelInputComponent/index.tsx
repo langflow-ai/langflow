@@ -1,8 +1,10 @@
 import Fuse from "fuse.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
 import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
+import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import ApiKeyModal from "@/modals/apiKeyModal";
 import useAlertStore from "@/stores/alertStore";
@@ -54,13 +56,25 @@ export default function ModelInputComponent({
   placeholder = "Select a Model",
   providers = ["OpenAI", "Anthropic"],
   helperText,
+  hasRefreshButton,
+  nodeId,
+  nodeClass,
+  handleNodeClass,
 }: BaseInputProps<any> & ModelInputComponentType): JSX.Element {
   // Initialize state and refs
   const [open, setOpen] = useState(false);
   const [openApiKeyDialog, setOpenApiKeyDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [refreshOptions, setRefreshOptions] = useState(false);
   const refButton = useRef<HTMLButtonElement>(null);
   const { setErrorData } = useAlertStore();
+
+  // API hooks
+  const postTemplateValue = usePostTemplateValue({
+    parameterId: "model",
+    nodeId: nodeId,
+    node: nodeClass,
+  });
 
   const [selectedProvider, setSelectedProvider] = useState<string | null>(
     () => {
@@ -176,6 +190,24 @@ export default function ModelInputComponent({
   const handleSendApiKey = useCallback(() => {
     setOpenApiKeyDialog(true);
   }, []);
+
+  const handleRefreshButtonPress = useCallback(async () => {
+    setRefreshOptions(true);
+    setOpen(false);
+
+    await mutateTemplate(
+      value,
+      nodeId!,
+      nodeClass!,
+      handleNodeClass!,
+      postTemplateValue,
+      setErrorData,
+    )?.then(() => {
+      setTimeout(() => {
+        setRefreshOptions(false);
+      }, 2000);
+    });
+  }, [value, nodeId, nodeClass, handleNodeClass, postTemplateValue, setErrorData]);
 
   // Effects
   useEffect(() => {
@@ -348,6 +380,26 @@ export default function ModelInputComponent({
 
   const renderManageProvidersButton = () => (
     <div className="sticky bottom-0 border-t bg-background">
+      {hasRefreshButton && (
+        <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
+          <Button
+            className="w-full"
+            unstyled
+            data-testid="refresh-model-list"
+            onClick={() => {
+              handleRefreshButtonPress();
+            }}
+          >
+            <div className="flex items-center gap-2 pl-1">
+              <ForwardedIconComponent
+                name="RefreshCcw"
+                className={cn("refresh-icon h-3 w-3 text-primary")}
+              />
+              Refresh list
+            </div>
+          </Button>
+        </CommandItem>
+      )}
       <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-b-md py-3 text-xs text-muted-foreground">
         <Button
           className="w-full"
@@ -400,7 +452,7 @@ export default function ModelInputComponent({
   };
 
   // Loading state
-  if ((options.length === 0 && !options) || !options) {
+  if ((options.length === 0 && !options) || !options || refreshOptions) {
     return <div className="w-full">{renderLoadingButton()}</div>;
   }
 
