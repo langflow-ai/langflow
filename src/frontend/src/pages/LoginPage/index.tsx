@@ -1,6 +1,6 @@
 import * as Form from "@radix-ui/react-form";
 import { useQueryClient } from "@tanstack/react-query";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
@@ -26,7 +26,7 @@ export default function LoginPage(): JSX.Element {
 
   useSanitizeRedirectUrl();
 
-  const { login } = useContext(AuthContext);
+  const { login, clearAuthSession } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   function handleInput({
@@ -57,6 +57,10 @@ export default function LoginPage(): JSX.Element {
       },
     });
   }
+
+  useEffect(() => {
+    clearAuthSession();
+  }, []);
 
   return (
     <Form.Root

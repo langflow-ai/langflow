@@ -8,9 +8,9 @@ import {
 import { useGetUserData } from "@/controllers/API/queries/auth";
 import { useGetGlobalVariablesMutation } from "@/controllers/API/queries/variables/use-get-mutation-global-variables";
 import useAuthStore from "@/stores/authStore";
-import { getCookiesInstance } from "@/utils/cookie-manager";
+import { cookieManager, getCookiesInstance } from "@/utils/cookie-manager";
 import { setLocalStorage } from "@/utils/local-storage-util";
-import { getAuthCookie, setAuthCookie } from "@/utils/utils";
+import { getAuthCookie } from "@/utils/utils";
 import { useStoreStore } from "../stores/storeStore";
 import type { Users } from "../types/api";
 import type { AuthContextType } from "../types/contexts/auth";
@@ -25,6 +25,7 @@ const initialValue: AuthContextType = {
   apiKey: null,
   storeApiKey: () => {},
   getUser: () => {},
+  clearAuthSession: () => {},
 };
 
 export const AuthContext = createContext<AuthContextType>(initialValue);
@@ -83,12 +84,12 @@ export function AuthProvider({ children }): React.ReactElement {
     autoLogin: string,
     refreshToken?: string,
   ) {
-    setAuthCookie(cookies, LANGFLOW_ACCESS_TOKEN, newAccessToken);
-    setAuthCookie(cookies, LANGFLOW_AUTO_LOGIN_OPTION, autoLogin);
+    cookieManager.set(LANGFLOW_ACCESS_TOKEN, newAccessToken);
+    cookieManager.set(LANGFLOW_AUTO_LOGIN_OPTION, autoLogin);
     setLocalStorage(LANGFLOW_ACCESS_TOKEN, newAccessToken);
 
     if (refreshToken) {
-      setAuthCookie(cookies, LANGFLOW_REFRESH_TOKEN, refreshToken);
+      cookieManager.set(LANGFLOW_REFRESH_TOKEN, refreshToken);
     }
     setAccessToken(newAccessToken);
 
@@ -100,7 +101,6 @@ export function AuthProvider({ children }): React.ReactElement {
         setIsAuthenticated(true);
       }
     };
-
     // Verify cookies are set before making authenticated requests
     // This prevents race condition where browser hasn't fully processed cookies
     const verifyAndProceed = () => {
@@ -149,6 +149,17 @@ export function AuthProvider({ children }): React.ReactElement {
     setApiKey(apikey);
   }
 
+  function clearAuthSession() {
+    cookieManager.clearAuthCookies();
+    localStorage.removeItem(LANGFLOW_ACCESS_TOKEN);
+    localStorage.removeItem(LANGFLOW_API_TOKEN);
+    localStorage.removeItem(LANGFLOW_REFRESH_TOKEN);
+    setAccessToken(null);
+    setApiKey(null);
+    setUserData(null);
+    setIsAuthenticated(false);
+  }
+
   return (
     // !! to convert string to boolean
     <AuthContext.Provider
@@ -162,6 +173,7 @@ export function AuthProvider({ children }): React.ReactElement {
         apiKey,
         storeApiKey,
         getUser,
+        clearAuthSession,
       }}
     >
       {children}
