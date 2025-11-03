@@ -48,7 +48,6 @@ def create_tag(build_type: str):
     current_version = Version(current_version_str)
 
     latest_base_version = get_latest_published_version(build_type, is_nightly=False)
-    latest_nightly_version = get_latest_published_version(build_type, is_nightly=True)
     try:
         current_nightly_version = get_latest_published_version(build_type, is_nightly=True)
         nightly_base_version = current_nightly_version.base_version
@@ -59,6 +58,7 @@ def create_tag(build_type: str):
 
     build_number = "0"
     latest_base_version = current_version.base_version
+    latest_nightly_version = get_latest_published_version(build_type, is_nightly=True)
 
     if current_nightly_version and latest_base_version == nightly_base_version:
         # If the latest version is the same as the nightly version, increment the build number
