@@ -1,4 +1,4 @@
-const SvgHelicone = (props) => (
+const SvgHelicone = ({ isDark, ...props }) => (
   <svg
     width="1000"
     height="1000"
@@ -9,7 +9,7 @@ const SvgHelicone = (props) => (
   >
     <path
       d="M512.259 82.0808C503.242 78.136 492.988 78.136 483.971 82.0808L75.8928 260.615L403.33 403.869L498.115 445.337L807.242 310.094L920.337 260.615L512.259 82.0808Z"
-      fill="#F8FEFF"
+      fill={isDark ? "#F8FEFF" : "#F8FEFF"}
     />
     <path
       d="M75.8928 260.615V641.369L403.33 403.869L75.8928 260.615Z"
