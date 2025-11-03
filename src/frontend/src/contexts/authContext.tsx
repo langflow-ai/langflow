@@ -101,35 +101,48 @@ export function AuthProvider({ children }): React.ReactElement {
       }
     };
 
-    mutateLoggedUser(
-      {},
-      {
-        onSuccess: async (user) => {
-          setUserData(user);
-          const isSuperUser = user!.is_superuser;
-          useAuthStore.getState().setIsAdmin(isSuperUser);
-          checkHasStore();
-          fetchApiData();
-          userLoaded = true;
-          checkAndSetAuthenticated();
-        },
-        onError: () => {
-          setUserData(null);
-          userLoaded = true;
-          checkAndSetAuthenticated();
-        },
-      },
-    );
+    // Verify cookies are set before making authenticated requests
+    // This prevents race condition where browser hasn't fully processed cookies
+    const verifyAndProceed = () => {
+      const storedToken = getAuthCookie(cookies, LANGFLOW_ACCESS_TOKEN);
+      if (storedToken) {
+        mutateLoggedUser(
+          {},
+          {
+            onSuccess: async (user) => {
+              setUserData(user);
+              const isSuperUser = user!.is_superuser;
+              useAuthStore.getState().setIsAdmin(isSuperUser);
+              checkHasStore();
+              fetchApiData();
+              userLoaded = true;
+              checkAndSetAuthenticated();
+            },
+            onError: () => {
+              setUserData(null);
+              userLoaded = true;
+              checkAndSetAuthenticated();
+            },
+          },
+        );
 
-    mutateGetGlobalVariables(
-      {},
-      {
-        onSettled: () => {
-          variablesLoaded = true;
-          checkAndSetAuthenticated();
-        },
-      },
-    );
+        mutateGetGlobalVariables(
+          {},
+          {
+            onSettled: () => {
+              variablesLoaded = true;
+              checkAndSetAuthenticated();
+            },
+          },
+        );
+      } else {
+        // Retry after a short delay if cookies aren't available yet
+        setTimeout(verifyAndProceed, 50);
+      }
+    };
+
+    // Start verification process with small initial delay
+    setTimeout(verifyAndProceed, 50);
   }
 
   function storeApiKey(apikey: string) {

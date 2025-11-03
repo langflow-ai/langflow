@@ -34,10 +34,14 @@ class CookieManager {
       domain?: string;
     },
   ): void {
+    // Only use secure flag if the connection is HTTPS
+    const isSecure =
+      typeof window !== "undefined" && window.location.protocol === "https:";
+
     this.cookies.set(name, value, {
       path: "/",
-      secure: true,
-      sameSite: "strict",
+      secure: isSecure,
+      sameSite: isSecure ? "strict" : "lax",
       ...options,
     });
   }

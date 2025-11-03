@@ -98,7 +98,13 @@ describe("CookieManager", () => {
   });
 
   describe("set method", () => {
-    it("should set a cookie with default options", () => {
+    it("should set a cookie with secure flag for HTTPS", () => {
+      // Mock HTTPS protocol
+      Object.defineProperty(window, "location", {
+        value: { protocol: "https:" },
+        writable: true,
+      });
+
       const name = "test_cookie";
       const value = "test_value";
 
@@ -108,6 +114,25 @@ describe("CookieManager", () => {
         path: "/",
         secure: true,
         sameSite: "strict",
+      });
+    });
+
+    it("should set a cookie without secure flag for HTTP", () => {
+      // Mock HTTP protocol
+      Object.defineProperty(window, "location", {
+        value: { protocol: "http:" },
+        writable: true,
+      });
+
+      const name = "test_cookie";
+      const value = "test_value";
+
+      cookieManager.set(name, value);
+
+      expect(mockCookiesInstance.set).toHaveBeenCalledWith(name, value, {
+        path: "/",
+        secure: false,
+        sameSite: "lax",
       });
     });
 
@@ -147,6 +172,12 @@ describe("CookieManager", () => {
     });
 
     it("should handle special characters in cookie values", () => {
+      // Mock HTTPS protocol
+      Object.defineProperty(window, "location", {
+        value: { protocol: "https:" },
+        writable: true,
+      });
+
       const name = "special_cookie";
       const value = "value-with-special_chars@#$%";
 
@@ -159,7 +190,13 @@ describe("CookieManager", () => {
       });
     });
 
-    it("should set auth tokens with correct security settings", () => {
+    it("should set auth tokens with correct security settings for HTTPS", () => {
+      // Mock HTTPS protocol
+      Object.defineProperty(window, "location", {
+        value: { protocol: "https:" },
+        writable: true,
+      });
+
       const accessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
 
       cookieManager.set("access_token_lf", accessToken);
@@ -175,7 +212,35 @@ describe("CookieManager", () => {
       );
     });
 
+    it("should set auth tokens without secure flag for HTTP", () => {
+      // Mock HTTP protocol
+      Object.defineProperty(window, "location", {
+        value: { protocol: "http:" },
+        writable: true,
+      });
+
+      const accessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+
+      cookieManager.set("access_token_lf", accessToken);
+
+      expect(mockCookiesInstance.set).toHaveBeenCalledWith(
+        "access_token_lf",
+        accessToken,
+        {
+          path: "/",
+          secure: false,
+          sameSite: "lax",
+        },
+      );
+    });
+
     it("should handle empty string values", () => {
+      // Mock HTTPS protocol
+      Object.defineProperty(window, "location", {
+        value: { protocol: "https:" },
+        writable: true,
+      });
+
       cookieManager.set("empty_cookie", "");
 
       expect(mockCookiesInstance.set).toHaveBeenCalledWith("empty_cookie", "", {
