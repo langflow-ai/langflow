@@ -5,10 +5,6 @@ from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput
 from lfx.io import MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput
 
-# Compute model options once at module level
-_MODEL_OPTIONS = get_language_model_options()
-_PROVIDERS = [provider["provider"] for provider in _MODEL_OPTIONS]
-
 
 class LanguageModelComponent(LCModelComponent):
     display_name = "Language Model"
@@ -18,14 +14,28 @@ class LanguageModelComponent(LCModelComponent):
     category = "models"
     priority = 0  # Set priority to 0 to make it appear first
 
+    def update_build_config(self, build_config: dict, field_value: any, field_name: str | None = None):
+        """Dynamically update build config with user-filtered model options."""
+        # Fetch options based on user's enabled models and providers
+        try:
+            options = get_language_model_options(user_id=self.user_id)
+            providers = list({opt["provider"] for opt in options})
+            build_config["model"]["options"] = options
+            build_config["model"]["providers"] = providers
+        except Exception:
+            # If we can't get user-specific options, fall back to empty
+            pass
+        return build_config
+
     inputs = [
         ModelInput(
             name="model",
             display_name="Language Model",
-            options=_MODEL_OPTIONS,
-            providers=_PROVIDERS,
+            options=[],  # Will be populated dynamically
+            providers=[],  # Will be populated dynamically
             info="Select your model provider",
             real_time_refresh=True,
+            refresh_button=True,
         ),
         SecretStrInput(
             name="api_key",

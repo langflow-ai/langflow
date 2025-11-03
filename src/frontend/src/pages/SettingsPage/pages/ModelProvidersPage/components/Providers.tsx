@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/accordion";
 import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
+import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
 import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
@@ -18,6 +20,8 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { useQueryClient } from "@tanstack/react-query";
 
 type Provider = {
   provider: string;
@@ -27,8 +31,23 @@ type Provider = {
   models?: { model_name: string; metadata: Record<string, any> }[];
 };
 
-const Providers = ({ type }: { type: "enabled" | "available" }) => {
-  const { data: providersData = [], isLoading } = useGetModelProviders();
+const Providers = ({
+  type,
+  showExperimental,
+}: {
+  type: "enabled" | "available";
+  showExperimental: boolean;
+}) => {
+  const { data: providersData = [], isLoading } = useGetModelProviders(
+    {
+      includeDeprecated: showExperimental,
+      includeUnsupported: showExperimental,
+    },
+    {},
+  );
+  const queryClient = useQueryClient();
+  const { data: enabledModelsData } = useGetEnabledModels();
+  const { mutate: mutateUpdateEnabledModels } = useUpdateEnabledModels();
   const { data: globalVariables } = useGetGlobalVariables();
   const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -38,6 +57,39 @@ const Providers = ({ type }: { type: "enabled" | "available" }) => {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [providerToDelete, setProviderToDelete] = useState<string | null>(null);
+
+  const handleToggleModel = (
+    providerName: string,
+    modelName: string,
+    enabled: boolean,
+  ) => {
+    mutateUpdateEnabledModels(
+      {
+        updates: [
+          {
+            provider: providerName,
+            model_id: modelName,
+            enabled: enabled,
+          },
+        ],
+      },
+      {
+        onSuccess: () => {
+          // Invalidate queries to refresh the UI
+          queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
+          setSuccessData({
+            title: `${modelName} ${enabled ? "enabled" : "disabled"} successfully`,
+          });
+        },
+        onError: () => {
+          setErrorData({
+            title: "Error updating model",
+            list: ["Failed to update model status"],
+          });
+        },
+      },
+    );
+  };
 
   const handleDeleteProvider = (providerName: string) => {
     if (!globalVariables) return;
@@ -207,59 +259,104 @@ const Providers = ({ type }: { type: "enabled" | "available" }) => {
               <AccordionContent>
                 {provider.models && provider.models.length > 0 ? (
                   <div className="space-y-1">
-                    {provider.models.map((model, index) => (
-                      <div
-                        key={`${model.model_name}-${index}`}
-                        className="flex items-center ml-3"
-                      >
-                        {false ? (
-                          <Checkbox
-                            checked={true}
-                            onCheckedChange={() => {}}
-                            disabled={type === "available"}
-                          />
-                        ) : (
-                          <div className="mr-4" />
-                        )}
+                    {provider.models.map((model, index) => {
+                      const isModelEnabled =
+                        enabledModelsData?.model_status?.[model.model_name] ??
+                        true;
+                      const isDeprecated = model.metadata.deprecated;
+                      const isPreview = model.metadata.preview;
+                      const isNotSupported = model.metadata.not_supported;
+
+                      return (
                         <div
-                          className={cn("text-sm py-1 pr-2 pl-5 font-medium")}
+                          key={`${model.model_name}-${index}`}
+                          className="flex items-center ml-3 gap-2"
                         >
-                          {model.model_name}
+                          {type === "enabled" ? (
+                            <Checkbox
+                              checked={isModelEnabled}
+                              onCheckedChange={(checked) => {
+                                handleToggleModel(
+                                  provider.provider,
+                                  model.model_name,
+                                  checked as boolean,
+                                );
+                              }}
+                            />
+                          ) : (
+                            <div className="mr-4" />
+                          )}
+                          <div
+                            className={cn(
+                              "text-sm py-1 pr-2 pl-1 font-medium",
+                              !isModelEnabled && "text-muted-foreground",
+                            )}
+                          >
+                            {model.model_name}
+                          </div>
+
+                          {isDeprecated && (
+                            <Badge
+                              variant="destructive"
+                              className="text-xs px-2 py-0"
+                            >
+                              Deprecated
+                            </Badge>
+                          )}
+
+                          {isPreview && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs px-2 py-0"
+                            >
+                              Preview
+                            </Badge>
+                          )}
+
+                          {isNotSupported && (
+                            <Badge
+                              variant="secondary"
+                              className="text-xs px-2 py-0"
+                            >
+                              Not Supported
+                            </Badge>
+                          )}
+
+                          {model.metadata.reasoning && (
+                            <div className="flex items-center space-x-1 text-muted-foreground">
+                              •
+                              <ForwardedIconComponent
+                                name="Brain"
+                                className="w-4 h-4 mx-1"
+                              />
+                              <span className="italic pr-2">Reasoning</span>
+                            </div>
+                          )}
+
+                          {model.metadata.model_type === "embeddings" && (
+                            <div className="flex items-center space-x-1 text-muted-foreground">
+                              •
+                              <ForwardedIconComponent
+                                name="Layers"
+                                className="w-4 h-4 mx-1"
+                              />
+                              <span className="italic pr-2">Embedding</span>
+                            </div>
+                          )}
+
+                          {model.metadata.tool_calling && (
+                            <div className="flex items-center space-x-1 text-muted-foreground">
+                              <span className="text-muted-foreground"> • </span>
+                              <ForwardedIconComponent
+                                name="Hammer"
+                                className="w-4 h-4 mx-1"
+                              />
+                              <span className="italic pr-2">Tooling</span>
+                            </div>
+                          )}
                         </div>
-                        {model.metadata.reasoning && (
-                          <div className="flex items-center space-x-1 text-muted-foreground">
-                            •
-                            <ForwardedIconComponent
-                              name="Brain"
-                              className="w-4 h-4 mx-1"
-                            />
-                            <span className="italic pr-2">Reasoning</span>
-                          </div>
-                        )}
-
-                        {model.metadata.model_type === "embeddings" && (
-                          <div className="flex items-center space-x-1 text-muted-foreground">
-                            •
-                            <ForwardedIconComponent
-                              name="Layers"
-                              className="w-4 h-4 mx-1"
-                            />
-                            <span className="italic pr-2">Embedding</span>
-                          </div>
-                        )}
-
-                        {model.metadata.tool_calling && (
-                          <div className="flex items-center space-x-1 text-muted-foreground">
-                            <span className="text-muted-foreground"> • </span>
-                            <ForwardedIconComponent
-                              name="Hammer"
-                              className="w-4 h-4 mx-1"
-                            />
-                            <span className="italic pr-2">Tooling</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="ml-12 text-sm text-muted-foreground py-1 px-2">

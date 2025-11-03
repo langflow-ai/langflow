@@ -13,10 +13,6 @@ from lfx.io import (
     SecretStrInput,
 )
 
-# Compute model options once at module level
-_MODEL_OPTIONS = get_embedding_model_options()
-_PROVIDERS = [option["provider"] for option in _MODEL_OPTIONS]
-
 
 class EmbeddingModelComponent(LCEmbeddingsModel):
     display_name = "Embedding Model"
@@ -26,14 +22,28 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
     name = "EmbeddingModel"
     category = "models"
 
+    def update_build_config(self, build_config: dict, field_value: any, field_name: str | None = None):
+        """Dynamically update build config with user-filtered model options."""
+        # Fetch options based on user's enabled models and providers
+        try:
+            options = get_embedding_model_options(user_id=self.user_id)
+            providers = list({opt["provider"] for opt in options})
+            build_config["model"]["options"] = options
+            build_config["model"]["providers"] = providers
+        except Exception:
+            # If we can't get user-specific options, fall back to empty
+            pass
+        return build_config
+
     inputs = [
         ModelInput(
             name="model",
             display_name="Embedding Model",
-            options=_MODEL_OPTIONS,
-            providers=_PROVIDERS,
+            options=[],  # Will be populated dynamically
+            providers=[],  # Will be populated dynamically
             info="Select your model provider",
             real_time_refresh=True,
+            refresh_button=True,
         ),
         SecretStrInput(
             name="api_key",

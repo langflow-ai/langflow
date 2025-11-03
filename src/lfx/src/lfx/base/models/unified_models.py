@@ -330,182 +330,278 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
         return
 
 
-def get_language_model_options() -> list[dict[str, Any]]:
-    """Return a list of available language model providers with their configuration."""
-    # OpenAI models
-    openai_options = [
-        {
-            "name": model_name,
-            "icon": "OpenAI",
-            "category": "OpenAI",
-            "provider": "OpenAI",
-            "metadata": {
-                "context_length": 128000,
-                "model_class": "ChatOpenAI",
-                "model_name_param": "model",
-                "api_key_param": "api_key",
-                "reasoning_models": OPENAI_REASONING_MODEL_NAMES,
-            },
-        }
-        for model_name in OPENAI_CHAT_MODEL_NAMES
-    ]
-
-    # Anthropic models
-    anthropic_options = [
-        {
-            "name": model_name,
-            "icon": "Anthropic",
-            "category": "Anthropic",
-            "provider": "Anthropic",
-            "metadata": {
-                "context_length": 200000,
-                "model_class": "ChatAnthropic",
-                "model_name_param": "model",
-                "api_key_param": "api_key",
-            },
-        }
-        for model_name in ANTHROPIC_MODELS
-    ]
-
-    # Google models
-    google_options = [
-        {
-            "name": model_name,
-            "icon": "GoogleGenerativeAI",
-            "category": "Google",
-            "provider": "Google",
-            "metadata": {
-                "context_length": 32768,
-                "model_class": "ChatGoogleGenerativeAIFixed",
-                "model_name_param": "model",
-                "api_key_param": "google_api_key",
-            },
-        }
-        for model_name in GOOGLE_GENERATIVE_AI_MODELS
-    ]
-
-    # Ollama models (local)
-    ollama_options = [
-        {
-            "name": "ChatOllama",
-            "icon": "Ollama",
-            "category": "Ollama",
-            "provider": "Ollama",
-            "metadata": {
-                "context_length": 8192,  # Varies by model
-                "model_class": "ChatOllama",
-                "model_name_param": "model",
-                "base_url_param": "base_url",
-            },
-        }
-    ]
-
-    # WatsonX models
-    watsonx_options = [
-        {
-            "name": "ChatWatsonx",
-            "icon": "WatsonxAI",
-            "category": "IBM WatsonX",
-            "provider": "IBM WatsonX",
-            "metadata": {
-                "context_length": 8192,  # Varies by model
-                "model_class": "ChatWatsonx",
-                "model_name_param": "model_id",
-                "api_key_param": "apikey",
-                "url_param": "url",
-                "project_id_param": "project_id",
-            },
-        }
-    ]
-
-    # Combine all options and return
-    return openai_options + anthropic_options + google_options + ollama_options + watsonx_options
-
-
-def get_embedding_model_options() -> list[dict[str, Any]]:
-    """Return a list of available embedding model providers with their configuration."""
-    openai_options = [
-        {
-            "name": model_name,
-            "icon": "OpenAI",
-            "category": "OpenAI",
-            "provider": "OpenAI",
-            "metadata": {
-                "embedding_class": "OpenAIEmbeddings",
-                "param_mapping": {
-                    "model": "model",
-                    "api_key": "api_key",
-                    "api_base": "base_url",
-                    "dimensions": "dimensions",
-                    "chunk_size": "chunk_size",
-                    "request_timeout": "timeout",
-                    "max_retries": "max_retries",
-                    "show_progress_bar": "show_progress_bar",
-                    "model_kwargs": "model_kwargs",
+def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[str, Any]]:
+    """Return a list of available language model providers with their configuration.
+    
+    This function uses get_unified_models_detailed() which respects the enabled/disabled
+    status from the settings page and automatically filters out deprecated/unsupported models.
+    
+    Args:
+        user_id: Optional user ID to filter by user-specific enabled/disabled models
+    """
+    # Get all LLM models (excluding embeddings, deprecated, and unsupported by default)
+    all_models = get_unified_models_detailed(
+        model_type="llm",
+        include_deprecated=False,
+        include_unsupported=False,
+    )
+    
+    # Get disabled models for this user if user_id is provided
+    disabled_models = set()
+    if user_id:
+        try:
+            async def _get_disabled():
+                async with session_scope() as session:
+                    variable_service = get_variable_service()
+                    if variable_service is None:
+                        return set()
+                    from langflow.services.variable.service import DatabaseVariableService
+                    if not isinstance(variable_service, DatabaseVariableService):
+                        return set()
+                    all_vars = await variable_service.get_all(user_id=UUID(user_id) if isinstance(user_id, str) else user_id, session=session)
+                    for var in all_vars:
+                        if var.name == "__disabled_models__" and var.value:
+                            import json
+                            try:
+                                return set(json.loads(var.value))
+                            except (json.JSONDecodeError, TypeError):
+                                return set()
+                    return set()
+            disabled_models = run_until_complete(_get_disabled())
+        except Exception:  # noqa: BLE001
+            # If we can't get disabled models, continue without filtering
+            pass
+    
+    # Get enabled providers (those with credentials configured)
+    enabled_providers = set()
+    if user_id:
+        try:
+            async def _get_enabled_providers():
+                async with session_scope() as session:
+                    variable_service = get_variable_service()
+                    if variable_service is None:
+                        return set()
+                    from langflow.services.variable.service import DatabaseVariableService
+                    from langflow.services.variable.constants import CREDENTIAL_TYPE
+                    if not isinstance(variable_service, DatabaseVariableService):
+                        return set()
+                    all_vars = await variable_service.get_all(user_id=UUID(user_id) if isinstance(user_id, str) else user_id, session=session)
+                    credential_names = {var.name for var in all_vars if var.type == CREDENTIAL_TYPE}
+                    provider_variable_map = get_model_provider_variable_mapping()
+                    return {provider for provider, var_name in provider_variable_map.items() if var_name in credential_names}
+            enabled_providers = run_until_complete(_get_enabled_providers())
+        except Exception:  # noqa: BLE001
+            # If we can't get enabled providers, show all
+            pass
+    
+    options = []
+    model_class_mapping = {
+        "OpenAI": "ChatOpenAI",
+        "Anthropic": "ChatAnthropic",
+        "Google Generative AI": "ChatGoogleGenerativeAIFixed",
+        "Ollama": "ChatOllama",
+        "IBM WatsonX": "ChatWatsonx",
+    }
+    
+    api_key_param_mapping = {
+        "OpenAI": "api_key",
+        "Anthropic": "api_key",
+        "Google Generative AI": "google_api_key",
+        "Ollama": "base_url",
+        "IBM WatsonX": "apikey",
+    }
+    
+    for provider_data in all_models:
+        provider = provider_data.get("provider")
+        models = provider_data.get("models", [])
+        icon = provider_data.get("icon", "Bot")
+        
+        # Skip provider if user_id is provided and provider is not enabled
+        if user_id and enabled_providers and provider not in enabled_providers:
+            continue
+        
+        for model_data in models:
+            model_name = model_data.get("model_name")
+            metadata = model_data.get("metadata", {})
+            
+            # Skip if model is in disabled list
+            if model_name in disabled_models:
+                continue
+            
+            # Build the option dict
+            option = {
+                "name": model_name,
+                "icon": icon,
+                "category": provider,
+                "provider": provider,
+                "metadata": {
+                    "context_length": 128000,  # Default, can be overridden
+                    "model_class": model_class_mapping.get(provider, "ChatOpenAI"),
+                    "model_name_param": "model",
+                    "api_key_param": api_key_param_mapping.get(provider, "api_key"),
                 },
-            },
-        }
-        for model_name in OPENAI_EMBEDDING_MODEL_NAMES
-    ]
+            }
+            
+            # Add reasoning models list for OpenAI
+            if provider == "OpenAI" and metadata.get("reasoning"):
+                if "reasoning_models" not in option["metadata"]:
+                    option["metadata"]["reasoning_models"] = []
+                option["metadata"]["reasoning_models"].append(model_name)
+            
+            # Add base_url_param for Ollama
+            if provider == "Ollama":
+                option["metadata"]["base_url_param"] = "base_url"
+            
+            # Add extra params for WatsonX
+            if provider == "IBM WatsonX":
+                option["metadata"]["model_name_param"] = "model_id"
+                option["metadata"]["url_param"] = "url"
+                option["metadata"]["project_id_param"] = "project_id"
+            
+            options.append(option)
+    
+    return options
 
-    google_options = [
-        {
-            "name": "GoogleGenerativeAIEmbeddings",
-            "icon": "GoogleGenerativeAI",
-            "category": "Google",
-            "provider": "Google",
-            "metadata": {
-                "embedding_class": "GoogleGenerativeAIEmbeddings",
-                "param_mapping": {
-                    "model": "model",
-                    "api_key": "google_api_key",
-                    "request_timeout": "request_options",
-                    "model_kwargs": "client_options",
+
+def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[str, Any]]:
+    """Return a list of available embedding model providers with their configuration.
+    
+    This function uses get_unified_models_detailed() which respects the enabled/disabled
+    status from the settings page and automatically filters out deprecated/unsupported models.
+    
+    Args:
+        user_id: Optional user ID to filter by user-specific enabled/disabled models
+    """
+    # Get all embedding models (excluding deprecated and unsupported by default)
+    all_models = get_unified_models_detailed(
+        model_type="embeddings",
+        include_deprecated=False,
+        include_unsupported=False,
+    )
+    
+    # Get disabled models for this user if user_id is provided
+    disabled_models = set()
+    if user_id:
+        try:
+            async def _get_disabled():
+                async with session_scope() as session:
+                    variable_service = get_variable_service()
+                    if variable_service is None:
+                        return set()
+                    from langflow.services.variable.service import DatabaseVariableService
+                    if not isinstance(variable_service, DatabaseVariableService):
+                        return set()
+                    all_vars = await variable_service.get_all(user_id=UUID(user_id) if isinstance(user_id, str) else user_id, session=session)
+                    for var in all_vars:
+                        if var.name == "__disabled_models__" and var.value:
+                            import json
+                            try:
+                                return set(json.loads(var.value))
+                            except (json.JSONDecodeError, TypeError):
+                                return set()
+                    return set()
+            disabled_models = run_until_complete(_get_disabled())
+        except Exception:  # noqa: BLE001
+            # If we can't get disabled models, continue without filtering
+            pass
+    
+    # Get enabled providers (those with credentials configured)
+    enabled_providers = set()
+    if user_id:
+        try:
+            async def _get_enabled_providers():
+                async with session_scope() as session:
+                    variable_service = get_variable_service()
+                    if variable_service is None:
+                        return set()
+                    from langflow.services.variable.service import DatabaseVariableService
+                    from langflow.services.variable.constants import CREDENTIAL_TYPE
+                    if not isinstance(variable_service, DatabaseVariableService):
+                        return set()
+                    all_vars = await variable_service.get_all(user_id=UUID(user_id) if isinstance(user_id, str) else user_id, session=session)
+                    credential_names = {var.name for var in all_vars if var.type == CREDENTIAL_TYPE}
+                    provider_variable_map = get_model_provider_variable_mapping()
+                    return {provider for provider, var_name in provider_variable_map.items() if var_name in credential_names}
+            enabled_providers = run_until_complete(_get_enabled_providers())
+        except Exception:  # noqa: BLE001
+            # If we can't get enabled providers, show all
+            pass
+    
+    options = []
+    embedding_class_mapping = {
+        "OpenAI": "OpenAIEmbeddings",
+        "Google Generative AI": "GoogleGenerativeAIEmbeddings",
+        "Ollama": "OllamaEmbeddings",
+        "IBM WatsonX": "WatsonxEmbeddings",
+    }
+    
+    # Provider-specific param mappings
+    param_mappings = {
+        "OpenAI": {
+            "model": "model",
+            "api_key": "api_key",
+            "api_base": "base_url",
+            "dimensions": "dimensions",
+            "chunk_size": "chunk_size",
+            "request_timeout": "timeout",
+            "max_retries": "max_retries",
+            "show_progress_bar": "show_progress_bar",
+            "model_kwargs": "model_kwargs",
+        },
+        "Google Generative AI": {
+            "model": "model",
+            "api_key": "google_api_key",
+            "request_timeout": "request_options",
+            "model_kwargs": "client_options",
+        },
+        "Ollama": {
+            "model": "model",
+            "base_url": "base_url",
+            "num_ctx": "num_ctx",
+            "request_timeout": "request_timeout",
+            "model_kwargs": "model_kwargs",
+        },
+        "IBM WatsonX": {
+            "model_id": "model_id",
+            "url": "url",
+            "api_key": "apikey",
+            "project_id": "project_id",
+            "space_id": "space_id",
+            "request_timeout": "request_timeout",
+        },
+    }
+    
+    for provider_data in all_models:
+        provider = provider_data.get("provider")
+        models = provider_data.get("models", [])
+        icon = provider_data.get("icon", "Bot")
+        
+        # Skip provider if user_id is provided and provider is not enabled
+        if user_id and enabled_providers and provider not in enabled_providers:
+            continue
+        
+        for model_data in models:
+            model_name = model_data.get("model_name")
+            
+            # Skip if model is in disabled list
+            if model_name in disabled_models:
+                continue
+            
+            # Build the option dict
+            option = {
+                "name": model_name,
+                "icon": icon,
+                "category": provider,
+                "provider": provider,
+                "metadata": {
+                    "embedding_class": embedding_class_mapping.get(provider, "OpenAIEmbeddings"),
+                    "param_mapping": param_mappings.get(provider, param_mappings["OpenAI"]),
                 },
-            },
-        }
-    ]
-
-    ollama_options = [
-        {
-            "name": "OllamaEmbeddings",
-            "icon": "Ollama",
-            "category": "Ollama",
-            "provider": "Ollama",
-            "metadata": {
-                "embedding_class": "OllamaEmbeddings",
-                "param_mapping": {
-                    "model": "model",
-                    "base_url": "base_url",
-                    "num_ctx": "num_ctx",
-                    "request_timeout": "request_timeout",
-                    "model_kwargs": "model_kwargs",
-                },
-            },
-        }
-    ]
-
-    watsonx_options = [
-        {
-            "name": "WatsonxEmbeddings",
-            "icon": "WatsonxAI",
-            "category": "IBM WatsonX",
-            "provider": "IBM WatsonX",
-            "metadata": {
-                "embedding_class": "WatsonxEmbeddings",
-                "param_mapping": {
-                    "model_id": "model_id",
-                    "url": "url",
-                    "api_key": "apikey",
-                    "project_id": "project_id",
-                    "space_id": "space_id",
-                    "request_timeout": "request_timeout",
-                },
-            },
-        }
-    ]
-
-    return openai_options + google_options + ollama_options + watsonx_options
+            }
+            
+            options.append(option)
+    
+    return options
 
 
 def get_llm(model, user_id: UUID | str, api_key=None, temperature=None, *, stream=False) -> Any:

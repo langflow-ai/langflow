@@ -16,16 +16,34 @@ export interface ModelProviderWithStatus extends ModelProviderInfo {
   icon?: string;
 }
 
+export interface GetModelProvidersParams {
+  includeDeprecated?: boolean;
+  includeUnsupported?: boolean;
+}
+
 export const useGetModelProviders: useQueryFunctionType<
-  undefined,
+  GetModelProvidersParams | undefined,
   ModelProviderWithStatus[]
-> = (options) => {
+> = (params, options) => {
   const { query } = UseRequestProcessor();
 
   const getModelProvidersFn = async (): Promise<ModelProviderWithStatus[]> => {
     try {
+      // Build query params
+      const queryParams = new URLSearchParams();
+      if (params?.includeDeprecated) {
+        queryParams.append("include_deprecated", "true");
+      }
+      if (params?.includeUnsupported) {
+        queryParams.append("include_unsupported", "true");
+      }
+
+      const url = `${getURL("MODELS")}${
+        queryParams.toString() ? `?${queryParams.toString()}` : ""
+      }`;
+
       // Fetch the models with provider information including is_enabled status from server
-      const response = await api.get<ModelProviderInfo[]>(getURL("MODELS"));
+      const response = await api.get<ModelProviderInfo[]>(url);
       const providersData = response.data;
 
       return providersData.map((providerInfo) => ({
@@ -38,11 +56,19 @@ export const useGetModelProviders: useQueryFunctionType<
     }
   };
 
-  const queryResult = query(["useGetModelProviders"], getModelProvidersFn, {
-    refetchOnWindowFocus: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    ...options,
-  });
+  const queryResult = query(
+    [
+      "useGetModelProviders",
+      params?.includeDeprecated,
+      params?.includeUnsupported,
+    ],
+    getModelProvidersFn,
+    {
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      ...options,
+    },
+  );
 
   return queryResult;
 };
