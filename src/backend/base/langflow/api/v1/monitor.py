@@ -160,6 +160,7 @@ async def delete_messages_session(
 ):
     try:
         await message_crud.delete_by_session_id(session, session_id)
+        await session.commit()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

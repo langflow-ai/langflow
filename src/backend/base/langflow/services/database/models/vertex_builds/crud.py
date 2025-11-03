@@ -127,7 +127,6 @@ async def delete_vertex_builds_by_flow_id(db: AsyncSession, flow_id: UUID) -> No
 
     Note:
         This operation is permanent and cannot be undone. Use with caution.
-        The function commits the transaction automatically.
+        The function does not commit automatically - caller must commit.
     """
     await vertex_build_crud.delete_by_flow_id(db, flow_id)
-    await db.commit()

@@ -279,6 +279,8 @@ class MessageCRUD(BaseCRUD):
     async def delete_by_session_id(self, session: AsyncSession, session_id: str) -> None:
         """Delete all messages for a session.
 
+        Note: This does not commit the transaction. The caller is responsible for committing.
+
         Args:
             session: Database session
             session_id: Session identifier
@@ -289,10 +291,11 @@ class MessageCRUD(BaseCRUD):
             .execution_options(synchronize_session="fetch")
         )
         await session.exec(stmt)
-        await session.commit()
 
     async def delete_by_flow_id(self, session: AsyncSession, flow_id: UUID) -> None:
         """Delete all messages for a flow.
+
+        Note: This does not commit the transaction. The caller is responsible for committing.
 
         Args:
             session: Database session
@@ -300,7 +303,6 @@ class MessageCRUD(BaseCRUD):
         """
         stmt = delete(self.model).where(self.model.flow_id == flow_id)  # type: ignore[attr-defined]
         await session.exec(stmt)
-        await session.commit()
 
 
 class TransactionCRUD(BaseCRUD):
@@ -338,13 +340,14 @@ class TransactionCRUD(BaseCRUD):
     async def delete_by_flow_id(self, session: AsyncSession, flow_id: UUID) -> None:
         """Delete all transactions for a flow.
 
+        Note: This does not commit the transaction. The caller is responsible for committing.
+
         Args:
             session: Database session
             flow_id: Flow identifier
         """
         stmt = delete(self.model).where(self.model.flow_id == flow_id)  # type: ignore[attr-defined]
         await session.exec(stmt)
-        await session.commit()
 
 
 class VertexBuildCRUD(BaseCRUD):
@@ -394,13 +397,14 @@ class VertexBuildCRUD(BaseCRUD):
     async def delete_by_flow_id(self, session: AsyncSession, flow_id: UUID) -> None:
         """Delete all vertex builds for a flow.
 
+        Note: This does not commit the transaction. The caller is responsible for committing.
+
         Args:
             session: Database session
             flow_id: Flow identifier
         """
         stmt = delete(self.model).where(self.model.flow_id == flow_id)  # type: ignore[attr-defined]
         await session.exec(stmt)
-        await session.commit()
 
 
 class FlowCRUD(BaseCRUD):
