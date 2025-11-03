@@ -296,6 +296,11 @@ class Settings(BaseSettings):
     """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax.
     ~=0.1.0.7 allows patch updates (0.1.0.x) but prevents minor/major version changes."""
 
+    # Agentic Experience
+    agentic_experience: bool = True
+    """If set to True, Langflow will start the agentic MCP server that provides tools for
+    flow/component operations, template search, and graph visualization."""
+
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
     """The interval in seconds at which public temporary flows will be cleaned up.
