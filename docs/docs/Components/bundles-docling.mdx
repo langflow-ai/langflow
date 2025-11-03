@@ -71,48 +71,6 @@ For more information, see the [Docling IBM models project repository](https://gi
 | pipeline | String | Docling pipeline to use (standard, vlm). |
 | ocr_engine | String | OCR engine to use (easyocr, tesserocr, rapidocr, ocrmac). |
 
-
-### Docling VLM pipeline with remote model
-
-The **Docling Remote VLM** component uses Docling to process input documents through a Vision Language Model (VLM) pipeline that runs a remote model.
-It supports both **IBM Cloud Watsonx** and **OpenAI-compatible** providers.
-
-This component enables document conversion, such as PDF to text or Markdown, using multimodal models hosted on remote APIs.
-
-It outputs `files`, which are processed files containing `DoclingDocument` data.
-
-For more information, see the [Docling VLM pipeline with API model example](https://docling-project.github.io/docling/examples/vlm_pipeline_api_model/).
-
-#### Docling VLM pipeline parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| files | File | The files to process. |
-| provider | String | Select which remote VLM provider to use (`IBM Cloud` or `OpenAI-Compatible`). |
-| vlm_prompt | String | Prompt text to send to the Vision-Language Model during processing. |
-
-
-##### IBM Cloud parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| watsonx_api_key | Secret String | IBM Cloud API key used for authentication (leave blank to load from `.env`). |
-| watsonx_project_id | String | The Watsonx project ID or deployment space ID associated with the model. |
-| url | String | The base URL of the Watsonx API, such as `https://us-south.ml.cloud.ibm.com`). |
-| model_name | String | Model name from the available Watsonx foundation models list. |
-
-##### OpenAI-Compatible parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| openai_base_url | String | Base URL for the OpenAI-compatible API, such as `https://openrouter.ai/api/`). |
-| openai_api_key | Secret String | API key for OpenAI-compatible endpoints. Leave this field blank if the key is not required. |
-| openai_model | String | Model ID for OpenAI-compatible provider, such as `gpt-4o-mini`). |
-
-
-
-
-
 ### Docling Serve
 
 The **Docling Serve** component runs Docling as an API service.
