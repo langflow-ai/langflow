@@ -207,7 +207,14 @@ export default function ModelInputComponent({
         setRefreshOptions(false);
       }, 2000);
     });
-  }, [value, nodeId, nodeClass, handleNodeClass, postTemplateValue, setErrorData]);
+  }, [
+    value,
+    nodeId,
+    nodeClass,
+    handleNodeClass,
+    postTemplateValue,
+    setErrorData,
+  ]);
 
   // Effects
   useEffect(() => {
