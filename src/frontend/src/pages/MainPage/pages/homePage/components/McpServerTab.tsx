@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { memo, type ReactNode, useCallback, useState } from "react";
+import { memo, type ReactNode, useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
@@ -156,30 +156,37 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const [apiKey, setApiKey] = useState<string>("");
   const [isGeneratingApiKey, setIsGeneratingApiKey] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [isWaitingForComposer, setIsWaitingForComposer] = useState(false);
+  const [showSlowWarning, setShowSlowWarning] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const queryClient = useQueryClient();
 
   const { data: mcpProjectData, isLoading: isLoadingMCPProjectData } =
     useGetFlowsMCP({ projectId });
   const { mutate: patchFlowsMCP, isPending: isPatchingFlowsMCP } =
     usePatchFlowsMCP({ project_id: projectId });
 
-  // Extract tools and auth_settings from the response
   const flowsMCP = mcpProjectData?.tools || [];
   const currentAuthSettings = mcpProjectData?.auth_settings;
 
-  // Only get composer URL for OAuth projects
-  // Disable the query during mutations to prevent stale auth state issues
   const isOAuthProject =
     currentAuthSettings?.auth_type === "oauth" && ENABLE_MCP_COMPOSER;
   const shouldQueryComposerUrl = isOAuthProject && !isPatchingFlowsMCP;
 
-  const { data: composerUrlData } = useGetProjectComposerUrl(
-    {
-      projectId,
-    },
-    { enabled: !!projectId && shouldQueryComposerUrl },
-  );
+  const { data: composerUrlData, isLoading: isLoadingComposerUrl } =
+    useGetProjectComposerUrl(
+      {
+        projectId,
+      },
+      { enabled: !!projectId && shouldQueryComposerUrl },
+    );
+
+  useEffect(() => {
+    if (isWaitingForComposer && !isLoadingComposerUrl && composerUrlData) {
+      setIsWaitingForComposer(false);
+    }
+  }, [isWaitingForComposer, isLoadingComposerUrl, composerUrlData]);
 
   const { mutate: patchInstallMCP } = usePatchInstallMCP({
     project_id: projectId,
@@ -203,7 +210,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     ? currentAuthSettings?.auth_type === "apikey"
     : !isAutoLogin;
 
-  // Check if the current connection is local
   const isLocalConnection = useCustomIsLocalConnection();
 
   const [selectedMode, setSelectedMode] = useState(
@@ -218,8 +224,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       mcp_enabled: flow.status,
     }));
 
-    // Prepare the request with both settings and auth_settings
-    // If ENABLE_MCP_COMPOSER is false, always use "none" for auth_type
     const finalAuthSettings = ENABLE_MCP_COMPOSER
       ? currentAuthSettings
       : { auth_type: "none" };
@@ -247,7 +251,37 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       auth_settings: authSettings,
     };
 
-    patchFlowsMCP(requestData);
+    // Clear cached composer URL data BEFORE making the request to ensure fresh errors are fetched
+    queryClient.removeQueries({
+      queryKey: ["project-composer-url", projectId],
+    });
+
+    // Set waiting state for OAuth before making the request
+    if (authSettings.auth_type === "oauth") {
+      setIsWaitingForComposer(true);
+    }
+
+    patchFlowsMCP(requestData, {
+      onSuccess: () => {
+        // Invalidate the MCP project data to refresh auth settings
+        queryClient.invalidateQueries({
+          queryKey: ["flows-mcp", { projectId }],
+        });
+
+        if (authSettings.auth_type === "oauth") {
+          // Also invalidate composer URL to fetch new OAuth server info
+          queryClient.invalidateQueries({
+            queryKey: ["project-composer-url", projectId],
+          });
+        } else {
+          // Clear waiting state if not OAuth
+          setIsWaitingForComposer(false);
+        }
+      },
+      onError: () => {
+        setIsWaitingForComposer(false);
+      },
+    });
   };
 
   const flowsMCPData = flowsMCP?.map((flow) => ({
@@ -385,11 +419,37 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const [loadingMCP, setLoadingMCP] = useState<string[]>([]);
 
-  // Check if authentication is configured (not "none")
   const hasAuthentication =
-    currentAuthSettings?.auth_type && currentAuthSettings.auth_type !== "none";
+    (currentAuthSettings?.auth_type &&
+      currentAuthSettings.auth_type !== "none") ||
+    isWaitingForComposer;
 
-  const isLoadingMCPProjectAuth = isLoadingMCPProjectData || isPatchingFlowsMCP;
+  const isLoadingMCPProjectAuth =
+    isLoadingMCPProjectData ||
+    isPatchingFlowsMCP ||
+    isWaitingForComposer ||
+    (isOAuthProject && isLoadingComposerUrl);
+
+  // Monitor loading time and show warning after 30s
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+
+    if (isLoadingMCPProjectAuth) {
+      // Start timer when loading begins
+      timer = setTimeout(() => {
+        setShowSlowWarning(true);
+      }, 30000); // 30 seconds
+    } else {
+      // Reset warning when loading completes
+      setShowSlowWarning(false);
+    }
+
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [isLoadingMCPProjectAuth]);
 
   return (
     <div>
@@ -460,21 +520,31 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                 ) : (
                   <ShadTooltip
                     content={
-                      !composerUrlData?.error_message
-                        ? undefined
-                        : `MCP Server is not running: ${composerUrlData?.error_message}`
+                      composerUrlData?.error_message
+                        ? `MCP Server is not running: ${composerUrlData?.error_message}`
+                        : showSlowWarning
+                          ? "MCP Server is taking longer than usual. Please check your credentials and network connection."
+                          : undefined
                     }
                   >
                     <span
                       className={cn(
                         "flex gap-2 text-mmd items-center",
                         isLoadingMCPProjectAuth
-                          ? "text-muted-foreground"
+                          ? showSlowWarning
+                            ? "text-accent-amber-foreground"
+                            : "text-muted-foreground"
                           : !composerUrlData?.error_message
                             ? "text-accent-emerald-foreground"
                             : "text-accent-amber-foreground",
                       )}
                     >
+                      {isLoadingMCPProjectAuth && showSlowWarning && (
+                        <ForwardedIconComponent
+                          name="AlertTriangle"
+                          className="h-4 w-4 shrink-0"
+                        />
+                      )}
                       <ForwardedIconComponent
                         name={
                           isLoadingMCPProjectAuth
@@ -491,8 +561,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                       {isLoadingMCPProjectAuth
                         ? "Loading..."
                         : AUTH_METHODS[
-                            currentAuthSettings.auth_type as keyof typeof AUTH_METHODS
-                          ]?.label || currentAuthSettings.auth_type}
+                            currentAuthSettings?.auth_type as keyof typeof AUTH_METHODS
+                          ]?.label || currentAuthSettings?.auth_type}
                     </span>
                   </ShadTooltip>
                 )}
