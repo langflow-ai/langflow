@@ -1,23 +1,23 @@
-import { useState } from 'react';
-import { ForwardedIconComponent } from '@/components/common/genericIconComponent';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion';
-import { PROVIDER_VARIABLE_MAPPING } from '@/constants/providerConstants';
-import { useGetModelProviders } from '@/controllers/API/queries/models/use-get-model-providers';
+} from "@/components/ui/accordion";
+import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
+import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
-} from '@/controllers/API/queries/variables';
-import ApiKeyModal from '@/modals/apiKeyModal';
-import DeleteConfirmationModal from '@/modals/deleteConfirmationModal';
-import useAlertStore from '@/stores/alertStore';
-import { cn } from '@/utils/utils';
-import { Checkbox } from '@/components/ui/checkbox';
+} from "@/controllers/API/queries/variables";
+import ApiKeyModal from "@/modals/apiKeyModal";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import useAlertStore from "@/stores/alertStore";
+import { cn } from "@/utils/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type Provider = {
   provider: string;
@@ -27,12 +27,12 @@ type Provider = {
   models?: { model_name: string; metadata: Record<string, any> }[];
 };
 
-const Providers = ({ type }: { type: 'enabled' | 'available' }) => {
+const Providers = ({ type }: { type: "enabled" | "available" }) => {
   const { data: providersData = [], isLoading } = useGetModelProviders();
   const { data: globalVariables } = useGetGlobalVariables();
   const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
-  const setErrorData = useAlertStore(state => state.setErrorData);
-  const setSuccessData = useAlertStore(state => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const [openApiKeyDialog, setOpenApiKeyDialog] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
@@ -45,17 +45,17 @@ const Providers = ({ type }: { type: 'enabled' | 'available' }) => {
     const variableName = PROVIDER_VARIABLE_MAPPING[providerName];
     if (!variableName) {
       setErrorData({
-        title: 'Error deleting provider',
-        list: ['Provider variable mapping not found'],
+        title: "Error deleting provider",
+        list: ["Provider variable mapping not found"],
       });
       return;
     }
 
-    const variable = globalVariables.find(v => v.name === variableName);
+    const variable = globalVariables.find((v) => v.name === variableName);
     if (!variable?.id) {
       setErrorData({
-        title: 'Error deleting provider',
-        list: ['API key not found for this provider'],
+        title: "Error deleting provider",
+        list: ["API key not found for this provider"],
       });
       return;
     }
@@ -72,20 +72,20 @@ const Providers = ({ type }: { type: 'enabled' | 'available' }) => {
         },
         onError: () => {
           setErrorData({
-            title: 'Error deleting provider',
-            list: ['Failed to remove API key'],
+            title: "Error deleting provider",
+            list: ["Failed to remove API key"],
           });
         },
-      }
+      },
     );
   };
 
   // Filter providers based on enabled status
   const filteredProviders: Provider[] = providersData
-    .filter(provider => {
-      return type === 'enabled' ? provider.is_enabled : !provider.is_enabled;
+    .filter((provider) => {
+      return type === "enabled" ? provider.is_enabled : !provider.is_enabled;
     })
-    .map(provider => ({
+    .map((provider) => ({
       provider: provider.provider,
       icon: provider.icon,
       is_enabled: provider.is_enabled,
@@ -104,7 +104,7 @@ const Providers = ({ type }: { type: 'enabled' | 'available' }) => {
           {type.charAt(0).toUpperCase() + type.slice(1)}
         </h2>
         <Accordion type="multiple">
-          {filteredProviders.map(provider => (
+          {filteredProviders.map((provider) => (
             <AccordionItem
               key={provider.provider}
               value={provider.provider}
@@ -112,20 +112,20 @@ const Providers = ({ type }: { type: 'enabled' | 'available' }) => {
             >
               <div
                 className={cn(
-                  'flex items-center my-2 py-1 relative hover:bg-transparent'
+                  "flex items-center my-2 py-1 relative hover:bg-transparent",
                 )}
               >
                 <ForwardedIconComponent
-                  name={provider.icon || 'Bot'}
+                  name={provider.icon || "Bot"}
                   className="w-4 h-4 mx-3"
                 />
 
                 <AccordionTrigger
                   className={cn(
-                    'flex-1 py-0 hover:no-underline hover:bg-transparent',
+                    "flex-1 py-0 hover:no-underline hover:bg-transparent",
                     provider.model_count && provider.model_count > 0
-                      ? ''
-                      : 'pointer-events-none'
+                      ? ""
+                      : "pointer-events-none",
                   )}
                   disabled={!provider.model_count || provider.model_count === 0}
                 >
@@ -136,29 +136,30 @@ const Providers = ({ type }: { type: 'enabled' | 'available' }) => {
                     {provider.model_count && (
                       <p
                         className={cn(
-                          'text-muted-foreground pr-2',
-                          type === 'enabled' && 'text-accent-emerald-foreground'
+                          "text-muted-foreground pr-2",
+                          type === "enabled" &&
+                            "text-accent-emerald-foreground",
                         )}
                       >
-                        {provider.model_count}{' '}
-                        {provider.model_count === 1 ? 'model' : 'models'}
+                        {provider.model_count}{" "}
+                        {provider.model_count === 1 ? "model" : "models"}
                       </p>
                     )}
                   </div>
                 </AccordionTrigger>
 
                 <div className="flex items-center ml-auto">
-                  {type === 'enabled' ? (
+                  {type === "enabled" ? (
                     <DeleteConfirmationModal
                       open={
                         deleteDialogOpen &&
                         providerToDelete === provider.provider
                       }
-                      setOpen={open => {
+                      setOpen={(open) => {
                         setDeleteDialogOpen(open);
                         if (!open) setProviderToDelete(null);
                       }}
-                      onConfirm={e => {
+                      onConfirm={(e) => {
                         e.stopPropagation();
                         if (providerToDelete) {
                           handleDeleteProvider(providerToDelete);
@@ -170,7 +171,7 @@ const Providers = ({ type }: { type: 'enabled' | 'available' }) => {
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={e => {
+                        onClick={(e) => {
                           e.stopPropagation();
                           setProviderToDelete(provider.provider);
                           setDeleteDialogOpen(true);
@@ -187,7 +188,7 @@ const Providers = ({ type }: { type: 'enabled' | 'available' }) => {
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={e => {
+                      onClick={(e) => {
                         e.stopPropagation();
                         setOpenApiKeyDialog(true);
                         setSelectedProvider(provider.provider);
@@ -215,13 +216,13 @@ const Providers = ({ type }: { type: 'enabled' | 'available' }) => {
                           <Checkbox
                             checked={true}
                             onCheckedChange={() => {}}
-                            disabled={type === 'available'}
+                            disabled={type === "available"}
                           />
                         ) : (
                           <div className="mr-4" />
                         )}
                         <div
-                          className={cn('text-sm py-1 pr-2 pl-5 font-medium')}
+                          className={cn("text-sm py-1 pr-2 pl-5 font-medium")}
                         >
                           {model.model_name}
                         </div>
@@ -236,7 +237,7 @@ const Providers = ({ type }: { type: 'enabled' | 'available' }) => {
                           </div>
                         )}
 
-                        {model.metadata.model_type === 'embeddings' && (
+                        {model.metadata.model_type === "embeddings" && (
                           <div className="flex items-center space-x-1 text-muted-foreground">
                             •
                             <ForwardedIconComponent
@@ -273,7 +274,7 @@ const Providers = ({ type }: { type: 'enabled' | 'available' }) => {
       <ApiKeyModal
         open={openApiKeyDialog}
         onClose={() => setOpenApiKeyDialog(false)}
-        provider={selectedProvider || 'Provider'}
+        provider={selectedProvider || "Provider"}
       />
     </>
   );

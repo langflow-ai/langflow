@@ -1,6 +1,6 @@
 from typing import Any
 
-from lfx.base.models.unified_models import get_language_model_options, get_model_classes
+from lfx.base.models.unified_models import get_language_model_options, get_llm
 from lfx.custom import Component
 from lfx.io import (
     BoolInput,
@@ -175,7 +175,7 @@ class SmartRouterComponent(Component):
 
         # Find the matching category using LLM-based categorization
         matched_category = None
-        llm = self.get_llm()
+        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
 
         if llm and categories:
             # Create prompt for categorization
@@ -311,38 +311,6 @@ class SmartRouterComponent(Component):
         self.status = "No match found and Else output is disabled"
         return Message(text="")
 
-    def get_llm(self):
-        """Get the LLM model from the selected model input."""
-        model_selection = self.model[0]
-        model_name = model_selection.get("name")
-        provider = model_selection.get("provider")
-        metadata = model_selection.get("metadata", {})
-
-        # Get model class and parameters from metadata
-        model_class = get_model_classes().get(metadata.get("model_class"))
-        if model_class is None:
-            msg = f"No model class defined for {model_name}"
-            raise ValueError(msg)
-
-        api_key_param = metadata.get("api_key_param", "api_key")
-        model_name_param = metadata.get("model_name_param", "model")
-
-        # Get API key from global variables
-        from lfx.base.models.unified_models import get_api_key_for_provider
-
-        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
-
-        if not api_key and provider != "Ollama":
-            msg = f"{provider} API key is required. Please configure it globally."
-            raise ValueError(msg)
-
-        # Instantiate the model
-        kwargs = {
-            model_name_param: model_name,
-            api_key_param: api_key,
-        }
-        return model_class(**kwargs)
-
     def default_response(self) -> Message:
         """Handle the else case when no conditions match."""
         # Check if else output is enabled
@@ -369,7 +337,7 @@ class SmartRouterComponent(Component):
 
         # Check if any category matches using LLM categorization
         has_match = False
-        llm = self.get_llm()
+        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
 
         if llm and categories:
             try:

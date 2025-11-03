@@ -71,7 +71,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
             pytest.skip("GOOGLE_API_KEY environment variable not set")
         return api_key
 
-    @patch("lfx.components.models.language_model.get_model_classes")
+    @patch("lfx.base.models.unified_models.get_model_classes")
     async def test_openai_model_creation(self, mock_get_model_classes, component_class, default_kwargs):
         """Test that the component returns an instance of ChatOpenAI for OpenAI provider."""
         # Setup mock
@@ -105,7 +105,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         assert call_kwargs["api_key"] == "sk-test-key"
         assert model == mock_instance
 
-    @patch("lfx.components.models.language_model.get_model_classes")
+    @patch("lfx.base.models.unified_models.get_model_classes")
     async def test_anthropic_model_creation(self, mock_get_model_classes, component_class):
         """Test that the component returns an instance of ChatAnthropic for Anthropic provider."""
         # Setup mock
@@ -152,7 +152,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         assert call_kwargs["api_key"] == "sk-ant-test-key"
         assert model == mock_instance
 
-    @patch("lfx.components.models.language_model.get_model_classes")
+    @patch("lfx.base.models.unified_models.get_model_classes")
     async def test_google_model_creation(self, mock_get_model_classes, component_class):
         """Test that the component returns an instance of ChatGoogleGenerativeAI for Google provider."""
         # Setup mock
@@ -287,7 +287,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="No model class defined for test-model"):
             component.build_model()
 
-    @patch("lfx.components.models.language_model.get_model_classes")
+    @patch("lfx.base.models.unified_models.get_model_classes")
     async def test_reasoning_model_no_temperature(self, mock_get_model_classes, component_class):
         """Test that reasoning models don't include temperature parameter."""
         # Setup mock

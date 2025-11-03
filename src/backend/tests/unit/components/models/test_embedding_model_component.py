@@ -46,16 +46,25 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         """Return the file names mapping for version-specific files."""
         return []
 
-    @patch("lfx.components.models.embedding_model.EMBEDDING_CLASSES")
-    async def test_build_embeddings_openai(self, mock_embedding_classes, component_class, default_kwargs):
+    @patch("lfx.components.models.embedding_model.get_api_key_for_provider")
+    @patch("lfx.components.models.embedding_model.get_embedding_classes")
+    async def test_build_embeddings_openai(
+        self, mock_get_embedding_classes, mock_get_api_key, component_class, default_kwargs
+    ):
+        # Setup mock for get_api_key_for_provider
+        mock_get_api_key.return_value = "test-key"
+
         # Setup mock
         mock_openai_class = MagicMock()
         mock_instance = MagicMock()
         mock_openai_class.return_value = mock_instance
-        mock_embedding_classes.get.return_value = mock_openai_class
+        mock_embedding_classes_dict = MagicMock()
+        mock_embedding_classes_dict.get.return_value = mock_openai_class
+        mock_get_embedding_classes.return_value = mock_embedding_classes_dict
 
         # Create and configure the component
         component = component_class(**default_kwargs)
+        component._user_id = "test-user-id"
         component.api_key = "test-key"
         component.chunk_size = 1000
         component.max_retries = 3
@@ -69,7 +78,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         embeddings = component.build_embeddings()
 
         # Verify the embedding class getter was called
-        mock_embedding_classes.get.assert_called_once_with("OpenAIEmbeddings")
+        mock_embedding_classes_dict.get.assert_called_once_with("OpenAIEmbeddings")
 
         # Verify the OpenAIEmbeddings was called with the correct parameters
         mock_openai_class.assert_called_once_with(
@@ -111,13 +120,19 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         with pytest.raises(ValueError, match="Unknown embedding class: UnknownEmbeddingClass"):
             component.build_embeddings()
 
-    @patch("lfx.components.models.embedding_model.EMBEDDING_CLASSES")
-    async def test_build_embeddings_google(self, mock_embedding_classes, component_class):
+    @patch("lfx.components.models.embedding_model.get_api_key_for_provider")
+    @patch("lfx.components.models.embedding_model.get_embedding_classes")
+    async def test_build_embeddings_google(self, mock_get_embedding_classes, mock_get_api_key, component_class):
+        # Setup mock for get_api_key_for_provider
+        mock_get_api_key.return_value = "test-google-key"
+
         # Setup mock
         mock_google_class = MagicMock()
         mock_instance = MagicMock()
         mock_google_class.return_value = mock_instance
-        mock_embedding_classes.get.return_value = mock_google_class
+        mock_embedding_classes_dict = MagicMock()
+        mock_embedding_classes_dict.get.return_value = mock_google_class
+        mock_get_embedding_classes.return_value = mock_embedding_classes_dict
 
         # Create component with Google configuration
         component = component_class(
@@ -138,6 +153,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
             ],
             api_key="test-google-key",
         )
+        component._user_id = "test-user-id"
         component.api_base = None
         component.dimensions = None
         component.chunk_size = None
@@ -150,7 +166,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         embeddings = component.build_embeddings()
 
         # Verify the embedding class getter was called
-        mock_embedding_classes.get.assert_called_once_with("GoogleGenerativeAIEmbeddings")
+        mock_embedding_classes_dict.get.assert_called_once_with("GoogleGenerativeAIEmbeddings")
 
         # Verify the GoogleGenerativeAIEmbeddings was called with the correct parameters
         mock_google_class.assert_called_once_with(
