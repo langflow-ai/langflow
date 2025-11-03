@@ -350,7 +350,48 @@ async def simple_run_flow_task(
 
         # Emit end event if UI is listening
         if emit_events and webhook_event_mgr and flow_id:
-            await webhook_event_mgr.emit(flow_id, "end", {"run_id": run_id, "success": True})
+            # Fetch complete vertex builds from database to include duration and full outputs
+            vertex_builds_map = None
+            try:
+                from uuid import UUID
+                from langflow.services.database.models.vertex_builds.crud import get_vertex_builds_by_flow_id
+                from langflow.services.database.models.vertex_builds.model import VertexBuildMapModel
+                from langflow.services.deps import get_db_service
+
+                db_service = get_db_service()
+                if db_service:
+                    async with db_service.with_async_session() as session:
+                        flow_uuid = UUID(flow_id) if isinstance(flow_id, str) else flow_id
+                        vertex_builds = await get_vertex_builds_by_flow_id(session, flow_uuid)
+                        vertex_builds_model = VertexBuildMapModel.from_list_of_dicts(vertex_builds)
+
+                        # Convert to dict format expected by frontend
+                        vertex_builds_map = {}
+                        for vertex_id, builds in vertex_builds_model.vertex_builds.items():
+                            vertex_builds_map[vertex_id] = [
+                                {
+                                    "id": build.id,
+                                    "valid": build.valid,
+                                    "params": build.params,
+                                    "data": build.data,
+                                    "artifacts": build.artifacts,
+                                    "timestamp": build.timestamp.isoformat() if build.timestamp else None,
+                                }
+                                for build in builds
+                            ]
+
+                        await logger.adebug(f"Fetched {len(vertex_builds_map)} vertex builds for flow {flow_id}")
+            except Exception as e:
+                await logger.aerror(f"Error fetching vertex builds for event: {e}")
+
+            event_data = {
+                "run_id": run_id,
+                "success": True,
+            }
+            if vertex_builds_map:
+                event_data["vertex_builds"] = vertex_builds_map
+
+            await webhook_event_mgr.emit(flow_id, "end", event_data)
 
         if telemetry_service and start_time is not None:
             await telemetry_service.log_package_run(

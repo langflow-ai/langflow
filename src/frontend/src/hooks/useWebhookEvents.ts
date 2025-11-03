@@ -185,21 +185,27 @@ export function useWebhookEvents() {
         console.log("[useWebhookEvents] All components built successfully");
         setBuildInfo({ success: true });
 
-        // Fetch complete builds (with duration and outputs) from backend
-        if (currentFlow?.id) {
-          try {
-            console.log("[useWebhookEvents] Fetching complete builds for flow:", currentFlow.id);
-            const response = await api.get(`${getURL("BUILDS")}`, {
-              params: { flow_id: currentFlow.id }
-            });
+        // Use vertex_builds from event if available (includes duration and full outputs)
+        if (data.vertex_builds) {
+          console.log("[useWebhookEvents] Setting flow pool with build data from event:", Object.keys(data.vertex_builds).length, "vertices");
+          setFlowPool(data.vertex_builds);
+        } else {
+          // Fallback: fetch complete builds from backend if not in event
+          if (currentFlow?.id) {
+            try {
+              console.log("[useWebhookEvents] Fetching complete builds for flow:", currentFlow.id);
+              const response = await api.get(`${getURL("BUILDS")}`, {
+                params: { flow_id: currentFlow.id }
+              });
 
-            if (response?.data?.vertex_builds) {
-              const flowPool = response.data.vertex_builds;
-              console.log("[useWebhookEvents] Setting flow pool with build data:", Object.keys(flowPool).length, "vertices");
-              setFlowPool(flowPool);
+              if (response?.data?.vertex_builds) {
+                const flowPool = response.data.vertex_builds;
+                console.log("[useWebhookEvents] Setting flow pool with build data from API:", Object.keys(flowPool).length, "vertices");
+                setFlowPool(flowPool);
+              }
+            } catch (error) {
+              console.error("[useWebhookEvents] Error fetching builds:", error);
             }
-          } catch (error) {
-            console.error("[useWebhookEvents] Error fetching builds:", error);
           }
         }
       } else {
