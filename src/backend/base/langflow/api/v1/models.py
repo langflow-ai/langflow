@@ -175,7 +175,7 @@ async def _get_disabled_models(session: DbSession, current_user: CurrentActiveUs
 
     all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
     for var in all_variables:
-        if var.name == DISABLED_MODELS_VAR:
+        if var.name == DISABLED_MODELS_VAR and var.value is not None:
             try:
                 return set(json.loads(var.value))
             except (json.JSONDecodeError, TypeError):
