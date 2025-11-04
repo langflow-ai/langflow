@@ -353,7 +353,7 @@ class AzureDocumentIntelligenceComponent(BaseFileComponent):
             with open(file_path, "rb") as file:
                 file_content = file.read()
 
-            extracted_content, plain_text = await ocr_service.process_document(
+            extracted_content,plain_text,document_uuid  = await ocr_service.process_document(
                 file_content=file_content,
                 model_type=self.model_type,
                 include_confidence=self.include_confidence,
@@ -365,6 +365,7 @@ class AzureDocumentIntelligenceComponent(BaseFileComponent):
                 data={
                     self.SERVER_FILE_PATH_FIELDNAME: str(file_path),
                     "result": extracted_content,
+                    "document_uuid":document_uuid
                 },
             )
 

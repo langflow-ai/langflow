@@ -3,6 +3,7 @@ from langchain_community.vectorstores import Qdrant
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
+from langflow.inputs.inputs import MessageTextInput
 from langflow.io import (
     DropdownInput,
     HandleInput,
@@ -11,6 +12,7 @@ from langflow.io import (
     StrInput,
 )
 from langflow.schema.data import Data
+import uuid
 
 
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
@@ -20,6 +22,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
     inputs = [
         StrInput(name="collection_name", display_name="Collection Name", required=True),
+        MessageTextInput(name="document_uuid", display_name="Document UUID", required=False,tool_mode=True),
         StrInput(name="host", display_name="Host", value="localhost", advanced=True),
         IntInput(name="port", display_name="Port", value=6333, advanced=True),
         IntInput(name="grpc_port", display_name="gRPC Port", value=6334, advanced=True),
@@ -45,6 +48,13 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             info="Number of results to return.",
             value=4,
             advanced=True,
+        ),
+        BoolInput(
+            name="return_doc_uuids",
+            display_name="Return Document UUIDs",
+            value=True,
+            advanced=True,
+            info="will return list of unique document ids",
         ),
     ]
 
@@ -75,8 +85,17 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
         documents = []
         for _input in self.ingest_data or []:
+            # document_uuid = str(uuid.uuid4())
+
             if isinstance(_input, Data):
-                documents.append(_input.to_lc_document())
+                if _input.model_dump().get('data',{}).get('result',[]):
+                    for page in _input.model_dump().get('data',{}).get('result',[]):
+                        # page['document_uuid'] =document_uuid
+                        page = Data(data=page)
+                        documents.append(page.to_lc_document())
+                else:
+                    # _input.document_uuid = document_uuid
+                    documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
 
@@ -96,14 +115,29 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
     def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
-
+        base_filter: Dict = {"document_uuid": self.document_uuid}
+        print(f'base filter {base_filter}')
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
                 query=self.search_query,
                 k=self.number_of_results,
+                filter = base_filter
             )
-
             data = docs_to_data(docs)
+            # logger.warning(f'from qdrant db : {data[0].model_dump()['data']}')
             self.status = data
+            if self.return_doc_uuids:
+                
+                new_data=[]
+                for page in data:
+                    x=page.model_dump()['data']
+                    x = x['document_uuid']
+                    page=Data(text=x)
+                    new_data.append(page)
+                return new_data
+                # x= data[0].model_dump()['data']
+                # logger.warning(f'qdrant logs : {(x['document_uuid'])}')
+                # data = [item['document_uuid'] for item in x]
+                # data =x['document_uuid']
             return data
         return []

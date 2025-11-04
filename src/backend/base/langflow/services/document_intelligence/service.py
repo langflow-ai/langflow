@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+import uuid
 
 try:
     from azure.ai.formrecognizer import DocumentAnalysisClient
@@ -110,7 +111,32 @@ class DocumentIntelligenceService(Service):
 
             # Initialize pages
             pages_data = {}
+            document_uuid = str(uuid.uuid4())
             for page in result.pages:
+                chunks_metadata=[]
+                for _, line in enumerate(page.lines):
+                    chunk_uuid = str(uuid.uuid4())
+                    
+                    # Extract all metadata from OCR
+                    chunk_metadata = {
+                        "chunk_uuid": chunk_uuid,
+                        "content": line.content,
+                        "text": line.content,  # Alias
+                        
+                        # Character offsets in the original document
+                        "begin_offset": line.spans[0].offset if line.spans else 0,
+                        "end_offset": line.spans[0].offset + line.spans[0].length if line.spans else len(line.content),
+                        
+                        # Bounding box coordinates (from OCR)
+                        "bounding_region": {
+                            "page_number": page.page_number,
+                            "polygon": [
+                                {"x": point.x, "y": point.y} 
+                                for point in line.polygon  # ← Use line.polygon, not line.bounding_regions
+                            ] if hasattr(line, 'polygon') and line.polygon else []
+                        }
+                    }
+                    chunks_metadata.append(chunk_metadata)
                 pages_data[page.page_number] = {
                     "page_number": page.page_number,
                     "text": [],
@@ -119,8 +145,9 @@ class DocumentIntelligenceService(Service):
                     "width": page.width if hasattr(page, 'width') else None,
                     "height": page.height if hasattr(page, 'height') else None,
                     "unit": page.unit if hasattr(page, 'unit') else None,
+                    "chunks_metadata":chunks_metadata,
+                    "document_uuid":document_uuid
                 }
-
             # Extract text content for each page
             for page in result.pages:
                 page_text = []
@@ -203,6 +230,9 @@ class DocumentIntelligenceService(Service):
                     "width": page_data.get("width"),
                     "height": page_data.get("height"),
                     "unit": page_data.get("unit"),
+                    "chunks_metadata": page_data.get("chunks_metadata"),
+                    "document_uuid": page_data.get("document_uuid")
+
                 }
                 for page_num, page_data in sorted(pages_data.items())
             ]
@@ -211,7 +241,7 @@ class DocumentIntelligenceService(Service):
             plain_text_pages = [page["text"] for page in structured_pages]
             plain_text = "\n=== END OF PAGE ===\n".join(plain_text_pages)
 
-            return structured_pages, plain_text
+            return structured_pages, plain_text,document_uuid
 
         except Exception as e:
             logger.error(f"Error processing document: {e!s}")
