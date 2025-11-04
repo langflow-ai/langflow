@@ -49,8 +49,6 @@ on:
         type: boolean
         default: true
 
-
-
 jobs:
   echo-inputs:
     name: Echo Workflow Inputs
@@ -75,7 +73,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0 # Fetch all history - required for tags (?) 
+          fetch-depth: 0 # Fetch all history - required for tags (?)
       - name: Validate that input is a tag, not a branch
         run: |
           # Check if the input exists as a tag
@@ -128,7 +126,6 @@ jobs:
       run-all-tests: true
       runs-on: ubuntu-latest
     secrets: inherit
-
 
   build-base:
     name: Build Langflow Base
@@ -293,7 +290,6 @@ jobs:
       base-artifact-name: "dist-base"
       main-artifact-name: "dist-main"
       lfx-artifact-name: "${{ inputs.release_lfx && 'dist-lfx' || '' }}"
-
 
   publish-base:
     name: Publish Langflow Base to PyPI
@@ -462,6 +458,30 @@ jobs:
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
+  call_docker_build_main_backend:
+    name: Call Docker Build Workflow for Langflow Backend
+    if: ${{ inputs.build_docker_main }}
+    needs: [ci]
+    uses: ./.github/workflows/docker-build-v2.yml
+    with:
+      ref: ${{ inputs.release_tag }}
+      release_type: main-backend
+      pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
+    secrets: inherit
+
+  call_docker_build_main_frontend:
+    name: Call Docker Build Workflow for Langflow Frontend
+    if: ${{ inputs.build_docker_main }}
+    needs: [ci]
+    uses: ./.github/workflows/docker-build-v2.yml
+    with:
+      ref: ${{ inputs.release_tag }}
+      release_type: main-frontend
+      pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
+    secrets: inherit
+
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
     if: ${{ inputs.build_docker_main }}
@@ -485,8 +505,6 @@ jobs:
       pre_release: ${{ inputs.pre_release }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
-
-
 
   create_release:
     name: Create Release
