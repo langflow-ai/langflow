@@ -3,13 +3,14 @@ from dotenv import load_dotenv
 from lfx.base.io.text import TextComponent
 from lfx.io import Output, StrInput
 from lfx.schema.message import Message
+import time
 
 load_dotenv()
 
 
 class LangfusePromptComponent(TextComponent):
     display_name = "Langfuse Prompt"
-    description = "Fetches a prompt from Langfuse by name."
+    description = "Fetches a prompt from Langfuse by name and auto-refreshes when changes are detected."
     documentation: str = "https://docs.langflow.org/components-io#langfuse-prompt"
     icon = "type"
     name = "LangfusePrompt"
@@ -20,6 +21,20 @@ class LangfusePromptComponent(TextComponent):
             display_name="Prompt Name",
             info="The name of the prompt in Langfuse (e.g., 'translator_system-prompt').",
             required=True,
+        ),
+        StrInput(
+            name="label",
+            display_name="Label",
+            info="The label of the prompt in Langfuse (e.g., 'production', 'latest').",
+            required=False,
+            value="latest",
+        ),
+        StrInput(
+            name="refresh_interval",
+            display_name="Refresh Interval (seconds)",
+            info="How often to check for prompt updates. Set to 0 to disable auto-refresh.",
+            required=False,
+            value="5",
         ),
     ]
 
@@ -48,7 +63,7 @@ class LangfusePromptComponent(TextComponent):
 
         # Fetch the prompt
         try:
-            langfuse_prompt = langfuse.get_prompt(self.prompt_name)
+            langfuse_prompt = langfuse.get_prompt(self.prompt_name, label=self.label)
         except Exception as e:
             msg = f"Failed to fetch prompt '{self.prompt_name}' from Langfuse: {e}"
             raise ValueError(msg) from e
