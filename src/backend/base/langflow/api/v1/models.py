@@ -371,9 +371,7 @@ async def set_default_model(
             detail="Variable service is not an instance of DatabaseVariableService",
         )
 
-    var_name = (
-        DEFAULT_LANGUAGE_MODEL_VAR if request.model_type == "language" else DEFAULT_EMBEDDING_MODEL_VAR
-    )
+    var_name = DEFAULT_LANGUAGE_MODEL_VAR if request.model_type == "language" else DEFAULT_EMBEDDING_MODEL_VAR
 
     # Prepare the model data
     model_data = {
@@ -436,7 +434,9 @@ async def clear_default_model(
 
     if existing_var:
         try:
-            await variable_service.delete_variable(user_id=current_user.id, variable_id=existing_var.id, session=session)
+            await variable_service.delete_variable(
+                user_id=current_user.id, variable_id=existing_var.id, session=session
+            )
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
 
