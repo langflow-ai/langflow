@@ -143,17 +143,14 @@ async def log_vertex_build(
     flow_id: str | UUID,
     vertex_id: str,
     valid: bool,
-    params: Any,  # noqa: ARG001
-    data: dict | Any,  # noqa: ARG001
-    artifacts: dict | None = None,  # noqa: ARG001
+    params: Any,
+    data: dict | Any,
+    artifacts: dict | None = None,
 ) -> None:
     """Asynchronously logs a vertex build record if vertex build storage is enabled.
 
     This is a lightweight implementation that only logs if database service is available.
     """
-    # DEBUG: Always print to see if function is called
-    print(f"[DEBUG] log_vertex_build called: vertex={vertex_id}, flow={flow_id}")
-
     try:
         settings_service = get_settings_service()
         if not settings_service or not getattr(settings_service.settings, "vertex_builds_storage_enabled", False):
@@ -173,27 +170,29 @@ async def log_vertex_build(
 
         # Call Langflow's crud.py to save build to database
         try:
-            from langflow.services.database.models.vertex_builds import crud as vertex_builds_crud
-            from langflow.services.database.models.vertex_builds.model import VertexBuildBase
             from datetime import datetime, timezone
 
-            async with db_service.with_async_session() as session:
+            from langflow.services.database.models.vertex_builds import crud as vertex_builds_crud
+            from langflow.services.database.models.vertex_builds.model import VertexBuildBase
+
+            async with db_service.with_session() as session:
+                # Convert ResultData to dict if it's a Pydantic model
+                data_to_save = (
+                    data.model_dump() if hasattr(data, "model_dump") else (data if isinstance(data, dict) else {})
+                )
+
                 vertex_build = VertexBuildBase(
                     id=vertex_id,
                     flow_id=flow_id,
                     valid=valid,
                     params=str(params) if params else None,
-                    data=data if isinstance(data, dict) else {},
+                    data=data_to_save,
                     artifacts=artifacts or {},
                     timestamp=datetime.now(timezone.utc),
                 )
                 await vertex_builds_crud.log_vertex_build(session, vertex_build)
-                logger.debug(f"Vertex build saved to database: vertex={vertex_id}, flow={flow_id}, valid={valid}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Error saving vertex build to database: {e}")
-
-        # Log basic vertex build info
-        logger.debug(f"Vertex build logged: vertex={vertex_id}, flow={flow_id}, valid={valid}")
 
         # Emit SSE events for webhook real-time feedback if UI is connected
         try:
@@ -202,22 +201,22 @@ async def log_vertex_build(
             flow_id_str = str(flow_id)
             has_listeners = webhook_event_manager.has_listeners(flow_id_str)
 
-            logger.debug(f"LFX log_vertex_build: vertex={vertex_id}, flow={flow_id_str}, has_listeners={has_listeners}")
-
             if has_listeners:
-                logger.debug(f"Emitting end_vertex for {vertex_id}")
-
                 # Convert complex objects to JSON-serializable format
                 try:
                     # Try to extract simple data, avoid complex objects
                     simple_data = {}
                     if isinstance(data, dict):
                         # Only include string/number/bool values
-                        simple_data = {k: v for k, v in data.items() if isinstance(v, (str, int, float, bool, type(None)))}
+                        simple_data = {
+                            k: v for k, v in data.items() if isinstance(v, (str, int, float, bool, type(None)))
+                        }
 
                     simple_artifacts = {}
                     if isinstance(artifacts, dict):
-                        simple_artifacts = {k: v for k, v in artifacts.items() if isinstance(v, (str, int, float, bool, type(None)))}
+                        simple_artifacts = {
+                            k: v for k, v in artifacts.items() if isinstance(v, (str, int, float, bool, type(None)))
+                        }
                 except Exception as e:  # noqa: BLE001
                     logger.debug(f"Error simplifying data for SSE: {e}")
                     simple_data = {}
@@ -236,9 +235,9 @@ async def log_vertex_build(
                         }
                     },
                 )
-                logger.debug(f"end_vertex emitted for {vertex_id}")
-        except Exception as e:  # noqa: BLE001
-            logger.error(f"Error emitting SSE event from LFX: {e}")
+        except Exception:  # noqa: BLE001, S110
+            # Silently fail SSE emission - not critical
+            pass
     except Exception:  # noqa: BLE001
         logger.debug("Error logging vertex build")
 

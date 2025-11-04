@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
@@ -208,8 +209,7 @@ async def simple_run_flow_task(
     emit_events: bool = False,
     flow_id: str | None = None,
 ):
-    """
-    Run a flow task as a BackgroundTask, therefore it should not throw exceptions.
+    """Run a flow task as a BackgroundTask, therefore it should not throw exceptions.
 
     Args:
         flow: The flow to execute
@@ -235,8 +235,9 @@ async def simple_run_flow_task(
     try:
         # Create event manager that forwards graph events to webhook SSE
         if emit_events and webhook_event_mgr and event_manager is None:
-            from lfx.events.event_manager import create_default_event_manager
             from queue import Queue
+
+            from lfx.events.event_manager import create_default_event_manager
 
             await logger.adebug(f"Creating EventManager bridge for flow {flow_id}")
 
@@ -263,7 +264,7 @@ async def simple_run_flow_task(
                         try:
                             # Use asyncio.to_thread to avoid blocking the event loop
                             try:
-                                event_id, event_data, timestamp = await asyncio.to_thread(
+                                _event_id, event_data, _timestamp = await asyncio.to_thread(
                                     event_queue.get, timeout=0.1
                                 )
 
@@ -279,7 +280,7 @@ async def simple_run_flow_task(
                             except Empty:
                                 # No events in queue, small sleep
                                 await asyncio.sleep(0.01)
-                        except Exception as exc:
+                        except Exception as exc:  # noqa: BLE001
                             await logger.aexception(f"Error forwarding event: {exc}")
 
                     # Flush remaining events after stop signal
@@ -287,9 +288,7 @@ async def simple_run_flow_task(
                     flushed = 0
                     while True:
                         try:
-                            event_id, event_data, timestamp = await asyncio.to_thread(
-                                event_queue.get_nowait
-                            )
+                            _event_id, event_data, _timestamp = await asyncio.to_thread(event_queue.get_nowait)
                             parsed = json.loads(event_data.decode("utf-8"))
                             event_type = parsed.get("event")
                             data = parsed.get("data")
@@ -298,15 +297,17 @@ async def simple_run_flow_task(
                         except Empty:
                             # Queue is empty, done flushing
                             break
-                        except Exception as exc:
+                        except Exception as exc:  # noqa: BLE001
                             await logger.aexception(f"Error flushing event: {exc}")
                             break
 
-                    await logger.adebug(f"Event forwarder completed: {events_forwarded + flushed} total events forwarded")
+                    await logger.adebug(
+                        f"Event forwarder completed: {events_forwarded + flushed} total events forwarded"
+                    )
 
                 except asyncio.CancelledError:
                     await logger.adebug("Event forwarder task cancelled")
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001
                     await logger.aexception(f"Event forwarder task error: {exc}")
 
             # Start forwarder task in background
@@ -334,7 +335,7 @@ async def simple_run_flow_task(
                     "ids": vertex_ids,
                     "to_run": vertex_ids,
                     "timestamp": time.time(),
-                }
+                },
             )
 
         await logger.adebug(f"Calling simple_run_flow with event_manager: {event_manager}")
@@ -354,13 +355,14 @@ async def simple_run_flow_task(
             vertex_builds_map = None
             try:
                 from uuid import UUID
+
                 from langflow.services.database.models.vertex_builds.crud import get_vertex_builds_by_flow_id
                 from langflow.services.database.models.vertex_builds.model import VertexBuildMapModel
                 from langflow.services.deps import get_db_service
 
                 db_service = get_db_service()
                 if db_service:
-                    async with db_service.with_async_session() as session:
+                    async with db_service.with_session() as session:
                         flow_uuid = UUID(flow_id) if isinstance(flow_id, str) else flow_id
                         vertex_builds = await get_vertex_builds_by_flow_id(session, flow_uuid)
                         vertex_builds_model = VertexBuildMapModel.from_list_of_dicts(vertex_builds)
@@ -379,9 +381,7 @@ async def simple_run_flow_task(
                                 }
                                 for build in builds
                             ]
-
-                        await logger.adebug(f"Fetched {len(vertex_builds_map)} vertex builds for flow {flow_id}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 await logger.aerror(f"Error fetching vertex builds for event: {e}")
 
             event_data = {
@@ -410,10 +410,8 @@ async def simple_run_flow_task(
             await asyncio.sleep(0.1)  # Give time to flush remaining events
             if not event_forwarder_task.done():
                 event_forwarder_task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await event_forwarder_task
-                except asyncio.CancelledError:
-                    pass
 
         return result  # noqa: TRY300
 
@@ -426,10 +424,8 @@ async def simple_run_flow_task(
             await asyncio.sleep(0.05)
             if not event_forwarder_task.done():
                 event_forwarder_task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await event_forwarder_task
-                except asyncio.CancelledError:
-                    pass
 
         if telemetry_service and start_time is not None:
             await telemetry_service.log_package_run(
@@ -701,12 +697,11 @@ async def simplified_run_flow(
 
 @router.get("/webhook-events/{flow_id_or_name}")
 async def webhook_events_stream(
-    flow_id_or_name: str,
+    _flow_id_or_name: str,
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     request: Request,
 ):
-    """
-    Server-Sent Events (SSE) endpoint for real-time webhook build updates.
+    """Server-Sent Events (SSE) endpoint for real-time webhook build updates.
 
     When a flow is open in the UI, this endpoint provides live feedback
     of webhook execution progress, similar to clicking "Play" in the UI.
@@ -766,7 +761,7 @@ async def webhook_events_stream(
 
         except asyncio.CancelledError:
             await logger.adebug(f"SSE stream cancelled for flow {flow_id_str}")
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             await logger.aerror(f"Error in SSE stream for flow {flow_id_str}: {exc}")
         finally:
             # Always unsubscribe when connection closes
@@ -789,7 +784,7 @@ async def webhook_run_flow(
     flow_id_or_name: str,
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     request: Request,
-    background_tasks: BackgroundTasks,
+    _background_tasks: BackgroundTasks,
 ):
     """Run a flow using a webhook request.
 
@@ -846,14 +841,13 @@ async def webhook_run_flow(
         listener_count = webhook_event_manager.get_listener_count(flow_id_str)
         has_ui_listeners = listener_count > 0
 
-        print(f"[WEBHOOK DEBUG] flow_id={flow_id_str}, listener_count={listener_count}, has_ui_listeners={has_ui_listeners}")
-        await logger.adebug(f"Checking for UI listeners: flow_id={flow_id_str}, count={listener_count}, has_listeners={has_ui_listeners}")
+        await logger.adebug(
+            f"Checking UI listeners: flow_id={flow_id_str}, count={listener_count}, has_listeners={has_ui_listeners}"
+        )
 
         if has_ui_listeners:
-            print(f"[WEBHOOK DEBUG] Will emit events for flow {flow_id_str}")
             await logger.adebug(f"UI listeners detected for flow {flow_id_str}, will emit events")
         else:
-            print(f"[WEBHOOK DEBUG] No listeners, skipping events")
             await logger.adebug(f"No UI listeners for flow {flow_id_str}, skipping event emission")
 
         await logger.adebug("Starting background task")
@@ -861,7 +855,7 @@ async def webhook_run_flow(
 
         # Use asyncio.create_task() instead of BackgroundTasks to ensure
         # the task runs in the same event loop (needed for SSE event forwarding)
-        asyncio.create_task(
+        asyncio.create_task(  # noqa: RUF006
             simple_run_flow_task(
                 flow=flow,
                 input_request=input_request,

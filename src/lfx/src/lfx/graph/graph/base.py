@@ -1514,8 +1514,14 @@ class Graph:
         Raises:
             ValueError: If no result is found for the vertex.
         """
+        import time
+
         vertex = self.get_vertex(vertex_id)
         self.run_manager.add_to_vertices_being_run(vertex_id)
+
+        # Start timing the build
+        start_time = time.perf_counter()
+
         try:
             params = ""
             should_build = False
@@ -1575,11 +1581,34 @@ class Graph:
                 await logger.aexception("Error building Component")
             raise
 
+        # Calculate build duration
+        end_time = time.perf_counter()
+        timedelta_seconds = end_time - start_time
+
+        # Format elapsed time to human-readable format
+        seconds_per_minute = 60
+        if timedelta_seconds < 1:
+            duration_str = f"{round(timedelta_seconds * 1000)}ms"
+        elif timedelta_seconds < seconds_per_minute:
+            duration_str = f"{round(timedelta_seconds, 2)}s"
+        else:
+            minutes = int(timedelta_seconds // seconds_per_minute)
+            seconds = round(timedelta_seconds % seconds_per_minute, 2)
+            duration_str = f"{minutes}m {seconds}s"
+
         if vertex.result is not None:
             params = f"{vertex.built_object_repr()}{params}"
             valid = True
             result_dict = vertex.result
             artifacts = vertex.artifacts
+
+            # Add duration to result_dict
+            if isinstance(result_dict, dict):
+                result_dict["timedelta"] = timedelta_seconds
+                result_dict["duration"] = duration_str
+            elif hasattr(result_dict, "timedelta") and hasattr(result_dict, "duration"):
+                result_dict.timedelta = timedelta_seconds
+                result_dict.duration = duration_str
         else:
             msg = f"Error building Component: no result found for vertex {vertex_id}"
             raise ValueError(msg)
