@@ -37,6 +37,18 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
+
+    /* Navigation timeout */
+    navigationTimeout: 60000, // 60 seconds for navigation
+
+    /* Action timeout */
+    actionTimeout: 30000, // 30 seconds for actions
+
+    /* Screenshot on failure */
+    screenshot: "only-on-failure",
+
+    /* Video on failure */
+    video: process.env.CI ? "retain-on-failure" : "off",
   },
 
   globalTeardown: require.resolve("./tests/globalTeardown.ts"),

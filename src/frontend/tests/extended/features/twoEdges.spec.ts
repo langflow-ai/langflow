@@ -1,4 +1,4 @@
-import { test } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -8,8 +8,19 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByText("Vector Store RAG", { exact: true }).last().click();
-    await page.getByText("Retriever", { exact: true }).first().isVisible();
-    await page.getByText("Search Results", { exact: true }).first().isVisible();
+
+    // Wait for canvas to load
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 30000,
+    });
+
+    await expect(
+      page.getByText("Retriever", { exact: true }).first(),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByText("Search Results", { exact: true }).first(),
+    ).toBeVisible({ timeout: 10000 });
+
     await page.getByTestId("canvas_controls_dropdown").click();
 
     const focusElementsOnBoard = async ({ page }) => {
@@ -23,12 +34,22 @@ test(
     await focusElementsOnBoard({ page });
     await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.getByText("Retriever", { exact: true }).first().isHidden();
-    await page.getByTestId("icon-ChevronDown").last().isVisible();
+    await expect(
+      page.getByText("Retriever", { exact: true }).first(),
+    ).toBeHidden({ timeout: 10000 });
+    await expect(page.getByTestId("icon-ChevronDown").last()).toBeVisible({
+      timeout: 10000,
+    });
     await page.getByTestId("icon-ChevronDown").last().click();
-    await page.getByText("Retriever", { exact: true }).first().isVisible();
-    await page.getByText("Search Results", { exact: true }).first().isVisible();
+    await expect(
+      page.getByText("Retriever", { exact: true }).first(),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByText("Search Results", { exact: true }).first(),
+    ).toBeVisible({ timeout: 10000 });
 
-    await page.getByTestId("icon-EyeOff").nth(0).isVisible();
+    await expect(page.getByTestId("icon-EyeOff").nth(0)).toBeVisible({
+      timeout: 10000,
+    });
   },
 );
