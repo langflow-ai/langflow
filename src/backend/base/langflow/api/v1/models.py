@@ -337,7 +337,7 @@ async def get_default_model(
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
-    model_type: str = Query("language", description="Type of model: 'language' or 'embedding'"),
+    model_type: Annotated[str, Query(description="Type of model: 'language' or 'embedding'")] = "language",
 ):
     """Get the default model for the current user."""
     variable_service = get_variable_service()
@@ -416,7 +416,7 @@ async def clear_default_model(
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
-    model_type: str = Query("language", description="Type of model: 'language' or 'embedding'"),
+    model_type: Annotated[str, Query(description="Type of model: 'language' or 'embedding'")] = "language",
 ):
     """Clear the default model for the current user."""
     variable_service = get_variable_service()
@@ -435,7 +435,7 @@ async def clear_default_model(
     if existing_var:
         try:
             await variable_service.delete_variable(
-                user_id=current_user.id, variable_id=existing_var.id, session=session
+                user_id=current_user.id, name=existing_var.name, session=session
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
