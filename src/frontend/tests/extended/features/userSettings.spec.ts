@@ -28,11 +28,16 @@ test(
 
     await page.getByText("Settings").click();
 
+    // Wait for settings page to fully load
+    await page
+      .waitForLoadState("networkidle", { timeout: 10000 })
+      .catch(() => {});
+    await page.waitForTimeout(1000);
+
     await expect(page.getByText("General").nth(2)).toBeVisible({
       timeout: 10000,
     });
-    await page.waitForSelector("text=Profile Gradient", { timeout: 10000 });
-    await expect(page.getByText("Profile Gradient")).toBeVisible();
+    await expect(page.getByText("Profile Picture").first()).toBeVisible();
   },
 );
 
@@ -51,7 +56,6 @@ test(
     await page.getByTestId("user-profile-settings").click();
     await page.getByText("Settings").click();
     await page.getByText("Global Variables").click();
-    await page.getByText("Global Variables").nth(2);
     await expect(
       page.getByText("Global Variables", { exact: true }).nth(1),
     ).toBeVisible({ timeout: 10000 });
@@ -164,40 +168,55 @@ test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
 
   await page.getByText("Settings").click();
 
+  // Wait for settings page to fully load
+  await page
+    .waitForLoadState("networkidle", { timeout: 10000 })
+    .catch(() => {});
+  await page.waitForTimeout(1000);
+
   await expect(page.getByText("General").nth(2)).toBeVisible({
     timeout: 10000,
   });
   await page.getByText("Shortcuts").nth(0).click();
+
+  // Wait for shortcuts section to load
+  await page.waitForTimeout(1000);
+
   await expect(page.getByText("Shortcuts", { exact: true }).nth(1)).toBeVisible(
     { timeout: 10000 },
   );
+  await expect(page.getByText("Controls", { exact: true })).toBeVisible({
+    timeout: 10000,
+  });
+
   await expect(
-    page.getByText("Controls Component", { exact: true }),
+    page.getByText("Search Components on Sidebar", { exact: true }),
   ).toBeVisible({ timeout: 10000 });
-  await expect(
-    page.getByText("Minimize Component", { exact: true }),
-  ).toBeVisible({ timeout: 10000 });
-  await expect(page.getByText("Code Component", { exact: true })).toBeVisible({
+
+  await expect(page.getByText("Minimize", { exact: true })).toBeVisible({
     timeout: 10000,
   });
-  await expect(page.getByText("Copy Component", { exact: true })).toBeVisible({
+  await expect(page.getByText("Code", { exact: true })).toBeVisible({
     timeout: 10000,
   });
-  await expect(
-    page.getByText("Duplicate Component", { exact: true }),
-  ).toBeVisible({ timeout: 10000 });
-  await expect(page.getByText("Share Component", { exact: true })).toBeVisible({
+  await expect(page.getByText("Copy", { exact: true })).toBeVisible({
     timeout: 10000,
   });
-  await expect(page.getByText("Docs Component", { exact: true })).toBeVisible({
+  await expect(page.getByText("Duplicate", { exact: true })).toBeVisible({
     timeout: 10000,
   });
-  await expect(page.getByText("Save Component", { exact: true })).toBeVisible({
+  await expect(page.getByText("Component Share", { exact: true })).toBeVisible({
     timeout: 10000,
   });
-  await expect(page.getByText("Delete Component", { exact: true })).toBeVisible(
-    { timeout: 10000 },
-  );
+  await expect(page.getByText("Docs", { exact: true })).toBeVisible({
+    timeout: 10000,
+  });
+  await expect(page.getByText("Changes Save", { exact: true })).toBeVisible({
+    timeout: 10000,
+  });
+  await expect(page.getByText("Delete", { exact: true })).toBeVisible({
+    timeout: 10000,
+  });
   await expect(page.getByText("Open Playground", { exact: true })).toBeVisible({
     timeout: 10000,
   });
@@ -211,7 +230,57 @@ test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
     timeout: 10000,
   });
 
-  await expect(page.getByText("Reset Columns").last()).toBeVisible({
+  await expect(
+    page.getByText("Redo (alternative)", { exact: true }).last(),
+  ).toBeVisible({
+    timeout: 10000,
+  });
+
+  await expect(page.getByText("Group").last()).toBeVisible({
+    timeout: 10000,
+  });
+
+  await expect(page.getByText("Cut").last()).toBeVisible({
+    timeout: 10000,
+  });
+
+  await expect(page.getByText("Paste").last()).toBeVisible({
+    timeout: 10000,
+  });
+
+  await expect(page.getByText("API").last()).toBeVisible({
+    timeout: 10000,
+  });
+
+  await expect(page.getByText("Download").last()).toBeVisible({
+    timeout: 10000,
+  });
+
+  await expect(page.getByText("Update").last()).toBeVisible({
+    timeout: 10000,
+  });
+
+  await expect(page.getByText("Freeze").last()).toBeVisible({
+    timeout: 10000,
+  });
+
+  await expect(page.getByText("Flow Share").last()).toBeVisible({
+    timeout: 10000,
+  });
+
+  await expect(page.getByText("Play").last()).toBeVisible({
+    timeout: 10000,
+  });
+
+  await expect(page.getByText("Output Inspection").last()).toBeVisible({
+    timeout: 10000,
+  });
+
+  await expect(page.getByText("Tool Mode").last()).toBeVisible({
+    timeout: 10000,
+  });
+
+  await expect(page.getByText("Toggle Sidebar").last()).toBeVisible({
     timeout: 10000,
   });
 });
@@ -225,9 +294,20 @@ test(
     });
     await page.getByTestId("user-profile-settings").click();
     await page.getByText("Settings").click();
+
+    // Wait for settings page to fully load
+    await page
+      .waitForLoadState("networkidle", { timeout: 10000 })
+      .catch(() => {});
+    await page.waitForTimeout(1000);
+
     await page.getByText("Langflow API").first().click();
+
+    // Wait for API section to load
+    await page.waitForTimeout(1000);
+
     await expect(
-      page.getByText("Langflow API", { exact: true }).nth(1),
+      page.getByText("Langflow API Keys", { exact: true }).nth(1),
     ).toBeVisible({ timeout: 10000 });
     await page.getByText("Add New").click();
     await expect(page.getByPlaceholder("My API Key")).toBeVisible({
@@ -249,6 +329,10 @@ test(
     await page.getByTestId("btn-copy-api-key").click();
 
     await page.waitForSelector("text=Api Key Copied!", { timeout: 30000 });
+
+    await page.getByTestId("secret_key_modal_submit_button").click();
+
+    await page.mouse.wheel(0, 10000);
 
     await expect(page.getByText(randomName)).toBeVisible({ timeout: 10000 });
   },
@@ -278,7 +362,6 @@ test(
 
     // Navigate to Global Variables
     await page.getByText("Global Variables").click();
-    await page.getByText("Global Variables").nth(2);
     await expect(
       page.getByText("Global Variables", { exact: true }).nth(1),
     ).toBeVisible({ timeout: 10000 });
