@@ -65,10 +65,6 @@ def get_model_provider_metadata():
             "icon": "GoogleGenerativeAI",
             "variable_name": "GOOGLE_API_KEY",
         },
-        "Google": {
-            "icon": "GoogleGenerativeAI",
-            "variable_name": "GOOGLE_API_KEY",
-        },
         "Ollama": {
             "icon": "Ollama",
             "variable_name": "OLLAMA_BASE_URL",  # Ollama is local but can have custom URL
@@ -218,7 +214,7 @@ def get_api_key_for_provider(user_id: UUID | str, provider: str, api_key: str | 
     provider_variable_map = {
         "OpenAI": "OPENAI_API_KEY",
         "Anthropic": "ANTHROPIC_API_KEY",
-        "Google": "GOOGLE_API_KEY",
+        "Google Generative AI": "GOOGLE_API_KEY",
         "IBM WatsonX": "WATSONX_APIKEY",
     }
 
@@ -419,10 +415,20 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
         "IBM WatsonX": "apikey",
     }
 
+    # Track which providers have models
+    providers_with_models = set()
+    
     for provider_data in all_models:
         provider = provider_data.get("provider")
         models = provider_data.get("models", [])
         icon = provider_data.get("icon", "Bot")
+
+        # Check if provider is enabled
+        is_provider_enabled = not user_id or not enabled_providers or provider in enabled_providers
+        
+        # Track this provider
+        if is_provider_enabled:
+            providers_with_models.add(provider)
 
         # Skip provider if user_id is provided and provider is not enabled
         if user_id and enabled_providers and provider not in enabled_providers:
@@ -467,6 +473,22 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
                 option["metadata"]["project_id_param"] = "project_id"
 
             options.append(option)
+
+    # Add disabled providers (providers that exist in metadata but have no enabled models)
+    if user_id:
+        for provider, metadata in model_provider_metadata.items():
+            if provider not in providers_with_models:
+                # This provider has no enabled models, add it as a disabled provider entry
+                options.append({
+                    "name": f"__enable_provider_{provider}__",
+                    "icon": metadata.get("icon", "Bot"),
+                    "category": provider,
+                    "provider": provider,
+                    "metadata": {
+                        "is_disabled_provider": True,
+                        "variable_name": metadata.get("variable_name"),
+                    },
+                })
 
     return options
 
@@ -594,10 +616,20 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
         },
     }
 
+    # Track which providers have models
+    providers_with_models = set()
+    
     for provider_data in all_models:
         provider = provider_data.get("provider")
         models = provider_data.get("models", [])
         icon = provider_data.get("icon", "Bot")
+
+        # Check if provider is enabled
+        is_provider_enabled = not user_id or not enabled_providers or provider in enabled_providers
+        
+        # Track this provider
+        if is_provider_enabled:
+            providers_with_models.add(provider)
 
         # Skip provider if user_id is provided and provider is not enabled
         if user_id and enabled_providers and provider not in enabled_providers:
@@ -623,6 +655,22 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
             }
 
             options.append(option)
+
+    # Add disabled providers (providers that exist in metadata but have no enabled models)
+    if user_id:
+        for provider, metadata in model_provider_metadata.items():
+            if provider not in providers_with_models and provider in embedding_class_mapping:
+                # This provider has no enabled models and supports embeddings, add it as a disabled provider entry
+                options.append({
+                    "name": f"__enable_provider_{provider}__",
+                    "icon": metadata.get("icon", "Bot"),
+                    "category": provider,
+                    "provider": provider,
+                    "metadata": {
+                        "is_disabled_provider": True,
+                        "variable_name": metadata.get("variable_name"),
+                    },
+                })
 
     return options
 

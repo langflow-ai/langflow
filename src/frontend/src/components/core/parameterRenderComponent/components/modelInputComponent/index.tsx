@@ -129,8 +129,21 @@ export default function ModelInputComponent({
 
     const sortedGroups: [string, typeof options][] = Object.entries(groups);
 
-    if (providers?.length) {
-      sortedGroups.sort(([a], [b]) => {
+    // Sort providers: enabled first, then by preference, then alphabetically
+    sortedGroups.sort(([a], [b]) => {
+      const aEnabled = globalVariablesEntries?.includes(
+        PROVIDER_VARIABLE_MAPPING[a] || "",
+      );
+      const bEnabled = globalVariablesEntries?.includes(
+        PROVIDER_VARIABLE_MAPPING[b] || "",
+      );
+
+      // Enabled providers come first
+      if (aEnabled && !bEnabled) return -1;
+      if (!aEnabled && bEnabled) return 1;
+
+      // If both enabled or both disabled, use provider preference if available
+      if (providers?.length) {
         const aIndex = providers.indexOf(a);
         const bIndex = providers.indexOf(b);
 
@@ -141,12 +154,14 @@ export default function ModelInputComponent({
         } else if (bIndex !== -1) {
           return 1;
         }
-        return a.localeCompare(b);
-      });
-    }
+      }
+
+      // Otherwise, sort alphabetically
+      return a.localeCompare(b);
+    });
 
     return sortedGroups;
-  }, [filteredOptions, providers, options]);
+  }, [filteredOptions, providers, options, globalVariablesEntries]);
 
   const isProviderConfigured = useMemo(() => {
     if (!selectedProvider || !globalVariablesEntries) return false;
@@ -325,23 +340,45 @@ export default function ModelInputComponent({
 
         if (visibleOptions.length === 0) return null;
 
+        // Check if this provider only has disabled provider entries
+        const isDisabledProvider = visibleOptions.length === 1 && 
+          visibleOptions[0]?.metadata?.is_disabled_provider === true;
+        const isProviderEnabled = globalVariablesEntries?.includes(
+          PROVIDER_VARIABLE_MAPPING[provider] || "",
+        );
+
         return (
           <CommandGroup className="p-0" key={`${provider}`}>
-            <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center">
-              {provider}
-              {globalVariablesEntries?.includes(
-                PROVIDER_VARIABLE_MAPPING[provider] || "",
-              ) && (
-                <div className="ml-2 text-xs text-accent-emerald-foreground flex items-center gap-1">
-                  <ForwardedIconComponent
-                    name="CheckCircle2"
-                    className="h-3 w-3"
-                  />
-                  Enabled
-                </div>
+            <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center justify-between pr-4">
+              <div className="flex items-center">
+                {provider}
+                {isProviderEnabled && (
+                  <div className="ml-2 text-xs text-accent-emerald-foreground flex items-center gap-1">
+                    <ForwardedIconComponent
+                      name="CheckCircle2"
+                      className="h-3 w-3"
+                    />
+                    Enabled
+                  </div>
+                )}
+              </div>
+              {isDisabledProvider && (
+                <Button
+                  size="xs"
+                  variant="primary"
+                  className="h-6 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedProvider(provider);
+                    setOpenApiKeyDialog(true);
+                  }}
+                  data-testid={`enable-${provider}-button`}
+                >
+                  Enable
+                </Button>
               )}
             </div>
-            {visibleOptions.map((option) => {
+            {!isDisabledProvider && visibleOptions.map((option) => {
               if (!option || !option.name) {
                 return null;
               }
