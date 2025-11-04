@@ -46,7 +46,7 @@ LFX can be installed in multiple ways.
 
 3. Run LFX commands using `uv run`:
    ```bash
-   uv run lfx serve my_flow.json
+   uv run lfx serve simple-agent-flow.json
    ```
 
 </TabItem>
@@ -56,7 +56,7 @@ LFX can be installed in multiple ways.
 
    ```bash
    uv venv lfx-venv
-   source lfx-venv/bin/activate  # On Windows: lfx-venv\Scripts\activate
+   source lfx-venv/bin/activate
    ```
 
 2. Install the LFX package from PyPI:
@@ -65,10 +65,10 @@ LFX can be installed in multiple ways.
    uv pip install lfx
    ```
 
-3. Run LFX commands directly:
+3. Run LFX commands using `uv run`:
 
    ```bash
-   uv lfx serve simple-agent-flow.json
+   uv run lfx serve simple-agent-flow.json
    ```
 
 </TabItem>
@@ -80,7 +80,7 @@ Run LFX without installing it using `uvx`:
 uvx lfx serve simple-agent-flow.json
 ```
 
-This automatically downloads and runs LFX in a temporary environment without permanent installation.
+This command downloads and runs LFX in a temporary environment without permanent installation.
 
 </TabItem>
 </Tabs>
@@ -89,7 +89,7 @@ This automatically downloads and runs LFX in a temporary environment without per
 
 To serve a flow as a REST API endpoint, set a `LANGFLOW_API_KEY` and run the flow JSON.
 The API key is required for security because `lfx serve` can create a publicly accessible FastAPI server.
-For more information, see [API keys and authentication](/api-keys-and-authentication).
+To create a Langflow API key, see [API keys and authentication](/api-keys-and-authentication).
 
 This example uses the **Agent** component's built-in OpenAI model, which requires an OpenAI API key.
 If you want to use a different provider, edit the model provider, model name, and credentials accordingly.
@@ -197,13 +197,13 @@ If you want to use a different provider, edit the model provider, model name, an
     ```
 
     Successful response:
-    ```
+    ```json
     {
-    "result":"Hello world! 👋\n\nHow can I help you today? If you have any questions or need assistance, just let me know!",
-    "success":true,
-    "logs":"\n\n\u001b[1m> Entering new None chain...\u001b[0m\n\u001b[32;1m\u001b[1;3mHello world! 👋\n\nHow can I help you today? If you have any questions or need assistance, just let me know!\u001b[0m\n\n\u001b[1m> Finished chain.\u001b[0m\n",
-    "type":"message",
-    "component":"Chat Output"
+      "result": "Hello world! 👋\n\nHow can I help you today? If you have any questions or need assistance, just let me know!",
+      "success": true,
+      "logs": "\n\n\u001b[1m> Entering new None chain...\u001b[0m\n\u001b[32;1m\u001b[1;3mHello world! 👋\n\nHow can I help you today? If you have any questions or need assistance, just let me know!\u001b[0m\n\n\u001b[1m> Finished chain.\u001b[0m\n",
+      "type": "message",
+      "component": "Chat Output"
     }
     ```
 
