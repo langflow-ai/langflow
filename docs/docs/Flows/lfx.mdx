@@ -198,7 +198,13 @@ If you want to use a different provider, edit the model provider, model name, an
 
     Successful response:
     ```
-    {"result":"Hello world! 👋\n\nHow can I help you today? If you have any questions or need assistance, just let me know!","success":true,"logs":"\n\n\u001b[1m> Entering new None chain...\u001b[0m\n\u001b[32;1m\u001b[1;3mHello world! 👋\n\nHow can I help you today? If you have any questions or need assistance, just let me know!\u001b[0m\n\n\u001b[1m> Finished chain.\u001b[0m\n","type":"message","component":"Chat Output"}%
+    {
+    "result":"Hello world! 👋\n\nHow can I help you today? If you have any questions or need assistance, just let me know!",
+    "success":true,
+    "logs":"\n\n\u001b[1m> Entering new None chain...\u001b[0m\n\u001b[32;1m\u001b[1;3mHello world! 👋\n\nHow can I help you today? If you have any questions or need assistance, just let me know!\u001b[0m\n\n\u001b[1m> Finished chain.\u001b[0m\n",
+    "type":"message",
+    "component":"Chat Output"
+    }
     ```
 
 Your flow is now running as a lightweight API endpoint, with only the flow's required dependencies and no visual builder installed.
@@ -208,47 +214,92 @@ To make your server publicly accessible, use a [tunneling service like ngrok](/d
 
 ### LFX serve options
 
-**Table: Command-line options for `lfx serve`**
 | Option                                 | Description                                                                                   |
 |-----------------------------------------|-----------------------------------------------------------------------------------------------|
+| `--check-variables`/`--no-check-variables` | Check global variables for environment variables.                                             |
+| `--env-file`                           | The path to the `.env` file.                                                                   |
 | `--host`, `-h`                         | Host to bind server. Default: `127.0.0.1` (localhost only). Use `0.0.0.0` to make it publicly accessible from other machines. |
-| `--port`, `-p`                         | Port to bind server. Default:`8000`.                                                         |
-| `--verbose`, `-v`                      | Display diagnostic output.                                                                        |
-| `--env-file`                           | The path to the `.env` file.                                                                           |
-| `--log-level`                          | Set logging level. Options are `debug`, `info`, `warning`, `error`, or `critical`.                           |
-| `--check-variables`/`--no-check-variables` | Check global variables for environment variables.
+| `--log-level`                          | Set logging level. Options are `debug`, `info`, `warning`, `error`, or `critical`.            |
+| `--port`, `-p`                         | Port to bind server. Default:`8000`.                                                          |
+| `--verbose`, `-v`                      | Display diagnostic output.                                                                    |
 
-## Run a flow with `lfx run` {#run}
+## Run the simple agent flow with `lfx run` {#run}
 
 The `lfx run` command runs a flow from a JSON file without serving it, and the output is sent to `stdout`.
 Input to `lfx run` can be a path to the JSON file, inline JSON passed with `--input-value`, or read from `stdin`.
+No Langflow API key is required.
 
-To run the flow from a JSON file with an input message, run:
-    ```
-    uv run lfx run my_flow.json "your input message"
-    ```
+This example uses the **Agent** component's built-in OpenAI model, which requires an OpenAI API key.
+If you want to use a different provider, edit the model provider, model name, and credentials accordingly.
 
-If the flow expects structured input, pass it as a JSON string.
-You can provide the input as a positional argument or with the `--input-value` flag.
-The `--input-value` flag is especially useful for structured input, as it avoids ambiguity.
-    ```
-    uv run lfx run my_flow.json --input-value '{"question": "What is the weather in Paris?", "context": "weather"}'
+1. Export your variables in the same terminal session where you'll run the flow.
+    ```bash
+    export OPENAI_API_KEY="sk-..."
     ```
 
-To run a flow from `stdin` and extract the `result` field from the output, run the `lfx run` command with additional options:
+2. Run the flow from a flow JSON file.
+    ```bash
+    uv run lfx run simple-agent-flow.json "Hello world"
     ```
-    cat my_flow.json | uv run lfx run --stdin --format json | jq '.result'
+
+    This flow expects a [Message](/data-types#message) input, which is a simple text string. The simple agent flow includes Calculator and URL tools, it can answer questions such as `"What is 15 multiplied by 23?"` or `"Can you fetch information from https://example.com?"`.
+
+    If your flow expects multiple structured input fields, you can pass structured JSON with the `--input-value` flag. The field names must match what your flow expects:
+    ```bash
+    uv run lfx run structured-input-flow.json \
+      --input-value '{"question": "What is the weather in Paris?", "context": "weather"}'
     ```
+
+In addition to running flows from JSON files, `lfx run` supports other input methods, which are described in the sections below.
+
+### Run flows from stdin
+
+The `--stdin` option allows you to run flows that come from dynamic sources such as APIs or databases, or when you want to modify a flow before execution.
+The command reads the flow's JSON definition from `stdin`, validates the JSON structure, and runs the flow.
+
+This example reads a flow JSON from stdin.
+Provide the input value to the flow with the `--input-value` flag.
+```bash
+cat simple-agent-flow.json | uv run lfx run --stdin \
+  --input-value "Hello world" \
+  --format json | jq '.result'
+```
+
+This example fetches a flow JSON from a remote API endpoint and runs it:
+```bash
+curl https://api.example.com/flows/my-agent-flow | uv run lfx run --stdin \
+  --input-value "Hello world"
+```
+
+Running a flow with `stdin` allows you to modify flows created in the visual builder before execution.
+This example demonstrates changing the OpenAI model to `gpt-4o` before running the flow:
+```bash
+cat simple-agent-flow.json | jq '(.data.nodes[] | select(.data.node.template.model_name.value) | .data.node.template.model_name.value) = "gpt-4o"' | \
+  uv run lfx run --stdin \
+  --input-value "Hello world" \
+  --format json | jq '.result'
+```
+
+### Run flows with inline JSON
+
+Instead of piping from `stdin` or reading from a JSON file, you can pass the flow JSON directly as a string argument:
+```bash
+uv run lfx run --flow-json '{"data": {"nodes": [...], "edges": [...]}}' \
+  --input-value "Hello world"
+```
 
 ### LFX run options
 
-**Table: Command-line options for `lfx run`**
-
 | Option                                         | Description                                                                                      |
 |------------------------------------------------|--------------------------------------------------------------------------------------------------|
-| `--format`, `-f`                               | Output format (`json`, `text`, `message`, `result`). Default: `json`                             |
-| `--verbose`                                    | Show diagnostic output                                                                           |
-| `--input-value`                                | Input value to pass to the graph (alternative to positional argument)                            |
-| `--flow-json`                                  | Inline JSON flow content as a string                                                             |
-| `--stdin`                                      | Read JSON flow from stdin                                                                        |
-| `--check-variables`/`--no-check-variables`     | Check global variables for environment variables
+| `--check-variables`/`--no-check-variables`     | Validates the flow's global variables. Default: check.                           |
+| `--flow-json`                                  | Loads inline JSON flow content as a string.                             |
+| `--format`, `-f`                               | Output format. Accepts `json`, `text`, `message`, or `result`. Default: `json`.                |
+| `--input-value`                                | Input value to pass to the graph.                         |
+| `--stdin`                                      | Read JSON flow content from `stdin`.                                 |
+| `--timing`                                     | Include detailed timing information in output.                                                  |
+| `--verbose`, `-v`                              | Show basic progress information and diagnostic output.                                         |
+| `-vv`                                          | Show detailed progress and debug information.                                                   |
+| `-vvv`                                         | Show full debugging output including component logs.                                            |
+
+### Use LFX run to create an application
