@@ -10,7 +10,7 @@ jobs:
   pool:
     vmImage: 'ubuntu-latest'
   steps:
-  - checkout: platform-charts
+  - checkout: ai-studio-charts
     fetchDepth: 0
     persistCredentials: true
 

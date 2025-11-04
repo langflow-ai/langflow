@@ -13,9 +13,9 @@ variables:
   PYTHON_VERSION: '3.12'
   UV_VERSION: '0.4.0'
 
-  # Helm Configuration (deprecated - now using platform-charts repository)
+  # Helm Configuration (deprecated - now using ai-studio-charts repository)
   HELM_VERSION: '3.12.0'
-  # CHART_PATH: 'helmcharts/ai-studio'  # Moved to platform-charts repository
+  # CHART_PATH: 'helmcharts/ai-studio'  # Moved to ai-studio-charts repository
 
   # Test Configuration
   TEST_RESULTS_DIR: '$(Agent.TempDirectory)/test-results'
@@ -31,6 +31,6 @@ variables:
   PROD_NAMESPACE: 'ai-studio-prod'
 
   # Platform Charts Configuration
-  PLATFORM_CHARTS_REPO: 'platform-charts'
-  PLATFORM_CHARTS_PATH: '$(Pipeline.Workspace)/platform-charts'
+  PLATFORM_CHARTS_REPO: 'ai-studio-charts'
+  PLATFORM_CHARTS_PATH: '$(Pipeline.Workspace)/ai-studio-charts'
   VALUES_FILE_UMBRELLA: 'genesis-umbrella/values-dev.yaml'

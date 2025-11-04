@@ -22,10 +22,10 @@ variables:
 
 resources:
   repositories:
-  - repository: platform-charts
+  - repository: ai-studio-charts
     type: github
     endpoint: autonomize-ai
-    name: autonomize-ai/platform-charts
+    name: autonomize-ai/ai-studio-charts
     ref: main
 
 trigger:
