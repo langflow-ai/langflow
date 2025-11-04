@@ -19,7 +19,7 @@ export const useGetMCPServer: useMutationFunctionType<
 
   const responseFn = async (params: IGetMCPServer) => {
     const { data } = await api.get<Omit<getMCPServerResponse, "name">>(
-      `${getURL("MCP_SERVERS", undefined, false)}/${params.name}`,
+      `${getURL("MCP_SERVERS", undefined, true)}/${params.name}`,
     );
 
     return { ...data, name: params.name };

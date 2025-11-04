@@ -20,7 +20,7 @@ export const useGetMCPServers: useQueryFunctionType<
   const responseFn = async () => {
     try {
       const { data } = await api.get<getMCPServersResponse>(
-        `${getURL("MCP_SERVERS", undefined, false)}?action_count=false`,
+        `${getURL("MCP_SERVERS", undefined, true)}?action_count=false`,
       );
       // Merge with cached data to preserve non-null mode/toolsCount
       const cachedData = queryClient.getQueryData(["useGetMCPServers"]) as
@@ -54,7 +54,7 @@ export const useGetMCPServers: useQueryFunctionType<
   const fetchWithCounts = async () => {
     try {
       const { data } = await api.get<getMCPServersResponse>(
-        `${getURL("MCP_SERVERS", undefined, false)}?action_count=true`,
+        `${getURL("MCP_SERVERS", undefined, true)}?action_count=true`,
       );
       return data;
     } catch (error) {
