@@ -1,6 +1,6 @@
 {
   "name": "langflow",
-  "version": "1.6.4",
+  "version": "1.7.0",
   "private": true,
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
@@ -98,7 +98,10 @@
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
     "serve": "vite preview",
-    "format": "npx @biomejs/biome check --write",
+    "format": "npx @biomejs/biome format --write",
+    "lint": "npx @biomejs/biome lint",
+    "lint:types": "npx @biomejs/biome lint --diagnostic-level=error",
+    "lint:types:staged": "npx @biomejs/biome lint --staged --diagnostic-level=error",
     "check-format": "npx @biomejs/biome check",
     "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite"
   },
