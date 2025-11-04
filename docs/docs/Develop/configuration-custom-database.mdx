@@ -44,7 +44,7 @@ Langflow can more efficiently handle multiple users and larger workloads by usin
 
     Langflow uses [SQLAlchemy](https://www.sqlalchemy.org/) with the [psycopg](https://www.psycopg.org/) driver to pass SSL parameters directly to the PostgreSQL connection.
 
-    :::note PostgreSQL driver compatibility
+    :::warning PostgreSQL driver compatibility
     Langflow requires `psycopg2-binary` or `psycopg[binary]` as the PostgreSQL driver. The `asyncpg` driver is not compatible with Langflow's current database schema due to stricter timezone handling requirements.
     :::
 
