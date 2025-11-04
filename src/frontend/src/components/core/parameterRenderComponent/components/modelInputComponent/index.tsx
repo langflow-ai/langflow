@@ -166,7 +166,13 @@ export default function ModelInputComponent({
     });
 
     return sortedGroups;
-  }, [filteredOptions, providers, options, globalVariablesEntries, defaultModelData]);
+  }, [
+    filteredOptions,
+    providers,
+    options,
+    globalVariablesEntries,
+    defaultModelData,
+  ]);
 
   const isProviderConfigured = useMemo(() => {
     if (!selectedProvider || !globalVariablesEntries) return false;
@@ -250,7 +256,7 @@ export default function ModelInputComponent({
   // Set initial value based on default model or first enabled provider
   useEffect(() => {
     if (initialValueSet || !options || options.length === 0) return;
-    
+
     // If value is already set, don't override
     if (value && Array.isArray(value) && value.length > 0) {
       setInitialValueSet(true);
