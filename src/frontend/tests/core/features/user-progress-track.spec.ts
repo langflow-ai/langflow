@@ -2,6 +2,8 @@ import { DISCORD_URL, GITHUB_URL } from "../../../src/constants/constants";
 import { expect, test } from "../../fixtures";
 import { addNewUserAndLogin } from "../../utils/add-new-user-and-loggin";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { cleanAllFlows } from "../../utils/clean-all-flows";
+import { cleanOldFolders } from "../../utils/clean-old-folders";
 
 test(
   "admin user must be able to track their progress in getting started",
@@ -17,19 +19,10 @@ test(
 
     await page.waitForTimeout(2000);
 
-    let emptyButton = page.getByTestId("new_project_btn_empty_page");
-    while ((await emptyButton.count()) === 0) {
-      await page.getByTestId("home-dropdown-menu").first().click();
-      await page.getByTestId("btn_delete_dropdown_menu").first().click();
-      await page
-        .getByTestId("btn_delete_delete_confirmation_modal")
-        .first()
-        .click();
-      await page.waitForTimeout(1000);
-      emptyButton = page.getByTestId("new_project_btn_empty_page");
-    }
+    await cleanAllFlows(page);
+    await cleanOldFolders(page);
 
-    await expect(emptyButton).toBeVisible();
+    await expect(page.getByTestId("new_project_btn_empty_page")).toBeVisible();
     await expect(page.getByTestId("mainpage_title").last()).toBeVisible();
     await expect(page.getByTestId("empty_page_description")).toBeVisible();
     await expect(page.getByTestId("empty_page_github_button")).toBeVisible();
@@ -70,6 +63,8 @@ test(
     await page.waitForSelector('[data-testid="home-dropdown-menu"]', {
       timeout: 100000,
     });
+
+    await cleanAllFlows(page);
 
     await expect(page.getByTestId("get_started_progress_title")).toBeVisible();
     await expect(
