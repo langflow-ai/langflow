@@ -11,7 +11,11 @@ if TYPE_CHECKING:
 
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.events import ExceptionWithMessageError
-from lfx.base.models.unified_models import get_language_model_options, get_llm
+from lfx.base.models.unified_models import (
+    get_language_model_options,
+    get_llm,
+    update_model_options_in_build_config,
+)
 from lfx.components.helpers.current_date import CurrentDateComponent
 from lfx.components.helpers.memory import MemoryComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
@@ -31,11 +35,6 @@ def set_advanced_true(component_input):
     return component_input
 
 
-# Compute model options once at module level
-_MODEL_OPTIONS = get_language_model_options()
-_PROVIDERS = [provider["provider"] for provider in _MODEL_OPTIONS]
-
-
 class AgentComponent(ToolCallingAgentComponent):
     display_name: str = "Agent"
     description: str = "Define the agent's instructions, then enter a task to complete using tools."
@@ -50,8 +49,8 @@ class AgentComponent(ToolCallingAgentComponent):
         ModelInput(
             name="model",
             display_name="Language Model",
-            options=_MODEL_OPTIONS,
-            providers=_PROVIDERS,
+            options=[],  # Will be populated dynamically
+            providers=[],  # Will be populated dynamically
             info="Select your model provider",
             real_time_refresh=True,
             required=True,
@@ -436,6 +435,16 @@ class AgentComponent(ToolCallingAgentComponent):
         field_value: list[dict],
         field_name: str | None = None,
     ) -> dotdict:
+        # Update model options with caching (for all field changes)
+        build_config = update_model_options_in_build_config(
+            component=self,
+            build_config=dict(build_config),
+            cache_key_prefix="language_model_options",
+            get_options_func=get_language_model_options,
+            field_name=field_name,
+        )
+        build_config = dotdict(build_config)
+
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
         if field_name == "model":
             self.log(str(field_value))
