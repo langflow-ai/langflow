@@ -36,6 +36,7 @@ export const useGetAppConfig: useQueryFunctionType<
     ["useGetAppConfig", params.key],
     responseFn,
     {
+      refetchOnMount: "always",  // Always fetch fresh data when component mounts (page load/reload)
       ...options,
       enabled: !!params.key && (options?.enabled ?? true),
     }

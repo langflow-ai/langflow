@@ -283,7 +283,7 @@ const LogoUploadForm = () => {
           disabled={(!selectedFile && !isLogoRemoved) || isUploading}
           className="w-full sm:w-auto"
         >
-          {isUploading ? (isLogoRemoved ? "Removing..." : "Uploading...") : isLogoRemoved ? "Remove Logo" : "Save Logo"}
+          {isUploading ? "Saving..." : "Save"}
         </Button>
       </CardFooter>
     </Card>
