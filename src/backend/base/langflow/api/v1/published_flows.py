@@ -197,7 +197,7 @@ async def unpublish_flow(
     """Unpublish a flow (soft delete - changes status to UNPUBLISHED)."""
     # Query by flow_cloned_from instead of flow_id
     query = select(PublishedFlow).where(
-        PublishedFlow.flow_cloned_from == flow_id, PublishedFlow.user_id == current_user.id
+        PublishedFlow.flow_cloned_from == flow_id
     )
     result = await session.exec(query)
     published_flow = result.first()
