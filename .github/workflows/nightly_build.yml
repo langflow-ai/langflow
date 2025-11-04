@@ -119,7 +119,7 @@ jobs:
           echo "Updating LFX project version to $LFX_TAG"
           uv run ./scripts/ci/update_lfx_version.py $LFX_TAG
           echo "Updating base project version to $BASE_TAG and updating main project version to $MAIN_TAG"
-          uv run ./scripts/ci/update_pyproject_combined.py main $MAIN_TAG $BASE_TAG $LFX_TAG
+          uv run --no-sync ./scripts/ci/update_pyproject_combined.py main $MAIN_TAG $BASE_TAG $LFX_TAG
 
           uv lock
           cd src/backend/base && uv lock && cd ../../..
