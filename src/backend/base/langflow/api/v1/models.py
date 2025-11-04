@@ -432,7 +432,7 @@ async def clear_default_model(
     all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
     existing_var = next((var for var in all_variables if var.name == var_name), None)
 
-    if existing_var:
+    if existing_var and existing_var.name:
         try:
             await variable_service.delete_variable(
                 user_id=current_user.id, name=existing_var.name, session=session
