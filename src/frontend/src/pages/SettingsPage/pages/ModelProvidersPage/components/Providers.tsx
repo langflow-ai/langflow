@@ -55,7 +55,9 @@ const Providers = ({
   const queryClient = useQueryClient();
   const { data: enabledModelsData } = useGetEnabledModels();
   const { mutate: mutateUpdateEnabledModels } = useUpdateEnabledModels();
-  const { data: defaultModelData } = useGetDefaultModel({ model_type: "language" });
+  const { data: defaultModelData } = useGetDefaultModel({
+    model_type: "language",
+  });
   const { mutate: mutateSetDefaultModel } = useSetDefaultModel();
   const { mutate: mutateClearDefaultModel } = useClearDefaultModel();
   const { data: globalVariables } = useGetGlobalVariables();

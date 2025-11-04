@@ -101,7 +101,9 @@ export default function ModelInputComponent({
   );
 
   // Get default model
-  const { data: defaultModelData } = useGetDefaultModel({ model_type: "language" });
+  const { data: defaultModelData } = useGetDefaultModel({
+    model_type: "language",
+  });
 
   // Initialize utilities and memoized values
   const filteredOptions = useMemo(() => {
@@ -345,7 +347,8 @@ export default function ModelInputComponent({
         if (visibleOptions.length === 0) return null;
 
         // Check if this provider only has disabled provider entries
-        const isDisabledProvider = visibleOptions.length === 1 && 
+        const isDisabledProvider =
+          visibleOptions.length === 1 &&
           visibleOptions[0]?.metadata?.is_disabled_provider === true;
         const isProviderEnabled = globalVariablesEntries?.includes(
           PROVIDER_VARIABLE_MAPPING[provider] || "",
@@ -382,52 +385,53 @@ export default function ModelInputComponent({
                 </Button>
               )}
             </div>
-            {!isDisabledProvider && visibleOptions.map((option) => {
-              if (!option || !option.name) {
-                return null;
-              }
-              const isDefaultModel = 
-                defaultModelData?.default_model?.model_name === option.name &&
-                defaultModelData?.default_model?.provider === option.provider;
-              
-              return (
-                <CommandItem
-                  key={option.name}
-                  value={option.name}
-                  onSelect={(currentValue) => {
-                    handleModelSelect(currentValue);
-                    setOpen(false);
-                  }}
-                  className="w-full items-center rounded-none"
-                  data-testid={`${option.name}-option`}
-                >
-                  <div className="flex w-full items-center gap-2">
-                    <ForwardedIconComponent
-                      name={option.icon || "Bot"}
-                      className="h-4 w-4 shrink-0 text-primary ml-2"
-                    />
-                    <div className="truncate text-[13px]">{option.name}</div>
-                    {isDefaultModel && (
+            {!isDisabledProvider &&
+              visibleOptions.map((option) => {
+                if (!option || !option.name) {
+                  return null;
+                }
+                const isDefaultModel =
+                  defaultModelData?.default_model?.model_name === option.name &&
+                  defaultModelData?.default_model?.provider === option.provider;
+
+                return (
+                  <CommandItem
+                    key={option.name}
+                    value={option.name}
+                    onSelect={(currentValue) => {
+                      handleModelSelect(currentValue);
+                      setOpen(false);
+                    }}
+                    className="w-full items-center rounded-none"
+                    data-testid={`${option.name}-option`}
+                  >
+                    <div className="flex w-full items-center gap-2">
                       <ForwardedIconComponent
-                        name="Star"
-                        className="h-3 w-3 text-yellow-500 fill-yellow-500"
+                        name={option.icon || "Bot"}
+                        className="h-4 w-4 shrink-0 text-primary ml-2"
                       />
-                    )}
-                    <div className="pl-2 ml-auto">
-                      <ForwardedIconComponent
-                        name="Check"
-                        className={cn(
-                          "h-4 w-4 shrink-0 text-primary",
-                          selectedModel?.name === option.name
-                            ? "opacity-100"
-                            : "opacity-0",
-                        )}
-                      />
+                      <div className="truncate text-[13px]">{option.name}</div>
+                      {isDefaultModel && (
+                        <ForwardedIconComponent
+                          name="Star"
+                          className="h-3 w-3 text-yellow-500 fill-yellow-500"
+                        />
+                      )}
+                      <div className="pl-2 ml-auto">
+                        <ForwardedIconComponent
+                          name="Check"
+                          className={cn(
+                            "h-4 w-4 shrink-0 text-primary",
+                            selectedModel?.name === option.name
+                              ? "opacity-100"
+                              : "opacity-0",
+                          )}
+                        />
+                      </div>
                     </div>
-                  </div>
-                </CommandItem>
-              );
-            })}
+                  </CommandItem>
+                );
+              })}
             {provider !== groupedOptions[groupedOptions.length - 1][0] &&
               visibleOptions.length > 0 && <CommandSeparator />}
           </CommandGroup>
