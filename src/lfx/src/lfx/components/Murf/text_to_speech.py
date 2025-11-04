@@ -178,11 +178,22 @@ class MurfTextToSpeech(Component):
         if voices:
             if "locale" not in build_config:
                 build_config["locale"] = {}
-            build_config["locale"]["options"] = list(voices.keys())
+            if not isinstance(voices, dict):
+                build_config["locale"]["show"] = False
+                return build_config
+            valid_locales = [
+                locale for locale, details in voices.items() if isinstance(details, dict) and "voice_list" in details
+            ]
+            if not valid_locales:
+                build_config["locale"]["show"] = False
+                return build_config
+            build_config["locale"]["options"] = valid_locales
             build_config["locale"]["options_metadata"] = [
-                {locale: voices[locale].get("display_name")} for locale in list(voices.keys())
+                {locale: voices[locale].get("display_name")} for locale in valid_locales
             ]
             build_config["locale"]["value"] = "en-US"  # default: en-US
+            if build_config["locale"].get("value") not in valid_locales:
+                build_config["locale"]["value"] = valid_locales[0]
             build_config["locale"]["show"] = True
             build_config = self._update_build_config_voice_id(build_config)
         else:
