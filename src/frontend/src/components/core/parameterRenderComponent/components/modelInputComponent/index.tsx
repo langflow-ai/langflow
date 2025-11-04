@@ -93,6 +93,7 @@ export default function ModelInputComponent({
       return null;
     },
   );
+  const [initialValueSet, setInitialValueSet] = useState(false);
 
   useGetGlobalVariables();
 
@@ -135,7 +136,13 @@ export default function ModelInputComponent({
 
     const sortedGroups: [string, typeof options][] = Object.entries(groups);
 
-    // Sort providers: enabled first, then by preference, then alphabetically
+    // Get default provider
+    const defaultProvider = defaultModelData?.default_model?.provider;
+
+    // Sort providers:
+    // 1. Provider with default model first
+    // 2. Enabled providers next
+    // 3. Alphabetically after that
     sortedGroups.sort(([a], [b]) => {
       const aEnabled = globalVariablesEntries?.includes(
         PROVIDER_VARIABLE_MAPPING[a] || "",
@@ -143,31 +150,23 @@ export default function ModelInputComponent({
       const bEnabled = globalVariablesEntries?.includes(
         PROVIDER_VARIABLE_MAPPING[b] || "",
       );
+      const aIsDefault = a === defaultProvider;
+      const bIsDefault = b === defaultProvider;
 
-      // Enabled providers come first
+      // Default provider comes first
+      if (aIsDefault && !bIsDefault) return -1;
+      if (!aIsDefault && bIsDefault) return 1;
+
+      // Then enabled providers
       if (aEnabled && !bEnabled) return -1;
       if (!aEnabled && bEnabled) return 1;
-
-      // If both enabled or both disabled, use provider preference if available
-      if (providers?.length) {
-        const aIndex = providers.indexOf(a);
-        const bIndex = providers.indexOf(b);
-
-        if (aIndex !== -1 && bIndex !== -1) {
-          return aIndex - bIndex;
-        } else if (aIndex !== -1) {
-          return -1;
-        } else if (bIndex !== -1) {
-          return 1;
-        }
-      }
 
       // Otherwise, sort alphabetically
       return a.localeCompare(b);
     });
 
     return sortedGroups;
-  }, [filteredOptions, providers, options, globalVariablesEntries]);
+  }, [filteredOptions, providers, options, globalVariablesEntries, defaultModelData]);
 
   const isProviderConfigured = useMemo(() => {
     if (!selectedProvider || !globalVariablesEntries) return false;
@@ -247,6 +246,73 @@ export default function ModelInputComponent({
       setSelectedProvider(null);
     }
   }, [value]);
+
+  // Set initial value based on default model or first enabled provider
+  useEffect(() => {
+    if (initialValueSet || !options || options.length === 0) return;
+    
+    // If value is already set, don't override
+    if (value && Array.isArray(value) && value.length > 0) {
+      setInitialValueSet(true);
+      return;
+    }
+
+    let modelToSet: SelectedModel | null = null;
+
+    // First, check if there's a default model
+    if (defaultModelData?.default_model) {
+      const defaultModel = options.find(
+        (option) =>
+          option.name === defaultModelData.default_model?.model_name &&
+          option.provider === defaultModelData.default_model?.provider,
+      );
+      if (defaultModel) {
+        modelToSet = defaultModel;
+      }
+    }
+
+    // If no default model, find the first model in the first enabled provider
+    if (!modelToSet && globalVariablesEntries) {
+      for (const [provider, providerOptions] of groupedOptions) {
+        const isProviderEnabled = globalVariablesEntries.includes(
+          PROVIDER_VARIABLE_MAPPING[provider] || "",
+        );
+        if (isProviderEnabled && providerOptions.length > 0) {
+          const firstModel = providerOptions[0];
+          if (firstModel && !firstModel.metadata?.is_disabled_provider) {
+            modelToSet = firstModel;
+            break;
+          }
+        }
+      }
+    }
+
+    // Set the model if found
+    if (modelToSet) {
+      const newValue = [
+        {
+          ...(modelToSet.id && { id: modelToSet.id }),
+          name: modelToSet.name,
+          icon: modelToSet.icon || "Bot",
+          provider: modelToSet.provider || "Unknown",
+          metadata: modelToSet.metadata || {},
+        },
+      ];
+      handleOnNewValue({ value: newValue });
+      setSelectedProvider(modelToSet.provider || null);
+      setSelectedModel(modelToSet);
+    }
+
+    setInitialValueSet(true);
+  }, [
+    options,
+    defaultModelData,
+    globalVariablesEntries,
+    groupedOptions,
+    value,
+    handleOnNewValue,
+    initialValueSet,
+  ]);
 
   const renderLoadingButton = () => (
     <Button

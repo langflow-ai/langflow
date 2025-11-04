@@ -78,6 +78,18 @@ async def list_models(
     enabled_providers_result = await get_enabled_providers(session=session, current_user=current_user)
     provider_status = enabled_providers_result.get("provider_status", {})
 
+    # Get default model if model_type is specified
+    default_provider = None
+    if model_type:
+        try:
+            default_model_result = await get_default_model(
+                session=session, current_user=current_user, model_type=model_type
+            )
+            if default_model_result.get("default_model"):
+                default_provider = default_model_result["default_model"].get("provider")
+        except Exception:
+            pass  # If we can't get default model, just continue without it
+
     # Get filtered models
     filtered_models = get_unified_models_detailed(
         model_name=model_name,
@@ -91,6 +103,21 @@ async def list_models(
     # Add enabled status to each provider
     for provider_dict in filtered_models:
         provider_dict["is_enabled"] = provider_status.get(provider_dict.get("provider"), False)
+
+    # Sort providers:
+    # 1. Provider with default model first
+    # 2. Enabled providers next
+    # 3. Alphabetically after that
+    def sort_key(provider_dict):
+        provider_name = provider_dict.get("provider", "")
+        is_enabled = provider_dict.get("is_enabled", False)
+        is_default = provider_name == default_provider
+
+        # Return tuple for sorting: (not is_default, not is_enabled, provider_name)
+        # This way default comes first (False < True), then enabled, then alphabetical
+        return (not is_default, not is_enabled, provider_name)
+
+    filtered_models.sort(key=sort_key)
 
     return filtered_models
 
