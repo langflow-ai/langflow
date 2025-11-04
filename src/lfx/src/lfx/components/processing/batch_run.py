@@ -4,7 +4,11 @@ from typing import TYPE_CHECKING, Any, cast
 
 import toml  # type: ignore[import-untyped]
 
-from lfx.base.models.unified_models import get_language_model_options, get_model_classes
+from lfx.base.models.unified_models import (
+    get_language_model_options,
+    get_model_classes,
+    update_model_options_in_build_config,
+)
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DataFrameInput, MessageTextInput, ModelInput, MultilineInput, Output, SecretStrInput
 from lfx.log.logger import logger
@@ -12,11 +16,6 @@ from lfx.schema.dataframe import DataFrame
 
 if TYPE_CHECKING:
     from langchain_core.runnables import Runnable
-
-
-# Compute model options once at module level
-_MODEL_OPTIONS = get_language_model_options()
-_PROVIDERS = [provider["provider"] for provider in _MODEL_OPTIONS]
 
 
 class BatchRunComponent(Component):
@@ -29,9 +28,10 @@ class BatchRunComponent(Component):
         ModelInput(
             name="model",
             display_name="Language Model",
-            options=_MODEL_OPTIONS,
-            providers=_PROVIDERS,
+            options=[],  # Will be populated dynamically
+            providers=[],  # Will be populated dynamically
             info="Select your model provider",
+            real_time_refresh=True,
             required=True,
         ),
         SecretStrInput(
@@ -89,6 +89,16 @@ class BatchRunComponent(Component):
             info="A DataFrame with all original columns plus the model's response column.",
         ),
     ]
+
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
+        """Dynamically update build config with user-filtered model options."""
+        return update_model_options_in_build_config(
+            component=self,
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=get_language_model_options,
+            field_name=field_name,
+        )
 
     def _format_row_as_toml(self, row: dict[str, Any]) -> str:
         """Convert a dictionary (row) into a TOML-formatted string."""

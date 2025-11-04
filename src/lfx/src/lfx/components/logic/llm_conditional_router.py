@@ -1,6 +1,10 @@
 from typing import Any
 
-from lfx.base.models.unified_models import get_language_model_options, get_llm
+from lfx.base.models.unified_models import (
+    get_language_model_options,
+    get_llm,
+    update_model_options_in_build_config,
+)
 from lfx.custom import Component
 from lfx.io import (
     BoolInput,
@@ -14,10 +18,6 @@ from lfx.io import (
 )
 from lfx.schema.message import Message
 from lfx.schema.table import EditMode
-
-# Compute model options once at module level
-_MODEL_OPTIONS = get_language_model_options()
-_PROVIDERS = [provider["provider"] for provider in _MODEL_OPTIONS]
 
 
 class SmartRouterComponent(Component):
@@ -34,9 +34,10 @@ class SmartRouterComponent(Component):
         ModelInput(
             name="model",
             display_name="Language Model",
-            options=_MODEL_OPTIONS,
-            providers=_PROVIDERS,
+            options=[],  # Will be populated dynamically
+            providers=[],  # Will be populated dynamically
             info="Select your model provider",
+            real_time_refresh=True,
             required=True,
         ),
         SecretStrInput(
@@ -132,6 +133,16 @@ class SmartRouterComponent(Component):
     ]
 
     outputs: list[Output] = []
+
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
+        """Dynamically update build config with user-filtered model options."""
+        return update_model_options_in_build_config(
+            component=self,
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=get_language_model_options,
+            field_name=field_name,
+        )
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Create a dynamic output for each category in the categories table."""
