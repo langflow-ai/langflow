@@ -14,6 +14,9 @@ import {
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
+import { useGetDefaultModel } from "@/controllers/API/queries/models/use-get-default-model";
+import { useSetDefaultModel } from "@/controllers/API/queries/models/use-set-default-model";
+import { useClearDefaultModel } from "@/controllers/API/queries/models/use-clear-default-model";
 import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
@@ -52,6 +55,9 @@ const Providers = ({
   const queryClient = useQueryClient();
   const { data: enabledModelsData } = useGetEnabledModels();
   const { mutate: mutateUpdateEnabledModels } = useUpdateEnabledModels();
+  const { data: defaultModelData } = useGetDefaultModel({ model_type: "language" });
+  const { mutate: mutateSetDefaultModel } = useSetDefaultModel();
+  const { mutate: mutateClearDefaultModel } = useClearDefaultModel();
   const { data: globalVariables } = useGetGlobalVariables();
   const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
   const { mutate: mutateCreateGlobalVariable } = usePostGlobalVariables();
@@ -90,6 +96,56 @@ const Providers = ({
           setErrorData({
             title: "Error updating model",
             list: ["Failed to update model status"],
+          });
+        },
+      },
+    );
+  };
+
+  const handleSetDefaultModel = (
+    providerName: string,
+    modelName: string,
+    modelType: string,
+  ) => {
+    mutateSetDefaultModel(
+      {
+        model_name: modelName,
+        provider: providerName,
+        model_type: modelType,
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["useGetDefaultModel"] });
+          setSuccessData({
+            title: `${modelName} set as default`,
+          });
+        },
+        onError: () => {
+          setErrorData({
+            title: "Error setting default model",
+            list: ["Failed to set default model"],
+          });
+        },
+      },
+    );
+  };
+
+  const handleClearDefaultModel = (modelType: string) => {
+    mutateClearDefaultModel(
+      {
+        model_type: modelType,
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["useGetDefaultModel"] });
+          setSuccessData({
+            title: "Default model cleared",
+          });
+        },
+        onError: () => {
+          setErrorData({
+            title: "Error clearing default model",
+            list: ["Failed to clear default model"],
           });
         },
       },
@@ -326,6 +382,13 @@ const Providers = ({
                       const isDeprecated = model.metadata.deprecated;
                       const isPreview = model.metadata.preview;
                       const isNotSupported = model.metadata.not_supported;
+                      const modelType = model.metadata.model_type || "llm";
+                      const isLanguageModel = modelType === "llm";
+                      const isDefaultModel =
+                        defaultModelData?.default_model?.model_name ===
+                          model.model_name &&
+                        defaultModelData?.default_model?.provider ===
+                          provider.provider;
 
                       return (
                         <div
@@ -333,16 +396,47 @@ const Providers = ({
                           className="flex items-center ml-3 gap-2"
                         >
                           {type === "enabled" ? (
-                            <Checkbox
-                              checked={isModelEnabled}
-                              onCheckedChange={(checked) => {
-                                handleToggleModel(
-                                  provider.provider,
-                                  model.model_name,
-                                  checked as boolean,
-                                );
-                              }}
-                            />
+                            <>
+                              <Checkbox
+                                checked={isModelEnabled}
+                                onCheckedChange={(checked) => {
+                                  handleToggleModel(
+                                    provider.provider,
+                                    model.model_name,
+                                    checked as boolean,
+                                  );
+                                }}
+                              />
+                              {isLanguageModel && isModelEnabled && (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => {
+                                    if (isDefaultModel) {
+                                      handleClearDefaultModel("language");
+                                    } else {
+                                      handleSetDefaultModel(
+                                        provider.provider,
+                                        model.model_name,
+                                        "language",
+                                      );
+                                    }
+                                  }}
+                                  data-testid={`default-${model.model_name}`}
+                                >
+                                  <ForwardedIconComponent
+                                    name={isDefaultModel ? "Star" : "StarOff"}
+                                    className={cn(
+                                      "h-4 w-4",
+                                      isDefaultModel
+                                        ? "text-yellow-500 fill-yellow-500"
+                                        : "text-muted-foreground hover:text-yellow-500",
+                                    )}
+                                  />
+                                </Button>
+                              )}
+                            </>
                           ) : (
                             <div className="mr-4" />
                           )}

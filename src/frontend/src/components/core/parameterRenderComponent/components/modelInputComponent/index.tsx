@@ -6,6 +6,7 @@ import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
 import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import { useGetDefaultModel } from "@/controllers/API/queries/models/use-get-default-model";
 import ApiKeyModal from "@/modals/apiKeyModal";
 import useAlertStore from "@/stores/alertStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
@@ -98,6 +99,9 @@ export default function ModelInputComponent({
   const globalVariablesEntries = useGlobalVariablesStore(
     (state) => state.globalVariablesEntries,
   );
+
+  // Get default model
+  const { data: defaultModelData } = useGetDefaultModel({ model_type: "language" });
 
   // Initialize utilities and memoized values
   const filteredOptions = useMemo(() => {
@@ -382,6 +386,10 @@ export default function ModelInputComponent({
               if (!option || !option.name) {
                 return null;
               }
+              const isDefaultModel = 
+                defaultModelData?.default_model?.model_name === option.name &&
+                defaultModelData?.default_model?.provider === option.provider;
+              
               return (
                 <CommandItem
                   key={option.name}
@@ -399,6 +407,12 @@ export default function ModelInputComponent({
                       className="h-4 w-4 shrink-0 text-primary ml-2"
                     />
                     <div className="truncate text-[13px]">{option.name}</div>
+                    {isDefaultModel && (
+                      <ForwardedIconComponent
+                        name="Star"
+                        className="h-3 w-3 text-yellow-500 fill-yellow-500"
+                      />
+                    )}
                     <div className="pl-2 ml-auto">
                       <ForwardedIconComponent
                         name="Check"

@@ -18,8 +18,10 @@ from langflow.services.variable.service import DatabaseVariableService
 
 router = APIRouter(prefix="/models", tags=["Models"])
 
-# Variable name for storing disabled models
+# Variable names for storing disabled models and default models
 DISABLED_MODELS_VAR = "__disabled_models__"
+DEFAULT_LANGUAGE_MODEL_VAR = "__default_language_model__"
+DEFAULT_EMBEDDING_MODEL_VAR = "__default_embedding_model__"
 
 
 class ModelStatusUpdate(BaseModel):
@@ -320,3 +322,122 @@ async def update_enabled_models(
 
     # Return the updated disabled models list
     return {"disabled_models": list(disabled_models)}
+
+
+class DefaultModelRequest(BaseModel):
+    """Request model for setting default model."""
+
+    model_name: str
+    provider: str
+    model_type: str  # 'language' or 'embedding'
+
+
+@router.get("/default_model", status_code=200)
+async def get_default_model(
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    model_type: str = Query("language", description="Type of model: 'language' or 'embedding'"),
+):
+    """Get the default model for the current user."""
+    variable_service = get_variable_service()
+    if not isinstance(variable_service, DatabaseVariableService):
+        return {"default_model": None}
+
+    var_name = DEFAULT_LANGUAGE_MODEL_VAR if model_type == "language" else DEFAULT_EMBEDDING_MODEL_VAR
+
+    all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
+    for var in all_variables:
+        if var.name == var_name and var.value:
+            try:
+                return {"default_model": json.loads(var.value)}
+            except (json.JSONDecodeError, TypeError):
+                return {"default_model": None}
+    return {"default_model": None}
+
+
+@router.post("/default_model", status_code=200)
+async def set_default_model(
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    request: DefaultModelRequest,
+):
+    """Set the default model for the current user."""
+    variable_service = get_variable_service()
+    if not isinstance(variable_service, DatabaseVariableService):
+        raise HTTPException(
+            status_code=500,
+            detail="Variable service is not an instance of DatabaseVariableService",
+        )
+
+    var_name = (
+        DEFAULT_LANGUAGE_MODEL_VAR if request.model_type == "language" else DEFAULT_EMBEDDING_MODEL_VAR
+    )
+
+    # Prepare the model data
+    model_data = {
+        "model_name": request.model_name,
+        "provider": request.provider,
+        "model_type": request.model_type,
+    }
+    model_json = json.dumps(model_data)
+
+    # Check if the variable already exists
+    all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
+    existing_var = next((var for var in all_variables if var.name == var_name), None)
+
+    try:
+        if existing_var:
+            # Update existing variable
+            from langflow.services.database.models.variable.model import VariableUpdate
+
+            await variable_service.update_variable_fields(
+                user_id=current_user.id,
+                variable_id=existing_var.id,
+                variable=VariableUpdate(id=existing_var.id, name=var_name, value=model_json, type=GENERIC_TYPE),
+                session=session,
+            )
+        else:
+            # Create new variable
+            await variable_service.create_variable(
+                user_id=current_user.id,
+                name=var_name,
+                value=model_json,
+                type_=GENERIC_TYPE,
+                session=session,
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return {"default_model": model_data}
+
+
+@router.delete("/default_model", status_code=200)
+async def clear_default_model(
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    model_type: str = Query("language", description="Type of model: 'language' or 'embedding'"),
+):
+    """Clear the default model for the current user."""
+    variable_service = get_variable_service()
+    if not isinstance(variable_service, DatabaseVariableService):
+        raise HTTPException(
+            status_code=500,
+            detail="Variable service is not an instance of DatabaseVariableService",
+        )
+
+    var_name = DEFAULT_LANGUAGE_MODEL_VAR if model_type == "language" else DEFAULT_EMBEDDING_MODEL_VAR
+
+    # Check if the variable exists
+    all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
+    existing_var = next((var for var in all_variables if var.name == var_name), None)
+
+    if existing_var:
+        try:
+            await variable_service.delete_variable(user_id=current_user.id, variable_id=existing_var.id, session=session)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return {"default_model": None}
