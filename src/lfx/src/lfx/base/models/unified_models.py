@@ -745,6 +745,7 @@ def update_model_options_in_build_config(
 ) -> dict:
     """Helper function to update build config with cached model options.
 
+
     Uses instance-level caching to avoid expensive database calls on every field change.
     Cache is refreshed when:
     - api_key changes (may enable/disable providers)
