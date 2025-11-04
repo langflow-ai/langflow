@@ -96,6 +96,7 @@ dependencies = [
     "langchain-ollama==0.3.10",
     "langchain-sambanova==0.1.0",
     "langchain-community>=0.3.21,<1.0.0",
+    "langchain-db2>=0.1.7,<1.0.0",
     "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
     "atlassian-python-api==3.41.16",
     "mem0ai==0.1.34",

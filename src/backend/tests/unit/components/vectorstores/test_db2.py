@@ -3,7 +3,7 @@ import time
 from typing import Any
 
 import pytest
-from lfx.components.vectorstores import DB2VectorStoreComponent
+from lfx.components.vectorstores.db2 import DB2VectorStoreComponent
 from lfx.schema.data import Data
 
 from tests.base import ComponentTestBaseWithoutClient
