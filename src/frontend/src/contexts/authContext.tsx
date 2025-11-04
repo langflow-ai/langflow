@@ -95,53 +95,62 @@ export function AuthProvider({ children }): React.ReactElement {
 
     let userLoaded = false;
     let variablesLoaded = false;
+    let retryCount = 0;
+    const MAX_RETRIES = 20;
 
     const checkAndSetAuthenticated = () => {
       if (userLoaded && variablesLoaded) {
         setIsAuthenticated(true);
       }
     };
-    // Verify cookies are set before making authenticated requests
-    // This prevents race condition where browser hasn't fully processed cookies
+
+    const executeAuthRequests = () => {
+      mutateLoggedUser(
+        {},
+        {
+          onSuccess: async (user) => {
+            setUserData(user);
+            const isSuperUser = user!.is_superuser;
+            useAuthStore.getState().setIsAdmin(isSuperUser);
+            checkHasStore();
+            fetchApiData();
+            userLoaded = true;
+            checkAndSetAuthenticated();
+          },
+          onError: () => {
+            setUserData(null);
+            userLoaded = true;
+            checkAndSetAuthenticated();
+          },
+        },
+      );
+
+      mutateGetGlobalVariables(
+        {},
+        {
+          onSettled: () => {
+            variablesLoaded = true;
+            checkAndSetAuthenticated();
+          },
+        },
+      );
+    };
+
     const verifyAndProceed = () => {
       const storedToken = getAuthCookie(cookies, LANGFLOW_ACCESS_TOKEN);
       if (storedToken) {
-        mutateLoggedUser(
-          {},
-          {
-            onSuccess: async (user) => {
-              setUserData(user);
-              const isSuperUser = user!.is_superuser;
-              useAuthStore.getState().setIsAdmin(isSuperUser);
-              checkHasStore();
-              fetchApiData();
-              userLoaded = true;
-              checkAndSetAuthenticated();
-            },
-            onError: () => {
-              setUserData(null);
-              userLoaded = true;
-              checkAndSetAuthenticated();
-            },
-          },
-        );
-
-        mutateGetGlobalVariables(
-          {},
-          {
-            onSettled: () => {
-              variablesLoaded = true;
-              checkAndSetAuthenticated();
-            },
-          },
-        );
-      } else {
-        // Retry after a short delay if cookies aren't available yet
+        executeAuthRequests();
+      } else if (retryCount < MAX_RETRIES) {
+        retryCount++;
         setTimeout(verifyAndProceed, 50);
+      } else {
+        console.warn(
+          "Cookie verification timeout - proceeding with authentication requests",
+        );
+        executeAuthRequests();
       }
     };
 
-    // Start verification process with small initial delay
     setTimeout(verifyAndProceed, 50);
   }
 
