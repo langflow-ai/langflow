@@ -4,8 +4,7 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export interface EnabledModelsResponse {
-  enabled_models: string[];
-  model_status: Record<string, boolean>;
+  enabled_models: Record<string, Record<string, boolean>>;
 }
 
 export const useGetEnabledModels: useQueryFunctionType<

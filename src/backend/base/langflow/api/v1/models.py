@@ -205,13 +205,16 @@ async def get_enabled_models(
     disabled_models = await _get_disabled_models(session=session, current_user=current_user)
 
     # Build model status based on provider enablement
-    enabled_models = []
-    model_status = {}
+    enabled_models: dict[str, dict[str, bool]] = {}
 
     # Iterate through providers and their models
     for provider_dict in all_models_by_provider:
         provider = provider_dict.get("provider")
         models = provider_dict.get("models", [])
+
+        # Initialize provider dict if not exists
+        if provider not in enabled_models:
+            enabled_models[provider] = {}
 
         for model in models:
             model_name = model.get("model_name")
@@ -231,25 +234,22 @@ async def get_enabled_models(
                 and not is_not_supported
                 and model_name not in disabled_models
             )
-            model_status[model_name] = is_enabled
-            if is_enabled:
-                enabled_models.append(model_name)
+            # Store model status per provider (true/false)
+            enabled_models[provider][model_name] = is_enabled
 
     result = {
         "enabled_models": enabled_models,
-        "model_status": model_status,
     }
 
     if model_names:
-        # Filter enabled_models and model_status by requested models
-        filtered_enabled = [m for m in result["enabled_models"] if m in model_names]
-        model_status_dict = result.get("model_status", {})
-        if not isinstance(model_status_dict, dict):
-            model_status_dict = {}
-        filtered_status = {m: v for m, v in model_status_dict.items() if m in model_names}
+        # Filter enabled_models by requested models
+        filtered_enabled: dict[str, dict[str, bool]] = {}
+        for provider, models_dict in enabled_models.items():
+            filtered_models = {m: v for m, v in models_dict.items() if m in model_names}
+            if filtered_models:
+                filtered_enabled[provider] = filtered_models
         return {
             "enabled_models": filtered_enabled,
-            "model_status": filtered_status,
         }
 
     return result
