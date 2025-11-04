@@ -30,7 +30,7 @@ test(
     }
 
     await expect(emptyButton).toBeVisible();
-    await expect(page.getByTestId("mainpage_title")).toBeVisible();
+    await expect(page.getByTestId("mainpage_title").last()).toBeVisible();
     await expect(page.getByTestId("empty_page_description")).toBeVisible();
     await expect(page.getByTestId("empty_page_github_button")).toBeVisible();
     await expect(page.getByTestId("empty_page_discord_button")).toBeVisible();
