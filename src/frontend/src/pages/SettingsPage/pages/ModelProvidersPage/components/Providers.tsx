@@ -184,6 +184,10 @@ const Providers = ({
           queryClient.invalidateQueries({
             queryKey: ["useGetModelProviders"],
           });
+          // Force refresh flow data to update node templates with new model options
+          queryClient.refetchQueries({
+            queryKey: ["flows"],
+          });
         },
         onError: (error: any) => {
           setErrorData({

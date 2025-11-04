@@ -78,9 +78,19 @@ export default function ApiKeyModal({
               setSuccessData({
                 title: `${provider} API Key Saved`,
               });
-              // Invalidate model providers cache to refresh the list
+              // Invalidate caches to refresh the UI
               queryClient.invalidateQueries({
                 queryKey: ["useGetModelProviders"],
+              });
+              queryClient.invalidateQueries({
+                queryKey: ["useGetGlobalVariables"],
+              });
+              queryClient.invalidateQueries({
+                queryKey: ["useGetDefaultModel"],
+              });
+              // Force refresh flow data to update node templates with new model options
+              queryClient.refetchQueries({
+                queryKey: ["flows"],
               });
               onSave?.(apiKeyValue);
               onClose();
