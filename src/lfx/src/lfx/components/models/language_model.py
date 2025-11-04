@@ -1,5 +1,9 @@
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.unified_models import get_language_model_options, get_llm
+from lfx.base.models.unified_models import (
+    get_language_model_options,
+    get_llm,
+    update_model_options_in_build_config,
+)
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput
@@ -69,13 +73,10 @@ class LanguageModelComponent(LCModelComponent):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
         """Dynamically update build config with user-filtered model options."""
-        # Fetch options based on user's enabled models and providers
-        try:
-            options = get_language_model_options(user_id=self.user_id)
-            providers = list({opt["provider"] for opt in options})
-            build_config["model"]["options"] = options
-            build_config["model"]["providers"] = providers
-        except KeyError as exc:
-            # If we can't get user-specific options, fall back to empty
-            self.log("Failed to fetch user-specific model options: %s", exc)
-        return build_config
+        return update_model_options_in_build_config(
+            component=self,
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=get_language_model_options,
+            field_name=field_name,
+        )

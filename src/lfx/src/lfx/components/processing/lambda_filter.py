@@ -4,7 +4,11 @@ import json
 import re
 from typing import TYPE_CHECKING, Any
 
-from lfx.base.models.unified_models import get_language_model_options, get_llm
+from lfx.base.models.unified_models import (
+    get_language_model_options,
+    get_llm,
+    update_model_options_in_build_config,
+)
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, IntInput, ModelInput, MultilineInput, Output, SecretStrInput
 from lfx.schema.data import Data
@@ -13,9 +17,9 @@ from lfx.schema.dataframe import DataFrame
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-# Compute model options once at module level
-_MODEL_OPTIONS = get_language_model_options()
-_PROVIDERS = [provider["provider"] for provider in _MODEL_OPTIONS]
+# # Compute model options once at module level
+# _MODEL_OPTIONS = get_language_model_options()
+# _PROVIDERS = [provider["provider"] for provider in _MODEL_OPTIONS]
 
 
 class LambdaFilterComponent(Component):
@@ -37,8 +41,8 @@ class LambdaFilterComponent(Component):
         ModelInput(
             name="model",
             display_name="Language Model",
-            options=_MODEL_OPTIONS,
-            providers=_PROVIDERS,
+            options=[],  # Will be populated dynamically
+            providers=[],  # Will be populated dynamically
             info="Select your model provider",
             real_time_refresh=True,
             required=True,
@@ -88,6 +92,16 @@ class LambdaFilterComponent(Component):
             method="process_as_dataframe",
         ),
     ]
+
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
+        """Dynamically update build config with user-filtered model options."""
+        return update_model_options_in_build_config(
+            component=self,
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=get_language_model_options,
+            field_name=field_name,
+        )
 
     def get_data_structure(self, data):
         """Extract the structure of data, replacing values with their types."""

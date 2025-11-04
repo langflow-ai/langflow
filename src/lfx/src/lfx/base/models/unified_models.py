@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from functools import lru_cache
 from typing import Any
 from uuid import UUID
@@ -731,3 +732,58 @@ def get_llm(model, user_id: UUID | str, api_key=None, temperature=None, *, strea
         kwargs["temperature"] = temperature
 
     return model_class(**kwargs)
+
+
+def update_model_options_in_build_config(
+    component: Any,
+    build_config: dict,
+    cache_key_prefix: str,
+    get_options_func: Callable,
+    field_name: str | None = None,
+) -> dict:
+    """Helper function to update build config with cached model options.
+    
+    Uses instance-level caching to avoid expensive database calls on every field change.
+    Cache is refreshed when:
+    - api_key changes (may enable/disable providers)
+    - Initial load (field_name is None)
+    - Cache is empty or expired (60s TTL)
+    
+    Args:
+        component: Component instance with cache, user_id, and log attributes
+        build_config: The build configuration dict to update
+        cache_key_prefix: Prefix for the cache key (e.g., "language_model_options" or "embedding_model_options")
+        get_options_func: Function to call to get model options (e.g., get_language_model_options)
+        field_name: The name of the field being changed, if any
+        
+    Returns:
+        Updated build_config dict with model options and providers set
+    """
+    # Cache key based on user_id
+    cache_key = f"{cache_key_prefix}_{component.user_id}"
+    
+    # Check if we need to refresh (when api_key changes, initial load, or cache is empty)
+    # Note: Cache has 60s TTL, so it will auto-refresh after expiration
+    should_refresh = (
+        field_name == "api_key"
+        or field_name is None
+        or cache_key not in component.cache
+    )
+    
+    if should_refresh:
+        # Fetch options based on user's enabled models and providers
+        try:
+            options = get_options_func(user_id=component.user_id)
+            providers = list({opt["provider"] for opt in options})
+            # Cache the results
+            component.cache[cache_key] = {"options": options, "providers": providers}
+        except KeyError as exc:
+            # If we can't get user-specific options, fall back to empty
+            component.log("Failed to fetch user-specific model options: %s", exc)
+            component.cache[cache_key] = {"options": [], "providers": []}
+    
+    # Use cached results
+    cached = component.cache.get(cache_key, {"options": [], "providers": []})
+    build_config["model"]["options"] = cached["options"]
+    build_config["model"]["providers"] = cached["providers"]
+    return build_config
