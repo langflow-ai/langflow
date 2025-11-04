@@ -16,6 +16,7 @@ import {
   FileInputComponent,
 } from "./Playground.types";
 import { DragIcon } from "@/assets/icons/DragIcon";
+import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
 
 export default function PlaygroundTab({
   publishedFlowData,
@@ -45,6 +46,11 @@ export default function PlaygroundTab({
     version: publishedFlowData?.version || "1.0",
     tags: publishedFlowData?.tags || [],
     name: publishedFlowData?.name || "Agent",
+  };
+
+   const getTagTitle = (tagId: string): string => {
+    const tag = MARKETPLACE_TAGS.find(t => t.id === tagId);
+    return tag ? tag.title : tagId;
   };
 
   const fileInputComponents: FileInputComponent[] = useMemo(() => {
@@ -514,7 +520,7 @@ export default function PlaygroundTab({
                       key={index}
                       className="bg-[#F5F2FF] text-[#64616A] text-xs px-2 py-1 rounded-[4px]"
                     >
-                      {tag}
+                      {getTagTitle(tag)}
                     </span>
                   ))}
                 </div>

@@ -12,11 +12,12 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useUnpublishFlow, useDeletePublishedFlow } from "@/controllers/API/queries/published-flows";
 import useAlertStore from "@/stores/alertStore";
 import { AgentLogo } from "@/components/AgentLogo";
+import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
 
 interface MarketplaceFlowCardProps {
   item: any;
   viewMode?: "grid" | "list";
-  expand?: boolean; // when true, card fills available space
+  expand?: boolean;
 }
 
 export default function MarketplaceFlowCard({
@@ -34,6 +35,12 @@ export default function MarketplaceFlowCard({
   const description = item.description || "No description provided";
   const tags: string[] = Array.isArray(item.tags) ? item.tags : [];
   const version = item.version || "";
+
+  // Helper function to get tag title from tag id
+  const getTagTitle = (tagId: string): string => {
+    const tag = MARKETPLACE_TAGS.find(t => t.id === tagId);
+    return tag ? tag.title : tagId;
+  };
 
   const handleCardClick = () => {
     navigate(`/marketplace/detail/${item.id}`);
@@ -103,13 +110,9 @@ export default function MarketplaceFlowCard({
               className="gap-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 animate-pulse"
             >
               <Circle className="h-3 w-3 fill-current" />
-              {/* Live */}
             </Badge>
           )}
           </h3>
-          {/* <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {tags.length > 0 && <span className="truncate" title={tags[0]}>{tags[0]}</span>}
-          </div> */}
         </div>
 
         <div className="flex items-center gap-2">
@@ -154,7 +157,7 @@ export default function MarketplaceFlowCard({
         {description}
       </p>
       <div className="flex justify-between items-center mt-auto">
-        {/* Tags - Show only first tag */}
+        {/* Tags - Show only first tag with title instead of id */}
         {tags.length > 0 && (
           <div className="mt-auto flex flex-wrap items-center gap-2">
             <Badge
@@ -162,7 +165,7 @@ export default function MarketplaceFlowCard({
               size="xq"
               className="gap-1 bg-[#F5F2FF] dark:bg-white/10 dark:text-white"
             >
-              {tags[0]}
+              {getTagTitle(tags[0])}
             </Badge>
           </div>
         )}
