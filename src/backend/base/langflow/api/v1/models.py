@@ -87,8 +87,8 @@ async def list_models(
             )
             if default_model_result.get("default_model"):
                 default_provider = default_model_result["default_model"].get("provider")
-        except Exception:
-            pass  # If we can't get default model, just continue without it
+        except Exception as _:  # noqa: BLE001, S110
+            pass
 
     # Get filtered models
     filtered_models = get_unified_models_detailed(

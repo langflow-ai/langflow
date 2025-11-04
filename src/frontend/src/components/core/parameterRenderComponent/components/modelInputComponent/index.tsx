@@ -134,10 +134,26 @@ export default function ModelInputComponent({
       groups[provider].push(option);
     });
 
-    const sortedGroups: [string, typeof options][] = Object.entries(groups);
-
-    // Get default provider
+    // Get default model info
+    const defaultModelName = defaultModelData?.default_model?.model_name;
     const defaultProvider = defaultModelData?.default_model?.provider;
+
+    // Sort models within each provider
+    for (const provider in groups) {
+      groups[provider].sort((a, b) => {
+        const aIsDefault = a.name === defaultModelName && provider === defaultProvider;
+        const bIsDefault = b.name === defaultModelName && provider === defaultProvider;
+
+        // Default model comes first
+        if (aIsDefault && !bIsDefault) return -1;
+        if (!aIsDefault && bIsDefault) return 1;
+
+        // Otherwise maintain original order (or sort alphabetically if preferred)
+        return 0;
+      });
+    }
+
+    const sortedGroups: [string, typeof options][] = Object.entries(groups);
 
     // Sort providers:
     // 1. Provider with default model first

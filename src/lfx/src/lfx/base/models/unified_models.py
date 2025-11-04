@@ -224,28 +224,20 @@ def get_api_key_for_provider(user_id: UUID | str, provider: str, api_key: str | 
     variable_name = provider_variable_map.get(provider)
     if not variable_name:
         return None
-
     # Try to get from global variables
-    try:
+    async def _get_variable():
+        async with session_scope() as session:
+            variable_service = get_variable_service()
+            if variable_service is None:
+                return None
+            return await variable_service.get_variable(
+                user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                name=variable_name,
+                field="",
+                session=session,
+            )
 
-        async def _get_variable():
-            async with session_scope() as session:
-                variable_service = get_variable_service()
-                if variable_service is None:
-                    return None
-                return await variable_service.get_variable(
-                    user_id=UUID(user_id),
-                    name=variable_name,
-                    field="",
-                    session=session,
-                )
-
-        return run_until_complete(_get_variable())
-    except (RuntimeError, ValueError, TypeError, AttributeError):
-        # If we can't get the global variable, return None
-        # Handles: RuntimeError (async issues), ValueError (invalid UUID),
-        # TypeError (None user_id), AttributeError (service issues)
-        return None
+    return run_until_complete(_get_variable())
 
 
 def validate_model_provider_key(variable_name: str, api_key: str) -> None:
@@ -749,7 +741,8 @@ def update_model_options_in_build_config(
     Cache is refreshed when:
     - api_key changes (may enable/disable providers)
     - Initial load (field_name is None)
-    - Cache is empty or expired (60s TTL)
+    - Cache is empty or expired
+    - Model field is being refreshed (field_name == "model")
 
     Args:
         component: Component instance with cache, user_id, and log attributes
@@ -761,24 +754,41 @@ def update_model_options_in_build_config(
     Returns:
         Updated build_config dict with model options and providers set
     """
+    import time
+
     # Cache key based on user_id
     cache_key = f"{cache_key_prefix}_{component.user_id}"
+    cache_timestamp_key = f"{cache_key}_timestamp"
+    cache_ttl = 30  # 30 seconds TTL to catch global variable changes faster
 
-    # Check if we need to refresh (when api_key changes, initial load, or cache is empty)
-    # Note: Cache has 60s TTL, so it will auto-refresh after expiration
-    should_refresh = field_name == "api_key" or field_name is None or cache_key not in component.cache
+    # Check if cache is expired
+    cache_expired = False
+    if cache_timestamp_key in component.cache:
+        time_since_cache = time.time() - component.cache[cache_timestamp_key]
+        cache_expired = time_since_cache > cache_ttl
+
+    # Check if we need to refresh
+    should_refresh = (
+        field_name == "api_key"  # API key changed
+        or field_name is None  # Initial load
+        or field_name == "model"  # Model field refresh button clicked
+        or cache_key not in component.cache  # Cache miss
+        or cache_expired  # Cache expired
+    )
 
     if should_refresh:
         # Fetch options based on user's enabled models and providers
         try:
             options = get_options_func(user_id=component.user_id)
             providers = list({opt["provider"] for opt in options})
-            # Cache the results
+            # Cache the results with timestamp
             component.cache[cache_key] = {"options": options, "providers": providers}
+            component.cache[cache_timestamp_key] = time.time()
         except KeyError as exc:
             # If we can't get user-specific options, fall back to empty
             component.log("Failed to fetch user-specific model options: %s", exc)
             component.cache[cache_key] = {"options": [], "providers": []}
+            component.cache[cache_timestamp_key] = time.time()
 
     # Use cached results
     cached = component.cache.get(cache_key, {"options": [], "providers": []})

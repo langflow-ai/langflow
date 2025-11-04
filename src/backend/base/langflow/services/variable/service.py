@@ -54,24 +54,52 @@ class DatabaseVariableService(VariableService, Service):
 
                 try:
                     if existing:
-                        # Update the value, but also update default_fields if they're not set
-                        if not existing.default_fields and default_fields:
-                            # Use update_variable_fields to set both value and default_fields
-                            from langflow.services.database.models.variable.model import VariableUpdate
+                        # Check if the variable has been user-modified (updated_at != created_at)
+                        # If so, don't overwrite with environment variable
+                        is_user_modified = (
+                            existing.updated_at is not None
+                            and existing.created_at is not None
+                            and existing.updated_at > existing.created_at
+                        )
 
-                            variable_update = VariableUpdate(
-                                id=existing.id,
-                                value=value,
-                                default_fields=default_fields,
-                            )
-                            await self.update_variable_fields(
-                                user_id=user_id,
-                                variable_id=existing.id,
-                                variable=variable_update,
-                                session=session,
+                        if is_user_modified:
+                            # Variable was modified by user, don't overwrite with environment variable
+                            # Only update default_fields if they're not set
+                            if not existing.default_fields and default_fields:
+                                from langflow.services.database.models.variable.model import VariableUpdate
+
+                                variable_update = VariableUpdate(
+                                    id=existing.id,
+                                    default_fields=default_fields,
+                                )
+                                await self.update_variable_fields(
+                                    user_id=user_id,
+                                    variable_id=existing.id,
+                                    variable=variable_update,
+                                    session=session,
+                                )
+                            await logger.adebug(
+                                f"Skipping update of user-modified variable {var_name} with environment value"
                             )
                         else:
-                            await self.update_variable(user_id, var_name, value, session=session)
+                            # Variable was not user-modified, safe to update from environment
+                            if not existing.default_fields and default_fields:
+                                # Update both value and default_fields
+                                from langflow.services.database.models.variable.model import VariableUpdate
+
+                                variable_update = VariableUpdate(
+                                    id=existing.id,
+                                    value=value,
+                                    default_fields=default_fields,
+                                )
+                                await self.update_variable_fields(
+                                    user_id=user_id,
+                                    variable_id=existing.id,
+                                    variable=variable_update,
+                                    session=session,
+                                )
+                            else:
+                                await self.update_variable(user_id, var_name, value, session=session)
                     else:
                         await self.create_variable(
                             user_id=user_id,
@@ -193,12 +221,16 @@ class DatabaseVariableService(VariableService, Service):
         db_variable = (await session.exec(query)).one()
         db_variable.updated_at = datetime.now(timezone.utc)
 
-        variable.value = variable.value or ""
         # Use the variable's type if provided, otherwise use the db_variable's type
         variable_type = variable.type or db_variable.type
-        if variable_type == CREDENTIAL_TYPE:
-            encrypted = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
-            variable.value = encrypted
+        
+        # Only process value if it's actually provided (not None)
+        if variable.value is not None:
+            # Handle empty string as valid value
+            value_to_store = variable.value
+            if variable_type == CREDENTIAL_TYPE:
+                encrypted = auth_utils.encrypt_api_key(value_to_store, settings_service=self.settings_service)
+                variable.value = encrypted
 
         variable_data = variable.model_dump(exclude_unset=True)
         for key, value in variable_data.items():
