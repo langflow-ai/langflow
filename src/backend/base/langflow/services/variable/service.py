@@ -81,25 +81,24 @@ class DatabaseVariableService(VariableService, Service):
                             await logger.adebug(
                                 f"Skipping update of user-modified variable {var_name} with environment value"
                             )
-                        else:
-                            # Variable was not user-modified, safe to update from environment
-                            if not existing.default_fields and default_fields:
-                                # Update both value and default_fields
-                                from langflow.services.database.models.variable.model import VariableUpdate
+                        # Variable was not user-modified, safe to update from environment
+                        elif not existing.default_fields and default_fields:
+                            # Update both value and default_fields
+                            from langflow.services.database.models.variable.model import VariableUpdate
 
-                                variable_update = VariableUpdate(
-                                    id=existing.id,
-                                    value=value,
-                                    default_fields=default_fields,
-                                )
-                                await self.update_variable_fields(
-                                    user_id=user_id,
-                                    variable_id=existing.id,
-                                    variable=variable_update,
-                                    session=session,
-                                )
-                            else:
-                                await self.update_variable(user_id, var_name, value, session=session)
+                            variable_update = VariableUpdate(
+                                id=existing.id,
+                                value=value,
+                                default_fields=default_fields,
+                            )
+                            await self.update_variable_fields(
+                                user_id=user_id,
+                                variable_id=existing.id,
+                                variable=variable_update,
+                                session=session,
+                            )
+                        else:
+                            await self.update_variable(user_id, var_name, value, session=session)
                     else:
                         await self.create_variable(
                             user_id=user_id,
@@ -223,7 +222,7 @@ class DatabaseVariableService(VariableService, Service):
 
         # Use the variable's type if provided, otherwise use the db_variable's type
         variable_type = variable.type or db_variable.type
-        
+
         # Only process value if it's actually provided (not None)
         if variable.value is not None:
             # Handle empty string as valid value

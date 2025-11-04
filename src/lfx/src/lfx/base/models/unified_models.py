@@ -224,6 +224,7 @@ def get_api_key_for_provider(user_id: UUID | str, provider: str, api_key: str | 
     variable_name = provider_variable_map.get(provider)
     if not variable_name:
         return None
+
     # Try to get from global variables
     async def _get_variable():
         async with session_scope() as session:
