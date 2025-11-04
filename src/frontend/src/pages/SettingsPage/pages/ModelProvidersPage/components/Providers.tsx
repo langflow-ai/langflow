@@ -261,8 +261,9 @@ const Providers = ({
                   <div className="space-y-1">
                     {provider.models.map((model, index) => {
                       const isModelEnabled =
-                        enabledModelsData?.enabled_models?.[provider.provider]?.[model.model_name] ??
-                        true;
+                        enabledModelsData?.enabled_models?.[
+                          provider.provider
+                        ]?.[model.model_name] ?? true;
                       const isDeprecated = model.metadata.deprecated;
                       const isPreview = model.metadata.preview;
                       const isNotSupported = model.metadata.not_supported;
