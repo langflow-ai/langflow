@@ -17,7 +17,7 @@ test(
     });
 
     await page
-      .getByTestId("dataAPI Request")
+      .getByTestId("data_sourceAPI Request")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();

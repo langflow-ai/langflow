@@ -26,7 +26,7 @@ test(
         });
 
         await page
-          .getByTestId("dataAPI Request")
+          .getByTestId("data_sourceAPI Request")
           .hover()
           .then(async () => {
             await page.getByTestId("add-component-button-api-request").click();

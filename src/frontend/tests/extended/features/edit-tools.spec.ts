@@ -17,7 +17,7 @@ test(
     });
 
     await page
-      .getByTestId("dataURL")
+      .getByTestId("data_sourceURL")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-url").click();

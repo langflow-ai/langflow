@@ -229,6 +229,8 @@ export const SIDEBAR_CATEGORIES = [
     icon: "ArrowRightLeft",
   },
   { display_name: "Utilities", name: "utilities", icon: "Wand2" },
+  { display_name: "Prototypes", name: "prototypes", icon: "FlaskConical" },
+  { display_name: "Tools", name: "tools", icon: "Hammer" },
 ];
 
 export const SIDEBAR_BUNDLES = [

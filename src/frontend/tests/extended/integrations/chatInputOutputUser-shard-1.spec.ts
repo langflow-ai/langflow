@@ -62,7 +62,7 @@ test(
     });
 
     await page
-      .getByTestId("dataURL")
+      .getByTestId("data_sourceURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 300, y: 200 },
       });
