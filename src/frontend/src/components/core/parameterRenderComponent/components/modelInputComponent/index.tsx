@@ -141,8 +141,10 @@ export default function ModelInputComponent({
     // Sort models within each provider
     for (const provider in groups) {
       groups[provider].sort((a, b) => {
-        const aIsDefault = a.name === defaultModelName && provider === defaultProvider;
-        const bIsDefault = b.name === defaultModelName && provider === defaultProvider;
+        const aIsDefault =
+          a.name === defaultModelName && provider === defaultProvider;
+        const bIsDefault =
+          b.name === defaultModelName && provider === defaultProvider;
 
         // Default model comes first
         if (aIsDefault && !bIsDefault) return -1;
