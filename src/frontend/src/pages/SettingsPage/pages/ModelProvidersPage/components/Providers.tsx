@@ -7,13 +7,17 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
+import {
+  PROVIDER_VARIABLE_MAPPING,
+  VARIABLE_CATEGORY,
+} from "@/constants/providerConstants";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
 import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
+  usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
 import ApiKeyModal from "@/modals/apiKeyModal";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
@@ -50,6 +54,7 @@ const Providers = ({
   const { mutate: mutateUpdateEnabledModels } = useUpdateEnabledModels();
   const { data: globalVariables } = useGetGlobalVariables();
   const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
+  const { mutate: mutateCreateGlobalVariable } = usePostGlobalVariables();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
@@ -89,6 +94,61 @@ const Providers = ({
         },
       },
     );
+  };
+
+  const handleEnableOllama = (providerName: string) => {
+    const variableName = PROVIDER_VARIABLE_MAPPING[providerName];
+    if (!variableName) {
+      setErrorData({
+        title: "Error enabling provider",
+        list: ["Provider variable mapping not found"],
+      });
+      return;
+    }
+
+    // Ollama uses base URL, default to localhost
+    const defaultBaseUrl = "http://localhost:11434";
+
+    mutateCreateGlobalVariable(
+      {
+        name: variableName,
+        value: defaultBaseUrl,
+        type: VARIABLE_CATEGORY.CREDENTIAL,
+        category: VARIABLE_CATEGORY.GLOBAL,
+        default_fields: [],
+      },
+      {
+        onSuccess: () => {
+          setSuccessData({
+            title: `${providerName} enabled successfully`,
+          });
+          // Invalidate queries to refresh the UI
+          queryClient.invalidateQueries({
+            queryKey: ["useGetModelProviders"],
+          });
+        },
+        onError: (error: any) => {
+          setErrorData({
+            title: "Error enabling provider",
+            list: [
+              error?.response?.data?.detail ||
+                "An unexpected error occurred while enabling the provider. Please try again.",
+            ],
+          });
+        },
+      },
+    );
+  };
+
+  const handleEnableProvider = (providerName: string) => {
+    // Ollama doesn't require API key, enable it directly
+    if (providerName === "Ollama") {
+      handleEnableOllama(providerName);
+    } else {
+      // For other providers, show API key modal
+      setOpenApiKeyDialog(true);
+      setSelectedProvider(providerName);
+    }
   };
 
   const handleDeleteProvider = (providerName: string) => {
@@ -242,8 +302,7 @@ const Providers = ({
                       variant="ghost"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setOpenApiKeyDialog(true);
-                        setSelectedProvider(provider.provider);
+                        handleEnableProvider(provider.provider);
                       }}
                       className="p-2"
                     >
