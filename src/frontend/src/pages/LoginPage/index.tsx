@@ -9,7 +9,7 @@ import InputComponent from "../../components/core/parameterRenderComponent/compo
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { SIGNIN_ERROR_ALERT } from "../../constants/alerts_constants";
-import { CONTROL_LOGIN_STATE } from "../../constants/constants";
+import { CONTROL_LOGIN_STATE, IS_AUTO_LOGIN } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
 import type { LoginType } from "../../types/api";
@@ -59,7 +59,9 @@ export default function LoginPage(): JSX.Element {
   }
 
   useEffect(() => {
-    clearAuthSession();
+    if (!IS_AUTO_LOGIN) {
+      clearAuthSession();
+    }
   }, []);
 
   return (
