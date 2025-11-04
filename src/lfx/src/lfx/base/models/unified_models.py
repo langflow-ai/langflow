@@ -740,11 +740,10 @@ def update_model_options_in_build_config(
     component: Any,
     build_config: dict,
     cache_key_prefix: str,
-    get_options_func: "Callable",
+    get_options_func: Callable,
     field_name: str | None = None,
 ) -> dict:
     """Helper function to update build config with cached model options.
-
 
     Uses instance-level caching to avoid expensive database calls on every field change.
     Cache is refreshed when:
@@ -767,11 +766,7 @@ def update_model_options_in_build_config(
 
     # Check if we need to refresh (when api_key changes, initial load, or cache is empty)
     # Note: Cache has 60s TTL, so it will auto-refresh after expiration
-    should_refresh = (
-        field_name == "api_key"
-        or field_name is None
-        or cache_key not in component.cache
-    )
+    should_refresh = field_name == "api_key" or field_name is None or cache_key not in component.cache
 
     if should_refresh:
         # Fetch options based on user's enabled models and providers
