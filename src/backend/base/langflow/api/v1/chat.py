@@ -289,6 +289,7 @@ async def build_vertex(
         if isinstance(cache, CacheMiss):
             # If there's no cache
             await logger.awarning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
+
             async with session_scope() as session:
                 graph = await build_graph_from_db(
                     flow_id=flow_id,

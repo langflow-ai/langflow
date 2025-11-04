@@ -53,12 +53,25 @@ class CSVToDataComponent(Component):
         try:
             if self.csv_file:
                 resolved_path = self.resolve_path(self.csv_file)
-                file_path = Path(resolved_path)
-                if file_path.suffix.lower() != ".csv":
+                # Use storage-aware reading for uploaded files
+                from lfx.base.data.storage_utils import read_file_bytes
+                from lfx.services.deps import get_settings_service
+                from lfx.utils.async_helpers import run_until_complete
+
+                resolved_path = self.resolve_path(self.csv_file)
+
+                if not resolved_path.lower().endswith(".csv"):
                     self.status = "The provided file must be a CSV file."
                 else:
-                    with file_path.open(newline="", encoding="utf-8") as csvfile:
-                        csv_data = csvfile.read()
+                    # Read bytes using storage-aware function
+                    settings = get_settings_service().settings
+                    if settings.storage_type == "s3":
+                        # For S3, run async read in sync context using Langflow's helper
+                        csv_bytes = run_until_complete(read_file_bytes(resolved_path))
+                    else:
+                        # For local, read directly
+                        csv_bytes = Path(resolved_path).read_bytes()
+                    csv_data = csv_bytes.decode("utf-8")            
 
             elif self.csv_path:
                 file_path = Path(self.csv_path)

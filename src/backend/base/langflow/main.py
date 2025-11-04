@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import re
+import tempfile
 import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
@@ -10,6 +11,7 @@ from typing import TYPE_CHECKING, cast
 from urllib.parse import urlencode
 
 import anyio
+from filelock import FileLock
 import httpx
 import sqlalchemy
 from fastapi import FastAPI, HTTPException, Request, Response, status
@@ -199,9 +201,6 @@ def get_lifespan(*, fix_migration=False, version=None):
             # the initialization work.
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Creating/updating starter projects")
-            import tempfile
-
-            from filelock import FileLock
 
             lock_file = Path(tempfile.gettempdir()) / "langflow_starter_projects.lock"
             lock = FileLock(lock_file, timeout=1)

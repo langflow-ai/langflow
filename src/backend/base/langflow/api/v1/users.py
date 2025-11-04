@@ -113,12 +113,13 @@ async def reset_password(
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
     if verify_password(user_update.password, user.password):
         raise HTTPException(status_code=400, detail="You can't use your current password")
+
     new_password = get_password_hash(user_update.password)
     user.password = new_password
-    await session.commit()
-    await session.refresh(user)
+    session.add(user)
 
     return user
 

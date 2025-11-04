@@ -8,6 +8,7 @@ from typing import Any
 from lfx.custom import Component
 from lfx.inputs import BoolInput, DropdownInput, HandleInput, IntInput
 from lfx.schema import Data
+from lfx.services.deps import get_settings_service
 from lfx.template import Output
 
 
@@ -267,6 +268,17 @@ class SplitVideoComponent(Component):
 
     def process(self) -> list[Data]:
         """Process the input video and return a list of Data objects containing the clips."""
+
+        # Video processing not yet supported in S3 mode.
+        settings = get_settings_service().settings
+        if settings.storage_type == "s3":
+            msg = (
+                "Video processing is not supported in S3 mode. "
+                "Video components require local file system access for processing. "
+                "Use local storage mode to enable this component."
+            )
+            raise ValueError(msg)
+
         try:
             # Get the input video path from the previous component
             if not hasattr(self, "videodata") or not isinstance(self.videodata, list) or len(self.videodata) != 1:

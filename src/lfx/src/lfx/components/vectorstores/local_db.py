@@ -2,6 +2,7 @@ from copy import deepcopy
 from pathlib import Path
 
 from langchain_chroma import Chroma
+from lfx.services.deps import get_settings_service
 from typing_extensions import override
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -193,6 +194,11 @@ class LocalDBComponent(LCVectorStoreComponent):
     @check_cached_vector_store
     def build_vector_store(self) -> Chroma:
         """Builds the Chroma object."""
+        settings = get_settings_service().settings
+        if settings.storage_type == "s3":
+            msg = "Local vector stores are not supported in S3 mode. Use local storage mode to enable this component."
+            raise ValueError(msg)
+
         try:
             from langchain_chroma import Chroma
         except ImportError as e:

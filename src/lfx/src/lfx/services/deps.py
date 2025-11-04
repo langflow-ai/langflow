@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import inspect
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, AsyncGenerator
 
 from lfx.log.logger import logger
 from lfx.services.schema import ServiceType
+from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 if TYPE_CHECKING:
     from lfx.services.interfaces import (
@@ -100,30 +101,51 @@ def get_tracing_service() -> TracingServiceProtocol | None:
 
     return get_service(ServiceType.TRACING_SERVICE)
 
-
-@asynccontextmanager
-async def session_scope():
-    """Session scope context manager.
-
-    Returns a real session if database service is available, otherwise a NoopSession.
-    This ensures code can always call session methods without None checking.
-    """
-    db_service = get_db_service()
-    if db_service is None or inspect.isabstract(type(db_service)):
-        from lfx.services.session import NoopSession
-
-        yield NoopSession()
-        return
-
-    async with db_service.with_session() as session:
-        yield session
-
-
-def get_session():
-    """Get database session.
-
-    Returns a session from the database service if available, otherwise NoopSession.
-    """
+async def get_session():
     msg = "get_session is deprecated, use session_scope instead"
     logger.warning(msg)
     raise NotImplementedError(msg)
+
+@asynccontextmanager
+async def session_scope() -> AsyncGenerator[AsyncSession, None]:
+    """Context manager for managing an async session scope with auto-commit for write operations.
+    This is used with `async with session_scope() as session:` for direct session management.
+    It ensures that the session is properly committed if no exceptions occur,
+    and rolled back if an exception is raised.
+    Use session_scope_readonly() for read-only operations to avoid unnecessary commits and locks.
+    Yields:
+        AsyncSession: The async session object.
+    Raises:
+        Exception: If an error occurs during the session scope.
+    """
+    db_service = get_db_service()
+    async with db_service._with_session() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception as e:
+            await logger.aexception(f"An error occurred during the session scope. {e!s}")
+            # Only rollback if session is still in a valid state
+            if session.is_active:
+                try:
+                    await session.rollback()
+                except InvalidRequestError:
+                    # Session was already rolled back by SQLAlchemy
+                    pass
+            raise
+        # No explicit close needed - _with_session() handles it
+
+
+@asynccontextmanager
+async def session_scope_readonly() -> AsyncGenerator[AsyncSession, None]:
+    """Context manager for managing a read-only async session scope.
+    This is used with `async with session_scope_readonly() as session:` for direct session management
+    when only reading data. No auto-commit or rollback - the session is simply closed after use.
+    Yields:
+        AsyncSession: The async session object.
+    """
+    db_service = get_db_service()
+    async with db_service._with_session() as session:
+        yield session
+        # No commit - read-only
+        # No explicit close needed - _with_session() handles it

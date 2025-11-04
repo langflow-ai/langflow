@@ -3,6 +3,7 @@ from pathlib import Path
 from lfx.base.data import BaseFileComponent
 from lfx.io import FileInput
 from lfx.schema import Data, DataFrame
+from lfx.services.deps import get_settings_service
 
 
 class VideoFileComponent(BaseFileComponent):
@@ -97,6 +98,11 @@ class VideoFileComponent(BaseFileComponent):
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
         """Process video files."""
+        settings = get_settings_service().settings
+        if settings.storage_type == "s3":
+            msg = "Video processing is not supported in S3 mode. Use local storage mode to enable this component."
+            raise ValueError(msg)
+
         self.log(f"DEBUG: Processing video files: {len(file_list)}")
 
         if not file_list:
@@ -137,6 +143,11 @@ class VideoFileComponent(BaseFileComponent):
 
     def load_files(self) -> DataFrame:
         """Load video files and return a list of Data objects."""
+        settings = get_settings_service().settings
+        if settings.storage_type == "s3":
+            msg = "Video processing is not supported in S3 mode. Use local storage mode to enable this component."
+            raise ValueError(msg)
+        
         try:
             self.log("DEBUG: Starting video file load")
             if not hasattr(self, "file_path") or not self.file_path:
