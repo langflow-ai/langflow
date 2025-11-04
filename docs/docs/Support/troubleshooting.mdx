@@ -147,6 +147,18 @@ In Langflow OSS, you can follow the error message's instructions to install the 
 
 To manage dependencies in Langflow Desktop, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
 
+### PostgreSQL asyncpg driver compatibility issue
+
+If you encounter errors when initializing Langflow with a PostgreSQL database, such as:
+
+```text
+sqlalchemy.exc.DBAPIError: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.DataError'>: invalid input for query argument $7: datetime.datetime(2025, 10, 31, 14, 8, 5... (can't subtract offset-naive and offset-aware datetimes)
+```
+
+This error occurs because `asyncpg` has stricter timezone handling than `psycopg2`, and is not fully compatible with Langflow's current database schema.
+
+To resolve this issue, remove `asyncpg` from your installation and use `psycopg2` instead.
+
 ## Langflow upgrade issues
 
 The following issues can occur when upgrading your Langflow version.
