@@ -417,7 +417,7 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
 
     # Track which providers have models
     providers_with_models = set()
-    
+
     for provider_data in all_models:
         provider = provider_data.get("provider")
         models = provider_data.get("models", [])
@@ -425,7 +425,7 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
 
         # Check if provider is enabled
         is_provider_enabled = not user_id or not enabled_providers or provider in enabled_providers
-        
+
         # Track this provider
         if is_provider_enabled:
             providers_with_models.add(provider)
@@ -479,16 +479,18 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
         for provider, metadata in model_provider_metadata.items():
             if provider not in providers_with_models:
                 # This provider has no enabled models, add it as a disabled provider entry
-                options.append({
-                    "name": f"__enable_provider_{provider}__",
-                    "icon": metadata.get("icon", "Bot"),
-                    "category": provider,
-                    "provider": provider,
-                    "metadata": {
-                        "is_disabled_provider": True,
-                        "variable_name": metadata.get("variable_name"),
-                    },
-                })
+                options.append(
+                    {
+                        "name": f"__enable_provider_{provider}__",
+                        "icon": metadata.get("icon", "Bot"),
+                        "category": provider,
+                        "provider": provider,
+                        "metadata": {
+                            "is_disabled_provider": True,
+                            "variable_name": metadata.get("variable_name"),
+                        },
+                    }
+                )
 
     return options
 
@@ -618,7 +620,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
 
     # Track which providers have models
     providers_with_models = set()
-    
+
     for provider_data in all_models:
         provider = provider_data.get("provider")
         models = provider_data.get("models", [])
@@ -626,7 +628,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
 
         # Check if provider is enabled
         is_provider_enabled = not user_id or not enabled_providers or provider in enabled_providers
-        
+
         # Track this provider
         if is_provider_enabled:
             providers_with_models.add(provider)
@@ -661,16 +663,18 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
         for provider, metadata in model_provider_metadata.items():
             if provider not in providers_with_models and provider in embedding_class_mapping:
                 # This provider has no enabled models and supports embeddings, add it as a disabled provider entry
-                options.append({
-                    "name": f"__enable_provider_{provider}__",
-                    "icon": metadata.get("icon", "Bot"),
-                    "category": provider,
-                    "provider": provider,
-                    "metadata": {
-                        "is_disabled_provider": True,
-                        "variable_name": metadata.get("variable_name"),
-                    },
-                })
+                options.append(
+                    {
+                        "name": f"__enable_provider_{provider}__",
+                        "icon": metadata.get("icon", "Bot"),
+                        "category": provider,
+                        "provider": provider,
+                        "metadata": {
+                            "is_disabled_provider": True,
+                            "variable_name": metadata.get("variable_name"),
+                        },
+                    }
+                )
 
     return options
 
