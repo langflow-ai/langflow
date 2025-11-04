@@ -373,7 +373,7 @@ class PreToolValidationWrapper(BaseToolWrapper):
         agent = kwargs.get("agent")
 
         if not agent:
-            logger.warning("Cannot wrap tool with PostToolProcessor: missing 'agent'")
+            logger.warning("Cannot wrap tool with PreToolValidationWrapper: missing 'agent'")
             return tool
 
         # Wrap with validation
