@@ -2,7 +2,11 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Langflow",
+<<<<<<< HEAD
     "version": "1.6.5"
+=======
+    "version": "1.7.0"
+>>>>>>> 4b655fcf96 (update to 1.7.0 actually)
   },
   "paths": {
     "/api/v1/build/{flow_id}/vertices": {
