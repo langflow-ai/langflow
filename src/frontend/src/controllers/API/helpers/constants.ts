@@ -29,7 +29,7 @@ export const URLs = {
   ALL: `all`,
   VOICE: `voice`,
   PUBLIC_FLOW: `flows/public_flow`,
-  MCP: `mcp`,
+  MCP: `mcp/project`,
   MCP_SERVERS: `mcp/servers`,
   KNOWLEDGE_BASES: `knowledge_bases`,
   AGENT_MARKETPLACE: `agent-marketplace`,
