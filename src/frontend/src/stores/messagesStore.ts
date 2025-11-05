@@ -27,7 +27,7 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
         get().updateMessagePartial(messageWithoutText);
       } else {
         // For complete messages, replace entirely
-        get().updateMessagePartial(message);
+        get().updateMessage(message);
       }
       return;
     }
