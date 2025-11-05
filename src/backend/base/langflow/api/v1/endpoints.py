@@ -355,7 +355,8 @@ async def simplified_run_flow(
     stream: bool = False,
     #TODO: Validate this approach for both Bearer and session authentication
     # Accept either a CurrentActiveUser or a UserRead from api_key_security (which supports Bearer)
-    api_key_user: CurrentActiveUser | Annotated[UserRead, Depends(api_key_security)],
+    # api_key_user: CurrentActiveUser | Annotated[UserRead, Depends(api_key_security)],
+    api_key_user: CurrentActiveUser,
     context: dict | None = None,
     http_request: Request,
 ):
