@@ -95,8 +95,21 @@ export default function ModelInputComponent({
     state => state.globalVariablesEntries
   );
 
+  // Detect if this is an embedding model input or language model input
+  const modelType = useMemo(() => {
+    if (options && options.length > 0) {
+      // Check if any of the options has model_type in metadata
+      const firstModel = options[0];
+      if (firstModel?.metadata?.model_type === 'embeddings') {
+        return 'embeddings';
+      }
+    }
+    return 'language'; // Default to language models
+  }, [options]);
+
+  // Get default model based on detected type
   const { data: defaultModelData } = useGetDefaultModel({
-    model_type: 'language',
+    model_type: modelType,
   });
 
   console.log('defaultModelData', defaultModelData);
@@ -187,12 +200,6 @@ export default function ModelInputComponent({
     defaultModelData,
   ]);
 
-  const isProviderConfigured = useMemo(() => {
-    if (!selectedProvider || !globalVariablesEntries) return false;
-    const variableName = PROVIDER_VARIABLE_MAPPING[selectedProvider];
-    return variableName ? globalVariablesEntries.includes(variableName) : false;
-  }, [selectedProvider, globalVariablesEntries]);
-
   // Utility functions
   const handleModelSelect = useCallback(
     (modelName: string) => {
@@ -225,10 +232,6 @@ export default function ModelInputComponent({
     },
     [options, handleOnNewValue, setErrorData]
   );
-
-  const handleSendApiKey = useCallback(() => {
-    setOpenApiKeyDialog(true);
-  }, []);
 
   const handleRefreshButtonPress = useCallback(async () => {
     setRefreshOptions(true);
