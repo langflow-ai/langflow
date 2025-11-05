@@ -297,7 +297,10 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["project_id"]["show"] = False
                 build_config["ollama_base_url"]["show"] = True
         elif (
-            field_name == "base_url_ibm_watsonx" and field_value and hasattr(self, "provider") and self.provider == "IBM watsonx.ai"
+            field_name == "base_url_ibm_watsonx"
+            and field_value
+            and hasattr(self, "provider")
+            and self.provider == "IBM watsonx.ai"
         ):
             # Fetch IBM models when base_url changes
             try:
