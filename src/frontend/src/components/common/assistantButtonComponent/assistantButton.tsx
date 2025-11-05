@@ -3,20 +3,20 @@ import langflowLogo from "@/assets/LangflowLogoColor.svg";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { useGetGeneratedPromptQuery } from "@/controllers/API/queries/assistant";
 import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
-import useFlowStore from "@/stores/flowStore";
+import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import { targetHandleType } from "@/types/flow";
 import ForwardedIconComponent from "../genericIconComponent";
 
-interface AIButtonProps {
+interface AssistantButtonProps {
   compData: targetHandleType;
   handleOnNewValue: handleOnNewValueType;
 }
 
-export const AIButton: React.FC<AIButtonProps> = ({
+export const AssistantButton: React.FC<AssistantButtonProps> = ({
   compData,
   handleOnNewValue,
 }) => {
-  const { setSelectedCompData } = useFlowStore();
+  const { setSelectedCompData } = useAssistantManagerStore();
   const flowId = useGetFlowId();
 
   // timer

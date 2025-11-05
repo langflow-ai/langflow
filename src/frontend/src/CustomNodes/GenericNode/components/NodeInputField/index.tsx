@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
-import { AIButton } from "@/components/common/aiButtonComponent/aiButton";
+import { AssistantButton } from "@/components/common/assistantButtonComponent/assistantButton";
 import type { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import {
@@ -199,7 +199,10 @@ export default function NodeInputField({
               )}
             </div>
             {data.node?.template[name]?.ai_enabled && (
-              <AIButton compData={id} handleOnNewValue={handleOnNewValue} />
+              <AssistantButton
+                compData={id}
+                handleOnNewValue={handleOnNewValue}
+              />
             )}
           </div>
           <CustomParameterLabel

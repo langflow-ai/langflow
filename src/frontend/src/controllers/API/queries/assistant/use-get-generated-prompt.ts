@@ -13,7 +13,6 @@ export const useGetGeneratedPromptQuery: useQueryFunctionType<any, any> = (
   const getGeneratedPromptFn = async (compId, flowId, fieldName) => {
     return await api.post<any>(
       getURL("RUN_SESSION", {
-        // assistantFlowId: "69aa447b-997e-4efd-bc33-909694cf9f02",
         assistantFlowId: "SystemMessageGen",
       }),
       {

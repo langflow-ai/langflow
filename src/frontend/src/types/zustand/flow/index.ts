@@ -302,6 +302,4 @@ export type FlowStoreType = {
   setNewChatOnPlayground: (newChat: boolean) => void;
   stopNodeId: string | undefined;
   setStopNodeId: (nodeId: string | undefined) => void;
-  selectedCompData: targetHandleType | undefined;
-  setSelectedCompData: (compData: targetHandleType | undefined) => void;
 };
