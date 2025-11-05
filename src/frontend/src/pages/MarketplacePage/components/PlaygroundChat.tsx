@@ -79,104 +79,155 @@ export function usePlaygroundChat(publishedFlowData: any) {
     return tweaks;
   };
 
-  const handleStreamEvent = (eventData: any, localAgentMessageId: string) => {
-    const data = eventData?.data;
-    if (!data) return;
+const handleStreamEvent = (eventData: any, localAgentMessageId: string) => {
+  const data = eventData?.data;
+  if (!data) return;
 
-    if (eventData.event === "add_message") {
-      if (data.sender === "User") return;
+  if (eventData.event === "add_message") {
+    if (data.sender === "User") return;
 
-      if (data.sender === "Machine") {
-        const backendId = data.id;
-        const text = data.text || "";
-        const state = data.properties?.state || "partial";
-        const isComplete = state === "complete";
+    if (data.sender === "Machine") {
+      const backendId = data.id;
+      const text = data.text || "";
+      const state = data.properties?.state || "partial";
+      const isComplete = state === "complete";
 
-        setTargetTexts((prev) => {
+      setTargetTexts((prev) => {
+        const next = new Map(prev);
+        next.set(backendId, text);
+        return next;
+      });
+
+      setDisplayedTexts((prev) => {
+        if (!prev.has(backendId)) {
           const next = new Map(prev);
-          next.set(backendId, text);
+          const currentDisplayed = prev.get(localAgentMessageId) || "";
+          next.set(backendId, currentDisplayed);
+          next.delete(localAgentMessageId);
           return next;
-        });
+        }
+        return prev;
+      });
 
-        setDisplayedTexts((prev) => {
-          if (!prev.has(backendId)) {
-            const next = new Map(prev);
-            const currentDisplayed = prev.get(localAgentMessageId) || "";
-            next.set(backendId, currentDisplayed);
-            next.delete(localAgentMessageId);
-            return next;
-          }
-          return prev;
-        });
+      setMessages((prev) => {
+        const existingIndex = prev.findIndex((msg) => msg.id === backendId);
 
-        setMessages((prev) => {
-          const existingIndex = prev.findIndex((msg) => msg.id === backendId);
+        if (existingIndex !== -1) {
+          return prev.map((msg) =>
+            msg.id === backendId
+              ? {
+                  ...msg,
+                  text: isComplete ? text : "",
+                  isStreaming: !isComplete,
+                }
+              : msg
+          );
+        } else {
+          const placeholderIndex = prev.findIndex(
+            (msg) => msg.id === localAgentMessageId
+          );
 
-          if (existingIndex !== -1) {
+          if (placeholderIndex !== -1) {
             return prev.map((msg) =>
-              msg.id === backendId
+              msg.id === localAgentMessageId
                 ? {
                     ...msg,
+                    id: backendId,
                     text: isComplete ? text : "",
                     isStreaming: !isComplete,
                   }
                 : msg
             );
           } else {
-            const placeholderIndex = prev.findIndex(
-              (msg) => msg.id === localAgentMessageId
-            );
-
-            if (placeholderIndex !== -1) {
-              return prev.map((msg) =>
-                msg.id === localAgentMessageId
-                  ? {
-                      ...msg,
-                      id: backendId,
-                      text: isComplete ? text : "",
-                      isStreaming: !isComplete,
-                    }
-                  : msg
-              );
-            } else {
-              return [
-                ...prev,
-                {
-                  id: backendId,
-                  type: "agent" as const,
-                  text: isComplete ? text : "",
-                  timestamp: new Date(),
-                  isStreaming: !isComplete,
-                },
-              ];
-            }
+            return [
+              ...prev,
+              {
+                id: backendId,
+                type: "agent" as const,
+                text: isComplete ? text : "",
+                timestamp: new Date(),
+                isStreaming: !isComplete,
+              },
+            ];
           }
-        });
-
-        if (isComplete) {
-          setTimeout(() => {
-            setTargetTexts((prev) => {
-              const next = new Map(prev);
-              next.delete(backendId);
-              return next;
-            });
-            setDisplayedTexts((prev) => {
-              const next = new Map(prev);
-              next.delete(backendId);
-              return next;
-            });
-          }, 2000);
         }
+      });
+
+      if (isComplete) {
+        setTimeout(() => {
+          setTargetTexts((prev) => {
+            const next = new Map(prev);
+            next.delete(backendId);
+            return next;
+          });
+          setDisplayedTexts((prev) => {
+            const next = new Map(prev);
+            next.delete(backendId);
+            return next;
+          });
+        }, 2000);
       }
-    } else if (eventData.event === "end") {
+    }
+  } else if (eventData.event === "end") {
+
+    try {
+      const outputs = data?.result?.outputs;
+      if (outputs && outputs.length > 0) {
+        const firstOutput = outputs[0];
+        const outputResults = firstOutput?.outputs?.[0];
+        
+        let finalText = "";
+
+        if (outputResults?.results?.text?.data?.text) {
+          finalText = outputResults.results.text.data.text;
+        }
+
+        else if (outputResults?.results?.text?.text) {
+          finalText = outputResults.results.text.text;
+        }
+
+        else if (outputResults?.outputs?.text?.message) {
+          finalText = outputResults.outputs.text.message;
+        }
+
+        else if (outputResults?.messages && outputResults.messages.length > 0) {
+          finalText = outputResults.messages[0].message || "";
+        }
+
+        if (finalText) {
+
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === localAgentMessageId
+                ? { ...msg, text: finalText, isStreaming: false }
+                : msg
+            )
+          );
+          
+          // Clear typewriter state
+          setTargetTexts(new Map());
+          setDisplayedTexts(new Map());
+        } else {
+          setMessages((prev) =>
+            prev.map((msg) => ({ ...msg, isStreaming: false }))
+          );
+        }
+      } else {
+        setMessages((prev) =>
+          prev.map((msg) => ({ ...msg, isStreaming: false }))
+        );
+      }
+    } catch (error) {
+      console.error("[Playground] Error parsing end event:", error);
       setMessages((prev) =>
         prev.map((msg) => ({ ...msg, isStreaming: false }))
       );
-    } else if (eventData.event === "error") {
-      const errorMsg = data?.error || "Stream error";
-      throw new Error(errorMsg);
     }
-  };
+  } else if (eventData.event === "error") {
+    const errorMsg = data?.error || "Stream error";
+    throw new Error(errorMsg);
+  }
+};
 
   const sendMessage = async (
     userInputText: string,

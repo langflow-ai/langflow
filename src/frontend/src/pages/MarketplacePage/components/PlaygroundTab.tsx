@@ -126,12 +126,14 @@ const sendMessage = async () => {
   if (!hasChatInput && selectedFiles.length === 0) return;
   if (isLoading) return;
   
-  // Clear files IMMEDIATELY before sending
-  setFileUrls({});
-  
+
+  const currentFileUrls = { ...fileUrls };
   const messageText = hasChatInput ? input.trim() : "Processing uploaded file...";
-  await sendMessageHook(messageText, fileUrls, fileInputComponents);
+
+  setFileUrls({});
   setInput("");
+  
+  await sendMessageHook(messageText, currentFileUrls, fileInputComponents);
 };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
