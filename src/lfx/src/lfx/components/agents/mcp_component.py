@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import uuid
 from typing import Any
 
@@ -61,6 +62,7 @@ class MCPToolsComponent(ComponentWithCache):
         "mcp_server",
         "tool",
         "use_cache",
+        "verify_ssl",
     ]
 
     display_name = "MCP Tools"
@@ -84,6 +86,16 @@ class MCPToolsComponent(ComponentWithCache):
                 "Disable to always fetch fresh tools and server updates."
             ),
             value=False,
+            advanced=True,
+        ),
+        BoolInput(
+            name="verify_ssl",
+            display_name="Verify SSL Certificate",
+            info=(
+                "Enable SSL certificate verification for HTTPS connections. "
+                "Disable only for development/testing with self-signed certificates."
+            ),
+            value=True,
             advanced=True,
         ),
         DropdownInput(
@@ -209,6 +221,11 @@ class MCPToolsComponent(ComponentWithCache):
             if not server_config:
                 self.tools = []
                 return [], {"name": server_name, "config": server_config}
+
+            # Add verify_ssl option to server config if not present
+            if "verify_ssl" not in server_config:
+                verify_ssl = getattr(self, "verify_ssl", True)
+                server_config["verify_ssl"] = verify_ssl
 
             _, tool_list, tool_cache = await update_tools(
                 server_name=server_name,
@@ -504,7 +521,6 @@ class MCPToolsComponent(ComponentWithCache):
                 if session_context:
                     self.stdio_client.set_session_context(session_context)
                     self.streamable_http_client.set_session_context(session_context)
-
                 exec_tool = self._tool_cache[self.tool]
                 tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
                 kwargs = {}
@@ -519,17 +535,31 @@ class MCPToolsComponent(ComponentWithCache):
                 unflattened_kwargs = maybe_unflatten_dict(kwargs)
 
                 output = await exec_tool.coroutine(**unflattened_kwargs)
-
                 tool_content = []
                 for item in output.content:
                     item_dict = item.model_dump()
+                    item_dict = self.process_output_item(item_dict)
                     tool_content.append(item_dict)
+
+                if isinstance(tool_content, list) and all(isinstance(x, dict) for x in tool_content):
+                    return DataFrame(tool_content)
                 return DataFrame(data=tool_content)
             return DataFrame(data=[{"error": "You must select a tool"}])
         except Exception as e:
             msg = f"Error in build_output: {e!s}"
             await logger.aexception(msg)
             raise ValueError(msg) from e
+
+    def process_output_item(self, item_dict):
+        """Process the output of a tool."""
+        if item_dict.get("type") == "text":
+            text = item_dict.get("text")
+            try:
+                return json.loads(text)
+                # convert it to dict
+            except json.JSONDecodeError:
+                return item_dict
+        return item_dict
 
     def _get_session_context(self) -> str | None:
         """Get the Langflow session ID for MCP session caching."""

@@ -164,9 +164,30 @@ jobs:
           python-version: ${{ matrix.python-version }}
           prune-cache: false
       - name: Run lfx tests
-        run: make lfx_tests
+        run: uv run make lfx_tests
         env:
           DO_NOT_TRACK: true # disable telemetry reporting
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        if: matrix.python-version == '3.10'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./src/lfx/coverage.xml
+          flags: lfx
+          name: lfx-coverage
+          fail_ci_if_error: false
+          directory: ./src/lfx/
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.10'
+        with:
+          name: lfx-coverage-report
+          path: |
+            src/lfx/coverage.xml
+            src/lfx/htmlcov/
+          retention-days: 30
 
   test-cli:
     name: Test CLI - Python ${{ matrix.python-version }}
