@@ -111,7 +111,7 @@ class LanguageModelComponent(LCModelComponent):
             real_time_refresh=True,
         ),
         DropdownInput(
-            name="base_url",
+            name="base_url_ibm_watsonx",
             display_name="watsonx API Endpoint",
             info="The base URL of the API (IBM watsonx.ai only)",
             options=IBM_WATSONX_URLS,
@@ -207,7 +207,7 @@ class LanguageModelComponent(LCModelComponent):
             if not self.api_key:
                 msg = "IBM API key is required when using IBM watsonx.ai provider"
                 raise ValueError(msg)
-            if not self.base_url:
+            if not self.base_url_ibm_watsonx:
                 msg = "IBM watsonx API Endpoint is required when using IBM watsonx.ai provider"
                 raise ValueError(msg)
             if not self.project_id:
@@ -215,7 +215,7 @@ class LanguageModelComponent(LCModelComponent):
                 raise ValueError(msg)
             return ChatWatsonx(
                 apikey=SecretStr(self.api_key).get_secret_value(),
-                url=self.base_url,
+                url=self.base_url_ibm_watsonx,
                 project_id=self.project_id,
                 model_id=model_name,
                 params={
@@ -259,7 +259,7 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["model_name"]["value"] = OPENAI_CHAT_MODEL_NAMES[0]
                 build_config["api_key"]["display_name"] = "OpenAI API Key"
                 build_config["api_key"]["show"] = True
-                build_config["base_url"]["show"] = False
+                build_config["base_url_ibm_watsonx"]["show"] = False
                 build_config["project_id"]["show"] = False
                 build_config["ollama_base_url"]["show"] = False
             elif field_value == "Anthropic":
@@ -267,7 +267,7 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["model_name"]["value"] = ANTHROPIC_MODELS[0]
                 build_config["api_key"]["display_name"] = "Anthropic API Key"
                 build_config["api_key"]["show"] = True
-                build_config["base_url"]["show"] = False
+                build_config["base_url_ibm_watsonx"]["show"] = False
                 build_config["project_id"]["show"] = False
                 build_config["ollama_base_url"]["show"] = False
             elif field_value == "Google":
@@ -275,7 +275,7 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["model_name"]["value"] = GOOGLE_GENERATIVE_AI_MODELS[0]
                 build_config["api_key"]["display_name"] = "Google API Key"
                 build_config["api_key"]["show"] = True
-                build_config["base_url"]["show"] = False
+                build_config["base_url_ibm_watsonx"]["show"] = False
                 build_config["project_id"]["show"] = False
                 build_config["ollama_base_url"]["show"] = False
             elif field_value == "IBM watsonx.ai":
@@ -283,7 +283,7 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["model_name"]["value"] = IBM_WATSONX_DEFAULT_MODELS[0]
                 build_config["api_key"]["display_name"] = "IBM API Key"
                 build_config["api_key"]["show"] = True
-                build_config["base_url"]["show"] = True
+                build_config["base_url_ibm_watsonx"]["show"] = True
                 build_config["project_id"]["show"] = True
                 build_config["ollama_base_url"]["show"] = False
             elif field_value == "Ollama":
@@ -293,11 +293,11 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["model_name"]["options"] = models
                 build_config["model_name"]["value"] = models[0] if models else ""
                 build_config["api_key"]["show"] = False
-                build_config["base_url"]["show"] = False
+                build_config["base_url_ibm_watsonx"]["show"] = False
                 build_config["project_id"]["show"] = False
                 build_config["ollama_base_url"]["show"] = True
         elif (
-            field_name == "base_url" and field_value and hasattr(self, "provider") and self.provider == "IBM watsonx.ai"
+            field_name == "base_url_ibm_watsonx" and field_value and hasattr(self, "provider") and self.provider == "IBM watsonx.ai"
         ):
             # Fetch IBM models when base_url changes
             try:
