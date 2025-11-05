@@ -217,14 +217,6 @@ class ValidatedTool(ALTKBaseTool):
         )
         return self._validate_and_run(*args, **kwargs)
 
-    async def _arun(self, *args, **kwargs) -> str:
-        """Async execute the tool with validation."""
-        self.sparc_component = SPARCReflectionComponent(
-            config=ComponentConfig(llm_client=self._get_altk_llm_object()),
-            track=Track.FAST_TRACK,  # Use fast track for performance
-            execution_mode=SPARCExecutionMode.SYNC,  # Use SYNC to avoid event loop conflicts
-        )
-        return self._validate_and_run(*args, **kwargs)
 
     def _validate_and_run(self, *args, **kwargs) -> str:
         """Validate the tool call using SPARC and execute if valid."""
@@ -424,41 +416,29 @@ class PreToolValidationWrapper(BaseToolWrapper):
                 }
 
                 # Extract parameters from tool schema if available
-                if (
-                    hasattr(unwrapped_tool, "args_schema")
-                    and unwrapped_tool.args_schema
-                ):
-                    schema = unwrapped_tool.args_schema
-                    if hasattr(schema, "__fields__"):
-                        for field_name, field_info in schema.__fields__.items():
-                            param_spec = {
-                                "type": "string",  # Default type
-                                "description": getattr(
-                                    field_info, "description", f"Parameter {field_name}"
-                                ),
-                            }
+                args_dict = unwrapped_tool.args
+                if isinstance(args_dict, dict):
+                    for param_name, param_info in args_dict.items():
+                        logger.debug("Field name:", param_name)
+                        logger.debug("Field info:", param_info)
+                        param_spec = {
+                            "type": param_info.get("type", "string"),
+                            "description": param_info.get("description", ""),
+                        }
 
-                            # Try to infer type from field info
-                            if hasattr(field_info, "type_"):
-                                if field_info.type_ == int:
-                                    param_spec["type"] = "integer"
-                                elif field_info.type_ == float:
-                                    param_spec["type"] = "number"
-                                elif field_info.type_ == bool:
-                                    param_spec["type"] = "boolean"
-
-                            tool_spec["function"]["parameters"]["properties"][
-                                field_name
-                            ] = param_spec
-
-                            # Check if field is required
-                            if (
-                                hasattr(field_info, "is_required")
-                                and field_info.is_required()
-                            ):
+                        if unwrapped_tool.args_schema and hasattr(
+                            unwrapped_tool.args_schema, "model_fields"
+                        ):
+                            field_info = unwrapped_tool.args_schema.model_fields.get(
+                                param_name
+                            )
+                            if field_info.is_required():
                                 tool_spec["function"]["parameters"]["required"].append(
-                                    field_name
+                                    param_name
                                 )
+                        tool_spec["function"]["parameters"]["properties"][
+                            param_name
+                        ] = param_spec
 
                 tool_specs.append(tool_spec)
 
