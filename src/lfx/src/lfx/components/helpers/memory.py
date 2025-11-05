@@ -15,7 +15,10 @@ from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSA
 
 class MemoryComponent(Component):
     display_name = "Message History"
-    description = "Stores or retrieves stored chat messages from Langflow tables or an external memory."
+    description = (
+        "Stores or retrieves stored chat messages from Langflow tables or an external memory. "
+        "Note: When using Store mode, disable 'Store Messages' in Chat Input and Chat Output to avoid duplicates."
+    )
     documentation: str = "https://docs.langflow.org/components-helpers#message-history"
     icon = "message-square-more"
     name = "Memory"
@@ -150,52 +153,8 @@ class MemoryComponent(Component):
 
         message.context_id = self.context_id or message.context_id
         message.session_id = self.session_id or message.session_id
-
-        # Check if message was already stored by checking ID or by searching in database
-        message_already_stored = hasattr(message, "id") and message.id
-
-        # If no ID, check if a message with same text was recently stored (last 10 seconds)
-        # This prevents duplicates when ChatInput already saved the message
-        if not message_already_stored and message.session_id:
-            from datetime import datetime, timedelta, timezone
-
-            # Get messages from the last 10 seconds to check for duplicates
-            recent_messages = await aget_messages(
-                session_id=message.session_id,
-                context_id=message.context_id,
-                limit=10,
-                order="DESC",
-            )
-
-            # Check if any recent message has the same text
-            message_text = str(message.text) if message.text else ""
-            for recent_msg in recent_messages:
-                # Check if text matches and was created in the last 10 seconds
-                if recent_msg.text == message_text:
-                    try:
-                        msg_time = (
-                            recent_msg.timestamp
-                            if isinstance(recent_msg.timestamp, datetime)
-                            else datetime.fromisoformat(str(recent_msg.timestamp).replace(" UTC", "+00:00"))
-                        )
-                        if msg_time.tzinfo is None:
-                            msg_time = msg_time.replace(tzinfo=timezone.utc)
-
-                        time_diff = datetime.now(timezone.utc) - msg_time
-                        if time_diff < timedelta(seconds=10):
-                            # Found duplicate - use existing message instead
-                            message_already_stored = True
-                            message = recent_msg
-                            break
-                    except (ValueError, AttributeError, TypeError):
-                        # If timestamp parsing fails, continue checking other messages
-                        continue
-
-        # Only set sender/sender_name if the message hasn't been stored yet (no ID)
-        # This prevents overwriting the sender of messages already saved by ChatInput/ChatOutput
-        if not message_already_stored:
-            message.sender = self.sender or message.sender or MESSAGE_SENDER_AI
-            message.sender_name = self.sender_name or message.sender_name or MESSAGE_SENDER_NAME_AI
+        message.sender = self.sender or message.sender or MESSAGE_SENDER_AI
+        message.sender_name = self.sender_name or message.sender_name or MESSAGE_SENDER_NAME_AI
 
         stored_messages: list[Message] = []
 
@@ -212,11 +171,7 @@ class MemoryComponent(Component):
             if message.sender:
                 stored_messages = [m for m in stored_messages if m.sender == message.sender]
         else:
-            # Only store the message if it hasn't been stored already
-            # Messages that were already stored by ChatInput/ChatOutput will have an ID
-            if not message_already_stored:
-                await astore_message(message, flow_id=self.graph.flow_id)
-
+            await astore_message(message, flow_id=self.graph.flow_id)
             stored_messages = (
                 await aget_messages(
                     session_id=message.session_id,

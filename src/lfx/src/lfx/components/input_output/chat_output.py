@@ -38,7 +38,7 @@ class ChatOutput(ChatComponent):
         BoolInput(
             name="should_store_message",
             display_name="Store Messages",
-            info="Store the message in the history.",
+            info="Store the message in the history. Disable this if using Message History component in Store mode.",
             value=True,
             advanced=True,
         ),
