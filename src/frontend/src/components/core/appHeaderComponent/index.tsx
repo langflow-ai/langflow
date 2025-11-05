@@ -82,6 +82,9 @@ export default function AppHeader(): JSX.Element {
   useEffect(() => {
     if (logoConfig?.value) {
       setLogoUrl(logoConfig.value);
+    } else if (logoConfig && !logoConfig.value) {
+      // Handle empty logo value (logo removed)
+      setLogoUrl(null);
     }
   }, [logoConfig, setLogoUrl]);
 
