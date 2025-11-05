@@ -1,0 +1,157 @@
+---
+title: Langfuse
+slug: /integrations-langfuse
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+[Langfuse](https://langfuse.com) is an open-source platform for LLM observability. It provides tracing and monitoring capabilities for AI applications, helping developers debug, analyze, and optimize their AI systems. Langfuse integrates with various tools and frameworks, including workflow builders and runtimes like Langflow.
+
+This guide explains how to configure Langflow to collect [tracing](https://langfuse.com/docs/tracing) data about your flow executions and automatically send the data to Langfuse.
+
+<iframe width="760" height="415" src="https://www.youtube.com/embed/SA9gGbzwNGU?si=eDKvdtvhb3fJCSbl" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+## Prerequisites
+
+- An account in a [Langfuse Cloud](https://cloud.langfuse.com) or [Langfuse self-hosted](https://langfuse.com/self-hosting) instance
+- A [running Langflow server](/get-started-installation) with a [flow](/concepts-flows) that you want to trace
+
+:::tip
+If you need a flow to test the Langfuse integration, see the [Langflow quickstart](/get-started-quickstart).
+:::
+
+## Set Langfuse credentials as environment variables {#langfuse-credentials}
+
+1. Create a set of [Langfuse API keys](https://langfuse.com/faq/all/where-are-langfuse-api-keys).
+
+2. Copy the following API key information:
+
+    - Secret Key
+    - Public Key
+    - Host URL
+
+3. Set your Langfuse project credentials as environment variables in the same environment where you run Langflow.
+
+    In the following examples, replace `SECRET_KEY`, `PUBLIC_KEY`, and `HOST_URL` with your API key details from Langfuse.
+
+    <Tabs>
+    <TabItem value="linux-macos" label="Linux or macOS" default>
+
+    These commands set the environment variables in a Linux or macOS terminal session:
+
+    ```
+    export LANGFUSE_SECRET_KEY=SECRET_KEY
+    export LANGFUSE_PUBLIC_KEY=PUBLIC_KEY
+    export LANGFUSE_HOST=HOST_URL
+    ```
+
+    </TabItem>
+    <TabItem value="windows" label="Windows">
+
+    These commands set the environment variables in a Windows command prompt session:
+
+    ```
+    set LANGFUSE_SECRET_KEY=SECRET_KEY
+    set LANGFUSE_PUBLIC_KEY=PUBLIC_KEY
+    set LANGFUSE_HOST=HOST_URL
+    ```
+
+    </TabItem>
+    </Tabs>
+
+## Start Langflow and view traces in Langfuse
+
+1. Start Langflow in the same environment where you set the Langfuse environment variables:
+
+    ```bash
+    uv run langflow run
+    ```
+
+2. Run a flow.
+
+    Langflow automatically collects and sends tracing data about the flow execution to Langfuse.
+
+3. View the collected data in your [Langfuse dashboard](https://langfuse.com/docs/analytics/overview).
+
+    Langfuse also provides a [public live trace example dashboard](https://cloud.langfuse.com/project/cm0nywmaa005c3ol2msoisiho/traces/f016ae6d-4527-43f5-93ba-9d78388cd3d9).
+
+## Disable Langfuse tracing
+
+To disable the Langfuse integration, remove the [Langfuse environment variables](#langfuse-credentials), and then restart Langflow.
+
+## Run Langfuse and Langflow with Docker Compose
+
+As an alternative to the previous setup, particularly for self-hosted Langfuse, you can run both services with Docker Compose.
+
+1. Create a set of [Langfuse API keys](https://langfuse.com/faq/all/where-are-langfuse-api-keys).
+
+2. Copy the following API key information:
+
+    - Secret Key
+    - Public Key
+    - Host URL
+
+3. Add your Langflow credentials to your Langflow `docker-compose.yml` file in the `environment` section.
+
+    The following example is based on the [example `docker-compose.yml`](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml).
+
+    ```yml
+    services:
+      langflow:
+        image: langflowai/langflow:latest # or another version tag on https://hub.docker.com/r/langflowai/langflow
+        pull_policy: always               # set to 'always' when using 'latest' image
+        ports:
+          - "7860:7860"
+        depends_on:
+          - postgres
+        environment:
+          - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
+          # This variable defines where the logs, file storage, monitor data and secret keys are stored.
+          - LANGFLOW_CONFIG_DIR=app/langflow
+          - LANGFUSE_SECRET_KEY=sk-...
+          - LANGFUSE_PUBLIC_KEY=pk-...
+          - LANGFUSE_HOST=https://us.cloud.langfuse.com
+        volumes:
+          - langflow-data:/app/langflow
+
+      postgres:
+        image: postgres:16
+        environment:
+          POSTGRES_USER: langflow
+          POSTGRES_PASSWORD: langflow
+          POSTGRES_DB: langflow
+        ports:
+          - "5432:5432"
+        volumes:
+          - langflow-postgres:/var/lib/postgresql/data
+
+    volumes:
+      langflow-postgres:
+      langflow-data:
+    ```
+
+4. Start the Docker container:
+
+    ```text
+    docker-compose up
+    ```
+
+5. To confirm Langfuse is connected to your Langflow container, run the following command:
+
+    ```sh
+    docker compose exec langflow python -c "import requests, os; addr = os.environ.get('LANGFUSE_HOST'); print(addr); res = requests.get(addr, timeout=5); print(res.status_code)"
+    ```
+
+    If there is an error, make sure you have set the `LANGFUSE_HOST` environment variable in your terminal session.
+
+    Output similar to the following indicates success:
+
+    ```text
+    https://us.cloud.langfuse.com
+    200
+    ```
+
+## See also
+
+* [Langfuse GitHub repository](https://github.com/langfuse/langfuse)

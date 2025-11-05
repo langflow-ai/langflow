@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -14,12 +15,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("nvidia");
 
-    await page.waitForSelector('[data-testid="languagemodelsNVIDIA"]', {
+    await page.waitForSelector('[data-testid="nvidiaNVIDIA"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("languagemodelsNVIDIA")
+      .getByTestId("nvidiaNVIDIA")
       .hover()
       .then(async () => {
         // Wait for the API request to complete after clicking the add button
@@ -42,7 +43,7 @@ test(
 
     await page.getByText("Close").last().click();
 
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     await page.locator('//*[@id="int_int_seed"]').click();
     await page.locator('//*[@id="int_int_seed"]').fill("");

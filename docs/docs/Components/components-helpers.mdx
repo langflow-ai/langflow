@@ -1,0 +1,245 @@
+---
+title: Helpers
+slug: /components-helpers
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Helper components provide utility functions to help manage data and perform simple tasks in your flow.
+
+## Calculator
+
+The **Calculator** component performs basic arithmetic operations on mathematical expressions.
+It supports addition, subtraction, multiplication, division, and exponentiation operations.
+
+For an example of using this component in a flow, see the [**Python Interpreter** component](/components-processing#python-interpreter).
+
+### Calculator parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| expression | String | Input parameter. The arithmetic expression to evaluate, such as `4*4*(33/22)+12-20`. |
+| result | Data | Output parameter. The calculation result as a [`Data` object](/data-types) containing the evaluated expression. |
+
+## Current Date
+
+The **Current Date** component returns the current date and time in a selected timezone. This component provides a flexible way to obtain timezone-specific date and time information within a Langflow pipeline.
+
+### Current Date parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| timezone | String | Input parameter. The timezone for the current date and time. |
+| current_date | String | Output parameter. The resulting current date and time in the selected timezone. |
+
+## Message History
+
+The **Message History** component provides combined chat history and message storage functionality.
+It can store and retrieve chat messages from either [Langflow storage](/memory) _or_ a dedicated chat memory database like Mem0 or Redis.
+
+:::tip
+The **Agent** component has built-in chat memory that is enabled by default and uses Langflow storage.
+This built-in chat memory functionality is sufficient for most use cases.
+
+Use the **Message History** component for the following use cases:
+
+* You need to store and retrieve chat memory for a language model component (not an agent).
+* You need to retrieve chat memories outside the chat context, such as a sentiment analysis flow that retrieves and analyzes recently stored memories.
+* You want to store memories in a specific database that is separate from Langflow storage.
+
+For more information, see [Store chat memory](/memory#store-chat-memory).
+:::
+
+### Use the Message History component in a flow
+
+The **Message History** component has two modes, depending on where you want to use it in your flow:
+
+* **Retrieve mode**: The component retrieves chat messages from your Langflow database or external memory.
+* **Store mode**: The component stores chat messages in your Langflow database or external memory.
+
+This means that you need multiple **Message History** components in your flow if you want to both store and retrieve chat messages.
+
+<Tabs>
+<TabItem value="langflow" label="Use Langflow storage" default>
+
+The following steps explain how to create a chat-based flow that uses **Message History** components to store and retrieve chat memory from your Langflow installation's database:
+
+1. Create or edit a flow where you want to use chat memory.
+
+2. At the beginning of the flow, add a **Message History** component, and then set it to **Retrieve** mode.
+
+3. Optional: In the **Message History** [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** to enable parameters for memory sorting, filtering, and limits.
+
+3. Add a **Prompt Template** component, add a `{memory}` variable to the **Template** field, and then connect the **Message History** output to the **memory** input.
+
+    The **Prompt Template** component supplies instructions and context to LLMs, separate from chat messages passed through a **Chat Input** component.
+    The template can include any text and variables that you want to supply to the LLM, for example:
+
+    ```text
+    You are a helpful assistant that answers questions.
+
+    Use markdown to format your answer, properly embedding images and urls.
+
+    History:
+
+    {memory}
+    ```
+
+    Variables (`{variable}`) in the template dynamically add fields to the **Prompt Template** component so that your flow can receive definitions for those values from elsewhere, such as other components, Langflow global variables, or runtime input.
+    For more information, see [Define variables in prompts](/components-prompts#define-variables-in-prompts).
+
+    In this example, the `{memory}` variable is populated by the retrieved chat memories, which are then passed to a **Language Model** or **Agent** component to provide additional context to the LLM.
+
+4. Connect the **Prompt Template** component's output to a **Language Model** component's **System Message** input.
+
+    This example uses the **Language Model** core component as the central chat driver, but you can also use another language model component or the **Agent** component.
+
+5. Add a **Chat Input** component, and then connect it to the **Language Model** component's **Input** field.
+
+6. Connect the **Language Model** component's output to a **Chat Output** component.
+
+7. At the end of the flow, add another **Message History** component, and then set it to **Store** mode.
+
+    Configure any additional parameters in the second **Message History** component as needed, taking into consideration that this particular component will store chat messages rather than retrieve them.
+
+8. Connect the **Chat Output** component's output to the **Message History** component's **Message** input.
+
+    Each response from the LLM is output from the **Language Model** component to the **Chat Output** component, and then stored in chat memory by the final **Message History** component.
+
+</TabItem>
+<TabItem value="external" label="Use external chat memory">
+
+To store and retrieve chat memory from a dedicated, external chat memory database, use the **Message History** component _and_ a provider-specific chat memory component.
+
+The following steps explain how to create a flow that stores and retrieves chat memory from a [**Redis Chat Memory** component](/bundles-redis).
+Other options include the [**Mem0 Chat Memory** component](/bundles-mem0) and [**Cassandra Chat Memory** component](/bundles-cassandra#cassandra-chat-memory).
+
+1. Create or edit a flow where you want to use chat memory.
+
+2. At the beginning of the flow, add a **Message History** component and a **Redis Chat Memory** component:
+
+   1. Configure the **Redis Chat Memory** component to connect to your Redis database. For more information, see the [Redis documentation](https://redis.io/docs/latest/).
+   2. Set the **Message History** component to **Retrieve** mode.
+   3. In the **Message History** [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable **External Memory**, and then click **Close**.
+
+      In **Controls**, you can also enable parameters for memory sorting, filtering, and limits.
+
+   4. Connect the **Redis Chat Memory** component's output to the **Message History** component's **External Memory** input.
+
+3. Add a **Prompt Template** component, add a `{memory}` variable to the **Template** field, and then connect the **Message History** output to the **memory** input.
+
+    The **Prompt Template** component supplies instructions and context to LLMs, separate from chat messages passed through a **Chat Input** component.
+    The template can include any text and variables that you want to supply to the LLM, for example:
+
+    ```text
+    You are a helpful assistant that answers questions.
+
+    Use markdown to format your answer, properly embedding images and urls.
+
+    History:
+
+    {memory}
+    ```
+
+    Variables (`{variable}`) in the template dynamically add fields to the **Prompt Template** component so that your flow can receive definitions for those values from elsewhere, such as other components, Langflow global variables, or runtime input.
+    For more information, see [Define variables in prompts](/components-prompts#define-variables-in-prompts).
+
+    In this example, the `{memory}` variable is populated by the retrieved chat memories, which are then passed to a **Language Model** or **Agent** component to provide additional context to the LLM.
+
+4. Connect the **Prompt Template** component's output to a **Language Model** component's **System Message** input.
+
+    This example uses the **Language Model** core component as the central chat driver, but you can also use another language model component or the **Agent** component.
+
+5. Add a **Chat Input** component, and then connect it to the **Language Model** component's **Input** input.
+
+6. Connect the **Language Model** component's output to a **Chat Output** component.
+
+7. At the end of the flow, add another pair of **Message History** and **Redis Chat Memory** components:
+
+   1. Configure the **Redis Chat Memory** component to connect to your Redis database.
+   2. Set the **Message History** component to **Store** mode.
+   3. In the **Message History** [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable **External Memory**, and then click **Close**.
+
+       Configure any additional parameters in this component as needed, taking into consideration that this particular component will store chat messages rather than retrieve them.
+
+   4. Connect the **Redis Chat Memory** component to the **Message History** component's **External Memory** input.
+
+8. Connect the **Chat Output** component's output to the **Message History** component's **Message** input.
+
+    Each response from the LLM is output from the **Language Model** component to the **Chat Output** component, and then stored in chat memory by passing it to the final **Message History** and **Redis Chat Memory** components.
+
+![A flow with Message History and Redis Chat Memory components](/img/component-message-history-external-memory.png)
+
+</TabItem>
+</Tabs>
+
+### Message History parameters
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+The available parameters depend on whether the component is in **Retrieve** or **Store** mode.
+
+<Tabs>
+<TabItem value="retrieve" label="Retrieve mode">
+
+| Name | Type | Description |
+|------|------|-------------|
+| **Template** (`template`) | String | Input parameter. The template to use for formatting the data. It can contain the keys `{text}`, `{sender}` or any other key in the message data. |
+| **External Memory** (`memory`) | External Memory | Input parameter. Retrieve messages from an external memory. If empty, Langflow storage is used. |
+| **Number of Messages** (`n_messages`) | Integer | Input parameter. The number of messages to retrieve. Default: 100. |
+| **Order** (`order`) | String | Input parameter. The order of the messages. Default: `Ascending`. |
+| **Sender Type** (`sender_type`) | String | Input parameter. Filter by sender type, one of `User`, `Machine`, or `Machine and User` (default). |
+| **Session ID** (`session_id`) | String | Input parameter. The [session ID](/session-id) of the chat memories to retrieve. If omitted or empty, the current session ID for the flow run is used. |
+
+</TabItem>
+<TabItem value="store" label="Store mode">
+
+| Name | Type | Description |
+|------|------|-------------|
+| **Template** (`template`) | String | Input parameter. The template to use for formatting the data. It can contain the keys `{text}`, `{sender}` or any other key in the message data. |
+| **Message** (`message`) | String | Input parameter. The message to store, typically provided by connecting a **Chat Output** component. |
+| **External Memory** (`memory`) | External Memory | Input parameter. Store messages in external memory. If empty, Langflow storage is used. |
+| **Sender** (`sender`) | String | Input parameter. Choose which messages to store based on sender, one of `User`, `Machine`, or `Machine and User` (default). |
+| **Sender Name** (`sender_name`) | String | Input parameter. A backup `sender` label to use if a message doesn't have sender metadata. |
+| **Session ID** (`session_id`) | String | Input parameter. The [session ID](/session-id) of the chat memories to store. If omitted or empty, the current session ID for the flow run is used. Use custom session IDs if you need to segregate chat memory for different users or applications that run the same flow. |
+| **Sender Type** (`sender_type`) | String | Input parameter. Filter by sender type, one of `User`, `Machine`, or `Machine and User` (default). |
+
+</TabItem>
+</Tabs>
+
+### Message History output
+
+Memories can be retrieved in one of two formats:
+
+* **Message**: Retrieve memories as `Message` objects, including `messages_text` containing retrieved chat message text.
+This is the typical output format used to pass memories _as chat messages_ to another component.
+
+* **DataFrame**: Returns memories as a `DataFrame` containing the message data.
+Useful for cases where you need to retrieve memories in a tabular format rather than as chat messages.
+
+You can set the output type near the component's output port.
+
+## Legacy Helper components
+
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
+
+<PartialLegacy />
+
+The following Helper components are in legacy status:
+
+* **Message Store**: Replaced by the [**Message History** component](#message-history)
+* **Create List**: Replace with [Processing components](/components-processing)
+* **ID Generator**: Replace with a component that executes arbitrary code to generate an ID or embed an ID generator script your application code (external to your Langflow flows).
+* **Output Parser**: Replace with the [**Structured Output** component](/components-processing#structured-output) and [**Parser** component](/components-processing#parser).
+The components you need depend on the data types and complexity of the parsing task.
+
+    The **Output Parser** component transformed the output of a language model into comma-separated values (CSV) format, such as `["item1", "item2", "item3"]`, using LangChain's `CommaSeparatedListOutputParser`.
+    The **Structured Output** component is a good alternative for this component because it also formats LLM responses with support for custom schemas and more complex parsing.
+
+    **Parsing** components only provide formatting instructions and parsing functionality.
+    _They don't include prompts._
+    You must connect parsers to **Prompt Template** components to create prompts that LLMs can use.

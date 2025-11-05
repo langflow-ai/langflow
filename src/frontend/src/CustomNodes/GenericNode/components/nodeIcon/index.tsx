@@ -1,10 +1,9 @@
-import { useTypesStore } from "@/stores/typesStore";
-import { iconExists, nodeColors } from "@/utils/styleUtils";
 import emojiRegex from "emoji-regex";
 import { useEffect, useState } from "react";
-
-import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { checkLucideIcons } from "@/CustomNodes/helpers/check-lucide-icons";
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { useTypesStore } from "@/stores/typesStore";
+import { iconExists } from "@/utils/styleUtils";
 import IconComponent from "../../../../components/common/genericIconComponent";
 
 export function NodeIcon({
@@ -26,7 +25,6 @@ export function NodeIcon({
   }, [dataType, types]);
 
   const isEmoji = emojiRegex().test(icon ?? "");
-  const iconColor = nodeColors[types[dataType]];
   const iconName = icon || (isGroup ? "group_components" : name);
 
   const isLucideIcon = checkLucideIcons(iconName);
@@ -38,11 +36,11 @@ export function NodeIcon({
 
     return (
       <div className="flex h-4 w-4 items-center justify-center">
-        {isLucideIcon ? (
-          <IconComponent strokeWidth={ICON_STROKE_WIDTH} name={iconName} />
-        ) : (
-          <IconComponent name={iconName} iconColor={iconColor} />
-        )}
+        <IconComponent
+          strokeWidth={isLucideIcon ? ICON_STROKE_WIDTH : undefined}
+          name={iconName}
+          className="h-4 w-4"
+        />
       </div>
     );
   };

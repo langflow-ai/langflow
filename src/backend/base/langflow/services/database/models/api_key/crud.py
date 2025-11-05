@@ -7,8 +7,8 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth.api_key_codec import apply_api_key_context, generate_api_key_for_user
-from langflow.services.database.models import User
-from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
+from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 
 if TYPE_CHECKING:

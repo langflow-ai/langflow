@@ -1,21 +1,21 @@
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { ReactFlowJsonObject } from "@xyflow/react";
-import { ReactElement, ReactNode } from "react";
-import { InputOutput } from "../../constants/enums";
-import {
+import type { ReactFlowJsonObject } from "@xyflow/react";
+import type { ReactElement, ReactNode } from "react";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
+import type { InputOutput } from "../../constants/enums";
+import type {
   APIClassType,
   APITemplateType,
   InputFieldType,
   OutputFieldProxyType,
 } from "../api";
-import { ChatMessageType } from "../chat";
-import {
+import type { ChatMessageType } from "../chat";
+import type { sourceHandleType, targetHandleType } from "./../flow/index";
+import type {
   AllNodeType,
   FlowStyleType,
   FlowType,
   NodeDataType,
 } from "../flow/index";
-import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   name?: string;
   autoFocus?: boolean;
@@ -51,6 +51,7 @@ export type InputComponentType = {
   commandWidth?: string;
   blockAddNewGlobalVariable?: boolean;
   hasRefreshButton?: boolean;
+  allowCustomValue?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -68,6 +69,7 @@ export type DropDownComponent = {
   children?: ReactNode;
   name: string;
   dialogInputs?: any;
+  externalOptions?: any;
   toggle?: boolean;
 };
 export type ParameterComponentType = {
@@ -83,7 +85,7 @@ export type ParameterComponentType = {
   required?: boolean;
   name?: string;
   tooltipTitle: string | undefined;
-  optionalHandle?: Array<String> | null;
+  optionalHandle?: Array<string> | null;
   info?: string;
   proxy?: { field: string; id: string };
   showNode?: boolean;
@@ -123,7 +125,7 @@ export type NodeInputFieldComponentType = {
   type: string | undefined;
   name: string;
   required: boolean;
-  optionalHandle: Array<String> | undefined | null;
+  optionalHandle: Array<string> | undefined | null;
   lastInput?: boolean;
   info: string;
   proxy: { field: string; id: string } | undefined;
@@ -478,10 +480,6 @@ export type nodeGroupedObjType = {
   node: string[] | string;
 };
 
-type test = {
-  [char: string]: string;
-};
-
 export type tweakType = Array<{
   [key: string]: {
     [char: string]: string;
@@ -551,7 +549,7 @@ export type ChatInputType = {
   }: {
     repeat: number;
     files?: string[];
-  }) => void;
+  }) => Promise<void>;
   playgroundPage: boolean;
 };
 
@@ -840,7 +838,7 @@ export type chatViewProps = {
   }: {
     repeat: number;
     files?: string[];
-  }) => void;
+  }) => Promise<void>;
   visibleSession?: string;
   focusChat?: string;
   closeChat?: () => void;

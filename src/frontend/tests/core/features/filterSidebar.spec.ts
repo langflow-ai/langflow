@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -56,8 +56,7 @@ test(
           .isVisible();
       });
 
-    await expect(page.getByTestId("disclosure-i/o")).toBeVisible();
-    await expect(page.getByTestId("disclosure-prompts")).toBeVisible();
+    await expect(page.getByTestId("disclosure-input / output")).toBeVisible();
     await expect(page.getByTestId("disclosure-models")).toBeVisible();
     await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
     await expect(page.getByTestId("disclosure-agents")).toBeVisible();
@@ -69,12 +68,12 @@ test(
     await page.getByTestId("sidebar-legacy-switch").click();
     await page.getByTestId("sidebar-options-trigger").click();
 
-    await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
-
     await expect(page.getByTestId("input_outputChat Input")).toBeVisible();
     await expect(page.getByTestId("input_outputChat Output")).toBeVisible();
-    await expect(page.getByTestId("promptsPrompt")).toBeVisible();
-    await expect(page.getByTestId("langchain_utilitiesCSVAgent")).toBeVisible();
+    await expect(page.getByTestId("processingPrompt Template")).toBeVisible();
+    await expect(
+      page.getByTestId("langchain_utilitiesCSV Agent"),
+    ).toBeVisible();
     await expect(
       page.getByTestId("langchain_utilitiesConversationChain"),
     ).toBeVisible();
@@ -97,7 +96,9 @@ test(
 
     await expect(page.getByTestId("input_outputChat Input")).not.toBeVisible();
     await expect(page.getByTestId("input_outputChat Output")).not.toBeVisible();
-    await expect(page.getByTestId("promptsPrompt")).not.toBeVisible();
+    await expect(
+      page.getByTestId("processingPrompt Template"),
+    ).not.toBeVisible();
     await expect(
       page.getByTestId("agentsTool Calling Agent"),
     ).not.toBeVisible();
@@ -114,13 +115,11 @@ test(
 
     await expect(page.getByTestId("disclosure-data")).toBeVisible();
     await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
-    await expect(page.getByTestId("disclosure-vector stores")).toBeVisible();
-    await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
     await expect(page.getByTestId("disclosure-tools")).toBeVisible();
 
     await expect(page.getByTestId("dataAPI Request")).toBeVisible();
-    await expect(page.getByTestId("vectorstoresAstra DB")).toBeVisible();
-    await expect(page.getByTestId("logicSub Flow [Deprecated]")).toBeVisible();
+    await expect(page.getByTestId("datastaxAstra DB")).toBeVisible();
+    await expect(page.getByTestId("logicSub Flow")).toBeVisible();
 
     await page.getByTestId("sidebar-options-trigger").click();
     await page.getByTestId("sidebar-beta-switch").isVisible({ timeout: 5000 });
@@ -128,17 +127,15 @@ test(
     await expect(page.getByTestId("sidebar-beta-switch")).toBeChecked();
     await page.getByTestId("sidebar-options-trigger").click();
 
-    await expect(page.getByTestId("logicSub Flow [Deprecated]")).toBeVisible();
+    await expect(page.getByTestId("logicSub Flow")).toBeVisible();
 
-    await expect(page.getByTestId("processingSplit Text")).toBeVisible();
+    await expect(page.getByTestId("processingData Operations")).toBeVisible();
 
     await page.getByTestId("icon-X").first().click();
 
     await expect(page.getByTestId("dataAPI Request")).not.toBeVisible();
-    await expect(page.getByTestId("vectorstoresAstra DB")).not.toBeVisible();
-    await expect(
-      page.getByTestId("logicSub Flow [Deprecated]"),
-    ).not.toBeVisible();
+    await expect(page.getByTestId("datastaxAstra DB")).not.toBeVisible();
+    await expect(page.getByTestId("logicSub Flow")).not.toBeVisible();
 
     await expect(page.getByTestId("processingSplit Text")).not.toBeVisible();
   },

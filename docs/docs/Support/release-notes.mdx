@@ -1,0 +1,259 @@
+---
+title: Langflow release notes
+slug: /release-notes
+---
+
+import Icon from "@site/src/components/icon";
+import McpIcon from '@site/static/logos/mcp-icon.svg';
+
+This page summarizes significant changes to Langflow in each release.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
+
+Due to strict SemVer requirements, Langflow Desktop can have different patch versions than the core Langflow OSS Python package, but the major and minor versions are aligned.
+
+## Prepare to upgrade
+
+:::warning
+Whenever possible, the Langflow team recommends installing new Langflow versions in a new virtual environment or VM before upgrading your primary installation.
+This allows you to [import flows](/concepts-flows-import#import-a-flow) from your existing installation and test them in the new version without disrupting your existing installation.
+In the event of breaking changes or bugs, your existing installation is preserved in a stable state.
+If you are upgrading Windows Desktop to 1.6.0, don't auto-upgrade with the in-app **Update** button. Instead, follow the instructions in [Known issue: Don't auto-upgrade Windows Desktop](#windows-desktop-update-issue).
+:::
+
+To avoid the impact of potential breaking changes and test new versions, the Langflow team recommends the following upgrade process:
+
+1. Recommended: [Export your projects](/api-projects#export-a-project) to create backups of your flows:
+
+    ```bash
+    curl -X GET \
+    "$LANGFLOW_SERVER_URL/api/v1/projects/download/$PROJECT_ID" \
+      -H "accept: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY"
+    ```
+
+   To export flows from the visual editor, see [Import and export flows](/concepts-flows-import).
+
+2. Install the new version:
+
+   * **Langflow OSS Python package**: Install the new version in a new virtual environment. For instructions, see [Install and run the Langflow OSS Python package](/get-started-installation#install-and-run-the-langflow-oss-python-package).
+   * **Langflow Docker image**: Run the new image in a separate container.
+   * **Langflow Desktop**: To upgrade in place, open Langflow Desktop, and then click **Upgrade Available** in the Langflow header. If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then [import your flows](/concepts-flows-import) to the new installation.
+
+3. [Import your flows](/concepts-flows-import) to test them in the new version, [upgrading components](/concepts-components#component-versions) as needed.
+
+    When upgrading components, you can use the **Create backup flow before updating** option if you didn't previously export your flows.
+
+4. If you installed the new version in isolation, upgrade your primary installation after testing the new version.
+
+    If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
+
+## 1.6.0
+
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### Known issue, potential security vulnerability: .env file not loaded in versions 1.6.0 through 1.6.3 {#env-file-bug}
+
+Langflow versions 1.6.0 through 1.6.3 have a critical bug where environment variables from `.env` files aren't read.
+This affects all deployments using environment variables for configuration, including security settings.
+
+:::warning Potential security vulnerability
+If your `.env` file includes `AUTO_LOGIN=false`, upgrading to the impacted versions causes Langflow to fall back to default settings, potentially giving all users superuser access immediately upon upgrade.
+Additionally, database credentials, API keys, and other sensitive configurations can't be loaded from `.env` files.
+
+_Don't_ upgrade to any Langflow version from 1.6.0 through 1.6.3 if you use `.env` files for configuration.
+Instead, upgrade to 1.6.4, which includes a fix for this bug.
+:::
+
+### Known issue: Don't auto-upgrade Windows Desktop {#windows-desktop-update-issue}
+
+:::warning
+Windows users of Langflow Desktop should **not** use the in-app update feature to upgrade to Langflow version 1.6.0.
+Only Windows Desktop users upgrading to Langflow version 1.6.0 are affected.
+:::
+
+The **Update** button in Langflow Desktop will not work for Windows users, and may result in data loss.
+
+Instead, download a fresh installation from the [Langflow website](https://langflow.org) when a new version is available.
+
+Follow the instructions below to minimize the risk of losing flows.
+
+These instructions assume the default path for the Langflow database of `C:\Users\YOUR_USERNAME\AppData\Roaming\com.langflow\data\database.db` or `C:\Users\%YOUR_USERNAME%\AppData\Roaming\com.langflow\data\database.db`. Replace `YOUR_USERNAME` with your Windows username.
+
+1. Ensure you have Administrator privileges.
+2. Ensure you have enough disk space for a second installation of Langflow.
+3. Close Langflow, and ensure no Langflow process is running in Task Manager.
+4. The Langflow 1.6.0 installer automatically performs a database backup in a later step, but an additional manual backup provides additional redundancy and is recommended.
+To manually back up your Langflow database file, do the following:
+   1. In Windows Explorer, navigate to `C:\Users\YOUR_USERNAME\AppData\Roaming\com.langflow\data\`. Replace `YOUR_USERNAME` with your Windows username.
+   2. Copy the `database.db` at this location, and paste it to a safe location.
+5. Download the Windows installer from the [Langflow website](https://langflow.org).
+6. Run the Windows installer as an Administrator. To run the installer as an Administrator, right-click the executable and select **Run as administrator**.
+7. Follow the Windows installer's guided steps.
+The Langflow 1.6.0 installer automatically performs a database backup.
+These steps install Langflow from scratch, and result in two Langflow installations: the previously installed version, and version 1.6.0.
+This is expected behavior.
+8. Start version 1.6.0 of Langflow, and confirm your flows behave as expected.
+9. **If flows are missing**, restore your flows from your manual backup by doing the following:
+    1. Close Langflow.
+    2. Navigate to your backup location, and copy the `database.db` file.
+    3. Replace the database file in the new installation's `data` directory.
+    4. Start Langflow, and confirm your flows behave as expected.
+    5. After confirmation, uninstall the previous version of Langflow, and keep version 1.6.0.
+
+### Breaking changes
+
+- Authentication enforced for Langflow API requests by default
+
+    In Langflow version 1.6, `LANGFLOW_AUTO_LOGIN=True` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False` by default.
+    This enforces authentication for Langflow API requests while still automatically authenticating all users as superusers in the visual editor.
+
+    **This is a breaking change from 1.5 where both of these environment variables were `true` by default, bypassing all authentication.**
+
+    For temporary backwards compatibility, you can revert to the earlier unauthenticated behavior by setting both variables to `true`.
+    However, a future release will set `LANGFLOW_AUTO_LOGIN=False` and remove `LANGFLOW_SKIP_AUTH_AUTO_LOGIN`.
+    At that point, Langflow will strictly enforce API key authentication for API requests, and you can manually disable authentication for some features, like the visual editor, by setting `LANGFLOW_AUTO_LOGIN=True`.
+
+    For more information, see the documentation for [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login).
+
+### New features and enhancements
+
+- OpenAI Responses API compatibility
+
+  Langflow now includes an endpoint that is compatible with the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses) at `POST /api/v1/responses`.
+  This allows you to use existing OpenAI client libraries with minimal code changes by replacing the `model` name with your `flow_id`.
+  The endpoint supports streaming responses, conversation continuity, tool call results, and global variable passing through headers.
+  For more information, see [OpenAI Responses API](/api-openai-responses).
+
+- Advanced document parsing with built-in Docling support
+
+  The **File** component supports advanced parsing with the Docling library.
+
+  To make it easier to use the [**Docling** components](/bundles-docling) and the **File** component's new advanced parsing feature, the Docling dependency is now included with Langflow for all operating systems except macOS Intel (x86_64).
+
+  For more information, see [Advanced parsing](/components-data#advanced-parsing).
+
+- Reorganized component menus and visual editor controls
+
+  - The [workspace](/concepts-overview#workspace) sidebar is divided into separate sections for <Icon name="Search" aria-hidden="true" /> **Search**, <Icon name="Component" aria-hidden="true" /> **Core components**, <McpIcon /> [**MCP servers**](/mcp-server), <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components), and <Icon name="StickyNote" aria-hidden="true"/> **Add Note**.
+  - Lock/unlock controls moved to flow details in [**Projects**](/concepts-flows#projects).
+  - Zoom and help controls moved to the lower-right corner of the workspace.
+  - Vector store components moved to provider-specific <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components)
+  - **Serper Google Search API** component moved to the **Serper** bundle
+
+- Increased the default maximum file upload size from `100 MB` to `1024 MB`.
+
+- New integrations and bundles:
+
+  - [Traceloop](/integrations-instana-traceloop)
+  - [Cohere Rerank](/bundles-cohere)
+  - [S3 Bucket Uploader](/bundles-amazon)
+  - [Composio single-service components](/bundles-composio)
+
+### Deprecations
+
+- The **Local DB** component is now in legacy status.
+Replace this component with the [**Chroma DB** component](/bundles-chroma).
+
+## 1.5.0
+
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### New features and enhancements
+
+- Langflow API requests can require authentication
+
+    To enhance security and ensure proper authentication for automatic login features, Langflow API endpoints now require authentication with a Langflow API key, even when `LANGFLOW_AUTO_LOGIN=True`.
+    This change will be enforced in a future release.
+    For temporary backwards compatibility, this release adds the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` environment variable.
+    The default value is `true`, which disables API authentication enforcement.
+    To enforce API authentication, set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False`.
+    For more information, see the documentation for [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login).
+
+- Centralized **Language Model** and **Embedding Model** components
+
+    The [**Language Model** component](/components-models) and [**Embedding Model** component](/components-embedding-models) are now core components for your LLM and embeddings flows. They support multiple models and model providers, and allow you to experiment with different models without swapping out single-provider components.
+    Find them in the visual editor in the **Models** category.
+
+    The single-provider components moved to the [**Bundles**](/components-bundle-components) section.
+    You can use them to replace the **Language Model** and **Embedding Model** core components, or connect them to the **Agent** component with the **Connect other models** provider option.
+
+- MCP server one-click installation
+
+    On your Langflow project's **MCP server** page, click **Auto install** to install your Langflow MCP server to MCP clients with just one click.
+    The option to install with a JSON configuration file is available for macOS, Windows, and WSL.
+    For more information, see [Use Langflow as an MCP server](/mcp-server).
+
+- MCP server management
+
+    You can now add, remove, and edit your MCP servers in the **MCP Tools** components and through your Langflow **Settings** page.
+    For more information, see [Use Langflow as an MCP client](/mcp-client).
+
+- Input schema replaces temporary overrides
+
+    The **Input schema** pane replaces the need to manage tweak values in the **API access** pane. When you enable a parameter in the **Input schema** pane, the parameter is automatically added to your flow's code snippets, providing ready-to-use templates for making requests in your preferred programming language.
+
+- Tools components are redistributed
+
+    All components in the **Tools** category were moved to other component categories, such as **Helpers** and [**Bundles**](/components-bundle-components), or marked as legacy.
+
+    The [**MCP Tools** component](/mcp-client) is now under the **Agents** category.
+
+    Tools that performed the same function were combined into single components that support multiple providers, such as the [**Web Search** component](/components-data#web-search) and the [**News Search** component](/components-data#news-search).
+
+    For more information, see [Tools components](/components-tools).
+
+- Stability improvements
+
+    General stability improvements and bug fixes for enhanced reliability.
+    See an issue? [Raise it on GitHub](https://github.com/langflow-ai/langflow/issues).
+
+- New integrations and bundles
+
+   - [**Cleanlab** bundle](/bundles-cleanlab)
+
+## 1.4.2
+
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### New features and enhancements
+
+- Enhanced file and flow management system with improved bulk capabilities.
+- Added the **BigQuery** component
+- Added the **Twelve Labs** bundle
+- Added the **NVIDIA System-Assist** component
+
+### Deprecations
+
+- Deprecated the **Combine Text** component.
+
+## 1.4.1
+
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### New features and enhancements
+
+- Added an enhanced **Breaking Changes** feature to help update components without breaking flows after updating Langflow.
+
+## 1.4.0
+
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### New features and enhancements
+
+- Introduced MCP server functionality to serve Langflow tools to MCP-compatible clients.
+- Renamed **Folders** to **Projects** in the visual editor.
+- The `/folders` endpoints now redirect to `/projects`.
+
+### Deprecations
+
+- Deprecated the **Gmail**, **Google Drive**, and **Google Search** components.
+For alternatives, see the [**Google** bundle](/bundles-google).
+
+## Earlier releases
+
+See the [Changelog](https://github.com/langflow-ai/langflow/releases).

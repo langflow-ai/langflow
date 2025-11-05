@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import useAlertStore from "../../../../../stores/alertStore";
-
 import RenderKey from "@/components/common/renderIconComponent/components/renderKey";
 import ForwardedIconComponent from "../../../../../components/common/genericIconComponent";
 import { Button } from "../../../../../components/ui/button";
 import BaseModal from "../../../../../modals/baseModal";
+import useAlertStore from "../../../../../stores/alertStore";
 import { useShortcutsStore } from "../../../../../stores/shortcuts";
 import { toCamelCase, toTitleCase } from "../../../../../utils/utils";
 
@@ -29,7 +28,7 @@ export default function EditShortcutButton({
   disable?: boolean;
   setSelected: (selected: string[]) => void;
 }): JSX.Element {
-  let shortcutInitialValue =
+  const shortcutInitialValue =
     defaultShortcuts.length > 0
       ? defaultShortcuts.find(
           (s) => toCamelCase(s.name) === toCamelCase(shortcut[0]),
@@ -123,7 +122,7 @@ export default function EditShortcutButton({
 
   function checkForKeys(keys: string, keyToCompare: string): boolean {
     const keysArr = keys.split(" ");
-    let hasNewKey = false;
+    const _hasNewKey = false;
     return keysArr.some(
       (k) => k.toLowerCase().trim() === keyToCompare.toLowerCase().trim(),
     );

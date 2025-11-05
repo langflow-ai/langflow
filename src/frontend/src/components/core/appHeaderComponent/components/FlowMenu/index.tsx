@@ -1,5 +1,6 @@
 import { memo, useMemo, useRef, useState } from "react";
-
+import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import FlowSettingsComponent from "@/components/core/flowSettingsComponent";
@@ -17,8 +18,8 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import useAlertStore from "@/stores/alertStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
@@ -35,6 +36,7 @@ export const MenuBar = memo((): JSX.Element => {
   const saveFlow = useSaveFlow();
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
   const {
+    isFlowLocked,
     currentFlowName,
     currentFlowId,
     currentFlowFolderId,
@@ -42,6 +44,7 @@ export const MenuBar = memo((): JSX.Element => {
     currentFlowGradient,
   } = useFlowStore(
     useShallow((state) => ({
+      isFlowLocked: state.currentFlow?.locked,
       currentFlowName: state.currentFlow?.name,
       currentFlowId: state.currentFlow?.id,
       currentFlowFolderId: state.currentFlow?.folder_id,
@@ -143,7 +146,6 @@ export const MenuBar = memo((): JSX.Element => {
               >
                 {currentFlowName || "Untitled Flow"}
               </span>
-
               <IconComponent
                 name="pencil"
                 className={cn(
@@ -198,8 +200,10 @@ export const MenuBar = memo((): JSX.Element => {
         align="center"
         sideOffset={15}
       >
-        <span className="text-sm font-semibold">Flow Details</span>
-        <FlowSettingsComponent close={() => setOpenSettings(false)} />
+        <FlowSettingsComponent
+          close={() => setOpenSettings(false)}
+          open={openSettings}
+        />
       </PopoverContent>
     </Popover>
   ) : (

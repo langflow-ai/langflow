@@ -666,35 +666,58 @@ cleanup_old_container() {
 
 # ---------- Ensure PostgreSQL and network ----------
 ensure_postgres() {
-  step "Ensuring langflow-net network"
+  step "Ensuring PostgreSQL container"
+
+  # Ensure network exists
   docker network inspect langflow-net >/dev/null 2>&1 || docker network create langflow-net
 
+  # Load image from env if missing
   if [[ -z "${POSTGRES_IMAGE:-}" ]]; then
     POSTGRES_IMAGE=$(grep '^POSTGRES_IMAGE=' "$CONTAINER_ENV_FILE" | cut -d= -f2-)
   fi
 
-  if docker_running "postgres"; then
-    ok "PostgreSQL container already running"
-    return 0
+  # Case 1: Container exists
+  if docker_exists "postgres"; then
+    if docker_running "postgres"; then
+      # Container is running — verify mount
+      local current_mount
+      current_mount=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/var/lib/postgresql/data"}}{{.Source}}{{end}}{{end}}' postgres 2>/dev/null || true)
+
+      if [[ "${current_mount}" == "/app/ebsstorage/postgres" ]]; then
+        ok "PostgreSQL container already running with correct bind mount"
+        return 0
+      else
+        warn "Incorrect mount (${current_mount:-none}) detected — recreating container"
+      fi
+    else
+      # Container exists but not running — clean up before recreating
+      warn "PostgreSQL container exists but is stopped — removing stale container"
+    fi
+
+    # Stop & remove container safely
+    docker stop postgres >/dev/null 2>&1 || true
+    docker rm -f postgres >/dev/null 2>&1 || true
+
+    # Remove lingering named volume
+    if docker volume inspect langflow-postgres >/dev/null 2>&1; then
+      step "Removing old named volume 'langflow-postgres'"
+      docker volume rm -f langflow-postgres >/dev/null 2>&1 || true
+    fi
   fi
 
-  if docker_exists "postgres"; then
-    step "Starting existing PostgreSQL container"
-    docker start postgres >/dev/null
-    ok "PostgreSQL container already exists and is now started"
-  else
-    step "Starting PostgreSQL container with EBS volume"
-    docker run -d \
-      --name postgres \
-      --network langflow-net \
-      -e POSTGRES_USER="${DB_USER}" \
-      -e POSTGRES_PASSWORD="${DB_PASSWORD}" \
-      -e POSTGRES_DB="${DB_NAME}" \
-      -v /app/ebsstorage/postgres:/var/lib/postgresql/data \
-      --restart unless-stopped \
-      "${POSTGRES_IMAGE}"
-    ok "PostgreSQL container started"
-  fi
+  # Case 2: Start a fresh container
+  step "Starting PostgreSQL container with correct bind mount"
+  docker run -d \
+    --name postgres \
+    --network langflow-net \
+    -e POSTGRES_USER="${DB_USER}" \
+    -e POSTGRES_PASSWORD="${DB_PASSWORD}" \
+    -e POSTGRES_DB="${DB_NAME}" \
+    -v /app/ebsstorage/postgres:/var/lib/postgresql/data \
+    --restart unless-stopped \
+    "${POSTGRES_IMAGE}"
+
+  ok "PostgreSQL container started with correct bind mount"
 }
 
 # ---------- Start/stop containers (STOP-FIRST) ----------

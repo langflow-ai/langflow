@@ -1,0 +1,219 @@
+---
+title: Configure tools for agents
+slug: /agents-tools
+---
+
+import Icon from "@site/src/components/icon";
+
+By default, [Langflow agents](/agents) only include the functionality built-in to their base LLM.
+
+You can attach tools to agents to provide access to additional, targeted functionality.
+For example, tools can be used to create domain-specific agents, such as a customer support agent that can access a company's knowledge base, a financial agent that can retrieve stock prices, or a math tutor agent that can use advanced math functions to solve complex equations.
+
+## Attach tools
+
+To attach a tool to an agent, you connect any component's **Tool** output to the **Agent** component's **Tools** input.
+
+Some components emit **Tool** output by default.
+For all other components, you must enable **Tool Mode** in the [component's header menu](/concepts-components#component-menus).
+Then, you can connect the tool to the agent.
+
+You can connect multiple tools to one agent, and each tool can have multiple actions (functions) that the agent can call.
+
+When you run your flow, the agent decides when to call on certain tools, if it determines that a tool can help it respond to the user's prompt.
+
+### Edit a tool's actions {#edit-a-tools-actions}
+
+When you attach components to an agent as tools, each tool can have multiple actions (functions) that the agent can call.
+Available actions are listed in each tool component's **Actions** list.
+
+You can change each action's labels, descriptions, and availability to help the agent understand how to use the tool and prevent it from using irrelevant or undesired actions.
+
+:::tip
+If an agent seems to be using a tool incorrectly, try editing the actions metadata to clarify the tool's purpose and disable unnecessary actions.
+
+You can also try using a **Prompt Template** component to pass additional instructions or examples to the agent.
+:::
+
+To view and edit a tool's actions, click <Icon name="Settings2" aria-hidden="true"/> **Edit Tool Actions** on the tool component.
+
+The following information is provided for each action:
+
+* **Enabled**: A checkbox that determines whether the action is available to the agent.
+If selected, the action is enabled.
+If not selected, the action is disabled.
+
+* **Name**: A human-readable string name for the action, such as `Fetch Content`. This cannot be changed.
+
+* **Description**: A human-readable description of the action's purpose, such as `Fetch content from web pages recursively`.
+To edit this value, double-click the action's row to open the edit pane.
+Changes are saved automatically when you click out of the field or close the dialog.
+
+* **Slug**: An encoded name for the action, usually the same as the name but in snake case, such as `fetch_content`.
+To edit this value, double-click the action's row to open the edit pane.
+Changes are saved automatically when you click out of the field or close the dialog.
+
+Some actions allow you to provide fixed values for their inputs.
+Typically, you want to leave these blank so the agent can provide its own values.
+However, you might use a fixed value if you're trying to debug an agent's behavior or your use case requires a fixed input for an action.
+
+## Use an agent as a tool
+
+To create multi-agent flows, you can set another **Agent** component to **Tool Mode**, and then attach that agent as a tool for your primary **Agent** component.
+
+To try this for yourself, add an additional agent to the **Simple Agent** template:
+
+1. Create a flow based on the **Simple Agent** template.
+2. Add a second **Agent** component to the flow.
+3. Add your **OpenAI API Key** to both **Agent** components.
+4. In the second **Agent** component, change the model to `gpt-4.1`, and then enable **Tool Mode**.
+5. Click <Icon name="Settings2" aria-hidden="true"/> **Edit Tool Actions** to [edit the tool's actions](#edit-a-tools-actions).
+
+    For this example, change the action's slug to `Agent-gpt-41`, and set the description to `Use the gpt-4.1 model for complex problem solving`.
+    This lets the primary agent know that this tool uses the `gpt-4.1` model, which could be helpful for tasks requiring a larger context window, such as large scrape and search tasks.
+
+    As another example, you could attach several specialized models to a primary agent, such as agents that are trained on certain tasks or domains, and then the primary agent would call each specialized agent as needed to respond to queries.
+
+    You can also enable and disable tools if you want to limit the available toolset.
+
+6. Connect the new agent's **Toolset** port to the existing agent's **Tools** port.
+
+    ![Agent as a tool](/img/agent-example-agent-as-tool.png)
+
+## Add custom components as tools {#components-as-tools}
+
+An agent can use [custom components](/components-custom-components) as tools.
+
+1. To add a custom component to an agent flow, click **New Custom Component** in the <Icon name="Component" aria-hidden="true" /> **Core components** or <Icon name="Blocks" aria-hidden="true" /> **Bundles** menus.
+
+2. Enter Python code into the **Code** pane to create the custom component.
+
+    If you don't already have code for a custom component, you can use the following code snippet as an example before creating your own.
+
+    <details>
+    <summary>Text Analyzer custom component</summary>
+
+    This code creates a text analyzer component.
+
+    ```python
+    from langflow.custom import Component
+    from langflow.io import MessageTextInput, Output
+    from langflow.schema import Data
+    import re
+
+    class TextAnalyzerComponent(Component):
+        display_name = "Text Analyzer"
+        description = "Analyzes and transforms input text."
+        documentation: str = "http://docs.langflow.org/components/custom"
+        icon = "chart-bar"
+        name = "TextAnalyzerComponent"
+
+        inputs = [
+            MessageTextInput(
+                name="input_text",
+                display_name="Input Text",
+                info="Enter text to analyze",
+                value="Hello, World!",
+                tool_mode=True,
+            ),
+        ]
+
+        outputs = [
+            Output(display_name="Analysis Result", name="output", method="analyze_text"),
+        ]
+
+        def analyze_text(self) -> Data:
+            text = self.input_text
+
+            # Perform text analysis
+            word_count = len(text.split())
+            char_count = len(text)
+            sentence_count = len(re.findall(r'\w+[.!?]', text))
+
+            # Transform text
+            reversed_text = text[::-1]
+            uppercase_text = text.upper()
+
+            analysis_result = {
+                "original_text": text,
+                "word_count": word_count,
+                "character_count": char_count,
+                "sentence_count": sentence_count,
+                "reversed_text": reversed_text,
+                "uppercase_text": uppercase_text
+            }
+
+            data = Data(value=analysis_result)
+            self.status = data
+            return data
+    ```
+    </details>
+
+3. Enable **Tool Mode** in the custom component.
+4. Connect the custom component's tool output to the **Agent** component's **Tools** input.
+5. Open the <Icon name="Play" aria-hidden="true" /> **Playground** and instruct the agent, `Use the text analyzer on this text: "Agents really are thinking machines!"`
+
+    Based on your instruction, the agent should call the `analyze_text` action and return the result.
+    For example:
+
+    ```
+    gpt-4o
+    Finished
+    0.6s
+    Here is the analysis of the text "Agents really are thinking machines!":
+    Original Text: Agents really are thinking machines!
+    Word Count: 5
+    Character Count: 36
+    Sentence Count: 1
+    Reversed Text: !senihcam gnikniht era yllaer stnegA
+    Uppercase Text: AGENTS REALLY ARE THINKING MACHINES!
+    ```
+
+## Make any component a tool
+
+If the component you want to use as a tool doesn't have a **Tool Mode** button, add `tool_mode=True` to one of the component's inputs, and connect the new **Toolset** output to the agent's **Tools** input.
+
+Langflow supports **Tool Mode** for the following data types:
+
+* `DataInput`
+* `DataFrameInput`
+* `PromptInput`
+* `MessageTextInput`
+* `MultilineInput`
+* `DropdownInput`
+
+For example, the example code in [Use custom components as tools](#components-as-tools) included `tool_mode=True` to the `MessageTextInput` input so the custom component could be used as a tool:
+
+```python
+inputs = [
+    MessageTextInput(
+        name="input_text",
+        display_name="Input Text",
+        info="Enter text to analyze",
+        value="Hello, World!",
+        tool_mode=True,
+    ),
+]
+```
+
+## Use flows as tools
+
+An agent can use your other flows as tools with the [**Run Flow** component](/components-logic#run-flow).
+
+1. Add a **Run Flow** component to your flow.
+2. Select the flow you want the agent to use as a tool.
+3. Enable **Tool Mode**.
+The selected flow becomes an [action](#edit-a-tools-actions) in the **Run Flow** component.
+4. Connect the **Run Flow** component's **Tool** output to the **Agent** component's **Tools** input.
+5. Open the **Playground**, and then ask the agent, `What tools are you using to answer my questions?`
+Your flow should be visible in the response as an available tool.
+6. Ask the agent a question that specifically uses the connected flow as a tool.
+The connected flow returns an answer based on your question.
+
+![Run Flow component connected to an Agent component as a tool](/img/agent-example-run-flow-as-tool.png)
+
+## See also
+
+* [Agent components](/components-agents)
+* [Use Langflow as an MCP client](/mcp-client)
+* [Use Langflow as an MCP server](/mcp-server)

@@ -1,4 +1,4 @@
-import { ErrorLogType } from "../api";
+import type { ErrorLogType } from "../api";
 
 export function isErrorLogType(value: any): value is ErrorLogType {
   return (

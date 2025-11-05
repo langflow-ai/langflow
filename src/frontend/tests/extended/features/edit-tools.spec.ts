@@ -1,5 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 test(
   "user should be able to edit tools",
   { tag: ["@release", "@components"] },
@@ -40,7 +41,7 @@ test(
       state: "visible",
     });
 
-    await page.waitForSelector("text=actions", { timeout: 30000 });
+    await page.waitForSelector("text=tools", { timeout: 30000 });
 
     await page.getByTestId("button_open_actions").click();
 
@@ -178,6 +179,14 @@ test(
     await page.locator('[data-testid="input_update_description"]').fill("");
 
     await page.waitForTimeout(500);
+
+    await page.getByTestId("btn_close_tools_modal").click();
+
+    await page.waitForTimeout(500);
+
+    await expect(page.getByTestId("btn_close_tools_modal")).not.toBeInViewport({
+      timeout: 3000,
+    });
 
     await page.getByText("Close").last().click();
 

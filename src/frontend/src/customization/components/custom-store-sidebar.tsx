@@ -1,8 +1,13 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 
-export const CustomStoreSidebar = () => {
-  return [
-    {
+export const CustomStoreSidebar = (
+  hasApiKey: boolean = false,
+  hasStore: boolean = false,
+) => {
+  const items: Array<{ title: string; href: string; icon: JSX.Element }> = [];
+
+  if (hasApiKey) {
+    items.push({
       title: "Langflow API Keys",
       href: "/settings/api-keys",
       icon: (
@@ -11,8 +16,11 @@ export const CustomStoreSidebar = () => {
           className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
         />
       ),
-    },
-    {
+    });
+  }
+
+  if (hasStore) {
+    items.push({
       title: "Langflow Store",
       href: "/settings/store",
       icon: (
@@ -21,6 +29,8 @@ export const CustomStoreSidebar = () => {
           className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
         />
       ),
-    },
-  ];
+    });
+  }
+
+  return items;
 };

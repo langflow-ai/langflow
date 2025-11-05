@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
@@ -30,7 +30,7 @@ withEventDeliveryModes(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Market Research" }).click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
 
@@ -40,6 +40,12 @@ withEventDeliveryModes(
       .getByTestId("popover-anchor-input-api_key")
       .nth(0)
       .fill(process.env.TAVILY_API_KEY ?? "");
+
+    await page
+      .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")
+      .click();
+
+    await page.getByTestId("tab_1_stringify").click();
 
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", {

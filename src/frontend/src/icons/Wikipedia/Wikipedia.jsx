@@ -1,11 +1,5 @@
 const SvgWikipedia = (props) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="103"
-    height="94"
-    viewBox="0 0 103 94"
-    {...props}
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 103 94" {...props}>
     <radialGradient
       id="SVGWIK_1_"
       cx="244.571"

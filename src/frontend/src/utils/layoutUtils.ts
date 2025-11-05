@@ -1,7 +1,7 @@
-import { NODE_HEIGHT, NODE_WIDTH } from "@/constants/constants";
-import { AllNodeType, EdgeType } from "@/types/flow";
+import ELK, { type ElkNode } from "elkjs/lib/elk.bundled.js";
 import { cloneDeep } from "lodash";
-import type { ElkNode } from "elkjs";
+import { NODE_HEIGHT, NODE_WIDTH } from "@/constants/constants";
+import type { AllNodeType, EdgeType } from "@/types/flow";
 
 const layoutOptions = {
   "elk.algorithm": "layered",
@@ -32,7 +32,7 @@ export const getLayoutedNodes = async (
         .map((e) => ({
           id: e.sourceHandle,
           properties: {
-            side: "EAST",
+            side: "EAST"
           },
         }));
 
@@ -41,9 +41,10 @@ export const getLayoutedNodes = async (
         .map((e) => ({
           id: e.targetHandle,
           properties: {
-            side: "WEST",
+            side: "WEST"
           },
         }));
+
       return {
         id: n.id,
         width: NODE_WIDTH,
@@ -52,7 +53,6 @@ export const getLayoutedNodes = async (
         properties: {
           "org.eclipse.elk.portConstraints": "FIXED_ORDER",
         },
-        // we are also passing the id, so we can also handle edges without a sourceHandle or targetHandle option
         ports: [{ id: n.id }, ...targetPorts, ...sourcePorts],
       };
     }) as ElkNode[],

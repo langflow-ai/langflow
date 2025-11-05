@@ -1,11 +1,13 @@
 import { mockClerkMutation ,IS_CLERK_AUTH } from "@/clerk/auth";
+import { Cookies } from "react-cookie";
 import { IS_AUTO_LOGIN, LANGFLOW_REFRESH_TOKEN } from "@/constants/constants";
 import useAuthStore from "@/stores/authStore";
-import { useMutationFunctionType } from "@/types/api";
-import { Cookies } from "react-cookie";
+import type { useMutationFunctionType } from "@/types/api";
+import { setAuthCookie } from "@/utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+
 interface IRefreshAccessToken {
   access_token: string;
   refresh_token: string;
@@ -18,7 +20,6 @@ export const useRefreshAccessToken: useMutationFunctionType<
   IRefreshAccessToken
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
-  const cookies = new Cookies();
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
   if (IS_CLERK_AUTH) {
@@ -27,7 +28,8 @@ export const useRefreshAccessToken: useMutationFunctionType<
 
   async function refreshAccess(): Promise<IRefreshAccessToken> {
     const res = await api.post<IRefreshAccessToken>(`${getURL("REFRESH")}`);
-    cookies.set(LANGFLOW_REFRESH_TOKEN, res.data.refresh_token, { path: "/" });
+    const cookies = new Cookies();
+    setAuthCookie(cookies, LANGFLOW_REFRESH_TOKEN, res.data.refresh_token);
 
     return res.data;
   }

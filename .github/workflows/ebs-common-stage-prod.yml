@@ -100,8 +100,15 @@ jobs:
         with:
           username: forwardemailforaifirstdesk
           password: ${{ secrets.DOCKERHUB_TOKEN }}  
+      
+      - name: Free up disk space
+        run: |
+          echo "=== Cleaning up space for Docker build ==="
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          docker builder prune -f
+          df -h
 
-      - name: Build Docker Image (for staging)
+      - name: Build Docker Image (staging)
         if: ${{ github.event.inputs.environment == 'staging' }}
         run: |
           COMMIT_ID=${{ steps.commit.outputs.commit_id }}
@@ -114,19 +121,26 @@ jobs:
           VITE_CLERK_AUTH_ENABLED=true \
           VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.CLERK_PUBLISHABLE_KEY }} \
           VITE_CLERK_FRONTEND_API=${{ vars.STAGING_CLERK_FRONTEND_API }} \
-          make docker_build TAG=langflow:staging-$BRANCH_NAME-$COMMIT_ID
+          make docker_build TAG=langflow:staging-$BRANCH_NAME-$COMMIT_ID DOCKER=docker
 
           docker tag langflow:staging-$BRANCH_NAME-$COMMIT_ID forwardemailforaifirstdesk/langflow:staging-$BRANCH_NAME-$COMMIT_ID
           docker push forwardemailforaifirstdesk/langflow:staging-$BRANCH_NAME-$COMMIT_ID
+          
+      - name: Build Docker Image (production)
+        if: ${{ github.event.inputs.environment == 'prod' }}
+        run: |
+          COMMIT_ID=${{ steps.commit.outputs.commit_id }}
+          BRANCH_NAME=${{ steps.branch.outputs.branch_name }}
+          echo "Using branch=$BRANCH_NAME commit=$COMMIT_ID"
 
-          echo "=== Building Prod Image ==="
+          echo "=== Building Production Image ==="
           DOCKER_BUILDKIT=1 \
           VITE_AUTO_LOGIN=false \
           VITE_CLERK_AUTH_ENABLED=true \
           VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.PROD_CLERK_PUBLISHABLE_KEY }} \
           VITE_CLERK_FRONTEND_API=${{ vars.PROD_CLERK_FRONTEND_API }} \
-          make docker_build TAG=langflow:prod-$BRANCH_NAME-$COMMIT_ID
-        
+          make docker_build TAG=langflow:prod-$BRANCH_NAME-$COMMIT_ID DOCKER=docker
+
           docker tag langflow:prod-$BRANCH_NAME-$COMMIT_ID forwardemailforaifirstdesk/langflow:prod-$BRANCH_NAME-$COMMIT_ID
           docker push forwardemailforaifirstdesk/langflow:prod-$BRANCH_NAME-$COMMIT_ID
 
@@ -237,6 +251,9 @@ jobs:
               --db-password "$DB_PASSWORD" \
               --db-name "$DB_NAME" \
               --volume-name "$VOLUME_NAME"
+
+          command_timeout: 20m
+
       - name: Copy deploy_status.env from VM
         run: |
           sshpass -p "${{ secrets.VM_PASSWORD }}" scp -o StrictHostKeyChecking=no \

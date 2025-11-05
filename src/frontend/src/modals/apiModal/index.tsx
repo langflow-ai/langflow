@@ -4,14 +4,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { CustomAPIGenerator } from "@/customization/components/custom-api-generator";
+import { CustomLink } from "@/customization/components/custom-link";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useAuthStore from "@/stores/authStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { isEndpointNameValid } from "@/utils/utils";
 import { lazyLoadAce } from "@/utils/lazyLoadAce";
 import { cloneDeep } from "lodash";
-import { ChangeEvent, ReactNode, useEffect, useState } from "react";
+import { type ChangeEvent, type ReactNode, useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import IconComponent from "../../components/common/genericIconComponent";
 import { useTweaksStore } from "../../stores/tweaksStore";
@@ -30,7 +31,7 @@ export default function ApiModal({
   open?: boolean;
   setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
 }) {
-  const autoLogin = useAuthStore((state) => state.autoLogin);
+  const _autoLogin = useAuthStore((state) => state.autoLogin);
   const nodes = useFlowStore((state) => state.nodes);
   const [openTweaks, setOpenTweaks] = useState(false);
   const tweaks = useTweaksStore((state) => state.tweaks);
@@ -108,21 +109,17 @@ export default function ApiModal({
         <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
         <BaseModal.Header
           description={
-            autoLogin ? undefined : (
-              <>
-                <span className="pr-2">
-                  API access requires an API key. You can{" "}
-                  <a
-                    href="/settings/api-keys"
-                    className="text-accent-pink-foreground"
-                  >
-                    {" "}
-                    create an API key
-                  </a>{" "}
-                  in settings.
-                </span>
-              </>
-            )
+            <span className="pr-2">
+              API access requires an API key. You can{" "}
+              <CustomLink
+                to="/settings/api-keys"
+                className="text-accent-pink-foreground"
+              >
+                {" "}
+                create an API key
+              </CustomLink>{" "}
+              in settings.
+            </span>
           }
         >
           <IconComponent
@@ -136,7 +133,7 @@ export default function ApiModal({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 px-3"
+                className="h-8 select-none px-3"
                 onClick={() => setOpenTweaks(true)}
                 data-testid="tweaks-button"
               >
@@ -165,25 +162,7 @@ export default function ApiModal({
         setOpen={setOpenTweaks}
         size="medium-small-tall"
       >
-        <BaseModal.Header
-          description={
-            autoLogin ? undefined : (
-              <>
-                <span className="pr-2">
-                  API access requires an API key. You can{" "}
-                  <a
-                    href="/settings/api-keys"
-                    className="text-accent-pink-foreground"
-                  >
-                    {" "}
-                    create an API key
-                  </a>{" "}
-                  in settings.
-                </span>
-              </>
-            )
-          }
-        >
+        <BaseModal.Header>
           <IconComponent name="SlidersHorizontal" className="text-f h-6 w-6" />
           <span className="pl-2">Input Schema</span>
         </BaseModal.Header>
@@ -214,8 +193,17 @@ export default function ApiModal({
               />
             </Label>
           )}
-          <div className="h-full w-full overflow-y-auto overflow-x-hidden rounded-lg bg-muted custom-scroll">
-            <TweaksComponent open={openTweaks} />
+          <div className="flex flex-1 flex-col gap-2 overflow-hidden">
+            <div className="flex flex-col gap-1">
+              <span className="shrink-0 text-sm font-medium">Expose API</span>
+              <span className="text-mmd text-muted-foreground">
+                Select which component fields to expose as inputs in this flow's
+                API schema.
+              </span>
+            </div>
+            <div className="min-h-0 w-full flex-1 flex-col overflow-y-auto overflow-x-hidden rounded-lg bg-muted custom-scroll">
+              <TweaksComponent open={openTweaks} />
+            </div>
           </div>
         </BaseModal.Content>
       </BaseModal>

@@ -1,6 +1,7 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
@@ -21,9 +22,8 @@ test(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
+    await adjustScreenView(page);
+
     await initialGPTsetup(page);
 
     await page.getByTestId("button_run_chat output").last().click();
@@ -71,7 +71,7 @@ test(
 
     // Get URL node ID
     const urlNode = await page.locator(".react-flow__node").first();
-    const urlNodeId = await urlNode.getAttribute("data-id");
+    const _urlNodeId = await urlNode.getAttribute("data-id");
 
     // Add two chat outputs
     await page.getByTestId("sidebar-search-input").click();
@@ -95,15 +95,16 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 700, y: 400 },
       });
-
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     // Fill URL input
     await page
       .getByTestId("inputlist_str_urls_0")
       .fill("https://www.example.com");
 
-    await page.getByTestId("handle-urlcomponent-shownode-result-right").click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
+      .click();
 
     await page.waitForTimeout(600);
 
@@ -128,7 +129,9 @@ test(
       exact: true,
     });
     await page.getByText("Close").first().click();
-    await page.getByTestId("handle-urlcomponent-shownode-result-right").click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
+      .click();
     await page
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(1)
@@ -141,12 +144,16 @@ test(
       timeout: 30000 * 3,
     });
 
-    await page.getByTestId("handle-urlcomponent-shownode-result-right").click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
+      .click();
     await page.waitForTimeout(600);
-    await page.getByTestId("handle-urlcomponent-shownode-result-right").click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
+      .click();
 
     await page
-      .getByTestId("output-inspection-result-urlcomponent")
+      .getByTestId("output-inspection-extracted pages-urlcomponent")
       .nth(0)
       .click();
 
@@ -161,7 +168,7 @@ test(
     await page.waitForTimeout(600);
 
     await page
-      .getByTestId("handle-urlcomponent-shownode-result-right")
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
       .nth(0)
       .click();
 
@@ -176,7 +183,9 @@ test(
       timeout: 30000 * 3,
     });
     await page.waitForTimeout(600);
-    await page.getByTestId("output-inspection-result-urlcomponent").click();
+    await page
+      .getByTestId("output-inspection-extracted pages-urlcomponent")
+      .click();
     await page.getByText(`Inspect the output of the component below.`, {
       exact: true,
     });

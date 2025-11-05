@@ -1,3 +1,6 @@
+import { useUpdateNodeInternals } from "@xyflow/react";
+import _, { cloneDeep } from "lodash";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { countHandlesFn } from "@/CustomNodes/helpers/count-handles";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
@@ -9,10 +12,7 @@ import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-t
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAddFlow from "@/hooks/flows/use-add-flow";
-import { APIClassType } from "@/types/api";
-import { useUpdateNodeInternals } from "@xyflow/react";
-import _, { cloneDeep } from "lodash";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { APIClassType } from "@/types/api";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import {
   Select,
@@ -26,8 +26,8 @@ import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useStoreStore } from "../../../../stores/storeStore";
-import { nodeToolbarPropsType } from "../../../../types/components";
-import { FlowType } from "../../../../types/flow";
+import type { nodeToolbarPropsType } from "../../../../types/components";
+import type { FlowType } from "../../../../types/flow";
 import {
   checkHasToolMode,
   createFlowComponent,
@@ -119,10 +119,16 @@ const NodeToolbarComponent = memo(
     );
     const addFlow = useAddFlow();
 
-    const isMinimal = useMemo(
-      () => countHandlesFn(data) <= 1 && numberOfOutputHandles <= 1,
-      [data, numberOfOutputHandles],
+    const hasGroupOutputs = data.node?.outputs?.some?.(
+      (output) => output.group_outputs,
     );
+    const hasOutputs =
+      data.node?.outputs?.length && data.node?.outputs?.length > 1;
+
+    const hasSelectOutput = hasOutputs && !hasGroupOutputs;
+    const hasOnlyOneOutput = data.node?.outputs?.length === 1;
+
+    const isMinimal = hasSelectOutput || hasOnlyOneOutput;
 
     const [toolMode, setToolMode] = useState(
       () =>
@@ -307,6 +313,7 @@ const NodeToolbarComponent = memo(
             saveComponent();
             break;
           case "freezeAll":
+            takeSnapshot();
             FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
             break;
           case "code":
@@ -348,11 +355,12 @@ const NodeToolbarComponent = memo(
           case "update":
             updateNode();
             break;
-          case "copy":
+          case "copy": {
             nodes = useFlowStore.getState().nodes;
             const node = nodes.filter((node) => node.id === data.id);
             setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
             break;
+          }
           case "duplicate":
             nodes = useFlowStore.getState().nodes;
             paste(
@@ -454,6 +462,7 @@ const NodeToolbarComponent = memo(
             <ToolbarButton
               icon="FreezeAll"
               label="Freeze"
+              dataTestId="freeze-all-button-modal"
               onClick={() => {
                 takeSnapshot();
                 FreezeAllVertices({
@@ -644,7 +653,9 @@ const NodeToolbarComponent = memo(
                 {(isMinimal || !showNode) && (
                   <SelectItem
                     value={"show"}
-                    data-testid={`${showNode ? "minimize" : "expand"}-button-modal`}
+                    data-testid={`${
+                      showNode ? "minimize" : "expand"
+                    }-button-modal`}
                   >
                     <ToolbarSelectItem
                       shortcut={
@@ -669,7 +680,10 @@ const NodeToolbarComponent = memo(
                   </SelectItem>
                 )}
                 {hasToolMode && (
-                  <SelectItem value="freezeAll">
+                  <SelectItem
+                    value="freezeAll"
+                    data-testid="freeze-all-button-modal"
+                  >
                     <ToolbarSelectItem
                       shortcut={
                         shortcuts.find((obj) =>
@@ -711,20 +725,6 @@ const NodeToolbarComponent = memo(
                     </span>
                   </div>
                 </SelectItem>
-                {hasToolMode && (
-                  <SelectItem value="toolMode">
-                    <ToolbarSelectItem
-                      shortcut={
-                        shortcuts.find((obj) => obj.name === "Tool Mode")
-                          ?.shortcut!
-                      }
-                      value={"Tool Mode"}
-                      icon={"Hammer"}
-                      dataTestId="tool-mode-button"
-                      style={`${toolMode ? "text-primary" : ""} transition-all`}
-                    />
-                  </SelectItem>
-                )}
               </SelectContentWithoutPortal>
             </Select>
           </div>
