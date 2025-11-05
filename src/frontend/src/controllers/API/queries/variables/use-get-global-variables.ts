@@ -35,11 +35,12 @@ export const useGetGlobalVariables: useQueryFunctionType<
     return res.data;
   };
 
-  const queryResult: UseQueryResult<GlobalVariable[], any> = query(
+  const queryResult: UseQueryResult<GlobalVariable[], Error> = query(
     ["useGetGlobalVariables"],
     getGlobalVariablesFn,
     {
       refetchOnWindowFocus: false,
+      enabled: isAuthenticated && (options?.enabled ?? true),
       ...options,
     },
   );
