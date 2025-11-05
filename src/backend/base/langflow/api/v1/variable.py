@@ -73,13 +73,7 @@ async def read_variables(
         all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
         # Filter out internal variables (those starting and ending with __)
         return [
-            var
-            for var in all_variables
-            if not (
-                var.name
-                and var.name.startswith("__")
-                and var.name.endswith("__")
-            )
+            var for var in all_variables if not (var.name and var.name.startswith("__") and var.name.endswith("__"))
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
