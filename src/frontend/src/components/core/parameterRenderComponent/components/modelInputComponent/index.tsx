@@ -192,12 +192,6 @@ export default function ModelInputComponent({
     defaultModelData,
   ]);
 
-  const isProviderConfigured = useMemo(() => {
-    if (!selectedProvider || !globalVariablesEntries) return false;
-    const variableName = PROVIDER_VARIABLE_MAPPING[selectedProvider];
-    return variableName ? globalVariablesEntries.includes(variableName) : false;
-  }, [selectedProvider, globalVariablesEntries]);
-
   // Utility functions
   const handleModelSelect = useCallback(
     (modelName: string) => {
@@ -230,10 +224,6 @@ export default function ModelInputComponent({
     },
     [options, handleOnNewValue, setErrorData],
   );
-
-  const handleSendApiKey = useCallback(() => {
-    setOpenApiKeyDialog(true);
-  }, []);
 
   const handleRefreshButtonPress = useCallback(async () => {
     setRefreshOptions(true);
@@ -588,20 +578,6 @@ export default function ModelInputComponent({
     </PopoverContent>
   );
 
-  const renderApiKeyInput = () => {
-    if (!selectedModel) return null;
-
-    return (
-      <Button
-        onClick={handleSendApiKey}
-        size="sm"
-        className="whitespace-nowrap"
-        data-testid="enable-provider-button"
-      >
-        {`Enable ${selectedProvider || "Provider"}`}
-      </Button>
-    );
-  };
 
   // Loading state
   if ((options.length === 0 && !options) || !options || refreshOptions) {
@@ -633,7 +609,6 @@ export default function ModelInputComponent({
         <div className="w-full truncate">{renderTriggerButton()}</div>
         {renderPopoverContent()}
       </Popover>
-      {!isProviderConfigured && renderApiKeyInput()}
       {openApiKeyDialog && (
         <ApiKeyModal
           open={openApiKeyDialog}
