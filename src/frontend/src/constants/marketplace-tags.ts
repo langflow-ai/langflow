@@ -5,8 +5,7 @@ export const MARKETPLACE_TAGS: { title: string; id: string, icon: string }[] = [
   { title: 'Care Management', id: 'care-management', icon: 'BotMessageSquare' },
   { title: 'Risk Adjustment', id: 'risk-adjustment', icon: 'BotMessageSquare' },
   { title: 'Claims Operations', id: 'claims-operations', icon: 'BotMessageSquare' },
-  { title: 'Contracting', id: 'contracting', icon: 'BotMessageSquare' },
-  { title: 'RFP', id: 'rfp', icon: 'BotMessageSquare' },
+  { title: 'Contracting & RFP', id: 'contracting-rfp', icon: 'BotMessageSquare' },
   { title: 'Member Engagement', id: 'member-engagement', icon: 'BotMessageSquare' },
   { title: 'Population Health', id: 'population-health', icon: 'BotMessageSquare' },
   { title: 'Provider Data Management', id: 'provider-data-management', icon: 'BotMessageSquare' },
@@ -25,7 +24,7 @@ export const MARKETPLACE_TAGS: { title: string; id: string, icon: string }[] = [
   { title: 'Revenue Cycle Management', id: 'revenue-cycle-management', icon: 'BotMessageSquare' },
   { title: 'Care Gap', id: 'care-gap', icon: 'BotMessageSquare' },
   { title: 'Chart Review', id: 'chart-review', icon: 'BotMessageSquare' },
-  { title: 'HEDIS Care Gap', id: 'hedis-care-gap', icon: 'BotMessageSquare' },
+  { title: 'Hedis Care Gap', id: 'hedis-care-gap', icon: 'BotMessageSquare' },
   { title: 'Clinical Research', id: 'clinical-research', icon: 'BotMessageSquare' },
 ] as const;
 
