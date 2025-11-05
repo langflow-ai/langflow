@@ -86,8 +86,13 @@ async def auto_configure_agentic_mcp_server(session: AsyncSession) -> None:
                         continue
 
                 except Exception as e:
-                    # If listing fails, try to add anyway
-                    await logger.adebug(f"Could not check existing servers for user {user.username}: {e}")
+                    # If listing fails, skip this user to avoid duplicates
+                    await logger.awarning(
+                        f"Could not check existing servers for user {user.username}: {e}. "
+                        "Skipping to avoid potential duplicates."
+                    )
+                    servers_skipped += 1
+                    continue
 
                 # Add the server
                 await update_server(
