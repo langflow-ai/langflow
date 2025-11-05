@@ -19,8 +19,10 @@ export interface SetDefaultModelResponse {
 }
 
 export const useSetDefaultModel: useMutationFunctionType<
+  undefined,
   SetDefaultModelRequest,
-  SetDefaultModelResponse
+  SetDefaultModelResponse,
+  Error
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
 
@@ -36,7 +38,7 @@ export const useSetDefaultModel: useMutationFunctionType<
 
   const mutation: UseMutationResult<
     SetDefaultModelResponse,
-    any,
+    Error,
     SetDefaultModelRequest
   > = mutate(["useSetDefaultModel"], setDefaultModelFn, options);
 

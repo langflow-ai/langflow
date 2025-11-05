@@ -13,8 +13,10 @@ export interface ClearDefaultModelResponse {
 }
 
 export const useClearDefaultModel: useMutationFunctionType<
+  undefined,
   ClearDefaultModelRequest,
-  ClearDefaultModelResponse
+  ClearDefaultModelResponse,
+  Error
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
 
@@ -29,7 +31,7 @@ export const useClearDefaultModel: useMutationFunctionType<
 
   const mutation: UseMutationResult<
     ClearDefaultModelResponse,
-    any,
+    Error,
     ClearDefaultModelRequest
   > = mutate(["useClearDefaultModel"], clearDefaultModelFn, options);
 

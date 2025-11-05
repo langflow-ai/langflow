@@ -15,8 +15,10 @@ export interface UpdateEnabledModelsResponse {
 }
 
 export const useUpdateEnabledModels: useMutationFunctionType<
+  undefined,
   { updates: ModelStatusUpdate[] },
-  UpdateEnabledModelsResponse
+  UpdateEnabledModelsResponse,
+  Error
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
 
@@ -32,7 +34,7 @@ export const useUpdateEnabledModels: useMutationFunctionType<
 
   const mutation: UseMutationResult<
     UpdateEnabledModelsResponse,
-    any,
+    Error,
     { updates: ModelStatusUpdate[] }
   > = mutate(["useUpdateEnabledModels"], updateEnabledModelsFn, options);
 

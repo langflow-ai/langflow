@@ -1,18 +1,12 @@
-import { useState } from "react";
-import ModelProvidersHeader from "./components/ModelProvidersHeader";
-import Providers from "./components/Providers";
+import ModelProvidersHeader from "./components/model-providers-header";
+import ProviderList from "./components/provider-list";
 
 const ModelProvidersPage = () => {
-  const [showExperimental, setShowExperimental] = useState(false);
-
   return (
     <div className="flex h-full w-full flex-col gap-6 overflow-x-hidden">
-      <ModelProvidersHeader
-        showExperimental={showExperimental}
-        onToggleExperimental={setShowExperimental}
-      />
-      <Providers type="enabled" showExperimental={showExperimental} />
-      <Providers type="available" showExperimental={showExperimental} />
+      <ModelProvidersHeader />
+      <ProviderList type="enabled" />
+      <ProviderList type="available" />
     </div>
   );
 };
