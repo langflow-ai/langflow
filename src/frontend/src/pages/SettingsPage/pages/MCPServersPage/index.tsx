@@ -101,7 +101,7 @@ export default function MCPServersPage() {
             <div className="flex flex-col gap-1">
               {servers.map((server, index) => (
                 <div
-                  key={server.id}
+                  key={server.name}
                   className="flex items-center justify-between rounded-lg px-3 py-2 shadow-sm transition-colors hover:bg-accent"
                 >
                   <div className="flex items-center gap-2">
