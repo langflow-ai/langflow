@@ -578,7 +578,6 @@ export default function ModelInputComponent({
     </PopoverContent>
   );
 
-
   // Loading state
   if ((options.length === 0 && !options) || !options || refreshOptions) {
     return <div className="w-full">{renderLoadingButton()}</div>;
