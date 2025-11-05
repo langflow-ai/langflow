@@ -783,7 +783,12 @@ async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -
     """Create or update agentic flows in the Langflow Assistant folder for a user.
 
     This function is called on user login to ensure that all agentic flows
-    are present in the user's Langflow Assistant folder.
+    are present and up-to-date in the user's Langflow Assistant folder.
+
+    The function will:
+    - Extract flow_id and endpoint_name from the JSON
+    - Update existing flows if they match by ID or endpoint_name
+    - Create new flows if they don't exist
 
     Args:
         session: Database session
@@ -800,13 +805,11 @@ async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -
             await logger.adebug("No agentic flows found to load")
             return
 
-        # Get existing flows in the folder
-        existing_flows = await get_all_flows_similar_to_project(session, assistant_folder.id)
-        existing_flow_names = {flow.name for flow in existing_flows}
-
-        # Create flows that don't exist
         flows_created = 0
+        flows_updated = 0
+
         for file_path, flow_data in agentic_flows:
+            # Extract flow metadata from JSON
             (
                 flow_name,
                 flow_description,
@@ -819,31 +822,84 @@ async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -
                 flow_tags,
             ) = get_project_data(flow_data)
 
-            if flow_name not in existing_flow_names:
+            # Extract flow_id and endpoint_name from JSON
+            flow_id = flow_data.get("id")
+            flow_endpoint_name = flow_data.get("endpoint_name")
+
+            # Convert flow_id to UUID if it's a valid UUID string
+            if flow_id and isinstance(flow_id, str):
+                try:
+                    flow_id = UUID(flow_id)
+                except ValueError:
+                    await logger.awarning(f"Invalid UUID for flow {flow_name}: {flow_id}, will use auto-generated ID")
+                    flow_id = None
+
+            # Try to find an existing flow by ID or endpoint_name
+            existing_flow = await find_existing_flow(session, flow_id, flow_endpoint_name)
+
+            if existing_flow:
+                try:
+                    await logger.adebug(f"Updating agentic flow: {flow_name}")
+                    # Update existing flow
+                    existing_flow.name = flow_name
+                    existing_flow.description = flow_description
+                    existing_flow.is_component = flow_is_component
+                    existing_flow.updated_at = updated_at_datetime
+                    existing_flow.data = project_data
+                    existing_flow.icon = flow_icon
+                    existing_flow.icon_bg_color = flow_icon_bg_color
+                    existing_flow.gradient = flow_gradient
+                    existing_flow.tags = flow_tags
+                    existing_flow.folder_id = assistant_folder.id
+                    existing_flow.user_id = user_id
+
+                    # Update endpoint_name if provided in JSON
+                    if flow_endpoint_name:
+                        existing_flow.endpoint_name = flow_endpoint_name
+
+                    # Update ID if provided and different
+                    if flow_id and existing_flow.id != flow_id:
+                        existing_flow.id = flow_id
+
+                    session.add(existing_flow)
+                    flows_updated += 1
+                except Exception:  # noqa: BLE001
+                    await logger.aexception(f"Error while updating agentic flow {flow_name}")
+            else:
                 try:
                     await logger.adebug(f"Creating agentic flow: {flow_name}")
-                    create_new_project(
-                        session=session,
-                        project_name=flow_name,
-                        project_description=flow_description,
-                        project_is_component=flow_is_component,
-                        updated_at_datetime=updated_at_datetime,
-                        project_data=project_data,
-                        project_icon=flow_icon,
-                        project_icon_bg_color=flow_icon_bg_color,
-                        project_gradient=flow_gradient,
-                        project_tags=flow_tags,
-                        new_folder_id=assistant_folder.id,
+                    # Create new flow with ID and endpoint_name from JSON
+                    new_project = FlowCreate(
+                        name=flow_name,
+                        description=flow_description,
+                        icon=flow_icon,
+                        icon_bg_color=flow_icon_bg_color,
+                        data=project_data,
+                        is_component=flow_is_component,
+                        updated_at=updated_at_datetime,
+                        folder_id=assistant_folder.id,
+                        gradient=flow_gradient,
+                        tags=flow_tags,
+                        endpoint_name=flow_endpoint_name,  # Set endpoint_name from JSON
                     )
+                    db_flow = Flow.model_validate(new_project, from_attributes=True)
+
+                    # Set the ID from JSON if provided
+                    if flow_id:
+                        db_flow.id = flow_id
+
+                    session.add(db_flow)
                     flows_created += 1
                 except Exception:  # noqa: BLE001
                     await logger.aexception(f"Error while creating agentic flow {flow_name}")
 
-        if flows_created > 0:
+        if flows_created > 0 or flows_updated > 0:
             await session.commit()
-            await logger.adebug(f"Successfully created {flows_created} agentic flows")
+            await logger.adebug(
+                f"Successfully created {flows_created} and updated {flows_updated} agentic flows"
+            )
         else:
-            await logger.adebug("No new agentic flows to create")
+            await logger.adebug("No agentic flows to create or update")
 
     except Exception:  # noqa: BLE001
         await logger.aexception("Error in create_or_update_agentic_flows")
