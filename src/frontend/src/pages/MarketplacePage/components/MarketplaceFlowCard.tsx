@@ -107,7 +107,7 @@ export default function MarketplaceFlowCard({
             {item.status === "PUBLISHED" && (
             <Badge
               variant="secondary"
-              className="gap-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 animate-pulse"
+              className="gap-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 animate-pulse ml-2"
             >
               <Circle className="h-3 w-3 fill-current" />
             </Badge>
@@ -157,16 +157,19 @@ export default function MarketplaceFlowCard({
         {description}
       </p>
       <div className="flex justify-between items-center mt-auto">
-        {/* Tags - Show only first tag with title instead of id */}
+        {/* Tags - Show all tags */}
         {tags.length > 0 && (
           <div className="mt-auto flex flex-wrap items-center gap-2">
-            <Badge
-              variant="secondary"
-              size="xq"
-              className="gap-1 bg-[#F5F2FF] dark:bg-white/10 dark:text-white"
-            >
-              {getTagTitle(tags[0])}
-            </Badge>
+            {tags.map((tag, index) => (
+              <Badge
+                key={index}
+                variant="secondary"
+                size="xq"
+                className="gap-1 bg-[#F5F2FF] dark:bg-white/10 dark:text-white"
+              >
+                {getTagTitle(tag)}
+              </Badge>
+            ))}
           </div>
         )}
 
