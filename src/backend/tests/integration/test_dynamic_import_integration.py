@@ -8,8 +8,8 @@ import sys
 import time
 
 import pytest
-from langflow.components.agents import AgentComponent  # Backwards compatibility alias
 from langflow.components.data import APIRequestComponent
+from langflow.components.models_and_agents import AgentComponent  # Backwards compatibility alias
 from langflow.components.openai import OpenAIModelComponent
 
 
