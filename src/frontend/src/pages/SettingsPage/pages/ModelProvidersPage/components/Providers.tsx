@@ -436,7 +436,9 @@ const Providers = ({
                                         ? "language"
                                         : "embeddings";
                                       if (isDefaultModel) {
-                                        handleClearDefaultModel(modelTypeForAPI);
+                                        handleClearDefaultModel(
+                                          modelTypeForAPI,
+                                        );
                                       } else {
                                         handleSetDefaultModel(
                                           provider.provider,
