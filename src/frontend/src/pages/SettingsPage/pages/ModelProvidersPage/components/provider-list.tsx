@@ -14,7 +14,11 @@ type ProviderListProps = {
 };
 
 const ProviderList = ({ type }: ProviderListProps) => {
-  const { data: providersData = [], isLoading, isFetching } = useGetModelProviders({});
+  const {
+    data: providersData = [],
+    isLoading,
+    isFetching,
+  } = useGetModelProviders({});
   const { data: enabledModelsData } = useGetEnabledModels();
   const { data: defaultModelData } = useGetDefaultModel({
     model_type: 'language',

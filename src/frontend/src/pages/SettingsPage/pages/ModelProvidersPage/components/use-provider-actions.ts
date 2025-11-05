@@ -72,11 +72,17 @@ export const useProviderActions = () => {
 
           let message = 'Models updated successfully';
           if (enabledCount > 0 && disabledCount > 0) {
-            message = `${enabledCount} model${enabledCount > 1 ? 's' : ''} enabled, ${disabledCount} disabled`;
+            message = `${enabledCount} model${
+              enabledCount > 1 ? 's' : ''
+            } enabled, ${disabledCount} disabled`;
           } else if (enabledCount > 0) {
-            message = `${enabledCount} model${enabledCount > 1 ? 's' : ''} enabled successfully`;
+            message = `${enabledCount} model${
+              enabledCount > 1 ? 's' : ''
+            } enabled successfully`;
           } else if (disabledCount > 0) {
-            message = `${disabledCount} model${disabledCount > 1 ? 's' : ''} disabled successfully`;
+            message = `${disabledCount} model${
+              disabledCount > 1 ? 's' : ''
+            } disabled successfully`;
           }
 
           setSuccessData({
