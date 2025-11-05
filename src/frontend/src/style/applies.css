@@ -1100,7 +1100,7 @@
   }
 
   .input-invalid {
-    @apply border-destructive focus:border-destructive focus:ring-destructive;
+    @apply border-destructive focus:border-destructive focus:ring-destructive hover:border-destructive hover:ring-destructive;
   }
 
   .fade-container {
