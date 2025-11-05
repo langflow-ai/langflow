@@ -32,7 +32,7 @@ class TestChatOllamaIntegration:
             model_name="llama3.1",
             format=json_schema,
             temperature=0.1,
-            enable_structured_output=True
+            enable_structured_output=True,
         )
 
         # Set up input message
@@ -75,7 +75,7 @@ class TestChatOllamaIntegration:
             model_name="llama3.1",
             format="json",
             temperature=0.1,
-            enable_structured_output=True
+            enable_structured_output=True,
         )
 
         # Set up input message
@@ -129,7 +129,7 @@ class TestChatOllamaIntegration:
             model_name="llama3.1",
             format=pydantic_schema,
             temperature=0.1,
-            enable_structured_output=True
+            enable_structured_output=True,
         )
 
         component.input_value = "Extract person info"

@@ -41,7 +41,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
             "system": "",
             "tool_model_enabled": True,
             "template": "",
-            "enable_structured_output": True
+            "enable_structured_output": True,
         }
 
     @pytest.fixture
@@ -1058,9 +1058,10 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert "format" not in call_args, "format should not be passed when enable_structured_output is False"
         assert model == mock_instance
 
-
     @patch("lfx.components.ollama.ollama.ChatOllama")
-    def test_build_model_with_structured_output_enabled_string_format(self, mock_chat_ollama, component_class, default_kwargs):
+    def test_build_model_with_structured_output_enabled_string_format(
+        self, mock_chat_ollama, component_class, default_kwargs
+    ):
         """Test that format field IS passed when enable_structured_output is True with string format."""
         mock_instance = MagicMock()
         mock_chat_ollama.return_value = mock_instance
@@ -1078,9 +1079,10 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert call_args["format"] == "json"
         assert model == mock_instance
 
-
     @patch("lfx.components.ollama.ollama.ChatOllama")
-    def test_build_model_with_structured_output_enabled_dict_format(self, mock_chat_ollama, component_class, default_kwargs):
+    def test_build_model_with_structured_output_enabled_dict_format(
+        self, mock_chat_ollama, component_class, default_kwargs
+    ):
         """Test that JSON schema format IS passed when enable_structured_output is True."""
         mock_instance = MagicMock()
         mock_chat_ollama.return_value = mock_instance
@@ -1105,9 +1107,10 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert call_args["format"]["type"] == "object"
         assert model == mock_instance
 
-
     @patch("lfx.components.ollama.ollama.ChatOllama")
-    def test_build_model_with_structured_output_enabled_no_format(self, mock_chat_ollama, component_class, default_kwargs):
+    def test_build_model_with_structured_output_enabled_no_format(
+        self, mock_chat_ollama, component_class, default_kwargs
+    ):
         """Test that format is not passed when enable_structured_output is True but format is None/empty."""
         mock_instance = MagicMock()
         mock_chat_ollama.return_value = mock_instance
@@ -1123,7 +1126,6 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         call_args = mock_chat_ollama.call_args[1]
         assert "format" not in call_args, "format should not be passed when it's None"
         assert model == mock_instance
-
 
     @patch("lfx.components.ollama.ollama.ChatOllama")
     def test_build_model_structured_output_toggle_behavior(self, mock_chat_ollama, component_class, default_kwargs):
