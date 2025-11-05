@@ -204,6 +204,7 @@ class DatabaseVariableService(VariableService, Service):
             variable.value = auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
         else:
             variable.value = value
+        variable.updated_at = datetime.now(timezone.utc)
         session.add(variable)
         await session.commit()
         await session.refresh(variable)

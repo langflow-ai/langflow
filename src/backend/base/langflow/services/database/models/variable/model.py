@@ -48,8 +48,6 @@ class Variable(VariableBase, table=True):  # type: ignore[call-arg]
 class VariableCreate(VariableBase):
     created_at: datetime | None = Field(default_factory=utc_now, description="Creation time of the variable")
 
-    updated_at: datetime | None = Field(default_factory=utc_now, description="Creation time of the variable")
-
 
 class VariableRead(SQLModel):
     id: UUID
