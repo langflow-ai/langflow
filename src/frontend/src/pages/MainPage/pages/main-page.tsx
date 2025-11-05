@@ -56,7 +56,7 @@ export default function CollectionPage(): JSX.Element {
 
   return (
     <>
-      <main className="flex h-full w-full bg-main-bg p-4 overflow-auto">
+      <main className="flex h-full w-full bg-main-bg p-4 overflow-y-auto">
         {flows && examples && folders ? (
           <Outlet />
         ) : (

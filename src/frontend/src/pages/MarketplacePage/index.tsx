@@ -240,7 +240,7 @@ export default function MarketplacePage() {
             <div
               className={
                 viewMode === "grid"
-                  ? "grid auto-rows-fr grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 max-h-[calc(100vh-212px)] overflow-auto place-items-start"
+                  ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-h-[calc(100vh-212px)] overflow-y-auto "
                   : "flex flex-col gap-4 flex-1 min-h-[calc(100vh-280px)]"
               }
             >
@@ -255,8 +255,8 @@ export default function MarketplacePage() {
                   className={
                     viewMode === "grid"
                       ? `grid ${
-                          expandCards ? "auto-rows-fr" : "auto-rows-auto"
-                        } grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 max-h-[calc(100vh-212px)] overflow-auto place-items-start`
+                          expandCards ? "" : "auto-rows-auto"
+                        } grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-h-[calc(100vh-212px)] overflow-y-auto place-items-start`
                       : "flex flex-col gap-4 flex-1 min-h-[calc(100vh-280px)]"
                   }
                 >
@@ -282,7 +282,7 @@ export default function MarketplacePage() {
           )}
 
           {!isLoading && total > 0 && (
-            <div className="flex justify-between gap-4 pt-4">
+            <div className="flex justify-between gap-4 pt-4 mt-auto">
               {!isLoading && total > 0 && (
                 <div className="flex items-center justify-end text-xs text-[#444444] dark:text-white/60">
                   {`Showing ${start + 1} - ${Math.min(
