@@ -55,8 +55,11 @@ const Providers = ({
   const queryClient = useQueryClient();
   const { data: enabledModelsData } = useGetEnabledModels();
   const { mutate: mutateUpdateEnabledModels } = useUpdateEnabledModels();
-  const { data: defaultModelData } = useGetDefaultModel({
+  const { data: defaultLLMData } = useGetDefaultModel({
     model_type: "language",
+  });
+  const { data: defaultEmbeddingData } = useGetDefaultModel({
+    model_type: "embeddings",
   });
   const { mutate: mutateSetDefaultModel } = useSetDefaultModel();
   const { mutate: mutateClearDefaultModel } = useClearDefaultModel();
@@ -390,11 +393,20 @@ const Providers = ({
                       const isNotSupported = model.metadata.not_supported;
                       const modelType = model.metadata.model_type || "llm";
                       const isLanguageModel = modelType === "llm";
-                      const isDefaultModel =
-                        defaultModelData?.default_model?.model_name ===
+                      const isEmbeddingModel = modelType === "embeddings";
+                      const isDefaultLLM =
+                        isLanguageModel &&
+                        defaultLLMData?.default_model?.model_name ===
                           model.model_name &&
-                        defaultModelData?.default_model?.provider ===
+                        defaultLLMData?.default_model?.provider ===
                           provider.provider;
+                      const isDefaultEmbedding =
+                        isEmbeddingModel &&
+                        defaultEmbeddingData?.default_model?.model_name ===
+                          model.model_name &&
+                        defaultEmbeddingData?.default_model?.provider ===
+                          provider.provider;
+                      const isDefaultModel = isDefaultLLM || isDefaultEmbedding;
 
                       return (
                         <div
@@ -413,35 +425,39 @@ const Providers = ({
                                   );
                                 }}
                               />
-                              {isLanguageModel && isModelEnabled && (
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => {
-                                    if (isDefaultModel) {
-                                      handleClearDefaultModel("language");
-                                    } else {
-                                      handleSetDefaultModel(
-                                        provider.provider,
-                                        model.model_name,
-                                        "language",
-                                      );
-                                    }
-                                  }}
-                                  data-testid={`default-${model.model_name}`}
-                                >
-                                  <ForwardedIconComponent
-                                    name={isDefaultModel ? "Star" : "StarOff"}
-                                    className={cn(
-                                      "h-4 w-4",
-                                      isDefaultModel
-                                        ? "text-yellow-500 fill-yellow-500"
-                                        : "text-muted-foreground hover:text-yellow-500",
-                                    )}
-                                  />
-                                </Button>
-                              )}
+                              {(isLanguageModel || isEmbeddingModel) &&
+                                isModelEnabled && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => {
+                                      const modelTypeForAPI = isLanguageModel
+                                        ? "language"
+                                        : "embeddings";
+                                      if (isDefaultModel) {
+                                        handleClearDefaultModel(modelTypeForAPI);
+                                      } else {
+                                        handleSetDefaultModel(
+                                          provider.provider,
+                                          model.model_name,
+                                          modelTypeForAPI,
+                                        );
+                                      }
+                                    }}
+                                    data-testid={`default-${model.model_name}`}
+                                  >
+                                    <ForwardedIconComponent
+                                      name={isDefaultModel ? "Star" : "StarOff"}
+                                      className={cn(
+                                        "h-4 w-4",
+                                        isDefaultModel
+                                          ? "text-yellow-500 fill-yellow-500"
+                                          : "text-muted-foreground hover:text-yellow-500",
+                                      )}
+                                    />
+                                  </Button>
+                                )}
                             </>
                           ) : (
                             <div className="mr-4" />

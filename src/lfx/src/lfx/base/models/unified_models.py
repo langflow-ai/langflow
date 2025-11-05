@@ -653,6 +653,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                 "metadata": {
                     "embedding_class": embedding_class_mapping.get(provider, "OpenAIEmbeddings"),
                     "param_mapping": param_mappings.get(provider, param_mappings["OpenAI"]),
+                    "model_type": "embeddings",  # Mark as embedding model
                 },
             }
 

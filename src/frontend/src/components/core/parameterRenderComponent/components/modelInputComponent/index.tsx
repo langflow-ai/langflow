@@ -101,9 +101,21 @@ export default function ModelInputComponent({
     (state) => state.globalVariablesEntries,
   );
 
-  // Get default model
+  // Detect if this is an embedding model input or language model input
+  const modelType = useMemo(() => {
+    if (options && options.length > 0) {
+      // Check if any of the options has model_type in metadata
+      const firstModel = options[0];
+      if (firstModel?.metadata?.model_type === "embeddings") {
+        return "embeddings";
+      }
+    }
+    return "language"; // Default to language models
+  }, [options]);
+
+  // Get default model based on detected type
   const { data: defaultModelData } = useGetDefaultModel({
-    model_type: "language",
+    model_type: modelType,
   });
 
   // Initialize utilities and memoized values
