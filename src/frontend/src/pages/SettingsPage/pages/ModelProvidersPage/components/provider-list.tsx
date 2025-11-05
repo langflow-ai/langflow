@@ -100,20 +100,29 @@ const ProviderList = ({ type }: ProviderListProps) => {
           </div>
         ) : (
           <div className="space-y-1">
-            {filteredProviders.map(provider => (
-              <ProviderListItem
-                key={provider.provider}
-                provider={provider}
-                type={type}
-                onCardClick={handleCardClick}
-                onEnableProvider={handleEnableProvider}
-                onDeleteProvider={handleDeleteProviderWithCleanup}
-                deleteDialogOpen={deleteDialogOpen}
-                setDeleteDialogOpen={setDeleteDialogOpen}
-                providerToDelete={providerToDelete}
-                setProviderToDelete={setProviderToDelete}
-              />
-            ))}
+            {filteredProviders.map(provider => {
+              // Show default model name only if it's from this provider
+              const defaultModelForProvider =
+                defaultModelData?.default_model?.provider === provider.provider
+                  ? defaultModelData?.default_model?.model_name
+                  : null;
+
+              return (
+                <ProviderListItem
+                  key={provider.provider}
+                  provider={provider}
+                  type={type}
+                  defaultModelName={defaultModelForProvider}
+                  onCardClick={handleCardClick}
+                  onEnableProvider={handleEnableProvider}
+                  onDeleteProvider={handleDeleteProviderWithCleanup}
+                  deleteDialogOpen={deleteDialogOpen}
+                  setDeleteDialogOpen={setDeleteDialogOpen}
+                  providerToDelete={providerToDelete}
+                  setProviderToDelete={setProviderToDelete}
+                />
+              );
+            })}
           </div>
         )}
       </div>
