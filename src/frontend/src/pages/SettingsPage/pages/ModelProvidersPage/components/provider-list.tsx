@@ -66,6 +66,7 @@ const ProviderList = ({ type }: ProviderListProps) => {
 
   const filteredProviders: Provider[] = providersData
     .filter(provider => {
+      // Exclude providers where all models are deprecated and not supported
       const filteredMetaData = provider?.models?.filter(
         model => model.metadata?.deprecated && model.metadata?.not_supported
       )?.length;
