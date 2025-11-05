@@ -1591,6 +1591,8 @@ class Component(CustomComponent):
                 ):
                     complete_message = await self._stream_message(message.text, stored_message)
                     stored_message.text = complete_message
+                    if complete_message:
+                        stored_message.properties.state = "complete"
                     stored_message = await self._update_stored_message(stored_message)
                 else:
                     # Only send message event for non-streaming messages
