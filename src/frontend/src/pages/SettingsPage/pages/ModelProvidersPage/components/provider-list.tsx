@@ -14,7 +14,7 @@ type ProviderListProps = {
 };
 
 const ProviderList = ({ type }: ProviderListProps) => {
-  const { data: providersData = [], isLoading } = useGetModelProviders({});
+  const { data: providersData = [], isLoading, isFetching } = useGetModelProviders({});
   const { data: enabledModelsData } = useGetEnabledModels();
   const { data: defaultModelData } = useGetDefaultModel({
     model_type: 'language',
@@ -78,8 +78,8 @@ const ProviderList = ({ type }: ProviderListProps) => {
       models: provider.models || [],
     }));
 
-  // Only show loading on initial load, not on refetch
-  if (isLoading && providersData.length === 0) {
+  // Show loading during initial load or when refetching
+  if (isLoading || (isFetching && filteredProviders.length === 0)) {
     return <div className="text-muted-foreground">Loading providers...</div>;
   }
 
@@ -89,22 +89,28 @@ const ProviderList = ({ type }: ProviderListProps) => {
         <h2 className="text-muted-foreground text-sm--medium mb-4">
           {type.charAt(0).toUpperCase() + type.slice(1)}
         </h2>
-        <div className="space-y-1">
-          {filteredProviders.map(provider => (
-            <ProviderListItem
-              key={provider.provider}
-              provider={provider}
-              type={type}
-              onCardClick={handleCardClick}
-              onEnableProvider={handleEnableProvider}
-              onDeleteProvider={handleDeleteProviderWithCleanup}
-              deleteDialogOpen={deleteDialogOpen}
-              setDeleteDialogOpen={setDeleteDialogOpen}
-              providerToDelete={providerToDelete}
-              setProviderToDelete={setProviderToDelete}
-            />
-          ))}
-        </div>
+        {filteredProviders.length === 0 ? (
+          <div className="text-muted-foreground text-sm">
+            No {type} providers
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {filteredProviders.map(provider => (
+              <ProviderListItem
+                key={provider.provider}
+                provider={provider}
+                type={type}
+                onCardClick={handleCardClick}
+                onEnableProvider={handleEnableProvider}
+                onDeleteProvider={handleDeleteProviderWithCleanup}
+                deleteDialogOpen={deleteDialogOpen}
+                setDeleteDialogOpen={setDeleteDialogOpen}
+                providerToDelete={providerToDelete}
+                setProviderToDelete={setProviderToDelete}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <ProviderModelsDialog

@@ -168,10 +168,12 @@ export const useProviderActions = () => {
           setSuccessData({
             title: `${providerName} enabled successfully`,
           });
-          queryClient.refetchQueries({
+          // The mutation already refetches useGetGlobalVariables in onSettled
+          // We need to refetch model providers and flows
+          queryClient.invalidateQueries({
             queryKey: ['useGetModelProviders'],
           });
-          queryClient.refetchQueries({
+          queryClient.invalidateQueries({
             queryKey: ['flows'],
           });
         },
@@ -223,10 +225,9 @@ export const useProviderActions = () => {
           setSuccessData({
             title: `${providerName} provider removed successfully`,
           });
-          queryClient.refetchQueries({
-            queryKey: ['useGetModelProviders'],
-          });
-          queryClient.refetchQueries({
+          // The mutation already refetches useGetModelProviders in onSettled
+          // Just invalidate flows and global variables
+          queryClient.invalidateQueries({
             queryKey: ['flows'],
           });
           onSuccess?.();
