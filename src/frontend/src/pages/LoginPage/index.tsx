@@ -1,6 +1,6 @@
 import * as Form from "@radix-ui/react-form";
 import { useQueryClient } from "@tanstack/react-query";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
@@ -46,6 +46,7 @@ export default function LoginPage(): JSX.Element {
 
     mutate(user, {
       onSuccess: (data) => {
+        clearAuthSession();
         login(data.access_token, "login", data.refresh_token);
         queryClient.clear();
       },
@@ -57,12 +58,6 @@ export default function LoginPage(): JSX.Element {
       },
     });
   }
-
-  useEffect(() => {
-    if (!IS_AUTO_LOGIN) {
-      clearAuthSession();
-    }
-  }, []);
 
   return (
     <Form.Root
