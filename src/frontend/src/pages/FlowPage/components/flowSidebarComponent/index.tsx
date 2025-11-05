@@ -58,6 +58,7 @@ import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
+const MCP_COMPONENT_CATEGORY = "models_and_agents";
 
 // Search context for the sidebar
 export type SearchContextType = {
@@ -254,8 +255,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   // Create base data that includes MCP category when available
   const baseData = useMemo(() => {
-    if (mcpSuccess && mcpServers && data["agents"]?.["MCPTools"]) {
-      const mcpComponent = data["agents"]["MCPTools"];
+    if (
+      mcpSuccess &&
+      mcpServers &&
+      data[MCP_COMPONENT_CATEGORY]?.["MCPTools"]
+    ) {
+      const mcpComponent = data[MCP_COMPONENT_CATEGORY]["MCPTools"];
       const newMcpSearchData = mcpServers.map((mcpServer) => ({
         ...mcpComponent,
         display_name: mcpServer.name,
@@ -275,6 +280,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       newMcpSearchData.forEach((mcp) => {
         mcpCategoryData[mcp.display_name] = mcp;
       });
+
+      console.log("mcpCategoryData", mcpCategoryData);
 
       return {
         ...data,
@@ -444,8 +451,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     );
 
     // MCP data is already included in baseData, but we still need mcpSearchData for non-search display
-    if (mcpSuccess && mcpServers && data["agents"]?.["MCPTools"]) {
-      const mcpComponent = data["agents"]["MCPTools"];
+    if (
+      mcpSuccess &&
+      mcpServers &&
+      data[MCP_COMPONENT_CATEGORY]?.["MCPTools"]
+    ) {
+      const mcpComponent = data[MCP_COMPONENT_CATEGORY]["MCPTools"];
       const newMcpSearchData = mcpServers.map((mcpServer) => ({
         ...mcpComponent,
         mcpServerName: mcpServer.name, // adds this field and makes it searchable

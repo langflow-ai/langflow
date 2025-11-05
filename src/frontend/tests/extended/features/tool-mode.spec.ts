@@ -10,12 +10,12 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
-    await page.waitForSelector('[data-testid="disclosure-data"]', {
+    await page.waitForSelector('[data-testid="disclosure-data sources"]', {
       timeout: 3000,
       state: "visible",
     });
 
-    await page.getByTestId("disclosure-data").click();
+    await page.getByTestId("disclosure-data sources").click();
     await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,
       state: "visible",
@@ -112,9 +112,9 @@ test(
       state: "visible",
     });
 
-    await page.getByTestId("disclosure-data").click();
+    await page.getByTestId("disclosure-data sources").click();
 
-    await page.getByTestId("disclosure-agents").click();
+    await page.getByTestId("disclosure-models & agents").click();
 
     await adjustScreenView(page, { numberOfZoomOut: 4 });
 

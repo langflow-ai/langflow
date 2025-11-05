@@ -33,7 +33,7 @@ test(
     await adjustScreenView(page);
 
     await page
-      .getByTestId("data_webhook_draggable")
+      .getByTestId("input_output_webhook_draggable")
       .hover()
       .then(async () => {
         await page.waitForSelector("text=Webhook already added", {
@@ -106,7 +106,7 @@ test(
     await adjustScreenView(page);
 
     await page
-      .getByTestId("data_webhook_draggable")
+      .getByTestId("input_output_webhook_draggable")
       .hover()
       .then(async () => {
         await page.waitForSelector("text=Webhook already added", {
