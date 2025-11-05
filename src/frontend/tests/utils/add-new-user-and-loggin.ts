@@ -46,6 +46,12 @@ export const addNewUserAndLogin = async (page: Page) => {
     timeout: 30000,
   });
 
+  // Wait for any loading text to disappear
+  await page.waitForSelector('text="Loading"', {
+    state: "hidden",
+    timeout: 30000,
+  });
+
   await page.waitForSelector('[id="new-project-btn"]', {
     timeout: 30000,
   });
@@ -100,5 +106,11 @@ export const addNewUserAndLogin = async (page: Page) => {
 
   await page.evaluate(() => {
     sessionStorage.removeItem("testMockAutoLogin");
+  });
+
+  // Wait for any loading text to disappear
+  await page.waitForSelector('text="Loading"', {
+    state: "hidden",
+    timeout: 30000,
   });
 };
