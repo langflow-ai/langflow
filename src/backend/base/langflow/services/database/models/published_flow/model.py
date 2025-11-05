@@ -11,6 +11,7 @@ from sqlmodel import JSON, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
+    from langflow.services.database.models.published_flow_version.model import PublishedFlowVersion
     from langflow.services.database.models.user.model import User
 
 
@@ -74,6 +75,13 @@ class PublishedFlow(PublishedFlowBase, table=True):  # type: ignore[call-arg]
     )
     publisher: Optional["User"] = Relationship(
         sa_relationship_kwargs={"foreign_keys": "PublishedFlow.published_by", "lazy": "joined"}
+    )
+    versions: list["PublishedFlowVersion"] = Relationship(
+        back_populates="published_flow",
+        sa_relationship_kwargs={
+            "cascade": "all, delete-orphan",
+            "order_by": "PublishedFlowVersion.published_at.desc()",
+        },
     )
 
     __table_args__ = (UniqueConstraint("flow_cloned_from", name="uq_published_flow_cloned_from"),)

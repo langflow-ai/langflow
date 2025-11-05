@@ -22,10 +22,11 @@ export const usePublishFlow = () => {
       );
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["published-flows"] });
       queryClient.invalidateQueries({ queryKey: ["all-published-flows"] });
       queryClient.invalidateQueries({ queryKey: ["published-flow-check"] });
+      queryClient.invalidateQueries({ queryKey: ["flow-versions", variables.flowId] });
     },
   });
 };

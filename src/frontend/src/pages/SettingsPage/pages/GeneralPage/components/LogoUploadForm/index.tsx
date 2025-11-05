@@ -19,6 +19,7 @@ import {
 import { useUpdateAppConfig } from "@/controllers/API/queries/application-config";
 import useAlertStore from "@/stores/alertStore";
 import { AppLogoDisplay } from "@/components/AppLogoDisplay";
+import { UseRequestProcessor } from "@/controllers/API/services/request-processor";
 
 const LogoUploadForm = () => {
   const { logoUrl, setLogoUrl } = useLogoStore();
@@ -31,6 +32,7 @@ const LogoUploadForm = () => {
   const { validateFileSize } = useFileSizeValidator();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { queryClient } = UseRequestProcessor();
 
   const { mutateAsync: getUploadUrl } = usePostUploadPresignedUrl();
   const { mutateAsync: uploadToBlob } = useUploadToBlob();
@@ -122,6 +124,10 @@ const LogoUploadForm = () => {
           description: "Application logo removed",
         });
         setLogoUrl(null);
+
+        // Invalidate the GET query cache so all users get the updated logo state
+        queryClient.invalidateQueries({ queryKey: ["useGetAppConfig", "app-logo"] });
+
         setSuccessData({
           title: "Logo Removed Successfully",
         });
@@ -177,6 +183,9 @@ const LogoUploadForm = () => {
 
       // Step 4: Save the blob path to logoStore (will be converted to signed URL on display)
       setLogoUrl(fileName);
+
+      // Invalidate the GET query cache so all users get the updated logo state
+      queryClient.invalidateQueries({ queryKey: ["useGetAppConfig", "app-logo"] });
 
       setSuccessData({
         title: "Logo Uploaded Successfully",

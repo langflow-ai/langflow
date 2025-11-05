@@ -48,9 +48,9 @@ export const useGenerateSignedUrl = ({
       return response.data.presignedUrl.data.signedUrl;
     },
     enabled: enabled && !!blobPath,
-    staleTime: 1000 * 60 * 60, // 1 hour cache (URLs valid for 24h)
+    staleTime: 0, // 1 hour cache (URLs valid for 24h)
     refetchOnWindowFocus: true, // Refetch when user returns to tab (if stale)
     refetchOnReconnect: true, // Refetch when internet reconnects (if stale)
-    retry: 2, // Retry failed requests twice
+    retry: 1, // Retry failed requests twice
   });
 };

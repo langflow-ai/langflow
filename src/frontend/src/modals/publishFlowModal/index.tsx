@@ -88,8 +88,8 @@ export default function PublishFlowModal({
     if (open) {
       // Check if flow has been published before (includes both published and unpublished)
       if (existingPublishedData?.marketplace_flow_name) {
-        // Previously published: Use cloned flow data
-        setMarketplaceName(existingPublishedData.marketplace_flow_name || flowName);
+        // Previously published: Always use current flow name
+        setMarketplaceName(flowName);
 
         // Auto-increment version only if currently published, otherwise keep same version
         if (existingPublishedData.is_published) {
@@ -234,6 +234,15 @@ export default function PublishFlowModal({
       return;
     }
 
+    // Validate version is required
+    if (!version || !version.trim()) {
+      setErrorData({
+        title: "Cannot publish flow",
+        list: ["Version is required"],
+      });
+      return;
+    }
+
     // Check if name is available
     if (nameValidation && !nameValidation.available) {
       setErrorData({
@@ -368,12 +377,15 @@ export default function PublishFlowModal({
 
           <div className="flex gap-4">
             <div className="space-y-2 flex-[2]">
-              <Label htmlFor="version">Version (Optional)</Label>
+              <Label htmlFor="version">
+                Version <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="version"
                 placeholder="1.0.0"
                 value={version}
                 onChange={(e) => setVersion(e.target.value)}
+                required
               />
               <p className="text-xs text-muted-foreground">
                 Semantic versioning recommended (e.g., 1.0.0, 1.2.3)
