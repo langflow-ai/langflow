@@ -353,9 +353,9 @@ async def simplified_run_flow(
     flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
-    #TODO: Create a new end point
-    # api_key_user: Annotated[UserRead, Depends(api_key_security)],
-    api_key_user: CurrentActiveUser,
+    #TODO: Validate this approach for both Bearer and session authentication
+    # Accept either a CurrentActiveUser or a UserRead from api_key_security (which supports Bearer)
+    api_key_user: CurrentActiveUser | Annotated[UserRead, Depends(api_key_security)],
     context: dict | None = None,
     http_request: Request,
 ):
