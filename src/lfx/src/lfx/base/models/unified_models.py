@@ -198,7 +198,7 @@ def get_unified_models_detailed(
     ]
 
 
-def get_api_key_for_provider(user_id: UUID | str, provider: str, api_key: str | None = None) -> str | None:
+def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: str | None = None) -> str | None:
     """Get API key from self.api_key or global variables.
 
     Args:
@@ -212,6 +212,10 @@ def get_api_key_for_provider(user_id: UUID | str, provider: str, api_key: str | 
     # First check if user provided an API key directly
     if api_key:
         return api_key
+
+    # If no user_id or user_id is the string "None", we can't look up global variables
+    if user_id is None or (isinstance(user_id, str) and user_id == "None"):
+        return None
 
     # Map provider to global variable name
     provider_variable_map = {
@@ -675,7 +679,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
     return options
 
 
-def get_llm(model, user_id: UUID | str, api_key=None, temperature=None, *, stream=False) -> Any:
+def get_llm(model, user_id: UUID | str | None, api_key=None, temperature=None, *, stream=False) -> Any:
     # Safely extract model configuration
     if not model or not isinstance(model, list) or len(model) == 0:
         msg = "A model selection is required"
