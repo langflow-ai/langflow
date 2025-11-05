@@ -169,6 +169,11 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
       onClearFileUrl(componentId);
     }
   };
+  
+  const handleClose = () => {
+    setUploadedFiles({});
+    onClose();
+  };
 
   return (
     <>
@@ -179,7 +184,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
         style={{ display: 'none' }}
       />
 
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Manage File Inputs</DialogTitle>
@@ -255,10 +260,10 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button onClick={onClose}>
+            <Button onClick={handleClose}>
               Done
             </Button>
           </div>

@@ -1,13 +1,9 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { v4 as uuid } from "uuid";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import LoadingIcon from "@/components/ui/loading";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { getURL } from "@/controllers/API/helpers/constants";
-import { Square, Paperclip, X, File } from "lucide-react";
-import { hasMarkdownFormatting } from "@/utils/markdownUtils";
+import { Square, Upload, X, File } from "lucide-react";
 import SvgAutonomize from "@/icons/Autonomize/Autonomize";
 import { FileUploadManager } from "./FileUploadManager";
 import {
@@ -17,23 +13,31 @@ import {
 } from "./Playground.types";
 import { DragIcon } from "@/assets/icons/DragIcon";
 import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
+import { MessageRenderer } from "./MessageRender";
+import { usePlaygroundChat } from "./PlaygroundChat";
+import { useResizablePanel } from "./UseResizablePanel";
 
 export default function PlaygroundTab({
   publishedFlowData,
 }: PlaygroundTabProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [sessionId] = useState(() => uuid());
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
-    null
-  );
-  const [loadingDots, setLoadingDots] = useState(1);
   const [fileUrls, setFileUrls] = useState<Record<string, string>>({});
   const [isFileModalOpen, setIsFileModalOpen] = useState(false);
-  const [leftPanelWidth, setLeftPanelWidth] = useState(33.33);
-  const [isDragging, setIsDragging] = useState(false);
+
+  const { leftPanelWidth, isDragging, handleDragStart } = useResizablePanel(33.33);
+
+  const {
+    messages,
+    isLoading,
+    error,
+    streamingMessageId,
+    loadingDots,
+    displayedTexts,
+    targetTexts,
+    sendMessage: sendMessageHook,
+    stopStreaming,
+    setError,
+  } = usePlaygroundChat(publishedFlowData);
 
   const agentDetails = {
     createdOn: publishedFlowData?.created_at
@@ -48,10 +52,20 @@ export default function PlaygroundTab({
     name: publishedFlowData?.name || "Agent",
   };
 
-   const getTagTitle = (tagId: string): string => {
-    const tag = MARKETPLACE_TAGS.find(t => t.id === tagId);
+  const getTagTitle = (tagId: string): string => {
+    const tag = MARKETPLACE_TAGS.find((t) => t.id === tagId);
     return tag ? tag.title : tagId;
   };
+
+  // Check if flow has chat input
+  const hasChatInput = useMemo(() => {
+    if (!publishedFlowData?.flow_data?.nodes) return true; // Default to true
+    
+    return publishedFlowData.flow_data.nodes.some((node: any) => {
+      const nodeType = node.data?.type;
+      return nodeType === "ChatInput" || nodeType === "TextInput";
+    });
+  }, [publishedFlowData]);
 
   const fileInputComponents: FileInputComponent[] = useMemo(() => {
     const components: FileInputComponent[] = [];
@@ -107,353 +121,18 @@ export default function PlaygroundTab({
       .filter((file): file is NonNullable<typeof file> => file !== null);
   }, [fileUrls, fileInputComponents]);
 
-  const handleDragStart = () => {
-    setIsDragging(true);
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
-
-      const containerWidth = window.innerWidth;
-      const newLeftWidth = (e.clientX / containerWidth) * 100;
-
-      if (newLeftWidth >= 20 && newLeftWidth <= 60) {
-        setLeftPanelWidth(newLeftWidth);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    if (isDragging) {
-      document.body.style.userSelect = "none";
-      document.body.style.cursor = "col-resize";
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    } else {
-      document.body.style.userSelect = "";
-      document.body.style.cursor = "";
-    }
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.userSelect = "";
-      document.body.style.cursor = "";
-    };
-  }, [isDragging]);
-
-  const createFileInputTweaks = (fileUrls: Record<string, string>) => {
-    const tweaks: Record<string, any> = {};
-
-    fileInputComponents.forEach((component) => {
-      const fileUrl = fileUrls[component.id];
-      if (fileUrl) {
-        tweaks[component.id] = {
-          input_value: fileUrl,
-        };
-      }
-    });
-
-    return tweaks;
-  };
-
-  const [targetTexts, setTargetTexts] = useState<Map<string, string>>(
-    new Map()
-  );
-  const [displayedTexts, setDisplayedTexts] = useState<Map<string, string>>(
-    new Map()
-  );
-  const targetTextsRef = useRef<Map<string, string>>(new Map());
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    targetTextsRef.current = targetTexts;
-  }, [targetTexts]);
-
-  useEffect(() => {
-    const hasEmptyStreamingMessage = messages.some(
-      (msg) => msg.isStreaming && !msg.text
-    );
-
-    if (hasEmptyStreamingMessage) {
-      const interval = setInterval(() => {
-        setLoadingDots((prev) => (prev % 3) + 1);
-      }, 500);
-
-      return () => clearInterval(interval);
-    } else {
-      setLoadingDots(1);
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDisplayedTexts((prev) => {
-        const next = new Map(prev);
-        let hasChanges = false;
-
-        targetTextsRef.current.forEach((target, messageId) => {
-          const current = prev.get(messageId) || "";
-
-          if (current.length < target.length) {
-            const charsToAdd = Math.min(5, target.length - current.length);
-            next.set(
-              messageId,
-              target.substring(0, current.length + charsToAdd)
-            );
-            hasChanges = true;
-          }
-        });
-
-        return hasChanges ? next : prev;
-      });
-    }, 20);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleStreamEvent = (eventData: any, localAgentMessageId: string) => {
-    const data = eventData?.data;
-    if (!data) return;
-
-    if (eventData.event === "add_message") {
-      if (data.sender === "User") return;
-
-      if (data.sender === "Machine") {
-        const backendId = data.id;
-        const text = data.text || "";
-        const state = data.properties?.state || "partial";
-        const isComplete = state === "complete";
-
-        setTargetTexts((prev) => {
-          const next = new Map(prev);
-          next.set(backendId, text);
-          return next;
-        });
-
-        setDisplayedTexts((prev) => {
-          if (!prev.has(backendId)) {
-            const next = new Map(prev);
-            const currentDisplayed = prev.get(localAgentMessageId) || "";
-            next.set(backendId, currentDisplayed);
-            next.delete(localAgentMessageId);
-            return next;
-          }
-          return prev;
-        });
-
-        setMessages((prev) => {
-          const existingIndex = prev.findIndex((msg) => msg.id === backendId);
-
-          if (existingIndex !== -1) {
-            return prev.map((msg) =>
-              msg.id === backendId
-                ? {
-                    ...msg,
-                    text: isComplete ? text : "",
-                    isStreaming: !isComplete,
-                  }
-                : msg
-            );
-          } else {
-            const placeholderIndex = prev.findIndex(
-              (msg) => msg.id === localAgentMessageId
-            );
-
-            if (placeholderIndex !== -1) {
-              return prev.map((msg) =>
-                msg.id === localAgentMessageId
-                  ? {
-                      ...msg,
-                      id: backendId,
-                      text: isComplete ? text : "",
-                      isStreaming: !isComplete,
-                    }
-                  : msg
-              );
-            } else {
-              return [
-                ...prev,
-                {
-                  id: backendId,
-                  type: "agent" as const,
-                  text: isComplete ? text : "",
-                  timestamp: new Date(),
-                  isStreaming: !isComplete,
-                },
-              ];
-            }
-          }
-        });
-
-        if (isComplete) {
-          setTimeout(() => {
-            setTargetTexts((prev) => {
-              const next = new Map(prev);
-              next.delete(backendId);
-              return next;
-            });
-            setDisplayedTexts((prev) => {
-              const next = new Map(prev);
-              next.delete(backendId);
-              return next;
-            });
-          }, 2000);
-        }
-      }
-    } else if (eventData.event === "end") {
-      setMessages((prev) =>
-        prev.map((msg) => ({ ...msg, isStreaming: false }))
-      );
-    } else if (eventData.event === "error") {
-      const errorMsg = data?.error || "Stream error";
-      throw new Error(errorMsg);
-    }
-  };
-
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
-
-    const userInputText = input.trim();
-    const userMessage: Message = {
-      id: uuid(),
-      type: "user",
-      text: userInputText,
-      timestamp: new Date(),
-    };
-
-    const localAgentMessageId = uuid();
-    const agentMessage: Message = {
-      id: localAgentMessageId,
-      type: "agent",
-      text: "",
-      timestamp: new Date(),
-      isStreaming: true,
-    };
-
-    setDisplayedTexts((prev) => {
-      const next = new Map(prev);
-      next.set(localAgentMessageId, "");
-      return next;
-    });
-
-    setMessages((prev) => [...prev, userMessage, agentMessage]);
-    setInput("");
-    setIsLoading(true);
-    setError(null);
-    setStreamingMessageId(localAgentMessageId);
-
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-
-    try {
-      const fileTweaks = createFileInputTweaks(fileUrls);
-
-      const requestBody = {
-        output_type: "chat",
-        input_type: "chat",
-        input_value: userInputText,
-        session_id: sessionId,
-        ...(Object.keys(fileTweaks).length > 0 && { tweaks: fileTweaks }),
-      };
-
-      const response = await fetch(
-        `${getURL("RUN")}/${publishedFlowData.flow_id}?stream=true`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
-          signal: abortController.signal,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) {
-        throw new Error("No response body");
-      }
-
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-
-        if (done) {
-          break;
-        }
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-
-          try {
-            const eventData = JSON.parse(line);
-            handleStreamEvent(eventData, localAgentMessageId);
-          } catch (e) {
-            console.error("[Playground] Error parsing chunk:", e, line);
-          }
-        }
-      }
-
-      if (buffer.trim()) {
-        try {
-          const eventData = JSON.parse(buffer);
-          handleStreamEvent(eventData, localAgentMessageId);
-        } catch (e) {
-        }
-      }
-
-      setMessages((prev) =>
-        prev.map((msg) => ({ ...msg, isStreaming: false }))
-      );
-    } catch (err: any) {
-      console.error("Streaming error:", err);
-
-      if (err.name === "AbortError") {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === localAgentMessageId
-              ? { ...msg, text: msg.text + " [stopped]", isStreaming: false }
-              : msg
-          )
-        );
-      } else {
-        const errorMessage = err.message || "Streaming failed";
-        setError(errorMessage);
-
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === localAgentMessageId
-              ? { ...msg, text: `Error: ${errorMessage}`, isStreaming: false }
-              : msg
-          )
-        );
-      }
-    } finally {
-      setIsLoading(false);
-      setStreamingMessageId(null);
-      abortControllerRef.current = null;
-    }
-  };
-
-  const stopStreaming = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-  };
+const sendMessage = async () => {
+  if (hasChatInput && !input.trim()) return;
+  if (!hasChatInput && selectedFiles.length === 0) return;
+  if (isLoading) return;
+  
+  // Clear files IMMEDIATELY before sending
+  setFileUrls({});
+  
+  const messageText = hasChatInput ? input.trim() : "Processing uploaded file...";
+  await sendMessageHook(messageText, fileUrls, fileInputComponents);
+  setInput("");
+};
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -484,6 +163,7 @@ export default function PlaygroundTab({
   return (
     <div className="flex h-full w-full flex-col ">
       <div className="flex flex-1 overflow-hidden h-full items-center">
+        {/* Agent Details Panel */}
         <div
           className="flex flex-col rounded-lg border border-border dark:border-white/20 h-full"
           style={{ width: `${leftPanelWidth}%` }}
@@ -529,6 +209,7 @@ export default function PlaygroundTab({
           </div>
         </div>
 
+        {/* Drag Handle */}
         <div
           className="w-3 h-[28px] bg-[#F5F2FF] cursor-col-resize rounded-[4px] text-[#350E84] flex items-center justify-center"
           onMouseDown={handleDragStart}
@@ -536,6 +217,7 @@ export default function PlaygroundTab({
           <DragIcon />
         </div>
 
+        {/* Chat Panel */}
         <div
           className="flex flex-col bg-background overflow-hidden rounded-lg border border-border dark:border-white/20 h-full"
           style={{
@@ -553,14 +235,27 @@ export default function PlaygroundTab({
                       className="h-10 w-10 scale-[1.5] mx-auto opacity-60"
                     />
                   </div>
-                  <p className="text-sm mt-2">
-                    Send a message to see how your agent responds
-                  </p>
-                  {fileInputComponents.length > 0 && (
-                    <p className="text-xs mt-2 text-muted-foreground">
-                      This agent accepts file inputs. Use the attachment button
-                      to provide files.
-                    </p>
+                  {hasChatInput ? (
+                    <>
+                      <p className="text-sm mt-2">
+                        Send a message to see how your agent responds
+                      </p>
+                      {fileInputComponents.length > 0 && (
+                        <p className="text-xs mt-2 text-muted-foreground">
+                          This agent accepts file inputs. Use the attachment button
+                          to provide files.
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm mt-2">
+                        Upload a file to process with this agent
+                      </p>
+                      <p className="text-xs mt-2 text-muted-foreground">
+                        This agent processes files without requiring text input
+                      </p>
+                    </>
                   )}
                 </div>
               </div>
@@ -568,120 +263,18 @@ export default function PlaygroundTab({
 
             <div className="space-y-4 max-w-full">
               {messages.map((message) => (
-                <div key={message.id} className="space-y-2">
-                  <div
-                    className={`flex ${
-                      message.type === "user" ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-lg px-4 py-3 ${
-                        message.type === "user"
-                          ? "bg-[#350E84] text-white"
-                          : "bg-[#F8F9FA] text-[#444] border"
-                      }`}
-                    >
-                      <div className="break-words">
-                        {(() => {
-                          if (message.type === "agent") {
-                            const displayedText = displayedTexts.get(
-                              message.id
-                            );
-                            const textToRender =
-                              displayedText !== undefined
-                                ? displayedText ||
-                                  `Working${".".repeat(loadingDots)}`
-                                : message.text || "";
-
-                            if (hasMarkdownFormatting(textToRender)) {
-                              return (
-                                <Markdown
-                                  remarkPlugins={[remarkGfm]}
-                                  className="prose prose-sm dark:prose-invert max-w-none"
-                                >
-                                  {textToRender}
-                                </Markdown>
-                              );
-                            } else {
-                              return (
-                                <div className="whitespace-pre-wrap">
-                                  {textToRender}
-                                </div>
-                              );
-                            }
-                          }
-                          return (
-                            <div className="whitespace-pre-wrap">
-                              {message.text}
-                            </div>
-                          );
-                        })()}
-                        {message.isStreaming &&
-                          message.type === "agent" &&
-                          (() => {
-                            const displayedText =
-                              displayedTexts.get(message.id) || "";
-                            const targetText =
-                              targetTexts.get(message.id) || message.text;
-                            return (
-                              displayedText &&
-                              displayedText.length > 0 &&
-                              displayedText.length <= targetText.length
-                            );
-                          })() && (
-                            <span className="inline-block w-0.5 h-5 ml-0.5 bg-foreground animate-pulse"></span>
-                          )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className={`flex text-xs text-muted-foreground ${
-                      message.type === "user" ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    {(() => {
-                      if (message.type === "user") {
-                        return (
-                          <span className="px-4">
-                            {message.timestamp.toLocaleTimeString()}
-                          </span>
-                        );
-                      }
-
-                      if (message.type === "agent") {
-                        const displayedText = displayedTexts.get(message.id);
-
-                        if (
-                          displayedText !== undefined &&
-                          displayedText.length > 0
-                        ) {
-                          return (
-                            <span className="px-4">
-                              {message.timestamp.toLocaleTimeString()}
-                            </span>
-                          );
-                        }
-
-                        if (displayedText === undefined && message.text) {
-                          return (
-                            <span className="px-4">
-                              {message.timestamp.toLocaleTimeString()}
-                            </span>
-                          );
-                        }
-
-                        return null;
-                      }
-
-                      return null;
-                    })()}
-                  </div>
-                </div>
+                <MessageRenderer
+                  key={message.id}
+                  message={message}
+                  displayedTexts={displayedTexts}
+                  targetTexts={targetTexts}
+                  loadingDots={loadingDots}
+                />
               ))}
             </div>
           </div>
 
+          {/* Input Area */}
           <div className="bg-background p-4 pt-0">
             {error && (
               <div className="mb-2 text-sm text-destructive">{error}</div>
@@ -723,54 +316,103 @@ export default function PlaygroundTab({
             )}
 
             <div className="max-w-full">
-              <div className="relative">
-                <textarea
-                  value={input}
-                  rows={1}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Type your message..."
-                  className="w-full p-3 pr-20 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
-                  onKeyDown={handleKeyPress}
-                  disabled={isLoading || !!streamingMessageId}
-                />
+              {hasChatInput ? (
+                // Show chat textarea for flows with chat input
+                <div className="relative">
+                  <textarea
+                    value={input}
+                    rows={1}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Type your message..."
+                    className="w-full p-3 pr-20 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                    onKeyDown={handleKeyPress}
+                    disabled={isLoading || !!streamingMessageId}
+                  />
 
-                <div className="absolute right-2 top-1.5 flex items-center gap-1">
-                  {fileInputComponents.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={isLoading || !!streamingMessageId}
-                      className="h-8 w-8 p-0 hover:bg-muted"
-                      onClick={() => setIsFileModalOpen(true)}
-                    >
-                      <Paperclip className="h-4 w-4" />
-                    </Button>
-                  )}
-
-                  <button
-                    onClick={streamingMessageId ? stopStreaming : sendMessage}
-                    disabled={
-                      !streamingMessageId && (!input.trim() || isLoading)
-                    }
-                    className={`p-2 rounded-md transition-colors ${
-                      streamingMessageId
-                        ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        : "bg-primary text-primary-foreground hover:bg-primary/90"
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    aria-label={
-                      streamingMessageId ? "Stop generation" : "Submit message"
-                    }
-                  >
-                    {streamingMessageId ? (
-                      <Square className="h-4 w-4" />
-                    ) : isLoading ? (
-                      <LoadingIcon />
-                    ) : (
-                      <ForwardedIconComponent name="Send" className="h-4 w-4" />
+                  <div className="absolute right-2 top-1.5 flex items-center gap-1">
+                    {fileInputComponents.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={isLoading || !!streamingMessageId}
+                        className="h-8 w-8 p-0 hover:bg-muted"
+                        onClick={() => setIsFileModalOpen(true)}
+                      >
+                        <Upload className="h-4 w-4" />
+                      </Button>
                     )}
-                  </button>
+
+                    <button
+                      onClick={streamingMessageId ? stopStreaming : sendMessage}
+                      disabled={
+                        !streamingMessageId && (!input.trim() || isLoading)
+                      }
+                      className={`p-2 rounded-md transition-colors ${
+                        streamingMessageId
+                          ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          : "bg-primary text-primary-foreground hover:bg-primary/90"
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      aria-label={
+                        streamingMessageId ? "Stop generation" : "Submit message"
+                      }
+                    >
+                      {streamingMessageId ? (
+                        <Square className="h-4 w-4" />
+                      ) : isLoading ? (
+                        <LoadingIcon />
+                      ) : (
+                        <ForwardedIconComponent name="Send" className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                // Show only file upload button for flows without chat input
+                <div className="flex items-center justify-center gap-3">
+                  <Button
+                    onClick={() => setIsFileModalOpen(true)}
+                    disabled={isLoading || !!streamingMessageId}
+                    variant="outline"
+                    size="lg"
+                    className="flex-1 max-w-md gap-2"
+                  >
+                    <Upload className="h-5 w-5" />
+                    {selectedFiles.length > 0 ? "Change File" : "Upload File"}
+                  </Button>
+
+                  {selectedFiles.length > 0 && (
+                    <button
+                      onClick={streamingMessageId ? stopStreaming : sendMessage}
+                      disabled={!streamingMessageId && isLoading}
+                      className={`px-6 py-2.5 rounded-md transition-colors ${
+                        streamingMessageId
+                          ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          : "bg-primary text-primary-foreground hover:bg-primary/90"
+                      } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
+                      aria-label={
+                        streamingMessageId ? "Stop generation" : "Process file"
+                      }
+                    >
+                      {streamingMessageId ? (
+                        <>
+                          <Square className="h-4 w-4" />
+                          Stop
+                        </>
+                      ) : isLoading ? (
+                        <>
+                          <LoadingIcon />
+                          Processing
+                        </>
+                      ) : (
+                        <>
+                          <ForwardedIconComponent name="Play" className="h-4 w-4" />
+                          Process
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
