@@ -40,7 +40,7 @@ export const usePatchMCPServer: useMutationFunctionType<
       }
 
       const res = await api.patch(
-        `${getURL("MCP_SERVERS", undefined, false)}/${body.name}`,
+        `${getURL("MCP_SERVERS", undefined, true)}/${body.name}`,
         payload,
       );
 

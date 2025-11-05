@@ -2784,7 +2784,7 @@
   "last_tested_version": "1.6.3",
   "name": "Accumulator Check Agent",
   "tags": [
-    "UM",
+    "utilization-management",
     "accumulator",
     "utilization",
     "reusable",
