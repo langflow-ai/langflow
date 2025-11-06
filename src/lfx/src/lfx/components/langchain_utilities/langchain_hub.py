@@ -3,7 +3,7 @@ import re
 from langchain_core.prompts import HumanMessagePromptTemplate
 
 from lfx.custom.custom_component.component import Component
-from lfx.inputs.inputs import DefaultPromptField, SecretStrInput, StrInput
+from lfx.inputs.inputs import DefaultPromptField, DropdownInput, SecretStrInput, StrInput
 from lfx.io import Output
 from lfx.schema.message import Message
 
@@ -21,6 +21,14 @@ class LangChainHubPromptComponent(Component):
             name="langchain_api_key",
             display_name="LangChain API Key",
             info="The LangChain API Key to use.",
+            required=True,
+        ),
+        DropdownInput(
+            name="region",
+            display_name="Region",
+            info="Select the LangChain Hub region (US or EU)",
+            options=["US", "EU"],
+            value="US",
             required=True,
         ),
         StrInput(
@@ -122,5 +130,8 @@ class LangChainHubPromptComponent(Component):
 
             raise ValueError(msg)
 
+            # Determine the API URL based on region
+        api_url = "https://api.hub.langchain.com" if self.region == "US" else "https://eu.api.hub.langchain.com"
+
         # Pull the prompt from LangChain Hub
-        return langchain.hub.pull(self.langchain_hub_prompt, api_key=self.langchain_api_key)
+        return langchain.hub.pull(self.langchain_hub_prompt, api_key=self.langchain_api_key, api_url=api_url)
