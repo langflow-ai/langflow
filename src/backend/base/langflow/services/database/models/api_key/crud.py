@@ -33,7 +33,7 @@ async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, us
     )
 
     session.add(api_key)
-    await session.commit()
+    await session.flush()
     await session.refresh(api_key)
     unmasked = UnmaskedApiKeyRead.model_validate(api_key, from_attributes=True)
     unmasked.api_key = generated_api_key
@@ -46,7 +46,6 @@ async def delete_api_key(session: AsyncSession, api_key_id: UUID) -> None:
         msg = "API Key not found"
         raise ValueError(msg)
     await session.delete(api_key)
-    await session.commit()
 
 
 async def check_key(session: AsyncSession, api_key: str) -> User | None:
@@ -56,7 +55,6 @@ async def check_key(session: AsyncSession, api_key: str) -> User | None:
     if api_key_object is not None:
         settings_service = get_settings_service()
         if settings_service.settings.disable_track_apikey_usage is not True:
-            # Update usage tracking in the same session
             api_key_object.total_uses += 1
             api_key_object.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_object)
