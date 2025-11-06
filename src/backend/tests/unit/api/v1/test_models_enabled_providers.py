@@ -5,8 +5,8 @@ from unittest import mock
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-from lfx.base.models.unified_models import get_model_provider_variable_mapping
 from langflow.services.variable.constants import CREDENTIAL_TYPE
+from lfx.base.models.unified_models import get_model_provider_variable_mapping
 
 # Get provider to variable name mapping
 _provider_variable_mapping = get_model_provider_variable_mapping()
@@ -80,7 +80,7 @@ async def test_enabled_providers_after_credential_creation(client: AsyncClient, 
     for var in all_vars.json():
         if var.get("name") == openai_var_name:
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-    
+
     # Check initial status
     initial_response = await client.get("api/v1/models/enabled_providers", headers=logged_in_headers)
     initial_result = initial_response.json()
@@ -93,9 +93,7 @@ async def test_enabled_providers_after_credential_creation(client: AsyncClient, 
     # Mock API validation - mock where it's used (in the variable endpoint)
     with mock.patch("langflow.api.v1.variable.validate_model_provider_key") as mock_validate:
         mock_validate.return_value = None  # validate_model_provider_key returns None on success
-        create_response = await client.post(
-            "api/v1/variables/", json=variable_payload, headers=logged_in_headers
-        )
+        create_response = await client.post("api/v1/variables/", json=variable_payload, headers=logged_in_headers)
     assert create_response.status_code == status.HTTP_201_CREATED
 
     # Check status after credential creation
@@ -125,12 +123,12 @@ async def test_enabled_providers_multiple_credentials(
     for var in all_vars.json():
         if var.get("name") in var_names:
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-    
+
     # Create multiple credentials using variables endpoint
     openai_var = _create_variable_payload(openai_credential["provider"], openai_credential["value"])
     anthropic_var = _create_variable_payload(anthropic_credential["provider"], anthropic_credential["value"])
     google_var = _create_variable_payload(google_credential["provider"], google_credential["value"])
-    
+
     # Mock API validations
     with mock.patch("langflow.api.v1.variable.validate_model_provider_key") as mock_validate:
         mock_validate.return_value = None
@@ -167,9 +165,7 @@ async def test_enabled_providers_after_credential_deletion(client: AsyncClient, 
     # Mock API validation
     with mock.patch("langflow.api.v1.variable.validate_model_provider_key") as mock_validate:
         mock_validate.return_value = None
-        create_response = await client.post(
-            "api/v1/variables/", json=variable_payload, headers=logged_in_headers
-        )
+        create_response = await client.post("api/v1/variables/", json=variable_payload, headers=logged_in_headers)
     created_credential = create_response.json()
     credential_id = created_credential["id"]
 
@@ -180,9 +176,7 @@ async def test_enabled_providers_after_credential_deletion(client: AsyncClient, 
     assert enabled_result["provider_status"]["OpenAI"] is True
 
     # Delete credential
-    delete_response = await client.delete(
-        f"api/v1/variables/{credential_id}", headers=logged_in_headers
-    )
+    delete_response = await client.delete(f"api/v1/variables/{credential_id}", headers=logged_in_headers)
     assert delete_response.status_code == status.HTTP_204_NO_CONTENT
 
     # Verify disabled
@@ -207,11 +201,11 @@ async def test_enabled_providers_filter_by_specific_providers(
     for var in all_vars.json():
         if var.get("name") in var_names:
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-    
+
     # Create credentials using variables endpoint
     openai_var = _create_variable_payload(openai_credential["provider"], openai_credential["value"])
     anthropic_var = _create_variable_payload(anthropic_credential["provider"], anthropic_credential["value"])
-    
+
     # Mock API validations
     with mock.patch("langflow.api.v1.variable.validate_model_provider_key") as mock_validate:
         mock_validate.return_value = None
@@ -252,15 +246,13 @@ async def test_variables_credential_redaction(client: AsyncClient, openai_creden
     for var in all_vars.json():
         if var.get("name") == openai_var_name:
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-    
+
     # Create a credential using variables endpoint
     variable_payload = _create_variable_payload(openai_credential["provider"], openai_credential["value"])
     # Mock API validation
     with mock.patch("langflow.api.v1.variable.validate_model_provider_key") as mock_validate:
         mock_validate.return_value = None
-        create_response = await client.post(
-            "api/v1/variables/", json=variable_payload, headers=logged_in_headers
-        )
+        create_response = await client.post("api/v1/variables/", json=variable_payload, headers=logged_in_headers)
     assert create_response.status_code == status.HTTP_201_CREATED
     created_credential = create_response.json()
 
@@ -296,20 +288,16 @@ async def test_variables_multiple_credentials_all_redacted(
     for var in all_vars.json():
         if var.get("name") in var_names:
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-    
+
     # Create multiple credentials using variables endpoint
     openai_var = _create_variable_payload(openai_credential["provider"], openai_credential["value"])
     anthropic_var = _create_variable_payload(anthropic_credential["provider"], anthropic_credential["value"])
-    
+
     # Mock API validations
     with mock.patch("langflow.api.v1.variable.validate_model_provider_key") as mock_validate:
         mock_validate.return_value = None
-        create_response1 = await client.post(
-            "api/v1/variables/", json=openai_var, headers=logged_in_headers
-        )
-        create_response2 = await client.post(
-            "api/v1/variables/", json=anthropic_var, headers=logged_in_headers
-        )
+        create_response1 = await client.post("api/v1/variables/", json=openai_var, headers=logged_in_headers)
+        create_response2 = await client.post("api/v1/variables/", json=anthropic_var, headers=logged_in_headers)
 
     assert create_response1.status_code == status.HTTP_201_CREATED
     assert create_response2.status_code == status.HTTP_201_CREATED
@@ -336,7 +324,7 @@ async def test_enabled_providers_reflects_models_endpoint(client: AsyncClient, o
     for var in all_vars.json():
         if var.get("name") == openai_var_name:
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-    
+
     # Create credential using variables endpoint
     variable_payload = _create_variable_payload(openai_credential["provider"], openai_credential["value"])
     # Mock API validation
@@ -375,7 +363,7 @@ async def test_security_credential_value_never_exposed_in_variables_endpoint(
     for var in all_vars.json():
         if var.get("name") == openai_var_name:
             await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
-    
+
     original_value = openai_credential["value"]
 
     # Create credential using variables endpoint
@@ -383,9 +371,7 @@ async def test_security_credential_value_never_exposed_in_variables_endpoint(
     # Mock API validation
     with mock.patch("langflow.api.v1.variable.validate_model_provider_key") as mock_validate:
         mock_validate.return_value = None
-        create_response = await client.post(
-            "api/v1/variables/", json=variable_payload, headers=logged_in_headers
-        )
+        create_response = await client.post("api/v1/variables/", json=variable_payload, headers=logged_in_headers)
     assert create_response.status_code == status.HTTP_201_CREATED
 
     # Get all variables - this is the security-critical path
