@@ -28,7 +28,11 @@ class TestChatOllamaIntegration:
 
         # Create component with schema format
         component = ChatOllamaComponent(
-            base_url="http://localhost:11434", model_name="llama3.1", format=json_schema, temperature=0.1
+            base_url="http://localhost:11434",
+            model_name="llama3.1",
+            format=json_schema,
+            temperature=0.1,
+            enable_structured_output=True,
         )
 
         # Set up input message
@@ -67,7 +71,11 @@ class TestChatOllamaIntegration:
 
         # Create component with JSON format
         component = ChatOllamaComponent(
-            base_url="http://localhost:11434", model_name="llama3.1", format="json", temperature=0.1
+            base_url="http://localhost:11434",
+            model_name="llama3.1",
+            format="json",
+            temperature=0.1,
+            enable_structured_output=True,
         )
 
         # Set up input message
@@ -117,7 +125,11 @@ class TestChatOllamaIntegration:
 
         # Create component with Pydantic schema
         component = ChatOllamaComponent(
-            base_url="http://localhost:11434", model_name="llama3.1", format=pydantic_schema, temperature=0.1
+            base_url="http://localhost:11434",
+            model_name="llama3.1",
+            format=pydantic_schema,
+            temperature=0.1,
+            enable_structured_output=True,
         )
 
         component.input_value = "Extract person info"
