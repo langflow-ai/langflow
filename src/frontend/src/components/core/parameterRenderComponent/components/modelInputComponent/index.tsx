@@ -477,6 +477,7 @@ export default function ModelInputComponent({
                     value={option.name}
                     onSelect={currentValue => {
                       handleModelSelect(currentValue);
+                      setSearchTerm('');
                       setOpen(false);
                     }}
                     className="w-full items-center rounded-none"
