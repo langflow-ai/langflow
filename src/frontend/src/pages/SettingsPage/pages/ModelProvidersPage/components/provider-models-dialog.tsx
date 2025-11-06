@@ -1,5 +1,5 @@
-import { ForwardedIconComponent } from '@/components/common/genericIconComponent';
-import { Button } from '@/components/ui/button';
+import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,10 +7,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Provider, EnabledModelsData, DefaultModelData } from './types';
-import ModelListItem from './model-list-item';
-import { useState, useEffect } from 'react';
+} from "@/components/ui/dialog";
+import { Provider, EnabledModelsData, DefaultModelData } from "./types";
+import ModelListItem from "./model-list-item";
+import { useState, useEffect } from "react";
 
 type DefaultModelChange = {
   providerName: string;
@@ -28,14 +28,14 @@ type ProviderModelsDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   provider: Provider | null;
-  type: 'enabled' | 'available';
+  type: "enabled" | "available";
   enabledModelsData?: EnabledModelsData;
   defaultModelData?: DefaultModelData;
   onBatchToggleModels: (updates: ModelUpdate[]) => void;
   onSetDefaultModel: (
     providerName: string,
     modelName: string,
-    modelType: string
+    modelType: string,
   ) => void;
   onClearDefaultModel: (modelType: string) => void;
 };
@@ -94,7 +94,7 @@ const ProviderModelsDialog = ({
           provider: provider.provider,
           model_id: modelName,
           enabled,
-        })
+        }),
       );
 
       // Use batch update function to send all changes in one API call
@@ -103,12 +103,12 @@ const ProviderModelsDialog = ({
 
     // Apply default model changes
     if (shouldClearDefault) {
-      onClearDefaultModel('language');
+      onClearDefaultModel("language");
     } else if (pendingDefaultModel) {
       onSetDefaultModel(
         pendingDefaultModel.providerName,
         pendingDefaultModel.modelName,
-        pendingDefaultModel.modelType
+        pendingDefaultModel.modelType,
       );
     }
 
@@ -133,9 +133,9 @@ const ProviderModelsDialog = ({
   const handleToggleModelLocal = (
     providerName: string,
     modelName: string,
-    enabled: boolean
+    enabled: boolean,
   ) => {
-    setPendingModelToggles(prev => {
+    setPendingModelToggles((prev) => {
       const updated = new Map(prev);
       updated.set(modelName, enabled);
       return updated;
@@ -145,7 +145,7 @@ const ProviderModelsDialog = ({
   const handleSetDefaultModelLocal = (
     providerName: string,
     modelName: string,
-    modelType: string
+    modelType: string,
   ) => {
     setPendingDefaultModel({ providerName, modelName, modelType });
     setShouldClearDefault(false);
@@ -177,7 +177,7 @@ const ProviderModelsDialog = ({
   };
 
   const effectiveDefaultModel = getEffectiveDefaultModel();
-  const effectiveDefaultModelName = effectiveDefaultModel?.model_name || 'None';
+  const effectiveDefaultModelName = effectiveDefaultModel?.model_name || "None";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -185,17 +185,17 @@ const ProviderModelsDialog = ({
         <DialogHeader className="px-5 pb-2">
           <DialogTitle className="gap-2 flex items-center w-full mr-5 mb-2">
             <ForwardedIconComponent
-              name={provider.icon || 'Bot'}
+              name={provider.icon || "Bot"}
               className="w-6 h-6"
             />
             <span>{provider.provider}</span>
           </DialogTitle>
           <DialogDescription>
-            {type === 'enabled' ? (
+            {type === "enabled" ? (
               <div>
                 Configure model availability for this provider using the
                 checkboxes below, or designate a global default model to
-                standardize across all flows. Current default:{' '}
+                standardize across all flows. Current default:{" "}
                 <span className="text-primary font-medium">
                   {effectiveDefaultModelName}
                 </span>
@@ -258,7 +258,7 @@ const ProviderModelsDialog = ({
             Close
           </Button>
 
-          {type === 'enabled' && (
+          {type === "enabled" && (
             <Button
               onClick={handleSave}
               type="submit"

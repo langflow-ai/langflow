@@ -1,16 +1,16 @@
-import { useState } from 'react';
-import { useGetModelProviders } from '@/controllers/API/queries/models/use-get-model-providers';
-import { useGetEnabledModels } from '@/controllers/API/queries/models/use-get-enabled-models';
-import { useGetDefaultModel } from '@/controllers/API/queries/models/use-get-default-model';
-import { useGetGlobalVariables } from '@/controllers/API/queries/variables';
-import ApiKeyModal from '@/modals/apiKeyModal';
-import ProviderModelsDialog from './provider-models-dialog';
-import ProviderListItem from './provider-list-item';
-import { useProviderActions } from './use-provider-actions';
-import { Provider } from './types';
+import { useState } from "react";
+import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
+import { useGetDefaultModel } from "@/controllers/API/queries/models/use-get-default-model";
+import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import ApiKeyModal from "@/modals/apiKeyModal";
+import ProviderModelsDialog from "./provider-models-dialog";
+import ProviderListItem from "./provider-list-item";
+import { useProviderActions } from "./use-provider-actions";
+import { Provider } from "./types";
 
 type ProviderListProps = {
-  type: 'enabled' | 'available';
+  type: "enabled" | "available";
 };
 
 const ProviderList = ({ type }: ProviderListProps) => {
@@ -21,7 +21,7 @@ const ProviderList = ({ type }: ProviderListProps) => {
   } = useGetModelProviders({});
   const { data: enabledModelsData } = useGetEnabledModels();
   const { data: defaultModelData } = useGetDefaultModel({
-    model_type: 'language',
+    model_type: "language",
   });
   const { data: globalVariables } = useGetGlobalVariables();
 
@@ -42,7 +42,7 @@ const ProviderList = ({ type }: ProviderListProps) => {
     useState<Provider | null>(null);
 
   const handleEnableProvider = (providerName: string) => {
-    if (providerName === 'Ollama') {
+    if (providerName === "Ollama") {
       handleEnableProviderFromHook(providerName);
     } else {
       setOpenApiKeyDialog(true);
@@ -65,17 +65,17 @@ const ProviderList = ({ type }: ProviderListProps) => {
   };
 
   const filteredProviders: Provider[] = providersData
-    .filter(provider => {
+    .filter((provider) => {
       // Exclude providers where all models are deprecated and not supported
       const filteredMetaData = provider?.models?.filter(
-        model => model.metadata?.deprecated && model.metadata?.not_supported
+        (model) => model.metadata?.deprecated && model.metadata?.not_supported,
       )?.length;
 
-      return type === 'enabled'
+      return type === "enabled"
         ? provider.is_enabled && !filteredMetaData
         : !provider.is_enabled;
     })
-    .map(provider => ({
+    .map((provider) => ({
       provider: provider.provider,
       icon: provider.icon,
       is_enabled: provider.is_enabled,
@@ -100,7 +100,7 @@ const ProviderList = ({ type }: ProviderListProps) => {
           </div>
         ) : (
           <div className="space-y-1">
-            {filteredProviders.map(provider => {
+            {filteredProviders.map((provider) => {
               // Show default model name only if it's from this provider
               const defaultModelForProvider =
                 defaultModelData?.default_model?.provider === provider.provider
@@ -142,7 +142,7 @@ const ProviderList = ({ type }: ProviderListProps) => {
       <ApiKeyModal
         open={openApiKeyDialog}
         onClose={() => setOpenApiKeyDialog(false)}
-        provider={selectedProvider || 'Provider'}
+        provider={selectedProvider || "Provider"}
       />
     </>
   );
