@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.deps import get_variable_service
-from langflow.services.variable.constants import GENERIC_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 
 router = APIRouter(prefix="/models", tags=["Models"])
@@ -90,16 +90,15 @@ async def list_models(
         except Exception as _:  # noqa: BLE001, S110
             pass
 
-    # Get filtered models
+    # Get filtered models - pass providers directly to avoid filtering after
     filtered_models = get_unified_models_detailed(
+        providers=selected_providers,
         model_name=model_name,
         include_unsupported=include_unsupported,
         include_deprecated=include_deprecated,
         model_type=model_type,
         **metadata_filters,
     )
-    if selected_providers:
-        filtered_models = [m for m in filtered_models if m.get("provider") in selected_providers]
     # Add enabled status to each provider
     for provider_dict in filtered_models:
         provider_dict["is_enabled"] = provider_status.get(provider_dict.get("provider"), False)
@@ -135,12 +134,6 @@ async def get_enabled_providers(
     providers: Annotated[list[str] | None, Query()] = None,
 ):
     """Get enabled providers for the current user."""
-    from lfx.base.models.unified_models import get_model_provider_variable_mapping
-
-    from langflow.services.variable.constants import CREDENTIAL_TYPE
-
-    if providers is None:
-        providers = []
     variable_service = get_variable_service()
     try:
         if not isinstance(variable_service, DatabaseVariableService):
@@ -160,7 +153,6 @@ async def get_enabled_providers(
                 "enabled_providers": [],
                 "provider_status": {},
             }
-        variable_names = credential_names
 
         # Get the provider-variable mapping
         provider_variable_map = get_model_provider_variable_mapping()
@@ -169,7 +161,7 @@ async def get_enabled_providers(
         provider_status = {}
 
         for provider, var_name in provider_variable_map.items():
-            is_enabled = var_name in variable_names
+            is_enabled = var_name in credential_names
             provider_status[provider] = is_enabled
             if is_enabled:
                 enabled_providers.append(provider)
@@ -202,13 +194,18 @@ async def _get_disabled_models(session: DbSession, current_user: CurrentActiveUs
     if not isinstance(variable_service, DatabaseVariableService):
         return set()
 
-    all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
-    for var in all_variables:
-        if var.name == DISABLED_MODELS_VAR and var.value is not None:
+    try:
+        var = await variable_service.get_variable_object(
+            user_id=current_user.id, name=DISABLED_MODELS_VAR, session=session
+        )
+        if var.value is not None:
             try:
                 return set(json.loads(var.value))
             except (json.JSONDecodeError, TypeError):
                 return set()
+    except ValueError:
+        # Variable not found, return empty set
+        pass
     return set()
 
 
@@ -319,31 +316,33 @@ async def update_enabled_models(
     disabled_models_json = json.dumps(list(disabled_models))
 
     # Check if the variable already exists
-    all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
-    existing_var = next((var for var in all_variables if var.name == DISABLED_MODELS_VAR), None)
-
     try:
-        if existing_var:
-            # Update existing variable
-            from langflow.services.database.models.variable.model import VariableUpdate
+        existing_var = await variable_service.get_variable_object(
+            user_id=current_user.id, name=DISABLED_MODELS_VAR, session=session
+        )
+        if existing_var is None or existing_var.id is None:
+            msg = f"Variable {DISABLED_MODELS_VAR} not found"
+            raise ValueError(msg)
+        # Update existing variable
+        from langflow.services.database.models.variable.model import VariableUpdate
 
-            await variable_service.update_variable_fields(
-                user_id=current_user.id,
-                variable_id=existing_var.id,
-                variable=VariableUpdate(
-                    id=existing_var.id, name=DISABLED_MODELS_VAR, value=disabled_models_json, type=GENERIC_TYPE
-                ),
-                session=session,
-            )
-        else:
-            # Create new variable
-            await variable_service.create_variable(
-                user_id=current_user.id,
-                name=DISABLED_MODELS_VAR,
-                value=disabled_models_json,
-                type_=GENERIC_TYPE,
-                session=session,
-            )
+        await variable_service.update_variable_fields(
+            user_id=current_user.id,
+            variable_id=existing_var.id,
+            variable=VariableUpdate(
+                id=existing_var.id, name=DISABLED_MODELS_VAR, value=disabled_models_json, type=GENERIC_TYPE
+            ),
+            session=session,
+        )
+    except ValueError:
+        # Variable not found, create new one
+        await variable_service.create_variable(
+            user_id=current_user.id,
+            name=DISABLED_MODELS_VAR,
+            value=disabled_models_json,
+            type_=GENERIC_TYPE,
+            session=session,
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -373,13 +372,16 @@ async def get_default_model(
 
     var_name = DEFAULT_LANGUAGE_MODEL_VAR if model_type == "language" else DEFAULT_EMBEDDING_MODEL_VAR
 
-    all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
-    for var in all_variables:
-        if var.name == var_name and var.value:
+    try:
+        var = await variable_service.get_variable_object(user_id=current_user.id, name=var_name, session=session)
+        if var.value:
             try:
                 return {"default_model": json.loads(var.value)}
             except (json.JSONDecodeError, TypeError):
                 return {"default_model": None}
+    except ValueError:
+        # Variable not found
+        pass
     return {"default_model": None}
 
 
@@ -409,29 +411,31 @@ async def set_default_model(
     model_json = json.dumps(model_data)
 
     # Check if the variable already exists
-    all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
-    existing_var = next((var for var in all_variables if var.name == var_name), None)
-
     try:
-        if existing_var:
-            # Update existing variable
-            from langflow.services.database.models.variable.model import VariableUpdate
+        existing_var = await variable_service.get_variable_object(
+            user_id=current_user.id, name=var_name, session=session
+        )
+        if existing_var is None or existing_var.id is None:
+            msg = f"Variable {DISABLED_MODELS_VAR} not found"
+            raise ValueError(msg)
+        # Update existing variable
+        from langflow.services.database.models.variable.model import VariableUpdate
 
-            await variable_service.update_variable_fields(
-                user_id=current_user.id,
-                variable_id=existing_var.id,
-                variable=VariableUpdate(id=existing_var.id, name=var_name, value=model_json, type=GENERIC_TYPE),
-                session=session,
-            )
-        else:
-            # Create new variable
-            await variable_service.create_variable(
-                user_id=current_user.id,
-                name=var_name,
-                value=model_json,
-                type_=GENERIC_TYPE,
-                session=session,
-            )
+        await variable_service.update_variable_fields(
+            user_id=current_user.id,
+            variable_id=existing_var.id,
+            variable=VariableUpdate(id=existing_var.id, name=var_name, value=model_json, type=GENERIC_TYPE),
+            session=session,
+        )
+    except ValueError:
+        # Variable not found, create new one
+        await variable_service.create_variable(
+            user_id=current_user.id,
+            name=var_name,
+            value=model_json,
+            type_=GENERIC_TYPE,
+            session=session,
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -455,14 +459,16 @@ async def clear_default_model(
 
     var_name = DEFAULT_LANGUAGE_MODEL_VAR if model_type == "language" else DEFAULT_EMBEDDING_MODEL_VAR
 
-    # Check if the variable exists
-    all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
-    existing_var = next((var for var in all_variables if var.name == var_name), None)
-
-    if existing_var and existing_var.name:
-        try:
-            await variable_service.delete_variable(user_id=current_user.id, name=existing_var.name, session=session)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e)) from e
+    # Check if the variable exists and delete it
+    try:
+        existing_var = await variable_service.get_variable_object(
+            user_id=current_user.id, name=var_name, session=session
+        )
+        await variable_service.delete_variable(user_id=current_user.id, name=existing_var.name, session=session)
+    except ValueError:
+        # Variable not found, nothing to delete
+        pass
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
     return {"default_model": None}
