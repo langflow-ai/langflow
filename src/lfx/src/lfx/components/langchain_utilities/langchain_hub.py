@@ -130,7 +130,7 @@ class LangChainHubPromptComponent(Component):
 
             raise ValueError(msg)
 
-            # Determine the API URL based on region
+        # Determine the API URL based on region
         api_url = "https://api.hub.langchain.com" if self.region == "US" else "https://eu.api.hub.langchain.com"
 
         # Pull the prompt from LangChain Hub
