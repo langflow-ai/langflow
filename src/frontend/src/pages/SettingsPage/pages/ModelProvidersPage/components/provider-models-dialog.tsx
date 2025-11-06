@@ -92,18 +92,6 @@ const ProviderModelsDialog = ({
       effectiveDefaultModel?.model_type ||
       "language";
 
-    if (
-      effectiveDefaultModel &&
-      pendingModelToggles.has(effectiveDefaultModel.model_name)
-    ) {
-      const isUncheckingDefault = !pendingModelToggles.get(
-        effectiveDefaultModel.model_name,
-      );
-      if (isUncheckingDefault) {
-        onClearDefaultModel(modelType);
-      }
-    }
-
     // Apply model toggles - convert Map to array for batch update
     if (pendingModelToggles.size > 0) {
       const updates = Array.from(pendingModelToggles.entries()).map(
@@ -134,16 +122,18 @@ const ProviderModelsDialog = ({
     setShouldClearDefault(false);
   };
 
-  const handleSave = (e: React.MouseEvent) => {
+  const handleClose = (e: React.MouseEvent) => {
     e.stopPropagation();
     applyChanges();
     onOpenChange(false);
   };
 
-  const handleClose = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    applyChanges();
-    onOpenChange(false);
+  const handleOpenChange = (newOpen: boolean) => {
+    // When closing the dialog (via ESC, click away, etc.), apply changes first
+    if (!newOpen) {
+      applyChanges();
+    }
+    onOpenChange(newOpen);
   };
 
   const handleToggleModelLocal = (
@@ -168,16 +158,9 @@ const ProviderModelsDialog = ({
         setShouldClearDefault(true);
         setPendingDefaultModel(null);
       }
-    } else {
-      // When re-enabling a model, clear the shouldClearDefault flag if this was the cleared model
-      // This allows the user to re-enable and then manually set as default again if desired
-      if (
-        shouldClearDefault &&
-        defaultModelData?.default_model?.model_name === modelName
-      ) {
-        setShouldClearDefault(false);
-      }
     }
+    // When re-enabling a model, do NOT restore default status
+    // The user must explicitly click the star button to set it as default again
   };
 
   const handleSetDefaultModelLocal = (
@@ -218,7 +201,7 @@ const ProviderModelsDialog = ({
   const effectiveDefaultModelName = effectiveDefaultModel?.model_name || "None";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-[600px] gap-2 px-1 py-6 max-h-[80vh] overflow-y-auto">
         <DialogHeader className="px-5 pb-2">
           <DialogTitle className="gap-2 flex items-center w-full mr-5 mb-2">
@@ -294,22 +277,11 @@ const ProviderModelsDialog = ({
         <DialogFooter className="px-5 pt-2">
           <Button
             onClick={handleClose}
-            className="mr-1"
             variant="outline"
             data-testid="btn_cancel_delete_confirmation_modal"
           >
             Close
           </Button>
-
-          {type === "enabled" && (
-            <Button
-              onClick={handleSave}
-              type="submit"
-              data-testid="btn_delete_delete_confirmation_modal"
-            >
-              Save
-            </Button>
-          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
