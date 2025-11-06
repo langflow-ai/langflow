@@ -92,8 +92,13 @@ const ProviderModelsDialog = ({
       effectiveDefaultModel?.model_type ||
       "language";
 
-    if (effectiveDefaultModel && pendingModelToggles.has(effectiveDefaultModel.model_name)) {
-      const isUncheckingDefault = !pendingModelToggles.get(effectiveDefaultModel.model_name);
+    if (
+      effectiveDefaultModel &&
+      pendingModelToggles.has(effectiveDefaultModel.model_name)
+    ) {
+      const isUncheckingDefault = !pendingModelToggles.get(
+        effectiveDefaultModel.model_name,
+      );
       if (isUncheckingDefault) {
         onClearDefaultModel(modelType);
       }
@@ -226,13 +231,16 @@ const ProviderModelsDialog = ({
               {provider.models!.map((model, index) => {
                 // Get the current enabled state from API data
                 const isModelEnabledFromAPI =
-                  enabledModelsData?.enabled_models?.[provider.provider]?.[model.model_name];
+                  enabledModelsData?.enabled_models?.[provider.provider]?.[
+                    model.model_name
+                  ];
 
                 const isDefaultModelInThisList =
                   effectiveDefaultModel?.model_name === model.model_name;
 
                 // Force-check if it's the default model, otherwise respect API true
-                const currentEnabledState = isDefaultModelInThisList || isModelEnabledFromAPI === true;
+                const currentEnabledState =
+                  isDefaultModelInThisList || isModelEnabledFromAPI === true;
                 const isModelEnabled = pendingModelToggles.has(model.model_name)
                   ? pendingModelToggles.get(model.model_name)!
                   : currentEnabledState;
