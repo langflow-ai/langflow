@@ -11,9 +11,9 @@ from langflow.services.database.service import DatabaseService
 
 def test_reload_engine_has_disposal_logic():
     """Test that reload_engine method now includes engine disposal logic."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("✅ VALIDATING reload_engine() FIX IS IN PLACE")
-    print("="*80)
+    print("=" * 80)
 
     # Get the source code of reload_engine method
     source = inspect.getsource(DatabaseService.reload_engine)
@@ -45,48 +45,53 @@ def test_reload_engine_has_disposal_logic():
 
 
 def test_service_manager_has_teardown_logic():
-    """Test that ServiceManager.update method now includes teardown logic."""
-    print("\n" + "="*80)
-    print("✅ VALIDATING ServiceManager.update() FIX IS IN PLACE")
-    print("="*80)
+    """Test that ServiceManager.teardown method properly cleans up all services.
+
+    NOTE: The ServiceManager.update() method was removed as it was only used in tests
+    and not in production code. Services are now managed through the standard lifecycle.
+    """
+    print("\n" + "=" * 80)
+    print("✅ VALIDATING ServiceManager TEARDOWN IS IN PLACE")
+    print("=" * 80)
 
     # Import the ServiceManager and get source
     from lfx.services.manager import ServiceManager
-    source = inspect.getsource(ServiceManager.update)
 
-    # Check for fix indicators
-    has_old_service_handling = "old_service" in source
+    source = inspect.getsource(ServiceManager.teardown)
+
+    # Check for teardown indicators
+    has_service_iteration = "for service" in source
     has_teardown_call = "teardown" in source
-    has_asyncio_handling = "asyncio" in source
-    has_fix_comment = "CRITICAL FIX" in source
+    has_asyncio_handling = "asyncio" in source or "await" in source
     has_exception_handling = "except" in source
+    has_cleanup = "self.services = {}" in source
 
-    print("Checking ServiceManager.update() method for fixes:")
-    print(f"  ✓ Handles old_service: {'✅' if has_old_service_handling else '❌'}")
+    print("Checking ServiceManager.teardown() method:")
+    print(f"  ✓ Iterates services: {'✅' if has_service_iteration else '❌'}")
     print(f"  ✓ Calls teardown(): {'✅' if has_teardown_call else '❌'}")
     print(f"  ✓ Handles async properly: {'✅' if has_asyncio_handling else '❌'}")
-    print(f"  ✓ Has fix documentation: {'✅' if has_fix_comment else '❌'}")
     print(f"  ✓ Has error handling: {'✅' if has_exception_handling else '❌'}")
+    print(f"  ✓ Cleans up services dict: {'✅' if has_cleanup else '❌'}")
 
-    fixes_present = sum([has_old_service_handling, has_teardown_call, has_asyncio_handling])
+    fixes_present = sum([has_service_iteration, has_teardown_call, has_asyncio_handling, has_cleanup])
 
     if fixes_present >= 3:
-        print("\n✅ ServiceManager.update() FIX CONFIRMED:")
-        print("   ✓ Old service teardown logic is present")
+        print("\n✅ ServiceManager.teardown() FIX CONFIRMED:")
+        print("   ✓ Proper service cleanup logic is present")
         print("   ✓ Async handling is implemented")
-        print("   ✓ Service orphaning should be fixed")
+        print("   ✓ Service lifecycle is properly managed")
         return True
-    print("\n❌ ServiceManager.update() FIX INCOMPLETE:")
-    print(f"   ❌ Only {fixes_present}/3 fix components found")
-    print("   ❌ Service orphaning may still exist")
+    print("\n❌ ServiceManager.teardown() FIX INCOMPLETE:")
+    print(f"   ❌ Only {fixes_present}/4 fix components found")
+    print("   ❌ Service cleanup may be incomplete")
     return False
 
 
 def test_teardown_has_enhancements():
     """Test that DatabaseService.teardown method has enhancements."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("✅ VALIDATING teardown() ENHANCEMENTS ARE IN PLACE")
-    print("="*80)
+    print("=" * 80)
 
     # Get source of teardown method
     source = inspect.getsource(DatabaseService.teardown)
@@ -121,9 +126,9 @@ def test_teardown_has_enhancements():
 
 def validate_fix_integration():
     """Validate that all fixes work together conceptually."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🎯 VALIDATING INTEGRATED FIX APPROACH")
-    print("="*80)
+    print("=" * 80)
 
     print("Connection Pool Leak Fix Strategy:")
     print("  1. reload_engine() disposes old engines before creating new ones")
@@ -150,9 +155,9 @@ def validate_fix_integration():
 
 def demonstrate_before_after():
     """Show the before and after behavior conceptually."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("📈 BEFORE vs AFTER COMPARISON")
-    print("="*80)
+    print("=" * 80)
 
     print("BEFORE FIXES:")
     print("  ❌ reload_engine(): Creates new engine, old engine leaked")
@@ -187,15 +192,15 @@ if __name__ == "__main__":
 
     total_fixes = sum([reload_fix, service_fix, teardown_fix])
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🎯 FIX VALIDATION SUMMARY")
-    print("="*80)
+    print("=" * 80)
 
     print("Fix Implementation Status:")
     print(f"  reload_engine() fix:     {'✅ IMPLEMENTED' if reload_fix else '❌ MISSING'}")
-    print(f"  ServiceManager fix:      {'✅ IMPLEMENTED' if service_fix else '❌ MISSING'}")
+    print(f"  ServiceManager teardown: {'✅ IMPLEMENTED' if service_fix else '❌ MISSING'}")
     print(f"  teardown() enhancement:  {'✅ IMPLEMENTED' if teardown_fix else '❌ MISSING'}")
-    print(f"  Overall completion:      {total_fixes}/3 fixes implemented")
+    print(f"  Overall completion:      {total_fixes}/3 components validated")
 
     if total_fixes == 3:
         print("\n🎉 ALL FIXES SUCCESSFULLY IMPLEMENTED!")
@@ -215,4 +220,4 @@ if __name__ == "__main__":
         print("❌ Connection pool leaks likely still present")
         print("❌ More work needed before production deployment")
 
-    print("="*80)
+    print("=" * 80)

@@ -47,6 +47,8 @@ _tasks: list[asyncio.Task] = []
 
 MAX_PORT = 65535
 
+CONNECTION_POOL_HEALTH_CHECK_INTERVAL_SECONDS = 300  # 5 minutes
+
 
 async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
     """Helper to safely log exceptions to telemetry without raising."""
@@ -138,6 +140,15 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug("Initializing services")
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
+
+            # Start connection pool monitoring (optional, gracefully degrades if not available)
+            try:
+                from langflow.services.database.monitoring import start_pool_monitoring
+
+                start_pool_monitoring(interval_seconds=CONNECTION_POOL_HEALTH_CHECK_INTERVAL_SECONDS)
+                await logger.adebug("Connection pool monitoring started (interval: 300s)")
+            except ImportError:
+                await logger.adebug("Connection pool monitoring not available (monitoring.py not found)")
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Setting up LLM caching")

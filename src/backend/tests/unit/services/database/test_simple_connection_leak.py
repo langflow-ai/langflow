@@ -3,7 +3,7 @@
 These tests validate the reported issue where connection pools are not being
 properly disposed, leading to pool exhaustion.
 """
-# ruff: noqa: T201, W293, FBT001, FBT002
+# ruff: noqa: T201, FBT001, FBT002
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -45,7 +45,7 @@ class TestSimpleConnectionPoolLeak:
 
     def test_reload_engine_doesnt_dispose_old_engine(self):
         """Test that reload_engine creates new engines without disposing old ones.
-        
+
         This is the CORE BUG causing connection pool leaks.
         """
         # Create database service with mock settings
@@ -101,37 +101,31 @@ class TestSimpleConnectionPoolLeak:
         print(f"\n🔴 MULTIPLE LEAKS CONFIRMED: {len(unique_engine_ids)} engines created, {leak_count} leaked!")
         print("   Each leaked engine holds a connection pool - SQLite uses StaticPool but concept applies")
 
-    def test_service_manager_update_simulation(self):
-        """Simulate ServiceManager.update() behavior that creates new services without cleanup."""
-        # Simulate the buggy ServiceManager.update() pattern
+    def test_multiple_service_instances_create_multiple_engines(self):
+        """Multiple DatabaseService instances create separate engines (expected behavior).
+
+        NOTE: ServiceManager.update() was removed as it was only used in tests.
+        This test now validates that multiple service instances properly manage their own engines.
+        """
+        # Simulate the scenario where multiple service instances exist
         mock_settings = MockSettingsService()
 
         # Create original service (simulating singleton)
         original_service = DatabaseService(mock_settings)
         original_engine = original_service.engine
 
-        # Mock teardown to verify it's called
-        teardown_mock = AsyncMock()
-        original_service.teardown = teardown_mock
-
-        # Simulate ServiceManager.update() - removes from cache and creates new
-        # This is what happens in the real code:
-        # self.services.pop(service_name, None)  # Remove from cache
-        # self.get(service_name)                 # Create new instance
-
-        new_service = DatabaseService(mock_settings)  # Simulates creating new service
+        # Create new service instance (simulating service recreation)
+        new_service = DatabaseService(mock_settings)
         new_engine = new_service.engine
 
         # Different engines should be created
         assert new_engine is not original_engine
 
-        # CRITICAL BUG: Original service teardown was never called
-        teardown_mock.assert_not_called()
-
-        print("\n🔴 SERVICE MANAGER BUG CONFIRMED:")
+        print("\n📊 MULTIPLE SERVICE INSTANCES:")
         print(f"   Original service engine: {id(original_engine)}")
         print(f"   New service engine: {id(new_engine)}")
-        print("   Original service teardown() was never called - ORPHANED SERVICE!")
+        print("   Each service manages its own engine lifecycle")
+        print("   NOTE: Proper cleanup requires calling teardown() on each service")
 
     @pytest.mark.asyncio
     async def test_teardown_should_dispose_engine(self):
@@ -185,14 +179,14 @@ class TestSimpleConnectionPoolLeak:
         total_engines += 1
 
         for i in range(3):
-            print(f"   Step {i+1}: User changes database configuration...")
+            print(f"   Step {i + 1}: User changes database configuration...")
             db_service.reload_engine()  # BUG: Previous engine not disposed
             total_engines += 1
             leaked_engines += 1
 
         # Scenario 2: Service manager updates during development/testing
         for i in range(2):
-            print(f"   Dev/Test {i+1}: Service manager update...")
+            print(f"   Dev/Test {i + 1}: Service manager update...")
             _ = DatabaseService(mock_settings)  # BUG: Old service not cleaned
             total_engines += 1
             leaked_engines += 1
@@ -206,7 +200,7 @@ class TestSimpleConnectionPoolLeak:
         print(f"   Leaked engines: {leaked_engines}")
         print(f"   Total connections allocated: {total_connections}")
         print(f"   Leaked connections: {leaked_connections}")
-        print(f"   Connection waste percentage: {(leaked_connections/total_connections)*100:.1f}%")
+        print(f"   Connection waste percentage: {(leaked_connections / total_connections) * 100:.1f}%")
         print("\n   This is why users report: 'não reutiliza as pools, vai consumindo até bater no limite'")
 
 
@@ -224,8 +218,8 @@ if __name__ == "__main__":
     print("\n2. Testing multiple reload_engine() calls...")
     test_instance.test_multiple_reload_engine_calls_create_multiple_leaked_engines()
 
-    print("\n3. Testing service manager update behavior...")
-    test_instance.test_service_manager_update_simulation()
+    print("\n3. Testing multiple service instances...")
+    test_instance.test_multiple_service_instances_create_multiple_engines()
 
     print("\n4. Analyzing connection pool configuration...")
     test_instance.test_connection_pool_configuration_creates_many_connections()
@@ -234,10 +228,10 @@ if __name__ == "__main__":
     test_instance.test_demonstrate_leak_impact()
 
     print("\n" + "=" * 80)
-    print("🎯 CONCLUSION: CONNECTION POOL LEAKS CONFIRMED!")
+    print("🎯 CONCLUSION: CONNECTION POOL LEAK PATTERNS IDENTIFIED!")
     print("   Root causes identified:")
     print("   1. reload_engine() doesn't dispose old engines")
-    print("   2. ServiceManager.update() doesn't call teardown on old services")
+    print("   2. Multiple service instances create separate connection pools")
     print("   3. Each leaked engine holds up to 10 database connections")
     print("   4. Multiple leaks compound to exhaust connection limits")
     print("=" * 80)
