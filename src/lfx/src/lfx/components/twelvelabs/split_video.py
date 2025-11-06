@@ -268,7 +268,6 @@ class SplitVideoComponent(Component):
 
     def process(self) -> list[Data]:
         """Process the input video and return a list of Data objects containing the clips."""
-
         # Video processing not yet supported in S3 mode.
         settings = get_settings_service().settings
         if settings.storage_type == "s3":

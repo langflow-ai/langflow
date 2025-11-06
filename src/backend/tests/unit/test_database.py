@@ -2,7 +2,6 @@ import json
 from typing import NamedTuple
 from uuid import UUID, uuid4
 
-from lfx.services.deps import session_scope
 import orjson
 import pytest
 from httpx import AsyncClient
@@ -14,6 +13,7 @@ from langflow.services.database.models.folder.model import FolderCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from lfx.graph.utils import log_transaction, log_vertex_build
+from lfx.services.deps import session_scope
 from sqlalchemy import text
 
 

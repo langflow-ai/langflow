@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, cast
 from urllib.parse import urlencode
 
 import anyio
-from filelock import FileLock
 import httpx
 import sqlalchemy
 from fastapi import FastAPI, HTTPException, Request, Response, status
@@ -19,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
+from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor

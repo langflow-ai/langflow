@@ -7,7 +7,6 @@ from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile, is_zipfile
 
-from lfx.services.deps import get_settings_service
 import orjson
 import pandas as pd
 
@@ -16,8 +15,8 @@ from lfx.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx.services.deps import get_settings_service
 from lfx.utils.helpers import build_content_type_from_extension
-
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -29,7 +28,7 @@ class BaseFileComponent(Component, ABC):
     This class provides common functionality for resolving, validating, and
     processing file paths. Child classes must define valid file extensions
     and implement the `process_files` method.
-    
+
     # TODO: May want to subclass for local and remote files
     """
 

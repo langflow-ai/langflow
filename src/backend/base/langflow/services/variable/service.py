@@ -4,10 +4,10 @@ import os
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
+from lfx.log.logger import logger
 from sqlmodel import select
 from typing_extensions import override
 
-from lfx.log.logger import logger
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
@@ -18,9 +18,8 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
-    from sqlmodel.ext.asyncio.session import AsyncSession
-
     from lfx.services.settings.service import SettingsService
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 class DatabaseVariableService(VariableService, Service):
@@ -216,4 +215,3 @@ class DatabaseVariableService(VariableService, Service):
         await session.flush()
         await session.refresh(variable)
         return variable
-

@@ -176,12 +176,12 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
 
 async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession, retry_count: int = 0):
     """Add messages to the database with retry logic for CancelledError.
-    
+
     Args:
         messages: List of MessageTable objects to add
         session: Database session
         retry_count: Internal retry counter (max 3 retries to prevent infinite loops)
-    
+
     This function includes a workaround for CancelledError that can occur during
     session.commit() when called from build_public_tmp but not from build_flow.
     The retry mechanism has a limit to prevent infinite recursion.
@@ -198,7 +198,9 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
         except asyncio.CancelledError:
             await session.rollback()
             if retry_count >= max_retries:
-                await logger.awarning(f"Max retries ({max_retries}) reached for aadd_messagetables due to CancelledError")
+                await logger.awarning(
+                    f"Max retries ({max_retries}) reached for aadd_messagetables due to CancelledError"
+                )
                 error_msg = "Add Message operation cancelled after multiple retries"
                 raise ValueError(error_msg)
             return await aadd_messagetables(messages, session, retry_count + 1)

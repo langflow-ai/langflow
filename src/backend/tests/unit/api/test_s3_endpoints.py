@@ -282,4 +282,3 @@ class TestS3FileEndpoints:
                 s3_storage_service.get_file_stream.assert_called_once_with(
                     flow_id="user_123", file_name="large_file.txt"
                 )
-

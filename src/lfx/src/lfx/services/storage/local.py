@@ -11,11 +11,9 @@ from lfx.log.logger import logger
 from lfx.services.storage.service import StorageService
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    from langflow.services.session.service import SessionService
 
     from lfx.services.settings.service import SettingsService
-
-    from langflow.services.session.service import SessionService
 
 
 class LocalStorageService(StorageService):
@@ -36,9 +34,9 @@ class LocalStorageService(StorageService):
         super().__init__(session_service, settings_service)
         # Base class already sets self.data_dir as anyio.Path from settings_service.settings.config_dir
 
-
     def resolve_component_path(self, logical_path: str) -> str:
         """Convert logical path to absolute filesystem path for local storage.
+
         Args:
             logical_path: Path in format "flow_id/filename"
         Returns:

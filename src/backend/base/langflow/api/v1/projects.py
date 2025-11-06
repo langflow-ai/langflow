@@ -284,7 +284,7 @@ async def read_project(
         project.flows = flows_from_current_user_in_project
 
         # Convert to FolderReadWithFlows while session is still active to avoid detached instance errors
-        return FolderReadWithFlows.model_validate(project, from_attributes=True)  # noqa: TRY300
+        return FolderReadWithFlows.model_validate(project, from_attributes=True)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

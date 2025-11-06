@@ -334,4 +334,3 @@ class TestStorageUtilsSyncEdgeCases:
             size = get_file_size(str(test_file))
 
         assert size == 0
-

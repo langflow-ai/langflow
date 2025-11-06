@@ -98,7 +98,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         with (
             patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
             patch("lfx.services.deps.session_scope") as mock_session,
-            patch("langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock) as mock_get_user,
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+            ) as mock_get_user,
         ):
             mock_db = AsyncMock()
             mock_session.return_value.__aenter__.return_value = mock_db
@@ -128,7 +130,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         with (
             patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
             patch("lfx.services.deps.session_scope") as mock_session,
-            patch("langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock) as mock_get_user,
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+            ) as mock_get_user,
         ):
             mock_db = AsyncMock()
             mock_session.return_value.__aenter__.return_value = mock_db
@@ -151,7 +155,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         with (
             patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
             patch("lfx.services.deps.session_scope") as mock_session,
-            patch("langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock) as mock_get_user,
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+            ) as mock_get_user,
         ):
             mock_db = AsyncMock()
             mock_session.return_value.__aenter__.return_value = mock_db
@@ -178,7 +184,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                 side_effect=Exception("Upload failed"),
             ),
             patch("lfx.services.deps.session_scope") as mock_session,
-            patch("langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock) as mock_get_user,
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+            ) as mock_get_user,
         ):
             mock_db = AsyncMock()
             mock_session.return_value.__aenter__.return_value = mock_db
@@ -239,7 +247,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         with (
             patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
             patch("lfx.services.deps.session_scope") as mock_session,
-            patch("langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock) as mock_get_user,
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+            ) as mock_get_user,
         ):
             mock_db = AsyncMock()
             mock_session.return_value.__aenter__.return_value = mock_db

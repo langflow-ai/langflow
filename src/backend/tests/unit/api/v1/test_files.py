@@ -71,7 +71,6 @@ async def files_active_user(files_client):  # noqa: ARG001
         await session.delete(user)
 
 
-
 @pytest.fixture(name="files_flow")
 async def files_flow(
     files_client,  # noqa: ARG001

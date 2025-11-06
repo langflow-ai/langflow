@@ -71,7 +71,7 @@ class CSVToDataComponent(Component):
                     else:
                         # For local, read directly
                         csv_bytes = Path(resolved_path).read_bytes()
-                    csv_data = csv_bytes.decode("utf-8")            
+                    csv_data = csv_bytes.decode("utf-8")
 
             elif self.csv_path:
                 file_path = Path(self.csv_path)

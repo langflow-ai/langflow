@@ -369,4 +369,3 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
                 assert call_kwargs["path"] == csv_file
         finally:
             Path(csv_file).unlink()
-

@@ -1,6 +1,7 @@
-from langchain_experimental.agents.agent_toolkits.csv.base import create_csv_agent
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
+from langchain_experimental.agents.agent_toolkits.csv.base import create_csv_agent
 
 from lfx.base.agents.agent import LCAgentComponent
 from lfx.base.data.storage_utils import read_file_bytes
@@ -13,8 +14,8 @@ from lfx.inputs.inputs import (
     MessageTextInput,
 )
 from lfx.schema.message import Message
-from lfx.template.field.base import Output
 from lfx.services.deps import get_settings_service
+from lfx.template.field.base import Output
 from lfx.utils.async_helpers import run_until_complete
 
 
@@ -127,6 +128,7 @@ class CSVAgentComponent(LCAgentComponent):
 
     def _get_local_path(self) -> str:
         """Get a local file path, downloading from S3 storage if necessary.
+
         Returns:
             str: Local file path that can be used by LangChain
         """

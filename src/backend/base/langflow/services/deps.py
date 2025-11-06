@@ -148,6 +148,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
     msg = "get_session is deprecated, use session_scope instead"
     raise NotImplementedError(msg)
 
+
 @asynccontextmanager
 async def session_scope() -> AsyncGenerator[AsyncSession, None]:
     """Context manager for managing an async session scope.
@@ -167,7 +168,6 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
 
     async with lfx_session_scope() as session:
         yield session
-
 
 
 def get_cache_service() -> CacheService | AsyncBaseCacheService:

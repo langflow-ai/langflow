@@ -143,4 +143,3 @@ def file_exists(file_path: str, storage_service: StorageService | None = None) -
         return True
     except (FileNotFoundError, ValueError):
         return False
-

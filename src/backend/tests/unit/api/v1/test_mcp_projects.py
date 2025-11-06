@@ -17,9 +17,9 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
+from lfx.services.deps import session_scope
 from mcp.server.sse import SseServerTransport
 from sqlmodel import select
-from lfx.services.deps import session_scope
 
 # Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio

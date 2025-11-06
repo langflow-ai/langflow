@@ -309,4 +309,3 @@ class S3StorageService(StorageService):
         via context managers.
         """
         logger.info("S3 storage service teardown complete")
-

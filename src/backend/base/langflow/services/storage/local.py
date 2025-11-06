@@ -7,7 +7,7 @@ from .service import StorageService
 
 class LocalStorageService(StorageService):
     """A service class for handling local storage operations.
-    
+
     This is a thin wrapper around the lfx LocalStorageService implementation.
     """
 

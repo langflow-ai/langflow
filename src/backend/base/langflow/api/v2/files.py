@@ -170,10 +170,7 @@ async def upload_user_file(
             raise HTTPException(status_code=403, detail=str(e)) from e
         except Exception as e:
             # General error saving file or getting file size
-            raise HTTPException(
-                status_code=500,
-                detail=f"Error accessing file: {e}"
-            ) from e
+            raise HTTPException(status_code=500, detail=f"Error accessing file: {e}") from e
 
         # Create a new file record
         new_file = UserFile(
@@ -191,11 +188,13 @@ async def upload_user_file(
             # Database insert failed - clean up the uploaded file to avoid orphaned files
             try:
                 await storage_service.delete_file(flow_id=str(current_user.id), file_name=stored_file_name)
-            except Exception as e:  # noqa: S110
+            except Exception as e:
                 #  If delete fails, just log the error
                 await logger.aerror(f"Failed to clean up uploaded file {stored_file_name}: {e}")
 
-            raise HTTPException(status_code=500, detail=f"Error inserting file metadata into database: {db_err}") from db_err
+            raise HTTPException(
+                status_code=500, detail=f"Error inserting file metadata into database: {db_err}"
+            ) from db_err
     except HTTPException:
         # Re-raise HTTP exceptions (like 409 conflicts) without modification
         raise
@@ -615,7 +614,7 @@ async def delete_all_files(
 
             # Always delete from database regardless of storage deletion result
             await session.delete(file)
-        
+
         # If there were storage failures, include them in the response
         if storage_failures:
             await logger.awarning(

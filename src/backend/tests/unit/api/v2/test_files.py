@@ -1,5 +1,5 @@
-import os
 import asyncio
+import os
 import tempfile
 from contextlib import suppress
 from pathlib import Path
@@ -65,7 +65,6 @@ async def files_active_user(files_client):  # noqa: ARG001
         user = await session.get(User, user.id, options=[selectinload(User.flows)])
         await _delete_transactions_and_vertex_builds(session, user.flows)
         await session.delete(user)
-
 
 
 @pytest.fixture
@@ -520,6 +519,7 @@ async def test_unique_filename_path_storage(files_client, files_created_api_key)
     assert download2.status_code == 200
     assert download2.content == b"path content 2"
 
+
 # ==================== S3 STORAGE TESTS ====================
 
 
@@ -583,7 +583,6 @@ async def s3_files_active_user(s3_files_client):  # noqa: ARG001
         user = await session.get(User, user.id, options=[selectinload(User.flows)])
         await _delete_transactions_and_vertex_builds(session, user.flows)
         await session.delete(user)
-
 
 
 @pytest.fixture(name="s3_files_client")

@@ -58,9 +58,7 @@ class TestS3CompatibleComponents:
                 patch(
                     "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
                 ) as mock_get_user,
-                patch(
-                    "langflow.api.v2.files.upload_user_file", new_callable=AsyncMock
-                ) as mock_upload,
+                patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
             ):
                 mock_get_user.return_value = MagicMock()
                 mock_upload.return_value = "s3_file.txt"
@@ -153,9 +151,7 @@ class TestS3CompatibleComponents:
 
             # Mock S3 error
             with (
-                patch(
-                    "lfx.base.data.storage_utils.read_file_bytes", side_effect=FileNotFoundError("File not found")
-                ),
+                patch("lfx.base.data.storage_utils.read_file_bytes", side_effect=FileNotFoundError("File not found")),
                 pytest.raises(FileNotFoundError),
             ):
                 await component.load_files()
@@ -218,4 +214,3 @@ class TestS3CompatibleComponents:
             # All should succeed
             assert len(results) == 3
             assert all(result is not None for result in results)
-

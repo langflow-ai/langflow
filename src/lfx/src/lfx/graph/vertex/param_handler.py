@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import os
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -149,7 +148,7 @@ class ParameterHandler:
                         file_path = [file_path]
                     for p in file_path:
                         resolved = self.storage_service.resolve_component_path(p)
-                        full_path.append(resolved)                      
+                        full_path.append(resolved)
                 else:
                     full_path = self.storage_service.resolve_component_path(file_path)
 

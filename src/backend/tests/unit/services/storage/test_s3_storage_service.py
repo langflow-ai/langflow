@@ -489,4 +489,3 @@ class TestS3StorageServiceTeardown:
     async def test_teardown(self, s3_storage_service):
         """Test that teardown completes without errors."""
         await s3_storage_service.teardown()
-

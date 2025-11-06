@@ -24,8 +24,9 @@ from lfx.io import BoolInput, FileInput, IntInput, Output
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame  # noqa: TC001
 from lfx.schema.message import Message
+from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.utils.async_helpers import run_until_complete
-from lfx.services.deps import get_storage_service, get_settings_service
+
 
 class FileComponent(BaseFileComponent):
     """File component with optional Docling processing (isolated in a subprocess)."""
@@ -293,8 +294,10 @@ class FileComponent(BaseFileComponent):
 
     async def _get_local_file_for_docling(self, file_path: str) -> tuple[str, bool]:
         """Get a local file path for Docling processing, downloading from S3 if needed.
+
         Args:
             file_path: Either a local path or S3 key (format "flow_id/filename")
+
         Returns:
             tuple[str, bool]: (local_path, should_delete) where should_delete indicates
                               if this is a temporary file that should be cleaned up
@@ -335,7 +338,7 @@ class FileComponent(BaseFileComponent):
 
         We avoid multiprocessing pickling by launching `python -c "<script>"` and
         passing JSON config via stdin. The child prints a JSON result to stdout.
-        
+
         For S3 storage, the file is downloaded to a temp file first.
         """
         if not file_path:
@@ -360,12 +363,13 @@ class FileComponent(BaseFileComponent):
 
     def _process_docling_subprocess_impl(self, local_file_path: str, original_file_path: str) -> Data | None:
         """Implementation of Docling subprocess processing.
+
         Args:
             local_file_path: Path to local file to process
             original_file_path: Original file path to include in metadata
         Returns:
             Data object with processed content
-        """        
+        """
         args: dict[str, Any] = {
             "file_path": local_file_path,
             "markdown": bool(self.markdown),
@@ -667,7 +671,7 @@ class FileComponent(BaseFileComponent):
 
         # Standard multi-file (or single non-advanced) path
         concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)
-        
+
         file_paths = [str(f.path) for f in file_list]
         self.log(f"Starting parallel processing of {len(file_paths)} files with concurrency: {concurrency}.")
         my_data = parallel_load_data(

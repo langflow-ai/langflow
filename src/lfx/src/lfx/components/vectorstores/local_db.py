@@ -2,7 +2,6 @@ from copy import deepcopy
 from pathlib import Path
 
 from langchain_chroma import Chroma
-from lfx.services.deps import get_settings_service
 from typing_extensions import override
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -12,6 +11,7 @@ from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextI
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
+from lfx.services.deps import get_settings_service
 from lfx.template.field.base import Output
 
 

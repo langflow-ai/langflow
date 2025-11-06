@@ -35,8 +35,10 @@ class JsonAgentComponent(LCAgentComponent):
             required=True,
         ),
     ]
+
     def _get_local_path(self) -> Path:
         """Get a local file path, downloading from S3 storage if necessary.
+
         Returns:
             Path: Local file path that can be used by LangChain
         """

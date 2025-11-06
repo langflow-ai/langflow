@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, AsyncGenerator
+from typing import TYPE_CHECKING
+
+from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from lfx.log.logger import logger
 from lfx.services.schema import ServiceType
-from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 if TYPE_CHECKING:
     from lfx.services.interfaces import (
@@ -101,10 +103,12 @@ def get_tracing_service() -> TracingServiceProtocol | None:
 
     return get_service(ServiceType.TRACING_SERVICE)
 
+
 async def get_session():
     msg = "get_session is deprecated, use session_scope instead"
     logger.warning(msg)
     raise NotImplementedError(msg)
+
 
 @asynccontextmanager
 async def session_scope() -> AsyncGenerator[AsyncSession, None]:
@@ -113,8 +117,10 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
     It ensures that the session is properly committed if no exceptions occur,
     and rolled back if an exception is raised.
     Use session_scope_readonly() for read-only operations to avoid unnecessary commits and locks.
+
     Yields:
         AsyncSession: The async session object.
+
     Raises:
         Exception: If an error occurs during the session scope.
     """
@@ -141,6 +147,7 @@ async def session_scope_readonly() -> AsyncGenerator[AsyncSession, None]:
     """Context manager for managing a read-only async session scope.
     This is used with `async with session_scope_readonly() as session:` for direct session management
     when only reading data. No auto-commit or rollback - the session is simply closed after use.
+
     Yields:
         AsyncSession: The async session object.
     """

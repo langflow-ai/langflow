@@ -147,7 +147,7 @@ class VideoFileComponent(BaseFileComponent):
         if settings.storage_type == "s3":
             msg = "Video processing is not supported in S3 mode. Use local storage mode to enable this component."
             raise ValueError(msg)
-        
+
         try:
             self.log("DEBUG: Starting video file load")
             if not hasattr(self, "file_path") or not self.file_path:

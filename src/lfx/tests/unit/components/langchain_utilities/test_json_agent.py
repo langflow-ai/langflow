@@ -287,4 +287,3 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
             if hasattr(component, "_temp_file_path"):
                 temp_file_path = component._temp_file_path
                 assert not Path(temp_file_path).exists()
-

@@ -1,20 +1,20 @@
 import asyncio
-from io import BytesIO
 import tempfile
 import unicodedata
 from collections.abc import Callable
 from concurrent import futures
+from io import BytesIO
 from pathlib import Path
 
 import chardet
-from lfx.base.data.storage_utils import read_file_bytes
-from lfx.services.deps import get_settings_service
 import orjson
-from pypdf import PdfReader
 import yaml
 from defusedxml import ElementTree
+from pypdf import PdfReader
 
+from lfx.base.data.storage_utils import read_file_bytes
 from lfx.schema.data import Data
+from lfx.services.deps import get_settings_service
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
@@ -41,11 +41,14 @@ TEXT_FILE_TYPES = [
 
 IMG_FILE_TYPES = ["jpg", "jpeg", "png", "bmp", "image"]
 
+
 def parse_structured_text(text: str, file_path: str) -> str | dict | list:
     """Parse structured text formats (JSON, YAML, XML) and normalize text.
+
     Args:
         text: The text content to parse
         file_path: The file path (used to determine format)
+
     Returns:
         Parsed content (dict/list for JSON, dict for YAML, str for XML)
     """
@@ -65,6 +68,7 @@ def parse_structured_text(text: str, file_path: str) -> str | dict | list:
         return ElementTree.tostring(xml_element, encoding="unicode")
 
     return text
+
 
 def normalize_text(text):
     return unicodedata.normalize("NFKD", text)
@@ -140,8 +144,10 @@ def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | Non
 
 def read_text_file(file_path: str) -> str:
     """Read a text file with automatic encoding detection.
+
     Args:
         file_path: Path to the file (local path only, not storage service path)
+
     Returns:
         str: The file content as text
     """
@@ -155,10 +161,13 @@ def read_text_file(file_path: str) -> str:
 
     return file_path_.read_text(encoding=encoding)
 
+
 async def read_text_file_async(file_path: str) -> str:
     """Read a text file with automatic encoding detection (async, storage-aware).
+
     Args:
         file_path: Path to the file (S3 key format "flow_id/filename" or local path)
+
     Returns:
         str: The file content as text
     """
@@ -177,12 +186,15 @@ async def read_text_file_async(file_path: str) -> str:
 
     return raw_data.decode(encoding, errors="replace")
 
+
 def read_docx_file(file_path: str) -> str:
     """Read a DOCX file and extract text.
     ote: python-docx requires a file path, so this only works with local files.
     For storage service files, use read_docx_file_async which downloads to temp.
+
     Args:
         file_path: Path to the DOCX file (local path only)
+
     Returns:
         str: Extracted text from the document
     """
@@ -191,12 +203,15 @@ def read_docx_file(file_path: str) -> str:
     doc = Document(file_path)
     return "\n\n".join([p.text for p in doc.paragraphs])
 
+
 async def read_docx_file_async(file_path: str) -> str:
     """Read a DOCX file and extract text (async, storage-aware).
     For S3 storage, downloads to temp file (python-docx requires file path).
     For local storage, reads directly.
+
     Args:
         file_path: Path to the DOCX file (S3 key format "flow_id/filename" or local path)
+
     Returns:
         str: Extracted text from the document
     """
@@ -230,17 +245,21 @@ async def read_docx_file_async(file_path: str) -> str:
         except Exception:  # noqa: S110
             pass
 
+
 def parse_pdf_to_text(file_path: str) -> str:
     from pypdf import PdfReader
 
     with Path(file_path).open("rb") as f, PdfReader(f) as reader:
         return "\n\n".join([page.extract_text() for page in reader.pages])
 
+
 async def parse_pdf_to_text_async(file_path: str) -> str:
     """Parse a PDF file to extract text (async, storage-aware).
     Uses storage-aware file reading to support both local and S3 storage.
+
     Args:
         file_path: Path to the PDF file (S3 key format "flow_id/filename" or local path)
+
     Returns:
         str: Extracted text from all pages
     """
@@ -269,7 +288,7 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
             text = read_docx_file(file_path)
         else:
             text = read_text_file(file_path)
-        
+
         text = parse_structured_text(text, file_path)
     except Exception as e:
         if not silent_errors:
@@ -278,6 +297,7 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
         return None
 
     return Data(data={"file_path": file_path, "text": text})
+
 
 async def parse_text_file_to_data_async(file_path: str, *, silent_errors: bool) -> Data | None:
     """Parse a text file to Data (async version, supports storage service).
@@ -306,6 +326,7 @@ async def parse_text_file_to_data_async(file_path: str, *, silent_errors: bool) 
             msg = f"Error loading file {file_path}: {e}"
             raise ValueError(msg) from e
         return None
+
 
 # ! Removing unstructured dependency until
 # ! 3.12 is supported
