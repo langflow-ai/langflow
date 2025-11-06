@@ -320,7 +320,7 @@ async def update_enabled_models(
         existing_var = await variable_service.get_variable_object(
             user_id=current_user.id, name=DISABLED_MODELS_VAR, session=session
         )
-        if existing_var is None:
+        if existing_var is None or existing_var.id is None:
             msg = f"Variable {DISABLED_MODELS_VAR} not found"
             raise ValueError(msg)
         # Update existing variable
@@ -415,7 +415,7 @@ async def set_default_model(
         existing_var = await variable_service.get_variable_object(
             user_id=current_user.id, name=var_name, session=session
         )
-        if existing_var is None:
+        if existing_var is None or existing_var.id is None:
             msg = f"Variable {DISABLED_MODELS_VAR} not found"
             raise ValueError(msg)
         # Update existing variable
