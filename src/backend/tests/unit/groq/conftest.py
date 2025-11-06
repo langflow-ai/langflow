@@ -1,7 +1,7 @@
 import json
 import os
 import tempfile
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, Mock
 
@@ -113,21 +113,21 @@ def mock_cache_file(temp_cache_dir):
     cache_file.parent.mkdir(parents=True, exist_ok=True)
 
     cache_data = {
-        "cached_at": datetime.now(UTC).isoformat(),
+        "cached_at": datetime.now(timezone.utc).isoformat(),
         "models": {
             "llama-3.1-8b-instant": {
                 "name": "llama-3.1-8b-instant",
                 "provider": "Meta",
                 "tool_calling": True,
                 "preview": False,
-                "last_tested": datetime.now(UTC).isoformat(),
+                "last_tested": datetime.now(timezone.utc).isoformat(),
             },
             "llama-3.3-70b-versatile": {
                 "name": "llama-3.3-70b-versatile",
                 "provider": "Meta",
                 "tool_calling": True,
                 "preview": False,
-                "last_tested": datetime.now(UTC).isoformat(),
+                "last_tested": datetime.now(timezone.utc).isoformat(),
             },
         },
     }
@@ -145,7 +145,7 @@ def mock_expired_cache_file(temp_cache_dir):
     cache_file.parent.mkdir(parents=True, exist_ok=True)
 
     # Set cache time to 25 hours ago (beyond 24 hour expiry)
-    expired_time = datetime.now(UTC) - timedelta(hours=25)
+    expired_time = datetime.now(timezone.utc) - timedelta(hours=25)
 
     cache_data = {
         "cached_at": expired_time.isoformat(),
@@ -273,33 +273,33 @@ def sample_models_metadata():
             "provider": "Meta",
             "tool_calling": True,
             "preview": False,
-            "last_tested": datetime.now(UTC).isoformat(),
+            "last_tested": datetime.now(timezone.utc).isoformat(),
         },
         "llama-3.3-70b-versatile": {
             "name": "llama-3.3-70b-versatile",
             "provider": "Meta",
             "tool_calling": True,
             "preview": False,
-            "last_tested": datetime.now(UTC).isoformat(),
+            "last_tested": datetime.now(timezone.utc).isoformat(),
         },
         "gemma-7b-it": {
             "name": "gemma-7b-it",
             "provider": "Google",
             "tool_calling": False,
             "preview": False,
-            "last_tested": datetime.now(UTC).isoformat(),
+            "last_tested": datetime.now(timezone.utc).isoformat(),
         },
         "llama-3.2-1b-preview": {
             "name": "llama-3.2-1b-preview",
             "provider": "Meta",
             "tool_calling": False,
             "preview": True,
-            "last_tested": datetime.now(UTC).isoformat(),
+            "last_tested": datetime.now(timezone.utc).isoformat(),
         },
         "whisper-large-v3": {
             "name": "whisper-large-v3",
             "provider": "OpenAI",
             "not_supported": True,
-            "last_tested": datetime.now(UTC).isoformat(),
+            "last_tested": datetime.now(timezone.utc).isoformat(),
         },
     }
