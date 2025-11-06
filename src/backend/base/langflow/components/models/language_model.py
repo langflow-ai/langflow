@@ -1,3 +1,4 @@
+import os
 from typing import Any
 
 from langchain_anthropic import ChatAnthropic
@@ -48,6 +49,7 @@ class LanguageModelComponent(LCModelComponent):
             required=False,
             show=True,
             real_time_refresh=True,
+            value=os.getenv("OPENAI_API_KEY", ""),
         ),
         MessageTextInput(
             name="azure_endpoint",
@@ -55,6 +57,7 @@ class LanguageModelComponent(LCModelComponent):
             info="Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`",
             show=False,
             real_time_refresh=True,
+            value=os.getenv("AZURE_OPENAI_ENDPOINT", ""),
         ),
         MessageTextInput(
             name="azure_deployment",
@@ -62,12 +65,13 @@ class LanguageModelComponent(LCModelComponent):
             info="The name of your Azure OpenAI deployment",
             show=False,
             real_time_refresh=True,
+            value=os.getenv("AZURE_DEPLOYMENT_NAME", ""),
         ),
         DropdownInput(
             name="api_version",
             display_name="API Version",
             options=["2024-06-01", "2024-07-01-preview", "2024-08-01-preview", "2024-09-01-preview"],
-            value="2024-06-01",
+            value=os.getenv("AZURE_API_VERSION", "2024-06-01"),
             show=False,
             real_time_refresh=True,
         ),
@@ -106,7 +110,8 @@ class LanguageModelComponent(LCModelComponent):
         stream = self.stream
 
         if provider == "OpenAI":
-            if not self.api_key:
+            api_key = self.api_key or os.getenv("OPENAI_API_KEY")
+            if not api_key:
                 msg = "OpenAI API key is required when using OpenAI provider"
                 raise ValueError(msg)
 
@@ -118,47 +123,43 @@ class LanguageModelComponent(LCModelComponent):
                 model_name=model_name,
                 temperature=temperature,
                 streaming=stream,
-                openai_api_key=self.api_key,
+                openai_api_key=api_key,
             )
         if provider == "Azure OpenAI":
-            if not self.api_key:
+            api_key = self.api_key or os.getenv("AZURE_OPENAI_API_KEY")
+            azure_endpoint = self.azure_endpoint or os.getenv("AZURE_OPENAI_ENDPOINT")
+            azure_deployment = self.azure_deployment or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
+            api_version = self.api_version or os.getenv("AZURE_API_VERSION", "2024-06-01")
+            
+            if not api_key:
                 msg = "Azure OpenAI API key is required when using Azure OpenAI provider"
                 raise ValueError(msg)
-            if not self.azure_endpoint:
+            if not azure_endpoint:
                 msg = "Azure endpoint is required when using Azure OpenAI provider"
                 raise ValueError(msg)
-            if not self.azure_deployment:
+            if not azure_deployment:
                 msg = "Azure deployment name is required when using Azure OpenAI provider"
                 raise ValueError(msg)
 
             return AzureChatOpenAI(
-                azure_endpoint=self.azure_endpoint,
-                azure_deployment=self.azure_deployment,
-                api_version=self.api_version,
-                api_key=self.api_key,
+                azure_endpoint=azure_endpoint,
+                azure_deployment=azure_deployment,
+                api_version=api_version,
+                api_key=api_key,
                 temperature=temperature,
                 streaming=stream,
             )
         if provider == "Anthropic":
-            if not self.api_key:
+            api_key = self.api_key or os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
                 msg = "Anthropic API key is required when using Anthropic provider"
                 raise ValueError(msg)
             return ChatAnthropic(
                 model=model_name,
                 temperature=temperature,
                 streaming=stream,
-                anthropic_api_key=self.api_key,
+                anthropic_api_key=api_key,
             )
-        # if provider == "Google":
-        #     if not self.api_key:
-        #         msg = "Google API key is required when using Google provider"
-        #         raise ValueError(msg)
-        #     return ChatGoogleGenerativeAI(
-        #         model=model_name,
-        #         temperature=temperature,
-        #         streaming=stream,
-        #         google_api_key=self.api_key,
-        #     )
         if provider == "Google":
             # Allow both API key and service account (managed identity) authentication
             if self.api_key:
@@ -170,6 +171,15 @@ class LanguageModelComponent(LCModelComponent):
                     google_api_key=self.api_key,
                 )
             else:
+                # Check for API key in environment
+                google_api_key = os.getenv("GOOGLE_API_KEY")
+                if google_api_key:
+                    return ChatGoogleGenerativeAI(
+                        model=model_name,
+                        temperature=temperature,
+                        streaming=stream,
+                        google_api_key=google_api_key,
+                    )
                 # Use default Google credentials (service account or managed identity)
                 # This will automatically pick up credentials from environment or GCP runtime
                 return ChatGoogleGenerativeAI(
@@ -177,7 +187,6 @@ class LanguageModelComponent(LCModelComponent):
                     temperature=temperature,
                     streaming=stream,
                 )
-
 
         msg = f"Unknown provider: {provider}"
         raise ValueError(msg)
@@ -194,6 +203,7 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["model_name"]["options"] = OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES
                 build_config["model_name"]["value"] = OPENAI_CHAT_MODEL_NAMES[0]
                 build_config["api_key"]["display_name"] = "OpenAI API Key"
+                build_config["api_key"]["value"] = os.getenv("OPENAI_API_KEY", "")
             elif field_value == "Azure OpenAI":
                 # Show Azure-specific fields
                 build_config["azure_endpoint"]["show"] = True
@@ -201,14 +211,21 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["api_version"]["show"] = True
                 build_config["model_name"]["show"] = False  # Azure uses deployment name instead
                 build_config["api_key"]["display_name"] = "Azure OpenAI API Key"
+                # Prefill Azure fields from environment variables
+                build_config["api_key"]["value"] = os.getenv("AZURE_OPENAI_API_KEY", "")
+                build_config["azure_endpoint"]["value"] = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+                build_config["azure_deployment"]["value"] = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
+                build_config["api_version"]["value"] = os.getenv("AZURE_API_VERSION", "2024-06-01")
             elif field_value == "Anthropic":
                 build_config["model_name"]["options"] = ANTHROPIC_MODELS
                 build_config["model_name"]["value"] = ANTHROPIC_MODELS[0]
                 build_config["api_key"]["display_name"] = "Anthropic API Key"
+                build_config["api_key"]["value"] = os.getenv("ANTHROPIC_API_KEY", "")
             elif field_value == "Google":
                 build_config["model_name"]["options"] = GOOGLE_GENERATIVE_AI_MODELS
                 build_config["model_name"]["value"] = GOOGLE_GENERATIVE_AI_MODELS[0]
                 build_config["api_key"]["display_name"] = "Google API Key"
+                build_config["api_key"]["value"] = os.getenv("GOOGLE_API_KEY", "")
         elif field_name == "model_name" and field_value.startswith("o1") and self.provider == "OpenAI":
             # Hide system_message for o1 models - currently unsupported
             if "system_message" in build_config:

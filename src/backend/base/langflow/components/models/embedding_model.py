@@ -1,3 +1,4 @@
+import os
 from typing import Any
 
 from langchain_openai import OpenAIEmbeddings
@@ -49,6 +50,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             required=True,
             show=True,
             real_time_refresh=True,
+            value=os.getenv("OPENAI_API_KEY", ""),
         ),
         MessageTextInput(
             name="api_base",
@@ -78,7 +80,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
     def build_embeddings(self) -> Embeddings:
         provider = self.provider
         model = self.model
-        api_key = self.api_key
+        api_key = self.api_key or os.getenv("OPENAI_API_KEY")
         api_base = self.api_base
         dimensions = self.dimensions
         chunk_size = self.chunk_size
@@ -110,5 +112,6 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             build_config["model"]["options"] = OPENAI_EMBEDDING_MODEL_NAMES
             build_config["model"]["value"] = OPENAI_EMBEDDING_MODEL_NAMES[0]
             build_config["api_key"]["display_name"] = "OpenAI API Key"
+            build_config["api_key"]["value"] = os.getenv("OPENAI_API_KEY", "")
             build_config["api_base"]["display_name"] = "OpenAI API Base URL"
         return build_config
