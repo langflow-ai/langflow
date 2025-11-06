@@ -15,6 +15,7 @@ They have many uses, including:
 * Feed instructions and context to your LLMs and agents with the [**Prompt Template** component](#prompt-template).
 * Extract content from larger chunks of data with a [**Parser** component](#parser).
 * Filter data with natural language with the [**Smart Transform** component](#smart-transform).
+* Create structured data dynamically with the [**Dynamic Create Data** component](#dynamic-create-data).
 * Perform advanced JSON queries with the [**Data Operations** component](#data-operations) using `jq` expressions.
 * Save data to your local machine with the [**Write File** component](#save-file).
 * Transform data into a different data type with the [**Type Convert** component](#type-convert) to pass it between incompatible components.
@@ -212,7 +213,7 @@ Use the Path Selection operation to extract values from nested JSON structures w
 3. In the **Select Paths** dropdown, select the path.
     You can select paths such as `.user.profile.name` to extract "John Doe", or select `.user.settings.theme` to extract "dark".
 
-### JQ Expression operation example
+### JQ Expression operation example {#jq-expression-operation-examples}
 
 Use the **JQ Expressions** operation to use the [jq](https://jqlang.org/) query language to perform more advanced JSON filtering.
 1. In the **Operations** dropdown, select **JQ Expression**.
@@ -416,6 +417,47 @@ The output is a `DataFrame` containing all columns from the original `DataFrame`
 
 </TabItem>
 </Tabs>
+
+## Dynamic Create Data
+
+The **Dynamic Create Data** component creates a [`Data`](/data-types#data) object with configurable fields.
+Define the table in the **Input Configuration** field, and the component creates corresponding input or output handles in the component.
+
+### Use the Dynamic Create Data component in a flow
+
+The following example demonstrates how to use a **Dynamic Create Data** component to create a structured `Data` object from multiple sources.
+
+1. Add the **Dynamic Create Data** component to your flow.
+
+2. To define your data's fields, in the **Input Configuration** field, click <Icon name="Table" aria-hidden="true"/> **Open table**.
+
+3. To add rows to your table, click <Icon name="Plus" aria-hidden="true"/> **Add a new row**.
+   Adding a new row creates input and output handles for the **Field Type**.
+   For example, if you add a field of type `Text`, `Text` input and output handles are added to the component.
+   For each new row, configure the **Field Name** and **Field Type**.
+
+    * **Field Name**: The name of the field used as both the internal key and display label.
+    * **Field Type**: The type of input field to create. The type options are:
+      * Text: Accepts `text` input or connects to `Text` or `Message` outputs.
+      * Data: Accepts `Data` input from other components.
+      * Number: Accepts numeric input or connects to `Text` or `Message` outputs.
+      * Handle: Creates a component input handle that accepts `Text`, `Data`, or `Message` outputs.
+      * Boolean: Accepts boolean values. The boolean field type creates no component handles.
+
+    For more information, see [Langflow data types](/data-types).
+4. After adding rows to the table, the component automatically creates corresponding input ports for each field.
+   You can now connect outputs from other components to the dynamic input ports, or enter values manually in the component's input fields.
+
+### Dynamic Create Data parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| `form_fields` | **Input Configuration** | Input parameter. A table that defines the dynamic form fields. |
+| `include_metadata` | **Include Metadata** | Input parameter. Whether to include form configuration metadata in the output.|
+| `form_data` | **Data** | Output parameter. A `Data` object containing all field values from the dynamic inputs. |
+| `message` | **Message** | Output parameter. A formatted `Text` message containing all field values in a human-readable format. |
 
 ## LLM Router
 
@@ -1118,7 +1160,7 @@ This component concatenates two text inputs into a single text chunk using a spe
 <details>
 <summary>Create Data</summary>
 
-Replace this legacy component with the [**Data Operations** component](#data-operations).
+Replace this legacy component with the [**Dynamic Create Data** component](#dynamic-create-data).
 
 This component dynamically creates a `Data` object with a specified number of fields and a text key.
 
