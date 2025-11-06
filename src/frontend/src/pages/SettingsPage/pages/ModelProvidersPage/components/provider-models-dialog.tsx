@@ -87,6 +87,18 @@ const ProviderModelsDialog = ({
       return;
     }
 
+    const modelType =
+      pendingDefaultModel?.modelType ||
+      effectiveDefaultModel?.model_type ||
+      "language";
+
+    if (effectiveDefaultModel && pendingModelToggles.has(effectiveDefaultModel.model_name)) {
+      const isUncheckingDefault = !pendingModelToggles.get(effectiveDefaultModel.model_name);
+      if (isUncheckingDefault) {
+        onClearDefaultModel(modelType);
+      }
+    }
+
     // Apply model toggles - convert Map to array for batch update
     if (pendingModelToggles.size > 0) {
       const updates = Array.from(pendingModelToggles.entries()).map(
@@ -96,19 +108,18 @@ const ProviderModelsDialog = ({
           enabled,
         }),
       );
-
       // Use batch update function to send all changes in one API call
       onBatchToggleModels(updates);
     }
 
     // Apply default model changes
     if (shouldClearDefault) {
-      onClearDefaultModel("language");
+      onClearDefaultModel(modelType);
     } else if (pendingDefaultModel) {
       onSetDefaultModel(
         pendingDefaultModel.providerName,
         pendingDefaultModel.modelName,
-        pendingDefaultModel.modelType,
+        modelType,
       );
     }
 
@@ -214,12 +225,14 @@ const ProviderModelsDialog = ({
             <div>
               {provider.models!.map((model, index) => {
                 // Get the current enabled state from API data
-                const currentEnabledState =
-                  enabledModelsData?.enabled_models?.[provider.provider]?.[
-                    model.model_name
-                  ] ?? true;
+                const isModelEnabledFromAPI =
+                  enabledModelsData?.enabled_models?.[provider.provider]?.[model.model_name];
 
-                // Check if there's a pending change for this model
+                const isDefaultModelInThisList =
+                  effectiveDefaultModel?.model_name === model.model_name;
+
+                // Force-check if it's the default model, otherwise respect API true
+                const currentEnabledState = isDefaultModelInThisList || isModelEnabledFromAPI === true;
                 const isModelEnabled = pendingModelToggles.has(model.model_name)
                   ? pendingModelToggles.get(model.model_name)!
                   : currentEnabledState;
