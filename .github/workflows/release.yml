@@ -308,16 +308,6 @@ jobs:
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
-    if: inputs.build_docker_base == true
-    needs: [build-base, build-main, publish-base, publish-main]
-    uses: ./.github/workflows/docker-build.yml
-    with:
-      ref: ${{ inputs.release_branch }}
-      base_version: ${{ needs.build-base.outputs.version }}
-      main_version: ${{ needs.build-main.outputs.version }}
-
-  call_docker_build_base:
-    name: Call Docker Build Workflow for Langflow Base
     if: inputs.build_docker_base
     needs: [validate-tag]
     uses: ./.github/workflows/docker-build-v2.yml
