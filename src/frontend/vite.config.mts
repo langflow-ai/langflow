@@ -43,18 +43,18 @@ export default defineConfig(({ mode }) => {
       outDir: "build",
     },
     define: {
-      "process.env.BACKEND_URL": JSON.stringify(
+      "import.meta.env.BACKEND_URL": JSON.stringify(
         envLangflow.BACKEND_URL ?? "http://localhost:7860",
       ),
-      "process.env.ACCESS_TOKEN_EXPIRE_SECONDS": JSON.stringify(
+      "import.meta.env.ACCESS_TOKEN_EXPIRE_SECONDS": JSON.stringify(
         envLangflow.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60,
       ),
-      "process.env.CI": JSON.stringify(envLangflow.CI ?? false),
-      "process.env.LANGFLOW_AUTO_LOGIN": JSON.stringify(
+      "import.meta.env.CI": JSON.stringify(envLangflow.CI ?? false),
+      "import.meta.env.LANGFLOW_AUTO_LOGIN": JSON.stringify(
         envLangflow.LANGFLOW_AUTO_LOGIN ?? true,
       ),
-      "process.env.LANGFLOW_FEATURE_MCP_COMPOSER": JSON.stringify(
-        envLangflow.LANGFLOW_FEATURE_MCP_COMPOSER ?? "true",
+      "import.meta.env.LANGFLOW_MCP_COMPOSER_ENABLED": JSON.stringify(
+        envLangflow.LANGFLOW_MCP_COMPOSER_ENABLED ?? "true",
       ),
     },
     plugins: [react(), svgr(), tsconfigPaths()],

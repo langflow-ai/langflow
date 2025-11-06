@@ -1,12 +1,10 @@
 import asyncio
 import json
-import os
 import pathlib
 
 import pytest
 from dotenv import load_dotenv
 from httpx import AsyncClient
-
 from lfx.log.logger import logger
 
 
@@ -53,8 +51,11 @@ async def load_and_prepare_flow(client: AsyncClient, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
 
     # Create OPENAI_API_KEY global variable
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    if not openai_api_key:
+    from tests.api_keys import get_openai_api_key
+
+    try:
+        openai_api_key = get_openai_api_key()
+    except ValueError:
         pytest.skip("OPENAI_API_KEY environment variable not set")
 
     await create_global_variable(client, headers, "OPENAI_API_KEY", openai_api_key)
@@ -103,6 +104,59 @@ async def load_and_prepare_flow(client: AsyncClient, created_api_key):
             await asyncio.sleep(1)
     else:
         logger.warning("Flow builds polling timed out, proceeding anyway")
+
+    return flow, headers
+
+
+async def load_and_prepare_agent_flow(client: AsyncClient, created_api_key):
+    """Load Simple Agent flow and wait for it to be ready."""
+    headers = {"x-api-key": created_api_key.api_key}
+
+    # Create OPENAI_API_KEY global variable
+    from tests.api_keys import get_openai_api_key
+
+    try:
+        openai_api_key = get_openai_api_key()
+    except ValueError:
+        pytest.skip("OPENAI_API_KEY environment variable not set")
+
+    await create_global_variable(client, headers, "OPENAI_API_KEY", openai_api_key)
+
+    # Load the Simple Agent template
+    template_path = (
+        pathlib.Path(__file__).resolve().parent.parent.parent
+        / "base"
+        / "langflow"
+        / "initial_setup"
+        / "starter_projects"
+        / "Simple Agent.json"
+    )
+
+    flow_data = await asyncio.to_thread(lambda: json.loads(pathlib.Path(template_path).read_text()))
+
+    # Add the flow
+    response = await client.post("/api/v1/flows/", json=flow_data, headers=headers)
+    assert response.status_code == 201
+    flow = response.json()
+
+    # Poll for flow builds to complete
+    max_attempts = 10
+    for attempt in range(max_attempts):
+        builds_response = await client.get(f"/api/v1/monitor/builds?flow_id={flow['id']}", headers=headers)
+
+        if builds_response.status_code == 200:
+            builds = builds_response.json().get("vertex_builds", {})
+            all_valid = True
+            for build_list in builds.values():
+                if not build_list or build_list[0].get("valid") is not True:
+                    all_valid = False
+                    break
+
+            if all_valid and builds:
+                break
+
+        if attempt < max_attempts - 1:
+            await asyncio.sleep(1)
 
     return flow, headers
 
@@ -470,6 +524,43 @@ async def test_openai_responses_stream_chunk_format(client: AsyncClient, created
     else:
         # If no streaming chunks, ensure we have the [DONE] marker or valid response
         assert "data: [DONE]" in text_content or len(text_content) > 0
+
+
+@pytest.mark.api_key_required
+@pytest.mark.integration
+async def test_openai_responses_stream_has_non_empty_content(client: AsyncClient, created_api_key):
+    """Ensure streaming returns at least one chunk with non-empty delta.content."""
+    flow, headers = await load_and_prepare_agent_flow(client, created_api_key)
+
+    payload = {"model": flow["id"], "input": "Say something concise", "stream": True}
+    response = await client.post("/api/v1/responses", json=payload, headers=headers)
+
+    assert response.status_code == 200
+
+    raw = await response.aread()
+    text_content = raw.decode("utf-8")
+
+    # Split SSE blocks and keep only data blocks
+    blocks = [b for b in text_content.strip().split("\n\n") if b.startswith("data:")]
+    has_non_empty = False
+    for blk in blocks:
+        data_part = blk.replace("data: ", "", 1).strip()
+        if data_part == "[DONE]":
+            continue
+        try:
+            obj = json.loads(data_part)
+        except json.JSONDecodeError:
+            # Not a JSON data block (could be our tool call events), skip
+            continue
+        if isinstance(obj, dict):
+            delta = obj.get("delta")
+            if isinstance(delta, dict):
+                content = delta.get("content")
+                if isinstance(content, str) and content.strip() != "":
+                    has_non_empty = True
+                    break
+
+    assert has_non_empty, f"No non-empty content chunks found. First 300 chars: {text_content[:300]}"
 
 
 @pytest.mark.api_key_required

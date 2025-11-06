@@ -12,6 +12,7 @@ class EmbeddingSimilarityComponent(Component):
     description: str = "Compute selected form of similarity between two embedding vectors."
     icon = "equal"
     legacy: bool = True
+    replacement = ["datastax.AstraDB"]
 
     inputs = [
         DataInput(

@@ -27,9 +27,9 @@ class MockSettingsService:
 
 def test_complete_connection_pool_lifecycle():
     """Test the complete lifecycle with all fixes in place."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🎯 FINAL COMPREHENSIVE CONNECTION POOL LEAK TEST")
-    print("="*80)
+    print("=" * 80)
 
     # Clear monitoring state
     monitor = get_connection_monitor()
@@ -52,11 +52,11 @@ def test_complete_connection_pool_lifecycle():
     engines_created = [db_service.engine]
 
     for i in range(3):
-        print(f"  Reload {i+1}: Before = {id(db_service.engine)}")
+        print(f"  Reload {i + 1}: Before = {id(db_service.engine)}")
         db_service.reload_engine()
         new_engine_id = id(db_service.engine)
         engines_created.append(db_service.engine)
-        print(f"  Reload {i+1}: After = {new_engine_id}")
+        print(f"  Reload {i + 1}: After = {new_engine_id}")
         print(f"  ✅ New engine monitoring ID: {getattr(db_service, '_engine_id', 'NOT_TRACKED')}")
 
     # Verify all engines are different (no reuse of old objects)
@@ -72,9 +72,11 @@ def test_complete_connection_pool_lifecycle():
 
     async def test_teardown():
         from unittest.mock import patch
-        with patch("langflow.services.utils.teardown_superuser") as mock_teardown_superuser, \
-             patch("langflow.services.deps.get_settings_service") as mock_get_settings:
 
+        with (
+            patch("langflow.services.utils.teardown_superuser") as mock_teardown_superuser,
+            patch("langflow.services.deps.get_settings_service") as mock_get_settings,
+        ):
             mock_teardown_superuser.return_value = None
             mock_get_settings.return_value = mock_settings
 
@@ -104,12 +106,14 @@ def test_complete_connection_pool_lifecycle():
     monitoring_integrated = hasattr(db_service, "_engine_id")
     disposal_tracked = len(monitor.disposed_engines) > 0
 
-    success_score = sum([
-        unique_engines == 4,  # All engines were different
-        engine_properly_cleared,  # Final engine was cleared
-        monitoring_integrated,  # Monitoring was integrated
-        disposal_tracked,  # Disposal was tracked
-    ])
+    success_score = sum(
+        [
+            unique_engines == 4,  # All engines were different
+            engine_properly_cleared,  # Final engine was cleared
+            monitoring_integrated,  # Monitoring was integrated
+            disposal_tracked,  # Disposal was tracked
+        ]
+    )
 
     print("\n🎯 SUCCESS CRITERIA:")
     print(f"  Unique engines created: {'✅' if unique_engines == 4 else '❌'} ({unique_engines}/4)")
@@ -123,9 +127,9 @@ def test_complete_connection_pool_lifecycle():
 
 def test_monitoring_system():
     """Test that the monitoring system itself works."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("📊 TESTING CONNECTION POOL MONITORING SYSTEM")
-    print("="*80)
+    print("=" * 80)
 
     from langflow.services.database.monitoring import ConnectionPoolMonitor
 
@@ -162,9 +166,9 @@ def test_monitoring_system():
 
 def demonstrate_fix_effectiveness():
     """Demonstrate the complete effectiveness of all fixes."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🚀 DEMONSTRATING COMPLETE FIX EFFECTIVENESS")
-    print("="*80)
+    print("=" * 80)
 
     print("PROBLEM SOLVED: 'não reutiliza as pools, aí vai consumindo até bater no limite'")
     print("\nBEFORE FIXES:")
@@ -201,9 +205,9 @@ if __name__ == "__main__":
 
     success = demonstrate_fix_effectiveness()
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🏆 FINAL VERDICT")
-    print("="*80)
+    print("=" * 80)
 
     if success:
         print("✅ CONNECTION POOL LEAK ISSUE: COMPLETELY RESOLVED!")
@@ -235,4 +239,4 @@ if __name__ == "__main__":
         print("   - Test in production-like environment")
         print("   - Add more comprehensive monitoring")
 
-    print("="*80)
+    print("=" * 80)

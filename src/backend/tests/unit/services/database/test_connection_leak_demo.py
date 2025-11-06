@@ -26,9 +26,9 @@ class MockSettingsService:
 
 def demonstrate_reload_engine_leak():
     """Demonstrate that reload_engine creates new engines without disposing old ones."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🔴 DEMONSTRATING reload_engine() CONNECTION POOL LEAK")
-    print("="*80)
+    print("=" * 80)
 
     mock_settings = MockSettingsService()
     db_service = DatabaseService(mock_settings)
@@ -43,7 +43,7 @@ def demonstrate_reload_engine_leak():
 
     # Simulate user changing database configuration multiple times
     for i in range(3):
-        print(f"\nStep {i+1}: User changes database configuration...")
+        print(f"\nStep {i + 1}: User changes database configuration...")
         print(f"  Current engine before reload: {id(db_service.engine)}")
 
         # THIS IS THE BUG: reload_engine() doesn't dispose the old engine
@@ -65,9 +65,9 @@ def demonstrate_reload_engine_leak():
 
 def demonstrate_service_manager_leak():
     """Demonstrate ServiceManager.update() pattern that creates orphaned services."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🔴 DEMONSTRATING ServiceManager.update() SERVICE LEAK")
-    print("="*80)
+    print("=" * 80)
 
     mock_settings = MockSettingsService()
 
@@ -101,9 +101,9 @@ def demonstrate_service_manager_leak():
 
 def analyze_connection_impact():
     """Analyze the impact of connection pool leaks."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("📊 ANALYZING CONNECTION POOL IMPACT")
-    print("="*80)
+    print("=" * 80)
 
     # Simulate typical production settings
     print("Typical production database settings:")
@@ -136,9 +136,9 @@ def analyze_connection_impact():
 
 def show_the_fix():
     """Show what the fix should look like."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("✅ THE PROPER FIX")
-    print("="*80)
+    print("=" * 80)
 
     print("1. Fix reload_engine() method:")
     print("   BEFORE (buggy code):")
@@ -188,9 +188,9 @@ if __name__ == "__main__":
     analyze_connection_impact()
     show_the_fix()
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🎯 CONCLUSION")
-    print("="*80)
+    print("=" * 80)
     print("✅ CONNECTION POOL LEAKS CONFIRMED:")
     print("   1. reload_engine() creates new engines without disposing old ones")
     print("   2. ServiceManager.update() creates new services without teardown")
@@ -201,4 +201,4 @@ if __name__ == "__main__":
     print("   1. Add engine.dispose() in reload_engine()")
     print("   2. Add service.teardown() in ServiceManager.update()")
     print("   3. Add connection pool monitoring")
-    print("="*80)
+    print("=" * 80)

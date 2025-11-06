@@ -71,10 +71,7 @@ class ConnectionPoolMonitor:
             max_overflow = getattr(pool, "_max_overflow", 0) if hasattr(pool, "_max_overflow") else 0
 
             metrics = EngineMetrics(
-                engine_id=engine_id,
-                created_at=time.time(),
-                pool_size=pool_size,
-                max_overflow=max_overflow
+                engine_id=engine_id, created_at=time.time(), pool_size=pool_size, max_overflow=max_overflow
             )
 
             self.engines[engine_id] = metrics
@@ -157,9 +154,7 @@ class ConnectionPoolMonitor:
         leaked_engine_ids = self.detect_leaked_engines()
         health.leaked_engines = len(leaked_engine_ids)
         health.leaked_connections = sum(
-            self.engines[eid].total_connections
-            for eid in leaked_engine_ids
-            if eid in self.engines
+            self.engines[eid].total_connections for eid in leaked_engine_ids if eid in self.engines
         )
 
         # Calculate health score
@@ -225,6 +220,7 @@ class ConnectionPoolMonitor:
         Args:
             interval_seconds: How often to log health reports
         """
+
         async def monitor_loop():
             while self.monitoring_enabled:
                 try:

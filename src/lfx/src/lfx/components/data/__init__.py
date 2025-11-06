@@ -23,12 +23,12 @@ _dynamic_imports = {
     "DirectoryComponent": "directory",
     "FileComponent": "file",
     "JSONToDataComponent": "json_to_data",
-    "NewsSearchComponent": "news_search",
-    "RSSReaderComponent": "rss",
     "SQLComponent": "sql_executor",
     "URLComponent": "url",
     "WebSearchComponent": "web_search",
     "WebhookComponent": "webhook",
+    "NewsSearchComponent": "news_search",
+    "RSSReaderComponent": "rss",
 }
 
 __all__ = [
