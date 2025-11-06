@@ -23,7 +23,7 @@ class GroqModelDiscovery:
     CACHE_DURATION = timedelta(hours=24)  # Refresh cache every 24 hours
 
     # Models to skip from LLM list (audio, TTS, guards)
-    SKIP_PATTERNS = ["whisper", "tts", "guard", "safeguard", "prompt-guard"]
+    SKIP_PATTERNS = ["whisper", "tts", "guard", "safeguard", "prompt-guard", "saba"]
 
     def __init__(self, api_key: str | None = None, base_url: str = "https://api.groq.com"):
         """Initialize discovery with optional API key for testing.
@@ -123,7 +123,8 @@ class GroqModelDiscovery:
         response.raise_for_status()
 
         model_list = response.json()
-        return [model["id"] for model in model_list.get("data", [])]
+        # Use direct access to raise KeyError if 'data' is missing
+        return [model["id"] for model in model_list["data"]]
 
     def _test_tool_calling(self, model_id: str) -> bool:
         """Test if a model supports tool calling.
