@@ -31,3 +31,9 @@ class StorageService(Service, LfxStorageService):
         LfxStorageService.__init__(self, session_service=session_service, settings_service=settings_service)
         # LfxStorageService already sets self.settings_service, self.session_service, and self.data_dir
         # LfxStorageService already calls set_ready() internally
+        self.set_ready()
+
+    def set_ready(self) -> None:
+        """Mark the service as ready, syncing both parent classes."""
+        Service.set_ready(self)
+        self._ready = True
