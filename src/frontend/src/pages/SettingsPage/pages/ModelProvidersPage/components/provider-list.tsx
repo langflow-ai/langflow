@@ -23,6 +23,9 @@ const ProviderList = ({ type }: ProviderListProps) => {
   const { data: defaultModelData } = useGetDefaultModel({
     model_type: "language",
   });
+  const { data: defaultEmbeddingModelData } = useGetDefaultModel({
+    model_type: "embedding",
+  });
   const { data: globalVariables } = useGetGlobalVariables();
 
   const {
@@ -107,12 +110,19 @@ const ProviderList = ({ type }: ProviderListProps) => {
                   ? defaultModelData?.default_model?.model_name
                   : null;
 
+              const defaultEmbeddingModelForProvider =
+                defaultEmbeddingModelData?.default_model?.provider ===
+                provider.provider
+                  ? defaultEmbeddingModelData?.default_model?.model_name
+                  : null;
+
               return (
                 <ProviderListItem
                   key={provider.provider}
                   provider={provider}
                   type={type}
                   defaultModelName={defaultModelForProvider}
+                  defaultEmbeddingModelName={defaultEmbeddingModelForProvider}
                   onCardClick={handleCardClick}
                   onEnableProvider={handleEnableProvider}
                   onDeleteProvider={handleDeleteProviderWithCleanup}
@@ -134,6 +144,7 @@ const ProviderList = ({ type }: ProviderListProps) => {
         type={type}
         enabledModelsData={enabledModelsData}
         defaultModelData={defaultModelData}
+        defaultEmbeddingModelData={defaultEmbeddingModelData}
         onBatchToggleModels={handleBatchToggleModels}
         onSetDefaultModel={handleSetDefaultModel}
         onClearDefaultModel={handleClearDefaultModel}

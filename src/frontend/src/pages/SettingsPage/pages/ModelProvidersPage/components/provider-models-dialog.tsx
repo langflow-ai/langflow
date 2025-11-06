@@ -31,6 +31,7 @@ type ProviderModelsDialogProps = {
   type: "enabled" | "available";
   enabledModelsData?: EnabledModelsData;
   defaultModelData?: DefaultModelData;
+  defaultEmbeddingModelData?: DefaultModelData;
   onBatchToggleModels: (updates: ModelUpdate[]) => void;
   onSetDefaultModel: (
     providerName: string,
@@ -47,6 +48,7 @@ const ProviderModelsDialog = ({
   type,
   enabledModelsData,
   defaultModelData,
+  defaultEmbeddingModelData,
   onBatchToggleModels,
   onSetDefaultModel,
   onClearDefaultModel,
@@ -56,7 +58,11 @@ const ProviderModelsDialog = ({
   >(new Map());
   const [pendingDefaultModel, setPendingDefaultModel] =
     useState<DefaultModelChange>(null);
+  const [pendingDefaultEmbeddingModel, setPendingDefaultEmbeddingModel] =
+    useState<DefaultModelChange>(null);
   const [shouldClearDefault, setShouldClearDefault] = useState(false);
+  const [shouldClearEmbeddingDefault, setShouldClearEmbeddingDefault] =
+    useState(false);
   const [previousOpenState, setPreviousOpenState] = useState(false);
 
   // Reset pending changes when dialog opens or provider changes
@@ -66,7 +72,9 @@ const ProviderModelsDialog = ({
     if (isDialogOpening) {
       setPendingModelToggles(new Map());
       setPendingDefaultModel(null);
+      setPendingDefaultEmbeddingModel(null);
       setShouldClearDefault(false);
+      setShouldClearEmbeddingDefault(false);
     } else if (open) {
       // When switching providers (dialog stays open), only reset provider-specific toggles
       setPendingModelToggles(new Map());
@@ -82,15 +90,12 @@ const ProviderModelsDialog = ({
     if (
       pendingModelToggles.size === 0 &&
       !pendingDefaultModel &&
-      !shouldClearDefault
+      !pendingDefaultEmbeddingModel &&
+      !shouldClearDefault &&
+      !shouldClearEmbeddingDefault
     ) {
       return;
     }
-
-    const modelType =
-      pendingDefaultModel?.modelType ||
-      effectiveDefaultModel?.model_type ||
-      "language";
 
     // Apply model toggles - convert Map to array for batch update
     if (pendingModelToggles.size > 0) {
@@ -105,21 +110,34 @@ const ProviderModelsDialog = ({
       onBatchToggleModels(updates);
     }
 
-    // Apply default model changes
+    // Apply LLM default model changes
     if (shouldClearDefault) {
-      onClearDefaultModel(modelType);
+      onClearDefaultModel("language");
     } else if (pendingDefaultModel) {
       onSetDefaultModel(
         pendingDefaultModel.providerName,
         pendingDefaultModel.modelName,
-        modelType,
+        "language",
+      );
+    }
+
+    // Apply embedding default model changes
+    if (shouldClearEmbeddingDefault) {
+      onClearDefaultModel("embedding");
+    } else if (pendingDefaultEmbeddingModel) {
+      onSetDefaultModel(
+        pendingDefaultEmbeddingModel.providerName,
+        pendingDefaultEmbeddingModel.modelName,
+        "embedding",
       );
     }
 
     // Reset pending changes
     setPendingModelToggles(new Map());
     setPendingDefaultModel(null);
+    setPendingDefaultEmbeddingModel(null);
     setShouldClearDefault(false);
+    setShouldClearEmbeddingDefault(false);
   };
 
   const handleClose = (e: React.MouseEvent) => {
@@ -149,14 +167,22 @@ const ProviderModelsDialog = ({
 
     // If unchecking a model, check if it's the current default and clear it
     if (!enabled) {
-      // Check if this model is the pending default
+      // Check LLM defaults
       if (pendingDefaultModel?.modelName === modelName) {
         setPendingDefaultModel(null);
       }
-      // Check if this model is the actual default from the API
       if (defaultModelData?.default_model?.model_name === modelName) {
         setShouldClearDefault(true);
         setPendingDefaultModel(null);
+      }
+
+      // Check embedding defaults
+      if (pendingDefaultEmbeddingModel?.modelName === modelName) {
+        setPendingDefaultEmbeddingModel(null);
+      }
+      if (defaultEmbeddingModelData?.default_model?.model_name === modelName) {
+        setShouldClearEmbeddingDefault(true);
+        setPendingDefaultEmbeddingModel(null);
       }
     }
     // When re-enabling a model, do NOT restore default status
@@ -168,18 +194,28 @@ const ProviderModelsDialog = ({
     modelName: string,
     modelType: string,
   ) => {
-    setPendingDefaultModel({ providerName, modelName, modelType });
-    setShouldClearDefault(false);
+    if (modelType === "language") {
+      setPendingDefaultModel({ providerName, modelName, modelType });
+      setShouldClearDefault(false);
+    } else if (modelType === "embedding") {
+      setPendingDefaultEmbeddingModel({ providerName, modelName, modelType });
+      setShouldClearEmbeddingDefault(false);
+    }
   };
 
-  const handleClearDefaultModelLocal = (_modelType: string) => {
-    setShouldClearDefault(true);
-    setPendingDefaultModel(null);
+  const handleClearDefaultModelLocal = (modelType: string) => {
+    if (modelType === "language") {
+      setShouldClearDefault(true);
+      setPendingDefaultModel(null);
+    } else if (modelType === "embedding") {
+      setShouldClearEmbeddingDefault(true);
+      setPendingDefaultEmbeddingModel(null);
+    }
   };
 
   const hasModels = provider.models && provider.models.length > 0;
 
-  // Get the effective default model (considering pending changes)
+  // Get the effective default LLM model (considering pending changes)
   const getEffectiveDefaultModel = () => {
     if (shouldClearDefault) {
       return null;
@@ -197,8 +233,26 @@ const ProviderModelsDialog = ({
     return defaultModelData?.default_model;
   };
 
+  // Get the effective default embedding model (considering pending changes)
+  const getEffectiveDefaultEmbeddingModel = () => {
+    if (shouldClearEmbeddingDefault) {
+      return null;
+    }
+    if (pendingDefaultEmbeddingModel) {
+      return {
+        model_name: pendingDefaultEmbeddingModel.modelName,
+        provider: pendingDefaultEmbeddingModel.providerName,
+        model_type: pendingDefaultEmbeddingModel.modelType,
+      };
+    }
+    return defaultEmbeddingModelData?.default_model;
+  };
+
   const effectiveDefaultModel = getEffectiveDefaultModel();
+  const effectiveDefaultEmbeddingModel = getEffectiveDefaultEmbeddingModel();
   const effectiveDefaultModelName = effectiveDefaultModel?.model_name || "None";
+  const effectiveDefaultEmbeddingModelName =
+    effectiveDefaultEmbeddingModel?.model_name || "None";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -215,11 +269,22 @@ const ProviderModelsDialog = ({
             {type === "enabled" ? (
               <div>
                 Configure model availability for this provider using the
-                checkboxes below, or designate a global default model to
-                standardize across all flows. Current default:{" "}
-                <span className="text-primary font-medium">
-                  {effectiveDefaultModelName}
-                </span>
+                checkboxes below, or designate global default models to
+                standardize across all flows.
+                <div className="mt-2 flex flex-col gap-1">
+                  <div>
+                    Default LLM:{" "}
+                    <span className="text-yellow-500 font-medium">
+                      {effectiveDefaultModelName}
+                    </span>
+                  </div>
+                  <div>
+                    Default Embedding:{" "}
+                    <span className="text-purple-500 font-medium">
+                      {effectiveDefaultEmbeddingModelName}
+                    </span>
+                  </div>
+                </div>
               </div>
             ) : (
               <div>
@@ -240,8 +305,13 @@ const ProviderModelsDialog = ({
                     model.model_name
                   ];
 
-                const isDefaultModelInThisList =
-                  effectiveDefaultModel?.model_name === model.model_name;
+                const modelType = model.metadata.model_type || "llm";
+                const isLanguageModel = modelType === "llm";
+
+                // Check if this model is the default for its type
+                const isDefaultModelInThisList = isLanguageModel
+                  ? effectiveDefaultModel?.model_name === model.model_name
+                  : effectiveDefaultEmbeddingModel?.model_name === model.model_name;
 
                 // Force-check if it's the default model, otherwise respect API true
                 const currentEnabledState =
@@ -258,7 +328,9 @@ const ProviderModelsDialog = ({
                     type={type}
                     isModelEnabled={isModelEnabled}
                     defaultModelData={{
-                      default_model: effectiveDefaultModel,
+                      default_model: isLanguageModel
+                        ? effectiveDefaultModel
+                        : effectiveDefaultEmbeddingModel,
                     }}
                     onToggleModel={handleToggleModelLocal}
                     onSetDefaultModel={handleSetDefaultModelLocal}

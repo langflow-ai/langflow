@@ -1,19 +1,20 @@
-import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import { Button } from "@/components/ui/button";
+import { ForwardedIconComponent } from '@/components/common/genericIconComponent';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
-import { cn } from "@/utils/utils";
-import { Provider } from "./types";
+} from '@/components/ui/dropdown-menu';
+import DeleteConfirmationModal from '@/modals/deleteConfirmationModal';
+import { cn } from '@/utils/utils';
+import { Provider } from './types';
 
 type ProviderListItemProps = {
   provider: Provider;
-  type: "enabled" | "available";
+  type: 'enabled' | 'available';
   defaultModelName?: string | null;
+  defaultEmbeddingModelName?: string | null;
   onCardClick: (provider: Provider) => void;
   onEnableProvider: (providerName: string) => void;
   onDeleteProvider: (providerName: string) => void;
@@ -27,6 +28,7 @@ const ProviderListItem = ({
   provider,
   type,
   defaultModelName,
+  defaultEmbeddingModelName,
   onCardClick,
   onEnableProvider,
   onDeleteProvider,
@@ -67,14 +69,14 @@ const ProviderListItem = ({
       <div
         key={provider.provider}
         className={cn(
-          "flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors",
-          hasModels ? "cursor-pointer" : "opacity-60 cursor-not-allowed",
+          'flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors',
+          hasModels ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'
         )}
         onClick={() => onCardClick(provider)}
       >
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <ForwardedIconComponent
-            name={provider.icon || "Bot"}
+            name={provider.icon || 'Bot'}
             className="w-5 h-5 flex-shrink-0"
           />
           <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -84,40 +86,51 @@ const ProviderListItem = ({
             {provider.model_count !== undefined && (
               <span
                 className={cn(
-                  "text-xs",
-                  type === "enabled"
-                    ? "text-accent-emerald-foreground"
-                    : "text-muted-foreground",
+                  'text-xs',
+                  type === 'enabled'
+                    ? 'text-accent-emerald-foreground'
+                    : 'text-muted-foreground'
                 )}
               >
-                {provider.model_count}{" "}
-                {provider.model_count === 1 ? "model" : "models"}
+                {provider.model_count}{' '}
+                {provider.model_count === 1 ? 'model' : 'models'}
               </span>
             )}
             {defaultModelName && (
-              <ForwardedIconComponent
-                name="Star"
-                className="w-3 h-3 inline-block text-yellow-500 fill-yellow-500"
-              />
+              <>
+                <ForwardedIconComponent
+                  name="Sparkle"
+                  className="w-3 h-3 inline-block text-yellow-500 fill-yellow-500"
+                />
+                <span className="flex text-yellow-500 text-sm truncate">
+                  {defaultModelName}
+                </span>
+              </>
             )}
-            {defaultModelName && (
-              <span className="flex text-primary text-sm truncate">
-                {defaultModelName}
-              </span>
+            {defaultEmbeddingModelName && (
+              <>
+                <ForwardedIconComponent
+                  name="Zap"
+                  className="w-3 h-3 inline-block text-purple-500 fill-purple-500"
+                />
+                <span className="flex text-purple-500 text-sm truncate">
+                  {defaultEmbeddingModelName}
+                </span>
+              </>
             )}
           </div>
         </div>
         <div
           className="flex items-center gap-2"
-          onClick={(e) => e.stopPropagation()}
+          onClick={e => e.stopPropagation()}
         >
-          {type === "enabled" ? (
+          {type === 'enabled' ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={e => e.stopPropagation()}
                   className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-transparent"
                 >
                   <ForwardedIconComponent

@@ -259,10 +259,20 @@ export default function ModelInputComponent({
   ]);
 
   // Effects
+  // Sync selectedModel state with the value prop
   useEffect(() => {
-    setSelectedModel(null);
-    setSelectedProvider(null);
-  }, []);
+    if (value && Array.isArray(value) && value.length > 0) {
+      const currentValue = value[0];
+      setSelectedModel({
+        id: currentValue.id,
+        name: currentValue.name,
+        icon: currentValue.icon || 'Bot',
+        provider: currentValue.provider || 'Unknown',
+        metadata: currentValue.metadata || {},
+      });
+      setSelectedProvider(currentValue.provider || null);
+    }
+  }, [value]);
 
   // Set initial value based on default model or first enabled provider
   useEffect(() => {
@@ -480,8 +490,13 @@ export default function ModelInputComponent({
                       <div className="truncate text-[13px]">{option.name}</div>
                       {isDefaultModel && (
                         <ForwardedIconComponent
-                          name="Star"
-                          className="h-3 w-3 text-yellow-500 fill-yellow-500"
+                          name={modelType === 'language' ? 'Sparkle' : 'Zap'}
+                          className={cn(
+                            'h-3 w-3',
+                            modelType === 'language'
+                              ? 'text-yellow-500 fill-yellow-500'
+                              : 'text-purple-500 fill-purple-500'
+                          )}
                         />
                       )}
                       {isReasoning && (

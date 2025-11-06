@@ -1,25 +1,25 @@
-import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { cn } from "@/utils/utils";
-import { Model, DefaultModelData } from "./types";
+import { ForwardedIconComponent } from '@/components/common/genericIconComponent';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import ShadTooltip from '@/components/common/shadTooltipComponent';
+import { cn } from '@/utils/utils';
+import { Model, DefaultModelData } from './types';
 
 type ModelListItemProps = {
   model: Model;
   providerName: string;
-  type: "enabled" | "available";
+  type: 'enabled' | 'available';
   isModelEnabled: boolean;
   defaultModelData?: DefaultModelData;
   onToggleModel: (
     providerName: string,
     modelName: string,
-    enabled: boolean,
+    enabled: boolean
   ) => void;
   onSetDefaultModel: (
     providerName: string,
     modelName: string,
-    modelType: string,
+    modelType: string
   ) => void;
   onClearDefaultModel: (modelType: string) => void;
 };
@@ -35,26 +35,27 @@ const ModelListItem = ({
   onClearDefaultModel,
 }: ModelListItemProps) => {
   const isPreview = model.metadata.preview;
-  const modelType = model.metadata.model_type || "llm";
-  const isLanguageModel = modelType === "llm";
+  const modelType = model.metadata.model_type || 'llm';
+  const isLanguageModel = modelType === 'llm';
   const isDefaultModel =
     defaultModelData?.default_model?.model_name === model.model_name &&
     defaultModelData?.default_model?.provider === providerName;
 
   const handleDefaultToggle = () => {
+    const modelTypeKey = isLanguageModel ? 'language' : 'embedding';
     if (isDefaultModel) {
-      onClearDefaultModel("language");
+      onClearDefaultModel(modelTypeKey);
     } else {
-      onSetDefaultModel(providerName, model.model_name, "language");
+      onSetDefaultModel(providerName, model.model_name, modelTypeKey);
     }
   };
 
   return (
     <div className="flex items-center gap-3 py-1 rounded hover:bg-muted/50">
-      {type === "enabled" && (
+      {type === 'enabled' && (
         <Checkbox
           checked={isModelEnabled}
-          onCheckedChange={(checked) => {
+          onCheckedChange={checked => {
             onToggleModel(providerName, model.model_name, checked as boolean);
           }}
         />
@@ -106,9 +107,17 @@ const ModelListItem = ({
       </div>
 
       <div className="ml-auto">
-        {isLanguageModel && isModelEnabled && (
+        {isModelEnabled && (
           <ShadTooltip
-            content={isDefaultModel ? "Default Model" : "Set as Default Model"}
+            content={
+              isDefaultModel
+                ? isLanguageModel
+                  ? 'Default LLM Model'
+                  : 'Default Embedding Model'
+                : isLanguageModel
+                ? 'Set as Default LLM Model'
+                : 'Set as Default Embedding Model'
+            }
             side="left"
           >
             <Button
@@ -118,15 +127,27 @@ const ModelListItem = ({
               onClick={handleDefaultToggle}
               data-testid={`default-${model.model_name}`}
             >
-              <ForwardedIconComponent
-                name={isDefaultModel ? "Star" : "StarOff"}
-                className={cn(
-                  "h-4 w-4",
-                  isDefaultModel
-                    ? "text-yellow-500 fill-yellow-500"
-                    : "text-muted-foreground hover:text-yellow-500",
-                )}
-              />
+              {isLanguageModel ? (
+                <ForwardedIconComponent
+                  name={isDefaultModel ? 'Sparkle' : 'Sparkle'}
+                  className={cn(
+                    'h-4 w-4',
+                    isDefaultModel
+                      ? 'text-yellow-500 fill-yellow-500'
+                      : 'text-muted-foreground hover:text-yellow-500'
+                  )}
+                />
+              ) : (
+                <ForwardedIconComponent
+                  name={isDefaultModel ? 'Zap' : 'Zap'}
+                  className={cn(
+                    'h-4 w-4',
+                    isDefaultModel
+                      ? 'text-purple-500 fill-purple-500'
+                      : 'text-muted-foreground hover:text-purple-500'
+                  )}
+                />
+              )}
             </Button>
           </ShadTooltip>
         )}
