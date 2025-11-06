@@ -1,4 +1,5 @@
 import json
+from asyncio import to_thread
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -16,8 +17,6 @@ class RegisterRequest(BaseModel):
 
 
 class RegisterResponse(BaseModel):
-    success: bool
-    message: str
     email: str
 
 
@@ -42,17 +41,15 @@ def _ensure_registration_file():
 
 def load_registration() -> dict | None:
     """Load the single registration from file."""
-    if REGISTRATION_FILE.exists():
-        try:
-            with REGISTRATION_FILE.open("r") as f:
-                # The file is empty
-                if REGISTRATION_FILE.stat().st_size == 0:
-                    return None
-                return json.load(f)
-        except json.JSONDecodeError:
-            logger.error(f"Corrupted registration file: {REGISTRATION_FILE}")
-            return None
-    return None
+    if not REGISTRATION_FILE.exists() or REGISTRATION_FILE.stat().st_size == 0:
+        return None
+    try:
+        with REGISTRATION_FILE.open("rb") as f:  # using binary mode for faster file IO
+            content = f.read()
+        return json.loads(content)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.error(f"Corrupted registration file: {REGISTRATION_FILE}")
+        return None
 
 
 def save_registration(email: str) -> bool:
@@ -102,10 +99,9 @@ async def register_user(request: RegisterRequest):
     """
     try:
         email = request.email
-
-        # Save to local file (replace existing)
-        if save_registration(email):
-            return RegisterResponse(success=True, message="Registration successful", email=email)
+        # Save to local file (replace existing) not dealing with 201 status for simplicity.
+        if await to_thread(save_registration, email):
+            return RegisterResponse(email=email)
 
     except HTTPException:
         raise
@@ -117,7 +113,7 @@ async def register_user(request: RegisterRequest):
 async def get_registration():
     """Get the registered user (if any)."""
     try:
-        registration = load_registration()
+        registration = await to_thread(load_registration)
         if registration:
             return registration
 

@@ -10,8 +10,6 @@ interface IRegistrationRequest {
 }
 
 interface IRegistrationResponse {
-  success: boolean;
-  message: string;
   email: string;
 }
 
