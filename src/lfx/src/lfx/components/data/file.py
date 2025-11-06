@@ -293,13 +293,7 @@ class FileComponent(BaseFileComponent):
                 return []
 
             data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(resolved_path)})
-            return [
-                BaseFileComponent.BaseFile(
-                    data_obj,
-                    resolved_path,
-                    delete_after_processing=False
-                )
-            ]
+            return [BaseFileComponent.BaseFile(data_obj, resolved_path, delete_after_processing=False)]
 
         # Otherwise use the default implementation
         return super()._validate_and_resolve_paths()
