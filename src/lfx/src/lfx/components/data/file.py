@@ -70,10 +70,19 @@ class FileComponent(BaseFileComponent):
     for input_item in _base_inputs:
         if isinstance(input_item, FileInput) and input_item.name == "path":
             input_item.real_time_refresh = True
+            input_item.tool_mode = False  # Disable tool mode for file upload input
             break
 
     inputs = [
         *_base_inputs,
+        StrInput(
+            name="file_path_str",
+            display_name="File Path",
+            info="Path to the file to read. Used when component is called as a tool.",
+            show=False,
+            advanced=True,
+            tool_mode=True,
+        ),
         BoolInput(
             name="advanced_mode",
             display_name="Advanced Parser",
@@ -259,6 +268,41 @@ class FileComponent(BaseFileComponent):
         return frontend_node
 
     # ------------------------------ Core processing ----------------------------------
+
+    def _validate_and_resolve_paths(self) -> list[BaseFileComponent.BaseFile]:
+        """Override to handle file_path_str input from tool mode.
+
+        When called as a tool, the file_path_str parameter will be set,
+        and we should use that instead of the path FileInput.
+        """
+        # Check if file_path_str is provided (from tool mode)
+        # file_path_str will be set when component is called as a tool
+        file_path_str = getattr(self, "file_path_str", None)
+        if file_path_str:
+            # Use the string path from tool mode
+            from pathlib import Path
+
+            from lfx.schema.data import Data
+
+            resolved_path = Path(self.resolve_path(file_path_str))
+            if not resolved_path.exists():
+                msg = f"File or directory not found: {file_path_str}"
+                self.log(msg)
+                if not self.silent_errors:
+                    raise ValueError(msg)
+                return []
+
+            data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(resolved_path)})
+            return [
+                BaseFileComponent.BaseFile(
+                    data_obj,
+                    resolved_path,
+                    delete_after_processing=False
+                )
+            ]
+
+        # Otherwise use the default implementation
+        return super()._validate_and_resolve_paths()
 
     def _is_docling_compatible(self, file_path: str) -> bool:
         """Lightweight extension gate for Docling-compatible types."""

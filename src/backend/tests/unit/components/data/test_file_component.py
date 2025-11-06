@@ -186,3 +186,43 @@ class TestFileComponentDynamicOutputs:
         result = component.update_outputs(frontend_node, "advanced_mode", field_value=False)
         for output in result["outputs"]:
             assert output.tool_mode is True, f"Output {output.name} should have tool_mode=True"
+
+    def test_file_path_str_input_exists_for_tool_mode(self):
+        """Test that file_path_str input exists for tool mode."""
+        component = FileComponent()
+        
+        # Find the file_path_str input
+        file_path_str_input = None
+        for input_field in component.inputs:
+            if input_field.name == "file_path_str":
+                file_path_str_input = input_field
+                break
+        
+        assert file_path_str_input is not None, "file_path_str input should exist"
+        assert file_path_str_input.tool_mode is True, "file_path_str should have tool_mode=True"
+        
+        # Check that the path FileInput has tool_mode=False
+        path_input = None
+        for input_field in component.inputs:
+            if input_field.name == "path":
+                path_input = input_field
+                break
+        
+        assert path_input is not None, "path input should exist"
+        assert path_input.tool_mode is False, "path FileInput should have tool_mode=False"
+
+    def test_read_file_using_file_path_str(self, tmp_path):
+        """Test reading a file using file_path_str parameter (tool mode)."""
+        # Create a test file
+        test_file = tmp_path / "test.txt"
+        test_content = "Hello from tool mode!"
+        test_file.write_text(test_content)
+        
+        # Create component and set file_path_str
+        component = FileComponent()
+        component.file_path_str = str(test_file)
+        
+        # Load the file
+        result = component.load_files_message()
+        
+        assert result.text == test_content, f"Expected '{test_content}', got '{result.text}'"
