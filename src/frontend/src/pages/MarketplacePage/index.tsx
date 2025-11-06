@@ -25,17 +25,106 @@ const sortedTags = [...MARKETPLACE_TAGS].sort((a, b) =>
   a.title.localeCompare(b.title)
 );
 
+// Storage keys for persisting filter state
+const STORAGE_KEYS = {
+  SEARCH: 'marketplace_search_query',
+  VIEW_MODE: 'marketplace_view_mode',
+  PAGE_INDEX: 'marketplace_page_index',
+  PAGE_SIZE: 'marketplace_page_size',
+  TAG_FILTER: 'marketplace_tag_filter',
+  SORT_BY: 'marketplace_sort_by',
+  ORDER: 'marketplace_order',
+};
+
+// Helper to safely get from sessionStorage
+const getStoredValue = <T,>(key: string, defaultValue: T): T => {
+  try {
+    const item = sessionStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+};
+
+// Helper to safely set to sessionStorage
+const setStoredValue = <T,>(key: string, value: T): void => {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error('Failed to save to sessionStorage:', key, error);
+  }
+};
+
 export default function MarketplacePage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [pageIndex, setPageIndex] = useState(1);
-  const [pageSize, setPageSize] = useState(12);
-  const [tagFilter, setTagFilter] = useState<string | "all">("all");
-  const [pendingTag, setPendingTag] = useState<string | "all">("all");
+  // Initialize state from sessionStorage with fallback to defaults
+  const [searchQuery, setSearchQuery] = useState(() => 
+    getStoredValue(STORAGE_KEYS.SEARCH, "")
+  );
+  const [debouncedSearch, setDebouncedSearch] = useState(() => 
+    getStoredValue(STORAGE_KEYS.SEARCH, "")
+  );
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => 
+    getStoredValue(STORAGE_KEYS.VIEW_MODE, "grid")
+  );
+  const [pageIndex, setPageIndex] = useState(() => 
+    getStoredValue(STORAGE_KEYS.PAGE_INDEX, 1)
+  );
+  const [pageSize, setPageSize] = useState(() => 
+    getStoredValue(STORAGE_KEYS.PAGE_SIZE, 12)
+  );
+  const [tagFilter, setTagFilter] = useState<string | "all">(() => 
+    getStoredValue(STORAGE_KEYS.TAG_FILTER, "all")
+  );
+  const [pendingTag, setPendingTag] = useState<string | "all">(() => 
+    getStoredValue(STORAGE_KEYS.TAG_FILTER, "all")
+  );
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<"name" | "date" | "tags">("name");
-  const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const [sortBy, setSortBy] = useState<"name" | "date" | "tags">(() => 
+    getStoredValue(STORAGE_KEYS.SORT_BY, "name")
+  );
+  const [order, setOrder] = useState<"asc" | "desc">(() => 
+    getStoredValue(STORAGE_KEYS.ORDER, "asc")
+  );
+
+  // Persist searchQuery to sessionStorage
+  useEffect(() => {
+    setStoredValue(STORAGE_KEYS.SEARCH, searchQuery);
+  }, [searchQuery]);
+
+  // Persist debouncedSearch to sessionStorage
+  useEffect(() => {
+    setStoredValue(STORAGE_KEYS.SEARCH, debouncedSearch);
+  }, [debouncedSearch]);
+
+  // Persist viewMode to sessionStorage
+  useEffect(() => {
+    setStoredValue(STORAGE_KEYS.VIEW_MODE, viewMode);
+  }, [viewMode]);
+
+  // Persist pageIndex to sessionStorage
+  useEffect(() => {
+    setStoredValue(STORAGE_KEYS.PAGE_INDEX, pageIndex);
+  }, [pageIndex]);
+
+  // Persist pageSize to sessionStorage
+  useEffect(() => {
+    setStoredValue(STORAGE_KEYS.PAGE_SIZE, pageSize);
+  }, [pageSize]);
+
+  // Persist tagFilter to sessionStorage
+  useEffect(() => {
+    setStoredValue(STORAGE_KEYS.TAG_FILTER, tagFilter);
+  }, [tagFilter]);
+
+  // Persist sortBy to sessionStorage
+  useEffect(() => {
+    setStoredValue(STORAGE_KEYS.SORT_BY, sortBy);
+  }, [sortBy]);
+
+  // Persist order to sessionStorage
+  useEffect(() => {
+    setStoredValue(STORAGE_KEYS.ORDER, order);
+  }, [order]);
 
   useEffect(() => {
     if (sortBy === "name") {
@@ -154,6 +243,11 @@ export default function MarketplacePage() {
                   >
                     <Filter className="h-4 w-4 text-muted-foreground" />
                     Filter
+                    {tagFilter !== "all" && (
+                      <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-white">
+                        1
+                      </span>
+                    )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent

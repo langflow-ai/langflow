@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
@@ -21,6 +22,7 @@ export default function MarketplaceDetailPage() {
   const { publishedFlowId } = useParams<{ publishedFlowId: string }>();
   const dark = useDarkStore((state) => state.dark);
   const navigate = useCustomNavigate();
+  const [activeTab, setActiveTab] = useState("playground");
 
   // Fetch published flow details
   const { data: publishedFlowData, isLoading: isLoadingPublishedFlow } =
@@ -107,7 +109,7 @@ export default function MarketplaceDetailPage() {
     >
       <div className="flex w-full flex-col gap-4 dark:text-white">
         <div className="flex flex-col h-full">
-          <Tabs defaultValue="playground" className="w-full h-full">
+          <Tabs defaultValue="playground" className="w-full h-full" onValueChange={setActiveTab}>
             <div className="flex items-center justify-between mt-1 relative">
               <TabsList className="justify-start gap-2 border-b border-border dark:border-white/20 p-0">
                 <TabsTrigger
@@ -142,8 +144,8 @@ export default function MarketplaceDetailPage() {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Edit Button - only show if flow_cloned_from exists */}
-              {publishedFlowData?.flow_cloned_from && (
+              {/* Edit Button - only show if flow_cloned_from exists AND on Flow Visualization tab */}
+              {publishedFlowData?.flow_cloned_from && activeTab === "flow" && (
                 <Button
                   onClick={handleEditClick}
                   size="sm"

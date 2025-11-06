@@ -13,6 +13,7 @@ import { useUnpublishFlow, useDeletePublishedFlow } from "@/controllers/API/quer
 import useAlertStore from "@/stores/alertStore";
 import { AgentLogo } from "@/components/AgentLogo";
 import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
+import { LiveIcon } from "@/assets/icons/LiveIcon";
 
 interface MarketplaceFlowCardProps {
   item: any;
@@ -100,19 +101,22 @@ export default function MarketplaceFlowCard({
     >
       {/* Header */}
       <div className="mb-3 flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <h3 className="mb-1 truncate text-base font-semibold text-foreground" title={name}>
+        <div className="grid grid-cols-[1fr_auto] gap-3 items-center mb-1">
+          <h3 className="truncate text-base font-semibold text-foreground" title={name}>
             {name}
             {/* Live Status Badge - Only for PUBLISHED flows */}
-            {item.status === "PUBLISHED" && (
+            {/* {item.status === "PUBLISHED" && (
             <Badge
               variant="secondary"
               className="gap-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 animate-pulse ml-2"
             >
               <Circle className="h-3 w-3 fill-current" />
             </Badge>
-          )}
+          )} */}
           </h3>
+          {item.status === "PUBLISHED" && (
+            <LiveIcon className="w-[14px] h-[14px]"/>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
