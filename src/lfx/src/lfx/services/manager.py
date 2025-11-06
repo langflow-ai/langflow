@@ -110,13 +110,6 @@ class ServiceManager:
             msg = f"No factory registered for the service class '{service_name.name}'"
             raise NoFactoryRegisteredError(msg)
 
-    def update(self, service_name: ServiceType) -> None:
-        """Update a service by its name."""
-        if service_name in self.services:
-            logger.debug(f"Update service {service_name}")
-            self.services.pop(service_name, None)
-            self.get(service_name)
-
     async def teardown(self) -> None:
         """Teardown all the services."""
         for service in list(self.services.values()):
