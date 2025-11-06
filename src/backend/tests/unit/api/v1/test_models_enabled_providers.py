@@ -16,7 +16,8 @@ def _create_variable_payload(provider: str, value: str) -> dict:
     """Helper to create variable payload for a model provider credential."""
     variable_name = _provider_variable_mapping.get(provider)
     if not variable_name:
-        raise ValueError(f"Unknown provider: {provider}")
+        msg = f"Unknown provider: {provider}"
+        raise ValueError(msg)
     return {
         "name": variable_name,
         "value": value,
