@@ -58,6 +58,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
             "api_key": {"display_name": "API Key", "required": True, "show": True},
             "api_base": {"display_name": "API Base URL", "value": ""},
             "project_id": {"show": False},
+            "base_url_ibm_watsonx": {"show": False},
         }
         updated_config = component.update_build_config(build_config, "Ollama", "provider")
         assert updated_config["model"]["options"] == OLLAMA_EMBEDDING_MODELS
@@ -78,6 +79,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
             "api_key": {"display_name": "API Key", "required": True, "show": True},
             "api_base": {"display_name": "API Base URL", "value": ""},
             "project_id": {"show": False},
+            "base_url_ibm_watsonx": {"show": False},
         }
         updated_config = component.update_build_config(build_config, "IBM watsonx.ai", "provider")
         assert updated_config["model"]["options"] == WATSONX_EMBEDDING_MODEL_NAMES
