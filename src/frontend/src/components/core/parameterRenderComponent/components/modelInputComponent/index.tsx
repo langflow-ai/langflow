@@ -531,43 +531,45 @@ export default function ModelInputComponent({
   const renderManageProvidersButton = () => (
     <div className="sticky bottom-0 border-t bg-background">
       {hasRefreshButton && (
-        <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
-          <Button
-            className="w-full"
-            unstyled
-            data-testid="refresh-model-list"
-            onClick={() => {
-              handleRefreshButtonPress();
-            }}
-          >
-            <div className="flex items-center gap-2 pl-1">
-              <ForwardedIconComponent
-                name="RefreshCcw"
-                className={cn('refresh-icon h-3 w-3 text-primary')}
-              />
-              Refresh list
-            </div>
-          </Button>
-        </CommandItem>
-      )}
-      <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-b-md py-3 text-xs text-muted-foreground">
         <Button
-          className="w-full"
+          className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs text-muted-foreground px-3 hover:bg-accent group"
           unstyled
+          data-testid="refresh-model-list"
           onClick={() => {
-            navigate('/settings/model-providers');
+            handleRefreshButtonPress();
           }}
-          data-testid="manage-model-providers"
         >
-          <div className="flex items-center gap-2 pl-1 text-muted-foreground">
-            Manage Model Providers
+          <div className="flex items-center gap-2 pl-1 group-hover:text-primary">
+            Refresh list
             <ForwardedIconComponent
-              name="Settings"
-              className={cn('ml-auto w-4 h-4 text-muted-foreground')}
+              name="RefreshCcw"
+              className={cn(
+                'refresh-icon h-3 w-3 text-primary text-muted-foreground group-hover:text-primary'
+              )}
             />
           </div>
         </Button>
-      </CommandItem>
+      )}
+      {/* <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-b-md py-3 text-xs text-muted-foreground"> */}
+      <Button
+        className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs text-muted-foreground px-3 hover:bg-accent group"
+        unstyled
+        onClick={() => {
+          navigate('/settings/model-providers');
+        }}
+        data-testid="manage-model-providers"
+      >
+        <div className="flex items-center gap-2 pl-1 group-hover:text-primary">
+          Manage Model Providers
+          <ForwardedIconComponent
+            name="Settings"
+            className={cn(
+              'w-4 h-4 text-muted-foreground group-hover:text-primary'
+            )}
+          />
+        </div>
+      </Button>
+      {/* </CommandItem> */}
     </div>
   );
 
