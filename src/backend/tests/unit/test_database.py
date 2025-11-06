@@ -2,6 +2,7 @@ import json
 from typing import NamedTuple
 from uuid import UUID, uuid4
 
+from lfx.services.deps import session_scope
 import orjson
 import pytest
 from httpx import AsyncClient
@@ -620,9 +621,7 @@ async def test_read_only_starter_projects(client: AsyncClient, logged_in_headers
 
 
 async def test_sqlite_pragmas():
-    db_service = get_db_service()
-
-    async with db_service.with_session() as session:
+    async with session_scope() as session:
         assert (await session.exec(text("PRAGMA journal_mode;"))).scalar() == "wal"
         assert (await session.exec(text("PRAGMA synchronous;"))).scalar() == 1
 
