@@ -52,7 +52,7 @@ class GroqModel(LCModelComponent):
         DropdownInput(
             name="model_name",
             display_name="Model",
-            info="The name of the model to use.",
+            info="The name of the model to use. Add your Groq API key to access additional available models.",
             options=GROQ_MODELS,
             value=GROQ_MODELS[0],
             refresh_button=True,
@@ -101,13 +101,12 @@ class GroqModel(LCModelComponent):
                 logger.info(f"Loaded {len(model_ids)} Groq models with tool calling support")
             else:
                 logger.info(f"Loaded {len(model_ids)} Groq models")
-
-            return model_ids
-
-        except Exception as e:
+        except (ValueError, KeyError, TypeError, ImportError) as e:
             logger.exception(f"Error getting model names: {e}")
             # Fallback to hardcoded list from groq_constants.py
             return GROQ_MODELS
+        else:
+            return model_ids
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
@@ -115,13 +114,13 @@ class GroqModel(LCModelComponent):
                 if len(self.api_key) != 0:
                     try:
                         ids = self.get_models(tool_model_enabled=self.tool_model_enabled)
-                    except Exception as e:
+                    except (ValueError, KeyError, TypeError, ImportError) as e:
                         logger.exception(f"Error getting model names: {e}")
                         ids = GROQ_MODELS
                     build_config.setdefault("model_name", {})
                     build_config["model_name"]["options"] = ids
                     build_config["model_name"].setdefault("value", ids[0])
-            except Exception as e:
+            except (ValueError, KeyError, TypeError, AttributeError) as e:
                 msg = f"Error getting model names: {e}"
                 raise ValueError(msg) from e
         return build_config
