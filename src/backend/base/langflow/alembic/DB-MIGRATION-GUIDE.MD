@@ -509,6 +509,4 @@ Remember: **When in doubt, expand first, migrate slowly, and contract only when 
 - [Evolutionary Database Design - Martin Fowler](https://martinfowler.com/articles/evodb.html)
 - [Zero-Downtime Database Migrations](https://www.brunton-spall.co.uk/post/2014/05/06/database-migrations-done-right/)
 - [Alembic Documentation](https://alembic.sqlalchemy.org/)
-```
 
-This comprehensive guide provides your team with a clear reference for implementing database migrations using the expand-contract pattern while maintaining N-1 version support. The document includes practical examples, safety checks, and monitoring strategies to ensure successful migrations in your multi-service environment.
