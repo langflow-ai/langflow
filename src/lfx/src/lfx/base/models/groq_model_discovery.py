@@ -6,7 +6,7 @@ eliminating the need for manual metadata updates.
 """
 
 import json
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -18,8 +18,8 @@ from lfx.log.logger import logger
 class GroqModelDiscovery:
     """Discovers and caches Groq model capabilities dynamically."""
 
-    # Cache file location
-    CACHE_FILE = Path(__file__).parent / ".groq_models_cache.json"
+    # Cache file location - use local cache directory within models
+    CACHE_FILE = Path(__file__).parent / ".cache" / "groq_models_cache.json"
     CACHE_DURATION = timedelta(hours=24)  # Refresh cache every 24 hours
 
     # Models to skip from LLM list (audio, TTS, guards)
@@ -92,7 +92,7 @@ class GroqModelDiscovery:
                     "provider": self._get_provider_name(model_id),
                     "tool_calling": supports_tools,
                     "preview": "preview" in model_id.lower() or "/" in model_id,
-                    "last_tested": datetime.now().isoformat(),
+                    "last_tested": datetime.now(UTC).isoformat(),
                 }
                 logger.debug(f"{model_id}: tool_calling={supports_tools}")
 
@@ -102,17 +102,17 @@ class GroqModelDiscovery:
                     "name": model_id,
                     "provider": self._get_provider_name(model_id),
                     "not_supported": True,
-                    "last_tested": datetime.now().isoformat(),
+                    "last_tested": datetime.now(UTC).isoformat(),
                 }
 
             # Save to cache
             self._save_cache(models_metadata)
 
-            return models_metadata
-
-        except Exception as e:
+        except (requests.RequestException, KeyError, ValueError, ImportError) as e:
             logger.exception(f"Error discovering models: {e}")
             return self._get_fallback_models()
+        else:
+            return models_metadata
 
     def _fetch_available_models(self) -> list[str]:
         """Fetch list of available models from Groq API."""
@@ -158,13 +158,11 @@ class GroqModelDiscovery:
             messages = [{"role": "user", "content": "test"}]
 
             # Try to make a request with tools
-            response = client.chat.completions.create(
+            client.chat.completions.create(
                 model=model_id, messages=messages, tools=tools, tool_choice="auto", max_tokens=10
             )
 
-            return True
-
-        except Exception as e:
+        except (ImportError, AttributeError, TypeError, ValueError, RuntimeError, KeyError) as e:
             error_msg = str(e).lower()
             # If error mentions tool calling, model doesn't support it
             if "tool" in error_msg:
@@ -172,6 +170,8 @@ class GroqModelDiscovery:
             # Other errors might be rate limits, etc - be conservative
             logger.warning(f"Error testing {model_id}: {e}")
             return False
+        else:
+            return True
 
     def _get_provider_name(self, model_id: str) -> str:
         """Extract provider name from model ID."""
@@ -202,12 +202,12 @@ class GroqModelDiscovery:
             return None
 
         try:
-            with open(self.CACHE_FILE) as f:
+            with self.CACHE_FILE.open() as f:
                 cache_data = json.load(f)
 
             # Check cache age
             cache_time = datetime.fromisoformat(cache_data["cached_at"])
-            if datetime.now() - cache_time > self.CACHE_DURATION:
+            if datetime.now(UTC) - cache_time > self.CACHE_DURATION:
                 logger.info("Cache expired, will fetch fresh data")
                 return None
 
@@ -220,15 +220,15 @@ class GroqModelDiscovery:
     def _save_cache(self, models_metadata: dict[str, dict]) -> None:
         """Save model metadata to cache."""
         try:
-            cache_data = {"cached_at": datetime.now().isoformat(), "models": models_metadata}
+            cache_data = {"cached_at": datetime.now(UTC).isoformat(), "models": models_metadata}
 
             self.CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.CACHE_FILE, "w") as f:
+            with self.CACHE_FILE.open("w") as f:
                 json.dump(cache_data, f, indent=2)
 
             logger.info(f"Cached {len(models_metadata)} models to {self.CACHE_FILE}")
 
-        except Exception as e:
+        except (OSError, TypeError, ValueError) as e:
             logger.warning(f"Failed to save cache: {e}")
 
     def _get_fallback_models(self) -> dict[str, dict]:
