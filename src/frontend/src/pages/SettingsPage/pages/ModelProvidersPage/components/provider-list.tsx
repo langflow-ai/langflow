@@ -51,7 +51,7 @@ const ProviderList = ({ type }: ProviderListProps) => {
   };
 
   const handleDeleteProviderWithCleanup = (providerName: string) => {
-    handleDeleteProvider(providerName, globalVariables, () => {
+    handleDeleteProvider(providerName, globalVariables, defaultModelData, () => {
       setDeleteDialogOpen(false);
       setProviderToDelete(null);
     });

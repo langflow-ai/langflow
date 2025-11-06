@@ -12,6 +12,7 @@ import {
 } from "@/constants/providerConstants";
 import useAlertStore from "@/stores/alertStore";
 import { GlobalVariable } from "@/types/global_variables";
+import { DefaultModelData } from "./types";
 
 export const useProviderActions = () => {
   const queryClient = useQueryClient();
@@ -202,6 +203,7 @@ export const useProviderActions = () => {
   const handleDeleteProvider = (
     providerName: string,
     globalVariables: GlobalVariable[] | undefined,
+    defaultModelData: DefaultModelData | undefined,
     onSuccess?: () => void,
   ) => {
     if (!globalVariables) return;
@@ -224,17 +226,54 @@ export const useProviderActions = () => {
       return;
     }
 
+    // Check if the provider being deleted has the current default model
+    const shouldClearDefault =
+      defaultModelData?.default_model?.provider === providerName;
+
+    // If the provider has the default model, clear it first
+    if (shouldClearDefault && defaultModelData?.default_model?.model_type) {
+      mutateClearDefaultModel(
+        {
+          model_type: defaultModelData.default_model.model_type,
+        },
+        {
+          onSuccess: () => {
+            // After clearing default, proceed with provider deletion
+            deleteProviderVariable(variable.id, providerName, onSuccess);
+          },
+          onError: () => {
+            setErrorData({
+              title: "Error clearing default model",
+              list: ["Failed to clear default model before deleting provider"],
+            });
+          },
+        },
+      );
+    } else {
+      // No default model to clear, proceed directly with deletion
+      deleteProviderVariable(variable.id, providerName, onSuccess);
+    }
+  };
+
+  const deleteProviderVariable = (
+    variableId: string,
+    providerName: string,
+    onSuccess?: () => void,
+  ) => {
     mutateDeleteGlobalVariable(
-      { id: variable.id },
+      { id: variableId },
       {
         onSuccess: () => {
           setSuccessData({
             title: `${providerName} provider removed successfully`,
           });
           // The mutation already refetches useGetModelProviders in onSettled
-          // Just invalidate flows and global variables
+          // Just invalidate flows, global variables, and default model
           queryClient.invalidateQueries({
             queryKey: ["flows"],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["useGetDefaultModel"],
           });
           onSuccess?.();
         },

@@ -147,7 +147,7 @@ const ProviderModelsDialog = ({
   };
 
   const handleToggleModelLocal = (
-    providerName: string,
+    _providerName: string,
     modelName: string,
     enabled: boolean,
   ) => {
@@ -156,6 +156,28 @@ const ProviderModelsDialog = ({
       updated.set(modelName, enabled);
       return updated;
     });
+
+    // If unchecking a model, check if it's the current default and clear it
+    if (!enabled) {
+      // Check if this model is the pending default
+      if (pendingDefaultModel?.modelName === modelName) {
+        setPendingDefaultModel(null);
+      }
+      // Check if this model is the actual default from the API
+      if (defaultModelData?.default_model?.model_name === modelName) {
+        setShouldClearDefault(true);
+        setPendingDefaultModel(null);
+      }
+    } else {
+      // When re-enabling a model, clear the shouldClearDefault flag if this was the cleared model
+      // This allows the user to re-enable and then manually set as default again if desired
+      if (
+        shouldClearDefault &&
+        defaultModelData?.default_model?.model_name === modelName
+      ) {
+        setShouldClearDefault(false);
+      }
+    }
   };
 
   const handleSetDefaultModelLocal = (
@@ -167,7 +189,7 @@ const ProviderModelsDialog = ({
     setShouldClearDefault(false);
   };
 
-  const handleClearDefaultModelLocal = (modelType: string) => {
+  const handleClearDefaultModelLocal = (_modelType: string) => {
     setShouldClearDefault(true);
     setPendingDefaultModel(null);
   };
