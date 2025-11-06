@@ -62,7 +62,7 @@ Each phase flows sequentially: Current Schema → Expand → Migrate → Contrac
 
 ### Phase Timeline
 
-Considering a N days Contract cicle
+Considering a N days Contract cycle
 
 | Phase | Duration | Description |
 |-------|----------|-------------|
