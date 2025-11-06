@@ -291,6 +291,7 @@ module.exports = {
           items: [
             "Components/components-bundles",
             "Components/bundles-aiml",
+            "Components/bundles-altk",
             "Components/bundles-amazon",
             "Components/bundles-anthropic",
             "Components/bundles-apify",
