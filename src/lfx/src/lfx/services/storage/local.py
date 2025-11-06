@@ -1,18 +1,57 @@
 """Local file-based storage service for lfx package."""
 
-from pathlib import Path
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+import anyio
+from aiofile import async_open
 
 from lfx.log.logger import logger
 from lfx.services.storage.service import StorageService
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from lfx.services.settings.service import SettingsService
+
+    from langflow.services.session.service import SessionService
 
 
 class LocalStorageService(StorageService):
     """A service class for handling local file storage operations."""
 
-    def __init__(self, data_dir: str | Path | None = None) -> None:
-        """Initialize the local storage service."""
-        super().__init__(data_dir)
-        self.set_ready()
+    def __init__(
+        self,
+        session_service: SessionService,
+        settings_service: SettingsService,
+    ) -> None:
+        """Initialize the local storage service.
+
+        Args:
+            session_service: Session service instance
+            settings_service: Settings service instance containing configuration
+        """
+        # Initialize base class with services
+        super().__init__(session_service, settings_service)
+        # Base class already sets self.data_dir as anyio.Path from settings_service.settings.config_dir
+
+
+    def resolve_component_path(self, logical_path: str) -> str:
+        """Convert logical path to absolute filesystem path for local storage.
+        Args:
+            logical_path: Path in format "flow_id/filename"
+        Returns:
+            str: Absolute filesystem path
+        """
+        # Split the logical path into flow_id and filename
+        parts = logical_path.split("/", 1)
+        if len(parts) != 2:
+            # Handle edge case - return as-is if format is unexpected
+            return logical_path
+
+        flow_id, file_name = parts
+        return self.build_full_path(flow_id, file_name)
 
     def build_full_path(self, flow_id: str, file_name: str) -> str:
         """Build the full path of a file in the local storage."""
@@ -32,17 +71,16 @@ class LocalStorageService(StorageService):
             PermissionError: If there is no permission to write the file.
         """
         folder_path = self.data_dir / flow_id
-        folder_path.mkdir(parents=True, exist_ok=True)
+        await folder_path.mkdir(parents=True, exist_ok=True)
         file_path = folder_path / file_name
 
         try:
-            with file_path.open("wb") as f:
-                f.write(data)
+            async with async_open(str(file_path), "wb") as f:
+                await f.write(data)
+            await logger.ainfo(f"File {file_name} saved successfully in flow {flow_id}.")
         except Exception:
             logger.exception(f"Error saving file {file_name} in flow {flow_id}")
             raise
-        else:
-            logger.info(f"File {file_name} saved successfully in flow {flow_id}.")
 
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """Retrieve a file from the local storage.
@@ -58,20 +96,16 @@ class LocalStorageService(StorageService):
             FileNotFoundError: If the file does not exist.
         """
         file_path = self.data_dir / flow_id / file_name
-        if not file_path.exists():
-            logger.warning(f"File {file_name} not found in flow {flow_id}.")
+        if not await file_path.exists():
+            await logger.awarning(f"File {file_name} not found in flow {flow_id}.")
             msg = f"File {file_name} not found in flow {flow_id}"
             raise FileNotFoundError(msg)
 
-        try:
-            with file_path.open("rb") as f:
-                content = f.read()
-        except Exception:
-            logger.exception(f"Error reading file {file_name} in flow {flow_id}")
-            raise
-        else:
-            logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
-            return content
+        async with async_open(str(file_path), "rb") as f:
+            content = await f.read()
+
+        logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
+        return content
 
     async def list_files(self, flow_id: str) -> list[str]:
         """List all files in a specific flow directory.
@@ -86,21 +120,21 @@ class LocalStorageService(StorageService):
             flow_id = str(flow_id)
 
         folder_path = self.data_dir / flow_id
-        if not folder_path.exists():
-            logger.debug(f"Flow folder {flow_id} does not exist.")
-            return []
-
-        if not folder_path.is_dir():
-            logger.warning(f"Flow path {flow_id} is not a directory.")
+        if not await folder_path.exists() or not await folder_path.is_dir():
+            await logger.awarning(f"Flow {flow_id} directory does not exist.")
             return []
 
         try:
-            files = [item.name for item in folder_path.iterdir() if item.is_file()]
+            files = [
+                file.name
+                async for file in await anyio.to_thread.run_sync(folder_path.iterdir)
+                if await anyio.Path(file).is_file()
+            ]
         except Exception:  # noqa: BLE001
             logger.exception(f"Error listing files in flow {flow_id}")
             return []
         else:
-            logger.debug(f"Listed {len(files)} files in flow {flow_id}.")
+            await logger.ainfo(f"Listed {len(files)} files in flow {flow_id}.")
             return files
 
     async def delete_file(self, flow_id: str, file_name: str) -> None:
@@ -114,17 +148,11 @@ class LocalStorageService(StorageService):
             FileNotFoundError: If the file does not exist.
         """
         file_path = self.data_dir / flow_id / file_name
-        if not file_path.exists():
-            logger.warning(f"File {file_name} not found in flow {flow_id}.")
-            msg = f"File {file_name} not found in flow {flow_id}"
-            raise FileNotFoundError(msg)
-
-        try:
-            file_path.unlink()
-            logger.info(f"File {file_name} deleted successfully from flow {flow_id}.")
-        except Exception:
-            logger.exception(f"Error deleting file {file_name} in flow {flow_id}")
-            raise
+        if await file_path.exists():
+            await file_path.unlink()
+            await logger.ainfo(f"File {file_name} deleted successfully from flow {flow_id}.")
+        else:
+            await logger.awarning(f"Attempted to delete non-existent file {file_name} in flow {flow_id}.")
 
     async def get_file_size(self, flow_id: str, file_name: str) -> int:
         """Get the size of a file in bytes.
@@ -140,16 +168,18 @@ class LocalStorageService(StorageService):
             FileNotFoundError: If the file does not exist.
         """
         file_path = self.data_dir / flow_id / file_name
-        if not file_path.exists():
-            logger.warning(f"File {file_name} not found in flow {flow_id}.")
+        if not await file_path.exists():
+            await logger.awarning(f"File {file_name} not found in flow {flow_id}.")
             msg = f"File {file_name} not found in flow {flow_id}"
             raise FileNotFoundError(msg)
 
         try:
-            size = file_path.stat().st_size
+            file_size_stat = await file_path.stat()
+            return file_size_stat.st_size
         except Exception:
             logger.exception(f"Error getting size of file {file_name} in flow {flow_id}")
             raise
-        else:
-            logger.debug(f"File {file_name} size: {size} bytes in flow {flow_id}.")
-            return size
+
+    async def teardown(self) -> None:
+        """Perform any cleanup operations when the service is being torn down."""
+        # No specific teardown actions required for local
