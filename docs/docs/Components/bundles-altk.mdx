@@ -8,7 +8,7 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
-The **ALTK Agent** implements the **JSON Processor** component from the [Agent Lifecycle Toolkit](https://github.com/AgentToolkit/agent-lifecycle-toolkit). This component processes large JSON tool responses by generating Python code on the fly to extract relevant data. This helps reduce context size and improves the agent's ability to work with large tool responses, especially when dealing with APIs that return extensive JSON data.
+The **ALTK Agent** implements the **JSON Processor** component from the [Agent Lifecycle Toolkit](https://github.com/AgentToolkit/agent-lifecycle-toolkit). This component processes large JSON tool responses by generating Python code on the fly to extract relevant data. This helps reduce context size and improves the agent's ability to work with large tool responses, especially when dealing with APIs that return extensive JSON data. The component outputs a [Message](/data-types#message) containing the agent's response, which is passed to the next component in the flow instead of the full JSON data that isn't needed.
 
 For more information, see the [Agent Lifecycle Toolkit documentation](https://agenttoolkit.github.io/agent-lifecycle-toolkit/).
 
@@ -30,4 +30,3 @@ For an example of the ALTK component in Langflow, see the video tutorial [ALTK i
 | max_iterations | Integer | Input parameter. The maximum number of iterations to allow the agent to execute. |
 | verbose | Boolean | Input parameter. This determines whether to print out the agent's intermediate steps. |
 | handle_parsing_errors | Boolean | Input parameter. This determines whether to handle parsing errors in the agent. |
-| response | Message | Output parameter. The agent's response message. |
