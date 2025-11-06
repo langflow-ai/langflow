@@ -104,15 +104,6 @@ export default function MarketplaceFlowCard({
         <div className="grid grid-cols-[1fr_auto] gap-3 items-center mb-1">
           <h3 className="truncate text-base font-semibold text-foreground" title={name}>
             {name}
-            {/* Live Status Badge - Only for PUBLISHED flows */}
-            {/* {item.status === "PUBLISHED" && (
-            <Badge
-              variant="secondary"
-              className="gap-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 animate-pulse ml-2"
-            >
-              <Circle className="h-3 w-3 fill-current" />
-            </Badge>
-          )} */}
           </h3>
           {item.status === "PUBLISHED" && (
             <LiveIcon className="w-[14px] h-[14px]"/>

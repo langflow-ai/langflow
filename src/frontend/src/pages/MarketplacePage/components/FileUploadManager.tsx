@@ -48,7 +48,6 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
   onClearFileUrl,
   onError,
 }) => {
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, UploadedFile[]>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [currentUploadComponentId, setCurrentUploadComponentId] = useState<string | null>(null);
@@ -58,22 +57,28 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
   const uploadToBlobMutation = useUploadToBlob();
   const readPresignedUrlMutation = usePostReadPresignedUrl();
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
   const handleFileUpload = async (componentId: string) => {
     if (!fileInputRef.current) return;
     
     setCurrentUploadComponentId(componentId);
-    fileInputRef.current.accept = "*/*";
+    fileInputRef.current.accept = ".json,.png,.pdf,application/json,image/png,application/pdf";
     fileInputRef.current.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
+
+      // Validate file type
+      const allowedTypes = ['application/json', 'image/png', 'application/pdf'];
+      const allowedExtensions = ['.json', '.png', '.pdf'];
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+      
+      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+        onError('Invalid file type. Only JSON, PNG, and PDF files are accepted.');
+        setCurrentUploadComponentId(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        return;
+      }
 
       setIsUploading(true);
       setUploadProgress({ [componentId]: 0 });
@@ -111,19 +116,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
         const readUrl = readUrlResponse.presignedUrl.data.signedUrl;
         setUploadProgress({ [componentId]: 100 });
 
-        const uploadedFile: UploadedFile = {
-          id: uuid(),
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          readUrl,
-          uploadTimestamp: new Date()
-        };
-
-        setUploadedFiles(prev => ({
-          ...prev,
-          [componentId]: [...(prev[componentId] || []), uploadedFile]
-        }));
+        // Replace existing file URL for this component
         onFileUrlChange(componentId, readUrl);
 
         console.log(`File uploaded successfully for component ${componentId}:`, {
@@ -133,9 +126,11 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
           fileType: file.type
         });
 
+        // Close modal after successful upload
         setTimeout(() => {
           setUploadProgress({});
-        }, 1000);
+          onClose();
+        }, 500);
 
       } catch (error) {
         console.error("File upload failed:", error);
@@ -153,26 +148,10 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
     fileInputRef.current.click();
   };
 
-  const removeUploadedFile = (componentId: string, fileId: string) => {
-    setUploadedFiles(prev => {
-      const componentFiles = prev[componentId] || [];
-      const updatedFiles = componentFiles.filter(f => f.id !== fileId);
-      
-      return {
-        ...prev,
-        [componentId]: updatedFiles
-      };
-    });
-
-    const fileToRemove = uploadedFiles[componentId]?.find(f => f.id === fileId);
-    if (fileToRemove && fileUrls[componentId] === fileToRemove.readUrl) {
-      onClearFileUrl(componentId);
-    }
-  };
-  
   const handleClose = () => {
-    setUploadedFiles({});
-    onClose();
+    if (!isUploading) {
+      onClose();
+    }
   };
 
   return (
@@ -190,6 +169,10 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
             <DialogTitle>Manage File Inputs</DialogTitle>
             <DialogDescription>
               Upload files for components that require file inputs.
+              <br />
+              <span className="text-xs text-muted-foreground mt-1 inline-block">
+                Accepted file types: JSON, PNG, PDF
+              </span>
             </DialogDescription>
           </DialogHeader>
 
@@ -205,7 +188,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={() => handleFileUpload(component.id)}
-                    disabled={isUploading && currentUploadComponentId === component.id}
+                    disabled={isUploading}
                     className="flex items-center gap-2"
                   >
                     {isUploading && currentUploadComponentId === component.id ? (
@@ -226,46 +209,8 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
                     />
                   </div>
                 )}
-
-                {/* Uploaded Files List */}
-                {uploadedFiles[component.id] && uploadedFiles[component.id].length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Uploaded Files:</p>
-                    <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {uploadedFiles[component.id].map((file) => (
-                        <div key={file.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{file.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatFileSize(file.size)} • {file.uploadTimestamp.toLocaleString()}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeUploadedFile(component.id, file.id)}
-                              className="text-destructive hover:text-destructive p-1 h-auto"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             ))}
-          </div>
-
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button variant="outline" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button onClick={handleClose}>
-              Done
-            </Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -3,9 +3,10 @@ import { v4 as uuid } from "uuid";
 import { Button } from "@/components/ui/button";
 import LoadingIcon from "@/components/ui/loading";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Square, Upload, X, File } from "lucide-react";
+import { Square, Upload, X, File, Eye } from "lucide-react";
 import SvgAutonomize from "@/icons/Autonomize/Autonomize";
 import { FileUploadManager } from "./FileUploadManager";
+import { FilePreviewModal } from "./FilePreviewModal";
 import {
   PlaygroundTabProps,
   Message,
@@ -23,6 +24,11 @@ export default function PlaygroundTab({
   const [input, setInput] = useState("");
   const [fileUrls, setFileUrls] = useState<Record<string, string>>({});
   const [isFileModalOpen, setIsFileModalOpen] = useState(false);
+  const [previewFile, setPreviewFile] = useState<{
+    url: string;
+    name: string;
+    type: string;
+  } | null>(null);
 
   const { leftPanelWidth, isDragging, handleDragStart } = useResizablePanel(33.33);
 
@@ -57,9 +63,8 @@ export default function PlaygroundTab({
     return tag ? tag.title : tagId;
   };
 
-  // Check if flow has chat input
   const hasChatInput = useMemo(() => {
-    if (!publishedFlowData?.flow_data?.nodes) return true; // Default to true
+    if (!publishedFlowData?.flow_data?.nodes) return true;
     
     return publishedFlowData.flow_data.nodes.some((node: any) => {
       const nodeType = node.data?.type;
@@ -111,30 +116,38 @@ export default function PlaygroundTab({
           }
         };
 
+        const filename = getFilenameFromUrl(url);
+        const extension = filename.split('.').pop()?.toLowerCase() || '';
+        let fileType = 'application/octet-stream';
+        
+        if (extension === 'json') fileType = 'application/json';
+        else if (extension === 'png') fileType = 'image/png';
+        else if (extension === 'pdf') fileType = 'application/pdf';
+
         return {
           componentId,
           componentName: component.display_name,
-          filename: getFilenameFromUrl(url),
+          filename,
           url,
+          fileType,
         };
       })
       .filter((file): file is NonNullable<typeof file> => file !== null);
   }, [fileUrls, fileInputComponents]);
 
-const sendMessage = async () => {
-  if (hasChatInput && !input.trim()) return;
-  if (!hasChatInput && selectedFiles.length === 0) return;
-  if (isLoading) return;
-  
+  const sendMessage = async () => {
+    if (hasChatInput && !input.trim()) return;
+    if (!hasChatInput && selectedFiles.length === 0) return;
+    if (isLoading) return;
 
-  const currentFileUrls = { ...fileUrls };
-  const messageText = hasChatInput ? input.trim() : "Processing uploaded file...";
+    const currentFileUrls = { ...fileUrls };
+    const messageText = hasChatInput ? input.trim() : "Processing uploaded file...";
 
-  setFileUrls({});
-  setInput("");
-  
-  await sendMessageHook(messageText, currentFileUrls, fileInputComponents);
-};
+    setFileUrls({});
+    setInput("");
+    
+    await sendMessageHook(messageText, currentFileUrls, fileInputComponents);
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -160,6 +173,14 @@ const sendMessage = async () => {
 
   const removeSelectedFile = (componentId: string) => {
     clearFileUrl(componentId);
+  };
+
+  const handlePreviewFile = (file: typeof selectedFiles[0]) => {
+    setPreviewFile({
+      url: file.url,
+      name: file.filename,
+      type: file.fileType,
+    });
   };
 
   return (
@@ -287,7 +308,7 @@ const sendMessage = async () => {
                 {selectedFiles.map((file) => (
                   <div
                     key={file.componentId}
-                    className="flex items-center gap-2 bg-muted/50 border rounded-lg px-3 py-2 text-sm"
+                    className="flex items-center gap-2 bg-muted/50 border rounded-lg px-3 py-2 text-sm group hover:border-primary/50 transition-colors"
                   >
                     <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <div className="flex flex-col min-w-0">
@@ -304,14 +325,26 @@ const sendMessage = async () => {
                         for {file.componentName}
                       </span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeSelectedFile(file.componentId)}
-                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive ml-1 flex-shrink-0"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
+                    <div className="flex items-center gap-1 ml-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handlePreviewFile(file)}
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-primary flex-shrink-0"
+                        title="Preview file"
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeSelectedFile(file.componentId)}
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
+                        title="Remove file"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -319,7 +352,6 @@ const sendMessage = async () => {
 
             <div className="max-w-full">
               {hasChatInput ? (
-                // Show chat textarea for flows with chat input
                 <div className="relative">
                   <textarea
                     value={input}
@@ -369,7 +401,6 @@ const sendMessage = async () => {
                   </div>
                 </div>
               ) : (
-                // Show only file upload button for flows without chat input
                 <div className="flex items-center justify-center gap-3">
                   <Button
                     onClick={() => setIsFileModalOpen(true)}
@@ -429,6 +460,16 @@ const sendMessage = async () => {
         onClearFileUrl={clearFileUrl}
         onError={setError}
       />
+
+      {previewFile && (
+        <FilePreviewModal
+          isOpen={!!previewFile}
+          onClose={() => setPreviewFile(null)}
+          fileUrl={previewFile.url}
+          fileName={previewFile.name}
+          fileType={previewFile.type}
+        />
+      )}
     </div>
   );
 }
