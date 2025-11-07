@@ -333,8 +333,6 @@ jobs:
         if: matrix.os != 'windows'
         timeout-minutes: 5
         run: |
-          # Set macOS fork safety environment variable (must be set before Python starts)
-          export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
           # Start server in background
           ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
@@ -623,8 +621,6 @@ jobs:
         if: matrix.os != 'windows'
         timeout-minutes: 5
         run: |
-          # Set macOS fork safety environment variable (must be set before Python starts)
-          export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
           # Start server in background
           ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
