@@ -137,7 +137,7 @@ dependencies = [
     "cuga==0.1.2",
     "agent-lifecycle-toolkit",
     "astrapy>=2.1.0,<3.0.0",
-    "torch==2.2.2; platform_machine == 'x86_64' and sys_platform == 'darwin'"
+    "torch==2.9.0; platform_machine == 'x86_64' and sys_platform == 'darwin'",
 ]
 
 
