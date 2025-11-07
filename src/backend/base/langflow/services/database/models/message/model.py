@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict, field_serializer, field_validator
-from sqlalchemy import Text
+from sqlalchemy import DateTime, Text
 from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.schema.content_block import ContentBlock
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 class MessageBase(SQLModel):
     timestamp: Annotated[datetime, str_to_timestamp_validator] = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
+        sa_column=Column(DateTime(timezone=True), nullable=False), default_factory=lambda: datetime.now(timezone.utc)
     )
     sender: str
     sender_name: str
