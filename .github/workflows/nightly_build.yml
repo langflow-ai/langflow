@@ -215,7 +215,7 @@ jobs:
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
-    needs: [create-nightly-tag, frontend-tests, backend-unit-tests]
+    needs: create-nightly-tag
     if: github.repository == 'langflow-ai/langflow'
     uses: ./.github/workflows/release_nightly.yml
     with:
