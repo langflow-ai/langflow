@@ -34,7 +34,7 @@ def _get_azure_openai_defaults(build_config: dict) -> Dict[str, Any]:
         },
         "azure_deployment": {
             **build_config.get("azure_deployment", {}),
-            "value": os.environ.get("AZURE_DEPLOYMENT_NAME", "gpt-4o")
+            "value": os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4.1")
         },
         "azure_endpoint": {
             **build_config.get("azure_endpoint", {}),

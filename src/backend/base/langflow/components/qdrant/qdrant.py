@@ -1,7 +1,9 @@
 from langchain.embeddings.base import Embeddings
 from langchain_community.vectorstores import Qdrant
+import os
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from typing import Dict
 from langflow.helpers.data import docs_to_data
 from langflow.inputs.inputs import MessageTextInput
 from langflow.io import (
@@ -10,6 +12,7 @@ from langflow.io import (
     IntInput,
     SecretStrInput,
     StrInput,
+    BoolInput
 )
 from langflow.schema.data import Data
 import uuid
@@ -26,7 +29,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="host", display_name="Host", value="localhost", advanced=True),
         IntInput(name="port", display_name="Port", value=6333, advanced=True),
         IntInput(name="grpc_port", display_name="gRPC Port", value=6334, advanced=True),
-        SecretStrInput(name="api_key", display_name="Qdrant API Key", advanced=True),
+        SecretStrInput(name="api_key", display_name="Qdrant API Key", required=False),
         StrInput(name="prefix", display_name="Prefix", advanced=True),
         IntInput(name="timeout", display_name="Timeout", advanced=True),
         StrInput(name="path", display_name="Path", advanced=True),
@@ -66,11 +69,13 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             "metadata_payload_key": self.metadata_payload_key,
         }
 
+        api_key = self.api_key or os.getenv("QUADRANT_API_KEY", "")
+
         server_kwargs = {
             "host": self.host or None,
             "port": int(self.port),  # Ensure port is an integer
             "grpc_port": int(self.grpc_port),  # Ensure grpc_port is an integer
-            "api_key": self.api_key,
+            "api_key": api_key,
             "prefix": self.prefix,
             # Ensure timeout is an integer
             "timeout": int(self.timeout) if self.timeout else None,
