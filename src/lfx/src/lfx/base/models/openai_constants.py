@@ -2,15 +2,13 @@ from .model_metadata import create_model_metadata
 
 # Unified model metadata - single source of truth
 OPENAI_MODELS_DETAILED = [
-    # GPT-5 Series (Experimental/Future models - not yet released)
+    # GPT-5 Series
     create_model_metadata(
         provider="OpenAI",
         name="gpt-5",
         icon="OpenAI",
         tool_calling=True,
         reasoning=True,
-        preview=True,
-        not_supported=True,
     ),
     create_model_metadata(
         provider="OpenAI",
@@ -18,8 +16,6 @@ OPENAI_MODELS_DETAILED = [
         icon="OpenAI",
         tool_calling=True,
         reasoning=True,
-        preview=True,
-        not_supported=True,
     ),
     create_model_metadata(
         provider="OpenAI",
@@ -27,8 +23,6 @@ OPENAI_MODELS_DETAILED = [
         icon="OpenAI",
         tool_calling=True,
         reasoning=True,
-        preview=True,
-        not_supported=True,
     ),
     create_model_metadata(
         provider="OpenAI",
@@ -36,8 +30,6 @@ OPENAI_MODELS_DETAILED = [
         icon="OpenAI",
         tool_calling=False,
         reasoning=True,
-        preview=True,
-        not_supported=True,
     ),
     # Regular OpenAI Models
     create_model_metadata(provider="OpenAI", name="gpt-4o-mini", icon="OpenAI", tool_calling=True),
@@ -68,12 +60,7 @@ OPENAI_MODELS_DETAILED = [
         provider="OpenAI", name="o3-mini", icon="OpenAI", reasoning=True, preview=True, not_supported=True
     ),
     create_model_metadata(
-        provider="OpenAI",
-        name="o3",
-        icon="OpenAI",
-        reasoning=True,
-        preview=True,
-        not_supported=True,
+        provider="OpenAI", name="o3", icon="OpenAI", reasoning=True, preview=True, not_supported=True
     ),
     create_model_metadata(
         provider="OpenAI", name="o3-pro", icon="OpenAI", reasoning=True, preview=True, not_supported=True
