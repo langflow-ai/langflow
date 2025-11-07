@@ -357,6 +357,8 @@ jobs:
           done
 
           # Clean shutdown
+          echo "Logs:"
+          cat langflow.log
           kill $SERVER_PID 2>/dev/null || true
           sleep 5
         shell: bash
