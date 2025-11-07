@@ -3,11 +3,35 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import NoResultsMessage from "../emptySearchComponent";
 
+// Mock feature flags
+jest.mock("@/customization/feature-flags", () => ({
+  ENABLE_NEW_SIDEBAR: true, // Set to true for SearchConfigTrigger tests
+}));
+
+// Mock the SearchConfigTrigger component
+jest.mock("../searchConfigTrigger", () => ({
+  SearchConfigTrigger: ({ showConfig, setShowConfig }: any) => (
+    <button
+      data-testid="search-config-trigger"
+      onClick={() => setShowConfig(!showConfig)}
+    >
+      Config Toggle: {showConfig.toString()}
+    </button>
+  ),
+}));
+
 describe("NoResultsMessage", () => {
   const mockOnClearSearch = jest.fn();
+  const mockSetShowConfig = jest.fn();
 
   const defaultProps = {
     onClearSearch: mockOnClearSearch,
+  };
+
+  const defaultPropsWithConfig = {
+    onClearSearch: mockOnClearSearch,
+    showConfig: false,
+    setShowConfig: mockSetShowConfig,
   };
 
   beforeEach(() => {
@@ -268,6 +292,131 @@ describe("NoResultsMessage", () => {
       await user.click(clearLink);
 
       expect(mockOnClearSearch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("SearchConfigTrigger Integration", () => {
+    describe("When ENABLE_NEW_SIDEBAR is true", () => {
+      it("should not render SearchConfigTrigger when setShowConfig is not provided", () => {
+        render(<NoResultsMessage {...defaultProps} />);
+
+        expect(
+          screen.queryByTestId("search-config-trigger"),
+        ).not.toBeInTheDocument();
+      });
+
+      it("should render SearchConfigTrigger when setShowConfig is provided", () => {
+        render(<NoResultsMessage {...defaultPropsWithConfig} />);
+
+        expect(screen.getByTestId("search-config-trigger")).toBeInTheDocument();
+        expect(screen.getByText("Config Toggle: false")).toBeInTheDocument();
+      });
+
+      it("should render SearchConfigTrigger with showConfig true", () => {
+        const propsWithShowConfig = {
+          ...defaultPropsWithConfig,
+          showConfig: true,
+        };
+
+        render(<NoResultsMessage {...propsWithShowConfig} />);
+
+        expect(screen.getByTestId("search-config-trigger")).toBeInTheDocument();
+        expect(screen.getByText("Config Toggle: true")).toBeInTheDocument();
+      });
+
+      it("should maintain proper layout with SearchConfigTrigger", () => {
+        const { container } = render(
+          <NoResultsMessage {...defaultPropsWithConfig} />,
+        );
+
+        // SearchConfigTrigger should be in absolute positioned container
+        expect(screen.getByTestId("search-config-trigger")).toBeInTheDocument();
+
+        // Main content div should still be centered
+        const mainContentDiv = container.querySelector(
+          ".flex.h-full.flex-col.items-center.justify-center",
+        );
+        expect(mainContentDiv).toBeInTheDocument();
+        expect(mainContentDiv).toHaveClass(
+          "flex",
+          "h-full",
+          "flex-col",
+          "items-center",
+          "justify-center",
+          "p-3",
+          "text-center",
+        );
+      });
+
+      it("should call setShowConfig when SearchConfigTrigger is clicked", async () => {
+        const user = userEvent.setup();
+        render(<NoResultsMessage {...defaultPropsWithConfig} />);
+
+        const configTrigger = screen.getByTestId("search-config-trigger");
+        await user.click(configTrigger);
+
+        expect(mockSetShowConfig).toHaveBeenCalledWith(true);
+        expect(mockSetShowConfig).toHaveBeenCalledTimes(1);
+      });
+
+      it("should not interfere with clear search functionality", async () => {
+        const user = userEvent.setup();
+        render(<NoResultsMessage {...defaultPropsWithConfig} />);
+
+        // SearchConfigTrigger should work
+        const configTrigger = screen.getByTestId("search-config-trigger");
+        await user.click(configTrigger);
+        expect(mockSetShowConfig).toHaveBeenCalledTimes(1);
+
+        // Clear search should still work
+        const clearLink = screen.getByText("Clear your search");
+        await user.click(clearLink);
+        expect(mockOnClearSearch).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe("Component Structure with SearchConfigTrigger", () => {
+      it("should have relative positioning container as root", () => {
+        const { container } = render(
+          <NoResultsMessage {...defaultPropsWithConfig} />,
+        );
+
+        const rootDiv = container.firstChild as HTMLElement;
+        expect(rootDiv).toHaveClass("flex", "h-full", "flex-col", "relative");
+      });
+
+      it("should render both SearchConfigTrigger and main content", () => {
+        render(<NoResultsMessage {...defaultPropsWithConfig} />);
+
+        // SearchConfigTrigger should be present
+        expect(screen.getByTestId("search-config-trigger")).toBeInTheDocument();
+
+        // Main content should still be present using partial text matching
+        expect(screen.getByText(/No components found/)).toBeInTheDocument();
+        expect(screen.getByText("Clear your search")).toBeInTheDocument();
+      });
+
+      it("should handle custom props with SearchConfigTrigger", () => {
+        const customPropsWithConfig = {
+          ...defaultPropsWithConfig,
+          message: "Custom message with config",
+          clearSearchText: "Custom clear",
+          additionalText: "Custom additional",
+          showConfig: true,
+        };
+
+        const { container } = render(
+          <NoResultsMessage {...customPropsWithConfig} />,
+        );
+
+        // SearchConfigTrigger should be present and show correct state
+        expect(screen.getByText("Config Toggle: true")).toBeInTheDocument();
+
+        // Custom text should be rendered
+        expect(container.textContent).toContain("Custom message with config");
+        expect(screen.getByText("Custom clear")).toBeInTheDocument();
+        expect(container.textContent).toContain("Custom additional");
+      });
     });
   });
 });

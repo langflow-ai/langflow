@@ -1,12 +1,15 @@
-import { memo, useState } from "react";
+import { memo } from "react";
 import {
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
 } from "@/components/ui/sidebar";
+import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { SIDEBAR_BUNDLES } from "@/utils/styleUtils";
 import type { CategoryGroupProps } from "../types";
 import { CategoryDisclosure } from "./categoryDisclouse";
+import { SearchConfigTrigger } from "./searchConfigTrigger";
 
 export const CategoryGroup = memo(function CategoryGroup({
   dataFilter,
@@ -18,17 +21,29 @@ export const CategoryGroup = memo(function CategoryGroup({
   nodeColors,
   onDragStart,
   sensitiveSort,
+  showConfig,
+  setShowConfig,
 }: CategoryGroupProps) {
   return (
-    <SidebarGroup className="p-3">
+    <SidebarGroup className="p-3 pr-2">
+      {ENABLE_NEW_SIDEBAR && (
+        <SidebarGroupLabel className="cursor-default flex items-center justify-between w-full">
+          <span>Components</span>
+          <SearchConfigTrigger
+            showConfig={showConfig}
+            setShowConfig={setShowConfig}
+          />
+        </SidebarGroupLabel>
+      )}
       <SidebarGroupContent>
         <SidebarMenu>
           {Object.entries(dataFilter)
             .filter(
               ([categoryName, items]) =>
-                // filter out bundles
+                // filter out bundles and MCP
                 !SIDEBAR_BUNDLES.some((cat) => cat.name === categoryName) &&
                 categoryName !== "custom_component" &&
+                categoryName !== "MCP" &&
                 Object.keys(items).length > 0,
             )
             .sort(([aName], [bName]) => {

@@ -1,0 +1,97 @@
+[project]
+name = "lfx"
+version = "0.2.0"
+description = "Langflow Executor - A lightweight CLI tool for executing and serving Langflow AI flows"
+readme = "README.md"
+authors = [
+    { name = "Gabriel Luiz Freitas Almeida", email = "gabriel@langflow.org" }
+]
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "langchain-core>=0.3.66,<1.0.0",
+    "pandas>=2.0.0,<3.0.0",
+    "pydantic>=2.0.0,<3.0.0",
+    "pillow>=10.0.0,<13.0.0",
+    "fastapi>=0.115.13,<1.0.0",
+    "uvicorn>=0.34.3,<1.0.0",
+    "typer>=0.16.0,<1.0.0",
+    "platformdirs>=4.3.8,<5.0.0",
+    "aiofiles>=24.1.0,<25.0.0",
+    "typing-extensions>=4.14.0,<5.0.0",
+    "python-dotenv>=1.0.0,<2.0.0",
+    "rich>=13.0.0,<14.0.0",
+    "httpx[http2]>=0.24.0,<1.0.0",
+    "aiofile>=3.8.0,<4.0.0",
+    "json-repair>=0.30.3,<1.0.0",
+    "docstring-parser>=0.16,<1.0.0",
+    "networkx>=3.4.2,<4.0.0",
+    "nanoid>=2.0.0,<3.0.0",
+    "cachetools>=5.5.2,<6.0.0",
+    "emoji>=2.14.1,<3.0.0",
+    "chardet>=5.2.0,<6.0.0",
+    "defusedxml>=0.7.1,<1.0.0",
+    "passlib>=1.7.4,<2.0.0",
+    "pydantic-settings>=2.10.1,<3.0.0",
+    "tomli>=2.2.1,<3.0.0",
+    "orjson>=3.10.15,<4.0.0",
+    "asyncer>=0.0.8,<1.0.0",
+    "structlog>=25.4.0,<26.0.0",
+    "loguru>=0.7.3,<1.0.0",
+    "langchain~=0.3.23",
+    "validators>=0.34.0,<1.0.0",
+]
+
+[project.scripts]
+lfx = "lfx.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v --tb=short --strict-markers --disable-warnings --color=yes"
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow-running tests",
+    "asyncio: Async tests"
+]
+
+[dependency-groups]
+dev = [
+    "asgi-lifespan>=2.1.0",
+    "blockbuster>=1.5.25",
+    "coverage>=7.9.2",
+    "hypothesis>=6.136.3",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=0.26.0",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.9.10",
+]
+
+[tool.coverage.run]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/__init__.py",
+    "*/components/*",  # Third-party integrations tracked separately
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == '__main__':",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]

@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -25,10 +26,9 @@ test(
 
     await page.mouse.up();
     await page.mouse.down();
+    await adjustScreenView(page);
 
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
+    await zoomOut(page, 2);
 
     await expect(page.getByText("api_key")).toBeVisible({
       timeout: 3000,
@@ -76,7 +76,7 @@ test(
         targetPosition: { x: 300, y: 300 },
       });
 
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     await page.getByTestId("title-SearchApi").first().click();
     await page.getByTestId("tool-mode-button").click();

@@ -1,12 +1,11 @@
-import os
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langflow.components.vectorstores.local_db import LocalDBComponent
-from langflow.schema.data import Data
 from langflow.services.cache.utils import CACHE_DIR
+from lfx.components.vectorstores.local_db import LocalDBComponent
+from lfx.schema.data import Data
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
@@ -21,12 +20,14 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self, tmp_path: Path) -> dict[str, Any]:
         """Return the default kwargs for the component."""
-        from langflow.components.openai.openai import OpenAIEmbeddingsComponent
+        from lfx.components.openai.openai import OpenAIEmbeddingsComponent
 
-        if os.getenv("OPENAI_API_KEY") is None:
+        from tests.api_keys import get_openai_api_key
+
+        try:
+            api_key = get_openai_api_key()
+        except ValueError:
             pytest.skip("OPENAI_API_KEY is not set")
-
-        api_key = os.getenv("OPENAI_API_KEY")
 
         return {
             "embedding": OpenAIEmbeddingsComponent(openai_api_key=api_key).build_embeddings(),
@@ -370,7 +371,7 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
         updated_config = component.update_build_config(build_config, "new_collection", "existing_collections")
         assert updated_config["collection_name"]["value"] == "new_collection"
 
-    @patch("langflow.components.vectorstores.local_db.LocalDBComponent.list_existing_collections")
+    @patch("lfx.components.vectorstores.local_db.LocalDBComponent.list_existing_collections")
     def test_list_existing_collections(self, mock_list: MagicMock, component_class: type[LocalDBComponent]) -> None:
         """Test the list_existing_collections method."""
         mock_list.return_value = ["collection1", "collection2", "collection3"]

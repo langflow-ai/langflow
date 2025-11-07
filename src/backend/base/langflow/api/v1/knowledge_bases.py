@@ -6,20 +6,29 @@ from pathlib import Path
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from langchain_chroma import Chroma
-from loguru import logger
+from lfx.log import logger
 from pydantic import BaseModel
 
+from langflow.api.utils import CurrentActiveUser
 from langflow.services.deps import get_settings_service
 
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases")
 
 
-settings = get_settings_service().settings
-knowledge_directory = settings.knowledge_bases_dir
-if not knowledge_directory:
-    msg = "Knowledge bases directory is not set in the settings."
-    raise ValueError(msg)
-KNOWLEDGE_BASES_DIR = Path(knowledge_directory).expanduser()
+_KNOWLEDGE_BASES_DIR: Path | None = None
+
+
+def _get_knowledge_bases_dir() -> Path:
+    """Lazy load the knowledge bases directory from settings."""
+    global _KNOWLEDGE_BASES_DIR  # noqa: PLW0603
+    if _KNOWLEDGE_BASES_DIR is None:
+        settings = get_settings_service().settings
+        knowledge_directory = settings.knowledge_bases_dir
+        if not knowledge_directory:
+            msg = "Knowledge bases directory is not set in the settings."
+            raise ValueError(msg)
+        _KNOWLEDGE_BASES_DIR = Path(knowledge_directory).expanduser()
+    return _KNOWLEDGE_BASES_DIR
 
 
 class KnowledgeBaseInfo(BaseModel):
@@ -40,7 +49,7 @@ class BulkDeleteRequest(BaseModel):
 
 def get_kb_root_path() -> Path:
     """Get the knowledge bases root path."""
-    return KNOWLEDGE_BASES_DIR
+    return _get_knowledge_bases_dir()
 
 
 def get_directory_size(path: Path) -> int:
@@ -194,10 +203,10 @@ def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[i
             continue
 
         text_series = df[col].astype(str).fillna("")
-        total_characters += text_series.str.len().sum()
-        total_words += text_series.str.split().str.len().sum()
+        total_characters += int(text_series.str.len().sum().item())
+        total_words += int(text_series.str.split().str.len().sum().item())
 
-    return int(total_words), int(total_characters)
+    return total_words, total_characters
 
 
 def get_kb_metadata(kb_path: Path) -> dict:
@@ -251,7 +260,7 @@ def get_kb_metadata(kb_path: Path) -> dict:
         )
 
         # Access the raw collection
-        collection = chroma._collection
+        collection = chroma._collection  # noqa: SLF001
 
         # Fetch all documents and metadata
         results = collection.get(include=["documents", "metadatas"])
@@ -290,17 +299,19 @@ def get_kb_metadata(kb_path: Path) -> dict:
 
 @router.get("", status_code=HTTPStatus.OK)
 @router.get("/", status_code=HTTPStatus.OK)
-async def list_knowledge_bases() -> list[KnowledgeBaseInfo]:
+async def list_knowledge_bases(current_user: CurrentActiveUser) -> list[KnowledgeBaseInfo]:
     """List all available knowledge bases."""
     try:
         kb_root_path = get_kb_root_path()
+        kb_user = current_user.username
+        kb_path = kb_root_path / kb_user
 
-        if not kb_root_path.exists():
+        if not kb_path.exists():
             return []
 
         knowledge_bases = []
 
-        for kb_dir in kb_root_path.iterdir():
+        for kb_dir in kb_path.iterdir():
             if not kb_dir.is_dir() or kb_dir.name.startswith("."):
                 continue
 
@@ -327,7 +338,7 @@ async def list_knowledge_bases() -> list[KnowledgeBaseInfo]:
 
             except OSError as _:
                 # Log the exception and skip directories that can't be read
-                logger.exception("Error reading knowledge base directory '%s'", kb_dir)
+                await logger.aexception("Error reading knowledge base directory '%s'", kb_dir)
                 continue
 
         # Sort by name alphabetically
@@ -340,11 +351,12 @@ async def list_knowledge_bases() -> list[KnowledgeBaseInfo]:
 
 
 @router.get("/{kb_name}", status_code=HTTPStatus.OK)
-async def get_knowledge_base(kb_name: str) -> KnowledgeBaseInfo:
+async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> KnowledgeBaseInfo:
     """Get detailed information about a specific knowledge base."""
     try:
         kb_root_path = get_kb_root_path()
-        kb_path = kb_root_path / kb_name
+        kb_user = current_user.username
+        kb_path = kb_root_path / kb_user / kb_name
 
         if not kb_path.exists() or not kb_path.is_dir():
             raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
@@ -374,11 +386,12 @@ async def get_knowledge_base(kb_name: str) -> KnowledgeBaseInfo:
 
 
 @router.delete("/{kb_name}", status_code=HTTPStatus.OK)
-async def delete_knowledge_base(kb_name: str) -> dict[str, str]:
+async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> dict[str, str]:
     """Delete a specific knowledge base."""
     try:
         kb_root_path = get_kb_root_path()
-        kb_path = kb_root_path / kb_name
+        kb_user = current_user.username
+        kb_path = kb_root_path / kb_user / kb_name
 
         if not kb_path.exists() or not kb_path.is_dir():
             raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
@@ -396,15 +409,17 @@ async def delete_knowledge_base(kb_name: str) -> dict[str, str]:
 
 @router.delete("", status_code=HTTPStatus.OK)
 @router.delete("/", status_code=HTTPStatus.OK)
-async def delete_knowledge_bases_bulk(request: BulkDeleteRequest) -> dict[str, object]:
+async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: CurrentActiveUser) -> dict[str, object]:
     """Delete multiple knowledge bases."""
     try:
         kb_root_path = get_kb_root_path()
+        kb_user = current_user.username
+        kb_user_path = kb_root_path / kb_user
         deleted_count = 0
         not_found_kbs = []
 
         for kb_name in request.kb_names:
-            kb_path = kb_root_path / kb_name
+            kb_path = kb_user_path / kb_name
 
             if not kb_path.exists() or not kb_path.is_dir():
                 not_found_kbs.append(kb_name)
@@ -415,7 +430,7 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest) -> dict[str, o
                 shutil.rmtree(kb_path)
                 deleted_count += 1
             except (OSError, PermissionError) as e:
-                logger.exception("Error deleting knowledge base '%s': %s", kb_name, e)
+                await logger.aexception("Error deleting knowledge base '%s': %s", kb_name, e)
                 # Continue with other deletions even if one fails
 
         if not_found_kbs and deleted_count == 0:

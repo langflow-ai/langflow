@@ -1,5 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -166,9 +167,7 @@ test(
       .nth(1);
     await elementCombineTextInput1.click();
 
-    await page.getByTitle("fit view").click();
-
-    await zoomOut(page, 2);
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     await page
       .getByTestId("title-Combine Text")

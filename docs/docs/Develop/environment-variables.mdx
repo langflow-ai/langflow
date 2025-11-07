@@ -1,0 +1,490 @@
+---
+title: Environment variables
+slug: /environment-variables
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Link from '@docusaurus/Link';
+
+In general, environment variables, like `LANGFLOW_PORT` or `LANGFLOW_LOG_LEVEL`, configure how Langflow runs.
+These are broad settings that apply to your entire Langflow deployment.
+
+In contrast, global variables are user-defined values stored in Langflow's database for use in flows, such as `OPENAI_API_KEY`.
+Langflow can also source global variables from environment variables.
+For more information, see [Langflow global variables](/configuration-global-variables).
+
+## Configure environment variables for Langflow OSS
+
+Langflow recognizes [supported environment variables](#supported-variables) from the following sources:
+
+- Environment variables set in your terminal.
+- Environment variables imported from a `.env` file when starting Langflow.
+- Environment variables set with the [Langflow CLI](./configuration-cli), including the `--env-file` option and direct options, such as `--port`.
+
+You can choose to use one or more of these sources.
+
+### Precedence {#precedence}
+
+If the same environment variable is set in multiple places, the following hierarchy applies:
+
+1. Langflow CLI options override all other sources.
+2. The `.env` file overrides system environment variables.
+3. System environment variables are used only if not set elsewhere.
+When running a Langflow Docker image, the `-e` flag can be used to set additional system environment variables.
+
+For example:
+
+* If you set `LANGFLOW_PORT=8080` in your system environment and `LANGFLOW_PORT=7860` in `.env`, Langflow uses `7860` from `.env`.
+* If you use the Langflow CLI to run `langflow run --env-file .env --port 9000`, and you set `LANGFLOW_PORT=7860` in `.env`, then Langflow uses `9000` from the CLI option.
+
+### Set environment variables in your terminal {#configure-variables-terminal}
+
+Run the following commands to set environment variables for your current terminal session:
+
+<Tabs>
+<TabItem value="linux-macos" label="Linux or macOS" default>
+
+```bash
+export VARIABLE_NAME='VALUE'
+```
+
+</TabItem>
+<TabItem value="windows" label="Windows">
+
+```
+set VARIABLE_NAME='VALUE'
+```
+
+</TabItem>
+<TabItem value="docker" label="Docker">
+
+```bash
+docker run -it --rm \
+    -p 7860:7860 \
+    -e VARIABLE_NAME='VALUE' \
+    langflowai/langflow:latest
+```
+
+</TabItem>
+</Tabs>
+
+When you start Langflow, it looks for environment variables that you've set in your terminal.
+If it detects a supported environment variable, then it automatically adopts the specified value, subject to [precedence rules](#precedence).
+
+### Import environment variables from a .env file {#configure-variables-env-file}
+
+1. If Langflow is running, quit Langflow.
+
+2. Create a `.env` file, and then open it in your preferred editor.
+
+3. Define [Langflow environment variables](#supported-variables) in the `.env` file.
+
+    <details>
+    <summary>Example: .env</summary>
+
+    ```text
+    DO_NOT_TRACK=True
+    LANGFLOW_AUTO_LOGIN=False
+    LANGFLOW_AUTO_SAVING=True
+    LANGFLOW_AUTO_SAVING_INTERVAL=1000
+    LANGFLOW_BACKEND_ONLY=False
+    LANGFLOW_BUNDLE_URLS=["https://github.com/user/repo/commit/hash"]
+    LANGFLOW_CACHE_TYPE=async
+    LANGFLOW_COMPONENTS_PATH=/path/to/components/
+    LANGFLOW_CONFIG_DIR=/path/to/config/
+    LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
+    LANGFLOW_DEV=False
+    LANGFLOW_FALLBACK_TO_ENV_VAR=False
+    LANGFLOW_HEALTH_CHECK_MAX_RETRIES=5
+    LANGFLOW_HOST=localhost
+    LANGFLOW_LANGCHAIN_CACHE=InMemoryCache
+    LANGFLOW_MAX_FILE_SIZE_UPLOAD=10000
+    LANGFLOW_MAX_ITEMS_LENGTH=100
+    LANGFLOW_MAX_TEXT_LENGTH=1000
+    LANGFLOW_LOG_LEVEL=error
+    LANGFLOW_OPEN_BROWSER=False
+    LANGFLOW_PORT=7860
+    LANGFLOW_REMOVE_API_KEYS=False
+    LANGFLOW_SAVE_DB_IN_CONFIG_DIR=True
+    LANGFLOW_SECRET_KEY=somesecretkey
+    LANGFLOW_STORE_ENVIRONMENT_VARIABLES=True
+    LANGFLOW_SUPERUSER=adminuser
+    LANGFLOW_SUPERUSER_PASSWORD=adminpass
+    LANGFLOW_WORKER_TIMEOUT=60000
+    LANGFLOW_WORKERS=3
+    ```
+
+    For additional examples, see [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) in the Langflow repository.
+
+    </details>
+
+4. Save and close `.env`.
+
+5. Start Langflow with your `.env` file:
+
+    <Tabs>
+    <TabItem value="local" label="Local" default>
+
+    ```bash
+    uv run langflow run --env-file .env
+    ```
+
+    </TabItem>
+    <TabItem value="docker" label="Docker">
+
+    ```bash
+    docker run -it --rm \
+        -p 7860:7860 \
+        --env-file .env \
+        langflowai/langflow:latest
+    ```
+
+    </TabItem>
+    </Tabs>
+
+    If your `.env` file isn't in the same directory, provide the path to your `.env` file.
+
+On startup, Langflow imports the environment variables from your `.env` file, as well as any others that you set in your terminal, and then adopts their specified values.
+
+### Configure environment variables for development
+
+The following examples show how to configure Langflow using environment variables in different development scenarios.
+
+<Tabs>
+<TabItem value="env" label=".env file" default>
+
+The `.env` file is a text file that contains key-value pairs of environment variables.
+
+Create or edit a `.env` file in the root directory of your application or Langflow environment, and then add your configuration variables to the file:
+
+<details>
+<summary>Example: .env</summary>
+
+```text title=".env"
+DO_NOT_TRACK=True
+LANGFLOW_AUTO_LOGIN=False
+LANGFLOW_AUTO_SAVING=True
+LANGFLOW_AUTO_SAVING_INTERVAL=1000
+LANGFLOW_BACKEND_ONLY=False
+LANGFLOW_BUNDLE_URLS=["https://github.com/user/repo/commit/hash"]
+LANGFLOW_CACHE_TYPE=async
+LANGFLOW_COMPONENTS_PATH=/path/to/components/
+LANGFLOW_CONFIG_DIR=/path/to/config/
+LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
+LANGFLOW_DEV=False
+LANGFLOW_FALLBACK_TO_ENV_VAR=False
+LANGFLOW_HEALTH_CHECK_MAX_RETRIES=5
+LANGFLOW_HOST=localhost
+LANGFLOW_LANGCHAIN_CACHE=InMemoryCache
+LANGFLOW_MAX_FILE_SIZE_UPLOAD=10000
+LANGFLOW_MAX_ITEMS_LENGTH=100
+LANGFLOW_MAX_TEXT_LENGTH=1000
+LANGFLOW_LOG_LEVEL=error
+LANGFLOW_OPEN_BROWSER=False
+LANGFLOW_PORT=7860
+LANGFLOW_REMOVE_API_KEYS=False
+LANGFLOW_SAVE_DB_IN_CONFIG_DIR=True
+LANGFLOW_SECRET_KEY=somesecretkey
+LANGFLOW_STORE_ENVIRONMENT_VARIABLES=True
+LANGFLOW_SUPERUSER=adminuser
+LANGFLOW_SUPERUSER_PASSWORD=adminpass
+LANGFLOW_WORKER_TIMEOUT=60000
+LANGFLOW_WORKERS=3
+```
+
+</details>
+
+</TabItem>
+<TabItem value="systemd" label="Systemd service">
+
+A systemd service configuration file configures Linux system services.
+
+To add environment variables, create or edit a service configuration file and add an `override.conf` file. This file allows you to override the default environment variables for the service.
+
+<details>
+<summary>Example: override.conf</summary>
+
+```ini title="override.conf"
+[Service]
+Environment="DO_NOT_TRACK=true"
+Environment="LANGFLOW_AUTO_LOGIN=false"
+Environment="LANGFLOW_AUTO_SAVING=true"
+Environment="LANGFLOW_AUTO_SAVING_INTERVAL=1000"
+Environment="LANGFLOW_BACKEND_ONLY=false"
+Environment="LANGFLOW_BUNDLE_URLS=[\"https://github.com/user/repo/commit/hash\"]"
+Environment="LANGFLOW_CACHE_TYPE=async"
+Environment="LANGFLOW_COMPONENTS_PATH=/path/to/components/"
+Environment="LANGFLOW_CONFIG_DIR=/path/to/config"
+Environment="LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow"
+Environment="LANGFLOW_DEV=false"
+Environment="LANGFLOW_FALLBACK_TO_ENV_VAR=false"
+Environment="LANGFLOW_HEALTH_CHECK_MAX_RETRIES=5"
+Environment="LANGFLOW_HOST=localhost"
+Environment="LANGFLOW_LANGCHAIN_CACHE=InMemoryCache"
+Environment="LANGFLOW_MAX_FILE_SIZE_UPLOAD=10000"
+Environment="LANGFLOW_MAX_ITEMS_LENGTH=100"
+Environment="LANGFLOW_MAX_TEXT_LENGTH=1000"
+Environment="LANGFLOW_LOG_ENV=container_json"
+Environment="LANGFLOW_LOG_FILE=logs/langflow.log"
+Environment="LANGFLOW_LOG_LEVEL=error"
+Environment="LANGFLOW_OPEN_BROWSER=false"
+Environment="LANGFLOW_PORT=7860"
+Environment="LANGFLOW_REMOVE_API_KEYS=false"
+Environment="LANGFLOW_SAVE_DB_IN_CONFIG_DIR=true"
+Environment="LANGFLOW_SECRET_KEY=somesecretkey"
+Environment="LANGFLOW_STORE_ENVIRONMENT_VARIABLES=true"
+Environment="LANGFLOW_SUPERUSER=adminuser"
+Environment="LANGFLOW_SUPERUSER_PASSWORD=adminpass"
+Environment="LANGFLOW_WORKER_TIMEOUT=60000"
+Environment="LANGFLOW_WORKERS=3"
+```
+
+</details>
+
+For more information on systemd, see the [Red Hat documentation](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_systemd_unit_files_to_customize_and_optimize_your_system/assembly_working-with-systemd-unit-files_working-with-systemd).
+
+</TabItem>
+<TabItem value="vscode" label="VSCode tasks.json">
+
+The `tasks.json` file located in `.vscode/tasks.json` is a configuration file for development environments using Visual Studio Code.
+
+Create or edit the `.vscode/tasks.json` file in your project root.
+
+<details>
+<summary>Example: .vscode/tasks.json</summary>
+
+```json title=".vscode/tasks.json"
+{
+    "version": "2.0.0",
+    "options": {
+        "env": {
+            "DO_NOT_TRACK": "true",
+            "LANGFLOW_AUTO_LOGIN": "false",
+            "LANGFLOW_AUTO_SAVING": "true",
+            "LANGFLOW_AUTO_SAVING_INTERVAL": "1000",
+            "LANGFLOW_BACKEND_ONLY": "false",
+            "LANGFLOW_BUNDLE_URLS": "[\"https://github.com/user/repo/commit/hash\"]",
+            "LANGFLOW_CACHE_TYPE": "async",
+            "LANGFLOW_COMPONENTS_PATH": "D:/path/to/components/",
+            "LANGFLOW_CONFIG_DIR": "D:/path/to/config/",
+            "LANGFLOW_DATABASE_URL": "postgresql://postgres:password@localhost:5432/langflow",
+            "LANGFLOW_DEV": "false",
+            "LANGFLOW_FALLBACK_TO_ENV_VAR": "false",
+            "LANGFLOW_HEALTH_CHECK_MAX_RETRIES": "5",
+            "LANGFLOW_HOST": "localhost",
+            "LANGFLOW_LANGCHAIN_CACHE": "InMemoryCache",
+            "LANGFLOW_MAX_FILE_SIZE_UPLOAD": "10000",
+            "LANGFLOW_MAX_ITEMS_LENGTH": "100",
+            "LANGFLOW_MAX_TEXT_LENGTH": "1000",
+            "LANGFLOW_LOG_ENV": "container_csv",
+            "LANGFLOW_LOG_FILE": "langflow.log",
+            "LANGFLOW_LOG_LEVEL": "error",
+            "LANGFLOW_OPEN_BROWSER": "false",
+            "LANGFLOW_PORT": "7860",
+            "LANGFLOW_REMOVE_API_KEYS": "true",
+            "LANGFLOW_SAVE_DB_IN_CONFIG_DIR": "false",
+            "LANGFLOW_SECRET_KEY": "somesecretkey",
+            "LANGFLOW_STORE_ENVIRONMENT_VARIABLES": "true",
+            "LANGFLOW_SUPERUSER": "adminuser",
+            "LANGFLOW_SUPERUSER_PASSWORD": "adminpass",
+            "LANGFLOW_WORKER_TIMEOUT": "60000",
+            "LANGFLOW_WORKERS": "3"
+        }
+    },
+    "tasks": [
+        {
+            "label": "langflow backend",
+            "type": "shell",
+            "command": ". ./langflownightly/Scripts/activate && langflow run",
+            "isBackground": true,
+            "problemMatcher": []
+        }
+    ]
+}
+```
+
+</details>
+
+To run Langflow using the above VSCode `tasks.json` file, in the VSCode command palette, select **Tasks: Run Task** > **langflow backend**.
+
+</TabItem>
+</Tabs>
+
+## Set environment variables for Langflow Desktop
+
+Environment variables set in your terminal aren't automatically available to GUI-based applications like Langflow Desktop when you launch them from the Windows or macOS GUI.
+
+For Windows, this means any GUI-based app launched from the Start menu, desktop shortcuts, or Windows Explorer.
+
+For macOS, this means any GUI-based app launched from Finder, Spotlight, Launchpad, or the Dock.
+
+To set environment variables for Langflow Desktop, you need to use specific commands or files, depending on your OS.
+
+<Tabs>
+<TabItem value="macos" label="macOS" default>
+
+Langflow Desktop for macOS cannot automatically use variables set in your terminal, such as those in`.zshrc` or `.bash_profile`, when launched from the macOS GUI.
+
+To make environment variables available to GUI apps on macOS, you need to use `launchctl` with a `plist` file:
+
+1. Create the `LaunchAgents` directory if it doesn't exist:
+
+    ```bash
+    mkdir -p ~/Library/LaunchAgents
+    ```
+
+2. In the `LaunchAgents` directory, create a `.plist` file called `dev.langflow.env`.
+
+3. Add the following content to `dev.langflow.env.plist`, and then add, change, or remove Langflow environment variables as needed for your configuration.
+
+    This example sets multiple environmental variables for all GUI apps launched from the macOS GUI.
+
+    ```xml
+     <?xml version="1.0" encoding="UTF-8"?>
+     <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+     <plist version="1.0">
+     <dict>
+       <key>Label</key>
+       <string>dev.langflow.env</string>
+       <key>ProgramArguments</key>
+       <array>
+         <string>/bin/sh</string>
+         <string>-c</string>
+          <string>
+            launchctl setenv LANGFLOW_CONFIG_DIR /Users/your_user/custom/config &&
+            launchctl setenv LANGFLOW_PORT 7860 &&
+            launchctl setenv LANGFLOW_HOST localhost &&
+            launchctl setenv ARIZE_API_KEY ak-...
+          </string>
+       </array>
+       <key>RunAtLoad</key>
+       <true/>
+     </dict>
+     </plist>
+    ```
+4. Load the file with `launchctl`:
+
+    ```bash
+    launchctl load ~/Library/LaunchAgents/dev.langflow.env.plist
+    ```
+
+</TabItem>
+<TabItem value="windows1" label="Window System Properties">
+
+Langflow Desktop for Windows cannot automatically use variables set in your terminal, such as those defined with `set` in `cmd` or `$env:VAR=...` in PowerShell, when launched from the Windows GUI.
+
+To make environment variables available to the Langflow Desktop app, you must set them at the user or system level using the **System Properties** interface or the Terminal.
+
+To set environment variables using the System Properties interface, do the following:
+
+1. Press <kbd>Win + R</kbd>, enter `SystemPropertiesAdvanced`, and then press <kbd>Enter</kbd>.
+2. Click **Environment Variables**.
+3. Under **User variables**, click **New**.
+
+    :::tip
+    To apply the setting to all users, select **System variables**.
+    :::
+
+4. Enter the name of the Langflow variable you want to set, such as `LANGFLOW_CONFIG_DIR`, and the desired value, such as `C:\Users\your_user\.langflow_config`.
+5. Click **OK** to save the variable.
+6. Repeat until you have set all necessary Langflow environment variables.
+7. Launch or restart Langflow Desktop to apply the environment variables.
+
+</TabItem>
+<TabItem value="windows2" label="Powershell">
+
+To define environment variables for Windows using PowerShell, do the following:
+
+1. Enter the name of the Langflow variable you want to set, such as `LANGFLOW_CONFIG_DIR`, and the desired value, such as `C:\Users\your_user\.langflow_config`.
+
+    To set an environment variable for the current user:
+    ```powershell
+    [System.Environment]::SetEnvironmentVariable("LANGFLOW_CONFIG_DIR", "C:\Users\your_user\.langflow_config", "User")
+    ```
+
+   To set an environment variable for all users (you must have Administrator priveleges):
+   ```powershell
+   [System.Environment]::SetEnvironmentVariable("LANGFLOW_CONFIG_DIR", "C:\Langflow\Config", "Machine")
+   ```
+
+2. Repeat until you have set all necessary Langflow environment variables.
+3. Launch or restart Langflow Desktop to apply the environment variables.
+
+</TabItem>
+</Tabs>
+
+## Supported environment variables {#supported-variables}
+
+The following sections provide information about specific Langflow environment variables.
+
+### Authentication and security
+
+See [API keys and authentication](/api-keys-and-authentication).
+
+### Global variables
+
+For information about the relationship between Langflow global variables and environment variables, as well as environment variables that control handling of global variables, see [Global variables](/configuration-global-variables).
+
+### Logs {#logging}
+
+See [Configure log options](/logging#log-storage).
+
+### MCP servers {#mcp}
+
+See [Use Langflow as an MCP server](/mcp-server).
+
+### Monitoring and metrics
+
+For environment variables for specific monitoring service providers, see the Langflow monitoring integration guides, such as [Langfuse](/integrations-langfuse) and [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices).
+
+### Server
+
+The following environment variables set base Langflow server configuration, such as where the server is hosted, required files for SSL encryption, and the deployment type (frontend and backend, backend-only, development mode).
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_HOST` | String | `localhost` | The host on which the Langflow server will run. |
+| `LANGFLOW_PORT` | Integer | `7860` | The port on which the Langflow server runs. The server automatically selects a free port if the specified port is in use. |
+| `LANGFLOW_BACKEND_ONLY` | Boolean | `False` | Run only the Langflow backend service (no frontend). |
+| `LANGFLOW_DEV` | Boolean | `False` | Whether to run Langflow in development mode (may contain bugs). |
+| `LANGFLOW_OPEN_BROWSER` | Boolean | `False` | Open the system web browser on startup. |
+| `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for Langflow's server status health checks. |
+| `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. |
+| `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. |
+| `LANGFLOW_SSL_CERT_FILE` | String | Not set | Path to the SSL certificate file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
+| `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
+| `LANGFLOW_DEACTIVATE_TRACING` | Boolean | `False` | Deactivate tracing functionality. |
+| `LANGFLOW_CELERY_ENABLED` | Boolean | `False` | Enable Celery for distributed task processing. |
+
+For more information about deploying Langflow servers, see [Langflow deployment overview](/deployment-overview).
+
+### Storage
+
+See [Memory management options](/memory) and [Manage files](/concepts-file-management).
+
+### Telemetry
+
+See [Telemetry](/contributing-telemetry).
+
+### Visual editor and Playground behavior
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_AUTO_SAVING` | Boolean | `True` | Whether to automatically save flows. |
+| `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `1000` | Set the auto-save interval in milliseconds if `LANGFLOW_AUTO_SAVING=True`. |
+| `LANGFLOW_BUNDLE_URLS` | List[String] | `[]` | A list of URLs from which to load custom bundles. Supports GitHub URLs. If `LANGFLOW_AUTO_LOGIN=True`, flows from these bundles are loaded into the database. |
+| `LANGFLOW_COMPONENTS_PATH` | String | Not set | Path to a directory containing custom components. Typically used if you have local custom components or you are building a Docker image with custom components. |
+| `LANGFLOW_LOAD_FLOWS_PATH` | String | Not set | Path to a directory containing flow JSON files to be loaded on startup. Typically used when creating a Docker image with prepackaged flows. Requires `LANGFLOW_AUTO_LOGIN=True`. |
+| `LANGFLOW_CREATE_STARTER_PROJECTS` | Boolean | `True` | Whether to create templates during initialization. If `false`, Langflow doesn't create templates, and `LANGFLOW_UPDATE_STARTER_PROJECTS` is treated as `false`. |
+| `LANGFLOW_UPDATE_STARTER_PROJECTS` | Boolean | `True` | Whether to update templates with the latest component versions when initializing after an upgrade. |
+| `LANGFLOW_LAZY_LOAD_COMPONENTS` | Boolean | `False` | If `true`, Langflow only partially loads components at startup and fully loads them on demand. This significantly reduces startup time but can cause a slight delay when a component is first used. |
+| `LANGFLOW_EVENT_DELIVERY` | String | `streaming` | How to deliver build events to the frontend: `polling`, `streaming` or `direct`. |
+| `LANGFLOW_FRONTEND_PATH` | String | `./frontend` | Path to the frontend directory containing build files. For development purposes only when you need to serve specific frontend code. |
+| `LANGFLOW_MAX_ITEMS_LENGTH` | Integer | `100` | Maximum number of items to store and display in the visual editor. Lists longer than this will be truncated when displayed in the visual editor. Doesn't affect outputs or data passed between components. |
+| `LANGFLOW_MAX_TEXT_LENGTH` | Integer | `1000` | Maximum number of characters to store and display in the visual editor. Responses longer than this will be truncated when displayed in the visual editor. Doesn't truncate outputs or responses passed between components. |
+| `LANGFLOW_MAX_TRANSACTIONS_TO_KEEP` | Integer | `3000` | Maximum number of flow transaction events to keep in the database. |
+| `LANGFLOW_MAX_VERTEX_BUILDS_TO_KEEP` | Integer | `3000` | Maximum number of vertex builds to keep in the database. Relates to [Playground](/concepts-playground) functionality. |
+| `LANGFLOW_MAX_VERTEX_BUILDS_PER_VERTEX` | Integer | `2` | Maximum number of builds to keep per vertex. Older builds are deleted. Relates to [Playground](/concepts-playground) functionality. |
+| `LANGFLOW_PUBLIC_FLOW_CLEANUP_INTERVAL` | Integer | `3600` | The interval in seconds at which data for [shared Playground](/concepts-playground#share-a-flows-playground) flows are cleaned up. Default: 3600 seconds (1 hour). Minimum: 600 seconds (10 minutes). |
+| `LANGFLOW_PUBLIC_FLOW_EXPIRATION` | Integer | `86400` | The time in seconds after which a [shared Playground](/concepts-playground#share-a-flows-playground) flow is considered expired and eligible for cleanup. Default: 86400 seconds (24 hours). Minimum: 600 seconds (10 minutes). |

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
@@ -15,6 +15,20 @@ test(
         body: JSON.stringify({
           detail: { auto_login: false },
         }),
+      });
+    });
+
+    await page.route("**/api/v1/config", (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          webhook_auth_enable: true,
+        }),
+        headers: {
+          "content-type": "application/json",
+          ...route.request().headers(),
+        },
       });
     });
 
@@ -61,6 +75,20 @@ test(
   "user must be able to not see api key in webhook component when auto login is enabled",
   { tag: ["@release"] },
   async ({ page }) => {
+    await page.route("**/api/v1/config", (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          webhook_auth_enable: false,
+        }),
+        headers: {
+          "content-type": "application/json",
+          ...route.request().headers(),
+        },
+      });
+    });
+
     await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
