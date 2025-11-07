@@ -161,7 +161,7 @@ async def refresh_token(
 @router.post("/logout")
 async def logout(response: Response):
     auth_settings = get_settings_service().auth_settings
-    
+
     response.delete_cookie(
         "refresh_token_lf",
         httponly=auth_settings.REFRESH_HTTPONLY,
