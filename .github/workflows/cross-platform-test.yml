@@ -179,6 +179,7 @@ jobs:
           ls -la ./lfx-dist/
           find ./lfx-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+          echo "$WHEEL_FILE"
           if [ -n "$WHEEL_FILE" ]; then
             uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
@@ -193,6 +194,7 @@ jobs:
           ls -la ./base-dist/
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
+          echo "$WHEEL_FILE"
           if [ -n "$WHEEL_FILE" ]; then
             uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
@@ -207,6 +209,7 @@ jobs:
           ls -la ./main-dist/
           find ./main-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
+          echo "$WHEEL_FILE"
           if [ -n "$WHEEL_FILE" ]; then
             uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
@@ -221,6 +224,7 @@ jobs:
           ls -la ./lfx-dist/
           find ./lfx-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+          echo "$WHEEL_FILE"
           if [ -n "$WHEEL_FILE" ]; then
             uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
           else
@@ -235,6 +239,7 @@ jobs:
           ls -la ./base-dist/
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
+          echo "$WHEEL_FILE"
           if [ -n "$WHEEL_FILE" ]; then
             uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
           else
@@ -249,6 +254,7 @@ jobs:
           ls -la ./main-dist/
           find ./main-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
+          echo "$WHEEL_FILE"
           if [ -n "$WHEEL_FILE" ]; then
             uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
           else
@@ -467,6 +473,7 @@ jobs:
           ls -la ./lfx-dist/
           find ./lfx-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+          echo "$WHEEL_FILE"
           if [ -n "$WHEEL_FILE" ]; then
             uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
@@ -481,6 +488,7 @@ jobs:
           ls -la ./base-dist/
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
+          echo "$WHEEL_FILE"
           if [ -n "$WHEEL_FILE" ]; then
             uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
@@ -495,6 +503,7 @@ jobs:
           ls -la ./main-dist/
           find ./main-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
+          echo "$WHEEL_FILE"
           if [ -n "$WHEEL_FILE" ]; then
             uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
@@ -509,6 +518,7 @@ jobs:
           ls -la ./lfx-dist/
           find ./lfx-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+          echo "$WHEEL_FILE"
           if [ -n "$WHEEL_FILE" ]; then
             uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
           else
@@ -523,6 +533,7 @@ jobs:
           ls -la ./base-dist/
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
+          echo "$WHEEL_FILE"
           if [ -n "$WHEEL_FILE" ]; then
             uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
           else
@@ -537,6 +548,7 @@ jobs:
           ls -la ./main-dist/
           find ./main-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
+          echo "$WHEEL_FILE"
           if [ -n "$WHEEL_FILE" ]; then
             uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
           else
