@@ -90,9 +90,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         assert embeddings == mock_instance
 
     @patch("lfx.components.models.embedding_model.get_api_key_for_provider")
-    async def test_build_embeddings_openai_missing_api_key(
-        self, mock_get_api_key, component_class, default_kwargs
-    ):
+    async def test_build_embeddings_openai_missing_api_key(self, mock_get_api_key, component_class, default_kwargs):
         # Setup mock to return None (no API key)
         mock_get_api_key.return_value = None
 
