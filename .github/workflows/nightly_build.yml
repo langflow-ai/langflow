@@ -22,6 +22,11 @@ on:
         required: false
         type: boolean
         default: false
+      skip_slack:
+        description: "Skip slack message on failure. Only do this for testing purposes."
+        required: false
+        type: boolean
+        default: false
       push_to_registry:
         description: "Whether to push images to registries. Set to false for testing builds without publishing."
         required: false
@@ -225,3 +230,84 @@ jobs:
       # When triggered manually, use the provided value (default is also true)
       push_to_registry: ${{ github.event_name == 'schedule' || inputs.push_to_registry != false }}
     secrets: inherit
+
+  slack-notification:
+    name: Send Slack Notification
+    needs: [frontend-tests, backend-unit-tests, release-nightly-build]
+    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send failure notification to Slack
+        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "❌ *Nightly Build Failed*"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Job:*\nrelease-nightly-build"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Status:*\n`${{ needs.release-nightly-build.result }}`"
+                  }
+                ]
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View full logs on GitHub>"
+                  }
+                ]
+              }
+            ]
+          }' ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
+      - name: Send success notification to Slack
+        if: ${{ needs.release-nightly-build.result == 'success' }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "✅ *Nightly Build Successful*"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Job:*\nrelease-nightly-build"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Status:*\n`${{ needs.release-nightly-build.result }}`"
+                  }
+                ]
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View full logs on GitHub>"
+                  }
+                ]
+              }
+            ]
+          }' ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
