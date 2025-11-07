@@ -54,6 +54,7 @@ class TestPoolClassValidation:
 
         # Create DatabaseService instance - should use issubclass() not isinstance()
         db_service = DatabaseService(mock_settings_service)
+        assert db_service is not None
 
         # Verify that create_async_engine was called with NullPool class (not instance)
         assert mock_create_engine.called
@@ -80,6 +81,7 @@ class TestPoolClassValidation:
 
         # This should not raise instantiation errors
         db_service = DatabaseService(mock_settings_service)
+        assert db_service is not None
 
         # Verify that create_async_engine was called with StaticPool class
         assert mock_create_engine.called
@@ -106,6 +108,7 @@ class TestPoolClassValidation:
 
         # This should log an error but not crash
         db_service = DatabaseService(mock_settings_service)
+        assert db_service is not None
 
         # Verify that error was logged
         assert mock_logger.error.called
@@ -135,6 +138,7 @@ class TestPoolClassValidation:
 
         # This should work without errors
         db_service = DatabaseService(mock_settings_service)
+        assert db_service is not None
 
         # Verify that create_async_engine was called with QueuePool class
         assert mock_create_engine.called
@@ -157,6 +161,7 @@ class TestPoolClassValidation:
         # Test with None value
         mock_settings_service.settings.db_connection_settings = {"poolclass": None}
         db_service = DatabaseService(mock_settings_service)
+        assert db_service is not None
 
         # poolclass should not be in kwargs when None
         call_kwargs = mock_create_engine.call_args[1]
@@ -176,6 +181,7 @@ class TestPoolClassValidation:
         # Test with missing key entirely
         mock_settings_service.settings.db_connection_settings = {}
         db_service = DatabaseService(mock_settings_service)
+        assert db_service is not None
 
         # poolclass should not be in kwargs when key is missing
         call_kwargs = mock_create_engine.call_args[1]
@@ -202,3 +208,8 @@ class TestPoolClassValidation:
 
         # Verify service was created successfully
         assert db_service is not None
+        # Verify that create_async_engine was called (service initialized)
+        assert mock_create_engine.called
+        # Logger may or may not be called depending on whether getattr returns None
+        # We just verify the mock is available for potential error logging
+        assert mock_logger is not None
