@@ -216,8 +216,7 @@ jobs:
 
   release-nightly-build:
     needs: [create-nightly-tag, frontend-tests, backend-unit-tests]
-    if: github.repository == 'langflow-ai/langflow' && (needs.frontend-tests.result == 'success' || needs.frontend-tests.result == 'skipped') && (needs.backend-unit-tests.result == 'success' || needs.backend-unit-tests.result == 'skipped')
-    name: Run Nightly Langflow Build
+    if: github.repository == 'langflow-ai/langflow'
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: true
