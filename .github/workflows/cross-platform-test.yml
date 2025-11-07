@@ -236,7 +236,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
+            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1
@@ -524,7 +524,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
+            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1
