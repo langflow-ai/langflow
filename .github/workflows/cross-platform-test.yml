@@ -23,6 +23,10 @@ on:
         required: false
         type: string
 
+env:
+  PYTORCH_MPS_DISABLE: 1
+  PYTORCH_ENABLE_MPS_FALLBACK: 1
+
 jobs:
   build-if-needed:
     name: Build Packages (if no artifacts provided)
@@ -340,7 +344,7 @@ jobs:
         timeout-minutes: 5
         run: |
           # Start server in background
-          ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
+          ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only > langflow.log 2>&1 &
           SERVER_PID=$!
 
           # Wait for server to be ready (GitHub Actions will timeout after 5 minutes)
