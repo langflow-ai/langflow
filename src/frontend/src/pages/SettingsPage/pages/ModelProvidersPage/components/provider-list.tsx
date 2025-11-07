@@ -54,10 +54,16 @@ const ProviderList = ({ type }: ProviderListProps) => {
   };
 
   const handleDeleteProviderWithCleanup = (providerName: string) => {
-    handleDeleteProvider(providerName, globalVariables, defaultModelData, defaultEmbeddingModelData, () => {
-      setDeleteDialogOpen(false);
-      setProviderToDelete(null);
-    });
+    handleDeleteProvider(
+      providerName,
+      globalVariables,
+      defaultModelData,
+      defaultEmbeddingModelData,
+      () => {
+        setDeleteDialogOpen(false);
+        setProviderToDelete(null);
+      },
+    );
   };
 
   const handleCardClick = (provider: Provider) => {

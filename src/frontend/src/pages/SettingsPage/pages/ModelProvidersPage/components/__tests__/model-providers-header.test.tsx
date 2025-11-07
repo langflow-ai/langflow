@@ -3,7 +3,13 @@ import ModelProvidersHeader from "../model-providers-header";
 
 // Mock the icon component
 jest.mock("@/components/common/genericIconComponent", () => ({
-  ForwardedIconComponent: ({ name, className }: { name: string; className?: string }) => (
+  ForwardedIconComponent: ({
+    name,
+    className,
+  }: {
+    name: string;
+    className?: string;
+  }) => (
     <span data-testid={`icon-${name}`} className={className}>
       {name}
     </span>
@@ -25,8 +31,8 @@ describe("ModelProvidersHeader", () => {
     render(<ModelProvidersHeader />);
     expect(
       screen.getByText(
-        "Configure access to Language, Embedding, and Multimodal models."
-      )
+        "Configure access to Language, Embedding, and Multimodal models.",
+      ),
     ).toBeInTheDocument();
   });
 

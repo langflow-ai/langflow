@@ -260,7 +260,9 @@ export const useProviderActions = () => {
                 onError: () => {
                   setErrorData({
                     title: "Error clearing default embedding",
-                    list: ["Failed to clear default embedding before deleting provider"],
+                    list: [
+                      "Failed to clear default embedding before deleting provider",
+                    ],
                   });
                 },
               },
@@ -274,7 +276,10 @@ export const useProviderActions = () => {
           },
         },
       );
-    } else if (shouldClearDefaultModel && defaultModelData?.default_model?.model_type) {
+    } else if (
+      shouldClearDefaultModel &&
+      defaultModelData?.default_model?.model_type
+    ) {
       // Only clear default language model
       mutateClearDefaultModel(
         {
@@ -293,7 +298,10 @@ export const useProviderActions = () => {
           },
         },
       );
-    } else if (shouldClearDefaultEmbedding && defaultEmbeddingModelData?.default_model?.model_type) {
+    } else if (
+      shouldClearDefaultEmbedding &&
+      defaultEmbeddingModelData?.default_model?.model_type
+    ) {
       // Only clear default embedding model
       mutateClearDefaultModel(
         {
@@ -307,7 +315,9 @@ export const useProviderActions = () => {
           onError: () => {
             setErrorData({
               title: "Error clearing default embedding",
-              list: ["Failed to clear default embedding before deleting provider"],
+              list: [
+                "Failed to clear default embedding before deleting provider",
+              ],
             });
           },
         },

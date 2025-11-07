@@ -1,34 +1,34 @@
-import Fuse from 'fuse.js';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { mutateTemplate } from '@/CustomNodes/helpers/mutate-template';
-import LoadingTextComponent from '@/components/common/loadingTextComponent';
-import { RECEIVING_INPUT_VALUE } from '@/constants/constants';
-import { PROVIDER_VARIABLE_MAPPING } from '@/constants/providerConstants';
-import { usePostTemplateValue } from '@/controllers/API/queries/nodes/use-post-template-value';
-import { useGetGlobalVariables } from '@/controllers/API/queries/variables';
-import { useGetDefaultModel } from '@/controllers/API/queries/models/use-get-default-model';
-import { useCustomNavigate } from '@/customization/hooks/use-custom-navigate';
-import ApiKeyModal from '@/modals/apiKeyModal';
-import useAlertStore from '@/stores/alertStore';
-import { useGlobalVariablesStore } from '@/stores/globalVariablesStore/globalVariables';
-import { convertStringToHTML } from '@/utils/stringManipulation';
-import { cn } from '@/utils/utils';
-import { default as ForwardedIconComponent } from '../../../../common/genericIconComponent';
-import { Button } from '../../../../ui/button';
+import Fuse from "fuse.js";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
+import LoadingTextComponent from "@/components/common/loadingTextComponent";
+import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
+import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
+import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import { useGetDefaultModel } from "@/controllers/API/queries/models/use-get-default-model";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import ApiKeyModal from "@/modals/apiKeyModal";
+import useAlertStore from "@/stores/alertStore";
+import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
+import { convertStringToHTML } from "@/utils/stringManipulation";
+import { cn } from "@/utils/utils";
+import { default as ForwardedIconComponent } from "../../../../common/genericIconComponent";
+import { Button } from "../../../../ui/button";
 import {
   Command,
   CommandGroup,
   CommandItem,
   CommandList,
   CommandSeparator,
-} from '../../../../ui/command';
+} from "../../../../ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '../../../../ui/popover';
-import type { BaseInputProps } from '../../types';
-import { APIClassType } from '@/types/api';
+} from "../../../../ui/popover";
+import type { BaseInputProps } from "../../types";
+import { APIClassType } from "@/types/api";
 
 export type ModelInputComponentType = {
   options?: {
@@ -56,8 +56,8 @@ export default function ModelInputComponent({
   disabled,
   handleOnNewValue,
   options = [],
-  placeholder = 'Select a Model',
-  providers = ['OpenAI', 'Anthropic'],
+  placeholder = "Select a Model",
+  providers = ["OpenAI", "Anthropic"],
   helperText,
   hasRefreshButton,
   nodeId,
@@ -67,20 +67,20 @@ export default function ModelInputComponent({
   // Initialize state and refs
   const [open, setOpen] = useState(false);
   const [openApiKeyDialog, setOpenApiKeyDialog] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [refreshOptions, setRefreshOptions] = useState(false);
   const refButton = useRef<HTMLButtonElement>(null);
   const { setErrorData } = useAlertStore();
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [initialValueSet, setInitialValueSet] = useState(false);
   const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(
-    null
+    null,
   );
 
   // API hooks
   const postTemplateValue = usePostTemplateValue({
-    parameterId: 'model',
-    nodeId: nodeId || '',
+    parameterId: "model",
+    nodeId: nodeId || "",
     node: (nodeClass as APIClassType) || null,
   });
 
@@ -89,7 +89,7 @@ export default function ModelInputComponent({
   useGetGlobalVariables();
 
   const globalVariablesEntries = useGlobalVariablesStore(
-    state => state.globalVariablesEntries
+    (state) => state.globalVariablesEntries,
   );
 
   // Detect if this is an embedding model input or language model input
@@ -97,11 +97,11 @@ export default function ModelInputComponent({
     if (options && options.length > 0) {
       // Check if any of the options has model_type in metadata
       const firstModel = options[0];
-      if (firstModel?.metadata?.model_type === 'embeddings') {
-        return 'embeddings';
+      if (firstModel?.metadata?.model_type === "embeddings") {
+        return "embeddings";
       }
     }
-    return 'language'; // Default to language models
+    return "language"; // Default to language models
   }, [options]);
 
   // Get default model based on detected type
@@ -116,12 +116,12 @@ export default function ModelInputComponent({
       if (!searchTerm.trim()) return options;
 
       const fuse = new Fuse(options, {
-        keys: ['name', 'provider'],
+        keys: ["name", "provider"],
         threshold: 0.3,
       });
-      return fuse.search(searchTerm).map(result => result.item);
+      return fuse.search(searchTerm).map((result) => result.item);
     } catch (error) {
-      console.warn('Error filtering options:', error);
+      console.warn("Error filtering options:", error);
       return options || [];
     }
   }, [options, searchTerm]);
@@ -129,8 +129,8 @@ export default function ModelInputComponent({
   const groupedOptions = useMemo(() => {
     const groups: Record<string, typeof options> = {};
 
-    filteredOptions.forEach(option => {
-      const provider = option.provider || 'Other';
+    filteredOptions.forEach((option) => {
+      const provider = option.provider || "Other";
       if (!groups[provider]) {
         groups[provider] = [];
       }
@@ -166,10 +166,10 @@ export default function ModelInputComponent({
     // 3. Alphabetically after that
     sortedGroups.sort(([a], [b]) => {
       const aEnabled = globalVariablesEntries?.includes(
-        PROVIDER_VARIABLE_MAPPING[a] || ''
+        PROVIDER_VARIABLE_MAPPING[a] || "",
       );
       const bEnabled = globalVariablesEntries?.includes(
-        PROVIDER_VARIABLE_MAPPING[b] || ''
+        PROVIDER_VARIABLE_MAPPING[b] || "",
       );
       const aIsDefault = a === defaultProvider;
       const bIsDefault = b === defaultProvider;
@@ -200,11 +200,11 @@ export default function ModelInputComponent({
     (modelName: string) => {
       try {
         const selectedOption = options.find(
-          option => option.name === modelName
+          (option) => option.name === modelName,
         );
 
         if (!selectedOption) {
-          setErrorData({ title: 'Model not found' });
+          setErrorData({ title: "Model not found" });
           return;
         }
 
@@ -212,8 +212,8 @@ export default function ModelInputComponent({
           {
             ...(selectedOption.id && { id: selectedOption.id }),
             name: selectedOption.name,
-            icon: selectedOption.icon || 'Bot',
-            provider: selectedOption.provider || 'Unknown',
+            icon: selectedOption.icon || "Bot",
+            provider: selectedOption.provider || "Unknown",
             metadata: selectedOption.metadata || {},
           },
         ];
@@ -222,10 +222,10 @@ export default function ModelInputComponent({
         setSelectedProvider(selectedOption.provider || null);
         setSelectedModel(selectedOption);
       } catch (error) {
-        setErrorData({ title: 'Error selecting model' });
+        setErrorData({ title: "Error selecting model" });
       }
     },
-    [options, handleOnNewValue, setErrorData]
+    [options, handleOnNewValue, setErrorData],
   );
 
   const handleRefreshButtonPress = useCallback(async () => {
@@ -238,7 +238,7 @@ export default function ModelInputComponent({
       nodeClass!,
       handleNodeClass!,
       postTemplateValue,
-      setErrorData
+      setErrorData,
     )?.then(() => {
       setTimeout(() => {
         setRefreshOptions(false);
@@ -261,17 +261,17 @@ export default function ModelInputComponent({
 
       // Check if the value exists in the available options
       const modelExists = options.some(
-        option =>
+        (option) =>
           option.name === currentValue.name &&
-          option.provider === currentValue.provider
+          option.provider === currentValue.provider,
       );
 
       if (modelExists) {
         setSelectedModel({
           id: currentValue.id,
           name: currentValue.name,
-          icon: currentValue.icon || 'Bot',
-          provider: currentValue.provider || 'Unknown',
+          icon: currentValue.icon || "Bot",
+          provider: currentValue.provider || "Unknown",
           metadata: currentValue.metadata || {},
         });
         setSelectedProvider(currentValue.provider || null);
@@ -299,9 +299,9 @@ export default function ModelInputComponent({
     // First, check if there's a default model
     if (defaultModelData?.default_model) {
       const defaultModel = options.find(
-        option =>
+        (option) =>
           option.name === defaultModelData.default_model?.model_name &&
-          option.provider === defaultModelData.default_model?.provider
+          option.provider === defaultModelData.default_model?.provider,
       );
       if (defaultModel) {
         modelToSet = defaultModel;
@@ -312,7 +312,7 @@ export default function ModelInputComponent({
     if (!modelToSet && globalVariablesEntries) {
       for (const [provider, providerOptions] of groupedOptions) {
         const isProviderEnabled = globalVariablesEntries.includes(
-          PROVIDER_VARIABLE_MAPPING[provider] || ''
+          PROVIDER_VARIABLE_MAPPING[provider] || "",
         );
         if (isProviderEnabled && providerOptions.length > 0) {
           const firstModel = providerOptions[0];
@@ -330,8 +330,8 @@ export default function ModelInputComponent({
         {
           ...(modelToSet.id && { id: modelToSet.id }),
           name: modelToSet.name,
-          icon: modelToSet.icon || 'Bot',
-          provider: modelToSet.provider || 'Unknown',
+          icon: modelToSet.icon || "Bot",
+          provider: modelToSet.provider || "Unknown",
           metadata: modelToSet.metadata || {},
         },
       ];
@@ -383,8 +383,8 @@ export default function ModelInputComponent({
           aria-expanded={open}
           data-testid={id}
           className={cn(
-            'dropdown-component-false-outline py-2',
-            'no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground'
+            "dropdown-component-false-outline py-2",
+            "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
           )}
         >
           <span
@@ -398,8 +398,8 @@ export default function ModelInputComponent({
               ) : (
                 <div
                   className={cn(
-                    'truncate',
-                    !selectedModel?.name && 'text-muted-foreground'
+                    "truncate",
+                    !selectedModel?.name && "text-muted-foreground",
                   )}
                 >
                   {selectedModel?.name || placeholder}
@@ -408,12 +408,12 @@ export default function ModelInputComponent({
             </span>
           </span>
           <ForwardedIconComponent
-            name={disabled ? 'Lock' : 'ChevronsUpDown'}
+            name={disabled ? "Lock" : "ChevronsUpDown"}
             className={cn(
-              'ml-2 h-4 w-4 shrink-0 text-foreground',
+              "ml-2 h-4 w-4 shrink-0 text-foreground",
               disabled
-                ? 'text-placeholder-foreground hover:text-placeholder-foreground'
-                : 'hover:text-foreground'
+                ? "text-placeholder-foreground hover:text-placeholder-foreground"
+                : "hover:text-foreground",
             )}
           />
         </Button>
@@ -433,7 +433,7 @@ export default function ModelInputComponent({
         className="mr-2 h-4 w-4 shrink-0 opacity-50"
       />
       <input
-        onChange={event => setSearchTerm(event.target.value)}
+        onChange={(event) => setSearchTerm(event.target.value)}
         placeholder="Search models..."
         className="flex h-9 w-full rounded-md bg-transparent py-3 text-[13px] outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
         autoComplete="off"
@@ -454,7 +454,7 @@ export default function ModelInputComponent({
           visibleOptions.length === 1 &&
           visibleOptions[0]?.metadata?.is_disabled_provider === true;
         const isProviderEnabled = globalVariablesEntries?.includes(
-          PROVIDER_VARIABLE_MAPPING[provider] || ''
+          PROVIDER_VARIABLE_MAPPING[provider] || "",
         );
 
         // Don't show disabled providers in the dropdown
@@ -469,7 +469,7 @@ export default function ModelInputComponent({
               <div className="flex items-center">{provider}</div>
             </div>
             {!isDisabledProvider &&
-              visibleOptions.map(option => {
+              visibleOptions.map((option) => {
                 if (!option || !option.name) {
                   return null;
                 }
@@ -478,16 +478,16 @@ export default function ModelInputComponent({
                   defaultModelData?.default_model?.provider === option.provider;
 
                 const isReasoning = option.metadata?.reasoning_models?.includes(
-                  option.name
+                  option.name,
                 );
 
                 return (
                   <CommandItem
                     key={option.name}
                     value={option.name}
-                    onSelect={currentValue => {
+                    onSelect={(currentValue) => {
                       handleModelSelect(currentValue);
-                      setSearchTerm('');
+                      setSearchTerm("");
                       setOpen(false);
                     }}
                     className="w-full items-center rounded-none"
@@ -495,18 +495,18 @@ export default function ModelInputComponent({
                   >
                     <div className="flex w-full items-center gap-2">
                       <ForwardedIconComponent
-                        name={option.icon || 'Bot'}
+                        name={option.icon || "Bot"}
                         className="h-4 w-4 shrink-0 text-primary ml-2"
                       />
                       <div className="truncate text-[13px]">{option.name}</div>
                       {isDefaultModel && (
                         <ForwardedIconComponent
-                          name={modelType === 'language' ? 'Sparkle' : 'Zap'}
+                          name={modelType === "language" ? "Sparkle" : "Zap"}
                           className={cn(
-                            'h-3 w-3',
-                            modelType === 'language'
-                              ? 'text-yellow-500 fill-yellow-500'
-                              : 'text-purple-500 fill-purple-500'
+                            "h-3 w-3",
+                            modelType === "language"
+                              ? "text-yellow-500 fill-yellow-500"
+                              : "text-purple-500 fill-purple-500",
                           )}
                         />
                       )}
@@ -520,10 +520,10 @@ export default function ModelInputComponent({
                         <ForwardedIconComponent
                           name="Check"
                           className={cn(
-                            'h-4 w-4 shrink-0 text-primary',
+                            "h-4 w-4 shrink-0 text-primary",
                             selectedModel?.name === option.name
-                              ? 'opacity-100'
-                              : 'opacity-0'
+                              ? "opacity-100"
+                              : "opacity-0",
                           )}
                         />
                       </div>
@@ -555,7 +555,7 @@ export default function ModelInputComponent({
             <ForwardedIconComponent
               name="RefreshCcw"
               className={cn(
-                'refresh-icon h-3 w-3 text-primary text-muted-foreground group-hover:text-primary'
+                "refresh-icon h-3 w-3 text-primary text-muted-foreground group-hover:text-primary",
               )}
             />
           </div>
@@ -566,7 +566,7 @@ export default function ModelInputComponent({
         className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs text-muted-foreground px-3 hover:bg-accent group"
         unstyled
         onClick={() => {
-          navigate('/settings/model-providers');
+          navigate("/settings/model-providers");
         }}
         data-testid="manage-model-providers"
       >
@@ -575,7 +575,7 @@ export default function ModelInputComponent({
           <ForwardedIconComponent
             name="Settings"
             className={cn(
-              'w-4 h-4 text-muted-foreground group-hover:text-primary'
+              "w-4 h-4 text-muted-foreground group-hover:text-primary",
             )}
           />
         </div>
@@ -589,7 +589,7 @@ export default function ModelInputComponent({
       side="bottom"
       avoidCollisions={true}
       className="noflow nowheel nopan nodelete nodrag p-0"
-      style={{ minWidth: refButton?.current?.clientWidth ?? '200px' }}
+      style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
     >
       <Command className="flex flex-col">
         {options?.length > 0 && renderSearchInput()}
@@ -633,7 +633,7 @@ export default function ModelInputComponent({
         <ApiKeyModal
           open={openApiKeyDialog}
           onClose={() => setOpenApiKeyDialog(false)}
-          provider={selectedProvider || 'Provider'}
+          provider={selectedProvider || "Provider"}
         />
       )}
     </>
