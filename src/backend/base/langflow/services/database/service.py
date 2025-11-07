@@ -133,6 +133,7 @@ class DatabaseService(Service):
                 kwargs["poolclass"] = pool_class
             else:
                 logger.error(f"Invalid poolclass '{poolclass_key}' specified. Using default pool class.")
+                kwargs.pop("poolclass", None)
 
         return create_async_engine(
             self.database_url,

@@ -116,11 +116,10 @@ class TestPoolClassValidation:
         assert "Invalid poolclass" in error_call_args
         assert "InvalidPoolClass" in error_call_args
 
-        # Verify that invalid poolclass was NOT passed to create_async_engine as a class
+        # Verify that invalid poolclass was removed from kwargs
         call_kwargs = mock_create_engine.call_args[1]
-        if "poolclass" in call_kwargs:
-            # Should still be the string, not a class object
-            assert call_kwargs["poolclass"] == "InvalidPoolClass"
+        # Invalid poolclass should have been popped from kwargs
+        assert "poolclass" not in call_kwargs
 
     @patch("langflow.services.database.service.create_async_engine")
     def test_queue_pool_class_validation(self, mock_create_engine, mock_settings_service):
