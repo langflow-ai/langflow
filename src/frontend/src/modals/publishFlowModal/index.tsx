@@ -336,7 +336,7 @@ export default function PublishFlowModal({
         <div className="space-y-4 py-4 overflow-y-auto pr-2">
           <div className="space-y-2">
             <Label htmlFor="marketplace-name">
-              Marketplace Flow Name <span className="text-destructive">*</span>
+              Name <span className="text-destructive">*</span>
             </Label>
             <div className="relative">
               <Input

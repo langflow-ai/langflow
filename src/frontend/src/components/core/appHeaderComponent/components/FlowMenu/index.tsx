@@ -1,4 +1,5 @@
 import { memo, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
 import IconComponent from "@/components/common/genericIconComponent";
@@ -57,6 +58,7 @@ export const MenuBar = memo((): JSX.Element => {
   const onFlowPage = useFlowStore((state) => state.onFlowPage);
   const measureRef = useRef<HTMLSpanElement>(null);
   const changesNotSaved = useUnsavedChanges();
+  const location = useLocation();
 
   const { data: folders, isFetched: isFoldersFetched } = useGetFoldersQuery();
 
@@ -87,6 +89,21 @@ export const MenuBar = memo((): JSX.Element => {
       ? parseInt(currentFlowGradient)
       : getNumberFromString(currentFlowGradient ?? currentFlowId ?? "")) %
     swatchColors.length;
+
+  // Determine if we should hide the flow name when viewing Marketplace Detail > Flow Visualization
+  const pathname = location.pathname || "";
+  const isMarketplaceDetail = pathname.includes("/marketplace/detail");
+  const routerState = location.state as { hideDetailName?: boolean } | undefined;
+  let marketplaceDetailActiveTab: string | null = null;
+  try {
+    marketplaceDetailActiveTab = typeof window !== "undefined"
+      ? window.sessionStorage.getItem("marketplaceDetailActiveTab")
+      : null;
+  } catch {
+    marketplaceDetailActiveTab = null;
+  }
+  const shouldHideFlowName =
+    isMarketplaceDetail && (routerState?.hideDetailName || marketplaceDetailActiveTab === "flow");
 
   return onFlowPage ? (
     <Popover open={openSettings} onOpenChange={setOpenSettings}>
@@ -123,33 +140,37 @@ export const MenuBar = memo((): JSX.Element => {
           >
             
           </div>
-          <div className={cn(`flex rounded p-1`, swatchColors[swatchIndex])}>
+          {!shouldHideFlowName && <div className={cn(`flex rounded p-1`, swatchColors[swatchIndex])}>
             <IconComponent
               name={currentFlowIcon ?? "Workflow"}
               className="h-3.5 w-3.5"
             />
-          </div>
+          </div>}
           <PopoverTrigger asChild>
             <div
               className="group relative -mr-5 flex shrink-0 cursor-pointer items-center gap-2 text-sm sm:whitespace-normal"
               data-testid="menu_bar_display"
             >
-              <span
-                ref={measureRef}
-                className="w-fit max-w-[35vw] truncate whitespace-pre text-mmd font-semibold sm:max-w-full sm:text-sm text-white"
-                aria-hidden="true"
-                data-testid="flow_name"
-              >
-                {currentFlowName || "Untitled Flow"}
-              </span>
-              <IconComponent
-                name="pencil"
-                className={cn(
-                  "h-5 w-3.5 -translate-x-2 opacity-0 transition-all",
-                  !openSettings &&
-                    "sm:group-hover:translate-x-0 sm:group-hover:opacity-100",
-                )}
-              />
+              {!shouldHideFlowName && (
+                <>
+                  <span
+                    ref={measureRef}
+                    className="w-fit max-w-[35vw] truncate whitespace-pre text-mmd font-semibold sm:max-w-full sm:text-sm text-white"
+                    aria-hidden="true"
+                    data-testid="flow_name"
+                  >
+                    {currentFlowName || "Untitled Flow"}
+                  </span>
+                  <IconComponent
+                    name="pencil"
+                    className={cn(
+                      "h-5 w-3.5 -translate-x-2 opacity-0 transition-all",
+                      !openSettings &&
+                        "sm:group-hover:translate-x-0 sm:group-hover:opacity-100",
+                    )}
+                  />
+                </>
+              )}
             </div>
           </PopoverTrigger> 
           <div className={"ml-5 hidden shrink-0 items-center sm:flex"}>

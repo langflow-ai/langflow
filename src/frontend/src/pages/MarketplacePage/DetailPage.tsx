@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
   oneDark,
@@ -23,6 +23,8 @@ export default function MarketplaceDetailPage() {
   const dark = useDarkStore((state) => state.dark);
   const navigate = useCustomNavigate();
   const [activeTab, setActiveTab] = useState("playground");
+  const location = useLocation();
+  const navigateRouter = useNavigate();
 
   // Fetch published flow details
   const { data: publishedFlowData, isLoading: isLoadingPublishedFlow } =
@@ -34,6 +36,26 @@ export default function MarketplaceDetailPage() {
 
   const title = publishedFlowData?.flow_name || "Published Flow";
   const description = publishedFlowData?.description || "";
+
+  // Restore previously selected tab on mount (persisted in sessionStorage)
+  useEffect(() => {
+    const saved = sessionStorage.getItem("marketplaceDetailActiveTab");
+    if (saved === "playground" || saved === "flow" || saved === "spec") {
+      setActiveTab(saved);
+    }
+  }, []);
+
+  // Persist tab selection and signal AppHeader to hide the detail name on Flow Visualization
+  useEffect(() => {
+    sessionStorage.setItem("marketplaceDetailActiveTab", activeTab);
+    const hideDetailName = activeTab === "flow";
+    const prevState = (location.state as any) || {};
+    // Replace current history entry to avoid changing the URL, only adjust state
+    navigateRouter(location.pathname, {
+      state: { ...prevState, hideDetailName },
+      replace: true,
+    });
+  }, [activeTab, navigateRouter, location.pathname]);
 
   // Handle Edit button click - navigate to the original flow (not the clone)
   const handleEditClick = () => {
@@ -109,7 +131,7 @@ export default function MarketplaceDetailPage() {
     >
       <div className="flex w-full flex-col gap-4 dark:text-white">
         <div className="flex flex-col h-full">
-          <Tabs defaultValue="playground" className="w-full h-full" onValueChange={setActiveTab}>
+          <Tabs value={activeTab} className="w-full h-full" onValueChange={(val) => setActiveTab(val)}>
             <div className="flex items-center justify-between mt-1 relative">
               <TabsList className="justify-start gap-2 border-b border-border dark:border-white/20 p-0">
                 <TabsTrigger
