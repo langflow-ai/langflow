@@ -128,7 +128,7 @@ class LanguageModelComponent(LCModelComponent):
         if provider == "Azure OpenAI":
             api_key = self.api_key or os.getenv("AZURE_OPENAI_API_KEY")
             azure_endpoint = self.azure_endpoint or os.getenv("AZURE_OPENAI_ENDPOINT")
-            azure_deployment = self.azure_deployment or os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
+            azure_deployment = self.azure_deployment or os.getenv("AZURE_DEPLOYMENT_NAME")
             api_version = self.api_version or os.getenv("AZURE_API_VERSION", "2024-06-01")
             
             if not api_key:
@@ -214,7 +214,7 @@ class LanguageModelComponent(LCModelComponent):
                 # Prefill Azure fields from environment variables
                 build_config["api_key"]["value"] = os.getenv("AZURE_OPENAI_API_KEY", "")
                 build_config["azure_endpoint"]["value"] = os.getenv("AZURE_OPENAI_ENDPOINT", "")
-                build_config["azure_deployment"]["value"] = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
+                build_config["azure_deployment"]["value"] = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4.1")
                 build_config["api_version"]["value"] = os.getenv("AZURE_API_VERSION", "2024-06-01")
             elif field_value == "Anthropic":
                 build_config["model_name"]["options"] = ANTHROPIC_MODELS
@@ -223,7 +223,9 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["api_key"]["value"] = os.getenv("ANTHROPIC_API_KEY", "")
             elif field_value == "Google":
                 build_config["model_name"]["options"] = GOOGLE_GENERATIVE_AI_MODELS
-                build_config["model_name"]["value"] = GOOGLE_GENERATIVE_AI_MODELS[0]
+                # Prefill Google Model from environment variable if available, otherwise use default
+                google_model = os.getenv("GOOGLE_GENAI_MODEL", "")
+                build_config["model_name"]["value"] = google_model if google_model else GOOGLE_GENERATIVE_AI_MODELS[0]
                 build_config["api_key"]["display_name"] = "Google API Key"
                 build_config["api_key"]["value"] = os.getenv("GOOGLE_API_KEY", "")
         elif field_name == "model_name" and field_value.startswith("o1") and self.provider == "OpenAI":

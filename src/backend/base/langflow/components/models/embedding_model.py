@@ -112,6 +112,6 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             build_config["model"]["options"] = OPENAI_EMBEDDING_MODEL_NAMES
             build_config["model"]["value"] = OPENAI_EMBEDDING_MODEL_NAMES[0]
             build_config["api_key"]["display_name"] = "OpenAI API Key"
-            build_config["api_key"]["value"] = os.getenv("OPENAI_API_KEY", "")
+            build_config["api_key"]["value"] = os.getenv("AZURE_OPENAI_API_KEY", "")
             build_config["api_base"]["display_name"] = "OpenAI API Base URL"
         return build_config

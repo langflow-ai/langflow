@@ -1,3 +1,5 @@
+import os
+
 from langchain_openai import AzureOpenAIEmbeddings
 
 from langflow.base.models.model import LCModelComponent
@@ -35,11 +37,13 @@ class AzureOpenAIEmbeddingsComponent(LCModelComponent):
             display_name="Azure Endpoint",
             required=True,
             info="Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`",
+            value=os.getenv("AZURE_OPENAI_EMBEDDING_ENDPOINT", ""),
         ),
         MessageTextInput(
             name="azure_deployment",
             display_name="Deployment Name",
             required=True,
+            value=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME", ""),
         ),
         DropdownInput(
             name="api_version",
@@ -51,7 +55,10 @@ class AzureOpenAIEmbeddingsComponent(LCModelComponent):
         SecretStrInput(
             name="api_key",
             display_name="Azure OpenAI API Key",
-            required=True,
+            required=False,
+            show=True,
+            real_time_refresh=True,
+            value=os.getenv("AZURE_OPENAI_EMBEDDING_API_KEY", ""),
         ),
         IntInput(
             name="dimensions",
@@ -67,13 +74,18 @@ class AzureOpenAIEmbeddingsComponent(LCModelComponent):
     ]
 
     def build_embeddings(self) -> Embeddings:
+        # Add fallback to environment variables if fields are empty
+        azure_endpoint = self.azure_endpoint or os.getenv("AZURE_OPENAI_EMBEDDING_ENDPOINT")
+        azure_deployment = self.azure_deployment or os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME")
+        api_key = self.api_key or os.getenv("AZURE_OPENAI_EMBEDDING_API_KEY")
+        
         try:
             embeddings = AzureOpenAIEmbeddings(
                 model=self.model,
-                azure_endpoint=self.azure_endpoint,
-                azure_deployment=self.azure_deployment,
+                azure_endpoint=azure_endpoint,
+                azure_deployment=azure_deployment,
                 api_version=self.api_version,
-                api_key=self.api_key,
+                api_key=api_key,
                 dimensions=self.dimensions or None,
             )
         except Exception as e:
