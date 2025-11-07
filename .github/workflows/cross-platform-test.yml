@@ -335,8 +335,8 @@ jobs:
         run: |
           # Set macOS fork safety environment variable (must be set before Python starts)
           export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
-          # Start server in background
-          ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
+          # Start server in background with reduced workers on macOS to avoid memory issues
+          ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only --workers 1 &
           SERVER_PID=$!
 
           # Wait for server to be ready (GitHub Actions will timeout after 5 minutes)
@@ -625,8 +625,8 @@ jobs:
         run: |
           # Set macOS fork safety environment variable (must be set before Python starts)
           export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
-          # Start server in background
-          ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
+          # Start server in background with reduced workers on macOS to avoid memory issues
+          ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only --workers 1 &
           SERVER_PID=$!
 
           # Wait for server to be ready (GitHub Actions will timeout after 5 minutes)
