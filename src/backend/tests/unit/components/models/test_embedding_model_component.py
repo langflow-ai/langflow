@@ -3,11 +3,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 from lfx.components.models.embedding_model import EmbeddingModelComponent
 
-from tests.base import ComponentTestBaseWithClient
+from tests.base import ComponentTestBaseWithoutClient
 
 
-@pytest.mark.usefixtures("client")
-class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
+class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
         return EmbeddingModelComponent
@@ -90,8 +89,15 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         )
         assert embeddings == mock_instance
 
-    async def test_build_embeddings_openai_missing_api_key(self, component_class, default_kwargs):
+    @patch("lfx.components.models.embedding_model.get_api_key_for_provider")
+    async def test_build_embeddings_openai_missing_api_key(
+        self, mock_get_api_key, component_class, default_kwargs
+    ):
+        # Setup mock to return None (no API key)
+        mock_get_api_key.return_value = None
+
         component = component_class(**default_kwargs)
+        component._user_id = "test-user-id"
         component.api_key = None
 
         with pytest.raises(ValueError, match="OpenAI API key is required"):
@@ -104,8 +110,20 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         with pytest.raises(ValueError, match="Model must be a non-empty list"):
             component.build_embeddings()
 
-    async def test_build_embeddings_unknown_embedding_class(self, component_class, default_kwargs):
+    @patch("lfx.components.models.embedding_model.get_api_key_for_provider")
+    @patch("lfx.components.models.embedding_model.get_embedding_classes")
+    async def test_build_embeddings_unknown_embedding_class(
+        self, mock_get_embedding_classes, mock_get_api_key, component_class, default_kwargs
+    ):
+        # Setup mock for get_api_key_for_provider
+        mock_get_api_key.return_value = "test-key"
+        # Setup mock to return None for unknown class
+        mock_embedding_classes_dict = MagicMock()
+        mock_embedding_classes_dict.get.return_value = None
+        mock_get_embedding_classes.return_value = mock_embedding_classes_dict
+
         component = component_class(**default_kwargs)
+        component._user_id = "test-user-id"
         component.model = [
             {
                 "name": "unknown-model",

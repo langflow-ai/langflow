@@ -7,10 +7,12 @@ from lfx.base.models.unified_models import (
     get_embedding_model_options,
     update_model_options_in_build_config,
 )
+from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.field_typing import Embeddings
 from lfx.io import (
     BoolInput,
     DictInput,
+    DropdownInput,
     FloatInput,
     IntInput,
     MessageTextInput,
@@ -59,6 +61,22 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             display_name="API Base URL",
             info="Base URL for the API. Leave empty for default.",
             advanced=True,
+        ),
+        # Watson-specific inputs
+        DropdownInput(
+            name="base_url_ibm_watsonx",
+            display_name="watsonx API Endpoint",
+            info="The base URL of the API (IBM watsonx.ai only)",
+            options=IBM_WATSONX_URLS,
+            value=IBM_WATSONX_URLS[0],
+            show=False,
+            real_time_refresh=True,
+        ),
+        MessageTextInput(
+            name="project_id",
+            display_name="Project ID",
+            info="IBM watsonx.ai Project ID (required for IBM watsonx.ai)",
+            show=False,
         ),
         IntInput(
             name="dimensions",
@@ -150,9 +168,11 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
 
         kwargs = {}
 
-        # Required parameters
+        # Required parameters - handle both "model" and "model_id" (for watsonx)
         if "model" in param_mapping:
             kwargs[param_mapping["model"]] = model.get("name")
+        elif "model_id" in param_mapping:
+            kwargs[param_mapping["model_id"]] = model.get("name")
         if "api_key" in param_mapping:
             kwargs[param_mapping["api_key"]] = get_api_key_for_provider(
                 self.user_id,
@@ -161,6 +181,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             )
 
         # Optional parameters with their values
+        provider = model.get("provider")
         optional_params = {
             "api_base": self.api_base if self.api_base else None,
             "dimensions": int(self.dimensions) if self.dimensions else None,
@@ -171,12 +192,26 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             "model_kwargs": self.model_kwargs if self.model_kwargs else None,
         }
 
+        # Watson-specific parameters
+        if provider == "IBM WatsonX":
+            # Map base_url_ibm_watsonx to "url" parameter for watsonx
+            if "url" in param_mapping:
+                url_value = (
+                    self.base_url_ibm_watsonx
+                    if hasattr(self, "base_url_ibm_watsonx") and self.base_url_ibm_watsonx
+                    else "https://us-south.ml.cloud.ibm.com"
+                )
+                kwargs[param_mapping["url"]] = url_value
+            # Map project_id for watsonx
+            if hasattr(self, "project_id") and self.project_id:
+                if "project_id" in param_mapping:
+                    kwargs[param_mapping["project_id"]] = self.project_id
+
         # Add optional parameters if they have values and are mapped
         for param_name, param_value in optional_params.items():
             if param_value is not None and param_name in param_mapping:
                 # Special handling for request_timeout with Google provider
                 if param_name == "request_timeout":
-                    provider = model.get("provider")
                     if provider == "Google" and isinstance(param_value, (int, float)):
                         kwargs[param_mapping[param_name]] = {"timeout": param_value}
                     else:

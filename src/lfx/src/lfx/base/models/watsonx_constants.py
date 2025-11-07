@@ -42,3 +42,12 @@ WATSONX_EMBEDDING_MODEL_NAMES = [
 
 # Backwards compatibility
 WATSONX_EMBEDDING_MODELS_DETAILED = WATSONX_MODELS_DETAILED
+
+IBM_WATSONX_URLS = [
+    "https://us-south.ml.cloud.ibm.com",
+    "https://eu-de.ml.cloud.ibm.com",
+    "https://eu-gb.ml.cloud.ibm.com",
+    "https://au-syd.ml.cloud.ibm.com",
+    "https://jp-tok.ml.cloud.ibm.com",
+    "https://ca-tor.ml.cloud.ibm.com",
+]
