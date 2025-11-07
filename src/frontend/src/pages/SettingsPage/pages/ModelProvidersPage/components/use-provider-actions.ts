@@ -204,6 +204,7 @@ export const useProviderActions = () => {
     providerName: string,
     globalVariables: GlobalVariable[] | undefined,
     defaultModelData: DefaultModelData | undefined,
+    defaultEmbeddingModelData: DefaultModelData | undefined,
     onSuccess?: () => void,
   ) => {
     if (!globalVariables) return;
@@ -226,12 +227,55 @@ export const useProviderActions = () => {
       return;
     }
 
-    // Check if the provider being deleted has the current default model
-    const shouldClearDefault =
+    // Check if the provider being deleted has the current default model or embedding
+    const shouldClearDefaultModel =
       defaultModelData?.default_model?.provider === providerName;
+    const shouldClearDefaultEmbedding =
+      defaultEmbeddingModelData?.default_model?.provider === providerName;
 
-    // If the provider has the default model, clear it first
-    if (shouldClearDefault && defaultModelData?.default_model?.model_type) {
+    // Clear both default model and embedding if needed
+    if (
+      shouldClearDefaultModel &&
+      shouldClearDefaultEmbedding &&
+      defaultModelData?.default_model?.model_type &&
+      defaultEmbeddingModelData?.default_model?.model_type
+    ) {
+      // Clear language model first, then embedding model, then delete provider
+      mutateClearDefaultModel(
+        {
+          model_type: defaultModelData.default_model.model_type,
+        },
+        {
+          onSuccess: () => {
+            // After clearing default language model, clear embedding model
+            mutateClearDefaultModel(
+              {
+                model_type: defaultEmbeddingModelData.default_model!.model_type,
+              },
+              {
+                onSuccess: () => {
+                  // After clearing both, proceed with provider deletion
+                  deleteProviderVariable(variable.id, providerName, onSuccess);
+                },
+                onError: () => {
+                  setErrorData({
+                    title: "Error clearing default embedding",
+                    list: ["Failed to clear default embedding before deleting provider"],
+                  });
+                },
+              },
+            );
+          },
+          onError: () => {
+            setErrorData({
+              title: "Error clearing default model",
+              list: ["Failed to clear default model before deleting provider"],
+            });
+          },
+        },
+      );
+    } else if (shouldClearDefaultModel && defaultModelData?.default_model?.model_type) {
+      // Only clear default language model
       mutateClearDefaultModel(
         {
           model_type: defaultModelData.default_model.model_type,
@@ -245,6 +289,25 @@ export const useProviderActions = () => {
             setErrorData({
               title: "Error clearing default model",
               list: ["Failed to clear default model before deleting provider"],
+            });
+          },
+        },
+      );
+    } else if (shouldClearDefaultEmbedding && defaultEmbeddingModelData?.default_model?.model_type) {
+      // Only clear default embedding model
+      mutateClearDefaultModel(
+        {
+          model_type: defaultEmbeddingModelData.default_model.model_type,
+        },
+        {
+          onSuccess: () => {
+            // After clearing default, proceed with provider deletion
+            deleteProviderVariable(variable.id, providerName, onSuccess);
+          },
+          onError: () => {
+            setErrorData({
+              title: "Error clearing default embedding",
+              list: ["Failed to clear default embedding before deleting provider"],
             });
           },
         },

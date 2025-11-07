@@ -65,9 +65,6 @@ export default function ModelInputComponent({
   handleNodeClass,
 }: BaseInputProps<any> & ModelInputComponentType): JSX.Element {
   // Initialize state and refs
-
-  console.log('selectedModel', value);
-
   const [open, setOpen] = useState(false);
   const [openApiKeyDialog, setOpenApiKeyDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -111,8 +108,6 @@ export default function ModelInputComponent({
   const { data: defaultModelData } = useGetDefaultModel({
     model_type: modelType,
   });
-
-  console.log('defaultModelData', defaultModelData);
 
   // Initialize utilities and memoized values
   const filteredOptions = useMemo(() => {
@@ -263,16 +258,31 @@ export default function ModelInputComponent({
   useEffect(() => {
     if (value && Array.isArray(value) && value.length > 0) {
       const currentValue = value[0];
-      setSelectedModel({
-        id: currentValue.id,
-        name: currentValue.name,
-        icon: currentValue.icon || 'Bot',
-        provider: currentValue.provider || 'Unknown',
-        metadata: currentValue.metadata || {},
-      });
-      setSelectedProvider(currentValue.provider || null);
+
+      // Check if the value exists in the available options
+      const modelExists = options.some(
+        option =>
+          option.name === currentValue.name &&
+          option.provider === currentValue.provider
+      );
+
+      if (modelExists) {
+        setSelectedModel({
+          id: currentValue.id,
+          name: currentValue.name,
+          icon: currentValue.icon || 'Bot',
+          provider: currentValue.provider || 'Unknown',
+          metadata: currentValue.metadata || {},
+        });
+        setSelectedProvider(currentValue.provider || null);
+      } else {
+        // Model doesn't exist in options, clear the selection
+        setSelectedModel(null);
+        setSelectedProvider(null);
+        handleOnNewValue({ value: [] });
+      }
     }
-  }, [value]);
+  }, [value, options, handleOnNewValue]);
 
   // Set initial value based on default model or first enabled provider
   useEffect(() => {

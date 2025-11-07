@@ -313,9 +313,14 @@ const ProviderModelsDialog = ({
                   ? effectiveDefaultModel?.model_name === model.model_name
                   : effectiveDefaultEmbeddingModel?.model_name === model.model_name;
 
-                // Force-check if it's the default model, otherwise respect API true
+                // Determine the current enabled state:
+                // 1. If it's the default model, force-check it
+                // 2. If backend has explicit value (true/false), use that
+                // 3. If backend has no value (undefined) for this provider, default to checked
+                const hasBackendValue = isModelEnabledFromAPI !== undefined;
                 const currentEnabledState =
-                  isDefaultModelInThisList || isModelEnabledFromAPI === true;
+                  isDefaultModelInThisList ||
+                  (hasBackendValue ? isModelEnabledFromAPI === true : true);
                 const isModelEnabled = pendingModelToggles.has(model.model_name)
                   ? pendingModelToggles.get(model.model_name)!
                   : currentEnabledState;
