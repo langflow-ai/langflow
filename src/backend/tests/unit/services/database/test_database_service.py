@@ -7,6 +7,7 @@ for classes like NullPool and StaticPool that require a 'creator' argument.
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 import sqlalchemy as sa
 from langflow.services.database.service import DatabaseService
 
