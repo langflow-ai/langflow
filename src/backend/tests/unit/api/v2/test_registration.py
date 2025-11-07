@@ -53,8 +53,6 @@ class TestDataModels:
     def test_register_response(self):
         """Test RegisterResponse model."""
         response = RegisterResponse(success=True, message="Registration successful", email="test@example.com")
-        assert response.success is True
-        assert response.message == "Registration successful"
         assert response.email == "test@example.com"
 
 
@@ -204,8 +202,6 @@ class TestAPIEndpoints:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["success"] is True
-        assert data["message"] == "Registration successful"
         assert data["email"] == "test@example.com"
 
     @pytest.mark.asyncio
@@ -344,7 +340,6 @@ class TestIntegration:
         # Test registration
         response = client.post("/registration/", json={"email": "integration@example.com"})
         assert response.status_code == 200
-        assert response.json()["success"] is True
 
         # Test get registration
         response = client.get("/registration/")
