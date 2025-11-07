@@ -787,13 +787,21 @@ async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -
 
     The function will:
     - Extract flow_id and endpoint_name from the JSON
-    - Update existing flows if they match by ID or endpoint_name
+    - Skip updates if flow already exists (only create new flows)
     - Create new flows if they don't exist
 
     Args:
         session: Database session
         user_id: The ID of the user
     """
+    from lfx.services.deps import get_settings_service
+
+    # Only configure if agentic experience is enabled
+    settings_service = get_settings_service()
+    if not settings_service.settings.agentic_experience:
+        await logger.adebug("Agentic experience disabled, skipping agentic flows creation")
+        return
+
     try:
         # Get or create the Langflow Assistant folder
         assistant_folder = await get_or_create_assistant_folder(session, user_id)
@@ -838,33 +846,9 @@ async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -
             existing_flow = await find_existing_flow(session, flow_id, flow_endpoint_name)
 
             if existing_flow:
-                try:
-                    await logger.adebug(f"Updating agentic flow: {flow_name}")
-                    # Update existing flow
-                    existing_flow.name = flow_name
-                    existing_flow.description = flow_description
-                    existing_flow.is_component = flow_is_component
-                    existing_flow.updated_at = updated_at_datetime
-                    existing_flow.data = project_data
-                    existing_flow.icon = flow_icon
-                    existing_flow.icon_bg_color = flow_icon_bg_color
-                    existing_flow.gradient = flow_gradient
-                    existing_flow.tags = flow_tags
-                    existing_flow.folder_id = assistant_folder.id
-                    existing_flow.user_id = user_id
-
-                    # Update endpoint_name if provided in JSON
-                    if flow_endpoint_name:
-                        existing_flow.endpoint_name = flow_endpoint_name
-
-                    # Update ID if provided and different
-                    if flow_id and existing_flow.id != flow_id:
-                        existing_flow.id = flow_id
-
-                    session.add(existing_flow)
-                    flows_updated += 1
-                except Exception:  # noqa: BLE001
-                    await logger.aexception(f"Error while updating agentic flow {flow_name}")
+                # Skip update if flow already exists
+                await logger.adebug(f"Agentic flow already exists, skipping: {flow_name}")
+                flows_updated += 1
             else:
                 try:
                     await logger.adebug(f"Creating agentic flow: {flow_name}")
@@ -896,10 +880,10 @@ async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -
         if flows_created > 0 or flows_updated > 0:
             await session.commit()
             await logger.adebug(
-                f"Successfully created {flows_created} and updated {flows_updated} agentic flows"
+                f"Successfully created {flows_created} and skipped {flows_updated} existing agentic flows"
             )
         else:
-            await logger.adebug("No agentic flows to create or update")
+            await logger.adebug("No agentic flows to create")
 
     except Exception:  # noqa: BLE001
         await logger.aexception("Error in create_or_update_agentic_flows")

@@ -157,7 +157,6 @@ def get_lifespan(*, fix_migration=False, version=None):
         temp_dirs: list[TemporaryDirectory] = []
         sync_flows_from_fs_task = None
         mcp_init_task = None
-        agentic_mcp_init_task = None
 
         try:
             start_time = asyncio.get_event_loop().time()
@@ -233,6 +232,21 @@ def get_lifespan(*, fix_migration=False, version=None):
                 f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s"
             )
 
+            # Auto-configure Agentic MCP server if enabled (before loading flows)
+            if get_settings_service().settings.agentic_experience:
+                from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
+
+                current_time = asyncio.get_event_loop().time()
+                await logger.ainfo("Configuring Agentic MCP server...")
+                try:
+                    async with session_scope() as session:
+                        await auto_configure_agentic_mcp_server(session)
+                    await logger.adebug(
+                        f"Agentic MCP server configured in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                    )
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Failed to configure agentic MCP server: {e}")
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Loading flows")
             await load_flows_from_directory()
@@ -268,39 +282,6 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Start the delayed initialization as a background task
             # Allows the server to start first to avoid race conditions with MCP Server startup
             mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
-
-            # Auto-configure Agentic MCP server if enabled
-            if get_settings_service().settings.agentic_experience:
-                from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
-
-                async def delayed_init_agentic_mcp_server():
-                    """Initialize agentic MCP server in background after a delay."""
-                    await asyncio.sleep(15.0)  # Wait for server to be fully ready
-                    current_time = asyncio.get_event_loop().time()
-                    await logger.ainfo("Configuring Agentic MCP server...")
-                    try:
-                        async with session_scope() as session:
-                            await auto_configure_agentic_mcp_server(session)
-                        await logger.adebug(
-                            f"Agentic MCP server configured in {asyncio.get_event_loop().time() - current_time:.2f}s"
-                        )
-                    except Exception as e:  # noqa: BLE001
-                        await logger.awarning(f"First agentic MCP server initialization attempt failed: {e}")
-                        await asyncio.sleep(5.0)
-                        current_time = asyncio.get_event_loop().time()
-                        await logger.adebug("Retrying agentic MCP server initialization")
-                        try:
-                            async with session_scope() as session:
-                                await auto_configure_agentic_mcp_server(session)
-                            await logger.adebug(
-                                f"Agentic MCP server configured on retry in "
-                                f"{asyncio.get_event_loop().time() - current_time:.2f}s"
-                            )
-                        except Exception as e2:  # noqa: BLE001
-                            await logger.aexception(f"Failed to configure agentic MCP server after retry: {e2}")
-
-                # Start the delayed agentic MCP initialization as a background task
-                agentic_mcp_init_task = asyncio.create_task(delayed_init_agentic_mcp_server())
 
             yield
 
@@ -340,9 +321,6 @@ def get_lifespan(*, fix_migration=False, version=None):
                     if mcp_init_task and not mcp_init_task.done():
                         mcp_init_task.cancel()
                         tasks_to_cancel.append(mcp_init_task)
-                    if agentic_mcp_init_task and not agentic_mcp_init_task.done():
-                        agentic_mcp_init_task.cancel()
-                        tasks_to_cancel.append(agentic_mcp_init_task)
                     if tasks_to_cancel:
                         # Wait for all tasks to complete, capturing exceptions
                         results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)

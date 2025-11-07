@@ -7,7 +7,7 @@ from lfx.services.deps import get_settings_service
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.v2.mcp import update_server
+from langflow.api.v2.mcp import get_server_list, update_server
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service
 from langflow.services.schema import ServiceType
@@ -44,19 +44,12 @@ async def auto_configure_agentic_mcp_server(session: AsyncSession) -> None:
         # Get services
         storage_service = get_service(ServiceType.STORAGE_SERVICE)
 
-        # Try to get MCP composer service
-        try:
-            mcp_composer_service = get_service(ServiceType.MCP_COMPOSER_SERVICE)
-        except Exception:
-            await logger.awarning("MCP Composer service not available, skipping agentic MCP server configuration")
-            return
-
         # Server configuration
         server_name = "langflow-agentic"
         python_executable = sys.executable
         server_config = {
             "command": python_executable,
-            "args": ["-m", "langflow.agentic.mcp.server"],
+            "args": ["-m", "langflow.agentic.mcp"],
             "metadata": {
                 "description": "Langflow Agentic MCP server providing tools for flow/component operations, "
                 "template search, and graph visualization",
@@ -75,8 +68,8 @@ async def auto_configure_agentic_mcp_server(session: AsyncSession) -> None:
 
                 # Check if server already exists for this user
                 try:
-                    existing_servers = await mcp_composer_service.list_servers(user.id)
-                    server_exists = any(s.get("name") == server_name for s in existing_servers)
+                    server_list = await get_server_list(user, session, storage_service, settings_service)
+                    server_exists = server_name in server_list.get("mcpServers", {})
 
                     if server_exists:
                         await logger.adebug(
@@ -141,12 +134,6 @@ async def remove_agentic_mcp_server(session: AsyncSession) -> None:
         # Get services
         storage_service = get_service(ServiceType.STORAGE_SERVICE)
         settings_service = get_settings_service()
-
-        try:
-            mcp_composer_service = get_service(ServiceType.MCP_COMPOSER_SERVICE)
-        except Exception:
-            await logger.awarning("MCP Composer service not available")
-            return
 
         server_name = "langflow-agentic"
         servers_removed = 0
