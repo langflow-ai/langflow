@@ -83,6 +83,9 @@ export default function ApiKeyModal({
                 queryKey: ["useGetModelProviders"],
               });
               queryClient.invalidateQueries({
+                queryKey: ["useGetEnabledModels"],
+              });
+              queryClient.invalidateQueries({
                 queryKey: ["useGetGlobalVariables"],
               });
               queryClient.invalidateQueries({

@@ -176,9 +176,12 @@ export const useProviderActions = () => {
             title: `${providerName} enabled successfully`,
           });
           // The mutation already refetches useGetGlobalVariables in onSettled
-          // We need to refetch model providers and flows
+          // We need to refetch model providers, enabled models, and flows
           queryClient.invalidateQueries({
             queryKey: ["useGetModelProviders"],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["useGetEnabledModels"],
           });
           queryClient.invalidateQueries({
             queryKey: ["flows"],
