@@ -225,13 +225,3 @@ jobs:
       # When triggered manually, use the provided value (default is also true)
       push_to_registry: ${{ github.event_name == 'schedule' || inputs.push_to_registry != false }}
     secrets: inherit
-
-  slack-notification:
-    name: Send Slack Notification
-    needs: [frontend-tests, backend-unit-tests, release-nightly-build]
-    if: ${{ github.repository == 'langflow-ai/langflow' && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send failure notification to Slack
-
-      - name: Send success notification to Slack
