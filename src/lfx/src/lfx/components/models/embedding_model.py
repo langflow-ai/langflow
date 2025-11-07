@@ -203,9 +203,8 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 )
                 kwargs[param_mapping["url"]] = url_value
             # Map project_id for watsonx
-            if hasattr(self, "project_id") and self.project_id:
-                if "project_id" in param_mapping:
-                    kwargs[param_mapping["project_id"]] = self.project_id
+            if hasattr(self, "project_id") and self.project_id and "project_id" in param_mapping:
+                kwargs[param_mapping["project_id"]] = self.project_id
 
         # Add optional parameters if they have values and are mapped
         for param_name, param_value in optional_params.items():
