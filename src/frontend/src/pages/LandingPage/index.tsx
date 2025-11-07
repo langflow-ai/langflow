@@ -5,6 +5,7 @@ import { useState } from "react";
 import useAuthStore from "@/stores/authStore";
 import { useLogout } from "@/clerk/auth";
 import { useNavigate } from "react-router-dom";
+import logoicon from "../../assets/visualailogo.png"
 
 
 function CheckIcon(props: SVGProps<SVGSVGElement>) {
@@ -69,10 +70,12 @@ export default function Landing(): JSX.Element {
       <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-neutral-900/60">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           {/* Logo and responsive title */}
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-teal-500 font-bold">
-              VA
-            </span>
+          <div className="flex items-center gap-2 select-none">
+            <img
+            src={logoicon}
+            alt="Logo"
+            className="h-8 w-8 object-contain drop-shadow-md"
+            />
             {/* Short title for mobile view with no-wrap */}
             <span className="whitespace-nowrap text-sm font-semibold tracking-wide text-white/90 md:hidden">
               Visual AI Agents Builder
@@ -483,10 +486,12 @@ export default function Landing(): JSX.Element {
       {/* Footer */}
       <footer className="border-t border-white/10">
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 md:grid-cols-4">
-          <div>
-            <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-teal-500 font-bold">
-              VA
-            </div>
+          <div className="flex flex-col items-start space-y-3 text-left">
+            <img
+            src={logoicon}
+            alt="Logo"
+            className="h-8 w-8 object-contain drop-shadow-md"
+            />
             <p className="mt-3 max-w-xs text-sm text-white/70">
               Build, deploy and scale AI agents enterprise-securely, powered by Langflow.
             </p>

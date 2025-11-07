@@ -8,7 +8,6 @@ import {
 import { ProtectedAdminRoute } from "./components/authorization/authAdminGuard";
 import { ProtectedRoute } from "./components/authorization/authGuard";
 import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
-import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
 import ContextWrapper from "./contexts";
 import { CustomNavigate } from "./customization/components/custom-navigate";
 import { BASENAME } from "./customization/config-constants";
@@ -52,9 +51,7 @@ const GlobalVariablesPage = lazy(
   () => import("./pages/SettingsPage/pages/GlobalVariablesPage"),
 );
 const ApiKeysPage = lazy(() => import("./pages/SettingsPage/pages/ApiKeysPage"));
-const GeneralPage = lazy(
-  () => import("./pages/SettingsPage/pages/GeneralPage"),
-);
+
 const ShortcutsPage = lazy(
   () => import("./pages/SettingsPage/pages/ShortcutsPage"),
 );
@@ -255,7 +252,7 @@ const router = createBrowserRouter(
                   </Suspense>
                 }
               >
-                <Route index element={<CustomNavigate replace to="general" />} />
+                <Route index element={<CustomNavigate replace to="mcp-servers" />} />
                 <Route
                   path="global-variables"
                   element={
@@ -280,16 +277,7 @@ const router = createBrowserRouter(
                     </Suspense>
                   }
                 />
-                <Route
-                  path="general/:scrollId?"
-                  element={
-                    <Suspense fallback={<LoadingPage />}>
-                      <AuthSettingsGuard>
-                        <GeneralPage />
-                      </AuthSettingsGuard>
-                    </Suspense>
-                  }
-                />
+                
                 <Route
                   path="shortcuts"
                   element={

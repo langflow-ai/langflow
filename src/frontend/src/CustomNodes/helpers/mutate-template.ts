@@ -1,5 +1,5 @@
 import type { UseMutationResult } from "@tanstack/react-query";
-import { cloneDeep, debounce } from "lodash";
+import { cloneDeep, type DebouncedFunc, debounce } from "lodash"
 import {
   ERROR_UPDATING_COMPONENT,
   SAVE_DEBOUNCE_TIME,
@@ -8,8 +8,32 @@ import {
 import type { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
 import { updateHiddenOutputs } from "./update-hidden-outputs";
 
+type MutateTemplateDebouncedFunc = DebouncedFunc<
+  (
+    newValue: any,
+    node: APIClassType,
+    setNodeClass: (node: APIClassType | undefined) => void,
+    postTemplateValue: UseMutationResult<
+      APIClassType | undefined,
+      ResponseErrorDetailAPI,
+      any
+    >,
+    setErrorData: (error: { title: string; list?: string[] }) => void,
+    parameterName?: string,
+    callback?: () => void,
+    toolMode?: boolean,
+  ) => Promise<void>
+>;
+
 // Map to store debounced functions for each node ID
-const debouncedFunctions = new Map<string, ReturnType<typeof debounce>>();
+const debouncedFunctions = new Map<string, MutateTemplateDebouncedFunc>();
+
+export const clearMutateTemplateDebounce = () => {
+  debouncedFunctions.forEach((fn) => {
+    fn.cancel();
+  });
+  debouncedFunctions.clear();
+};
 
 export const mutateTemplate = async (
   newValue,

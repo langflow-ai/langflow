@@ -69,13 +69,7 @@ export const GetStartedProgress: FC<{
       {
         onSuccess: () => {
           mutateLoggedUser({});
-          if (key === "github_starred") {
-            setIsGithubStarredChild(true);
-            window.open(GITHUB_URL, "_blank", "noopener,noreferrer");
-          } else if (key === "discord_clicked") {
-            setIsDiscordJoinedChild(true);
-            window.open(DISCORD_URL, "_blank", "noopener,noreferrer");
-          } else if (key === "dialog_dismissed") {
+          if (key === "dialog_dismissed") {
             handleDismissDialog();
           }
         },
@@ -123,89 +117,7 @@ export const GetStartedProgress: FC<{
       </div>
 
       <div className="mt-2 space-y-1">
-        <Button
-          data-testid="github_starred_btn_get_started"
-          unstyled
-          className={cn(
-            "w-full",
-            isGithubStarredChild && "pointer-events-none",
-          )}
-          onClick={(e) => {
-            if (isGithubStarredChild) {
-              e.preventDefault();
-              return;
-            }
-            handleUserTrack("github_starred");
-          }}
-        >
-          <div
-            className={cn(
-              "flex items-center gap-2 rounded-md px-2 py-[10px] hover:bg-muted",
-              isGithubStarredChild && "pointer-events-none",
-            )}
-          >
-            {isGithubStarredChild ? (
-              <span data-testid="github_starred_icon_get_started">
-                <IconComponent
-                  name="Check"
-                  className="h-4 w-4 text-accent-emerald-foreground"
-                />
-              </span>
-            ) : (
-              <FaGithub className="h-4 w-4" />
-            )}
-            <span
-              className={cn(
-                "text-sm",
-                isGithubStarredChild && "text-muted-foreground line-through",
-              )}
-            >
-              Star repo for updates
-            </span>
-          </div>
-        </Button>
-
-        <Button
-          data-testid="discord_joined_btn_get_started"
-          unstyled
-          className={cn(
-            "w-full",
-            isDiscordJoinedChild && "pointer-events-none",
-          )}
-          onClick={(e) => {
-            if (isDiscordJoinedChild) {
-              e.preventDefault();
-              return;
-            }
-            handleUserTrack("discord_clicked");
-          }}
-        >
-          <div
-            className={cn(
-              "flex items-center gap-2 rounded-md p-2 py-[10px] hover:bg-muted",
-              isDiscordJoinedChild && "pointer-events-none",
-            )}
-          >
-            {isDiscordJoinedChild ? (
-              <span data-testid="discord_joined_icon_get_started">
-                <IconComponent
-                  name="Check"
-                  className="h-4 w-4 text-accent-emerald-foreground"
-                />
-              </span>
-            ) : (
-              <FaDiscord className="h-4 w-4 text-[#5865F2]" />
-            )}
-            <span
-              className={cn(
-                "text-sm",
-                isDiscordJoinedChild && "text-muted-foreground line-through",
-              )}
-            >
-              Join the community
-            </span>
-          </div>
-        </Button>
+        
 
         <Button
           unstyled

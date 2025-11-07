@@ -11,12 +11,15 @@ import {
   SidebarMenuItem,
 } from "../../ui/sidebar";
 
+export type SidebarNavItem = {
+  href?: string;
+  title: string;
+  icon: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+};
 type SideBarButtonsComponentProps = {
-  items: {
-    href?: string;
-    title: string;
-    icon: React.ReactNode;
-  }[];
+  items: SidebarNavItem[];
   handleOpenNewFolderModal?: () => void;
 };
 
@@ -34,21 +37,35 @@ const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
             <SidebarMenu>
               {items.map((item, index) => (
                 <SidebarMenuItem key={index}>
-                  <CustomLink to={item.href!} replace>
+                  {item.href ? (
+                    <CustomLink to={item.href} replace>
+                      <SidebarMenuButton
+                        size="md"
+                        isActive={pathname.endsWith(item.href)}
+                        data-testid={`sidebar-nav-${item.title}`}
+                        tooltip={item.title}
+                      >
+                        {item.icon}
+                        <span className="block max-w-full truncate">
+                          {item.title}
+                        </span>
+                      </SidebarMenuButton>
+                    </CustomLink>
+                  ) : (
                     <SidebarMenuButton
                       size="md"
-                      isActive={
-                        item.href ? pathname.endsWith(item.href) : false
-                      }
+                      onClick={item.onClick}
+                      disabled={item.disabled}
                       data-testid={`sidebar-nav-${item.title}`}
                       tooltip={item.title}
+                      className="disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {item.icon}
                       <span className="block max-w-full truncate">
                         {item.title}
                       </span>
                     </SidebarMenuButton>
-                  </CustomLink>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
