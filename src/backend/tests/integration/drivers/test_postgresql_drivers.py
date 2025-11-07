@@ -21,15 +21,11 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlmodel import select
 
-# Mark all tests in this module as standalone (don't need app client)
-# and skip if not using PostgreSQL
-pytestmark = [
-    pytest.mark.standalone,
-    pytest.mark.skipif(
-        not os.getenv("LANGFLOW_DATABASE_URL", "").startswith("postgresql"),
-        reason="PostgreSQL-specific driver compatibility tests",
-    ),
-]
+# Skip all tests in this module if not using PostgreSQL
+pytestmark = pytest.mark.skipif(
+    not os.getenv("LANGFLOW_DATABASE_URL", "").startswith("postgresql"),
+    reason="PostgreSQL-specific driver compatibility tests",
+)
 
 
 @pytest.fixture
