@@ -89,6 +89,9 @@ jobs:
             arch: amd64
             runner: ubuntu-latest
             python-version: "3.12"
+          # macOS-13 Brown out
+          # https://github.com/actions/runner-images/issues/13046
+          # https://github.com/godot-rust/gdext/pull/1402
           # macOS ARM64 (Apple Silicon)
           - os: macos
             arch: arm64
@@ -323,6 +326,7 @@ jobs:
       - name: Test server startup (Unix)
         if: matrix.os != 'windows'
         timeout-minutes: 5
+        #objc[23504]: +[MPSGraphObject initialize] may have been in progress in another thread when fork() was called. We cannot safely call it or ignore it in the fork() child process. Crashing instead. Set a breakpoint on objc_initializeAfterForkError to debug.
         env:
           PYTORCH_NO_MPS: 1
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
