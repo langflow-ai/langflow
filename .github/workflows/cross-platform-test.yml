@@ -332,6 +332,8 @@ jobs:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
         run: |
           # Start server in background
+          echo "PYTORCH_NO_MPS=$PYTORCH_NO_MPS"
+          echo "PYTORCH_NFORK_SAFETYO_MPS=$OBJC_DISABLE_INITIALIZE_FORK_SAFETY"
           ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
 
