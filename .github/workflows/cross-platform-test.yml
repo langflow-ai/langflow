@@ -330,6 +330,7 @@ jobs:
         env:
           PYTORCH_NO_MPS: 1
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
+          OMP_NUM_THREADS: 1
         run: |
           # Start server in background
           echo "PYTORCH_NO_MPS=$PYTORCH_NO_MPS"
@@ -619,6 +620,7 @@ jobs:
         env:
           PYTORCH_NO_MPS: 1
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
+          OMP_NUM_THREADS: 1
         run: |
           # Start server in background
           ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
