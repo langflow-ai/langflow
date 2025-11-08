@@ -325,8 +325,6 @@ jobs:
         timeout-minutes: 5
         env:
           PYTORCH_NO_MPS: 1
-          PYTORCH_ENABLE_MPS_FALLBACK: 1
-          PYTORCH_MPS_HIGH_WATERMARK_RATIO: 0.0
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
         run: |
           # Start server in background
@@ -614,8 +612,6 @@ jobs:
         timeout-minutes: 5
         env:
           PYTORCH_NO_MPS: 1
-          PYTORCH_ENABLE_MPS_FALLBACK: 1
-          PYTORCH_MPS_HIGH_WATERMARK_RATIO: 0.0
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
         run: |
           # Start server in background
