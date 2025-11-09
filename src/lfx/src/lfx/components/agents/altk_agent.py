@@ -187,6 +187,9 @@ class ValidatedTool(ALTKBaseTool):
     conversation_context: list[BaseMessage] = Field(default_factory=list)
     tool_specs: list[dict] = Field(default_factory=list)
     validation_attempts: dict[str, int] = Field(default_factory=dict)
+    current_conversation_context: list[BaseMessage] = Field(default_factory=list)
+    previous_tool_calls_in_current_step: list[dict] = Field(default_factory=list)
+    previous_reflection_messages: dict[str, str] = Field(default_factory=list)
 
     def __init__(
         self,
@@ -245,14 +248,24 @@ class ValidatedTool(ALTKBaseTool):
             self.conversation_context = [
                 message_to_dict(msg) for msg in self.conversation_context
             ]
+        
+        logger.debug(f"Converted conversation context for SPARC for tool call:\n{json.dumps(tool_call, indent=2)}\n{self.conversation_context=}")
 
         try:
             # Run SPARC validation
             run_input = SPARCReflectionRunInput(
-                messages=self.conversation_context,
+                messages=self.conversation_context + self.previous_tool_calls_in_current_step,
                 tool_specs=self.tool_specs,
                 tool_calls=[tool_call],
             )
+
+            if self.current_conversation_context != self.conversation_context:
+                logger.info("Updating conversation context for SPARC validation")
+                self.current_conversation_context = self.conversation_context
+                self.previous_tool_calls_in_current_step = []
+            else:
+                logger.info("Using existing conversation context for SPARC validation")
+                self.previous_tool_calls_in_current_step.append(tool_call)
 
             # Check for missing tool specs and bypass if necessary
             if not self.tool_specs:
