@@ -6,10 +6,12 @@ This test class focuses on components that are compatible with S3 storage.
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.components.data.file import FileComponent
-from langflow.components.data.save_file import SaveToFileComponent
-from langflow.components.langchain_utilities.csv_agent import CSVAgentComponent
-from langflow.components.langchain_utilities.json_agent import JsonAgentComponent
+from lfx.components.data.file import FileComponent
+from lfx.components.data.save_file import SaveToFileComponent
+from lfx.components.data.csv_to_data import CSVToDataComponent
+from lfx.components.data.json_to_data import JSONToDataComponent
+from lfx.components.langchain_utilities.csv_agent import CSVAgentComponent
+from lfx.components.langchain_utilities.json_agent import JsonAgentComponent
 
 
 class TestS3CompatibleComponents:
@@ -214,3 +216,131 @@ class TestS3CompatibleComponents:
             # All should succeed
             assert len(results) == 3
             assert all(result is not None for result in results)
+
+    @pytest.mark.asyncio
+    async def test_csv_to_data_fileinput_local_only(self, s3_settings, local_settings):
+        """Test CSVToDataComponent with FileInput - always treats as local."""
+        # Test with S3 storage - FileInput should still be treated as local
+        with patch("lfx.services.deps.get_settings_service", return_value=s3_settings):
+            component = CSVToDataComponent()
+            component.csv_file = "/local/path/data.csv"
+
+            # Mock local file read
+            with patch("pathlib.Path.read_bytes", return_value=b"name,age\nJohn,30"):
+                with patch("pathlib.Path.exists", return_value=True):
+                    result = component.load_csv_to_data()
+
+                    # Should read from local filesystem, not S3
+                    assert len(result) == 1
+                    assert result[0].data == {"name": "John", "age": "30"}
+
+        # Test with local storage
+        with patch("lfx.services.deps.get_settings_service", return_value=local_settings):
+            component = CSVToDataComponent()
+            component.csv_file = "/local/path/data.csv"
+
+            with patch("pathlib.Path.read_bytes", return_value=b"name,age\nJane,25"):
+                with patch("pathlib.Path.exists", return_value=True):
+                    result = component.load_csv_to_data()
+
+                    assert len(result) == 1
+                    assert result[0].data == {"name": "Jane", "age": "25"}
+
+    @pytest.mark.asyncio
+    async def test_csv_to_data_path_s3_key(self, s3_settings):
+        """Test CSVToDataComponent with text path input - handles S3 keys."""
+        with patch("lfx.services.deps.get_settings_service", return_value=s3_settings):
+            component = CSVToDataComponent()
+            component.csv_path = "user_123/data.csv"  # S3 key format
+
+            # Mock S3 read
+            with patch("lfx.base.data.storage_utils.read_file_bytes", return_value=b"name,age\nBob,35"):
+                result = component.load_csv_to_data()
+
+                # Should read from S3
+                assert len(result) == 1
+                assert result[0].data == {"name": "Bob", "age": "35"}
+
+    @pytest.mark.asyncio
+    async def test_csv_to_data_path_local(self, local_settings):
+        """Test CSVToDataComponent with text path input - handles local paths."""
+        with patch("lfx.services.deps.get_settings_service", return_value=local_settings):
+            component = CSVToDataComponent()
+            component.csv_path = "/local/path/data.csv"
+
+            # Mock local file read
+            with patch("pathlib.Path.open") as mock_open:
+                mock_file = MagicMock()
+                mock_file.read.return_value = "name,age\nAlice,28"
+                mock_open.return_value.__enter__.return_value = mock_file
+                mock_open.return_value.__exit__.return_value = None
+
+                result = component.load_csv_to_data()
+
+                # Should read from local filesystem
+                assert len(result) == 1
+                assert result[0].data == {"name": "Alice", "age": "28"}
+
+    @pytest.mark.asyncio
+    async def test_json_to_data_fileinput_local_only(self, s3_settings, local_settings):
+        """Test JSONToDataComponent with FileInput - always treats as local."""
+        # Test with S3 storage - FileInput should still be treated as local
+        with patch("lfx.services.deps.get_settings_service", return_value=s3_settings):
+            component = JSONToDataComponent()
+            component.json_file = "/local/path/data.json"
+
+            # Mock local file read
+            with patch("pathlib.Path.read_text", return_value='{"key": "value"}'):
+                with patch("pathlib.Path.exists", return_value=True):
+                    result = component.convert_json_to_data()
+
+                    # Should read from local filesystem, not S3
+                    from lfx.schema.data import Data
+                    assert isinstance(result, Data)
+                    assert result.data == {"key": "value"}
+
+        # Test with local storage
+        with patch("lfx.services.deps.get_settings_service", return_value=local_settings):
+            component = JSONToDataComponent()
+            component.json_file = "/local/path/data.json"
+
+            with patch("pathlib.Path.read_text", return_value='{"name": "test"}'):
+                with patch("pathlib.Path.exists", return_value=True):
+                    result = component.convert_json_to_data()
+
+                    from lfx.schema.data import Data
+                    assert isinstance(result, Data)
+                    assert result.data == {"name": "test"}
+
+    @pytest.mark.asyncio
+    async def test_json_to_data_path_s3_key(self, s3_settings):
+        """Test JSONToDataComponent with text path input - handles S3 keys."""
+        with patch("lfx.services.deps.get_settings_service", return_value=s3_settings):
+            component = JSONToDataComponent()
+            component.json_path = "user_123/data.json"  # S3 key format
+
+            # Mock S3 read
+            with patch("lfx.base.data.storage_utils.read_file_bytes", return_value=b'{"key": "s3_value"}'):
+                result = component.convert_json_to_data()
+
+                # Should read from S3
+                from lfx.schema.data import Data
+                assert isinstance(result, Data)
+                assert result.data == {"key": "s3_value"}
+
+    @pytest.mark.asyncio
+    async def test_json_to_data_path_local(self, local_settings):
+        """Test JSONToDataComponent with text path input - handles local paths."""
+        with patch("lfx.services.deps.get_settings_service", return_value=local_settings):
+            component = JSONToDataComponent()
+            component.json_path = "/local/path/data.json"
+
+            # Mock local file read
+            with patch("pathlib.Path.read_text", return_value='{"local": "data"}'):
+                with patch("pathlib.Path.exists", return_value=True):
+                    result = component.convert_json_to_data()
+
+                    # Should read from local filesystem
+                    from lfx.schema.data import Data
+                    assert isinstance(result, Data)
+                    assert result.data == {"local": "data"}

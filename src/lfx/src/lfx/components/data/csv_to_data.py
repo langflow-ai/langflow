@@ -5,6 +5,10 @@ from pathlib import Path
 from lfx.custom.custom_component.component import Component
 from lfx.io import FileInput, MessageTextInput, MultilineInput, Output
 from lfx.schema.data import Data
+from lfx.base.data.storage_utils import read_file_bytes
+from lfx.services.deps import get_settings_service
+from lfx.utils.async_helpers import run_until_complete
+
 
 
 class CSVToDataComponent(Component):
@@ -52,34 +56,31 @@ class CSVToDataComponent(Component):
         csv_data = None
         try:
             if self.csv_file:
-                resolved_path = self.resolve_path(self.csv_file)
-                # Use storage-aware reading for uploaded files
-                from lfx.base.data.storage_utils import read_file_bytes
-                from lfx.services.deps import get_settings_service
-                from lfx.utils.async_helpers import run_until_complete
-
-                resolved_path = self.resolve_path(self.csv_file)
-
-                if not resolved_path.lower().endswith(".csv"):
+                # FileInput always provides a local file path
+                file_path = self.csv_file
+                if not file_path.lower().endswith(".csv"):
                     self.status = "The provided file must be a CSV file."
                 else:
-                    # Read bytes using storage-aware function
-                    settings = get_settings_service().settings
-                    if settings.storage_type == "s3":
-                        # For S3, run async read in sync context using Langflow's helper
-                        csv_bytes = run_until_complete(read_file_bytes(resolved_path))
-                    else:
-                        # For local, read directly
-                        csv_bytes = Path(resolved_path).read_bytes()
+                    # Resolve to absolute path and read from local filesystem
+                    resolved_path = self.resolve_path(file_path)
+                    csv_bytes = Path(resolved_path).read_bytes()
                     csv_data = csv_bytes.decode("utf-8")
 
             elif self.csv_path:
-                file_path = Path(self.csv_path)
-                if file_path.suffix.lower() != ".csv":
-                    self.status = "The provided file must be a CSV file."
+                file_path = self.csv_path
+                if not file_path.lower().endswith(".csv"):
+                    self.status = "The provided path must be to a CSV file."
                 else:
-                    with file_path.open(newline="", encoding="utf-8") as csvfile:
-                        csv_data = csvfile.read()
+                    settings = get_settings_service().settings
+                    if settings.storage_type == "s3":
+                        # For S3 storage, treat as S3 key format "flow_id/filename"
+                        csv_bytes = run_until_complete(read_file_bytes(file_path))
+                        csv_data = csv_bytes.decode("utf-8")
+                    else:
+                        # Local storage, read from filesystem
+                        resolved_path = self.resolve_path(file_path)
+                        with Path(resolved_path).open(newline="", encoding="utf-8") as csvfile:
+                            csv_data = csvfile.read()
 
             else:
                 csv_data = self.csv_string

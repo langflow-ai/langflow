@@ -64,6 +64,7 @@ async def read_file_bytes(file_path: str, storage_service: StorageService | None
 
         flow_id, filename = parsed
         return await storage_service.get_file(flow_id, filename)
+
     path_obj = Path(file_path)
     if not path_obj.exists():
         msg = f"File not found: {file_path}"
