@@ -325,7 +325,7 @@ class BaseFileComponent(Component, ABC):
         """
         files = self._validate_and_resolve_paths()
         settings = get_settings_service().settings
-        
+
         # For S3 storage, paths are virtual storage keys that don't exist on the local filesystem.
         # Skip the exists() check for S3 files to preserve them in the output.
         # Validation of S3 file existence is deferred until file processing (see _validate_and_resolve_paths).

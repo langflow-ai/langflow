@@ -1,4 +1,3 @@
-import asyncio
 import tempfile
 import unicodedata
 from collections.abc import Callable

@@ -75,10 +75,7 @@ class TestS3FileEndpoints:
                 )
 
                 # API extracts "document.pdf" from "user_123/subfolder/document.pdf" (last segment only)
-                mock_storage_service.get_file.assert_called_once_with(
-                    flow_id="user_123",
-                    file_name="document.pdf"
-                )
+                mock_storage_service.get_file.assert_called_once_with(flow_id="user_123", file_name="document.pdf")
 
     @pytest.mark.asyncio
     async def test_download_file_returns_streaming_response(self, mock_storage_service, mock_settings):
@@ -99,7 +96,6 @@ class TestS3FileEndpoints:
                 patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
             ):
                 from fastapi.responses import StreamingResponse
-
                 from langflow.api.v2.files import download_file
 
                 response = await download_file(
@@ -179,10 +175,7 @@ class TestS3FileEndpoints:
                 )
 
                 # Verify storage service was called with just the filename (last path segment)
-                mock_storage_service.delete_file.assert_called_once_with(
-                    flow_id="user_123",
-                    file_name="document.pdf"
-                )
+                mock_storage_service.delete_file.assert_called_once_with(flow_id="user_123", file_name="document.pdf")
 
                 # Verify database deletion
                 mock_session.delete.assert_called_once_with(mock_file)
@@ -241,16 +234,9 @@ class TestS3FileEndpoints:
             with patch("langflow.api.v2.files.upload_user_file"):
                 from langflow.api.v2.files import save_file_routine
 
-                await save_file_routine(
-                    mock_file,
-                    mock_storage_service,
-                    mock_user,
-                    file_name="upload.txt"
-                )
+                await save_file_routine(mock_file, mock_storage_service, mock_user, file_name="upload.txt")
 
                 # Verify storage service was called
                 mock_storage_service.save_file.assert_called_once_with(
-                    flow_id="user_123",
-                    file_name="upload.txt",
-                    data=b"file content"
+                    flow_id="user_123", file_name="upload.txt", data=b"file content"
                 )
