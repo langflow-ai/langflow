@@ -109,6 +109,9 @@ async def get_session():
     logger.warning(msg)
     raise NotImplementedError(msg)
 
+async def injectable_session_scope():
+    async with session_scope() as session:
+        yield session
 
 @asynccontextmanager
 async def session_scope() -> AsyncGenerator[AsyncSession, None]:
@@ -141,6 +144,10 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
             raise
         # No explicit close needed - _with_session() handles it
 
+
+async def injectable_session_scope_readonly():
+    async with session_scope_readonly() as session:
+        yield session
 
 @asynccontextmanager
 async def session_scope_readonly() -> AsyncGenerator[AsyncSession, None]:

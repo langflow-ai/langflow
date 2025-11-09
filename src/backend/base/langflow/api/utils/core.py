@@ -10,7 +10,7 @@ from fastapi import Depends, HTTPException, Query
 from fastapi_pagination import Params
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
-from lfx.services.deps import session_scope, session_scope_readonly
+from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly, session_scope
 from sqlalchemy import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -36,9 +36,9 @@ MIN_PAGE_SIZE = 1
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
 CurrentActiveMCPUser = Annotated[User, Depends(get_current_active_user_mcp)]
 # DbSession with auto-commit for write operations
-DbSession = Annotated[AsyncSession, Depends(session_scope)]
+DbSession = Annotated[AsyncSession, Depends(injectable_session_scope)]
 # DbSessionReadOnly for read-only operations (no auto-commit, reduces lock contention)
-DbSessionReadOnly = Annotated[AsyncSession, Depends(session_scope_readonly)]
+DbSessionReadOnly = Annotated[AsyncSession, Depends(injectable_session_scope_readonly)]
 
 
 class EventDeliveryType(str, Enum):

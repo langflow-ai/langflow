@@ -463,12 +463,6 @@ async def download_file(
         # Get the basename of the file path
         file_name = file.path.split("/")[-1]
 
-        # Get file stream
-        file_stream = await storage_service.get_file(flow_id=str(current_user.id), file_name=file_name)
-
-        if file_stream is None:
-            raise HTTPException(status_code=404, detail="File stream not available")
-
         # If return_content is True, read the file content and return it
         if return_content:
             # For content return, get the full file

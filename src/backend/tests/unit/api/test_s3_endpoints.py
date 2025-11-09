@@ -1,152 +1,92 @@
-"""S3-specific test class for file API endpoints.
+"""API endpoint tests for S3 storage.
 
-This test class focuses on API endpoints working with S3 storage.
+This module tests the file API endpoints (download, upload, delete) work correctly
+with S3 storage. These are unit tests that mock the storage layer to focus on
+testing API logic:
+- Path parsing from database file records
+- HTTP response construction (StreamingResponse vs content)
+- Error handling and HTTP status codes
+- Request parameter validation
+
+For actual S3 storage service testing, see:
+- tests/unit/services/storage/ - Unit tests with mocked boto3
+- tests/integration/storage/ - Integration tests with real AWS S3
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 from langflow.services.storage.s3 import S3StorageService
 
 
 class TestS3FileEndpoints:
-    """Test file API endpoints with S3 storage."""
+    """Test file API endpoints with S3 storage mock."""
 
     @pytest.fixture
-    def s3_storage_service(self):
-        """Mock S3 storage service."""
+    def mock_storage_service(self):
+        """Mock storage service for testing API logic.
+
+        This is a simple mock - we're testing the API layer, not S3 itself.
+        """
         service = MagicMock(spec=S3StorageService)
-        service.get_file = AsyncMock(return_value=b"file content")
-        service.get_file_stream = AsyncMock()
-        service.get_file_stream.return_value = [b"chunk1", b"chunk2", b"chunk3"]
+        service.get_file = AsyncMock(return_value=b"test file content")
+        service.get_file_stream = MagicMock(return_value=iter([b"chunk1", b"chunk2", b"chunk3"]))
         service.save_file = AsyncMock()
         service.delete_file = AsyncMock()
         service.get_file_size = AsyncMock(return_value=1024)
         return service
 
     @pytest.fixture
-    def s3_settings(self):
-        """Mock S3 settings."""
+    def mock_settings(self):
+        """Mock settings service."""
         settings = MagicMock()
         settings.settings.storage_type = "s3"
         settings.settings.max_file_size_upload = 10  # 10MB
         return settings
 
     @pytest.mark.asyncio
-    async def test_s3_download_file_streaming(self, s3_storage_service, s3_settings):
-        """Test downloading files with S3 streaming."""
+    async def test_download_file_parses_path_correctly(self, mock_storage_service, mock_settings):
+        """Test that download_file correctly extracts filename from path."""
         with (
-            patch("langflow.services.deps.get_storage_service", return_value=s3_storage_service),
-            patch("langflow.services.deps.get_settings_service", return_value=s3_settings),
+            patch("langflow.services.deps.get_storage_service", return_value=mock_storage_service),
+            patch("langflow.services.deps.get_settings_service", return_value=mock_settings),
         ):
-            # Mock database and user
             mock_user = MagicMock()
             mock_user.id = "user_123"
 
+            # File path uses .split("/")[-1] to get just the filename
             mock_file = MagicMock()
-            mock_file.path = "user_123/document.pdf"
+            mock_file.path = "user_123/subfolder/document.pdf"
             mock_file.name = "document"
 
             with (
                 patch("langflow.api.v2.files.fetch_file_object", return_value=mock_file),
                 patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
             ):
-                # Test the download endpoint logic
                 from langflow.api.v2.files import download_file
 
-                # Mock the database session
-                mock_session = MagicMock()
-
-                # Test streaming download
-                response = await download_file(
+                await download_file(
                     file_id="test-id",
                     current_user=mock_user,
-                    session=mock_session,
-                    storage_service=s3_storage_service,
-                    return_content=False,
-                )
-
-                # Should use S3 streaming
-                s3_storage_service.get_file_stream.assert_called_once_with(flow_id="user_123", file_name="document.pdf")
-
-    @pytest.mark.asyncio
-    async def test_s3_download_file_content(self, s3_storage_service, s3_settings):
-        """Test downloading file content with S3."""
-        with (
-            patch("langflow.services.deps.get_storage_service", return_value=s3_storage_service),
-            patch("langflow.services.deps.get_settings_service", return_value=s3_settings),
-        ):
-            # Mock database and user
-            mock_user = MagicMock()
-            mock_user.id = "user_123"
-
-            mock_file = MagicMock()
-            mock_file.path = "user_123/document.pdf"
-            mock_file.name = "document"
-
-            with (
-                patch("langflow.api.v2.files.fetch_file_object", return_value=mock_file),
-                patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
-            ):
-                # Test the download endpoint logic
-                from langflow.api.v2.files import download_file
-
-                # Mock the database session
-                mock_session = MagicMock()
-
-                # Test content download
-                response = await download_file(
-                    file_id="test-id",
-                    current_user=mock_user,
-                    session=mock_session,
-                    storage_service=s3_storage_service,
+                    session=MagicMock(),
+                    storage_service=mock_storage_service,
                     return_content=True,
                 )
 
-                # Should use S3 get_file for content
-                s3_storage_service.get_file.assert_called_once_with(flow_id="user_123", file_name="document.pdf")
-
-    @pytest.mark.asyncio
-    async def test_s3_upload_file(self, s3_storage_service, s3_settings):
-        """Test uploading files to S3."""
-        with (
-            patch("langflow.services.deps.get_storage_service", return_value=s3_storage_service),
-            patch("langflow.services.deps.get_settings_service", return_value=s3_settings),
-        ):
-            # Mock database and user
-            mock_user = MagicMock()
-            mock_user.id = "user_123"
-
-            # Mock file upload
-            mock_file = MagicMock()
-            mock_file.filename = "test.txt"
-            mock_file.size = 1024
-            mock_file.read = AsyncMock(return_value=b"file content")
-
-            with (
-                patch("langflow.api.v2.files.upload_user_file"),
-                patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
-            ):
-                # Test upload logic
-                from langflow.api.v2.files import save_file_routine
-
-                file_id, file_name = await save_file_routine(
-                    mock_file, s3_storage_service, mock_user, file_name="test.txt"
-                )
-
-                # Should save to S3
-                s3_storage_service.save_file.assert_called_once_with(
-                    flow_id="user_123", file_name="test.txt", data=b"file content"
+                # API extracts "document.pdf" from "user_123/subfolder/document.pdf" (last segment only)
+                mock_storage_service.get_file.assert_called_once_with(
+                    flow_id="user_123",
+                    file_name="document.pdf"
                 )
 
     @pytest.mark.asyncio
-    async def test_s3_delete_file(self, s3_storage_service, s3_settings):
-        """Test deleting files from S3."""
+    async def test_download_file_returns_streaming_response(self, mock_storage_service, mock_settings):
+        """Test that download_file returns StreamingResponse for file downloads."""
         with (
-            patch("langflow.services.deps.get_storage_service", return_value=s3_storage_service),
-            patch("langflow.services.deps.get_settings_service", return_value=s3_settings),
+            patch("langflow.services.deps.get_storage_service", return_value=mock_storage_service),
+            patch("langflow.services.deps.get_settings_service", return_value=mock_settings),
         ):
-            # Mock database and user
             mock_user = MagicMock()
             mock_user.id = "user_123"
 
@@ -158,127 +98,159 @@ class TestS3FileEndpoints:
                 patch("langflow.api.v2.files.fetch_file_object", return_value=mock_file),
                 patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
             ):
-                # Test delete logic
-                from langflow.api.v2.files import delete_file
+                from fastapi.responses import StreamingResponse
 
-                # Mock the database session
-                mock_session = MagicMock()
-
-                await delete_file(
-                    file_id="test-id", current_user=mock_user, session=mock_session, storage_service=s3_storage_service
-                )
-
-                # Should delete from S3
-                s3_storage_service.delete_file.assert_called_once_with(flow_id="user_123", file_name="document.pdf")
-
-    @pytest.mark.asyncio
-    async def test_s3_file_size_calculation(self, s3_storage_service, s3_settings):
-        """Test file size calculation with S3."""
-        with (
-            patch("langflow.services.deps.get_storage_service", return_value=s3_storage_service),
-            patch("langflow.services.deps.get_settings_service", return_value=s3_settings),
-        ):
-            # Mock database and user
-            mock_user = MagicMock()
-            mock_user.id = "user_123"
-
-            # Mock file upload
-            mock_file = MagicMock()
-            mock_file.filename = "test.txt"
-            mock_file.size = 1024
-            mock_file.read = AsyncMock(return_value=b"file content")
-
-            with (
-                patch("langflow.api.v2.files.upload_user_file"),
-                patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
-            ):
-                # Test size calculation
-                from langflow.api.v2.files import save_file_routine
-
-                file_id, file_name = await save_file_routine(
-                    mock_file, s3_storage_service, mock_user, file_name="test.txt"
-                )
-
-                # Should get file size from S3
-                s3_storage_service.get_file_size.assert_called_once_with(flow_id="user_123", file_name="test.txt")
-
-    @pytest.mark.asyncio
-    async def test_s3_error_handling(self, s3_storage_service, s3_settings):
-        """Test error handling with S3 operations."""
-        with (
-            patch("langflow.services.deps.get_storage_service", return_value=s3_storage_service),
-            patch("langflow.services.deps.get_settings_service", return_value=s3_settings),
-        ):
-            # Mock S3 error
-            s3_storage_service.get_file.side_effect = FileNotFoundError("File not found")
-
-            # Mock database and user
-            mock_user = MagicMock()
-            mock_user.id = "user_123"
-
-            mock_file = MagicMock()
-            mock_file.path = "user_123/nonexistent.pdf"
-            mock_file.name = "nonexistent"
-
-            with (
-                patch("langflow.api.v2.files.fetch_file_object", return_value=mock_file),
-                patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
-            ):
-                # Test error handling
                 from langflow.api.v2.files import download_file
 
-                # Mock the database session
-                mock_session = MagicMock()
-
-                # Should handle S3 errors gracefully
-                with pytest.raises(FileNotFoundError):
-                    await download_file(
-                        file_id="test-id",
-                        current_user=mock_user,
-                        session=mock_session,
-                        storage_service=s3_storage_service,
-                        return_content=True,
-                    )
-
-    @pytest.mark.asyncio
-    async def test_s3_streaming_performance(self, s3_storage_service, s3_settings):
-        """Test S3 streaming performance."""
-        with (
-            patch("langflow.services.deps.get_storage_service", return_value=s3_storage_service),
-            patch("langflow.services.deps.get_settings_service", return_value=s3_settings),
-        ):
-            # Mock large file streaming
-            large_chunks = [b"chunk" * 1000 for _ in range(100)]
-            s3_storage_service.get_file_stream.return_value = large_chunks
-
-            # Mock database and user
-            mock_user = MagicMock()
-            mock_user.id = "user_123"
-
-            mock_file = MagicMock()
-            mock_file.path = "user_123/large_file.txt"
-            mock_file.name = "large_file"
-
-            with (
-                patch("langflow.api.v2.files.fetch_file_object", return_value=mock_file),
-                patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
-            ):
-                # Test streaming performance
-                from langflow.api.v2.files import download_file
-
-                # Mock the database session
-                mock_session = MagicMock()
-
-                # Should handle large files efficiently
                 response = await download_file(
                     file_id="test-id",
                     current_user=mock_user,
-                    session=mock_session,
-                    storage_service=s3_storage_service,
+                    session=MagicMock(),
+                    storage_service=mock_storage_service,
                     return_content=False,
                 )
 
-                # Should use streaming for large files
-                s3_storage_service.get_file_stream.assert_called_once_with(
-                    flow_id="user_123", file_name="large_file.txt"
+                # Verify response type and headers
+                assert isinstance(response, StreamingResponse)
+                assert response.media_type == "application/octet-stream"
+                assert "attachment" in response.headers.get("Content-Disposition", "")
+                assert "document.pdf" in response.headers.get("Content-Disposition", "")
+
+    @pytest.mark.asyncio
+    async def test_download_file_returns_content_string(self, mock_storage_service, mock_settings):
+        """Test that download_file returns decoded content when return_content=True."""
+        with (
+            patch("langflow.services.deps.get_storage_service", return_value=mock_storage_service),
+            patch("langflow.services.deps.get_settings_service", return_value=mock_settings),
+        ):
+            mock_user = MagicMock()
+            mock_user.id = "user_123"
+
+            mock_file = MagicMock()
+            mock_file.path = "user_123/document.txt"
+            mock_file.name = "document"
+
+            with (
+                patch("langflow.api.v2.files.fetch_file_object", return_value=mock_file),
+                patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
+            ):
+                from langflow.api.v2.files import download_file
+
+                result = await download_file(
+                    file_id="test-id",
+                    current_user=mock_user,
+                    session=MagicMock(),
+                    storage_service=mock_storage_service,
+                    return_content=True,
+                )
+
+                # Should return decoded string content
+                assert isinstance(result, str)
+                assert result == "test file content"
+
+    @pytest.mark.asyncio
+    async def test_delete_file_calls_storage_with_correct_params(self, mock_storage_service, mock_settings):
+        """Test that delete_file correctly parses path and calls storage service."""
+        with (
+            patch("langflow.services.deps.get_storage_service", return_value=mock_storage_service),
+            patch("langflow.services.deps.get_settings_service", return_value=mock_settings),
+        ):
+            mock_user = MagicMock()
+            mock_user.id = "user_123"
+
+            mock_file = MagicMock()
+            mock_file.path = "user_123/folder/document.pdf"
+            mock_file.name = "document"
+
+            mock_session = MagicMock()
+            mock_session.delete = AsyncMock()
+
+            with (
+                patch("langflow.api.v2.files.fetch_file_object", return_value=mock_file),
+                patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
+            ):
+                from langflow.api.v2.files import delete_file
+
+                await delete_file(
+                    file_id="test-id",
+                    current_user=mock_user,
+                    session=mock_session,
+                    storage_service=mock_storage_service,
+                )
+
+                # Verify storage service was called with just the filename (last path segment)
+                mock_storage_service.delete_file.assert_called_once_with(
+                    flow_id="user_123",
+                    file_name="document.pdf"
+                )
+
+                # Verify database deletion
+                mock_session.delete.assert_called_once_with(mock_file)
+
+    @pytest.mark.asyncio
+    async def test_storage_error_converted_to_http_exception(self, mock_storage_service, mock_settings):
+        """Test that storage errors are properly converted to HTTP exceptions."""
+        # Mock storage service to raise error
+        mock_storage_service.get_file.side_effect = FileNotFoundError("File not found in S3")
+
+        with (
+            patch("langflow.services.deps.get_storage_service", return_value=mock_storage_service),
+            patch("langflow.services.deps.get_settings_service", return_value=mock_settings),
+        ):
+            mock_user = MagicMock()
+            mock_user.id = "user_123"
+
+            mock_file = MagicMock()
+            mock_file.path = "user_123/missing.pdf"
+            mock_file.name = "missing"
+
+            with (
+                patch("langflow.api.v2.files.fetch_file_object", return_value=mock_file),
+                patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
+            ):
+                from langflow.api.v2.files import download_file
+
+                # API should convert FileNotFoundError to HTTPException
+                with pytest.raises(HTTPException) as exc_info:
+                    await download_file(
+                        file_id="test-id",
+                        current_user=mock_user,
+                        session=MagicMock(),
+                        storage_service=mock_storage_service,
+                        return_content=True,
+                    )
+
+                assert exc_info.value.status_code == 500
+                assert "Error downloading file" in str(exc_info.value.detail)
+
+    @pytest.mark.asyncio
+    async def test_upload_saves_to_storage_service(self, mock_storage_service, mock_settings):
+        """Test that file upload correctly saves to storage service."""
+        with (
+            patch("langflow.services.deps.get_storage_service", return_value=mock_storage_service),
+            patch("langflow.services.deps.get_settings_service", return_value=mock_settings),
+        ):
+            mock_user = MagicMock()
+            mock_user.id = "user_123"
+
+            mock_file = MagicMock()
+            mock_file.filename = "upload.txt"
+            mock_file.size = 1024
+            mock_file.read = AsyncMock(return_value=b"file content")
+
+            with patch("langflow.api.v2.files.upload_user_file"):
+                from langflow.api.v2.files import save_file_routine
+
+                await save_file_routine(
+                    mock_file,
+                    mock_storage_service,
+                    mock_user,
+                    file_name="upload.txt"
+                )
+
+                # Verify storage service was called
+                mock_storage_service.save_file.assert_called_once_with(
+                    flow_id="user_123",
+                    file_name="upload.txt",
+                    data=b"file content"
                 )

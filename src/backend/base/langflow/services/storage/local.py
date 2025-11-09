@@ -42,7 +42,7 @@ class LocalStorageService(StorageService):
 
     async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192):
         """Retrieve a file from storage as a stream."""
-        return self._lfx_service.get_file_stream(flow_id, file_name, chunk_size)
+        return await self._lfx_service.get_file_stream(flow_id, file_name, chunk_size)
 
     async def list_files(self, flow_id: str) -> list[str]:
         """List all files in a specified flow."""

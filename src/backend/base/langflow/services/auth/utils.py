@@ -11,7 +11,7 @@ from fastapi import Depends, HTTPException, Request, Security, WebSocketExceptio
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from lfx.log.logger import logger
-from lfx.services.deps import session_scope
+from lfx.services.deps import injectable_session_scope, session_scope
 from lfx.services.settings.service import SettingsService
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -146,7 +146,7 @@ async def get_current_user(
     token: Annotated[str, Security(oauth2_login)],
     query_param: Annotated[str, Security(api_key_query)],
     header_param: Annotated[str, Security(api_key_header)],
-    db: Annotated[AsyncSession, Depends(session_scope)],
+    db: Annotated[AsyncSession, Depends(injectable_session_scope)],
 ) -> User:
     if token:
         return await get_current_user_by_jwt(token, db)
@@ -587,7 +587,7 @@ async def get_current_user_mcp(
     token: Annotated[str, Security(oauth2_login)],
     query_param: Annotated[str, Security(api_key_query)],
     header_param: Annotated[str, Security(api_key_header)],
-    db: Annotated[AsyncSession, Depends(session_scope)],
+    db: Annotated[AsyncSession, Depends(injectable_session_scope)],
 ) -> User:
     """MCP-specific user authentication that always allows fallback to username lookup.
 
