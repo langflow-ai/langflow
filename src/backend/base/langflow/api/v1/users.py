@@ -33,13 +33,12 @@ async def add_user(
         new_user.password = get_password_hash(user.password)
         new_user.is_active = get_settings_service().auth_settings.NEW_USER_IS_ACTIVE
         session.add(new_user)
-        await session.commit()
+        await session.flush()
         await session.refresh(new_user)
         folder = await get_or_create_default_folder(session, new_user.id)
         if not folder:
             raise HTTPException(status_code=500, detail="Error creating default project")
     except IntegrityError as e:
-        await session.rollback()
         raise HTTPException(status_code=400, detail="This username is unavailable.") from e
 
     return new_user
@@ -120,6 +119,8 @@ async def reset_password(
     new_password = get_password_hash(user_update.password)
     user.password = new_password
     session.add(user)
+    await session.flush()
+    await session.refresh(user)
 
     return user
 
@@ -142,6 +143,4 @@ async def delete_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     await session.delete(user_db)
-    await session.commit()
-
     return {"detail": "User deleted"}
