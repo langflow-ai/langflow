@@ -15,6 +15,7 @@ from pypdf import PdfReader
 from lfx.base.data.storage_utils import read_file_bytes
 from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service
+from lfx.utils.async_helpers import run_until_complete
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
@@ -278,8 +279,8 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
 
     # If using S3 storage, we need to use async operations
     if settings.storage_type == "s3":
-        # Run the async version in a new event loop
-        return asyncio.run(parse_text_file_to_data_async(file_path, silent_errors=silent_errors))
+        # Run the async version safely (handles existing event loops)
+        return run_until_complete(parse_text_file_to_data_async(file_path, silent_errors=silent_errors))
 
     try:
         if file_path.endswith(".pdf"):

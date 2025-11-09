@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from lfx.services.deps import get_settings_service, get_storage_service
+from lfx.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     from lfx.services.storage.service import StorageService
@@ -117,7 +118,7 @@ def get_file_size(file_path: str, storage_service: StorageService | None = None)
             storage_service = get_storage_service()
 
         flow_id, filename = parsed
-        return asyncio.run(storage_service.get_file_size(flow_id, filename))
+        return run_until_complete(storage_service.get_file_size(flow_id, filename))
 
     # Local file system
     path_obj = Path(file_path)

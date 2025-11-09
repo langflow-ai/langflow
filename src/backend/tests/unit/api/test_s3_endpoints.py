@@ -189,8 +189,8 @@ class TestS3FileEndpoints:
 
     @pytest.mark.asyncio
     async def test_storage_error_converted_to_http_exception(self, mock_storage_service, mock_settings):
-        """Test that storage errors are properly converted to HTTP exceptions."""
-        # Mock storage service to raise error
+        """Test that storage FileNotFoundError is converted to HTTPException with 404 status."""
+        # Mock storage service to raise FileNotFoundError
         mock_storage_service.get_file.side_effect = FileNotFoundError("File not found in S3")
 
         with (
@@ -210,7 +210,7 @@ class TestS3FileEndpoints:
             ):
                 from langflow.api.v2.files import download_file
 
-                # API should convert FileNotFoundError to HTTPException
+                # API should convert FileNotFoundError to HTTPException with 404 status
                 with pytest.raises(HTTPException) as exc_info:
                     await download_file(
                         file_id="test-id",
@@ -220,8 +220,8 @@ class TestS3FileEndpoints:
                         return_content=True,
                     )
 
-                assert exc_info.value.status_code == 500
-                assert "Error downloading file" in str(exc_info.value.detail)
+                assert exc_info.value.status_code == 404
+                assert "File not found" in str(exc_info.value.detail)
 
     @pytest.mark.asyncio
     async def test_upload_saves_to_storage_service(self, mock_storage_service, mock_settings):

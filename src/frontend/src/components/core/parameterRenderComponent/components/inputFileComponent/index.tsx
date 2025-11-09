@@ -219,8 +219,8 @@ export default function InputFileComponent({
                                   ?.name,
                             )
                           : ((files ?? []).find(
-                              (f) => f.path == newSelectedFiles[0],
-                            ) ?? ""),
+                              (f) => f.path === newSelectedFiles[0],
+                            )?.name ?? ""),
                         file_path: isList
                           ? newSelectedFiles
                           : (newSelectedFiles[0] ?? ""),
@@ -239,8 +239,8 @@ export default function InputFileComponent({
                               (files ?? []).find((f) => f.path === file)?.name,
                           )
                         : ((files ?? []).find(
-                            (f) => f.path == selectedFiles[0],
-                          ) ?? ""),
+                            (f) => f.path === selectedFiles[0],
+                          )?.name ?? ""),
                       file_path: isList
                         ? selectedFiles
                         : (selectedFiles[0] ?? ""),

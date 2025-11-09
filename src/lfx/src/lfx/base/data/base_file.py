@@ -324,7 +324,16 @@ class BaseFileComponent(Component, ABC):
             Message: Message containing file paths
         """
         files = self._validate_and_resolve_paths()
-        paths = [file.path.as_posix() for file in files if file.path.exists()]
+        settings = get_settings_service().settings
+        
+        # For S3 storage, paths are virtual storage keys that don't exist on the local filesystem.
+        # Skip the exists() check for S3 files to preserve them in the output.
+        # Validation of S3 file existence is deferred until file processing (see _validate_and_resolve_paths).
+        # If a file was removed from S3, it will fail when attempting to read/process it later.
+        if settings.storage_type == "s3":
+            paths = [file.path.as_posix() for file in files]
+        else:
+            paths = [file.path.as_posix() for file in files if file.path.exists()]
 
         return Message(text="\n".join(paths) if paths else "")
 
