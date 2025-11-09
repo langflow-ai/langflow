@@ -15,6 +15,7 @@ from lfx.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx.services.deps import get_settings_service
 from lfx.utils.helpers import build_content_type_from_extension
 
 if TYPE_CHECKING:
@@ -27,6 +28,8 @@ class BaseFileComponent(Component, ABC):
     This class provides common functionality for resolving, validating, and
     processing file paths. Child classes must define valid file extensions
     and implement the `process_files` method.
+
+    # TODO: May want to subclass for local and remote files
     """
 
     class BaseFile:
@@ -321,7 +324,16 @@ class BaseFileComponent(Component, ABC):
             Message: Message containing file paths
         """
         files = self._validate_and_resolve_paths()
-        paths = [file.path.as_posix() for file in files if file.path.exists()]
+        settings = get_settings_service().settings
+
+        # For S3 storage, paths are virtual storage keys that don't exist on the local filesystem.
+        # Skip the exists() check for S3 files to preserve them in the output.
+        # Validation of S3 file existence is deferred until file processing (see _validate_and_resolve_paths).
+        # If a file was removed from S3, it will fail when attempting to read/process it later.
+        if settings.storage_type == "s3":
+            paths = [file.path.as_posix() for file in files]
+        else:
+            paths = [file.path.as_posix() for file in files if file.path.exists()]
 
         return Message(text="\n".join(paths) if paths else "")
 
@@ -558,16 +570,26 @@ class BaseFileComponent(Component, ABC):
         resolved_files = []
 
         def add_file(data: Data, path: str | Path, *, delete_after_processing: bool):
-            resolved_path = Path(self.resolve_path(str(path)))
+            path_str = str(path)
+            settings = get_settings_service().settings
 
-            if not resolved_path.exists():
-                msg = f"File or directory not found: {path}"
-                self.log(msg)
-                if not self.silent_errors:
-                    raise ValueError(msg)
-            resolved_files.append(
-                BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing)
-            )
+            # When using object storage (S3), file paths are storage keys (e.g., "<flow_id>/<filename>")
+            # that don't exist on the local filesystem. We defer validation until file processing.
+            # For local storage, validate the file exists immediately to fail fast.
+            if settings.storage_type == "s3":
+                resolved_files.append(
+                    BaseFileComponent.BaseFile(data, Path(path_str), delete_after_processing=delete_after_processing)
+                )
+            else:
+                resolved_path = Path(self.resolve_path(path_str))
+                if not resolved_path.exists():
+                    msg = f"File or directory not found: {path}"
+                    self.log(msg)
+                    if not self.silent_errors:
+                        raise ValueError(msg)
+                resolved_files.append(
+                    BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing)
+                )
 
         file_path = self._file_path_as_list()
 
@@ -722,14 +744,20 @@ class BaseFileComponent(Component, ABC):
         ignored_files = []
 
         for file in files:
-            if not file.path.is_file():
-                self.log(f"Not a file: {file.path.name}")
-                continue
+            # For S3 storage, paths are virtual keys that don't exist locally
+            # Skip filesystem checks and only validate extensions
+            if get_settings_service().settings.storage_type != "s3":
+                if not file.path.is_file():
+                    self.log(f"Not a file: {file.path.name}")
+                    continue
 
-            if file.path.suffix[1:].lower() not in self.valid_extensions:
-                if self.ignore_unsupported_extensions:
+            # Validate file extension
+            extension = file.path.suffix[1:].lower()
+            if extension not in self.valid_extensions:
+                if get_settings_service().settings.storage_type != "s3" and self.ignore_unsupported_extensions:
                     ignored_files.append(file.path.name)
                     continue
+
                 msg = f"Unsupported file extension: {file.path.suffix}"
                 self.log(msg)
                 if not self.silent_errors:

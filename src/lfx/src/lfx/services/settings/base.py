@@ -87,6 +87,10 @@ class Settings(BaseSettings):
     db_connect_timeout: int = 30
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
     database."""
+    migration_lock_namespace: str | None = None
+    """Optional namespace identifier for PostgreSQL advisory lock during migrations.
+    If not provided, a hash of the database URL will be used. Useful when multiple Langflow
+    instances share the same database and need coordinated migration locking."""
 
     mcp_server_timeout: int = 20
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
@@ -109,7 +113,7 @@ class Settings(BaseSettings):
     reap idle sessions."""
 
     # sqlite configuration
-    sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
+    sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL", "busy_timeout": 30000}
     """SQLite pragmas to use when connecting to the database."""
 
     db_driver_connection_settings: dict | None = None
@@ -187,6 +191,13 @@ class Settings(BaseSettings):
     like_webhook_url: str | None = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
 
     storage_type: str = "local"
+    """Storage type for file storage. Defaults to 'local'. Supports 'local' and 's3'."""
+    object_storage_bucket_name: str | None = "langflow-bucket"
+    """Object storage bucket name for file storage. Defaults to 'langflow-bucket'."""
+    object_storage_prefix: str | None = "files"
+    """Object storage prefix for file storage. Defaults to 'files'."""
+    object_storage_tags: dict[str, str] | None = None
+    """Object storage tags for file storage."""
 
     celery_enabled: bool = False
 

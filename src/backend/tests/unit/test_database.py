@@ -13,6 +13,7 @@ from langflow.services.database.models.folder.model import FolderCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from lfx.graph.utils import log_transaction, log_vertex_build
+from lfx.services.deps import session_scope
 from sqlalchemy import text
 
 
@@ -620,9 +621,7 @@ async def test_read_only_starter_projects(client: AsyncClient, logged_in_headers
 
 
 async def test_sqlite_pragmas():
-    db_service = get_db_service()
-
-    async with db_service.with_session() as session:
+    async with session_scope() as session:
         assert (await session.exec(text("PRAGMA journal_mode;"))).scalar() == "wal"
         assert (await session.exec(text("PRAGMA synchronous;"))).scalar() == 1
 

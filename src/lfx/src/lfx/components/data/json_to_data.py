@@ -3,9 +3,12 @@ from pathlib import Path
 
 from json_repair import repair_json
 
+from lfx.base.data.storage_utils import read_file_bytes
 from lfx.custom.custom_component.component import Component
 from lfx.io import FileInput, MessageTextInput, MultilineInput, Output
 from lfx.schema.data import Data
+from lfx.services.deps import get_settings_service
+from lfx.utils.async_helpers import run_until_complete
 
 
 class JSONToDataComponent(Component):
@@ -51,19 +54,30 @@ class JSONToDataComponent(Component):
 
         try:
             if self.json_file:
-                resolved_path = self.resolve_path(self.json_file)
-                file_path = Path(resolved_path)
-                if file_path.suffix.lower() != ".json":
+                # FileInput always provides a local file path
+                file_path = self.json_file
+                if not file_path.lower().endswith(".json"):
                     self.status = "The provided file must be a JSON file."
                 else:
-                    json_data = file_path.read_text(encoding="utf-8")
+                    # Resolve to absolute path and read from local filesystem
+                    resolved_path = self.resolve_path(file_path)
+                    json_data = Path(resolved_path).read_text(encoding="utf-8")
 
             elif self.json_path:
-                file_path = Path(self.json_path)
-                if file_path.suffix.lower() != ".json":
-                    self.status = "The provided file must be a JSON file."
+                # User-provided text path - could be local or S3 key
+                file_path = self.json_path
+                if not file_path.lower().endswith(".json"):
+                    self.status = "The provided path must be to a JSON file."
                 else:
-                    json_data = file_path.read_text(encoding="utf-8")
+                    settings = get_settings_service().settings
+                    if settings.storage_type == "s3":
+                        # For S3 storage, treat as S3 key format "flow_id/filename"
+                        json_bytes = run_until_complete(read_file_bytes(file_path))
+                        json_data = json_bytes.decode("utf-8")
+                    else:
+                        # Local storage, read from filesystem
+                        resolved_path = self.resolve_path(file_path)
+                        json_data = Path(resolved_path).read_text(encoding="utf-8")
 
             else:
                 json_data = self.json_string

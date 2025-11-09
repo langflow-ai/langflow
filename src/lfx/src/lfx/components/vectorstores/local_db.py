@@ -11,6 +11,7 @@ from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextI
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
+from lfx.services.deps import get_settings_service
 from lfx.template.field.base import Output
 
 
@@ -193,6 +194,11 @@ class LocalDBComponent(LCVectorStoreComponent):
     @check_cached_vector_store
     def build_vector_store(self) -> Chroma:
         """Builds the Chroma object."""
+        settings = get_settings_service().settings
+        if settings.storage_type == "s3":
+            msg = "Local vector stores are not supported in S3 mode. Use local storage mode to enable this component."
+            raise ValueError(msg)
+
         try:
             from langchain_chroma import Chroma
         except ImportError as e:

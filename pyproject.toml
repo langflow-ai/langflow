@@ -85,7 +85,7 @@ dependencies = [
     "langchain-pinecone>=0.2.8,<1.0.0",
     "langchain-mistralai==0.2.3",
     "langchain-chroma>=0.2.6,<1.0.0",
-    "langchain-aws==0.2.33",
+    "langchain-aws>=0.2.33,<1.0.0",
     "langchain-unstructured==0.1.5",
     "langchain-milvus==0.1.7",
     "langchain-mongodb==0.7.0",
@@ -137,6 +137,7 @@ dependencies = [
     "cuga==0.1.2",
     "agent-lifecycle-toolkit",
     "astrapy>=2.1.0,<3.0.0",
+    "aioboto3>=15.2.0,<16.0.0"
 ]
 
 

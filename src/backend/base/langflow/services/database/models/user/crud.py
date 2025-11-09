@@ -45,9 +45,8 @@ async def update_user(user_db: User | None, user: UserUpdate, db: AsyncSession) 
     flag_modified(user_db, "updated_at")
 
     try:
-        await db.commit()
+        await db.flush()
     except IntegrityError as e:
-        await db.rollback()
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     return user_db
