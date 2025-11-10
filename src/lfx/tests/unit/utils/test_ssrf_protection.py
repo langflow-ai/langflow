@@ -275,15 +275,16 @@ class TestURLValidation:
 
     def test_valid_schemes_allowed(self):
         """Test that http and https schemes are explicitly allowed."""
-        with mock_ssrf_settings(enabled=True):
-            # Mock DNS resolution to return public IPs
-            with patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve:
-                mock_resolve.return_value = ["93.184.216.34"]  # Public IP (example.com)
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
+        ):
+            mock_resolve.return_value = ["93.184.216.34"]  # Public IP (example.com)
 
-                # Should not raise - valid schemes with public IPs
-                validate_url_for_ssrf("http://example.com", warn_only=False)
-                validate_url_for_ssrf("https://example.com", warn_only=False)
-                validate_url_for_ssrf("https://api.example.com/v1", warn_only=False)
+            # Should not raise - valid schemes with public IPs
+            validate_url_for_ssrf("http://example.com", warn_only=False)
+            validate_url_for_ssrf("https://example.com", warn_only=False)
+            validate_url_for_ssrf("https://api.example.com/v1", warn_only=False)
 
     def test_direct_ip_blocking(self):
         """Test blocking of direct IP addresses."""
@@ -356,7 +357,7 @@ class TestURLValidation:
 
     def test_malformed_url_raises_value_error(self):
         """Test that malformed URLs raise ValueError."""
-        with mock_ssrf_settings(enabled=True), pytest.raises(ValueError):
+        with mock_ssrf_settings(enabled=True), pytest.raises(ValueError, match="Invalid URL"):
             validate_url_for_ssrf("not a valid url", warn_only=False)
 
     def test_missing_hostname_blocked(self):
@@ -400,31 +401,35 @@ class TestIntegrationScenarios:
 
     def test_legitimate_api_allowed(self):
         """Test that legitimate external APIs are allowed."""
-        with mock_ssrf_settings(enabled=True):
-            # Mock DNS resolution for API endpoints
-            with patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve:
-                mock_resolve.return_value = ["104.16.132.229"]  # Public IP
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
+        ):
+            mock_resolve.return_value = ["104.16.132.229"]  # Public IP
 
-                # Should all pass - mocked as public IPs
-                validate_url_for_ssrf("https://api.openai.com/v1/chat/completions", warn_only=False)
-                validate_url_for_ssrf("https://api.github.com/repos/langflow-ai/langflow", warn_only=False)
-                validate_url_for_ssrf("https://www.googleapis.com/auth/cloud-platform", warn_only=False)
+            # Should all pass - mocked as public IPs
+            validate_url_for_ssrf("https://api.openai.com/v1/chat/completions", warn_only=False)
+            validate_url_for_ssrf("https://api.github.com/repos/langflow-ai/langflow", warn_only=False)
+            validate_url_for_ssrf("https://www.googleapis.com/auth/cloud-platform", warn_only=False)
 
     def test_docker_internal_networking_requires_allowlist(self):
         """Test that Docker internal networking requires allowlist configuration."""
-        with mock_ssrf_settings(enabled=True):
-            # Mock DNS to simulate Docker internal hostname resolving to private IP
-            with patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve:
-                mock_resolve.return_value = ["172.18.0.2"]  # Docker bridge network IP
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
+        ):
+            mock_resolve.return_value = ["172.18.0.2"]  # Docker bridge network IP
 
-                # Without allowlist, should be blocked
-                with pytest.raises(SSRFProtectionError):
-                    validate_url_for_ssrf("http://database:5432", warn_only=False)
+            # Without allowlist, should be blocked
+            with pytest.raises(SSRFProtectionError):
+                validate_url_for_ssrf("http://database:5432", warn_only=False)
 
         # With allowlist, should be allowed
-        with mock_ssrf_settings(enabled=True, allowed_hosts=["database", "*.internal.local"]):
-            with patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve:
-                mock_resolve.return_value = ["172.18.0.2"]  # Docker bridge network IP
+        with (
+            mock_ssrf_settings(enabled=True, allowed_hosts=["database", "*.internal.local"]),
+            patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
+        ):
+            mock_resolve.return_value = ["172.18.0.2"]  # Docker bridge network IP
 
-                validate_url_for_ssrf("http://database:5432", warn_only=False)
-                validate_url_for_ssrf("http://api.internal.local", warn_only=False)
+            validate_url_for_ssrf("http://database:5432", warn_only=False)
+            validate_url_for_ssrf("http://api.internal.local", warn_only=False)
