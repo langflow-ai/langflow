@@ -192,7 +192,7 @@ class LanguageModelComponent(LCModelComponent):
             show=False,
             required=False,
         ),
-        SecretStrInput(
+        MessageTextInput(
             name="ollama_base_url",
             display_name="Ollama API URL",
             info="Endpoint of the Ollama API (Ollama only). Defaults to http://localhost:11434",
