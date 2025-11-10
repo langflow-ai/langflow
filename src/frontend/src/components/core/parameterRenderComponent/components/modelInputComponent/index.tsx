@@ -59,7 +59,7 @@ export default function ModelInputComponent({
   disabled,
   handleOnNewValue,
   options = [],
-  placeholder = "Select a Model",
+  placeholder = "Select or Connect a Model",
   providers = ["OpenAI", "Anthropic"],
   helperText,
   hasRefreshButton,
