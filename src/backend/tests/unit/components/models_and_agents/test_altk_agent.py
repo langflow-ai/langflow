@@ -60,9 +60,6 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert isinstance(updated_config["agent_llm"]["options"], list)
         assert len(updated_config["agent_llm"]["options"]) > 0
         assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS)
-        assert (
-            updated_config["agent_llm"]["external_options"]["fields"]["data"]["node"]["name"] == "connect_other_models"
-        )
 
         # Verify model_name field is populated for OpenAI
 

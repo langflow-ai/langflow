@@ -182,9 +182,17 @@ class ALTKBaseAgentComponent(AgentComponent):
 
         if hasattr(self, "chat_history") and self.chat_history:
             if isinstance(self.chat_history, Data):
-                context.extend(data_to_messages(self.chat_history))
+                context.append(self.chat_history.to_lc_message())
             elif all(isinstance(m, Message) for m in self.chat_history):
                 context.extend([m.to_lc_message() for m in self.chat_history])
+            elif hasattr(self.chat_history, '__iter__') and not isinstance(self.chat_history, str):
+                # Handle list of Data objects (but not strings)
+                try:
+                    context.extend(data_to_messages(self.chat_history))
+                except (AttributeError, TypeError):
+                    raise ValueError(
+                        "chat_history must be a Data object or an iterable of Message or Data objects."
+                    )
         return context
 
     def get_user_query(self) -> str:
