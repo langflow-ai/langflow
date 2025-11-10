@@ -25,13 +25,11 @@ TODO: In next major version (2.0):
 """
 
 import ipaddress
-import logging
-import os
 import socket
-from typing import Any
 from urllib.parse import urlparse
 
-logger = logging.getLogger(__name__)
+from lfx.services.deps import get_settings_service
+from lfx.logging import logger
 
 
 class SSRFProtectionError(ValueError):
@@ -71,31 +69,17 @@ BLOCKED_IP_RANGES = [
 ]
 
 
-def is_ssrf_protection_enabled() -> bool:
-    """Check if SSRF protection is enabled via environment variable.
-
-    Returns:
-        bool: True if SSRF protection is enabled, False otherwise (default: False).
-
-    TODO: Change default to True in next major version (2.0)
-    """
-    # TODO: Change default to "true" in next major version
-    env_value = os.getenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false").lower()
-    return env_value in ("true", "1", "yes", "on")
-
-
 def get_allowed_hosts() -> list[str]:
-    """Get list of allowed hosts from environment variable.
+    """
+    Get list of allowed hosts and/or CIDR ranges for SSRF protection.
 
     Returns:
-        list[str]: List of allowed hosts/CIDR ranges.
+        list[str]: Stripped hostnames or CIDR blocks from settings, or empty list if unset.
     """
-    allowed_hosts_str = os.getenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "")
-    if not allowed_hosts_str:
+    allowed_hosts = get_settings_service().settings.ssrf_allowed_hosts
+    if not allowed_hosts:
         return []
-
-    # Split by comma and strip whitespace
-    return [host.strip() for host in allowed_hosts_str.split(",") if host.strip()]
+    return [host.strip() for host in allowed_hosts.split(",") if host.strip()]
 
 
 def is_host_allowed(hostname: str, ip: str | None = None) -> bool:
@@ -237,7 +221,7 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = True) -> None:
         ValueError: If the URL is malformed
     """
     # Skip validation if SSRF protection is disabled
-    if not is_ssrf_protection_enabled():
+    if not get_settings_service().settings.ssrf_protection_enabled:
         return
 
     try:

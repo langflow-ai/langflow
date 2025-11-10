@@ -149,7 +149,7 @@ class APIRequestComponent(Component):
             value=False,
             info=(
                 "Whether to follow HTTP redirects. "
-                "⚠️ WARNING: Enabling redirects may allow SSRF bypass attacks where a public URL "
+                "WARNING: Enabling redirects may allow SSRF bypass attacks where a public URL "
                 "redirects to internal resources. Only enable if you trust the target server. "
                 "See OWASP SSRF Prevention Cheat Sheet for details."
             ),
@@ -433,7 +433,7 @@ class APIRequestComponent(Component):
         # Security warning when redirects are enabled
         if follow_redirects:
             self.log(
-                "⚠️ Security Warning: HTTP redirects are enabled. This may allow SSRF bypass attacks "
+                "Security Warning: HTTP redirects are enabled. This may allow SSRF bypass attacks "
                 "where a public URL redirects to internal resources (e.g., cloud metadata endpoints). "
                 "Only enable this if you trust the target server."
             )
