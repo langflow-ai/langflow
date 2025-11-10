@@ -390,15 +390,17 @@ class TestAPIRequestSSRFProtection:
         component.url_input = "http://127.0.0.1:8080/admin"
 
         # Enable SSRF protection in enforcement mode
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
-            with patch("lfx.components.data.api_request.validate_url_for_ssrf") as mock_validate:
-                from lfx.utils.ssrf_protection import SSRFProtectionError
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("lfx.components.data.api_request.validate_url_for_ssrf") as mock_validate,
+        ):
+            from lfx.utils.ssrf_protection import SSRFProtectionError
 
-                # Make it raise in enforcement mode
-                mock_validate.side_effect = SSRFProtectionError("Access to 127.0.0.1 blocked")
+            # Make it raise in enforcement mode
+            mock_validate.side_effect = SSRFProtectionError("Access to 127.0.0.1 blocked")
 
-                with pytest.raises(ValueError, match="SSRF Protection"):
-                    await component.make_api_request()
+            with pytest.raises(ValueError, match="SSRF Protection"):
+                await component.make_api_request()
 
     async def test_ssrf_protection_enabled_blocks_private_networks(self, component):
         """Test that SSRF protection blocks private network IPs when enabled."""
@@ -424,14 +426,16 @@ class TestAPIRequestSSRFProtection:
         """Test that SSRF protection blocks cloud metadata endpoints when enabled."""
         component.url_input = "http://169.254.169.254/latest/meta-data/"
 
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
-            with patch("lfx.components.data.api_request.validate_url_for_ssrf") as mock_validate:
-                from lfx.utils.ssrf_protection import SSRFProtectionError
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("lfx.components.data.api_request.validate_url_for_ssrf") as mock_validate,
+        ):
+            from lfx.utils.ssrf_protection import SSRFProtectionError
 
-                mock_validate.side_effect = SSRFProtectionError("Access to 169.254.169.254 blocked")
+            mock_validate.side_effect = SSRFProtectionError("Access to 169.254.169.254 blocked")
 
-                with pytest.raises(ValueError, match="SSRF Protection"):
-                    await component.make_api_request()
+            with pytest.raises(ValueError, match="SSRF Protection"):
+                await component.make_api_request()
 
     @respx.mock
     async def test_ssrf_protection_allows_public_urls(self, component):
