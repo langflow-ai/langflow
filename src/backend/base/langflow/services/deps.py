@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
@@ -184,7 +185,7 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
 
             # Log at appropriate level based on error type
             if isinstance(e, HTTPException):
-                if 400 <= e.status_code < 500:
+                if HTTPStatus.BAD_REQUEST.value <= e.status_code < HTTPStatus.INTERNAL_SERVER_ERROR.value:
                     # Client errors (4xx) - log at info level
                     await logger.ainfo(f"Client error during session scope: {e.status_code}: {e.detail}")
                 else:
