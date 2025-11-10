@@ -1,0 +1,343 @@
+"""SSRF (Server-Side Request Forgery) protection utilities.
+
+This module provides validation to prevent SSRF attacks by blocking requests to:
+- Private IP ranges (RFC 1918)
+- Loopback addresses
+- Cloud metadata endpoints (169.254.169.254)
+- Other internal/special-use addresses
+
+IMPORTANT: HTTP Redirects
+    According to OWASP SSRF Prevention Cheat Sheet, HTTP redirects should be DISABLED
+    to prevent bypass attacks where a public URL redirects to internal resources.
+    The API Request component has (as of v1.7.0) follow_redirects=False by default.
+    See: https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
+
+Configuration:
+    LANGFLOW_SSRF_PROTECTION_ENABLED: Enable/disable SSRF protection (default: false)
+        TODO: Change default to true in next major version (2.0)
+    LANGFLOW_SSRF_ALLOWED_HOSTS: Comma-separated list of allowed hosts/CIDR ranges
+        Examples: "192.168.1.0/24,internal-api.company.local,10.0.0.5"
+
+TODO: In next major version (2.0):
+    - Change LANGFLOW_SSRF_PROTECTION_ENABLED default to "true"
+    - Remove warning-only mode and enforce blocking
+    - Update documentation to reflect breaking change
+"""
+
+import ipaddress
+import logging
+import os
+import socket
+from typing import Any
+from urllib.parse import urlparse
+
+logger = logging.getLogger(__name__)
+
+
+class SSRFProtectionError(ValueError):
+    """Raised when a URL is blocked due to SSRF protection."""
+
+    pass
+
+
+# Define blocked IP ranges
+BLOCKED_IP_RANGES = [
+    # IPv4 ranges
+    ipaddress.ip_network("0.0.0.0/8"),  # Current network (only valid as source)
+    ipaddress.ip_network("10.0.0.0/8"),  # Private network (RFC 1918)
+    ipaddress.ip_network("100.64.0.0/10"),  # Carrier-grade NAT (RFC 6598)
+    ipaddress.ip_network("127.0.0.0/8"),  # Loopback
+    ipaddress.ip_network("169.254.0.0/16"),  # Link-local / AWS metadata
+    ipaddress.ip_network("172.16.0.0/12"),  # Private network (RFC 1918)
+    ipaddress.ip_network("192.0.0.0/24"),  # IETF Protocol Assignments
+    ipaddress.ip_network("192.0.2.0/24"),  # Documentation (TEST-NET-1)
+    ipaddress.ip_network("192.168.0.0/16"),  # Private network (RFC 1918)
+    ipaddress.ip_network("198.18.0.0/15"),  # Benchmarking
+    ipaddress.ip_network("198.51.100.0/24"),  # Documentation (TEST-NET-2)
+    ipaddress.ip_network("203.0.113.0/24"),  # Documentation (TEST-NET-3)
+    ipaddress.ip_network("224.0.0.0/4"),  # Multicast
+    ipaddress.ip_network("240.0.0.0/4"),  # Reserved
+    ipaddress.ip_network("255.255.255.255/32"),  # Broadcast
+    # IPv6 ranges
+    ipaddress.ip_network("::1/128"),  # Loopback
+    ipaddress.ip_network("::/128"),  # Unspecified address
+    ipaddress.ip_network("::ffff:0:0/96"),  # IPv4-mapped IPv6 addresses
+    ipaddress.ip_network("100::/64"),  # Discard prefix
+    ipaddress.ip_network("2001::/23"),  # IETF Protocol Assignments
+    ipaddress.ip_network("2001:db8::/32"),  # Documentation
+    ipaddress.ip_network("fc00::/7"),  # Unique local addresses (ULA)
+    ipaddress.ip_network("fe80::/10"),  # Link-local
+    ipaddress.ip_network("ff00::/8"),  # Multicast
+]
+
+
+def is_ssrf_protection_enabled() -> bool:
+    """Check if SSRF protection is enabled via environment variable.
+
+    Returns:
+        bool: True if SSRF protection is enabled, False otherwise (default: False).
+
+    TODO: Change default to True in next major version (2.0)
+    """
+    # TODO: Change default to "true" in next major version
+    env_value = os.getenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false").lower()
+    return env_value in ("true", "1", "yes", "on")
+
+
+def get_allowed_hosts() -> list[str]:
+    """Get list of allowed hosts from environment variable.
+
+    Returns:
+        list[str]: List of allowed hosts/CIDR ranges.
+    """
+    allowed_hosts_str = os.getenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "")
+    if not allowed_hosts_str:
+        return []
+
+    # Split by comma and strip whitespace
+    return [host.strip() for host in allowed_hosts_str.split(",") if host.strip()]
+
+
+def is_host_allowed(hostname: str, ip: str | None = None) -> bool:
+    """Check if a hostname or IP is in the allowed hosts list.
+
+    Args:
+        hostname: Hostname to check
+        ip: Optional IP address to check
+
+    Returns:
+        bool: True if hostname or IP is in the allowed list, False otherwise.
+    """
+    allowed_hosts = get_allowed_hosts()
+    if not allowed_hosts:
+        return False
+
+    # Check hostname match
+    if hostname in allowed_hosts:
+        return True
+
+    # Check if hostname matches any wildcard patterns
+    for allowed in allowed_hosts:
+        if allowed.startswith("*."):
+            # Wildcard domain matching
+            domain_suffix = allowed[1:]  # Remove the *
+            if hostname.endswith(domain_suffix) or hostname == domain_suffix[1:]:
+                return True
+
+    # Check IP-based matching if IP is provided
+    if ip:
+        try:
+            ip_obj = ipaddress.ip_address(ip)
+
+            # Check exact IP match
+            if ip in allowed_hosts:
+                return True
+
+            # Check CIDR range match
+            for allowed in allowed_hosts:
+                try:
+                    # Try to parse as CIDR network
+                    if "/" in allowed:
+                        network = ipaddress.ip_network(allowed, strict=False)
+                        if ip_obj in network:
+                            return True
+                except (ValueError, ipaddress.AddressValueError):
+                    # Not a valid CIDR, skip
+                    continue
+
+        except (ValueError, ipaddress.AddressValueError):
+            # Invalid IP, skip IP-based checks
+            pass
+
+    return False
+
+
+def is_ip_blocked(ip: str | ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    """Check if an IP address is in a blocked range.
+
+    Args:
+        ip: IP address to check (string or ipaddress object)
+
+    Returns:
+        bool: True if IP is in a blocked range, False otherwise.
+    """
+    try:
+        if isinstance(ip, str):
+            ip_obj = ipaddress.ip_address(ip)
+        else:
+            ip_obj = ip
+
+        # Check against all blocked ranges
+        for blocked_range in BLOCKED_IP_RANGES:
+            if ip_obj in blocked_range:
+                return True
+
+        return False
+    except (ValueError, ipaddress.AddressValueError):
+        # If we can't parse the IP, treat it as blocked for safety
+        return True
+
+
+def resolve_hostname(hostname: str) -> list[str]:
+    """Resolve a hostname to its IP addresses.
+
+    Args:
+        hostname: Hostname to resolve
+
+    Returns:
+        list[str]: List of resolved IP addresses
+
+    Raises:
+        SSRFProtectionError: If hostname cannot be resolved
+    """
+    try:
+        # Get address info for both IPv4 and IPv6
+        addr_info = socket.getaddrinfo(hostname, None)
+
+        # Extract unique IP addresses
+        ips = []
+        for info in addr_info:
+            ip = info[4][0]
+            # Remove IPv6 zone ID if present (e.g., "fe80::1%eth0" -> "fe80::1")
+            if "%" in ip:
+                ip = ip.split("%")[0]
+            if ip not in ips:
+                ips.append(ip)
+
+        if not ips:
+            msg = f"Unable to resolve hostname: {hostname}"
+            raise SSRFProtectionError(msg)
+
+        return ips
+    except socket.gaierror as e:
+        msg = f"DNS resolution failed for {hostname}: {e}"
+        raise SSRFProtectionError(msg) from e
+    except Exception as e:
+        msg = f"Error resolving hostname {hostname}: {e}"
+        raise SSRFProtectionError(msg) from e
+
+
+def validate_url_for_ssrf(url: str, *, warn_only: bool = True) -> None:
+    """Validate a URL to prevent SSRF attacks.
+
+    This function performs the following checks:
+    1. Validates the URL scheme (only http/https allowed)
+    2. Resolves the hostname to IP addresses
+    3. Checks if any resolved IP is in a blocked range
+    4. Blocks direct IP addresses if they're in blocked ranges
+    5. Checks allowlist for override
+
+    Args:
+        url: URL to validate
+        warn_only: If True, only log warnings instead of raising errors (default: True)
+            TODO: Change default to False in next major version (2.0)
+
+    Raises:
+        SSRFProtectionError: If the URL is blocked due to SSRF protection (only if warn_only=False)
+        ValueError: If the URL is malformed
+    """
+    # Skip validation if SSRF protection is disabled
+    if not is_ssrf_protection_enabled():
+        return
+
+    try:
+        parsed = urlparse(url)
+    except Exception as e:
+        msg = f"Invalid URL format: {e}"
+        raise ValueError(msg) from e
+
+    # Check scheme
+    if parsed.scheme not in ("http", "https"):
+        msg = f"Invalid URL scheme '{parsed.scheme}'. Only http and https are allowed."
+        if warn_only:
+            logger.warning("SSRF Protection Warning: %s", msg)
+            return
+        raise SSRFProtectionError(msg)
+
+    hostname = parsed.hostname
+    if not hostname:
+        msg = "URL must contain a valid hostname"
+        if warn_only:
+            logger.warning("SSRF Protection Warning: %s", msg)
+            return
+        raise SSRFProtectionError(msg)
+
+    # Check if hostname/IP is in allowlist
+    if is_host_allowed(hostname):
+        logger.debug("Hostname %s is in allowlist, bypassing SSRF checks", hostname)
+        return
+
+    # Check if hostname is a direct IP address
+    try:
+        ip_obj = ipaddress.ip_address(hostname)
+        # It's a direct IP address
+        # Check if IP is in allowlist
+        if is_host_allowed(hostname, str(ip_obj)):
+            logger.debug("IP address %s is in allowlist, bypassing SSRF checks", hostname)
+            return
+
+        if is_ip_blocked(ip_obj):
+            msg = (
+                f"Access to IP address {hostname} is blocked by SSRF protection. "
+                "Requests to private/internal IP ranges are not allowed for security reasons. "
+                "To allow this IP, add it to LANGFLOW_SSRF_ALLOWED_HOSTS environment variable."
+            )
+            if warn_only:
+                # TODO: Remove warn_only mode in next major version
+                logger.warning("SSRF Protection Warning: %s [URL: %s]", msg, url)
+                logger.warning(
+                    "This request will be blocked when SSRF protection is enforced in the next major version. "
+                    "Please review your API Request components."
+                )
+                return
+            raise SSRFProtectionError(msg)
+        # Direct IP is allowed (public IP)
+        return
+    except ValueError:
+        # Not an IP address, it's a hostname - continue to DNS resolution
+        pass
+
+    # Resolve hostname to IP addresses
+    try:
+        resolved_ips = resolve_hostname(hostname)
+    except SSRFProtectionError as e:
+        if warn_only:
+            logger.warning("SSRF Protection Warning: %s [URL: %s]", str(e), url)
+            return
+        # Re-raise SSRF errors as-is
+        raise
+    except Exception as e:
+        msg = f"Failed to resolve hostname {hostname}: {e}"
+        if warn_only:
+            logger.warning("SSRF Protection Warning: %s [URL: %s]", msg, url)
+            return
+        raise SSRFProtectionError(msg) from e
+
+    # Check if any resolved IP is blocked
+    blocked_ips = []
+    for ip in resolved_ips:
+        # Check if this specific IP is in the allowlist
+        if is_host_allowed(hostname, ip):
+            logger.debug("Resolved IP %s for hostname %s is in allowlist, bypassing SSRF checks", ip, hostname)
+            return
+
+        if is_ip_blocked(ip):
+            blocked_ips.append(ip)
+
+    if blocked_ips:
+        msg = (
+            f"Hostname {hostname} resolves to blocked IP address(es): {', '.join(blocked_ips)}. "
+            "Requests to private/internal IP ranges are not allowed for security reasons. "
+            "This protection prevents access to internal services, cloud metadata endpoints "
+            "(e.g., AWS 169.254.169.254), and other sensitive internal resources. "
+            "To allow this hostname, add it to LANGFLOW_SSRF_ALLOWED_HOSTS environment variable."
+        )
+        if warn_only:
+            # TODO: Remove warn_only mode in next major version
+            logger.warning("SSRF Protection Warning: %s [URL: %s]", msg, url)
+            logger.warning(
+                "This request will be blocked when SSRF protection is enforced in the next major version. "
+                "Please review your API Request components and update LANGFLOW_SSRF_ALLOWED_HOSTS if needed."
+            )
+            return
+        raise SSRFProtectionError(msg)
