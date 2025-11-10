@@ -323,11 +323,16 @@ class Settings(BaseSettings):
     When enabled, blocks requests to private IP ranges, localhost, and cloud metadata endpoints.
     When False (default), no URL validation is performed, allowing requests to any destination
     including internal services, private networks, and cloud metadata endpoints.
-    Default is False for backward compatibility. In v2.0, this will be changed to True."""
+    Default is False for backward compatibility. In v2.0, this will be changed to True.
+    
+    Note: When protection is disabled, the ssrf_allowed_hosts setting is ignored and has no effect."""
     ssrf_allowed_hosts: list[str] = []
     """Comma-separated list of hosts/IPs/CIDR ranges to allow despite SSRF protection.
     Examples: 'internal-api.company.local,192.168.1.0/24,10.0.0.5,*.dev.internal'
-    Supports exact hostnames, wildcard domains (*.example.com), exact IPs, and CIDR ranges."""
+    Supports exact hostnames, wildcard domains (*.example.com), exact IPs, and CIDR ranges.
+    
+    Note: This setting only takes effect when ssrf_protection_enabled is True.
+    When protection is disabled, all hosts are allowed regardless of this setting."""
 
     @field_validator("cors_origins", mode="before")
     @classmethod
