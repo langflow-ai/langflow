@@ -420,7 +420,9 @@ class LanguageModelComponent(LCModelComponent):
         elif field_name == "ollama_base_url":
             # Fetch Ollama models when ollama_base_url changes
             # Use the field_value directly since this is triggered when the field changes
-            logger.debug(f"Fetching Ollama models from updated URL: {build_config['ollama_base_url']} and value {self.ollama_base_url}")
+            logger.debug(
+                f"Fetching Ollama models from updated URL: {build_config['ollama_base_url']} and value {self.ollama_base_url}"
+            )
             await logger.adebug(f"Fetching Ollama models from updated URL: {self.ollama_base_url}")
             if await self.is_valid_ollama_url(self.ollama_base_url):
                 try:
