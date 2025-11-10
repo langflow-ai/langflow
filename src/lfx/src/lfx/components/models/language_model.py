@@ -1,8 +1,5 @@
-import asyncio
 from typing import Any
-from urllib.parse import urljoin
 
-import httpx
 import requests
 from langchain_anthropic import ChatAnthropic
 from langchain_ibm import ChatWatsonx
@@ -14,6 +11,7 @@ from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
 from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
 from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.model_utils import get_ollama_models, is_valid_ollama_url
 from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
@@ -65,86 +63,6 @@ class LanguageModelComponent(LCModelComponent):
         except Exception:  # noqa: BLE001
             logger.exception("Error fetching IBM watsonx models. Using default models.")
             return IBM_WATSONX_DEFAULT_MODELS
-
-    async def is_valid_ollama_url(self, url: str) -> bool:
-        """Check if the provided URL is a valid Ollama API endpoint."""
-        try:
-            async with httpx.AsyncClient() as client:
-                url = transform_localhost_url(url)
-                if not url:
-                    return False
-                # Strip /v1 suffix if present, as Ollama API endpoints are at root level
-                url = url.rstrip("/").removesuffix("/v1")
-                if not url.endswith("/"):
-                    url = url + "/"
-                return (await client.get(url=urljoin(url, "api/tags"))).status_code == HTTP_STATUS_OK
-        except httpx.RequestError:
-            logger.debug(f"Invalid Ollama URL: {url}")
-            return False
-
-    async def get_ollama_models(self, base_url_value: str) -> list[str]:
-        """Fetch available completion models from the Ollama API.
-
-        Filters out embedding models and only returns models with completion capability.
-
-        Args:
-            base_url_value (str): The base URL of the Ollama API.
-
-        Returns:
-            list[str]: A sorted list of model names that support completion.
-
-        Raises:
-            ValueError: If there is an issue with the API request or response.
-        """
-        try:
-            # Strip /v1 suffix if present, as Ollama API endpoints are at root level
-            base_url = base_url_value.rstrip("/").removesuffix("/v1")
-            if not base_url.endswith("/"):
-                base_url = base_url + "/"
-            base_url = transform_localhost_url(base_url)
-
-            # Ollama REST API to return models
-            tags_url = urljoin(base_url, "api/tags")
-
-            # Ollama REST API to return model capabilities
-            show_url = urljoin(base_url, "api/show")
-
-            async with httpx.AsyncClient() as client:
-                # Fetch available models
-                tags_response = await client.get(url=tags_url)
-                tags_response.raise_for_status()
-                models = tags_response.json()
-                if asyncio.iscoroutine(models):
-                    models = await models
-                await logger.adebug(f"Available models: {models}")
-
-                # Filter models that are NOT embedding models
-                model_ids = []
-                for model in models.get(JSON_MODELS_KEY, []):
-                    model_name = model.get(JSON_NAME_KEY)
-                    if not model_name:
-                        continue
-                    await logger.adebug(f"Checking model: {model_name}")
-
-                    payload = {"model": model_name}
-                    show_response = await client.post(url=show_url, json=payload)
-                    show_response.raise_for_status()
-                    json_data = show_response.json()
-                    if asyncio.iscoroutine(json_data):
-                        json_data = await json_data
-
-                    capabilities = json_data.get(JSON_CAPABILITIES_KEY, [])
-                    await logger.adebug(f"Model: {model_name}, Capabilities: {capabilities}")
-
-                    if DESIRED_CAPABILITY in capabilities:
-                        model_ids.append(model_name)
-
-                return sorted(model_ids)
-
-        except (httpx.RequestError, ValueError) as e:
-            msg = "Could not get model names from Ollama."
-            await logger.aexception(msg)
-            raise ValueError(msg) from e
 
     inputs = [
         DropdownInput(
@@ -389,9 +307,15 @@ class LanguageModelComponent(LCModelComponent):
                         ollama_url = config_value
 
                 await logger.adebug(f"Fetching Ollama models for provider switch. URL: {ollama_url}")
-                if await self.is_valid_ollama_url(ollama_url):
+                if await is_valid_ollama_url(url=ollama_url):
                     try:
-                        models = await self.get_ollama_models(base_url_value=ollama_url)
+                        models = await get_ollama_models(
+                            base_url_value=ollama_url,
+                            desired_capability=DESIRED_CAPABILITY,
+                            json_models_key=JSON_MODELS_KEY,
+                            json_name_key=JSON_NAME_KEY,
+                            json_capabilities_key=JSON_CAPABILITIES_KEY,
+                        )
                         build_config["model_name"]["options"] = models
                         build_config["model_name"]["value"] = models[0] if models else ""
                     except ValueError:
@@ -424,9 +348,15 @@ class LanguageModelComponent(LCModelComponent):
                 f"Fetching Ollama models from updated URL: {build_config['ollama_base_url']} and value {self.ollama_base_url}"
             )
             await logger.adebug(f"Fetching Ollama models from updated URL: {self.ollama_base_url}")
-            if await self.is_valid_ollama_url(self.ollama_base_url):
+            if await is_valid_ollama_url(url=self.ollama_base_url):
                 try:
-                    models = await self.get_ollama_models(base_url_value=self.ollama_base_url)
+                    models = await get_ollama_models(
+                        base_url_value=self.ollama_base_url,
+                        desired_capability=DESIRED_CAPABILITY,
+                        json_models_key=JSON_MODELS_KEY,
+                        json_name_key=JSON_NAME_KEY,
+                        json_capabilities_key=JSON_CAPABILITIES_KEY,
+                    )
                     build_config["model_name"]["options"] = models
                     build_config["model_name"]["value"] = models[0] if models else ""
                     info_message = f"Updated model options: {len(models)} models found in {self.ollama_base_url}"
@@ -443,9 +373,15 @@ class LanguageModelComponent(LCModelComponent):
             # Refresh Ollama models when model_name field is accessed
             if hasattr(self, "provider") and self.provider == "Ollama":
                 ollama_url = getattr(self, "ollama_base_url", DEFAULT_OLLAMA_URL)
-                if await self.is_valid_ollama_url(ollama_url):
+                if await is_valid_ollama_url(url=ollama_url):
                     try:
-                        models = await self.get_ollama_models(base_url_value=ollama_url)
+                        models = await get_ollama_models(
+                            base_url_value=ollama_url,
+                            desired_capability=DESIRED_CAPABILITY,
+                            json_models_key=JSON_MODELS_KEY,
+                            json_name_key=JSON_NAME_KEY,
+                            json_capabilities_key=JSON_CAPABILITIES_KEY,
+                        )
                         build_config["model_name"]["options"] = models
                     except ValueError:
                         await logger.awarning("Failed to refresh Ollama models.")
