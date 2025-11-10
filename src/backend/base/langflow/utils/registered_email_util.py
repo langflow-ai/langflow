@@ -1,71 +1,97 @@
 from lfx.log.logger import logger
 
 from langflow.api.v2.registration import load_registration
+from langflow.services.telemetry.schema import EmailPayload
 
 
-class _Registration:
+class _RegisteredEmailCache:
+    """An in-memory cache for the registered email address."""
+
     # Static variable
-    # Tri-state:
-    # - str (empty): Load registration not invoked yet
-    # - str (non-empty): Load registration invoked (valid registered email address)
-    # - None: Load registration invoked (no registered email address or error encountered)
-    _email = ""
+    _email_model: EmailPayload | None = None
+
+    # Static variable
+    # - True: Registered email address has been resolved via a downstream source (either defined or not defined)
+    # - False: Registered email address has not been resolved yet
+    _resolved: bool = False
 
     @classmethod
-    def get_email(cls) -> str | None:
-        return cls._email
+    def get_email_model(cls) -> EmailPayload | None:
+        """Retrieves the registered email address from the cache."""
+        return cls._email_model
 
     @classmethod
-    def set_email(cls, value: str | None):
-        cls._email = value
+    def set_email_model(cls, value: EmailPayload | None) -> None:
+        """Stores the registered email address in the cache."""
+        cls._email_model = value
+        cls._resolved = True
+
+    @classmethod
+    def is_resolved(cls) -> bool:
+        """Determines whether the registered email address was resolved from a downstream source."""
+        return cls._resolved
 
 
-def get_email() -> str:
-    """Retrieves the registered email address."""
+def get_email_model() -> EmailPayload | None:
+    """Retrieves the registered email address model."""
     # Use cached email address from a previous invocation (if applicable)
-    email = _Registration.get_email()
-
-    if email is None:
-        # No registered email address or error encountered
-        return ""
+    email = _RegisteredEmailCache.get_email_model()
 
     if email:
-        # Non-empty email address
         return email
 
-    # Empty email address ("")
+    if _RegisteredEmailCache.is_resolved():
+        # No registered email address
+        # OR an email address parsing error occurred
+        return None
+
     # Retrieve registration
     try:
         registration = load_registration()
     except (OSError, UnicodeDecodeError, AttributeError) as e:
-        _Registration.set_email(None)
+        _RegisteredEmailCache.set_email_model(None)
         logger.error(f"Failed to load registration: {e}")
-        return ""
+        return None
 
     # Parse email address from registration
-    email = _parse_email(registration)
+    email_model = _parse_email_registration(registration)
 
     # Cache email address
-    if email:
-        _Registration.set_email(email)
-    else:
-        _Registration.set_email(None)
+    _RegisteredEmailCache.set_email_model(email_model)
 
-    return email
+    return email_model
 
 
-def _parse_email(registration) -> str:
+def _parse_email_registration(registration) -> EmailPayload | None:
     """Parses the email address from the registration."""
     # Verify registration is a dict
     if not isinstance(registration, dict):
         logger.error("Email registration is not a valid dict.")
-        return ""
+        return None
 
     # Retrieve email address
     email = registration.get("email")
 
+    # Create email model
+    email_model: EmailPayload | None = _create_email_model(email)
+
+    return email_model
+
+
+def _create_email_model(email) -> EmailPayload | None:
+    """Creates the model for the registered email."""
     # Verify email address is a valid non-zero length string
     if not isinstance(email, str) or (len(email) == 0):
-        logger.error(f"Email registration is not a valid non-zero length string: {email}.")
-        return ""
-    return email
+        logger.error(f"Email is not a valid non-zero length string: {email}.")
+        return None
+
+    # Verify email address is syntactically valid
+    email_model: EmailPayload | None = None
+
+    try:
+        email_model = EmailPayload(email=email)
+    except ValueError as err:
+        logger.error(f"Email is not a valid email address: {email}: {err}.")
+        return None
+
+    return email_model
