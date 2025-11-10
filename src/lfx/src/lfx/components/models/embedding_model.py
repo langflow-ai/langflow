@@ -47,7 +47,8 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             providers=[],  # Will be populated dynamically
             info="Select your model provider",
             real_time_refresh=True,
-            refresh_button=True,
+            required=True,
+            input_types=["Embeddings"],  # Override default to accept Embeddings instead of LanguageModel
         ),
         SecretStrInput(
             name="api_key",
@@ -117,6 +118,14 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
 
     def build_embeddings(self) -> Embeddings:
         """Build and return an embeddings instance based on the selected model."""
+        # If an Embeddings object is directly connected, return it
+        try:
+            from langchain_core.embeddings import Embeddings as BaseEmbeddings
+            if isinstance(self.model, BaseEmbeddings):
+                return self.model
+        except ImportError:
+            pass
+        
         # Safely extract model configuration
         if not self.model or not isinstance(self.model, list):
             msg = "Model must be a non-empty list"
@@ -187,7 +196,6 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             "dimensions": int(self.dimensions) if self.dimensions else None,
             "chunk_size": int(self.chunk_size) if self.chunk_size else None,
             "request_timeout": float(self.request_timeout) if self.request_timeout else None,
-            "max_retries": int(self.max_retries) if self.max_retries else None,
             "show_progress_bar": self.show_progress_bar if hasattr(self, "show_progress_bar") else None,
             "model_kwargs": self.model_kwargs if self.model_kwargs else None,
         }
@@ -203,9 +211,8 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 )
                 kwargs[param_mapping["url"]] = url_value
             # Map project_id for watsonx
-            if hasattr(self, "project_id") and self.project_id:
-                if "project_id" in param_mapping:
-                    kwargs[param_mapping["project_id"]] = self.project_id
+            if hasattr(self, "project_id") and self.project_id and "project_id" in param_mapping:
+                kwargs[param_mapping["project_id"]] = self.project_id
 
         # Add optional parameters if they have values and are mapped
         for param_name, param_value in optional_params.items():

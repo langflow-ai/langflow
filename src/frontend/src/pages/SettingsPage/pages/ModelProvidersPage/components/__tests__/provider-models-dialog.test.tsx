@@ -19,18 +19,30 @@ jest.mock("@/components/ui/button", () => ({
 
 jest.mock("@/components/ui/dialog", () => ({
   Dialog: ({ children, open }: any) => (open ? <div>{children}</div> : null),
-  DialogContent: ({ children }: any) => <div data-testid="dialog-content">{children}</div>,
-  DialogHeader: ({ children }: any) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }: any) => <div data-testid="dialog-title">{children}</div>,
+  DialogContent: ({ children }: any) => (
+    <div data-testid="dialog-content">{children}</div>
+  ),
+  DialogHeader: ({ children }: any) => (
+    <div data-testid="dialog-header">{children}</div>
+  ),
+  DialogTitle: ({ children }: any) => (
+    <div data-testid="dialog-title">{children}</div>
+  ),
   DialogDescription: ({ children }: any) => (
     <div data-testid="dialog-description">{children}</div>
   ),
-  DialogFooter: ({ children }: any) => <div data-testid="dialog-footer">{children}</div>,
+  DialogFooter: ({ children }: any) => (
+    <div data-testid="dialog-footer">{children}</div>
+  ),
 }));
 
 jest.mock("../model-list-item", () => {
   return function MockModelListItem({ model }: any) {
-    return <div data-testid={`model-item-${model.model_name}`}>{model.model_name}</div>;
+    return (
+      <div data-testid={`model-item-${model.model_name}`}>
+        {model.model_name}
+      </div>
+    );
   };
 });
 
@@ -133,7 +145,7 @@ describe("ProviderModelsDialog", () => {
     const props = { ...defaultProps, open: true, type: "enabled" as const };
     render(<ProviderModelsDialog {...props} />);
     expect(
-      screen.getByText(/Configure model availability for this provider/i)
+      screen.getByText(/Configure model availability for this provider/i),
     ).toBeInTheDocument();
   });
 
@@ -141,7 +153,7 @@ describe("ProviderModelsDialog", () => {
     const props = { ...defaultProps, open: true, type: "available" as const };
     render(<ProviderModelsDialog {...props} />);
     expect(
-      screen.getByText(/These models are available for use with/i)
+      screen.getByText(/These models are available for use with/i),
     ).toBeInTheDocument();
   });
 

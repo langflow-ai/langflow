@@ -140,7 +140,7 @@ describe("ModelListItem", () => {
     expect(defaultProps.onSetDefaultModel).toHaveBeenCalledWith(
       "OpenAI",
       "gpt-4",
-      "language"
+      "language",
     );
   });
 

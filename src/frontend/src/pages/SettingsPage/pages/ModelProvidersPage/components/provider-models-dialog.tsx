@@ -311,7 +311,8 @@ const ProviderModelsDialog = ({
                 // Check if this model is the default for its type
                 const isDefaultModelInThisList = isLanguageModel
                   ? effectiveDefaultModel?.model_name === model.model_name
-                  : effectiveDefaultEmbeddingModel?.model_name === model.model_name;
+                  : effectiveDefaultEmbeddingModel?.model_name ===
+                    model.model_name;
 
                 // Determine the current enabled state:
                 // 1. If it's the default model, force-check it

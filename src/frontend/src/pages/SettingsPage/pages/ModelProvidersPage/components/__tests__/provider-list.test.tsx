@@ -22,13 +22,19 @@ jest.mock("@/controllers/API/queries/variables", () => ({
 // Mock child components
 jest.mock("../provider-list-item", () => {
   return function MockProviderListItem({ provider }: any) {
-    return <div data-testid={`provider-item-${provider.provider}`}>{provider.provider}</div>;
+    return (
+      <div data-testid={`provider-item-${provider.provider}`}>
+        {provider.provider}
+      </div>
+    );
   };
 });
 
 jest.mock("../provider-models-dialog", () => {
   return function MockProviderModelsDialog() {
-    return <div data-testid="provider-models-dialog">Provider Models Dialog</div>;
+    return (
+      <div data-testid="provider-models-dialog">Provider Models Dialog</div>
+    );
   };
 });
 
@@ -57,7 +63,9 @@ const {
 const {
   useGetDefaultModel,
 } = require("@/controllers/API/queries/models/use-get-default-model");
-const { useGetGlobalVariables } = require("@/controllers/API/queries/variables");
+const {
+  useGetGlobalVariables,
+} = require("@/controllers/API/queries/variables");
 
 const createTestWrapper = () => {
   const queryClient = new QueryClient({
@@ -149,7 +157,9 @@ describe("ProviderList", () => {
     render(<ProviderList type="enabled" />, { wrapper: createTestWrapper() });
 
     expect(screen.getByTestId("provider-item-OpenAI")).toBeInTheDocument();
-    expect(screen.queryByTestId("provider-item-Anthropic")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("provider-item-Anthropic"),
+    ).not.toBeInTheDocument();
   });
 
   it("filters and renders available providers", () => {
@@ -174,7 +184,9 @@ describe("ProviderList", () => {
 
     render(<ProviderList type="available" />, { wrapper: createTestWrapper() });
 
-    expect(screen.queryByTestId("provider-item-OpenAI")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("provider-item-OpenAI"),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("provider-item-Anthropic")).toBeInTheDocument();
   });
 
@@ -198,7 +210,9 @@ describe("ProviderList", () => {
     });
 
     render(<ProviderList type="enabled" />, { wrapper: createTestWrapper() });
-    expect(screen.queryByTestId("provider-item-OpenAI")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("provider-item-OpenAI"),
+    ).not.toBeInTheDocument();
   });
 
   it("renders provider models dialog", () => {

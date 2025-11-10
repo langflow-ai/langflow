@@ -300,6 +300,7 @@ export function ParameterRenderComponent({
             options={templateData?.options || []}
             placeholder={templateData?.placeholder || "Select a Model"}
             providers={templateData?.providers}
+            externalOptions={templateData?.external_options}
           />
         );
       default:

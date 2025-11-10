@@ -28,7 +28,9 @@ jest.mock("@/components/ui/dropdown-menu", () => ({
 
 jest.mock("@/modals/deleteConfirmationModal", () => {
   return function MockDeleteConfirmationModal({ open }: any) {
-    return open ? <div data-testid="delete-confirmation-modal">Delete Modal</div> : null;
+    return open ? (
+      <div data-testid="delete-confirmation-modal">Delete Modal</div>
+    ) : null;
   };
 });
 
@@ -151,7 +153,9 @@ describe("ProviderListItem", () => {
       providerToDelete: "Anthropic",
     };
     render(<ProviderListItem {...props} />);
-    expect(screen.queryByTestId("delete-confirmation-modal")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("delete-confirmation-modal"),
+    ).not.toBeInTheDocument();
   });
 
   it("applies correct cursor style when provider has models", () => {

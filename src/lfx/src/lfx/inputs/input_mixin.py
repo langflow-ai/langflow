@@ -139,6 +139,8 @@ class ModelInputMixin(BaseModel):
     """Maximum tokens for model generation."""
     limit: int | None = None
     """Limit for the number of options to display."""
+    external_options: dict[str, Any] | None = None
+    """Dictionary of external options to display below the dropdown options (e.g., 'Connect other models')."""
 
 
 class ToolModeMixin(BaseModel):
