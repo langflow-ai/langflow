@@ -681,6 +681,15 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
 
 
 def get_llm(model, user_id: UUID | str | None, api_key=None, temperature=None, *, stream=False) -> Any:
+    # Check if model is already a BaseLanguageModel instance (from a connection)
+    try:
+        from langchain_core.language_models import BaseLanguageModel
+        if isinstance(model, BaseLanguageModel):
+            # Model is already instantiated, return it directly
+            return model
+    except ImportError:
+        pass
+    
     # Safely extract model configuration
     if not model or not isinstance(model, list) or len(model) == 0:
         msg = "A model selection is required"

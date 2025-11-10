@@ -11,8 +11,10 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import ApiKeyModal from "@/modals/apiKeyModal";
 import useAlertStore from "@/stores/alertStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
+import { useTypesStore } from "@/stores/typesStore";
 import { convertStringToHTML } from "@/utils/stringManipulation";
-import { cn } from "@/utils/utils";
+import { cn, groupByFamily } from "@/utils/utils";
+import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 import { default as ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import {
@@ -40,6 +42,7 @@ export type ModelInputComponentType = {
   }[];
   placeholder?: string;
   providers?: string[];
+  externalOptions?: any;
 };
 
 export type SelectedModel = {
@@ -63,6 +66,7 @@ export default function ModelInputComponent({
   nodeId,
   nodeClass,
   handleNodeClass,
+  externalOptions,
 }: BaseInputProps<any> & ModelInputComponentType): JSX.Element {
   // Initialize state and refs
   const [open, setOpen] = useState(false);
@@ -251,6 +255,94 @@ export default function ModelInputComponent({
     handleNodeClass,
     postTemplateValue,
     setErrorData,
+  ]);
+
+  const handleExternalOptions = useCallback(async (optionValue: string) => {
+    setOpen(false);
+    
+    // Clear the current selection
+    setSelectedModel(null);
+    setSelectedProvider(null);
+    handleOnNewValue({ value: [] });
+
+    await mutateTemplate(
+      optionValue,
+      nodeId!,
+      nodeClass!,
+      handleNodeClass!,
+      postTemplateValue,
+      setErrorData,
+      "model",
+    );
+
+    // Enable connection mode for connect_other_models
+    try {
+      if (optionValue === "connect_other_models") {
+        const store = useFlowStore.getState();
+        const node = store.getNode(nodeId!);
+        const templateField = node?.data?.node?.template?.["model"];
+        if (!templateField) return;
+
+        const inputTypes: string[] =
+          (Array.isArray(templateField.input_types)
+            ? templateField.input_types
+            : []) || [];
+        const effectiveInputTypes =
+          inputTypes.length > 0 ? inputTypes : ["LanguageModel"];
+        const tooltipTitle: string =
+          (inputTypes && inputTypes.length > 0
+            ? inputTypes.join("\n")
+            : templateField.type) || "";
+
+        const myId = scapedJSONStringfy({
+          inputTypes: effectiveInputTypes,
+          type: templateField.type,
+          id: nodeId,
+          fieldName: "model",
+          proxy: templateField.proxy,
+        });
+
+        const typesData = useTypesStore.getState().data;
+        const grouped = groupByFamily(
+          typesData,
+          (effectiveInputTypes && effectiveInputTypes.length > 0
+            ? effectiveInputTypes.join("\n")
+            : tooltipTitle) || "",
+          true,
+          store.nodes,
+        );
+
+        // Build a pseudo source so compatible target handles (left side) glow
+        const pseudoSourceHandle = scapedJSONStringfy({
+          fieldName: "model",
+          id: nodeId,
+          inputTypes: effectiveInputTypes,
+          type: "str",
+        });
+
+        const filterObj = {
+          source: undefined,
+          sourceHandle: undefined,
+          target: nodeId,
+          targetHandle: pseudoSourceHandle,
+          type: "LanguageModel",
+          color: "datatype-fuchsia",
+        } as any;
+
+        // Show compatible handles glow
+        store.setFilterEdge(grouped);
+        store.setFilterType(filterObj);
+      }
+    } catch (error) {
+      console.warn("Error setting up connection mode:", error);
+    }
+  }, [
+    nodeId,
+    nodeClass,
+    handleNodeClass,
+    postTemplateValue,
+    setErrorData,
+    handleOnNewValue,
   ]);
 
   // Effects
@@ -558,6 +650,30 @@ export default function ModelInputComponent({
                 "refresh-icon h-3 w-3 text-primary text-muted-foreground group-hover:text-primary",
               )}
             />
+          </div>
+        </Button>
+      )}
+      {externalOptions?.fields?.data?.node && (
+        <Button
+          className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs text-muted-foreground px-3 hover:bg-accent group"
+          unstyled
+          data-testid="external-option-button"
+          onClick={() => {
+            handleExternalOptions(
+              externalOptions.fields.data.node.name || "",
+            );
+          }}
+        >
+          <div className="flex items-center gap-2 pl-1 group-hover:text-primary">
+            {externalOptions.fields.data.node.display_name}
+            {externalOptions.fields.data.node.icon && (
+              <ForwardedIconComponent
+                name={externalOptions.fields.data.node.icon}
+                className={cn(
+                  "w-4 h-4 text-muted-foreground group-hover:text-primary",
+                )}
+              />
+            )}
           </div>
         </Button>
       )}

@@ -124,7 +124,49 @@ class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMix
 
 
 class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
+    """Represents a model input field with automatic LanguageModel connection support.
+    
+    Automatically includes:
+    - input_types=["LanguageModel"] for connection support
+    - external_options with "Connect other models" button
+    """
     field_type: SerializableFieldTypes = FieldTypes.MODEL
+    input_types: list[str] = Field(default_factory=lambda: ["LanguageModel"])
+    external_options: dict = Field(
+        default_factory=lambda: {
+            "fields": {
+                "data": {
+                    "node": {
+                        "name": "connect_other_models",
+                        "display_name": "Connect other models",
+                        "icon": "CornerDownLeft",
+                    }
+                }
+            },
+        }
+    )
+    
+    @model_validator(mode="after")
+    def set_defaults(self):
+        """Ensure input_types and external_options are set even if inherited as None."""
+        # Set input_types if not explicitly provided
+        if self.input_types is None or len(self.input_types) == 0:
+            self.input_types = ["LanguageModel"]
+        
+        # Set external_options if not explicitly provided
+        if self.external_options is None or len(self.external_options) == 0:
+            self.external_options = {
+                "fields": {
+                    "data": {
+                        "node": {
+                            "name": "connect_other_models",
+                            "display_name": "Connect other models",
+                            "icon": "CornerDownLeft",
+                        }
+                    }
+                },
+            }
+        return self
 
 
 # Applying mixins to a specific input type
