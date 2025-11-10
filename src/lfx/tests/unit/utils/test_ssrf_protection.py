@@ -1,7 +1,8 @@
 """Unit tests for SSRF protection utilities."""
 
 import os
-from unittest.mock import patch
+from contextlib import contextmanager
+from unittest.mock import MagicMock, patch
 
 import pytest
 from lfx.utils.ssrf_protection import (
@@ -15,58 +16,73 @@ from lfx.utils.ssrf_protection import (
 )
 
 
+@contextmanager
+def mock_ssrf_settings(*, enabled=False, allowed_hosts=None):
+    """Context manager to mock SSRF settings."""
+    if allowed_hosts is None:
+        allowed_hosts = []
+
+    with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get_settings:
+        mock_settings = MagicMock()
+        mock_settings.settings.ssrf_protection_enabled = enabled
+        mock_settings.settings.ssrf_allowed_hosts = allowed_hosts
+        mock_get_settings.return_value = mock_settings
+        yield
+
+
 class TestSSRFProtectionConfiguration:
     """Test SSRF protection configuration and environment variables."""
 
     def test_ssrf_protection_disabled_by_default(self):
         """Test that SSRF protection is disabled by default (for now)."""
         # TODO: Update this test when default changes to enabled in v2.0
-        with patch.dict(os.environ, {}, clear=True):
+        with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.ssrf_protection_enabled = False
+            mock_get_settings.return_value = mock_settings
             assert is_ssrf_protection_enabled() is False
 
     @pytest.mark.parametrize(
-        ("env_value", "expected"),
+        ("setting_value", "expected"),
         [
-            ("true", True),
-            ("TRUE", True),
-            ("1", True),
-            ("yes", True),
-            ("YES", True),
-            ("on", True),
-            ("ON", True),
-            ("false", False),
-            ("FALSE", False),
-            ("0", False),
-            ("no", False),
-            ("off", False),
-            ("", False),
-            ("invalid", False),
+            (True, True),
+            (False, False),
         ],
     )
-    def test_ssrf_protection_env_var(self, env_value, expected):
-        """Test SSRF protection environment variable parsing."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": env_value}):
+    def test_ssrf_protection_setting(self, setting_value, expected):
+        """Test SSRF protection setting value."""
+        with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.ssrf_protection_enabled = setting_value
+            mock_get_settings.return_value = mock_settings
             assert is_ssrf_protection_enabled() == expected
 
     def test_allowed_hosts_empty_by_default(self):
         """Test that allowed hosts is empty by default."""
-        with patch.dict(os.environ, {}, clear=True):
+        with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.ssrf_allowed_hosts = []
+            mock_get_settings.return_value = mock_settings
             assert get_allowed_hosts() == []
 
     @pytest.mark.parametrize(
-        ("env_value", "expected"),
+        ("setting_value", "expected"),
         [
-            ("", []),
-            ("example.com", ["example.com"]),
-            ("example.com,api.example.com", ["example.com", "api.example.com"]),
-            ("192.168.1.0/24,10.0.0.5", ["192.168.1.0/24", "10.0.0.5"]),
-            ("  example.com  ,  api.example.com  ", ["example.com", "api.example.com"]),
-            ("*.example.com", ["*.example.com"]),
+            ([], []),
+            (["example.com"], ["example.com"]),
+            (["example.com", "api.example.com"], ["example.com", "api.example.com"]),
+            (["192.168.1.0/24", "10.0.0.5"], ["192.168.1.0/24", "10.0.0.5"]),
+            (["  example.com  ", "  api.example.com  "], ["example.com", "api.example.com"]),
+            (["*.example.com"], ["*.example.com"]),
+            (["", "example.com", "  ", "api.example.com"], ["example.com", "api.example.com"]),  # Test filtering
         ],
     )
-    def test_allowed_hosts_parsing(self, env_value, expected):
-        """Test allowed hosts environment variable parsing."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_ALLOWED_HOSTS": env_value}):
+    def test_allowed_hosts_parsing(self, setting_value, expected):
+        """Test allowed hosts list cleaning and filtering."""
+        with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.ssrf_allowed_hosts = setting_value
+            mock_get_settings.return_value = mock_settings
             assert get_allowed_hosts() == expected
 
 
@@ -146,13 +162,19 @@ class TestHostnameAllowlist:
 
     def test_exact_hostname_match(self):
         """Test exact hostname matching in allowlist."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_ALLOWED_HOSTS": "internal.company.local"}):
+        with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.ssrf_allowed_hosts = ["internal.company.local"]
+            mock_get_settings.return_value = mock_settings
             assert is_host_allowed("internal.company.local") is True
             assert is_host_allowed("other.company.local") is False
 
     def test_wildcard_hostname_match(self):
         """Test wildcard hostname matching in allowlist."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_ALLOWED_HOSTS": "*.company.local"}):
+        with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.ssrf_allowed_hosts = ["*.company.local"]
+            mock_get_settings.return_value = mock_settings
             assert is_host_allowed("api.company.local") is True
             assert is_host_allowed("internal.company.local") is True
             assert is_host_allowed("company.local") is True
@@ -160,13 +182,19 @@ class TestHostnameAllowlist:
 
     def test_exact_ip_match(self):
         """Test exact IP matching in allowlist."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_ALLOWED_HOSTS": "192.168.1.5"}):
+        with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.ssrf_allowed_hosts = ["192.168.1.5"]
+            mock_get_settings.return_value = mock_settings
             assert is_host_allowed("example.com", "192.168.1.5") is True
             assert is_host_allowed("example.com", "192.168.1.6") is False
 
     def test_cidr_range_match(self):
         """Test CIDR range matching in allowlist."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_ALLOWED_HOSTS": "192.168.1.0/24,10.0.0.0/16"}):
+        with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.ssrf_allowed_hosts = ["192.168.1.0/24", "10.0.0.0/16"]
+            mock_get_settings.return_value = mock_settings
             assert is_host_allowed("example.com", "192.168.1.5") is True
             assert is_host_allowed("example.com", "192.168.1.255") is True
             assert is_host_allowed("example.com", "192.168.2.5") is False
@@ -176,7 +204,10 @@ class TestHostnameAllowlist:
 
     def test_multiple_allowed_hosts(self):
         """Test multiple entries in allowlist."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_ALLOWED_HOSTS": "internal.local,192.168.1.0/24,*.api.company.com"}):
+        with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.ssrf_allowed_hosts = ["internal.local", "192.168.1.0/24", "*.api.company.com"]
+            mock_get_settings.return_value = mock_settings
             assert is_host_allowed("internal.local") is True
             assert is_host_allowed("v1.api.company.com") is True
             assert is_host_allowed("example.com", "192.168.1.100") is True
@@ -184,7 +215,10 @@ class TestHostnameAllowlist:
 
     def test_empty_allowlist(self):
         """Test that empty allowlist returns False."""
-        with patch.dict(os.environ, {}, clear=True):
+        with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.ssrf_allowed_hosts = []
+            mock_get_settings.return_value = mock_settings
             assert is_host_allowed("example.com") is False
             assert is_host_allowed("example.com", "192.168.1.1") is False
 
@@ -218,7 +252,10 @@ class TestURLValidation:
 
     def test_protection_disabled_allows_all(self):
         """Test that when protection is disabled, all URLs are allowed."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}):
+        with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.ssrf_protection_enabled = False
+            mock_get_settings.return_value = mock_settings
             # These should all pass without errors when protection is disabled
             validate_url_for_ssrf("http://127.0.0.1", warn_only=False)
             validate_url_for_ssrf("http://169.254.169.254", warn_only=False)
@@ -226,7 +263,11 @@ class TestURLValidation:
 
     def test_invalid_scheme_blocked(self):
         """Test that non-http/https schemes are blocked."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
+        with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.ssrf_protection_enabled = True
+            mock_get_settings.return_value = mock_settings
+
             with pytest.raises(SSRFProtectionError, match="Invalid URL scheme"):
                 validate_url_for_ssrf("ftp://example.com", warn_only=False)
 
@@ -235,7 +276,7 @@ class TestURLValidation:
 
     def test_valid_schemes_allowed(self):
         """Test that http and https schemes are explicitly allowed."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
+        with mock_ssrf_settings(enabled=True):
             # Mock DNS resolution to return public IPs
             with patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve:
                 mock_resolve.return_value = ["93.184.216.34"]  # Public IP (example.com)
@@ -247,7 +288,7 @@ class TestURLValidation:
 
     def test_direct_ip_blocking(self):
         """Test blocking of direct IP addresses."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
+        with mock_ssrf_settings(enabled=True):
             # Loopback
             with pytest.raises(SSRFProtectionError, match="blocked"):
                 validate_url_for_ssrf("http://127.0.0.1", warn_only=False)
@@ -262,14 +303,14 @@ class TestURLValidation:
 
     def test_public_ips_allowed(self):
         """Test that public IP addresses are allowed."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
+        with mock_ssrf_settings(enabled=True):
             # Should not raise
             validate_url_for_ssrf("http://8.8.8.8", warn_only=False)
             validate_url_for_ssrf("http://1.1.1.1", warn_only=False)
 
     def test_public_hostnames_allowed(self):
         """Test that public hostnames are allowed."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
+        with mock_ssrf_settings(enabled=True):
             # Test with real DNS to stable Google service
             validate_url_for_ssrf("https://www.google.com", warn_only=False)
 
@@ -281,54 +322,53 @@ class TestURLValidation:
 
     def test_localhost_hostname_blocked(self):
         """Test that localhost hostname is blocked."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
+        with mock_ssrf_settings(enabled=True):
             with pytest.raises(SSRFProtectionError, match="blocked IP address"):
                 validate_url_for_ssrf("http://localhost:8080", warn_only=False)
 
     def test_allowlist_bypass_hostname(self):
         """Test that allowlisted hostnames bypass SSRF checks."""
-        with patch.dict(
-            os.environ,
-            {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true", "LANGFLOW_SSRF_ALLOWED_HOSTS": "internal.company.local"},
-        ):
+        with mock_ssrf_settings(enabled=True, allowed_hosts=["internal.company.local"]):
             # Should not raise even if it resolves to private IP
             # (We can't easily test actual resolution without mocking, but the allowlist check happens first)
             validate_url_for_ssrf("http://internal.company.local", warn_only=False)
 
     def test_allowlist_bypass_ip(self):
         """Test that allowlisted IPs bypass SSRF checks."""
-        with patch.dict(
-            os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true", "LANGFLOW_SSRF_ALLOWED_HOSTS": "192.168.1.5"}
-        ):
+        with mock_ssrf_settings(enabled=True, allowed_hosts=["192.168.1.5"]):
             # Should not raise
             validate_url_for_ssrf("http://192.168.1.5", warn_only=False)
 
     def test_allowlist_bypass_cidr(self):
         """Test that IPs in allowlisted CIDR ranges bypass SSRF checks."""
-        with patch.dict(
-            os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true", "LANGFLOW_SSRF_ALLOWED_HOSTS": "192.168.1.0/24"}
-        ):
+        with mock_ssrf_settings(enabled=True, allowed_hosts=["192.168.1.0/24"]):
             # Should not raise
             validate_url_for_ssrf("http://192.168.1.5", warn_only=False)
             validate_url_for_ssrf("http://192.168.1.100", warn_only=False)
 
-    def test_warn_only_mode_logs_warnings(self, caplog):
+    def test_warn_only_mode_logs_warnings(self):
         """Test that warn_only mode logs warnings instead of raising errors."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
-            # Should not raise, but should log warning
-            validate_url_for_ssrf("http://127.0.0.1", warn_only=True)
+        with mock_ssrf_settings(enabled=True):
+            with patch("lfx.utils.ssrf_protection.logger") as mock_logger:
+                # Should not raise, but should log warning
+                validate_url_for_ssrf("http://127.0.0.1", warn_only=True)
 
-            # Check that warning was logged
-            assert any("SSRF Protection Warning" in record.message for record in caplog.records)
+                # Check that warning was logged
+                mock_logger.warning.assert_called()
+                assert any(
+                    "SSRF Protection Warning" in str(call)
+                    for call in mock_logger.warning.call_args_list
+                )
 
     def test_malformed_url_raises_value_error(self):
         """Test that malformed URLs raise ValueError."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}), pytest.raises(ValueError):
-            validate_url_for_ssrf("not a valid url", warn_only=False)
+        with mock_ssrf_settings(enabled=True):
+            with pytest.raises(ValueError):
+                validate_url_for_ssrf("not a valid url", warn_only=False)
 
     def test_missing_hostname_blocked(self):
         """Test that URLs without hostname are blocked."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
+        with mock_ssrf_settings(enabled=True):
             with pytest.raises(SSRFProtectionError, match="valid hostname"):
                 validate_url_for_ssrf("http://", warn_only=False)
 
@@ -343,13 +383,13 @@ class TestURLValidation:
     )
     def test_ipv6_blocking(self, url):
         """Test that private IPv6 addresses are blocked."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
+        with mock_ssrf_settings(enabled=True):
             with pytest.raises(SSRFProtectionError, match="blocked"):
                 validate_url_for_ssrf(url, warn_only=False)
 
     def test_ipv6_public_allowed(self):
         """Test that public IPv6 addresses are allowed."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
+        with mock_ssrf_settings(enabled=True):
             # Should not raise
             validate_url_for_ssrf("http://[2001:4860:4860::8888]", warn_only=False)
 
@@ -359,7 +399,7 @@ class TestIntegrationScenarios:
 
     def test_aws_metadata_blocked(self):
         """Test that AWS metadata endpoint is blocked."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
+        with mock_ssrf_settings(enabled=True):
             with pytest.raises(SSRFProtectionError):
                 validate_url_for_ssrf(
                     "http://169.254.169.254/latest/meta-data/iam/security-credentials/", warn_only=False
@@ -367,13 +407,13 @@ class TestIntegrationScenarios:
 
     def test_internal_admin_panel_blocked(self):
         """Test that internal admin panels are blocked."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
+        with mock_ssrf_settings(enabled=True):
             with pytest.raises(SSRFProtectionError):
                 validate_url_for_ssrf("http://192.168.1.1/admin", warn_only=False)
 
     def test_legitimate_api_allowed(self):
         """Test that legitimate external APIs are allowed."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
+        with mock_ssrf_settings(enabled=True):
             # Mock DNS resolution for API endpoints
             with patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve:
                 mock_resolve.return_value = ["104.16.132.229"]  # Public IP
@@ -385,7 +425,7 @@ class TestIntegrationScenarios:
 
     def test_docker_internal_networking_requires_allowlist(self):
         """Test that Docker internal networking requires allowlist configuration."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
+        with mock_ssrf_settings(enabled=True):
             # Mock DNS to simulate Docker internal hostname resolving to private IP
             with patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve:
                 mock_resolve.return_value = ["172.18.0.2"]  # Docker bridge network IP
@@ -395,17 +435,9 @@ class TestIntegrationScenarios:
                     validate_url_for_ssrf("http://database:5432", warn_only=False)
 
         # With allowlist, should be allowed
-        with (
-            patch.dict(
-                os.environ,
-                {
-                    "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
-                    "LANGFLOW_SSRF_ALLOWED_HOSTS": "database,*.internal.local",
-                },
-            ),
-            patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
-        ):
-            mock_resolve.return_value = ["172.18.0.2"]  # Docker bridge network IP
+        with mock_ssrf_settings(enabled=True, allowed_hosts=["database", "*.internal.local"]):
+            with patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve:
+                mock_resolve.return_value = ["172.18.0.2"]  # Docker bridge network IP
 
-            validate_url_for_ssrf("http://database:5432", warn_only=False)
-            validate_url_for_ssrf("http://api.internal.local", warn_only=False)
+                validate_url_for_ssrf("http://database:5432", warn_only=False)
+                validate_url_for_ssrf("http://api.internal.local", warn_only=False)

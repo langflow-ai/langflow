@@ -321,6 +321,8 @@ class Settings(BaseSettings):
     ssrf_protection_enabled: bool = False
     """If set to True, Langflow will enable SSRF (Server-Side Request Forgery) protection.
     When enabled, blocks requests to private IP ranges, localhost, and cloud metadata endpoints.
+    When False (default), no URL validation is performed, allowing requests to any destination
+    including internal services, private networks, and cloud metadata endpoints.
     Default is False for backward compatibility. In v2.0, this will be changed to True."""
     ssrf_allowed_hosts: list[str] = []
     """Comma-separated list of hosts/IPs/CIDR ranges to allow despite SSRF protection.

@@ -36,35 +36,61 @@ class SSRFProtectionError(ValueError):
     """Raised when a URL is blocked due to SSRF protection."""
 
 
-# Define blocked IP ranges
-BLOCKED_IP_RANGES = [
-    # IPv4 ranges
-    ipaddress.ip_network("0.0.0.0/8"),  # Current network (only valid as source)
-    ipaddress.ip_network("10.0.0.0/8"),  # Private network (RFC 1918)
-    ipaddress.ip_network("100.64.0.0/10"),  # Carrier-grade NAT (RFC 6598)
-    ipaddress.ip_network("127.0.0.0/8"),  # Loopback
-    ipaddress.ip_network("169.254.0.0/16"),  # Link-local / AWS metadata
-    ipaddress.ip_network("172.16.0.0/12"),  # Private network (RFC 1918)
-    ipaddress.ip_network("192.0.0.0/24"),  # IETF Protocol Assignments
-    ipaddress.ip_network("192.0.2.0/24"),  # Documentation (TEST-NET-1)
-    ipaddress.ip_network("192.168.0.0/16"),  # Private network (RFC 1918)
-    ipaddress.ip_network("198.18.0.0/15"),  # Benchmarking
-    ipaddress.ip_network("198.51.100.0/24"),  # Documentation (TEST-NET-2)
-    ipaddress.ip_network("203.0.113.0/24"),  # Documentation (TEST-NET-3)
-    ipaddress.ip_network("224.0.0.0/4"),  # Multicast
-    ipaddress.ip_network("240.0.0.0/4"),  # Reserved
-    ipaddress.ip_network("255.255.255.255/32"),  # Broadcast
-    # IPv6 ranges
-    ipaddress.ip_network("::1/128"),  # Loopback
-    ipaddress.ip_network("::/128"),  # Unspecified address
-    ipaddress.ip_network("::ffff:0:0/96"),  # IPv4-mapped IPv6 addresses
-    ipaddress.ip_network("100::/64"),  # Discard prefix
-    ipaddress.ip_network("2001::/23"),  # IETF Protocol Assignments
-    ipaddress.ip_network("2001:db8::/32"),  # Documentation
-    ipaddress.ip_network("fc00::/7"),  # Unique local addresses (ULA)
-    ipaddress.ip_network("fe80::/10"),  # Link-local
-    ipaddress.ip_network("ff00::/8"),  # Multicast
-]
+# Global variable for lazy-loaded blocked IP ranges
+_BLOCKED_IP_RANGES: list[ipaddress.IPv4Network | ipaddress.IPv6Network] | None = None
+
+
+def get_blocked_ip_ranges() -> list[ipaddress.IPv4Network | ipaddress.IPv6Network]:
+    """Get the list of blocked IP ranges, initializing lazily on first access.
+
+    This lazy loading avoids the startup cost of creating all ip_network objects
+    at module import time.
+
+    Returns:
+        list: List of blocked IPv4 and IPv6 network ranges.
+    """
+    global _BLOCKED_IP_RANGES
+
+    if _BLOCKED_IP_RANGES is None:
+        _BLOCKED_IP_RANGES = [
+            # IPv4 ranges
+            ipaddress.ip_network("0.0.0.0/8"),  # Current network (only valid as source)
+            ipaddress.ip_network("10.0.0.0/8"),  # Private network (RFC 1918)
+            ipaddress.ip_network("100.64.0.0/10"),  # Carrier-grade NAT (RFC 6598)
+            ipaddress.ip_network("127.0.0.0/8"),  # Loopback
+            ipaddress.ip_network("169.254.0.0/16"),  # Link-local / AWS metadata
+            ipaddress.ip_network("172.16.0.0/12"),  # Private network (RFC 1918)
+            ipaddress.ip_network("192.0.0.0/24"),  # IETF Protocol Assignments
+            ipaddress.ip_network("192.0.2.0/24"),  # Documentation (TEST-NET-1)
+            ipaddress.ip_network("192.168.0.0/16"),  # Private network (RFC 1918)
+            ipaddress.ip_network("198.18.0.0/15"),  # Benchmarking
+            ipaddress.ip_network("198.51.100.0/24"),  # Documentation (TEST-NET-2)
+            ipaddress.ip_network("203.0.113.0/24"),  # Documentation (TEST-NET-3)
+            ipaddress.ip_network("224.0.0.0/4"),  # Multicast
+            ipaddress.ip_network("240.0.0.0/4"),  # Reserved
+            ipaddress.ip_network("255.255.255.255/32"),  # Broadcast
+            # IPv6 ranges
+            ipaddress.ip_network("::1/128"),  # Loopback
+            ipaddress.ip_network("::/128"),  # Unspecified address
+            ipaddress.ip_network("::ffff:0:0/96"),  # IPv4-mapped IPv6 addresses
+            ipaddress.ip_network("100::/64"),  # Discard prefix
+            ipaddress.ip_network("2001::/23"),  # IETF Protocol Assignments
+            ipaddress.ip_network("2001:db8::/32"),  # Documentation
+            ipaddress.ip_network("fc00::/7"),  # Unique local addresses (ULA)
+            ipaddress.ip_network("fe80::/10"),  # Link-local
+            ipaddress.ip_network("ff00::/8"),  # Multicast
+        ]
+
+    return _BLOCKED_IP_RANGES
+
+
+def is_ssrf_protection_enabled() -> bool:
+    """Check if SSRF protection is enabled in settings.
+
+    Returns:
+        bool: True if SSRF protection is enabled, False otherwise.
+    """
+    return get_settings_service().settings.ssrf_protection_enabled
 
 
 def get_allowed_hosts() -> list[str]:
@@ -76,7 +102,8 @@ def get_allowed_hosts() -> list[str]:
     allowed_hosts = get_settings_service().settings.ssrf_allowed_hosts
     if not allowed_hosts:
         return []
-    return [host.strip() for host in allowed_hosts.split(",") if host.strip()]
+    # ssrf_allowed_hosts is already a list[str], just clean and filter entries
+    return [host.strip() for host in allowed_hosts if host and host.strip()]
 
 
 def is_host_allowed(hostname: str, ip: str | None = None) -> bool:
@@ -149,7 +176,7 @@ def is_ip_blocked(ip: str | ipaddress.IPv4Address | ipaddress.IPv6Address) -> bo
             ip_obj = ip
 
         # Check against all blocked ranges
-        for blocked_range in BLOCKED_IP_RANGES:
+        for blocked_range in get_blocked_ip_ranges():
             if ip_obj in blocked_range:
                 return True
 
@@ -198,64 +225,61 @@ def resolve_hostname(hostname: str) -> list[str]:
         raise SSRFProtectionError(msg) from e
 
 
-def validate_url_for_ssrf(url: str, *, warn_only: bool = True) -> None:
-    """Validate a URL to prevent SSRF attacks.
-
-    This function performs the following checks:
-    1. Validates the URL scheme (only http/https allowed)
-    2. Resolves the hostname to IP addresses
-    3. Checks if any resolved IP is in a blocked range
-    4. Blocks direct IP addresses if they're in blocked ranges
-    5. Checks allowlist for override
+def _validate_url_scheme(scheme: str, url: str) -> None:
+    """Validate that URL scheme is http or https.
 
     Args:
-        url: URL to validate
-        warn_only: If True, only log warnings instead of raising errors (default: True)
-            TODO: Change default to False in next major version (2.0)
+        scheme: URL scheme to validate
+        url: Full URL (for error messages)
 
     Raises:
-        SSRFProtectionError: If the URL is blocked due to SSRF protection (only if warn_only=False)
-        ValueError: If the URL is malformed
+        SSRFProtectionError: If scheme is invalid
     """
-    # Skip validation if SSRF protection is disabled
-    if not get_settings_service().settings.ssrf_protection_enabled:
-        return
-
-    try:
-        parsed = urlparse(url)
-    except Exception as e:
-        msg = f"Invalid URL format: {e}"
-        raise ValueError(msg) from e
-
-    # Check scheme
-    if parsed.scheme not in ("http", "https"):
-        msg = f"Invalid URL scheme '{parsed.scheme}'. Only http and https are allowed."
-        if warn_only:
-            logger.warning("SSRF Protection Warning: %s", msg)
-            return
+    if scheme not in ("http", "https"):
+        msg = f"Invalid URL scheme '{scheme}'. Only http and https are allowed."
         raise SSRFProtectionError(msg)
 
-    hostname = parsed.hostname
+
+def _validate_hostname_exists(hostname: str | None, url: str) -> str:
+    """Validate that hostname exists in the URL.
+
+    Args:
+        hostname: Hostname to validate (may be None)
+        url: Full URL (for error messages)
+
+    Returns:
+        str: The validated hostname
+
+    Raises:
+        SSRFProtectionError: If hostname is missing
+    """
     if not hostname:
         msg = "URL must contain a valid hostname"
-        if warn_only:
-            logger.warning("SSRF Protection Warning: %s", msg)
-            return
         raise SSRFProtectionError(msg)
+    return hostname
 
-    # Check if hostname/IP is in allowlist
-    if is_host_allowed(hostname):
-        logger.debug("Hostname %s is in allowlist, bypassing SSRF checks", hostname)
-        return
 
-    # Check if hostname is a direct IP address
+def _validate_direct_ip_address(hostname: str, url: str) -> bool:
+    """Validate a direct IP address in the URL.
+
+    Args:
+        hostname: Hostname that may be an IP address
+        url: Full URL (for error messages)
+
+    Returns:
+        bool: True if hostname is a direct IP and validation passed,
+              False if hostname is not an IP (caller should continue with DNS resolution)
+
+    Raises:
+        SSRFProtectionError: If IP is blocked
+    """
     try:
         ip_obj = ipaddress.ip_address(hostname)
         # It's a direct IP address
         # Check if IP is in allowlist
         if is_host_allowed(hostname, str(ip_obj)):
             logger.debug("IP address %s is in allowlist, bypassing SSRF checks", hostname)
-            return
+            return True
 
         if is_ip_blocked(ip_obj):
             msg = (
@@ -263,35 +287,33 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = True) -> None:
                 "Requests to private/internal IP ranges are not allowed for security reasons. "
                 "To allow this IP, add it to LANGFLOW_SSRF_ALLOWED_HOSTS environment variable."
             )
-            if warn_only:
-                # TODO: Remove warn_only mode in next major version
-                logger.warning("SSRF Protection Warning: %s [URL: %s]", msg, url)
-                logger.warning(
-                    "This request will be blocked when SSRF protection is enforced in the next major version. "
-                    "Please review your API Request components."
-                )
-                return
             raise SSRFProtectionError(msg)
-        # Direct IP is allowed (public IP)
-        return
-    except ValueError:
-        # Not an IP address, it's a hostname - continue to DNS resolution
-        pass
 
+        # Direct IP is allowed (public IP)
+        return True
+    except ValueError:
+        # Not an IP address, it's a hostname - caller should continue with DNS resolution
+        return False
+
+
+def _validate_hostname_resolution(hostname: str, url: str) -> None:
+    """Resolve hostname and validate resolved IPs are not blocked.
+
+    Args:
+        hostname: Hostname to resolve and validate
+        url: Full URL (for error messages)
+
+    Raises:
+        SSRFProtectionError: If resolved IPs are blocked
+    """
     # Resolve hostname to IP addresses
     try:
         resolved_ips = resolve_hostname(hostname)
-    except SSRFProtectionError as e:
-        if warn_only:
-            logger.warning("SSRF Protection Warning: %s [URL: %s]", str(e), url)
-            return
+    except SSRFProtectionError:
         # Re-raise SSRF errors as-is
         raise
     except Exception as e:
         msg = f"Failed to resolve hostname {hostname}: {e}"
-        if warn_only:
-            logger.warning("SSRF Protection Warning: %s [URL: %s]", msg, url)
-            return
         raise SSRFProtectionError(msg) from e
 
     # Check if any resolved IP is blocked
@@ -313,12 +335,67 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = True) -> None:
             "(e.g., AWS 169.254.169.254), and other sensitive internal resources. "
             "To allow this hostname, add it to LANGFLOW_SSRF_ALLOWED_HOSTS environment variable."
         )
+        raise SSRFProtectionError(msg)
+
+
+def validate_url_for_ssrf(url: str, *, warn_only: bool = True) -> None:
+    """Validate a URL to prevent SSRF attacks.
+
+    This function performs the following checks:
+    1. Validates the URL scheme (only http/https allowed)
+    2. Validates hostname exists
+    3. Checks if hostname/IP is in allowlist
+    4. If direct IP: validates it's not in blocked ranges
+    5. If hostname: resolves to IPs and validates they're not in blocked ranges
+
+    Args:
+        url: URL to validate
+        warn_only: If True, only log warnings instead of raising errors (default: True)
+            TODO: Change default to False in next major version (2.0)
+
+    Raises:
+        SSRFProtectionError: If the URL is blocked due to SSRF protection (only if warn_only=False)
+        ValueError: If the URL is malformed
+    """
+    # Skip validation if SSRF protection is disabled
+    if not is_ssrf_protection_enabled():
+        return
+
+    # Parse URL
+    try:
+        parsed = urlparse(url)
+    except Exception as e:
+        msg = f"Invalid URL format: {e}"
+        raise ValueError(msg) from e
+
+    try:
+        # Validate scheme
+        _validate_url_scheme(parsed.scheme, url)
+        if parsed.scheme not in ("http", "https"):
+            return
+
+        # Validate hostname exists
+        hostname = _validate_hostname_exists(parsed.hostname, url)
+
+        # Check if hostname/IP is in allowlist (early return if allowed)
+        if is_host_allowed(hostname):
+            logger.debug("Hostname %s is in allowlist, bypassing SSRF checks", hostname)
+            return
+
+        # Validate direct IP address or resolve hostname
+        is_direct_ip = _validate_direct_ip_address(hostname, url)
+        if is_direct_ip:
+            # Direct IP was handled (allowed or exception raised)
+            return
+
+        # Not a direct IP, resolve hostname and validate
+        _validate_hostname_resolution(hostname, url)
+    except SSRFProtectionError as e:
         if warn_only:
-            # TODO: Remove warn_only mode in next major version
-            logger.warning("SSRF Protection Warning: %s [URL: %s]", msg, url)
+            logger.warning("SSRF Protection Warning: %s [URL: %s]", str(e), url)
             logger.warning(
                 "This request will be blocked when SSRF protection is enforced in the next major version. "
-                "Please review your API Request components and update LANGFLOW_SSRF_ALLOWED_HOSTS if needed."
+                "Please review your API Request components."
             )
             return
-        raise SSRFProtectionError(msg)
+        raise
