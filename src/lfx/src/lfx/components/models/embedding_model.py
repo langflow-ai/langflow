@@ -16,7 +16,9 @@ from lfx.io import (
     MessageTextInput,
     SecretStrInput,
 )
+from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
+from lfx.utils.util import transform_localhost_url
 
 
 class EmbeddingModelComponent(LCEmbeddingsModel):
@@ -132,9 +134,22 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                     msg = "Please install langchain-ollama: pip install langchain-ollama"
                     raise ImportError(msg) from None
 
+            transformed_base_url = transform_localhost_url(api_base)
+
+            # Check if URL contains /v1 suffix (OpenAI-compatible mode)
+            if transformed_base_url and transformed_base_url.rstrip("/").endswith("/v1"):
+                # Strip /v1 suffix and log warning
+                transformed_base_url = transformed_base_url.rstrip("/").removesuffix("/v1")
+                logger.warning(
+                    "Detected '/v1' suffix in base URL. The Ollama component uses the native Ollama API, "
+                    "not the OpenAI-compatible API. The '/v1' suffix has been automatically removed. "
+                    "If you want to use the OpenAI-compatible API, please use the OpenAI component instead. "
+                    "Learn more at https://docs.ollama.com/openai#openai-compatibility"
+                )
+
             return OllamaEmbeddings(
                 model=model,
-                base_url=api_base or "http://localhost:11434",
+                base_url=transformed_base_url or "http://localhost:11434",
                 **model_kwargs,
             )
 
@@ -178,6 +193,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 build_config["api_key"]["show"] = True
                 build_config["api_base"]["display_name"] = "OpenAI API Base URL"
                 build_config["api_base"]["advanced"] = True
+                build_config["api_base"]["show"] = True
                 build_config["project_id"]["show"] = False
                 build_config["base_url_ibm_watsonx"]["show"] = False
 
@@ -190,6 +206,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 build_config["api_base"]["display_name"] = "Ollama Base URL"
                 build_config["api_base"]["value"] = "http://localhost:11434"
                 build_config["api_base"]["advanced"] = False
+                build_config["api_base"]["show"] = True
                 build_config["project_id"]["show"] = False
                 build_config["base_url_ibm_watsonx"]["show"] = False
 
