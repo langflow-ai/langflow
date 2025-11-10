@@ -1,9 +1,11 @@
+import asyncio
 from typing import Any
+from urllib.parse import urljoin
 
+import httpx
 from langchain_openai import OpenAIEmbeddings
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
-from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS, WATSONX_EMBEDDING_MODEL_NAMES
 from lfx.field_typing import Embeddings
@@ -16,7 +18,17 @@ from lfx.io import (
     MessageTextInput,
     SecretStrInput,
 )
+from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
+from lfx.utils.util import transform_localhost_url
+
+# Ollama API constants
+HTTP_STATUS_OK = 200
+JSON_MODELS_KEY = "models"
+JSON_NAME_KEY = "name"
+JSON_CAPABILITIES_KEY = "capabilities"
+DESIRED_CAPABILITY = "embedding"
+DEFAULT_OLLAMA_URL = "http://localhost:11434"
 
 
 class EmbeddingModelComponent(LCEmbeddingsModel):
@@ -26,6 +38,64 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
     icon = "binary"
     name = "EmbeddingModel"
     category = "models"
+
+    async def is_valid_ollama_url(self, url: str) -> bool:
+        """Check if the provided URL is a valid Ollama API endpoint."""
+        try:
+            async with httpx.AsyncClient() as client:
+                url = transform_localhost_url(url)
+                if not url:
+                    return False
+                # Strip /v1 suffix if present, as Ollama API endpoints are at root level
+                url = url.rstrip("/").removesuffix("/v1")
+                if not url.endswith("/"):
+                    url = url + "/"
+                return (await client.get(url=urljoin(url, "api/tags"))).status_code == HTTP_STATUS_OK
+        except httpx.RequestError:
+            logger.debug(f"Invalid Ollama URL: {url}")
+            return False
+
+    async def get_ollama_models(self, base_url_value: str) -> list[str]:
+        """Fetch available embedding models from the Ollama API.
+
+        Filters out completion models and only returns models with embedding capability.
+        """
+        try:
+            # Strip /v1 suffix and normalize URL
+            base_url = base_url_value.rstrip("/").removesuffix("/v1")
+            if not base_url.endswith("/"):
+                base_url = base_url + "/"
+            base_url = transform_localhost_url(base_url)
+
+            tags_url = urljoin(base_url, "api/tags")
+            show_url = urljoin(base_url, "api/show")
+
+            async with httpx.AsyncClient() as client:
+                # Fetch and filter models
+                tags_response = await client.get(url=tags_url)
+                tags_response.raise_for_status()
+                models = tags_response.json()
+
+                model_ids = []
+                for model in models.get(JSON_MODELS_KEY, []):
+                    model_name = model.get(JSON_NAME_KEY)
+                    if not model_name:
+                        continue
+
+                    payload = {"model": model_name}
+                    show_response = await client.post(url=show_url, json=payload)
+                    show_response.raise_for_status()
+                    json_data = show_response.json()
+
+                    capabilities = json_data.get(JSON_CAPABILITIES_KEY, [])
+                    if DESIRED_CAPABILITY in capabilities:
+                        model_ids.append(model_name)
+
+                return sorted(model_ids)
+        except (httpx.RequestError, ValueError) as e:
+            msg = "Could not get model names from Ollama."
+            await logger.aexception(msg)
+            raise ValueError(msg) from e
 
     inputs = [
         DropdownInput(
@@ -42,6 +112,15 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             display_name="API Base URL",
             info="Base URL for the API. Leave empty for default.",
             advanced=True,
+        ),
+        MessageTextInput(
+            name="ollama_base_url",
+            display_name="Ollama API URL",
+            info=f"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}",
+            value=DEFAULT_OLLAMA_URL,
+            show=False,
+            real_time_refresh=True,
+            load_from_db=True,
         ),
         DropdownInput(
             name="base_url_ibm_watsonx",
@@ -98,6 +177,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         model = self.model
         api_key = self.api_key
         api_base = self.api_base
+        ollama_base_url = self.ollama_base_url
         base_url_ibm_watsonx = self.base_url_ibm_watsonx
         dimensions = self.dimensions
         chunk_size = self.chunk_size
@@ -134,7 +214,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
 
             return OllamaEmbeddings(
                 model=model,
-                base_url=api_base or "http://localhost:11434",
+                base_url=ollama_base_url,
                 **model_kwargs,
             )
 
@@ -168,7 +248,9 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         msg = f"Unknown provider: {provider}"
         raise ValueError(msg)
 
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
+    async def update_build_config(
+        self, build_config: dotdict, field_value: Any, field_name: str | None = None
+    ) -> dotdict:
         if field_name == "provider":
             if field_value == "OpenAI":
                 build_config["model"]["options"] = OPENAI_EMBEDDING_MODEL_NAMES
@@ -178,18 +260,31 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 build_config["api_key"]["show"] = True
                 build_config["api_base"]["display_name"] = "OpenAI API Base URL"
                 build_config["api_base"]["advanced"] = True
+                build_config["api_base"]["show"] = True
+                build_config["ollama_base_url"]["show"] = False
                 build_config["project_id"]["show"] = False
                 build_config["base_url_ibm_watsonx"]["show"] = False
 
             elif field_value == "Ollama":
-                build_config["model"]["options"] = OLLAMA_EMBEDDING_MODELS
-                build_config["model"]["value"] = OLLAMA_EMBEDDING_MODELS[0]
+                build_config["ollama_base_url"]["show"] = True
+                build_config["ollama_base_url"]["load_from_db"] = True
+
+                if await self.is_valid_ollama_url(self.ollama_base_url):
+                    try:
+                        models = await self.get_ollama_models(base_url_value=self.ollama_base_url)
+                        build_config["model"]["options"] = models
+                        build_config["model"]["value"] = models[0] if models else ""
+                    except ValueError:
+                        build_config["model"]["options"] = []
+                        build_config["model"]["value"] = ""
+                else:
+                    build_config["model"]["options"] = []
+                    build_config["model"]["value"] = ""
+
                 build_config["api_key"]["display_name"] = "API Key (Optional)"
                 build_config["api_key"]["required"] = False
                 build_config["api_key"]["show"] = False
-                build_config["api_base"]["display_name"] = "Ollama Base URL"
-                build_config["api_base"]["value"] = "http://localhost:11434"
-                build_config["api_base"]["advanced"] = False
+                build_config["api_base"]["show"] = False
                 build_config["project_id"]["show"] = False
                 build_config["base_url_ibm_watsonx"]["show"] = False
 
@@ -200,7 +295,33 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 build_config["api_key"]["required"] = True
                 build_config["api_key"]["show"] = True
                 build_config["api_base"]["show"] = False
+                build_config["ollama_base_url"]["show"] = False
                 build_config["base_url_ibm_watsonx"]["show"] = True
                 build_config["project_id"]["show"] = True
+
+        elif field_name == "ollama_base_url":
+            # # Refresh Ollama models when base URL changes
+            # if hasattr(self, "provider") and self.provider == "Ollama":
+            # Use field_value if provided, otherwise fall back to instance attribute
+            ollama_url = self.ollama_base_url
+            if await self.is_valid_ollama_url(ollama_url):
+                try:
+                    models = await self.get_ollama_models(base_url_value=ollama_url)
+                    build_config["model"]["options"] = models
+                    build_config["model"]["value"] = models[0] if models else ""
+                except ValueError:
+                    await logger.awarning("Failed to fetch Ollama embedding models.")
+                    build_config["model"]["options"] = []
+                    build_config["model"]["value"] = ""
+
+        elif field_name == "model" and self.provider == "Ollama":
+            ollama_url = self.ollama_base_url
+            if await self.is_valid_ollama_url(ollama_url):
+                try:
+                    models = await self.get_ollama_models(base_url_value=ollama_url)
+                    build_config["model"]["options"] = models
+                except ValueError:
+                    await logger.awarning("Failed to refresh Ollama embedding models.")
+                    build_config["model"]["options"] = []
 
         return build_config
