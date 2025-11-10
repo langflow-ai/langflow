@@ -165,7 +165,19 @@ class LCAgentComponent(Component):
         lc_message = None
         if isinstance(self.input_value, Message):
             lc_message = self.input_value.to_lc_message()
-            input_dict: dict[str, str | list[BaseMessage] | BaseMessage] = {"input": lc_message}
+            # Extract text content from the LangChain message for agent input
+            # Agents expect a string input, not a Message object
+            if hasattr(lc_message, "content"):
+                if isinstance(lc_message.content, str):
+                    input_dict: dict[str, str | list[BaseMessage] | BaseMessage] = {"input": lc_message.content}
+                elif isinstance(lc_message.content, list):
+                    # For multimodal content, extract text parts
+                    text_parts = [item.get("text", "") for item in lc_message.content if item.get("type") == "text"]
+                    input_dict = {"input": " ".join(text_parts) if text_parts else ""}
+                else:
+                    input_dict = {"input": str(lc_message.content)}
+            else:
+                input_dict = {"input": str(lc_message)}
         else:
             input_dict = {"input": self.input_value}
 
