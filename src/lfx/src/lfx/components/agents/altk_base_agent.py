@@ -213,12 +213,8 @@ class ALTKBaseAgentComponent(AgentComponent):
     def build_conversation_context(self) -> list[BaseMessage]:
         """Create conversation context from input and chat history."""
         context: list[BaseMessage] = []
-        if hasattr(self, "input_value") and self.input_value:
-            if isinstance(self.input_value, Message):
-                context.append(self.input_value.to_lc_message())
-            else:
-                context.append(HumanMessage(content=str(self.input_value)))
-
+        
+        # Add chat history to maintain chronological order
         if hasattr(self, "chat_history") and self.chat_history:
             if isinstance(self.chat_history, Data):
                 context.append(self.chat_history.to_lc_message())
@@ -237,6 +233,14 @@ class ALTKBaseAgentComponent(AgentComponent):
                     f"chat_history must be a Data object, list of Data/Message objects, or None. "
                     f"Got: {type(self.chat_history).__name__}"
                 )
+        
+        # Then add current input to maintain chronological order
+        if hasattr(self, "input_value") and self.input_value:
+            if isinstance(self.input_value, Message):
+                context.append(self.input_value.to_lc_message())
+            else:
+                context.append(HumanMessage(content=str(self.input_value)))
+
         return context
 
     def get_user_query(self) -> str:
