@@ -28,14 +28,12 @@ import ipaddress
 import socket
 from urllib.parse import urlparse
 
-from lfx.services.deps import get_settings_service
 from lfx.logging import logger
+from lfx.services.deps import get_settings_service
 
 
 class SSRFProtectionError(ValueError):
     """Raised when a URL is blocked due to SSRF protection."""
-
-    pass
 
 
 # Define blocked IP ranges
@@ -70,8 +68,7 @@ BLOCKED_IP_RANGES = [
 
 
 def get_allowed_hosts() -> list[str]:
-    """
-    Get list of allowed hosts and/or CIDR ranges for SSRF protection.
+    """Get list of allowed hosts and/or CIDR ranges for SSRF protection.
 
     Returns:
         list[str]: Stripped hostnames or CIDR blocks from settings, or empty list if unset.

@@ -4,7 +4,6 @@ import os
 from unittest.mock import patch
 
 import pytest
-
 from lfx.utils.ssrf_protection import (
     SSRFProtectionError,
     get_allowed_hosts,
@@ -177,9 +176,7 @@ class TestHostnameAllowlist:
 
     def test_multiple_allowed_hosts(self):
         """Test multiple entries in allowlist."""
-        with patch.dict(
-            os.environ, {"LANGFLOW_SSRF_ALLOWED_HOSTS": "internal.local,192.168.1.0/24,*.api.company.com"}
-        ):
+        with patch.dict(os.environ, {"LANGFLOW_SSRF_ALLOWED_HOSTS": "internal.local,192.168.1.0/24,*.api.company.com"}):
             assert is_host_allowed("internal.local") is True
             assert is_host_allowed("v1.api.company.com") is True
             assert is_host_allowed("example.com", "192.168.1.100") is True
@@ -326,9 +323,8 @@ class TestURLValidation:
 
     def test_malformed_url_raises_value_error(self):
         """Test that malformed URLs raise ValueError."""
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
-            with pytest.raises(ValueError):
-                validate_url_for_ssrf("not a valid url", warn_only=False)
+        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}), pytest.raises(ValueError):
+            validate_url_for_ssrf("not a valid url", warn_only=False)
 
     def test_missing_hostname_blocked(self):
         """Test that URLs without hostname are blocked."""
@@ -365,7 +361,9 @@ class TestIntegrationScenarios:
         """Test that AWS metadata endpoint is blocked."""
         with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
             with pytest.raises(SSRFProtectionError):
-                validate_url_for_ssrf("http://169.254.169.254/latest/meta-data/iam/security-credentials/", warn_only=False)
+                validate_url_for_ssrf(
+                    "http://169.254.169.254/latest/meta-data/iam/security-credentials/", warn_only=False
+                )
 
     def test_internal_admin_panel_blocked(self):
         """Test that internal admin panels are blocked."""
@@ -397,12 +395,17 @@ class TestIntegrationScenarios:
                     validate_url_for_ssrf("http://database:5432", warn_only=False)
 
         # With allowlist, should be allowed
-        with patch.dict(
-            os.environ,
-            {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true", "LANGFLOW_SSRF_ALLOWED_HOSTS": "database,*.internal.local"},
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
+                    "LANGFLOW_SSRF_ALLOWED_HOSTS": "database,*.internal.local",
+                },
+            ),
+            patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
         ):
-            with patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve:
-                mock_resolve.return_value = ["172.18.0.2"]  # Docker bridge network IP
+            mock_resolve.return_value = ["172.18.0.2"]  # Docker bridge network IP
 
-                validate_url_for_ssrf("http://database:5432", warn_only=False)
-                validate_url_for_ssrf("http://api.internal.local", warn_only=False)
+            validate_url_for_ssrf("http://database:5432", warn_only=False)
+            validate_url_for_ssrf("http://api.internal.local", warn_only=False)

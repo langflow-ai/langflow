@@ -455,45 +455,48 @@ class TestAPIRequestSSRFProtection:
         """Test that allowlisted hosts bypass SSRF protection."""
         component.url_input = "http://internal.company.local/api"
 
-        with patch.dict(
-            os.environ,
-            {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true", "LANGFLOW_SSRF_ALLOWED_HOSTS": "internal.company.local"},
+        with (
+            patch.dict(
+                os.environ,
+                {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true", "LANGFLOW_SSRF_ALLOWED_HOSTS": "internal.company.local"},
+            ),
+            respx.mock,
         ):
-            with respx.mock:
-                respx.get("http://internal.company.local/api").mock(return_value=Response(200, json={"status": "ok"}))
+            respx.get("http://internal.company.local/api").mock(return_value=Response(200, json={"status": "ok"}))
 
-                # Should not raise - host is in allowlist
-                result = await component.make_api_request()
-                assert isinstance(result, Data)
+            # Should not raise - host is in allowlist
+            result = await component.make_api_request()
+            assert isinstance(result, Data)
 
     async def test_ssrf_protection_allowlist_cidr(self, component):
         """Test that CIDR ranges in allowlist work correctly."""
         component.url_input = "http://192.168.1.5/api"
 
-        with patch.dict(
-            os.environ,
-            {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true", "LANGFLOW_SSRF_ALLOWED_HOSTS": "192.168.1.0/24"},
+        with (
+            patch.dict(
+                os.environ,
+                {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true", "LANGFLOW_SSRF_ALLOWED_HOSTS": "192.168.1.0/24"},
+            ),
+            respx.mock,
         ):
-            with respx.mock:
-                respx.get("http://192.168.1.5/api").mock(return_value=Response(200, json={"status": "ok"}))
+            respx.get("http://192.168.1.5/api").mock(return_value=Response(200, json={"status": "ok"}))
 
-                # Should not raise - IP is in allowlisted CIDR range
-                result = await component.make_api_request()
-                assert isinstance(result, Data)
+            # Should not raise - IP is in allowlisted CIDR range
+            result = await component.make_api_request()
+            assert isinstance(result, Data)
 
     async def test_ssrf_protection_warn_only_mode(self, component):
         """Test that warn_only mode logs warnings instead of blocking."""
         component.url_input = "http://127.0.0.1:8080/admin"
 
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}):
-            with respx.mock:
-                respx.get("http://127.0.0.1:8080/admin").mock(return_value=Response(200, json={"status": "ok"}))
+        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}), respx.mock:
+            respx.get("http://127.0.0.1:8080/admin").mock(return_value=Response(200, json={"status": "ok"}))
 
-                # In warn_only mode (default), should not raise but should log
-                result = await component.make_api_request()
-                assert isinstance(result, Data)
+            # In warn_only mode (default), should not raise but should log
+            result = await component.make_api_request()
+            assert isinstance(result, Data)
 
-                # TODO: In next major version, this should raise instead of just warning
+            # TODO: In next major version, this should raise instead of just warning
 
     async def test_follow_redirects_security_warning(self, component):
         """Test that enabling follow_redirects logs a security warning."""
