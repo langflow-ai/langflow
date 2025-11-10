@@ -81,13 +81,21 @@ class LoopComponent(Component):
             self.aggregated_output()
             self.update_ctx({f"{self._id}_index": current_index + 1})
 
-        # Now we need to update the dependencies for the next run
+        # Update dependencies - call sync version for now
+        # TODO: Make this async when component output methods support async
         self.update_dependency()
+
         return current_item
 
     def update_dependency(self):
+        """Update loop dependencies using centralized graph API (sync).
+
+        This ensures run_predecessors and run_map stay synchronized.
+        Uses the fast path (no events) since called from sync context.
+        """
         item_dependency_id = self.get_incoming_edge_by_target_param("item")
-        if item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:
+        if item_dependency_id and item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:
+            # Call the fast path directly (no events since sync)
             self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)
             # CRITICAL: Also update run_map so remove_from_predecessors() works correctly
             # run_map[predecessor] = list of vertices that depend on predecessor
@@ -127,3 +135,21 @@ class LoopComponent(Component):
             aggregated.append(loop_input)
             self.update_ctx({f"{self._id}_aggregated": aggregated})
         return aggregated
+
+    def reset_loop_state(self) -> None:
+        """Reset loop internal state for fresh execution.
+
+        This should be called before starting a new independent iteration
+        of the graph to ensure the loop starts from a clean state.
+
+        This method clears all loop-specific context variables including:
+        - initialization flag
+        - current index
+        - aggregated results
+        - stored data
+        """
+        loop_id = self._id
+        self.ctx.pop(f"{loop_id}_initialized", None)
+        self.ctx.pop(f"{loop_id}_index", None)
+        self.ctx.pop(f"{loop_id}_aggregated", None)
+        self.ctx.pop(f"{loop_id}_data", None)
