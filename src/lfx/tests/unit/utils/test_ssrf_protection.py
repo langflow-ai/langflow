@@ -1,6 +1,5 @@
 """Unit tests for SSRF protection utilities."""
 
-import os
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
@@ -322,9 +321,8 @@ class TestURLValidation:
 
     def test_localhost_hostname_blocked(self):
         """Test that localhost hostname is blocked."""
-        with mock_ssrf_settings(enabled=True):
-            with pytest.raises(SSRFProtectionError, match="blocked IP address"):
-                validate_url_for_ssrf("http://localhost:8080", warn_only=False)
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError, match="blocked IP address"):
+            validate_url_for_ssrf("http://localhost:8080", warn_only=False)
 
     def test_allowlist_bypass_hostname(self):
         """Test that allowlisted hostnames bypass SSRF checks."""
@@ -348,29 +346,23 @@ class TestURLValidation:
 
     def test_warn_only_mode_logs_warnings(self):
         """Test that warn_only mode logs warnings instead of raising errors."""
-        with mock_ssrf_settings(enabled=True):
-            with patch("lfx.utils.ssrf_protection.logger") as mock_logger:
-                # Should not raise, but should log warning
-                validate_url_for_ssrf("http://127.0.0.1", warn_only=True)
+        with mock_ssrf_settings(enabled=True), patch("lfx.utils.ssrf_protection.logger") as mock_logger:
+            # Should not raise, but should log warning
+            validate_url_for_ssrf("http://127.0.0.1", warn_only=True)
 
-                # Check that warning was logged
-                mock_logger.warning.assert_called()
-                assert any(
-                    "SSRF Protection Warning" in str(call)
-                    for call in mock_logger.warning.call_args_list
-                )
+            # Check that warning was logged
+            mock_logger.warning.assert_called()
+            assert any("SSRF Protection Warning" in str(call) for call in mock_logger.warning.call_args_list)
 
     def test_malformed_url_raises_value_error(self):
         """Test that malformed URLs raise ValueError."""
-        with mock_ssrf_settings(enabled=True):
-            with pytest.raises(ValueError):
-                validate_url_for_ssrf("not a valid url", warn_only=False)
+        with mock_ssrf_settings(enabled=True), pytest.raises(ValueError):
+            validate_url_for_ssrf("not a valid url", warn_only=False)
 
     def test_missing_hostname_blocked(self):
         """Test that URLs without hostname are blocked."""
-        with mock_ssrf_settings(enabled=True):
-            with pytest.raises(SSRFProtectionError, match="valid hostname"):
-                validate_url_for_ssrf("http://", warn_only=False)
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError, match="valid hostname"):
+            validate_url_for_ssrf("http://", warn_only=False)
 
     @pytest.mark.parametrize(
         "url",
@@ -383,9 +375,8 @@ class TestURLValidation:
     )
     def test_ipv6_blocking(self, url):
         """Test that private IPv6 addresses are blocked."""
-        with mock_ssrf_settings(enabled=True):
-            with pytest.raises(SSRFProtectionError, match="blocked"):
-                validate_url_for_ssrf(url, warn_only=False)
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError, match="blocked"):
+            validate_url_for_ssrf(url, warn_only=False)
 
     def test_ipv6_public_allowed(self):
         """Test that public IPv6 addresses are allowed."""
@@ -399,17 +390,13 @@ class TestIntegrationScenarios:
 
     def test_aws_metadata_blocked(self):
         """Test that AWS metadata endpoint is blocked."""
-        with mock_ssrf_settings(enabled=True):
-            with pytest.raises(SSRFProtectionError):
-                validate_url_for_ssrf(
-                    "http://169.254.169.254/latest/meta-data/iam/security-credentials/", warn_only=False
-                )
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError):
+            validate_url_for_ssrf("http://169.254.169.254/latest/meta-data/iam/security-credentials/", warn_only=False)
 
     def test_internal_admin_panel_blocked(self):
         """Test that internal admin panels are blocked."""
-        with mock_ssrf_settings(enabled=True):
-            with pytest.raises(SSRFProtectionError):
-                validate_url_for_ssrf("http://192.168.1.1/admin", warn_only=False)
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError):
+            validate_url_for_ssrf("http://192.168.1.1/admin", warn_only=False)
 
     def test_legitimate_api_allowed(self):
         """Test that legitimate external APIs are allowed."""
