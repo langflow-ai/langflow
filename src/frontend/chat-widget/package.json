@@ -1,0 +1,38 @@
+{
+  "name": "@langflow/chat-widget",
+  "version": "0.0.1",
+  "description": "Embeddable AI chat widget powered by Langflow",
+  "type": "module",
+  "main": "./index.cjs",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "require": "./index.cjs",
+      "types": "./index.d.ts"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.cjs",
+    "index.d.ts",
+    "src/"
+  ],
+  "dependencies": {},
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "keywords": [
+    "langflow",
+    "ai",
+    "chat",
+    "chatbot",
+    "widget",
+    "rag",
+    "llm"
+  ],
+  "author": "Langflow",
+  "license": "MIT"
+}
