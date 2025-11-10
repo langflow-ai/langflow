@@ -163,17 +163,10 @@ def is_ip_blocked(ip: str | ipaddress.IPv4Address | ipaddress.IPv6Address) -> bo
         bool: True if IP is in a blocked range, False otherwise.
     """
     try:
-        if isinstance(ip, str):
-            ip_obj = ipaddress.ip_address(ip)
-        else:
-            ip_obj = ip
+        ip_obj = ipaddress.ip_address(ip) if isinstance(ip, str) else ip
 
         # Check against all blocked ranges
-        for blocked_range in get_blocked_ip_ranges():
-            if ip_obj in blocked_range:
-                return True
-
-        return False
+        return any(ip_obj in blocked_range for blocked_range in get_blocked_ip_ranges())
     except (ValueError, ipaddress.AddressValueError):
         # If we can't parse the IP, treat it as blocked for safety
         return True
