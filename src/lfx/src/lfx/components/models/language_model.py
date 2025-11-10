@@ -40,6 +40,7 @@ JSON_MODELS_KEY = "models"
 JSON_NAME_KEY = "name"
 JSON_CAPABILITIES_KEY = "capabilities"
 DESIRED_CAPABILITY = "completion"
+DEFAULT_OLLAMA_URL = "http://localhost:11434"
 
 
 class LanguageModelComponent(LCModelComponent):
@@ -78,6 +79,7 @@ class LanguageModelComponent(LCModelComponent):
                     url = url + "/"
                 return (await client.get(url=urljoin(url, "api/tags"))).status_code == HTTP_STATUS_OK
         except httpx.RequestError:
+            logger.debug(f"Invalid Ollama URL: {url}")
             return False
 
     async def get_ollama_models(self, base_url_value: str) -> list[str]:
@@ -167,6 +169,7 @@ class LanguageModelComponent(LCModelComponent):
             value=OPENAI_CHAT_MODEL_NAMES[0],
             info="Select the model to use",
             real_time_refresh=True,
+            refresh_button=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -195,10 +198,11 @@ class LanguageModelComponent(LCModelComponent):
         MessageTextInput(
             name="ollama_base_url",
             display_name="Ollama API URL",
-            info="Endpoint of the Ollama API (Ollama only). Defaults to http://localhost:11434",
-            value="http://localhost:11434",
+            info=f"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}",
+            value=DEFAULT_OLLAMA_URL,
             show=False,
             real_time_refresh=True,
+            load_from_db=True,
         ),
         MessageInput(
             name="input_value",
@@ -318,7 +322,9 @@ class LanguageModelComponent(LCModelComponent):
         msg = f"Unknown provider: {provider}"
         raise ValueError(msg)
 
-    async def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
+    async def update_build_config(
+        self, build_config: dotdict, field_value: Any, field_name: str | None = None
+    ) -> dotdict:
         if field_name == "provider":
             if field_value == "OpenAI":
                 build_config["model_name"]["options"] = OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES
@@ -354,7 +360,35 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["ollama_base_url"]["show"] = False
             elif field_value == "Ollama":
                 # Fetch Ollama models from the API
-                ollama_url = build_config["ollama_base_url"].get("value", "http://localhost:11434")
+                build_config["api_key"]["show"] = False
+                build_config["base_url_ibm_watsonx"]["show"] = False
+                build_config["project_id"]["show"] = False
+                build_config["ollama_base_url"]["show"] = True
+                build_config["ollama_base_url"]["load_from_db"] = True
+
+                # Try multiple sources to get the URL (in order of preference):
+                # 1. Instance attribute (already resolved from global/db)
+                # 2. Build config value (may be a global variable reference)
+                # 3. Default value
+                ollama_url = getattr(self, "ollama_base_url", None)
+                if not ollama_url:
+                    config_value = build_config["ollama_base_url"].get("value", DEFAULT_OLLAMA_URL)
+                    # If config_value looks like a variable name (all caps with underscores), use default
+                    is_variable_ref = (
+                        config_value
+                        and isinstance(config_value, str)
+                        and config_value.isupper()
+                        and "_" in config_value
+                    )
+                    if is_variable_ref:
+                        await logger.adebug(
+                            f"Config value appears to be a variable reference: {config_value}, using default"
+                        )
+                        ollama_url = DEFAULT_OLLAMA_URL
+                    else:
+                        ollama_url = config_value
+
+                await logger.adebug(f"Fetching Ollama models for provider switch. URL: {ollama_url}")
                 if await self.is_valid_ollama_url(ollama_url):
                     try:
                         models = await self.get_ollama_models(base_url_value=ollama_url)
@@ -365,12 +399,9 @@ class LanguageModelComponent(LCModelComponent):
                         build_config["model_name"]["options"] = []
                         build_config["model_name"]["value"] = ""
                 else:
+                    await logger.awarning(f"Invalid Ollama URL: {ollama_url}")
                     build_config["model_name"]["options"] = []
                     build_config["model_name"]["value"] = ""
-                build_config["api_key"]["show"] = False
-                build_config["base_url_ibm_watsonx"]["show"] = False
-                build_config["project_id"]["show"] = False
-                build_config["ollama_base_url"]["show"] = True
         elif (
             field_name == "base_url_ibm_watsonx"
             and field_value
@@ -386,28 +417,44 @@ class LanguageModelComponent(LCModelComponent):
                 logger.info(info_message)
             except Exception:  # noqa: BLE001
                 logger.exception("Error updating IBM model options.")
-        elif (
-            field_name == "ollama_base_url" and field_value and hasattr(self, "provider") and self.provider == "Ollama"
-        ):
+        elif field_name == "ollama_base_url":
             # Fetch Ollama models when ollama_base_url changes
-            if await self.is_valid_ollama_url(field_value):
+            # Use the field_value directly since this is triggered when the field changes
+            logger.debug(f"Fetching Ollama models from updated URL: {build_config['ollama_base_url']} and value {self.ollama_base_url}")
+            await logger.adebug(f"Fetching Ollama models from updated URL: {self.ollama_base_url}")
+            if await self.is_valid_ollama_url(self.ollama_base_url):
                 try:
-                    models = await self.get_ollama_models(base_url_value=field_value)
+                    models = await self.get_ollama_models(base_url_value=self.ollama_base_url)
                     build_config["model_name"]["options"] = models
                     build_config["model_name"]["value"] = models[0] if models else ""
-                    info_message = f"Updated model options: {len(models)} models found in {field_value}"
+                    info_message = f"Updated model options: {len(models)} models found in {self.ollama_base_url}"
                     await logger.ainfo(info_message)
                 except ValueError:
                     await logger.awarning("Error updating Ollama model options.")
                     build_config["model_name"]["options"] = []
                     build_config["model_name"]["value"] = ""
             else:
+                await logger.awarning(f"Invalid Ollama URL: {self.ollama_base_url}")
                 build_config["model_name"]["options"] = []
                 build_config["model_name"]["value"] = ""
-        elif field_name == "model_name" and field_value.startswith("o1") and self.provider == "OpenAI":
+        elif field_name == "model_name":
+            # Refresh Ollama models when model_name field is accessed
+            if hasattr(self, "provider") and self.provider == "Ollama":
+                ollama_url = getattr(self, "ollama_base_url", DEFAULT_OLLAMA_URL)
+                if await self.is_valid_ollama_url(ollama_url):
+                    try:
+                        models = await self.get_ollama_models(base_url_value=ollama_url)
+                        build_config["model_name"]["options"] = models
+                    except ValueError:
+                        await logger.awarning("Failed to refresh Ollama models.")
+                        build_config["model_name"]["options"] = []
+                else:
+                    build_config["model_name"]["options"] = []
+
             # Hide system_message for o1 models - currently unsupported
-            if "system_message" in build_config:
-                build_config["system_message"]["show"] = False
-        elif field_name == "model_name" and not field_value.startswith("o1") and "system_message" in build_config:
-            build_config["system_message"]["show"] = True
+            if field_value and field_value.startswith("o1") and hasattr(self, "provider") and self.provider == "OpenAI":
+                if "system_message" in build_config:
+                    build_config["system_message"]["show"] = False
+            elif "system_message" in build_config:
+                build_config["system_message"]["show"] = True
         return build_config
