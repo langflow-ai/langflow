@@ -201,8 +201,6 @@ def resolve_hostname(hostname: str) -> list[str]:
         if not ips:
             msg = f"Unable to resolve hostname: {hostname}"
             raise SSRFProtectionError(msg)
-
-        return ips
     except socket.gaierror as e:
         msg = f"DNS resolution failed for {hostname}: {e}"
         raise SSRFProtectionError(msg) from e
@@ -210,13 +208,14 @@ def resolve_hostname(hostname: str) -> list[str]:
         msg = f"Error resolving hostname {hostname}: {e}"
         raise SSRFProtectionError(msg) from e
 
+    return ips
 
-def _validate_url_scheme(scheme: str, url: str) -> None:
+
+def _validate_url_scheme(scheme: str) -> None:
     """Validate that URL scheme is http or https.
 
     Args:
         scheme: URL scheme to validate
-        url: Full URL (for error messages)
 
     Raises:
         SSRFProtectionError: If scheme is invalid
@@ -226,12 +225,11 @@ def _validate_url_scheme(scheme: str, url: str) -> None:
         raise SSRFProtectionError(msg)
 
 
-def _validate_hostname_exists(hostname: str | None, url: str) -> str:
+def _validate_hostname_exists(hostname: str | None) -> str:
     """Validate that hostname exists in the URL.
 
     Args:
         hostname: Hostname to validate (may be None)
-        url: Full URL (for error messages)
 
     Returns:
         str: The validated hostname
@@ -245,12 +243,11 @@ def _validate_hostname_exists(hostname: str | None, url: str) -> str:
     return hostname
 
 
-def _validate_direct_ip_address(hostname: str, url: str) -> bool:
+def _validate_direct_ip_address(hostname: str) -> bool:
     """Validate a direct IP address in the URL.
 
     Args:
         hostname: Hostname that may be an IP address
-        url: Full URL (for error messages)
 
     Returns:
         bool: True if hostname is a direct IP and validation passed,
@@ -356,12 +353,12 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = True) -> None:
 
     try:
         # Validate scheme
-        _validate_url_scheme(parsed.scheme, url)
+        _validate_url_scheme(parsed.scheme)
         if parsed.scheme not in ("http", "https"):
             return
 
         # Validate hostname exists
-        hostname = _validate_hostname_exists(parsed.hostname, url)
+        hostname = _validate_hostname_exists(parsed.hostname)
 
         # Check if hostname/IP is in allowlist (early return if allowed)
         if is_host_allowed(hostname):
@@ -369,13 +366,13 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = True) -> None:
             return
 
         # Validate direct IP address or resolve hostname
-        is_direct_ip = _validate_direct_ip_address(hostname, url)
+        is_direct_ip = _validate_direct_ip_address(hostname)
         if is_direct_ip:
             # Direct IP was handled (allowed or exception raised)
             return
 
         # Not a direct IP, resolve hostname and validate
-        _validate_hostname_resolution(hostname, url)
+        _validate_hostname_resolution(hostname)
     except SSRFProtectionError as e:
         if warn_only:
             logger.warning("SSRF Protection Warning: %s [URL: %s]", str(e), url)
