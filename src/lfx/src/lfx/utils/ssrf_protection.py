@@ -24,6 +24,7 @@ TODO: In next major version (2.0):
     - Update documentation to reflect breaking change
 """
 
+import functools
 import ipaddress
 import socket
 from urllib.parse import urlparse
@@ -36,10 +37,7 @@ class SSRFProtectionError(ValueError):
     """Raised when a URL is blocked due to SSRF protection."""
 
 
-# Global variable for lazy-loaded blocked IP ranges
-_BLOCKED_IP_RANGES: list[ipaddress.IPv4Network | ipaddress.IPv6Network] | None = None
-
-
+@functools.cache
 def get_blocked_ip_ranges() -> list[ipaddress.IPv4Network | ipaddress.IPv6Network]:
     """Get the list of blocked IP ranges, initializing lazily on first access.
 
@@ -49,39 +47,34 @@ def get_blocked_ip_ranges() -> list[ipaddress.IPv4Network | ipaddress.IPv6Networ
     Returns:
         list: List of blocked IPv4 and IPv6 network ranges.
     """
-    global _BLOCKED_IP_RANGES
-
-    if _BLOCKED_IP_RANGES is None:
-        _BLOCKED_IP_RANGES = [
-            # IPv4 ranges
-            ipaddress.ip_network("0.0.0.0/8"),  # Current network (only valid as source)
-            ipaddress.ip_network("10.0.0.0/8"),  # Private network (RFC 1918)
-            ipaddress.ip_network("100.64.0.0/10"),  # Carrier-grade NAT (RFC 6598)
-            ipaddress.ip_network("127.0.0.0/8"),  # Loopback
-            ipaddress.ip_network("169.254.0.0/16"),  # Link-local / AWS metadata
-            ipaddress.ip_network("172.16.0.0/12"),  # Private network (RFC 1918)
-            ipaddress.ip_network("192.0.0.0/24"),  # IETF Protocol Assignments
-            ipaddress.ip_network("192.0.2.0/24"),  # Documentation (TEST-NET-1)
-            ipaddress.ip_network("192.168.0.0/16"),  # Private network (RFC 1918)
-            ipaddress.ip_network("198.18.0.0/15"),  # Benchmarking
-            ipaddress.ip_network("198.51.100.0/24"),  # Documentation (TEST-NET-2)
-            ipaddress.ip_network("203.0.113.0/24"),  # Documentation (TEST-NET-3)
-            ipaddress.ip_network("224.0.0.0/4"),  # Multicast
-            ipaddress.ip_network("240.0.0.0/4"),  # Reserved
-            ipaddress.ip_network("255.255.255.255/32"),  # Broadcast
-            # IPv6 ranges
-            ipaddress.ip_network("::1/128"),  # Loopback
-            ipaddress.ip_network("::/128"),  # Unspecified address
-            ipaddress.ip_network("::ffff:0:0/96"),  # IPv4-mapped IPv6 addresses
-            ipaddress.ip_network("100::/64"),  # Discard prefix
-            ipaddress.ip_network("2001::/23"),  # IETF Protocol Assignments
-            ipaddress.ip_network("2001:db8::/32"),  # Documentation
-            ipaddress.ip_network("fc00::/7"),  # Unique local addresses (ULA)
-            ipaddress.ip_network("fe80::/10"),  # Link-local
-            ipaddress.ip_network("ff00::/8"),  # Multicast
-        ]
-
-    return _BLOCKED_IP_RANGES
+    return [
+        # IPv4 ranges
+        ipaddress.ip_network("0.0.0.0/8"),  # Current network (only valid as source)
+        ipaddress.ip_network("10.0.0.0/8"),  # Private network (RFC 1918)
+        ipaddress.ip_network("100.64.0.0/10"),  # Carrier-grade NAT (RFC 6598)
+        ipaddress.ip_network("127.0.0.0/8"),  # Loopback
+        ipaddress.ip_network("169.254.0.0/16"),  # Link-local / AWS metadata
+        ipaddress.ip_network("172.16.0.0/12"),  # Private network (RFC 1918)
+        ipaddress.ip_network("192.0.0.0/24"),  # IETF Protocol Assignments
+        ipaddress.ip_network("192.0.2.0/24"),  # Documentation (TEST-NET-1)
+        ipaddress.ip_network("192.168.0.0/16"),  # Private network (RFC 1918)
+        ipaddress.ip_network("198.18.0.0/15"),  # Benchmarking
+        ipaddress.ip_network("198.51.100.0/24"),  # Documentation (TEST-NET-2)
+        ipaddress.ip_network("203.0.113.0/24"),  # Documentation (TEST-NET-3)
+        ipaddress.ip_network("224.0.0.0/4"),  # Multicast
+        ipaddress.ip_network("240.0.0.0/4"),  # Reserved
+        ipaddress.ip_network("255.255.255.255/32"),  # Broadcast
+        # IPv6 ranges
+        ipaddress.ip_network("::1/128"),  # Loopback
+        ipaddress.ip_network("::/128"),  # Unspecified address
+        ipaddress.ip_network("::ffff:0:0/96"),  # IPv4-mapped IPv6 addresses
+        ipaddress.ip_network("100::/64"),  # Discard prefix
+        ipaddress.ip_network("2001::/23"),  # IETF Protocol Assignments
+        ipaddress.ip_network("2001:db8::/32"),  # Documentation
+        ipaddress.ip_network("fc00::/7"),  # Unique local addresses (ULA)
+        ipaddress.ip_network("fe80::/10"),  # Link-local
+        ipaddress.ip_network("ff00::/8"),  # Multicast
+    ]
 
 
 def is_ssrf_protection_enabled() -> bool:
