@@ -17,7 +17,7 @@ def utc_now():
 
 class ApiKeyBase(SQLModel):
     name: str | None = Field(index=True, nullable=True, default=None)
-    last_used_at: datetime | None = Field(default=None, nullable=True)
+    last_used_at: datetime | None = Field(sa_column=Column(DateTime(timezone=True), nullable=True), default=None)
     total_uses: int = Field(default=0)
     is_active: bool = Field(default=True)
 
