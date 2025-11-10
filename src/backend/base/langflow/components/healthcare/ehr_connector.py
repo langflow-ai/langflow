@@ -119,11 +119,10 @@ class EHRConnector(HealthcareConnectorBase):
                     query_data = {"patient_id": self.patient_query, "operation": self.operation}
             else:
                 query_data = {"operation": self.operation}
-
-            # Add operation from dropdown if not in query
-            if "operation" not in query_data:
-                query_data["operation"] = self.operation
-
+    
+            # FIX: ALWAYS use the dropdown operation value (override query_data)
+            query_data["operation"] = self.operation  # ← Changed from conditional to always set
+            
             # Add EHR system configuration
             query_data.update({
                 "ehr_system": self.ehr_system,
@@ -131,10 +130,10 @@ class EHRConnector(HealthcareConnectorBase):
                 "authentication_type": self.authentication_type,
                 "base_url": self.base_url,
             })
-
+    
             # Execute healthcare workflow
             return self.execute_healthcare_workflow(query_data)
-
+    
         except Exception as e:
             return self._handle_healthcare_error(e, "ehr_response_building")
 
@@ -268,7 +267,7 @@ class EHRConnector(HealthcareConnectorBase):
             return {
                 "resourceType": "Bundle",
                 "type": "searchset",
-                "total": 2,
+                "total": 5,
                 "entry": [
                     {
                         "resource": {
@@ -276,20 +275,128 @@ class EHRConnector(HealthcareConnectorBase):
                             "id": "med-001",
                             "status": "active",
                             "intent": "order",
+                            "priority": "routine",
                             "medicationCodeableConcept": {
                                 "coding": [
-                                    {"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "860975", "display": "Metformin 500 MG Oral Tablet"}
-                                ]
+                                    {
+                                        "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                                        "code": "860975",
+                                        "display": "Metformin 500 MG Oral Tablet"
+                                    },
+                                    {
+                                        "system": "http://www.whocc.no/atc",
+                                        "code": "A10BA02",
+                                        "display": "Metformin"
+                                    }
+                                ],
+                                "text": "Metformin 500mg tablet"
                             },
                             "subject": {"reference": f"Patient/{patient_id}"},
-                            "authoredOn": "2024-01-01",
+                            "authoredOn": "2024-01-01T09:00:00Z",
+                            "requester": {
+                                "reference": "Practitioner/pract-001",
+                                "display": "Dr. Robert Smith"
+                            },
+                            "reasonCode": [
+                                {
+                                    "coding": [
+                                        {
+                                            "system": "http://snomed.info/sct",
+                                            "code": "44054006",
+                                            "display": "Type 2 diabetes mellitus"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "note": [
+                                {
+                                    "text": "Monitor blood glucose levels regularly. Take with food to reduce GI side effects."
+                                }
+                            ],
                             "dosageInstruction": [
                                 {
+                                    "sequence": 1,
                                     "text": "Take one tablet twice daily with meals",
-                                    "timing": {"repeat": {"frequency": 2, "period": 1, "periodUnit": "d"}},
-                                    "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "tablet"}}]
+                                    "additionalInstruction": [
+                                        {
+                                            "coding": [
+                                                {
+                                                    "system": "http://snomed.info/sct",
+                                                    "code": "311504000",
+                                                    "display": "With or after food"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "timing": {
+                                        "repeat": {
+                                            "frequency": 2,
+                                            "period": 1,
+                                            "periodUnit": "d",
+                                            "when": ["MORN", "EVE"]
+                                        }
+                                    },
+                                    "route": {
+                                        "coding": [
+                                            {
+                                                "system": "http://snomed.info/sct",
+                                                "code": "26643006",
+                                                "display": "Oral route"
+                                            }
+                                        ]
+                                    },
+                                    "doseAndRate": [
+                                        {
+                                            "type": {
+                                                "coding": [
+                                                    {
+                                                        "system": "http://terminology.hl7.org/CodeSystem/dose-rate-type",
+                                                        "code": "ordered",
+                                                        "display": "Ordered"
+                                                    }
+                                                ]
+                                            },
+                                            "doseQuantity": {
+                                                "value": 1,
+                                                "unit": "tablet",
+                                                "system": "http://unitsofmeasure.org",
+                                                "code": "{tablet}"
+                                            }
+                                        }
+                                    ]
                                 }
-                            ]
+                            ],
+                            "dispenseRequest": {
+                                "validityPeriod": {
+                                    "start": "2024-01-01",
+                                    "end": "2024-07-01"
+                                },
+                                "numberOfRepeatsAllowed": 5,
+                                "quantity": {
+                                    "value": 60,
+                                    "unit": "tablets",
+                                    "system": "http://unitsofmeasure.org",
+                                    "code": "{tablet}"
+                                },
+                                "expectedSupplyDuration": {
+                                    "value": 30,
+                                    "unit": "days",
+                                    "system": "http://unitsofmeasure.org",
+                                    "code": "d"
+                                }
+                            },
+                            "substitution": {
+                                "allowedBoolean": True,
+                                "reason": {
+                                    "coding": [
+                                        {
+                                            "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason",
+                                            "code": "FP",
+                                            "display": "formulary policy"
+                                        }
+                                    ]
+                                }
+                            }
                         }
                     },
                     {
@@ -298,25 +405,416 @@ class EHRConnector(HealthcareConnectorBase):
                             "id": "med-002",
                             "status": "active",
                             "intent": "order",
+                            "priority": "routine",
                             "medicationCodeableConcept": {
                                 "coding": [
-                                    {"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "197361", "display": "Lisinopril 10 MG Oral Tablet"}
-                                ]
+                                    {
+                                        "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                                        "code": "197361",
+                                        "display": "Lisinopril 10 MG Oral Tablet"
+                                    },
+                                    {
+                                        "system": "http://www.whocc.no/atc",
+                                        "code": "C09AA03",
+                                        "display": "Lisinopril"
+                                    }
+                                ],
+                                "text": "Lisinopril 10mg tablet"
                             },
                             "subject": {"reference": f"Patient/{patient_id}"},
-                            "authoredOn": "2024-01-01",
+                            "authoredOn": "2024-01-01T09:15:00Z",
+                            "requester": {
+                                "reference": "Practitioner/pract-001",
+                                "display": "Dr. Robert Smith"
+                            },
+                            "reasonCode": [
+                                {
+                                    "coding": [
+                                        {
+                                            "system": "http://snomed.info/sct",
+                                            "code": "38341003",
+                                            "display": "Essential hypertension"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "note": [
+                                {
+                                    "text": "Monitor blood pressure regularly. Report any persistent cough or dizziness."
+                                }
+                            ],
                             "dosageInstruction": [
                                 {
-                                    "text": "Take one tablet once daily",
-                                    "timing": {"repeat": {"frequency": 1, "period": 1, "periodUnit": "d"}},
-                                    "doseAndRate": [{"doseQuantity": {"value": 1, "unit": "tablet"}}]
+                                    "sequence": 1,
+                                    "text": "Take one tablet once daily in the morning",
+                                    "timing": {
+                                        "repeat": {
+                                            "frequency": 1,
+                                            "period": 1,
+                                            "periodUnit": "d",
+                                            "when": ["MORN"]
+                                        }
+                                    },
+                                    "route": {
+                                        "coding": [
+                                            {
+                                                "system": "http://snomed.info/sct",
+                                                "code": "26643006",
+                                                "display": "Oral route"
+                                            }
+                                        ]
+                                    },
+                                    "doseAndRate": [
+                                        {
+                                            "type": {
+                                                "coding": [
+                                                    {
+                                                        "system": "http://terminology.hl7.org/CodeSystem/dose-rate-type",
+                                                        "code": "ordered",
+                                                        "display": "Ordered"
+                                                    }
+                                                ]
+                                            },
+                                            "doseQuantity": {
+                                                "value": 1,
+                                                "unit": "tablet",
+                                                "system": "http://unitsofmeasure.org",
+                                                "code": "{tablet}"
+                                            }
+                                        }
+                                    ]
                                 }
-                            ]
+                            ],
+                            "dispenseRequest": {
+                                "validityPeriod": {
+                                    "start": "2024-01-01",
+                                    "end": "2024-07-01"
+                                },
+                                "numberOfRepeatsAllowed": 5,
+                                "quantity": {
+                                    "value": 30,
+                                    "unit": "tablets",
+                                    "system": "http://unitsofmeasure.org",
+                                    "code": "{tablet}"
+                                },
+                                "expectedSupplyDuration": {
+                                    "value": 30,
+                                    "unit": "days",
+                                    "system": "http://unitsofmeasure.org",
+                                    "code": "d"
+                                }
+                            },
+                            "substitution": {
+                                "allowedBoolean": True
+                            }
+                        }
+                    },
+                    {
+                        "resource": {
+                            "resourceType": "MedicationRequest",
+                            "id": "med-003",
+                            "status": "active",
+                            "intent": "order",
+                            "priority": "routine",
+                            "medicationCodeableConcept": {
+                                "coding": [
+                                    {
+                                        "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                                        "code": "617314",
+                                        "display": "Atorvastatin 20 MG Oral Tablet"
+                                    },
+                                    {
+                                        "system": "http://www.whocc.no/atc",
+                                        "code": "C10AA05",
+                                        "display": "Atorvastatin"
+                                    }
+                                ],
+                                "text": "Atorvastatin 20mg tablet"
+                            },
+                            "subject": {"reference": f"Patient/{patient_id}"},
+                            "authoredOn": "2024-01-01T09:20:00Z",
+                            "requester": {
+                                "reference": "Practitioner/pract-001",
+                                "display": "Dr. Robert Smith"
+                            },
+                            "reasonCode": [
+                                {
+                                    "coding": [
+                                        {
+                                            "system": "http://snomed.info/sct",
+                                            "code": "13644009",
+                                            "display": "Hypercholesterolemia"
+                                        }
+                                    ],
+                                    "text": "High cholesterol management"
+                                }
+                            ],
+                            "note": [
+                                {
+                                    "text": "Take in the evening. Avoid grapefruit juice. Monitor liver function tests annually."
+                                }
+                            ],
+                            "dosageInstruction": [
+                                {
+                                    "sequence": 1,
+                                    "text": "Take one tablet once daily in the evening",
+                                    "timing": {
+                                        "repeat": {
+                                            "frequency": 1,
+                                            "period": 1,
+                                            "periodUnit": "d",
+                                            "when": ["EVE"]
+                                        }
+                                    },
+                                    "route": {
+                                        "coding": [
+                                            {
+                                                "system": "http://snomed.info/sct",
+                                                "code": "26643006",
+                                                "display": "Oral route"
+                                            }
+                                        ]
+                                    },
+                                    "doseAndRate": [
+                                        {
+                                            "doseQuantity": {
+                                                "value": 1,
+                                                "unit": "tablet",
+                                                "system": "http://unitsofmeasure.org",
+                                                "code": "{tablet}"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            "dispenseRequest": {
+                                "validityPeriod": {
+                                    "start": "2024-01-01",
+                                    "end": "2024-07-01"
+                                },
+                                "numberOfRepeatsAllowed": 5,
+                                "quantity": {
+                                    "value": 30,
+                                    "unit": "tablets",
+                                    "system": "http://unitsofmeasure.org",
+                                    "code": "{tablet}"
+                                },
+                                "expectedSupplyDuration": {
+                                    "value": 30,
+                                    "unit": "days",
+                                    "system": "http://unitsofmeasure.org",
+                                    "code": "d"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "resource": {
+                            "resourceType": "MedicationRequest",
+                            "id": "med-004",
+                            "status": "active",
+                            "intent": "order",
+                            "priority": "routine",
+                            "medicationCodeableConcept": {
+                                "coding": [
+                                    {
+                                        "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                                        "code": "308136",
+                                        "display": "Aspirin 81 MG Oral Tablet"
+                                    }
+                                ],
+                                "text": "Aspirin 81mg (low-dose) tablet"
+                            },
+                            "subject": {"reference": f"Patient/{patient_id}"},
+                            "authoredOn": "2024-01-01T09:25:00Z",
+                            "requester": {
+                                "reference": "Practitioner/pract-001",
+                                "display": "Dr. Robert Smith"
+                            },
+                            "reasonCode": [
+                                {
+                                    "coding": [
+                                        {
+                                            "system": "http://snomed.info/sct",
+                                            "code": "134436002",
+                                            "display": "Cardiovascular disease prevention"
+                                        }
+                                    ],
+                                    "text": "Cardiovascular disease prevention"
+                                }
+                            ],
+                            "note": [
+                                {
+                                    "text": "Take with food. Report any signs of unusual bleeding or bruising."
+                                }
+                            ],
+                            "dosageInstruction": [
+                                {
+                                    "sequence": 1,
+                                    "text": "Take one tablet once daily with food",
+                                    "additionalInstruction": [
+                                        {
+                                            "coding": [
+                                                {
+                                                    "system": "http://snomed.info/sct",
+                                                    "code": "311504000",
+                                                    "display": "With or after food"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "timing": {
+                                        "repeat": {
+                                            "frequency": 1,
+                                            "period": 1,
+                                            "periodUnit": "d"
+                                        }
+                                    },
+                                    "route": {
+                                        "coding": [
+                                            {
+                                                "system": "http://snomed.info/sct",
+                                                "code": "26643006",
+                                                "display": "Oral route"
+                                            }
+                                        ]
+                                    },
+                                    "doseAndRate": [
+                                        {
+                                            "doseQuantity": {
+                                                "value": 1,
+                                                "unit": "tablet",
+                                                "system": "http://unitsofmeasure.org",
+                                                "code": "{tablet}"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            "dispenseRequest": {
+                                "validityPeriod": {
+                                    "start": "2024-01-01",
+                                    "end": "2024-07-01"
+                                },
+                                "numberOfRepeatsAllowed": 5,
+                                "quantity": {
+                                    "value": 30,
+                                    "unit": "tablets",
+                                    "system": "http://unitsofmeasure.org",
+                                    "code": "{tablet}"
+                                },
+                                "expectedSupplyDuration": {
+                                    "value": 30,
+                                    "unit": "days",
+                                    "system": "http://unitsofmeasure.org",
+                                    "code": "d"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "resource": {
+                            "resourceType": "MedicationRequest",
+                            "id": "med-005",
+                            "status": "completed",
+                            "intent": "order",
+                            "priority": "routine",
+                            "medicationCodeableConcept": {
+                                "coding": [
+                                    {
+                                        "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                                        "code": "1049221",
+                                        "display": "Amoxicillin 500 MG Oral Capsule"
+                                    }
+                                ],
+                                "text": "Amoxicillin 500mg capsule"
+                            },
+                            "subject": {"reference": f"Patient/{patient_id}"},
+                            "authoredOn": "2023-12-01T10:00:00Z",
+                            "requester": {
+                                "reference": "Practitioner/pract-003",
+                                "display": "Dr. Jennifer Martinez"
+                            },
+                            "reasonCode": [
+                                {
+                                    "coding": [
+                                        {
+                                            "system": "http://snomed.info/sct",
+                                            "code": "43878008",
+                                            "display": "Streptococcal pharyngitis"
+                                        }
+                                    ],
+                                    "text": "Bacterial throat infection"
+                                }
+                            ],
+                            "note": [
+                                {
+                                    "text": "Course completed. No adverse reactions reported."
+                                }
+                            ],
+                            "dosageInstruction": [
+                                {
+                                    "sequence": 1,
+                                    "text": "Take one capsule three times daily for 10 days",
+                                    "timing": {
+                                        "repeat": {
+                                            "boundsDuration": {
+                                                "value": 10,
+                                                "unit": "days",
+                                                "system": "http://unitsofmeasure.org",
+                                                "code": "d"
+                                            },
+                                            "frequency": 3,
+                                            "period": 1,
+                                            "periodUnit": "d"
+                                        }
+                                    },
+                                    "route": {
+                                        "coding": [
+                                            {
+                                                "system": "http://snomed.info/sct",
+                                                "code": "26643006",
+                                                "display": "Oral route"
+                                            }
+                                        ]
+                                    },
+                                    "doseAndRate": [
+                                        {
+                                            "doseQuantity": {
+                                                "value": 1,
+                                                "unit": "capsule",
+                                                "system": "http://unitsofmeasure.org",
+                                                "code": "{capsule}"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            "dispenseRequest": {
+                                "validityPeriod": {
+                                    "start": "2023-12-01",
+                                    "end": "2023-12-11"
+                                },
+                                "numberOfRepeatsAllowed": 0,
+                                "quantity": {
+                                    "value": 30,
+                                    "unit": "capsules",
+                                    "system": "http://unitsofmeasure.org",
+                                    "code": "{capsule}"
+                                },
+                                "expectedSupplyDuration": {
+                                    "value": 10,
+                                    "unit": "days",
+                                    "system": "http://unitsofmeasure.org",
+                                    "code": "d"
+                                }
+                            }
                         }
                     }
                 ],
-                "processing_time_ms": 198
+                "processing_time_ms": 198,
             }
+
 
         elif operation == "get_conditions":
             return {
