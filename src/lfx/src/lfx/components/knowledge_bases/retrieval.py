@@ -16,12 +16,20 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.services.deps import get_settings_service, session_scope
 
-settings = get_settings_service().settings
-knowledge_directory = settings.knowledge_bases_dir
-if not knowledge_directory:
-    msg = "Knowledge bases directory is not set in the settings."
-    raise ValueError(msg)
-KNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()
+_KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
+
+
+def _get_knowledge_bases_root_path() -> Path:
+    """Lazy load the knowledge bases root path from settings."""
+    global _KNOWLEDGE_BASES_ROOT_PATH  # noqa: PLW0603
+    if _KNOWLEDGE_BASES_ROOT_PATH is None:
+        settings = get_settings_service().settings
+        knowledge_directory = settings.knowledge_bases_dir
+        if not knowledge_directory:
+            msg = "Knowledge bases directory is not set in the settings."
+            raise ValueError(msg)
+        _KNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()
+    return _KNOWLEDGE_BASES_ROOT_PATH
 
 
 class KnowledgeRetrievalComponent(Component):
@@ -90,7 +98,7 @@ class KnowledgeRetrievalComponent(Component):
         if field_name == "knowledge_base":
             # Update the knowledge base options dynamically
             build_config["knowledge_base"]["options"] = await get_knowledge_bases(
-                KNOWLEDGE_BASES_ROOT_PATH,
+                _get_knowledge_bases_root_path(),
                 user_id=self.user_id,  # Use the user_id from the component context
             )
 
@@ -186,7 +194,7 @@ class KnowledgeRetrievalComponent(Component):
                 msg = f"User with ID {self.user_id} not found."
                 raise ValueError(msg)
             kb_user = current_user.username
-        kb_path = KNOWLEDGE_BASES_ROOT_PATH / kb_user / self.knowledge_base
+        kb_path = _get_knowledge_bases_root_path() / kb_user / self.knowledge_base
 
         metadata = self._get_kb_metadata(kb_path)
         if not metadata:

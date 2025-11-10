@@ -19,47 +19,29 @@ if TYPE_CHECKING:
 
     from lfx.graph.graph.base import Graph
 
-from .test_execution_path_equivalence import (
-    ExecutionTrace,
-    ExecutionTracer,
-    assert_execution_equivalence,
-)
+from .test_execution_path_equivalence import ExecutionTrace, ExecutionTracer, assert_execution_equivalence
 
 TEST_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
-STARTER_PROJECTS_DIR = Path(
-    "/Users/ogabrielluiz/Projects/langflow/src/backend/base/langflow/initial_setup/starter_projects"
-)
 
-# Start with test data flows we know work
-TEST_DATA_FLOWS = [
-    ("data", "LoopTest.json"),  # Simple loop with feedback
-    ("data", "loop_csv_test.json"),  # Real-world failing case from issue
-    ("data", "MemoryChatbotNoLLM.json"),
+# Test flows that should work without external dependencies
+TEST_FLOWS = [
+    "LoopTest.json",  # Simple loop with feedback
+    "loop_csv_test.json",  # Real-world failing case from issue
+    "MemoryChatbotNoLLM.json",
 ]
-
-# Add starter projects - start with simpler ones without API dependencies
-STARTER_PROJECT_FLOWS = [
-    ("starter", "Basic Prompting.json"),  # Will fail without API key - good to test error handling
-    ("starter", "Text Sentiment Analysis.json"),
-]
-
-# Combine all test flows
-TEST_FLOWS = TEST_DATA_FLOWS + STARTER_PROJECT_FLOWS
 
 
 @pytest.fixture
 def loop_csv_path() -> Generator[Path, None, None]:
-    """Copy loop_test.csv to user's cache directory for File component access."""
+    """Move loop_test.csv to user's cache directory."""
     from platformdirs import user_cache_dir
 
-    cache_dir = Path(user_cache_dir("langflow"))
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    file_path = cache_dir / "loop_test.csv"
-    shutil.copy(TEST_DATA_DIR / "loop_test.csv", file_path)
+    user_cache_dir = user_cache_dir("langflow")
+    file_path = Path(user_cache_dir) / "loop_test.csv"
+    shutil.copy(TEST_DATA_DIR / "loop_test.csv", file_path.as_posix())
     yield file_path
-    # Cleanup - remove the file if it exists
-    if file_path.exists():
-        file_path.unlink()
+    # Remove the file
+    file_path.unlink()
 
 
 async def run_via_async_start_traced(graph: Graph) -> ExecutionTrace:
@@ -137,30 +119,23 @@ async def run_via_arun_traced(graph: Graph) -> ExecutionTrace:
     return trace
 
 
-@pytest.mark.parametrize("flow_info", TEST_FLOWS, ids=lambda x: x[1])
+@pytest.mark.parametrize("flow_name", TEST_FLOWS)
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("loop_csv_path")
-async def test_flow_execution_equivalence(flow_info: tuple[str, str]):
+@pytest.mark.usefixtures("loop_csv_path", "client")
+async def test_flow_execution_equivalence(flow_name: str):
     """Test that a flow produces identical results via both execution paths."""
     from uuid import uuid4
 
     from lfx.graph.graph.base import Graph
 
-    flow_type, flow_name = flow_info
-
-    # Determine which directory to use
-    if flow_type == "data":
-        flow_path = TEST_DATA_DIR / flow_name
-    elif flow_type == "starter":
-        flow_path = STARTER_PROJECTS_DIR / flow_name
-    else:
-        pytest.skip(f"Unknown flow type: {flow_type}")
+    flow_path = TEST_DATA_DIR / flow_name
 
     if not flow_path.exists():
         pytest.skip(f"Flow not found: {flow_path}")
 
     # Load the flow
-    flow_data = json.loads(flow_path.read_text())
+    with flow_path.open() as f:
+        flow_data = json.load(f)
 
     graph_data = flow_data.get("data", flow_data)
 

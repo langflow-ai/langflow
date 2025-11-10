@@ -16,7 +16,7 @@ class AmazonBedrockConverseComponent(LCModelComponent):
     beta = True
 
     inputs = [
-        *LCModelComponent._base_inputs,
+        *LCModelComponent.get_base_inputs(),
         DropdownInput(
             name="model_id",
             display_name="Model ID",

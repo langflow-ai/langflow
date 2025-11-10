@@ -97,6 +97,8 @@ class LoopComponent(Component):
         if item_dependency_id and item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:
             # Call the fast path directly (no events since sync)
             self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)
+            # CRITICAL: Also update run_map so remove_from_predecessors() works correctly
+            # run_map[predecessor] = list of vertices that depend on predecessor
             if self._id not in self.graph.run_manager.run_map[item_dependency_id]:
                 self.graph.run_manager.run_map[item_dependency_id].append(self._id)
 
