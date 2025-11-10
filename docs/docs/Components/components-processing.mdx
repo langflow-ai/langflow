@@ -433,20 +433,19 @@ The following example demonstrates how to use a **Dynamic Create Data** componen
 
 3. To add rows to your table, click <Icon name="Plus" aria-hidden="true"/> **Add a new row**.
    Adding a new row creates input and output handles for the **Field Type**.
-   For example, if you add a field of type `Text`, `Text` input and output handles are added to the component.
+   For example, if you add a `Text` type field, then`Text` input and output handles are added to the component.
    For each new row, configure the **Field Name** and **Field Type**.
 
     * **Field Name**: The name of the field used as both the internal key and display label.
     * **Field Type**: The type of input field to create. The type options are:
-      * Text: Accepts `text` input or connects to `Text` or `Message` outputs.
+      * Text: Accepts direct text input or accepts `Text` or `Message` output from other components.
       * Data: Accepts `Data` input from other components.
-      * Number: Accepts numeric input or connects to `Text` or `Message` outputs.
-      * Handle: Creates a component input handle that accepts `Text`, `Data`, or `Message` outputs.
-      * Boolean: Accepts boolean values. The boolean field type creates no component handles.
+      * Number: Accepts direct numeric input or accepts `Text` or `Message` outputs from other components.
+      * Handle: Accepts `Text`, `Data`, or `Message` output from other components.
+      * Boolean: Accepts Boolean values. Cannot accept input from another component.
 
     For more information, see [Langflow data types](/data-types).
-4. After adding rows to the table, the component automatically creates corresponding input ports for each field.
-   You can now connect outputs from other components to the dynamic input ports, or enter values manually in the component's input fields.
+4. Depending on your **Field Type** selections, either connect output from other components to dynamically populate the inputs, or enter values manually in the **Dynamic Create Data** component's fields.
 
 ### Dynamic Create Data parameters
 
