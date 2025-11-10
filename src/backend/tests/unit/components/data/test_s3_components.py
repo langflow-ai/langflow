@@ -49,6 +49,52 @@ class TestS3CompatibleComponents:
                 assert result is not None
 
     @pytest.mark.asyncio
+    async def test_file_component_get_local_file_for_docling_s3(self, s3_settings):
+        """Test FileComponent._get_local_file_for_docling with S3 paths uses parse_storage_path and Path."""
+        with patch("lfx.services.deps.get_settings_service", return_value=s3_settings):
+            component = FileComponent()
+            s3_path = "user_123/document.pdf"
+
+            # Mock storage service
+            mock_storage_service = MagicMock()
+            mock_storage_service.get_file = AsyncMock(return_value=b"pdf content")
+
+            # Mock tempfile
+            mock_temp_file = MagicMock()
+            mock_temp_file.name = "/tmp/temp_file.pdf"
+            mock_temp_file.write = MagicMock()
+
+            with (
+                patch("lfx.services.deps.get_storage_service", return_value=mock_storage_service),
+                patch("lfx.components.data.file.parse_storage_path", return_value=("user_123", "document.pdf")) as mock_parse,
+                patch("lfx.components.data.file.NamedTemporaryFile") as mock_temp,
+            ):
+                mock_temp.return_value.__enter__.return_value = mock_temp_file
+
+                local_path, should_delete = await component._get_local_file_for_docling(s3_path)
+
+                # Verify parse_storage_path was called with S3 path (imported at module level)
+                mock_parse.assert_called_once_with(s3_path)
+                # Verify storage service was called
+                mock_storage_service.get_file.assert_called_once_with("user_123", "document.pdf")
+                # Verify temp file was created
+                assert should_delete is True
+                assert local_path == "/tmp/temp_file.pdf"
+
+    @pytest.mark.asyncio
+    async def test_file_component_get_local_file_for_docling_local(self, local_settings):
+        """Test FileComponent._get_local_file_for_docling with local paths."""
+        with patch("lfx.services.deps.get_settings_service", return_value=local_settings):
+            component = FileComponent()
+            local_path = "/local/path/document.pdf"
+
+            result_path, should_delete = await component._get_local_file_for_docling(local_path)
+
+            # Should return local path as-is, no deletion needed
+            assert result_path == local_path
+            assert should_delete is False
+
+    @pytest.mark.asyncio
     async def test_save_file_component_s3_upload(self, s3_settings):
         """Test SaveToFileComponent with S3 storage."""
         with patch("lfx.services.deps.get_settings_service", return_value=s3_settings):

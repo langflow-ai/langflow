@@ -124,9 +124,9 @@ class LocalStorageService(StorageService):
 
         try:
             files = [
-                file.name
-                async for file in await anyio.to_thread.run_sync(folder_path.iterdir)
-                if await anyio.Path(file).is_file()
+                p.name
+                async for p in folder_path.iterdir()
+                if await p.is_file()
             ]
         except Exception:  # noqa: BLE001
             logger.exception(f"Error listing files in flow {flow_id}")

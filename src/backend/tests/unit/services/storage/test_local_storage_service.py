@@ -179,6 +179,40 @@ class TestLocalStorageServiceListOperations:
 
         assert file_name in listed_files
 
+    async def test_list_files_async_iteration(self, local_storage_service):
+        """Test that list_files uses async iteration correctly (folder_path.iterdir())."""
+        flow_id = "async_iter_test"
+        files = ["file1.txt", "file2.txt", "file3.txt"]
+
+        # Create files
+        for file_name in files:
+            await local_storage_service.save_file(flow_id, file_name, b"content")
+
+        # List files - this tests the async for loop with folder_path.iterdir()
+        listed_files = await local_storage_service.list_files(flow_id)
+
+        # Verify all files are listed (tests async iteration works)
+        assert len(listed_files) == 3
+        assert set(listed_files) == set(files)
+
+    async def test_list_files_excludes_directories(self, local_storage_service):
+        """Test that list_files only returns files, not directories."""
+        flow_id = "dir_test"
+        file_name = "test.txt"
+
+        # Create a file
+        await local_storage_service.save_file(flow_id, file_name, b"content")
+
+        # Create a subdirectory (by creating a file in a subdirectory)
+        await local_storage_service.save_file(f"{flow_id}/subdir", "nested.txt", b"content")
+
+        # List files - should only return files in the flow_id directory, not subdirectories
+        listed_files = await local_storage_service.list_files(flow_id)
+
+        # Should only return the file in the root, not the nested one
+        assert file_name in listed_files
+        assert "nested.txt" not in listed_files  # Nested file is in subdirectory
+
 
 @pytest.mark.asyncio
 class TestLocalStorageServiceDeleteOperations:

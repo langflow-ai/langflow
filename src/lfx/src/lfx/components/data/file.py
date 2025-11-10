@@ -11,13 +11,16 @@ Notes:
 from __future__ import annotations
 
 import json
+from pathlib import Path
 import subprocess
 import sys
+from tempfile import NamedTemporaryFile
 import textwrap
 from copy import deepcopy
 from typing import Any
 
 from lfx.base.data.base_file import BaseFileComponent
+from lfx.base.data.storage_utils import parse_storage_path
 from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
 from lfx.io import BoolInput, FileInput, IntInput, Output
@@ -302,12 +305,8 @@ class FileComponent(BaseFileComponent):
             tuple[str, bool]: (local_path, should_delete) where should_delete indicates
                               if this is a temporary file that should be cleaned up
         """
-        from langflow.services.deps import get_settings_service
-
         settings = get_settings_service().settings
-
         if settings.storage_type == "local":
-            # Already a local path
             return file_path, False
 
         # S3 storage - download to temp file
@@ -321,10 +320,6 @@ class FileComponent(BaseFileComponent):
 
         # Get file content from S3
         content = await storage_service.get_file(flow_id, filename)
-
-        # Create temp file with same extension
-        from pathlib import Path
-        from tempfile import NamedTemporaryFile
 
         suffix = Path(filename).suffix
         with NamedTemporaryFile(mode="wb", suffix=suffix, delete=False) as tmp_file:
