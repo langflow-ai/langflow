@@ -3374,7 +3374,7 @@ class MCPToolsComponent(ComponentWithCache):
         self.mock_mode = True
 
         # Generate mock tools based on component configuration
-        mock_tools = self._generate_mock_tools_from_component_config()
+        mock_tools = await self._generate_mock_tools_from_component_config()
 
         if mock_tools:
             self.tools = mock_tools
