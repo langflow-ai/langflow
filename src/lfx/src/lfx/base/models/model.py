@@ -291,12 +291,12 @@ class LCModelComponent(Component):
                 text=runnable.astream(inputs),
                 sender=MESSAGE_SENDER_AI,
                 sender_name="AI",
-                properties={"icon": self.icon, "state": "complete"},
+                properties={"icon": self.icon, "state": "partial"},
                 session_id=session_id,
             )
             model_message.properties.source = self._build_source(self._id, self.display_name, self)
             lf_message = await self.send_message(model_message)
-            result = ""
+            result = lf_message.text or ""
         else:
             message = await runnable.ainvoke(inputs)
             result = message.content if hasattr(message, "content") else message
