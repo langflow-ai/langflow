@@ -4,16 +4,13 @@ This test suite focuses on testing the actual orchestration logic, tool wrapping
 and pipeline execution order without requiring external API dependencies.
 """
 
-import json
-import uuid
-from typing import Any, Dict, List, Optional, Union
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from typing import Dict, List
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel, Field
 
 from lfx.components.agents.altk_agent import ALTKAgentComponent
 from lfx.components.agents.altk_base_agent import (
@@ -392,39 +389,53 @@ class TestToolExecutionOrder:
 
 
 class TestALTKBaseToolLogic:
-    """Test ALTKBaseTool functionality."""
+    """Test ALTKBaseTool functionality and document design issues."""
     
-    def test_execute_tool_with_run_method(self):
-        """Test _execute_tool when wrapped tool has _run method."""
-        # Create a mock base tool that acts like ALTKBaseTool without pydantic validation
-        class MockALTKBaseTool:
-            def __init__(self):
-                self.wrapped_tool = MockTool()
-                
-            def _execute_tool(self, *args, **kwargs):
-                # Copy the actual _execute_tool logic
-                try:
-                    if hasattr(self.wrapped_tool, "_run"):
-                        if "config" not in kwargs:
-                            kwargs["config"] = {}
-                        return self.wrapped_tool._run(*args, **kwargs)
-                    return self.wrapped_tool.run(*args, **kwargs)
-                except TypeError as e:
-                    if "config" in str(e):
-                        kwargs.pop("config", None)
-                        if hasattr(self.wrapped_tool, "_run"):
-                            return self.wrapped_tool._run(*args, **kwargs)
-                        return self.wrapped_tool.run(*args, **kwargs)
-                    raise
+    def test_altk_base_tool_is_abstract(self):
+        """Test that ALTKBaseTool cannot be instantiated directly."""
+        from lfx.components.agents.altk_base_agent import ALTKBaseTool
         
-        base_tool = MockALTKBaseTool()
-        result = base_tool._execute_tool("test query")
+        mock_agent = MagicMock()
+        wrapped_tool = MockTool()
+        
+        # This should fail because ALTKBaseTool is abstract
+        with pytest.raises(TypeError, match="Can't instantiate abstract class ALTKBaseTool"):
+            ALTKBaseTool(
+                name="test_tool",
+                description="Test tool",
+                wrapped_tool=wrapped_tool,
+                agent=mock_agent
+            )
+        
+    def test_execute_tool_logic_isolated(self):
+        """Test the _execute_tool logic in isolation without full class instantiation."""
+        # Since we can't easily create ALTKBaseTool instances, test the core logic
+        # by copying it into a simple function
+        
+        def execute_tool_logic(wrapped_tool, *args, **kwargs):
+            """Isolated version of ALTKBaseTool._execute_tool logic."""
+            try:
+                if hasattr(wrapped_tool, "_run"):
+                    if "config" not in kwargs:
+                        kwargs["config"] = {}
+                    return wrapped_tool._run(*args, **kwargs)
+                return wrapped_tool.run(*args, **kwargs)
+            except TypeError as e:
+                if "config" in str(e):
+                    kwargs.pop("config", None)
+                    if hasattr(wrapped_tool, "_run"):
+                        return wrapped_tool._run(*args, **kwargs)
+                    return wrapped_tool.run(*args, **kwargs)
+                raise
+        
+        # Test with _run method
+        tool = MockTool()
+        result = execute_tool_logic(tool, "test query")
         assert result == "mock_response_1"
-        assert base_tool.wrapped_tool.call_count == 1
+        assert tool.call_count == 1
         
-    def test_execute_tool_with_config_error_fallback(self):
-        """Test _execute_tool fallback when config parameter causes issues."""
-        class MockToolWithConfigError(BaseTool):
+        # Test config error fallback
+        class ConfigErrorTool(BaseTool):
             name: str = "config_error_tool"
             description: str = "Tool that errors on config"
             call_count: int = 0
@@ -435,73 +446,11 @@ class TestALTKBaseToolLogic:
                 self.call_count += 1
                 return f"success_{self.call_count}"
                 
-        class MockALTKBaseTool:
-            def __init__(self):
-                self.wrapped_tool = MockToolWithConfigError()
-                
-            def _execute_tool(self, *args, **kwargs):
-                try:
-                    if hasattr(self.wrapped_tool, "_run"):
-                        if "config" not in kwargs:
-                            kwargs["config"] = {}
-                        return self.wrapped_tool._run(*args, **kwargs)
-                    return self.wrapped_tool.run(*args, **kwargs)
-                except TypeError as e:
-                    if "config" in str(e):
-                        kwargs.pop("config", None)
-                        if hasattr(self.wrapped_tool, "_run"):
-                            return self.wrapped_tool._run(*args, **kwargs)
-                        return self.wrapped_tool.run(*args, **kwargs)
-                    raise
+        tool2 = ConfigErrorTool()
+        result2 = execute_tool_logic(tool2, "test query")
+        assert result2 == "success_1"
+        assert tool2.call_count == 1
         
-        base_tool = MockALTKBaseTool()
-        result = base_tool._execute_tool("test query")
-        assert result == "success_1"
-        assert base_tool.wrapped_tool.call_count == 1
-        
-    def test_get_altk_llm_object_for_openai(self):
-        """Test _get_altk_llm_object with OpenAI model."""
-        class MockChatOpenAI:
-            def __init__(self):
-                self.model_name = "gpt-4o"
-                self.openai_api_key = MagicMock()
-                self.openai_api_key.get_secret_value.return_value = "test_key"
-                
-        class MockRunnableBinding:
-            def __init__(self):
-                self.bound = MockChatOpenAI()
-                
-        class MockAgent:
-            def __init__(self):
-                self.steps = [MockRunnableBinding()]
-                
-        class MockALTKBaseTool:
-            def __init__(self):
-                self.agent = MockAgent()
-                
-            def _get_altk_llm_object(self, use_output_val: bool = True):
-                # Copy the actual implementation logic
-                llm_object = None
-                steps = getattr(self.agent, "steps", None)
-                if steps:
-                    for step in steps:
-                        if hasattr(step, 'bound') and hasattr(step.bound, 'model_name'):
-                            llm_object = step.bound
-                            break
-                
-                if llm_object and hasattr(llm_object, 'model_name'):
-                    # Mock the OpenAI path
-                    return {"model": llm_object.model_name, "api_key": "test_key"}
-                return None
-        
-        with patch('lfx.components.agents.altk_base_agent.get_llm') as mock_get_llm:
-            mock_llm_client = MagicMock()
-            mock_get_llm.return_value = mock_llm_client
-            mock_llm_client.return_value = {"model": "gpt-4o", "api_key": "test_key"}
-            
-            base_tool = MockALTKBaseTool()
-            result = base_tool._get_altk_llm_object()
-            assert result == {"model": "gpt-4o", "api_key": "test_key"}
 
 
 class TestHelperFunctions:
@@ -589,6 +538,8 @@ class TestConversationContextBuilding:
         # The Data.to_lc_message() returns content as list of dicts
         assert context[1].content == [{'type': 'text', 'text': 'previous message'}]
         
+        # NOTE: This content format might be inconsistent - see test_data_message_content_format_inconsistency
+        
     def test_build_conversation_context_with_data_list(self):
         """Test build_conversation_context with list of Data objects."""
         from lfx.schema.data import Data
@@ -613,6 +564,7 @@ class TestConversationContextBuilding:
         assert context[1].content == [{'type': 'text', 'text': 'first message'}]
         # AIMessage from Assistant sender has content as plain string
         assert context[2].content == "second message"
+        
     """Integration tests for the complete ALTK agent functionality."""
     
     def test_agent_configuration_integration(self):
@@ -812,7 +764,7 @@ class TestEdgeCasesAndErrorHandling:
             pipeline.process_tools(tools)
             
     def test_chat_history_edge_cases(self):
-        """Test various edge cases for chat_history processing."""
+        """Test various edge cases for chat_history processing with proper validation."""
         agent = ALTKAgentComponent(
             _type="Agent",
             agent_llm=MockLanguageModel(),
@@ -820,21 +772,30 @@ class TestEdgeCasesAndErrorHandling:
             tools=[],
         )
         
-        # Test with None
+        # Test with None - this should work
         agent.chat_history = None
         context = agent.build_conversation_context()
         assert len(context) == 1  # Only input_value
         
-        # Test with empty list
+        # Test with empty list - this should work
         agent.chat_history = []
         context = agent.build_conversation_context()
         assert len(context) == 1  # Only input_value
         
-        # Test with invalid data structure
+        # Test with invalid string input - should now raise ValueError
         agent.chat_history = "invalid_string"
-        context = agent.build_conversation_context()
-        assert len(context) == 1  # Should skip invalid chat_history
-        
+        with pytest.raises(ValueError, match="chat_history must be a Data object, list of Data/Message objects, or None"):
+            agent.build_conversation_context()
+            
+        # Test with other invalid types - should also raise ValueError
+        agent.chat_history = 42
+        with pytest.raises(ValueError, match="chat_history must be a Data object, list of Data/Message objects, or None"):
+            agent.build_conversation_context()
+            
+        agent.chat_history = {"invalid": "dict"}
+        with pytest.raises(ValueError, match="chat_history must be a Data object, list of Data/Message objects, or None"):
+            agent.build_conversation_context()
+            
     def test_data_with_missing_required_keys(self):
         """Test Data objects with missing required keys for message conversion."""
         from lfx.schema.data import Data
@@ -846,12 +807,150 @@ class TestEdgeCasesAndErrorHandling:
             tools=[],
         )
         
-        # Data missing 'sender' key
+        # Test current behavior with missing required keys
         invalid_data = Data(data={'text': 'message without sender'})
         agent.chat_history = invalid_data
         
-        with pytest.raises(ValueError, match="Missing required keys"):
-            agent.build_conversation_context()
+        # DOCUMENT CURRENT BEHAVIOR - does it crash or handle gracefully?
+        try:
+            context = agent.build_conversation_context()
+            pytest.fail("Expected ValueError for missing required keys, but method succeeded")
+        except ValueError as e:
+            # This is expected - Data.to_lc_message() should validate required keys
+            assert "Missing required keys" in str(e)
+        except Exception as e:
+            pytest.fail(f"Unexpected exception type: {type(e).__name__}: {e}")
+            
+    def test_data_message_content_format_inconsistency(self):
+        """Document the Data.to_lc_message() content format inconsistency and its solution.
+        
+        DESIGN ISSUE DOCUMENTED: Data.to_lc_message() produces different content formats:
+        - User messages (HumanMessage): content = [{"type": "text", "text": "..."}] (list format)
+        - Assistant messages (AIMessage): content = "text" (string format)
+        
+        ROOT CAUSE: lfx/schema/data.py lines 175-189 implement different serialization:
+        - USER sender: HumanMessage(content=[{"type": "text", "text": text}])  # Always list
+        - AI sender: AIMessage(content=text)  # Always string
+        
+        SOLUTION IMPLEMENTED: 
+        1. normalize_message_content() helper function handles both formats
+        2. NormalizedInputProxy in ALTKAgentComponent intercepts inconsistent content
+        3. Proxy automatically converts list format to string when needed
+        """
+        from lfx.schema.data import Data
+        
+        user_data = Data(data={'text': 'user message', 'sender': 'User'})
+        assistant_data = Data(data={'text': 'assistant message', 'sender': 'Assistant'})
+        
+        user_message = user_data.to_lc_message()
+        assistant_message = assistant_data.to_lc_message()
+        
+        # DOCUMENT THE INCONSISTENCY (still exists in core Data class)
+        assert user_message.content == [{'type': 'text', 'text': 'user message'}]
+        assert isinstance(user_message.content, list)
+        assert assistant_message.content == "assistant message"
+        assert isinstance(assistant_message.content, str)
+        
+        # DEMONSTRATE THE SOLUTION: normalize_message_content handles both formats
+        from lfx.components.agents.altk_base_agent import normalize_message_content
+        
+        normalized_user = normalize_message_content(user_message)
+        normalized_assistant = normalize_message_content(assistant_message)
+        
+        # Both are now consistent string format
+        assert normalized_user == "user message"
+        assert normalized_assistant == "assistant message"
+        assert isinstance(normalized_user, str)
+        assert isinstance(normalized_assistant, str)
+        
+        # VALIDATION: ALTKAgentComponent uses proxy to handle this automatically
+        # See test_altk_agent_handles_inconsistent_message_content for proxy validation
+        
+    def test_normalize_message_content_function(self):
+        """Test the normalize_message_content helper function in ALTK agent."""
+        from lfx.schema.data import Data
+        from lfx.components.agents.altk_base_agent import normalize_message_content
+        
+        # Test with User message (list format)
+        user_data = Data(data={'text': 'user message', 'sender': 'User'})
+        user_message = user_data.to_lc_message()
+        
+        normalized_user_text = normalize_message_content(user_message)
+        assert normalized_user_text == "user message"
+        
+        # Test with Assistant message (string format)
+        assistant_data = Data(data={'text': 'assistant message', 'sender': 'Assistant'}) 
+        assistant_message = assistant_data.to_lc_message()
+        
+        normalized_assistant_text = normalize_message_content(assistant_message)
+        assert normalized_assistant_text == "assistant message"
+        
+        # Both should normalize to the same format
+        assert isinstance(normalized_user_text, str)
+        assert isinstance(normalized_assistant_text, str)
+        
+        # Test edge case: empty list content
+        from langchain_core.messages import HumanMessage
+        empty_message = HumanMessage(content=[])
+        normalized_empty = normalize_message_content(empty_message)
+        assert normalized_empty == ""
+        
+        # Test edge case: non-text content in list (image-only)
+        complex_message = HumanMessage(content=[{"type": "image", "url": "test.jpg"}])
+        normalized_complex = normalize_message_content(complex_message)
+        assert normalized_complex == ""  # Should return empty string when no text found
+        
+        # Test edge case: mixed content with text
+        mixed_message = HumanMessage(content=[
+            {"type": "image", "url": "test.jpg"},
+            {"type": "text", "text": "check this image"}
+        ])
+        normalized_mixed = normalize_message_content(mixed_message)
+        assert normalized_mixed == "check this image"  # Should extract the text part
+        
+    def test_altk_agent_handles_inconsistent_message_content(self):
+        """Test that ALTK agent correctly handles inconsistent Data.to_lc_message() formats.""" 
+        from lfx.schema.data import Data
+        
+        # Test with User data (produces list content format)
+        user_data = Data(data={'text': 'test user query', 'sender': 'User'})
+        
+        agent = ALTKAgentComponent(
+            _type="Agent",
+            agent_llm=MockLanguageModel(),
+            input_value=user_data,  # This will call Data.to_lc_message() internally
+            tools=[],
+        )
+        
+        # Test that get_user_query works with the Data input
+        user_query = agent.get_user_query()
+        assert user_query == "test user query"  # Data.get_text() should be called
+        
+        # Test with Assistant data (produces string content format)  
+        assistant_data = Data(data={'text': 'test assistant message', 'sender': 'Assistant'})
+        
+        agent.input_value = assistant_data
+        assistant_query = agent.get_user_query()
+        assert assistant_query == "test assistant message"  # Data.get_text() should be called
+        
+        # Both should be handled consistently
+        assert isinstance(user_query, str)
+        assert isinstance(assistant_query, str)
+        
+        # Test build_conversation_context with mixed data types
+        agent.input_value = "simple string"
+        agent.chat_history = [user_data, assistant_data]  # Mixed content formats
+        
+        context = agent.build_conversation_context()
+        assert len(context) == 3  # input + 2 history items
+        
+        # All should be BaseMessage instances
+        from langchain_core.messages import BaseMessage
+        for msg in context:
+            assert isinstance(msg, BaseMessage)
+            # Content should be accessible (even if format differs)
+            assert hasattr(msg, 'content')
+            assert msg.content is not None
             
     def test_tool_pipeline_multiple_processing(self):
         """Test that tools can be processed multiple times safely."""

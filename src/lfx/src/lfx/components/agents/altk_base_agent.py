@@ -34,6 +34,45 @@ from lfx.schema.message import Message
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 
+def normalize_message_content(message: BaseMessage) -> str:
+    """Normalize message content to handle inconsistent formats from Data.to_lc_message().
+    
+    Args:
+        message: A BaseMessage that may have content as either:
+                - str (for AI messages)  
+                - list[dict] (for User messages in format [{"type": "text", "text": "..."}])
+                
+    Returns:
+        str: The extracted text content
+        
+    Note:
+        This addresses the inconsistency in lfx.schema.data.Data.to_lc_message() where:
+        - User messages: content = [{"type": "text", "text": text}] (list format)
+        - AI messages: content = text (string format)
+    """
+    content = message.content
+    
+    # Handle string format (AI messages)
+    if isinstance(content, str):
+        return content
+    
+    # Handle list format (User messages) 
+    if isinstance(content, list) and len(content) > 0:
+        # Extract text from first content block that has 'text' field
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "text" and "text" in item:
+                return item["text"]
+        # If no text found, return empty string (e.g., image-only messages)
+        return ""
+    
+    # Handle empty list or other formats
+    if isinstance(content, list):
+        return ""
+        
+    # Fallback for any other format
+    return str(content)
+
+
 # === Base Tool Wrapper Architecture ===
 
 
@@ -183,16 +222,21 @@ class ALTKBaseAgentComponent(AgentComponent):
         if hasattr(self, "chat_history") and self.chat_history:
             if isinstance(self.chat_history, Data):
                 context.append(self.chat_history.to_lc_message())
-            elif all(isinstance(m, Message) for m in self.chat_history):
-                context.extend([m.to_lc_message() for m in self.chat_history])
-            elif hasattr(self.chat_history, '__iter__') and not isinstance(self.chat_history, str):
-                # Handle list of Data objects (but not strings)
-                try:
-                    context.extend(data_to_messages(self.chat_history))
-                except (AttributeError, TypeError):
-                    raise ValueError(
-                        "chat_history must be a Data object or an iterable of Message or Data objects."
-                    )
+            elif isinstance(self.chat_history, list):
+                if all(isinstance(m, Message) for m in self.chat_history):
+                    context.extend([m.to_lc_message() for m in self.chat_history])
+                else:
+                    # Assume list of Data objects, let data_to_messages handle validation
+                    try:
+                        context.extend(data_to_messages(self.chat_history))
+                    except (AttributeError, TypeError) as e:
+                        raise ValueError(f"Invalid chat_history list contents: {e}")
+            else:
+                # Reject all other types (strings, numbers, etc.)
+                raise ValueError(
+                    f"chat_history must be a Data object, list of Data/Message objects, or None. "
+                    f"Got: {type(self.chat_history).__name__}"
+                )
         return context
 
     def get_user_query(self) -> str:

@@ -144,3 +144,52 @@ class ALTKAgentComponent(ALTKBaseAgentComponent):
                 )
 
         return super().update_runnable_instance(agent, runnable, tools)
+    
+    def __init__(self, **kwargs):
+        """Initialize ALTK agent with input normalization for Data.to_lc_message() inconsistencies."""
+        super().__init__(**kwargs)
+        
+        # If input_value uses Data.to_lc_message(), wrap it to provide consistent content
+        if (hasattr(self.input_value, "to_lc_message") and 
+            callable(getattr(self.input_value, "to_lc_message"))):
+            self.input_value = self._create_normalized_input_proxy(self.input_value)
+    
+    def _create_normalized_input_proxy(self, original_input):
+        """Create a proxy that normalizes to_lc_message() content format."""
+        
+        class NormalizedInputProxy:
+            def __init__(self, original):
+                self._original = original
+            
+            def __getattr__(self, name):
+                if name == "to_lc_message":
+                    return self._normalized_to_lc_message
+                return getattr(self._original, name)
+            
+            def _normalized_to_lc_message(self):
+                """Return a message with normalized string content.""" 
+                original_msg = self._original.to_lc_message()
+                
+                # If content is in list format, normalize it to string
+                if hasattr(original_msg, "content") and isinstance(original_msg.content, list):
+                    from lfx.components.agents.altk_base_agent import normalize_message_content
+                    from langchain_core.messages import HumanMessage, AIMessage
+                    
+                    normalized_content = normalize_message_content(original_msg)
+                    
+                    # Create new message with string content
+                    if isinstance(original_msg, HumanMessage):
+                        return HumanMessage(content=normalized_content)
+                    else:
+                        return AIMessage(content=normalized_content)
+                
+                # Return original if already string format
+                return original_msg
+            
+            def __str__(self):
+                return str(self._original)
+            
+            def __repr__(self):
+                return f"NormalizedInputProxy({repr(self._original)})"
+        
+        return NormalizedInputProxy(original_input)
