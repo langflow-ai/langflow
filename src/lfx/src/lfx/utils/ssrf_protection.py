@@ -258,33 +258,33 @@ def _validate_direct_ip_address(hostname: str) -> bool:
     """
     try:
         ip_obj = ipaddress.ip_address(hostname)
-        # It's a direct IP address
-        # Check if IP is in allowlist
-        if is_host_allowed(hostname, str(ip_obj)):
-            logger.debug("IP address %s is in allowlist, bypassing SSRF checks", hostname)
-            return True
-
-        if is_ip_blocked(ip_obj):
-            msg = (
-                f"Access to IP address {hostname} is blocked by SSRF protection. "
-                "Requests to private/internal IP ranges are not allowed for security reasons. "
-                "To allow this IP, add it to LANGFLOW_SSRF_ALLOWED_HOSTS environment variable."
-            )
-            raise SSRFProtectionError(msg)
-
-        # Direct IP is allowed (public IP)
-        return True
     except ValueError:
         # Not an IP address, it's a hostname - caller should continue with DNS resolution
         return False
 
+    # It's a direct IP address
+    # Check if IP is in allowlist
+    if is_host_allowed(hostname, str(ip_obj)):
+        logger.debug("IP address %s is in allowlist, bypassing SSRF checks", hostname)
+        return True
 
-def _validate_hostname_resolution(hostname: str, url: str) -> None:
+    if is_ip_blocked(ip_obj):
+        msg = (
+            f"Access to IP address {hostname} is blocked by SSRF protection. "
+            "Requests to private/internal IP ranges are not allowed for security reasons. "
+            "To allow this IP, add it to LANGFLOW_SSRF_ALLOWED_HOSTS environment variable."
+        )
+        raise SSRFProtectionError(msg)
+
+    # Direct IP is allowed (public IP)
+    return True
+
+
+def _validate_hostname_resolution(hostname: str) -> None:
     """Resolve hostname and validate resolved IPs are not blocked.
 
     Args:
         hostname: Hostname to resolve and validate
-        url: Full URL (for error messages)
 
     Raises:
         SSRFProtectionError: If resolved IPs are blocked
