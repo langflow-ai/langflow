@@ -61,7 +61,7 @@ class URLComponent(Component):
             tool_mode=True,
             placeholder="Enter a URL...",
             list_add_label="Add URL",
-            input_types=[],
+            input_types=["Message"],
         ),
         SliderInput(
             name="max_depth",
