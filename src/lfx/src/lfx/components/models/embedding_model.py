@@ -121,11 +121,12 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         # If an Embeddings object is directly connected, return it
         try:
             from langchain_core.embeddings import Embeddings as BaseEmbeddings
+
             if isinstance(self.model, BaseEmbeddings):
                 return self.model
         except ImportError:
             pass
-        
+
         # Safely extract model configuration
         if not self.model or not isinstance(self.model, list):
             msg = "Model must be a non-empty list"
