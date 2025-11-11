@@ -1,5 +1,6 @@
 import json
 from typing import Any
+
 import requests
 from ibm_watsonx_ai import APIClient, Credentials
 from langchain_ibm import ChatWatsonx
@@ -26,7 +27,6 @@ class WatsonxAIComponentCPD(LCModelComponent):
         "ibm/granite-3-8b-instruct",
         "ibm/granite-13b-instruct-v2",
     ]
-
 
     inputs = [
         TabInput(
@@ -253,13 +253,12 @@ class WatsonxAIComponentCPD(LCModelComponent):
                 streaming=self.stream,
             )
 
-        else:
-            # 🟢 SaaS auth
-            return ChatWatsonx(
-                apikey=SecretStr(self.api_key).get_secret_value(),
-                url=self.url,
-                project_id=self.project_id,
-                model_id=self.model_name,
-                params=chat_params,
-                streaming=self.stream,
-            )
+        # 🟢 SaaS auth
+        return ChatWatsonx(
+            apikey=SecretStr(self.api_key).get_secret_value(),
+            url=self.url,
+            project_id=self.project_id,
+            model_id=self.model_name,
+            params=chat_params,
+            streaming=self.stream,
+        )

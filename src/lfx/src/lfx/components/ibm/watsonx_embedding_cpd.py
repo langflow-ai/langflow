@@ -1,4 +1,5 @@
 from typing import Any
+
 import requests
 from ibm_watsonx_ai import APIClient, Credentials
 from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
@@ -18,7 +19,7 @@ class WatsonxEmbeddingsComponentCPD(LCEmbeddingsModel):
     icon = "WatsonxAI"
     name = "WatsonxEmbeddingsComponent"
 
- # These LLMs are used only for SaaS - On-Prem models as input field according to what has been deployed on-prem
+    # These LLMs are used only for SaaS - On-Prem models as input field according to what has been deployed on-prem
     _default_models = [
         "ibm/slate-30m-english-rtrvr-v2",
         "ibm/slate-125m-english-rtrvr-v2",
@@ -148,7 +149,7 @@ class WatsonxEmbeddingsComponentCPD(LCEmbeddingsModel):
                     url=self.url,
                     username=username,
                     password=password,
-                    instance_id="openshift",  
+                    instance_id="openshift",
                     auth_type="cpd",
                 )
             except TypeError:
