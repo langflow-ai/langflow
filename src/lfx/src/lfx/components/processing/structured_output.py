@@ -141,7 +141,7 @@ class StructuredOutputComponent(Component):
         ),
     ]
 
-    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
         return update_model_options_in_build_config(
             component=self,
