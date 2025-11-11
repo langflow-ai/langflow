@@ -135,7 +135,7 @@ dependencies = [
     "traceloop-sdk>=0.43.1,<1.0.0",
     "vlmrun[all]>=0.2.0",
     "cuga==0.1.4",
-    "agent-lifecycle-toolkit==0.2.1.10062025",
+    "agent-lifecycle-toolkit==0.4.1",
     "astrapy>=2.1.0,<3.0.0",
 ]
 
