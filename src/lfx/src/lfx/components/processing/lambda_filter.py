@@ -101,6 +101,7 @@ class LambdaFilterComponent(Component):
             cache_key_prefix="language_model_options",
             get_options_func=get_language_model_options,
             field_name=field_name,
+            field_value=field_value,
         )
 
     def get_data_structure(self, data):

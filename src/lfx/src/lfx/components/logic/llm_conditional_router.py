@@ -142,6 +142,7 @@ class SmartRouterComponent(Component):
             cache_key_prefix="language_model_options",
             get_options_func=get_language_model_options,
             field_name=field_name,
+            field_value=field_value,
         )
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:

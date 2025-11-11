@@ -10,6 +10,7 @@ import { useGetDefaultModel } from "@/controllers/API/queries/models/use-get-def
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import ApiKeyModal from "@/modals/apiKeyModal";
 import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useTypesStore } from "@/stores/typesStore";
 import { convertStringToHTML } from "@/utils/stringManipulation";
@@ -260,10 +261,13 @@ export default function ModelInputComponent({
   const handleExternalOptions = useCallback(async (optionValue: string) => {
     setOpen(false);
     
-    // Clear the current selection
+    // Clear the current selection UI state
     setSelectedModel(null);
     setSelectedProvider(null);
-    handleOnNewValue({ value: [] });
+    
+    // Pass the optionValue ("connect_other_models") as both the field value and to mutateTemplate
+    // This way the backend knows we're in connection mode
+    handleOnNewValue({ value: optionValue });
 
     await mutateTemplate(
       optionValue,
@@ -273,15 +277,16 @@ export default function ModelInputComponent({
       postTemplateValue,
       setErrorData,
       "model",
-    );
-
-    // Enable connection mode for connect_other_models
-    try {
-      if (optionValue === "connect_other_models") {
+      () => {
+        // Enable connection mode for connect_other_models AFTER mutation completes
+        try {
+          if (optionValue === "connect_other_models") {
         const store = useFlowStore.getState();
         const node = store.getNode(nodeId!);
         const templateField = node?.data?.node?.template?.["model"];
-        if (!templateField) return;
+        if (!templateField) {
+          return;
+        }
 
         const inputTypes: string[] =
           (Array.isArray(templateField.input_types)
@@ -289,6 +294,7 @@ export default function ModelInputComponent({
             : []) || [];
         const effectiveInputTypes =
           inputTypes.length > 0 ? inputTypes : ["LanguageModel"];
+        
         const tooltipTitle: string =
           (inputTypes && inputTypes.length > 0
             ? inputTypes.join("\n")
@@ -332,10 +338,12 @@ export default function ModelInputComponent({
         // Show compatible handles glow
         store.setFilterEdge(grouped);
         store.setFilterType(filterObj);
-      }
-    } catch (error) {
-      console.warn("Error setting up connection mode:", error);
-    }
+          }
+        } catch (error) {
+          console.warn("Error setting up connection mode:", error);
+        }
+      },
+    );
   }, [
     nodeId,
     nodeClass,
@@ -382,6 +390,12 @@ export default function ModelInputComponent({
 
     // If value is already set, don't override
     if (value && Array.isArray(value) && value.length > 0) {
+      setInitialValueSet(true);
+      return;
+    }
+
+    // Don't auto-select if user is explicitly connecting other models (value is the string "connect_other_models")
+    if (value === "connect_other_models") {
       setInitialValueSet(true);
       return;
     }

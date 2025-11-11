@@ -750,6 +750,7 @@ def update_model_options_in_build_config(
     cache_key_prefix: str,
     get_options_func: Callable,
     field_name: str | None = None,
+    field_value: Any = None,
 ) -> dict:
     """Helper function to update build config with cached model options.
 
@@ -766,6 +767,7 @@ def update_model_options_in_build_config(
         cache_key_prefix: Prefix for the cache key (e.g., "language_model_options" or "embedding_model_options")
         get_options_func: Function to call to get model options (e.g., get_language_model_options)
         field_name: The name of the field being changed, if any
+        field_value: The current value of the field being changed, if any
 
     Returns:
         Updated build_config dict with model options and providers set
@@ -810,4 +812,21 @@ def update_model_options_in_build_config(
     cached = component.cache.get(cache_key, {"options": [], "providers": []})
     build_config["model"]["options"] = cached["options"]
     build_config["model"]["providers"] = cached["providers"]
+
+    # Simple logic: ONLY hide the handle when we're explicitly setting a model value
+    # Check if field_value is a model selection (list with model dict)
+    if (
+        isinstance(field_value, list)
+        and len(field_value) > 0
+        and isinstance(field_value[0], dict)
+        and "name" in field_value[0]
+    ):
+        # User is selecting a model, hide the handle
+        build_config["model"]["input_types"] = []
+    # Otherwise (including when field_value is "connect_other_models" or anything else), restore default input_types
+    elif cache_key_prefix == "embedding_model_options":
+        build_config["model"]["input_types"] = ["Embeddings"]
+    else:
+        build_config["model"]["input_types"] = ["LanguageModel"]
+
     return build_config

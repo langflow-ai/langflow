@@ -100,11 +100,16 @@ export default function NodeInputField({
     }
   }, [optionalHandle]);
 
+  // For ModelInput (type === "model"), only show handle if input_types is not empty
+  const isModelInput = type === "model";
+  const hasInputTypes = optionalHandle && Array.isArray(optionalHandle) && optionalHandle.length > 0;
+  
   const displayHandle =
     (!LANGFLOW_SUPPORTED_TYPES.has(type ?? "") ||
       (optionalHandle && optionalHandle.length > 0)) &&
     !isToolMode &&
-    !hasRefreshButton;
+    !hasRefreshButton &&
+    (!isModelInput || hasInputTypes); // Hide handle for ModelInput when input_types is empty
 
   const isFlexView = FLEX_VIEW_TYPES.includes(type ?? "");
 
