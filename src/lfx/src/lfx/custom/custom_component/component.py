@@ -1594,6 +1594,9 @@ class Component(CustomComponent):
                     if complete_message:
                         stored_message.properties.state = "complete"
                     stored_message = await self._update_stored_message(stored_message)
+                    # Note: We intentionally do NOT send a message event here with state="complete"
+                    # The frontend already has all the content from streaming tokens
+                    # Only the database is updated with the complete state
                 else:
                     # Only send message event for non-streaming messages
                     await self._send_message_event(stored_message, id_=id_)

@@ -350,6 +350,8 @@ class ChatOllamaComponent(LCModelComponent):
                     build_config["mirostat_tau"]["value"] = 5
 
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
+            logger.warning(f"Fetching Ollama models from updated URL: {build_config['base_url']}")
+
             if await self.is_valid_ollama_url(self.base_url):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
                 build_config["model_name"]["options"] = await self.get_models(
