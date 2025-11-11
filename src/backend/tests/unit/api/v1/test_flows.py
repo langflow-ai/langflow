@@ -343,9 +343,11 @@ async def test_patch_flow_json_patch_success(client: AsyncClient, flow, logged_i
     assert response_data["success"] is True
     assert response_data["operations_applied"] == 1
     assert "/name" in response_data["updated_fields"]
-    assert "patched_data" in response_data
-    assert "name" in response_data["patched_data"]
-    assert response_data["patched_data"]["name"] == "Updated Flow Name"
+    assert "operations" in response_data
+    assert len(response_data["operations"]) == 1
+    assert response_data["operations"][0]["op"] == "replace"
+    assert response_data["operations"][0]["path"] == "/name"
+    assert response_data["operations"][0]["value"] == "Updated Flow Name"
 
 
 async def test_patch_flow_json_patch_not_found(client: AsyncClient, logged_in_headers):
@@ -408,11 +410,14 @@ async def test_patch_flow_json_patch_complex_operations(client: AsyncClient, flo
     assert response_data["operations_applied"] == 2
     assert "/name" in response_data["updated_fields"]
     assert "/description" in response_data["updated_fields"]
-    assert "patched_data" in response_data
-    assert "name" in response_data["patched_data"]
-    assert response_data["patched_data"]["name"] == "Complex Update"
-    assert "description" in response_data["patched_data"]
-    assert response_data["patched_data"]["description"] == "Updated description"
+    assert "operations" in response_data
+    assert len(response_data["operations"]) == 2
+    assert response_data["operations"][0]["op"] == "replace"
+    assert response_data["operations"][0]["path"] == "/name"
+    assert response_data["operations"][0]["value"] == "Complex Update"
+    assert response_data["operations"][1]["op"] == "replace"
+    assert response_data["operations"][1]["path"] == "/description"
+    assert response_data["operations"][1]["value"] == "Updated description"
 
     # Verify the changes by fetching the flow
     verify_response = await client.get(
@@ -440,9 +445,11 @@ async def test_patch_flow_json_patch_data_field(client: AsyncClient, flow, logge
     assert response_data["success"] is True
     assert response_data["operations_applied"] == 1
     assert "/data" in response_data["updated_fields"]
-    assert "patched_data" in response_data
-    assert "data" in response_data["patched_data"]
-    assert response_data["patched_data"]["data"] == new_data
+    assert "operations" in response_data
+    assert len(response_data["operations"]) == 1
+    assert response_data["operations"][0]["op"] == "replace"
+    assert response_data["operations"][0]["path"] == "/data"
+    assert response_data["operations"][0]["value"] == new_data
 
     # Verify the data was updated by fetching the flow
     verify_response = await client.get(
@@ -496,9 +503,11 @@ async def test_json_patch_endpoint_is_separate(client: AsyncClient, flow, logged
     assert response_data["success"] is True
     assert response_data["operations_applied"] == 1
     assert "/name" in response_data["updated_fields"]
-    assert "patched_data" in response_data
-    assert "name" in response_data["patched_data"]
-    assert response_data["patched_data"]["name"] == "JSON Patch Update"
+    assert "operations" in response_data
+    assert len(response_data["operations"]) == 1
+    assert response_data["operations"][0]["op"] == "replace"
+    assert response_data["operations"][0]["path"] == "/name"
+    assert response_data["operations"][0]["value"] == "JSON Patch Update"
 
     # Verify the name was updated by fetching the flow
     verify_response = await client.get(

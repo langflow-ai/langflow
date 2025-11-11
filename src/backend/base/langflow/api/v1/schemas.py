@@ -538,6 +538,6 @@ class JsonPatchResponse(BaseModel):
     updated_fields: list[str] = Field(default_factory=list, description="List of fields that were updated by the patch")
     operations_applied: int = Field(..., description="Number of operations that were applied")
     folder_id: UUID | None = Field(None, description="The folder ID of the flow (for refetching)")
-    patched_data: dict[str, Any] = Field(
-        default_factory=dict, description="The actual patched fields and their new values for client-side merging"
+    operations: list[PatchOperation] = Field(
+        default_factory=list, description="The patch operations that were applied (for client-side merging)"
     )
