@@ -25,6 +25,7 @@ from langflow.api.v1.users import router as users_router
 from langflow.api.v1.validate import router as validate_router
 from langflow.api.v1.variable import router as variables_router
 from langflow.api.v1.voice_mode import router as voice_mode_router
+from langflow.spec_flow_builder.api import router as spec_flow_builder_router
 
 __all__ = [
     "agent_builder_router",
@@ -54,4 +55,5 @@ __all__ = [
     "validate_router",
     "variables_router",
     "voice_mode_router",
+    "spec_flow_builder_router",
 ]
