@@ -460,8 +460,8 @@ jobs:
 
   call_docker_build_main_backend:
     name: Call Docker Build Workflow for Langflow Backend
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci]
+    if: ${{ inputs.build_docker_main && !inputs.dry_run }}
+    needs: [call_docker_build_main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -472,8 +472,8 @@ jobs:
 
   call_docker_build_main_frontend:
     name: Call Docker Build Workflow for Langflow Frontend
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci]
+    if: ${{ inputs.build_docker_main && !inputs.dry_run }}
+    needs: [call_docker_build_main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
