@@ -79,9 +79,9 @@ export interface JsonPatchResponse {
   folder_id?: string;
 
   /**
-   * The actual patched fields and their new values for client-side merging
+   * The patch operations that were applied (for client-side merging using fast-json-patch)
    */
-  patched_data: Record<string, any>;
+  operations: JsonPatchOperation[];
 }
 
 // Made with Bob

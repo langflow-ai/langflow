@@ -1,5 +1,5 @@
 import type { ReactFlowJsonObject } from "@xyflow/react";
-import { compare } from "fast-json-patch";
+import { applyPatch, compare } from "fast-json-patch";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import type { PatchOperation } from "@/controllers/API/queries/flows/use-patch-json-patch-flow";
 import { usePatchJsonPatchFlow } from "@/controllers/API/queries/flows/use-patch-json-patch-flow";
@@ -90,10 +90,14 @@ const useSaveFlow = () => {
                   const flows = useFlowsManagerStore.getState().flows;
                   setSaveLoading(false);
                   if (flows) {
-                    // Merge the patched data into the current flow
+                    // Apply the patch operations to the current flow using fast-json-patch
+                    // This efficiently handles nested updates like /data/1/template/field
+                    const patchResult = applyPatch(
+                      structuredClone(flow!),
+                      patchResponse.operations,
+                    );
                     const mergedFlow = {
-                      ...flow!,
-                      ...patchResponse.patched_data,
+                      ...patchResult.newDocument,
                       id: patchResponse.id,
                       updated_at: patchResponse.updated_at,
                     };
