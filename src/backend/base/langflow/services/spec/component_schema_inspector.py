@@ -54,6 +54,8 @@ class ComponentSchemaInspector:
         """
         self.components_root = components_root or "langflow.components"
         self._schema_cache: Dict[str, ComponentSchema] = {}
+        # Additional cache keyed by Python class name for robust lookup
+        self._schema_cache_by_class: Dict[str, ComponentSchema] = {}
         self._last_scan_time = 0
         self._cache_duration = 300  # 5 minutes
 
@@ -68,7 +70,23 @@ class ComponentSchemaInspector:
             ComponentSchema or None if not found
         """
         self._ensure_fresh_cache()
-        return self._schema_cache.get(component_name)
+        # Try by display/name key first
+        schema = self._schema_cache.get(component_name)
+        if schema:
+            return schema
+
+        # Fallback: try by class name key
+        schema = self._schema_cache_by_class.get(component_name)
+        if schema:
+            return schema
+
+        # Final fallback: case-insensitive search across both caches
+        lowered = component_name.lower()
+        for s in self._schema_cache.values():
+            if s.name.lower() == lowered or s.class_name.lower() == lowered:
+                return s
+
+        return None
 
     def get_all_schemas(self) -> Dict[str, ComponentSchema]:
         """
@@ -89,7 +107,7 @@ class ComponentSchemaInspector:
         """
         self._ensure_fresh_cache()
 
-        mapping = {}
+        mapping: Dict[str, Dict[str, Any]] = {}
         for name, schema in self._schema_cache.items():
             # Determine primary input and output fields
             input_field = None
@@ -115,7 +133,7 @@ class ComponentSchemaInspector:
             if not output_field and schema.outputs:
                 output_field = schema.outputs[0].get("name")
 
-            mapping[name] = {
+            entry = {
                 "input_field": input_field,
                 "output_field": output_field,
                 "output_types": schema.output_types,
@@ -124,6 +142,10 @@ class ComponentSchemaInspector:
                 "outputs": schema.outputs,
                 "description": schema.description
             }
+
+            # Map under both display/name and class name for flexible lookups
+            mapping[name] = entry
+            mapping[schema.class_name] = entry
 
         return mapping
 
@@ -138,6 +160,7 @@ class ComponentSchemaInspector:
         """Scan all components and build schema cache."""
         logger.info(f"Scanning components in {self.components_root}")
         self._schema_cache.clear()
+        self._schema_cache_by_class.clear()
 
         try:
             # Import the components package
@@ -182,7 +205,9 @@ class ComponentSchemaInspector:
                 if self._is_component_class(obj) and obj.__module__ == module_name:
                     schema = self._extract_component_schema(obj, module_name)
                     if schema:
+                        # Cache by display/name and by class name
                         self._schema_cache[schema.name] = schema
+                        self._schema_cache_by_class[schema.class_name] = schema
                         logger.debug(f"Extracted schema for {schema.name}")
 
         except Exception as e:
@@ -495,8 +520,24 @@ class ComponentSchemaInspector:
             }
 
         # Check type compatibility
-        compatible = any(otype in target_schema.input_types
-                        for otype in source_schema.output_types)
+        # Special-case: tool connections targeting the 'tools' input should be considered compatible.
+        # Tool semantics imply registration rather than direct data type matching.
+        if isinstance(target_input, str) and target_input.lower() == "tools":
+            return {
+                'valid': True,
+                'source_types': source_schema.output_types,
+                'target_types': target_schema.input_types,
+                'error': None
+            }
+
+        # Treat 'any'/'Any'/'object' on target as wildcard accepting any source type
+        source_types = set(source_schema.output_types or [])
+        target_types = set(target_schema.input_types or [])
+
+        if any(t in target_types for t in ("any", "Any", "object")):
+            compatible = True
+        else:
+            compatible = bool(source_types & target_types)
 
         return {
             'valid': compatible,

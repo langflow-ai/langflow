@@ -28,6 +28,7 @@ from langflow.api.v1 import (
     users_router,
     validate_router,
     variables_router,
+    spec_flow_builder_router,
 )
 from langflow.api.v1.voice_mode import router as voice_mode_router
 from langflow.api.v2 import files_router as files_router_v2
@@ -49,6 +50,7 @@ router_v1.include_router(auth_proxy_router)
 router_v1.include_router(chat_router)
 router_v1.include_router(endpoints_router)
 router_v1.include_router(files_router)
+router_v1.include_router(spec_flow_builder_router)
 router_v1.include_router(flexstore_router)
 router_v1.include_router(flows_router)
 router_v1.include_router(folders_router)
