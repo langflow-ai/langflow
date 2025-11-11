@@ -282,7 +282,6 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["base_url_ibm_watsonx"]["show"] = False
                 build_config["project_id"]["show"] = False
                 build_config["ollama_base_url"]["show"] = True
-                build_config["ollama_base_url"]["load_from_db"] = True
 
                 # Try multiple sources to get the URL (in order of preference):
                 # 1. Instance attribute (already resolved from global/db)
