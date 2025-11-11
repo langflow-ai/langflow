@@ -102,8 +102,11 @@ export default function NodeInputField({
 
   // For ModelInput (type === "model"), only show handle if input_types is not empty
   const isModelInput = type === "model";
-  const hasInputTypes = optionalHandle && Array.isArray(optionalHandle) && optionalHandle.length > 0;
-  
+  const hasInputTypes =
+    optionalHandle &&
+    Array.isArray(optionalHandle) &&
+    optionalHandle.length > 0;
+
   const displayHandle =
     (!LANGFLOW_SUPPORTED_TYPES.has(type ?? "") ||
       (optionalHandle && optionalHandle.length > 0)) &&

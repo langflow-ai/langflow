@@ -298,7 +298,9 @@ export function ParameterRenderComponent({
           <ModelInputComponent
             {...baseInputProps}
             options={templateData?.options || []}
-            placeholder={templateData?.placeholder || "Select or Connect a Model"}
+            placeholder={
+              templateData?.placeholder || "Select or Connect a Model"
+            }
             providers={templateData?.providers}
             externalOptions={templateData?.external_options}
           />
