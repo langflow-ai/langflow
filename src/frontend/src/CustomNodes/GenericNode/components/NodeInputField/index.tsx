@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
-import { AssistantButton } from "@/components/common/assistantButtonComponent/assistantButton";
+import { AssistantButton } from "@/components/common/assistant";
 import type { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import {
@@ -202,6 +202,8 @@ export default function NodeInputField({
               <AssistantButton
                 compData={id}
                 handleOnNewValue={handleOnNewValue}
+                inputValue={data.node?.template[name]?.value}
+                type="field"
               />
             )}
           </div>

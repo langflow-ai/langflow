@@ -4,21 +4,27 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-export const useGetGeneratedPromptQuery: useQueryFunctionType<any, any> = (
-  { compId, flowId, fieldName },
+export const useGetAssistantPromptQuery: useQueryFunctionType<any, any> = (
+  { compId, flowId, fieldName, inputValue },
   options,
 ) => {
   const { query } = UseRequestProcessor();
 
-  const getGeneratedPromptFn = async (compId, flowId, fieldName) => {
+  const getGeneratedPromptFn = async (
+    compId,
+    flowId,
+    fieldName,
+    inputValue,
+  ) => {
     return await api.post<any>(
       getURL("RUN_SESSION", {
-        assistantFlowId: "SystemMessageGen",
+        assistantFlowId: "TemplateAssistant",
       }),
       {
-        input_value: "",
+        input_value: inputValue || "",
         input_type: "chat",
-        output_type: "text",
+        output_type: "chat",
+        stream: true,
       },
       {
         headers: {
@@ -31,12 +37,11 @@ export const useGetGeneratedPromptQuery: useQueryFunctionType<any, any> = (
   };
 
   const responseFn = async () => {
-    const data = await getGeneratedPromptFn(compId, flowId, fieldName);
-    return data;
+    return await getGeneratedPromptFn(compId, flowId, fieldName, inputValue);
   };
 
   const queryResult = query(
-    ["useGetGeneratedPromptQuery", { compId, flowId, fieldName }],
+    ["useGetAssistantPromptQuery", { compId, flowId, fieldName, inputValue }],
     responseFn,
     {
       enabled: false,

@@ -49,11 +49,15 @@ const useAssistantManagerStore = create<AssistantManagerStoreType>(
       });
     },
 
+    isFullscreen: false,
+    setFullscreen: (isFullscreen: boolean) => {
+      set({ isFullscreen });
+    },
     isLoading: false,
     setIsLoading: (isLoading: boolean) => set({ isLoading }),
-    AssistantSidebarOpen: false,
-    setAssistantSidebarOpen: (AssistantSidebarOpen: boolean) => {
-      set({ AssistantSidebarOpen });
+    assistantSidebarOpen: false,
+    setAssistantSidebarOpen: (assistantSidebarOpen: boolean) => {
+      set({ assistantSidebarOpen });
     },
     takeSnapshot: () => {
       const currentFlowId = get().currentFlowId;
@@ -133,6 +137,9 @@ const useAssistantManagerStore = create<AssistantManagerStoreType>(
       set({ newAssistantChat: newChat });
     },
     newAssistantChat: false,
+    selectedSession: undefined,
+    setSelectedSession: (sessionID: string) =>
+      set({ selectedSession: sessionID }),
 
     healthCheckMaxRetries: 5,
     setHealthCheckMaxRetries: (healthCheckMaxRetries: number) =>

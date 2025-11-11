@@ -1,1 +1,1 @@
-export * from "./use-get-generated-prompt";
+export * from "./use-get-assistant-prompt";

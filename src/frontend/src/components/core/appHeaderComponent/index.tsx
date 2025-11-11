@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import AlertDropdown from "@/alerts/alertDropDown";
 import DataStaxLogo from "@/assets/DataStaxLogo.svg?react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import { AssistantButton } from "@/components/common/assistant";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -89,6 +90,7 @@ export default function AppHeader(): JSX.Element {
         className={`relative left-3 z-30 flex shrink-0 items-center gap-3`}
         data-testid="header_right_section_wrapper"
       >
+        <AssistantButton type="header" />
         <>
           <Button
             unstyled

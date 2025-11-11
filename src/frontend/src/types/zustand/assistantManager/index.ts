@@ -17,12 +17,14 @@ export type AssistantManagerStoreType = {
   // Project context
 
   // UI state
+  isFullscreen: boolean;
+  setFullscreen: (isFullscreen: boolean) => void;
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;
   undo: () => void;
   redo: () => void;
   takeSnapshot: () => void;
-  AssistantSidebarOpen: boolean;
+  assistantSidebarOpen: boolean;
   setAssistantSidebarOpen: (AssistantSideBarOpen: boolean) => void;
 
   // Chat state
@@ -30,6 +32,8 @@ export type AssistantManagerStoreType = {
   setExamples: (examples: FlowType[]) => void;
   newAssistantChat: boolean;
   setNewAssistantChat: (newChat: boolean) => void;
+  selectedSession: string | undefined;
+  setSelectedSession: (sessionId: string) => void;
 
   // General use
   healthCheckMaxRetries: number;
