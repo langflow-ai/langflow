@@ -19,18 +19,20 @@ export default function TemplateContentComponent({
 }: TemplateContentProps) {
   const allExamples = useFlowsManagerStore((state) => state.examples);
 
-  const examples = allExamples
-    .filter((example) => {
-      if (!ENABLE_KNOWLEDGE_BASES && example.name?.includes("Knowledge")) {
-        return false;
-      }
-      return true;
-    })
-    .filter(
-      (example) =>
-        example.tags?.includes(currentTab ?? "") ||
-        currentTab === "all-templates",
-    );
+  const examples = useMemo(() => {
+    return allExamples
+      .filter((example) => {
+        if (!ENABLE_KNOWLEDGE_BASES && example.name?.includes("Knowledge")) {
+          return false;
+        }
+        return true;
+      })
+      .filter(
+        (example) =>
+          example.tags?.includes(currentTab ?? "") ||
+          currentTab === "all-templates",
+      );
+  }, [allExamples, currentTab]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredExamples, setFilteredExamples] = useState(examples);
