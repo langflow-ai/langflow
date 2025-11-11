@@ -222,9 +222,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             # Map api_base to "base_url" parameter for Ollama
             if "base_url" in param_mapping:
                 base_url_value = (
-                    self.api_base
-                    if hasattr(self, "api_base") and self.api_base
-                    else "http://localhost:11434"
+                    self.api_base if hasattr(self, "api_base") and self.api_base else "http://localhost:11434"
                 )
                 kwargs[param_mapping["base_url"]] = base_url_value
 
