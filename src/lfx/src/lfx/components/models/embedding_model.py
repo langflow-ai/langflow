@@ -220,7 +220,8 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
 
             elif field_value == "Ollama":
                 build_config["ollama_base_url"]["show"] = True
-                build_config["ollama_base_url"]["load_from_db"] = True
+                build_config["ollama_base_url"]["load_from_db"] = False
+                build_config["ollama_base_url"]["value"] = DEFAULT_OLLAMA_URL
 
                 if await is_valid_ollama_url(url=self.ollama_base_url):
                     try:
