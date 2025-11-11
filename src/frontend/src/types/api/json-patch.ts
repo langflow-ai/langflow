@@ -49,6 +49,11 @@ export interface JsonPatch {
  */
 export interface JsonPatchResponse {
   /**
+   * The ID of the patched flow
+   */
+  id: string;
+
+  /**
    * Whether the patch was successful
    */
   success: boolean;
@@ -67,6 +72,16 @@ export interface JsonPatchResponse {
    * Number of operations that were applied
    */
   operations_applied: number;
+
+  /**
+   * The folder ID of the flow (for refetching)
+   */
+  folder_id?: string;
+
+  /**
+   * The actual patched fields and their new values for client-side merging
+   */
+  patched_data: Record<string, any>;
 }
 
 // Made with Bob

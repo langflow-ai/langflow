@@ -1,5 +1,6 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { useMutationFunctionType } from "@/types/api";
+import type { JsonPatchResponse } from "@/types/api/json-patch";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -37,7 +38,7 @@ export const usePatchJsonPatchFlow: useMutationFunctionType<
   const PatchJsonPatchFlowFn = async ({
     id,
     operations,
-  }: IPatchJsonPatchFlow): Promise<any> => {
+  }: IPatchJsonPatchFlow): Promise<JsonPatchResponse> => {
     const response = await api.patch(`${getURL("FLOWS")}/${id}/json-patch`, {
       operations,
     });
@@ -46,7 +47,7 @@ export const usePatchJsonPatchFlow: useMutationFunctionType<
   };
 
   const mutation: UseMutationResult<
-    IPatchJsonPatchFlow,
+    JsonPatchResponse,
     any,
     IPatchJsonPatchFlow
   > = mutate(["usePatchJsonPatchFlow"], PatchJsonPatchFlowFn, {

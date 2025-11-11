@@ -111,6 +111,15 @@ async def test_json_patch_vs_traditional_patch_comparison(client: AsyncClient, f
     assert "/description" in response_data["updated_fields"]
     assert "/data" in response_data["updated_fields"]
 
+    # Verify patched_data contains the updated fields
+    assert "patched_data" in response_data
+    assert "name" in response_data["patched_data"]
+    assert response_data["patched_data"]["name"] == new_name
+    assert "description" in response_data["patched_data"]
+    assert response_data["patched_data"]["description"] == new_description
+    assert "data" in response_data["patched_data"]
+    assert response_data["patched_data"]["data"] == new_data
+
     # Verify the flow was actually updated by fetching it
     verify_response = await client.get(
         f"api/v1/flows/{flow.id}",
@@ -136,6 +145,9 @@ async def test_json_patch_null_value_clears_field(client: AsyncClient, flow, log
     assert response_data["success"] is True
     assert response_data["operations_applied"] == 1
     assert "/endpoint_name" in response_data["updated_fields"]
+    assert "patched_data" in response_data
+    assert "endpoint_name" in response_data["patched_data"]
+    assert response_data["patched_data"]["endpoint_name"] == "test-endpoint"
 
     # Verify the endpoint was set by fetching the flow
     verify_response = await client.get(
@@ -156,6 +168,9 @@ async def test_json_patch_null_value_clears_field(client: AsyncClient, flow, log
     assert response_data["success"] is True
     assert response_data["operations_applied"] == 1
     assert "/endpoint_name" in response_data["updated_fields"]
+    assert "patched_data" in response_data
+    assert "endpoint_name" in response_data["patched_data"]
+    assert response_data["patched_data"]["endpoint_name"] is None
 
     # Verify the endpoint was cleared by fetching the flow
     verify_response = await client.get(
@@ -204,6 +219,9 @@ async def test_json_patch_partial_update_efficiency(client: AsyncClient, flow, l
     assert response_data["success"] is True
     assert response_data["operations_applied"] == 1
     assert "/name" in response_data["updated_fields"]
+    assert "patched_data" in response_data
+    assert "name" in response_data["patched_data"]
+    assert response_data["patched_data"]["name"] == "Just Name Change"
 
     # Verify the name was updated by fetching the flow
     verify_response = await client.get(
@@ -230,3 +248,46 @@ async def test_json_patch_partial_update_efficiency(client: AsyncClient, flow, l
 
     # The savings should be significant for partial updates
     assert savings_percent > 50, f"Expected >50% savings for partial update, got {savings_percent:.1f}%"
+
+
+@pytest.mark.asyncio
+async def test_json_patch_remove_operation_returns_null(client: AsyncClient, flow, logged_in_headers):
+    """Test that remove operations return null in patched_data so frontend can delete the field."""
+    # First, set an endpoint name
+    response = await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json={"operations": [{"op": "replace", "path": "/endpoint_name", "value": "test-endpoint"}]},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 200
+
+    # Now remove it
+    response = await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json={"operations": [{"op": "remove", "path": "/endpoint_name"}]},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    response_data = response.json()
+    assert response_data["success"] is True
+    assert response_data["operations_applied"] == 1
+    assert "/endpoint_name" in response_data["updated_fields"]
+
+    # The key part: patched_data should contain endpoint_name: null
+    assert "patched_data" in response_data
+    assert "endpoint_name" in response_data["patched_data"]
+    assert response_data["patched_data"]["endpoint_name"] is None
+
+    # Verify the field was actually removed in the database
+    verify_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    assert verify_response.json()["endpoint_name"] is None
+
+    logger.info(
+        "\n✅ REMOVE OPERATION TEST PASSED:\n"
+        "   Verified that remove operations return null in patched_data\n"
+        "   This allows the frontend to properly remove fields from local state"
+    )

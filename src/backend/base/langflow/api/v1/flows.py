@@ -709,8 +709,30 @@ async def patch_flow(
 
         raise HTTPException(status_code=500, detail=str(e)) from e
     else:
-        # Create a lightweight response instead of returning the entire flow
+        # Extract patched fields from the updated flow for client-side merging
         updated_fields = [op.path for op in patch.operations]
+        patched_data = {}
+        flow_dict = db_flow.model_dump()
+
+        for op in patch.operations:
+            path = op.path
+            # Convert JSON Pointer path to dict key (e.g., "/name" -> "name")
+            path_parts = path.lstrip("/").split("/")
+
+            # For remove operations, explicitly set to None so frontend can delete it
+            if op.op == "remove":
+                patched_data[path_parts[0]] = None
+            else:
+                # For add/replace/etc, get the current value from the patched flow
+                try:
+                    value = flow_dict
+                    for part in path_parts:
+                        value = value[part]
+                    patched_data[path_parts[0]] = flow_dict[path_parts[0]]
+                except (KeyError, TypeError):
+                    # If path doesn't exist in flow, skip it
+                    continue
+
         return JsonPatchResponse(
             id=db_flow.id,
             success=True,
@@ -718,4 +740,5 @@ async def patch_flow(
             updated_fields=updated_fields,
             operations_applied=len(patch.operations),
             folder_id=db_flow.folder_id,
+            patched_data=patched_data,
         )

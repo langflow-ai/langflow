@@ -343,6 +343,9 @@ async def test_patch_flow_json_patch_success(client: AsyncClient, flow, logged_i
     assert response_data["success"] is True
     assert response_data["operations_applied"] == 1
     assert "/name" in response_data["updated_fields"]
+    assert "patched_data" in response_data
+    assert "name" in response_data["patched_data"]
+    assert response_data["patched_data"]["name"] == "Updated Flow Name"
 
 
 async def test_patch_flow_json_patch_not_found(client: AsyncClient, logged_in_headers):
@@ -405,6 +408,11 @@ async def test_patch_flow_json_patch_complex_operations(client: AsyncClient, flo
     assert response_data["operations_applied"] == 2
     assert "/name" in response_data["updated_fields"]
     assert "/description" in response_data["updated_fields"]
+    assert "patched_data" in response_data
+    assert "name" in response_data["patched_data"]
+    assert response_data["patched_data"]["name"] == "Complex Update"
+    assert "description" in response_data["patched_data"]
+    assert response_data["patched_data"]["description"] == "Updated description"
 
     # Verify the changes by fetching the flow
     verify_response = await client.get(
@@ -432,6 +440,9 @@ async def test_patch_flow_json_patch_data_field(client: AsyncClient, flow, logge
     assert response_data["success"] is True
     assert response_data["operations_applied"] == 1
     assert "/data" in response_data["updated_fields"]
+    assert "patched_data" in response_data
+    assert "data" in response_data["patched_data"]
+    assert response_data["patched_data"]["data"] == new_data
 
     # Verify the data was updated by fetching the flow
     verify_response = await client.get(
@@ -485,6 +496,9 @@ async def test_json_patch_endpoint_is_separate(client: AsyncClient, flow, logged
     assert response_data["success"] is True
     assert response_data["operations_applied"] == 1
     assert "/name" in response_data["updated_fields"]
+    assert "patched_data" in response_data
+    assert "name" in response_data["patched_data"]
+    assert response_data["patched_data"]["name"] == "JSON Patch Update"
 
     # Verify the name was updated by fetching the flow
     verify_response = await client.get(

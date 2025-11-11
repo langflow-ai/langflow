@@ -86,20 +86,28 @@ const useSaveFlow = () => {
                 operations,
               },
               {
-                onSuccess: (updatedFlow) => {
+                onSuccess: (patchResponse) => {
                   const flows = useFlowsManagerStore.getState().flows;
                   setSaveLoading(false);
                   if (flows) {
+                    // Merge the patched data into the current flow
+                    const mergedFlow = {
+                      ...flow!,
+                      ...patchResponse.patched_data,
+                      id: patchResponse.id,
+                      updated_at: patchResponse.updated_at,
+                    };
+
                     // updates flow in state
                     setFlows(
-                      flows.map((flow) => {
-                        if (flow.id === updatedFlow.id) {
-                          return updatedFlow;
+                      flows.map((f) => {
+                        if (f.id === patchResponse.id) {
+                          return mergedFlow;
                         }
-                        return flow;
+                        return f;
                       }),
                     );
-                    setCurrentFlow(updatedFlow);
+                    setCurrentFlow(mergedFlow);
                     resolve();
                   } else {
                     setErrorData({
