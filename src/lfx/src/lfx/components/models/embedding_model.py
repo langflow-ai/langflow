@@ -117,8 +117,8 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         model = self.model
         api_key = self.api_key
         api_base = self.api_base
-        ollama_base_url = self.ollama_base_url
         base_url_ibm_watsonx = self.base_url_ibm_watsonx
+        ollama_base_url = self.ollama_base_url
         dimensions = self.dimensions
         chunk_size = self.chunk_size
         request_timeout = self.request_timeout
@@ -152,7 +152,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                     msg = "Please install langchain-ollama: pip install langchain-ollama"
                     raise ImportError(msg) from None
 
-            transformed_base_url = transform_localhost_url(api_base)
+            transformed_base_url = transform_localhost_url(ollama_base_url)
 
             # Check if URL contains /v1 suffix (OpenAI-compatible mode)
             if transformed_base_url and transformed_base_url.rstrip("/").endswith("/v1"):

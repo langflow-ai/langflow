@@ -45,6 +45,10 @@ async def get_ollama_models(
 
     Args:
         base_url_value (str): The base URL of the Ollama API.
+        desired_capability (str): The desired capability of the model.
+        json_models_key (str): The key in the JSON response that contains the models.
+        json_name_key (str): The key in the JSON response that contains the model names.
+        json_capabilities_key (str): The key in the JSON response that contains the model capabilities.
 
     Returns:
         list[str]: A sorted list of model names that support completion.
