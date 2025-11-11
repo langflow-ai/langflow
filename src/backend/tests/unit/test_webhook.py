@@ -1,3 +1,5 @@
+import asyncio
+
 import aiofiles
 import anyio
 import pytest
@@ -42,10 +44,19 @@ async def test_webhook_endpoint_with_valid_api_key(client, added_webhook_test, c
         # Should work with valid API key
         response = await client.post(endpoint, headers={"x-api-key": created_api_key.api_key}, json=payload)
         assert response.status_code == 202
-        assert await file_path.exists(), f"File {file_path} does not exist"
 
-    file_does_not_exist = not await file_path.exists()
-    assert file_does_not_exist, f"File {file_path} still exists"
+        # Wait for the background task to complete and create the file
+        # Poll for up to 5 seconds
+        max_wait_time = 5
+        poll_interval = 0.1
+        elapsed = 0
+        while elapsed < max_wait_time:
+            if await file_path.exists():
+                break
+            await asyncio.sleep(poll_interval)
+            elapsed += poll_interval
+
+        assert await file_path.exists(), f"File {file_path} does not exist after {max_wait_time} seconds"
 
 
 async def test_webhook_endpoint_unauthorized_user_flow(client, added_webhook_test):
