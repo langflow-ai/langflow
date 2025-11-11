@@ -1,5 +1,6 @@
 import math
 
+
 def replace_none_and_null_with_empty_str(data: list[dict],required_fields: list[str] = []) -> list[dict]:
     """Replaces all None, 'null' (case-insensitive), and NaN/NaT float values with empty strings in a list of dicts.
     Additionally, turns "NaN", "Infinity", "-Infinity" strings (case-insensitive, extra whitespace) into None as not available.
