@@ -90,6 +90,11 @@ def _create_email_model(email) -> EmailPayload | None:
         logger.error(f"Email is not a valid non-zero length string: {email}.")
         return None
 
+    # Fast pre-validation to avoid expensive EmailPayload calls for obviously invalid emails
+    if "@" not in email or email.count("@") != 1 or email.endswith("@") or email.startswith("@"):
+        logger.error(f"Email is not a valid email address: {email}: missing or misplaced '@'.")
+        return None
+
     # Verify email address is syntactically valid
     email_model: EmailPayload | None = None
 
