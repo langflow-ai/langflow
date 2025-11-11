@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "langchain-core>=0.3.66",
+    "langchain-core>=1.0.0,<2.0.0",
     "pandas>=2.0.0",
     "pydantic>=2.0.0",
     "pillow>=10.0.0",
