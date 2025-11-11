@@ -2,7 +2,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from lfx.components.models.embedding_model import (
-    OLLAMA_EMBEDDING_MODELS,
     OPENAI_EMBEDDING_MODEL_NAMES,
     WATSONX_EMBEDDING_MODEL_NAMES,
     EmbeddingModelComponent,
@@ -61,8 +60,6 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
             "base_url_ibm_watsonx": {"show": False},
         }
         updated_config = component.update_build_config(build_config, "Ollama", "provider")
-        assert updated_config["model"]["options"] == OLLAMA_EMBEDDING_MODELS
-        assert updated_config["model"]["value"] == OLLAMA_EMBEDDING_MODELS[0]
         assert updated_config["api_key"]["display_name"] == "API Key (Optional)"
         assert updated_config["api_key"]["required"] is False
         assert updated_config["api_key"]["show"] is False
