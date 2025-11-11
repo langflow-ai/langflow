@@ -204,7 +204,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         }
 
         # Watson-specific parameters
-        if provider == "IBM WatsonX":
+        if provider == "IBM WatsonX" or provider == "IBM watsonx.ai":
             # Map base_url_ibm_watsonx to "url" parameter for watsonx
             if "url" in param_mapping:
                 url_value = (
@@ -216,6 +216,17 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             # Map project_id for watsonx
             if hasattr(self, "project_id") and self.project_id and "project_id" in param_mapping:
                 kwargs[param_mapping["project_id"]] = self.project_id
+
+        # Ollama-specific parameters
+        if provider == "Ollama":
+            # Map api_base to "base_url" parameter for Ollama
+            if "base_url" in param_mapping:
+                base_url_value = (
+                    self.api_base
+                    if hasattr(self, "api_base") and self.api_base
+                    else "http://localhost:11434"
+                )
+                kwargs[param_mapping["base_url"]] = base_url_value
 
         # Add optional parameters if they have values and are mapped
         for param_name, param_value in optional_params.items():

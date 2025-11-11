@@ -52,7 +52,6 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
     ):
         # Setup mock for get_api_key_for_provider
         mock_get_api_key.return_value = "test-key"
-
         # Setup mock
         mock_openai_class = MagicMock()
         mock_instance = MagicMock()

@@ -1,13 +1,24 @@
+from typing import Any
+
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.unified_models import (
     get_language_model_options,
     get_llm,
     update_model_options_in_build_config,
 )
+from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
-from lfx.inputs.inputs import BoolInput
+from lfx.inputs.inputs import BoolInput, DropdownInput, StrInput
 from lfx.io import MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput
+
+# Ollama API constants
+HTTP_STATUS_OK = 200
+JSON_MODELS_KEY = "models"
+JSON_NAME_KEY = "name"
+JSON_CAPABILITIES_KEY = "capabilities"
+DESIRED_CAPABILITY = "completion"
+DEFAULT_OLLAMA_URL = "http://localhost:11434"
 
 
 class LanguageModelComponent(LCModelComponent):
@@ -16,6 +27,7 @@ class LanguageModelComponent(LCModelComponent):
     documentation: str = "https://docs.langflow.org/components-models"
     icon = "brain-circuit"
     category = "models"
+    priority = 0  # Set priority to 0 to make it appear first
 
     inputs = [
         ModelInput(
@@ -25,14 +37,42 @@ class LanguageModelComponent(LCModelComponent):
             providers=[],  # Will be populated dynamically
             info="Select your model provider",
             real_time_refresh=True,
+            refresh_button=True,
             required=True,
         ),
         SecretStrInput(
             name="api_key",
             display_name="API Key",
             info="Model Provider API key",
+            required=False,
+            show=True,
             real_time_refresh=True,
             advanced=True,
+        ),
+        DropdownInput(
+            name="base_url_ibm_watsonx",
+            display_name="watsonx API Endpoint",
+            info="The base URL of the API (IBM watsonx.ai only)",
+            options=IBM_WATSONX_URLS,
+            value=IBM_WATSONX_URLS[0],
+            show=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="project_id",
+            display_name="watsonx Project ID",
+            info="The project ID associated with the foundation model (IBM watsonx.ai only)",
+            show=False,
+            required=False,
+        ),
+        MessageInput(
+            name="ollama_base_url",
+            display_name="Ollama API URL",
+            info=f"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}",
+            value=DEFAULT_OLLAMA_URL,
+            show=False,
+            real_time_refresh=True,
+            load_from_db=True,
         ),
         MessageInput(
             name="input_value",
