@@ -219,6 +219,21 @@ def get_lifespan(*, fix_migration=False, version=None):
                     f"Failed to acquire lock for starter projects: {e}. Starter projects may not be created or updated."
                 )
 
+            # Initialize agentic global variables early (before MCP server and flows)
+            if get_settings_service().settings.agentic_experience:
+                from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_global_variables
+
+                current_time = asyncio.get_event_loop().time()
+                await logger.ainfo("Initializing agentic global variables...")
+                try:
+                    async with session_scope() as session:
+                        await initialize_agentic_global_variables(session)
+                    await logger.adebug(
+                        f"Agentic global variables initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                    )
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Failed to initialize agentic global variables: {e}")
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Starting telemetry service")
             telemetry_service.start()
@@ -232,7 +247,7 @@ def get_lifespan(*, fix_migration=False, version=None):
                 f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s"
             )
 
-            # Auto-configure Agentic MCP server if enabled (before loading flows)
+            # Auto-configure Agentic MCP server if enabled (after variables are initialized)
             if get_settings_service().settings.agentic_experience:
                 from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
 

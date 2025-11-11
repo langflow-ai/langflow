@@ -1193,6 +1193,11 @@ async def initialize_auto_login_default_superuser() -> None:
     async with session_scope() as async_session:
         super_user = await create_super_user(db=async_session, username=username, password=password)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
+        # Initialize agentic variables if agentic experience is enabled
+        from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
+
+        if get_settings_service().settings.agentic_experience:
+            await initialize_agentic_user_variables(super_user.id, async_session)
         _ = await get_or_create_default_folder(async_session, super_user.id)
     await logger.adebug("Super user initialized")
 

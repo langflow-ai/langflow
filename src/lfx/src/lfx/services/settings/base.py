@@ -17,7 +17,7 @@ from typing_extensions import override
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.log.logger import logger
 from lfx.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
-from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
+from lfx.services.settings.constants import AGENTIC_VARIABLES, VARIABLES_TO_GET_FROM_ENVIRONMENT
 from lfx.utils.util_strings import is_valid_database_url
 
 
@@ -394,9 +394,19 @@ class Settings(BaseSettings):
     @field_validator("variables_to_get_from_environment", mode="before")
     @classmethod
     def set_variables_to_get_from_environment(cls, value):
+        import os
+
         if isinstance(value, str):
             value = value.split(",")
-        return list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
+
+        result = list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
+
+        # Add agentic variables if agentic_experience is enabled
+        # Check env var directly since we can't access instance attributes in validator
+        if os.getenv("LANGFLOW_AGENTIC_EXPERIENCE", "true").lower() == "true":
+            result.extend(AGENTIC_VARIABLES)
+
+        return list(set(result))
 
     @field_validator("log_file", mode="before")
     @classmethod
