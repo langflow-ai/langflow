@@ -5,7 +5,7 @@ from langchain_openai import OpenAIEmbeddings
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
-from lfx.base.models.watsonx_constants import WATSONX_EMBEDDING_MODEL_NAMES
+from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS, WATSONX_EMBEDDING_MODEL_NAMES
 from lfx.field_typing import Embeddings
 from lfx.io import (
     BoolInput,
@@ -37,6 +37,21 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             real_time_refresh=True,
             options_metadata=[{"icon": "OpenAI"}, {"icon": "Ollama"}, {"icon": "WatsonxAI"}],
         ),
+        MessageTextInput(
+            name="api_base",
+            display_name="API Base URL",
+            info="Base URL for the API. Leave empty for default.",
+            advanced=True,
+        ),
+        DropdownInput(
+            name="base_url_ibm_watsonx",
+            display_name="watsonx API Endpoint",
+            info="The base URL of the API (IBM watsonx.ai only)",
+            options=IBM_WATSONX_URLS,
+            value=IBM_WATSONX_URLS[0],
+            show=False,
+            real_time_refresh=True,
+        ),
         DropdownInput(
             name="model",
             display_name="Model Name",
@@ -51,12 +66,6 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             required=True,
             show=True,
             real_time_refresh=True,
-        ),
-        MessageTextInput(
-            name="api_base",
-            display_name="API Base URL",
-            info="Base URL for the API. Leave empty for default.",
-            advanced=True,
         ),
         # Watson-specific inputs
         MessageTextInput(
@@ -89,6 +98,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         model = self.model
         api_key = self.api_key
         api_base = self.api_base
+        base_url_ibm_watsonx = self.base_url_ibm_watsonx
         dimensions = self.dimensions
         chunk_size = self.chunk_size
         request_timeout = self.request_timeout
@@ -147,7 +157,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
 
             params = {
                 "model_id": model,
-                "url": api_base or "https://us-south.ml.cloud.ibm.com",
+                "url": base_url_ibm_watsonx or "https://us-south.ml.cloud.ibm.com",
                 "apikey": api_key,
             }
 
@@ -169,6 +179,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 build_config["api_base"]["display_name"] = "OpenAI API Base URL"
                 build_config["api_base"]["advanced"] = True
                 build_config["project_id"]["show"] = False
+                build_config["base_url_ibm_watsonx"]["show"] = False
 
             elif field_value == "Ollama":
                 build_config["model"]["options"] = OLLAMA_EMBEDDING_MODELS
@@ -178,8 +189,9 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 build_config["api_key"]["show"] = False
                 build_config["api_base"]["display_name"] = "Ollama Base URL"
                 build_config["api_base"]["value"] = "http://localhost:11434"
-                build_config["api_base"]["advanced"] = True
+                build_config["api_base"]["advanced"] = False
                 build_config["project_id"]["show"] = False
+                build_config["base_url_ibm_watsonx"]["show"] = False
 
             elif field_value == "IBM watsonx.ai":
                 build_config["model"]["options"] = WATSONX_EMBEDDING_MODEL_NAMES
@@ -187,9 +199,8 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 build_config["api_key"]["display_name"] = "IBM watsonx.ai API Key"
                 build_config["api_key"]["required"] = True
                 build_config["api_key"]["show"] = True
-                build_config["api_base"]["display_name"] = "IBM watsonx.ai URL"
-                build_config["api_base"]["value"] = "https://us-south.ml.cloud.ibm.com"
-                build_config["api_base"]["advanced"] = False
+                build_config["api_base"]["show"] = False
+                build_config["base_url_ibm_watsonx"]["show"] = True
                 build_config["project_id"]["show"] = True
 
         return build_config
