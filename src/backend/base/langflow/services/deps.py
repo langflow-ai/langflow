@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 
+from fastapi import HTTPException
 from lfx.log.logger import logger
 
 from langflow.services.schema import ServiceType
@@ -108,6 +110,17 @@ def get_variable_service() -> VariableService:
     return get_service(ServiceType.VARIABLE_SERVICE, VariableServiceFactory())
 
 
+def is_settings_service_initialized() -> bool:
+    """Check if the SettingsService is already initialized without triggering initialization.
+
+    Returns:
+        bool: True if the SettingsService is already initialized, False otherwise.
+    """
+    from lfx.services.manager import get_service_manager
+
+    return ServiceType.SETTINGS_SERVICE in get_service_manager().services
+
+
 def get_settings_service() -> SettingsService:
     """Retrieves the SettingsService instance.
 
@@ -168,8 +181,20 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
             yield session
             await session.commit()
         except Exception as e:
-            await logger.aexception("An error occurred during the session scope.", exception=e)
             await session.rollback()
+
+            # Log at appropriate level based on error type
+            if isinstance(e, HTTPException):
+                if HTTPStatus.BAD_REQUEST.value <= e.status_code < HTTPStatus.INTERNAL_SERVER_ERROR.value:
+                    # Client errors (4xx) - log at info level
+                    await logger.ainfo(f"Client error during session scope: {e.status_code}: {e.detail}")
+                else:
+                    # Server errors (5xx) or other - log at error level
+                    await logger.aexception("An error occurred during the session scope.", exception=e)
+            else:
+                # Non-HTTP exceptions - log at error level
+                await logger.aexception("An error occurred during the session scope.", exception=e)
+
             raise
 
 

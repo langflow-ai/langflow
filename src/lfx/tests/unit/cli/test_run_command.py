@@ -8,7 +8,6 @@ from unittest.mock import patch
 
 import pytest
 import typer
-
 from lfx.cli.run import run
 
 
