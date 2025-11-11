@@ -1,5 +1,3 @@
-from typing import Any
-
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.unified_models import (
     get_language_model_options,
