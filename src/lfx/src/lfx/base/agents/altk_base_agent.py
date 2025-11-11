@@ -8,8 +8,7 @@ from __future__ import annotations
 
 import uuid
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from altk.core.llm import get_llm
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
@@ -29,34 +28,39 @@ from lfx.log.logger import logger
 from lfx.memory import delete_message
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data
-from lfx.schema.log import SendMessageFunctionType
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from lfx.schema.log import SendMessageFunctionType
+
 from lfx.schema.message import Message
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 
 def normalize_message_content(message: BaseMessage) -> str:
     """Normalize message content to handle inconsistent formats from Data.to_lc_message().
-    
+
     Args:
         message: A BaseMessage that may have content as either:
-                - str (for AI messages)  
+                - str (for AI messages)
                 - list[dict] (for User messages in format [{"type": "text", "text": "..."}])
-                
+
     Returns:
         str: The extracted text content
-        
+
     Note:
         This addresses the inconsistency in lfx.schema.data.Data.to_lc_message() where:
         - User messages: content = [{"type": "text", "text": text}] (list format)
         - AI messages: content = text (string format)
     """
     content = message.content
-    
+
     # Handle string format (AI messages)
     if isinstance(content, str):
         return content
-    
-    # Handle list format (User messages) 
+
+    # Handle list format (User messages)
     if isinstance(content, list) and len(content) > 0:
         # Extract text from first content block that has 'text' field
         for item in content:
@@ -64,11 +68,11 @@ def normalize_message_content(message: BaseMessage) -> str:
                 return item["text"]
         # If no text found, return empty string (e.g., image-only messages)
         return ""
-    
+
     # Handle empty list or other formats
     if isinstance(content, list):
         return ""
-        
+
     # Fallback for any other format
     return str(content)
 
@@ -106,9 +110,7 @@ class ALTKBaseTool(BaseTool):
     name: str = Field(...)
     description: str = Field(...)
     wrapped_tool: BaseTool = Field(...)
-    agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor = (
-        Field(...)
-    )
+    agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor = Field(...)
 
     def _execute_tool(self, *args, **kwargs) -> str:
         """Execute the wrapped tool with compatibility across LC versions."""
@@ -126,15 +128,13 @@ class ALTKBaseTool(BaseTool):
                 return self.wrapped_tool.run(*args, **kwargs)
             raise
 
-    def _get_altk_llm_object(self, use_output_val: bool = True) -> Any:
+    def _get_altk_llm_object(self, *, use_output_val: bool = True) -> Any:
         """Extract the underlying LLM and map it to an ALTK client object."""
         llm_object: BaseChatModel | None = None
         steps = getattr(self.agent, "steps", None)
         if steps:
             for step in steps:
-                if isinstance(step, RunnableBinding) and isinstance(
-                    step.bound, BaseChatModel
-                ):
+                if isinstance(step, RunnableBinding) and isinstance(step.bound, BaseChatModel):
                     llm_object = step.bound
                     break
 
@@ -147,15 +147,11 @@ class ALTKBaseTool(BaseTool):
         elif isinstance(llm_object, ChatOpenAI):
             model_name = llm_object.model_name
             api_key = llm_object.openai_api_key.get_secret_value()
-            llm_client_type = (
-                "openai.sync.output_val" if use_output_val else "openai.sync"
-            )
+            llm_client_type = "openai.sync.output_val" if use_output_val else "openai.sync"
             llm_client = get_llm(llm_client_type)
             llm_client_obj = llm_client(model=model_name, api_key=api_key)
         else:
-            logger.info(
-                "ALTK currently only supports OpenAI and Anthropic models through Langflow."
-            )
+            logger.info("ALTK currently only supports OpenAI and Anthropic models through Langflow.")
             llm_client_obj = None
 
         return llm_client_obj
@@ -213,7 +209,7 @@ class ALTKBaseAgentComponent(AgentComponent):
     def build_conversation_context(self) -> list[BaseMessage]:
         """Create conversation context from input and chat history."""
         context: list[BaseMessage] = []
-        
+
         # Add chat history to maintain chronological order
         if hasattr(self, "chat_history") and self.chat_history:
             if isinstance(self.chat_history, Data):
@@ -226,14 +222,16 @@ class ALTKBaseAgentComponent(AgentComponent):
                     try:
                         context.extend(data_to_messages(self.chat_history))
                     except (AttributeError, TypeError) as e:
-                        raise ValueError(f"Invalid chat_history list contents: {e}")
+                        error_message = f"Invalid chat_history list contents: {e}"
+                        raise ValueError(error_message) from e
             else:
                 # Reject all other types (strings, numbers, etc.)
-                raise ValueError(
-                    f"chat_history must be a Data object, list of Data/Message objects, or None. "
-                    f"Got: {type(self.chat_history).__name__}"
+                type_name = type(self.chat_history).__name__
+                error_message = (
+                    f"chat_history must be a Data object, list of Data/Message objects, or None. Got: {type_name}"
                 )
-        
+                raise ValueError(error_message)
+
         # Then add current input to maintain chronological order
         if hasattr(self, "input_value") and self.input_value:
             if isinstance(self.input_value, Message):
@@ -244,9 +242,7 @@ class ALTKBaseAgentComponent(AgentComponent):
         return context
 
     def get_user_query(self) -> str:
-        if hasattr(self.input_value, "get_text") and callable(
-            getattr(self.input_value, "get_text")
-        ):
+        if hasattr(self.input_value, "get_text") and callable(self.input_value.get_text):
             return self.input_value.get_text()
         return str(self.input_value)
 
@@ -259,7 +255,7 @@ class ALTKBaseAgentComponent(AgentComponent):
         self, agent: AgentExecutor, runnable: AgentExecutor, tools: Sequence[BaseTool]
     ) -> AgentExecutor:
         """Update the runnable instance with processed tools.
-        
+
         Subclasses can override this method to customize tool processing.
         The default implementation applies the tool wrapper pipeline.
         """
@@ -285,9 +281,7 @@ class ALTKBaseAgentComponent(AgentComponent):
             runnable = agent
         else:
             # note the tools are not required to run the agent, hence the validation removed.
-            handle_parsing_errors = (
-                hasattr(self, "handle_parsing_errors") and self.handle_parsing_errors
-            )
+            handle_parsing_errors = hasattr(self, "handle_parsing_errors") and self.handle_parsing_errors
             verbose = hasattr(self, "verbose") and self.verbose
             max_iterations = hasattr(self, "max_iterations") and self.max_iterations
             runnable = AgentExecutor.from_agent_and_tools(
@@ -300,15 +294,9 @@ class ALTKBaseAgentComponent(AgentComponent):
         runnable = self.update_runnable_instance(agent, runnable, self.tools)
 
         # Convert input_value to proper format for agent
-        if hasattr(self.input_value, "to_lc_message") and callable(
-            self.input_value.to_lc_message
-        ):
+        if hasattr(self.input_value, "to_lc_message") and callable(self.input_value.to_lc_message):
             lc_message = self.input_value.to_lc_message()
-            input_text = (
-                lc_message.content
-                if hasattr(lc_message, "content")
-                else str(lc_message)
-            )
+            input_text = lc_message.content if hasattr(lc_message, "content") else str(lc_message)
         else:
             lc_message = None
             input_text = self.input_value
@@ -324,35 +312,22 @@ class ALTKBaseAgentComponent(AgentComponent):
             ):
                 input_dict["chat_history"] = data_to_messages(self.chat_history)
             # Handle both lfx.schema.message.Message and langflow.schema.message.Message types
-            if all(
-                hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data
-                for m in self.chat_history
-            ):
+            if all(hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data for m in self.chat_history):
                 input_dict["chat_history"] = data_to_messages(self.chat_history)
             if all(isinstance(m, Message) for m in self.chat_history):
-                input_dict["chat_history"] = data_to_messages(
-                    [m.to_data() for m in self.chat_history]
-                )
+                input_dict["chat_history"] = data_to_messages([m.to_data() for m in self.chat_history])
         if hasattr(lc_message, "content") and isinstance(lc_message.content, list):
             # ! Because the input has to be a string, we must pass the images in the chat_history
 
-            image_dicts = [
-                item for item in lc_message.content if item.get("type") == "image"
-            ]
-            lc_message.content = [
-                item for item in lc_message.content if item.get("type") != "image"
-            ]
+            image_dicts = [item for item in lc_message.content if item.get("type") == "image"]
+            lc_message.content = [item for item in lc_message.content if item.get("type") != "image"]
 
             if "chat_history" not in input_dict:
                 input_dict["chat_history"] = []
             if isinstance(input_dict["chat_history"], list):
-                input_dict["chat_history"].extend(
-                    HumanMessage(content=[image_dict]) for image_dict in image_dicts
-                )
+                input_dict["chat_history"].extend(HumanMessage(content=[image_dict]) for image_dict in image_dicts)
             else:
-                input_dict["chat_history"] = [
-                    HumanMessage(content=[image_dict]) for image_dict in image_dicts
-                ]
+                input_dict["chat_history"] = [HumanMessage(content=[image_dict]) for image_dict in image_dicts]
         input_dict["input"] = input_text
         if hasattr(self, "graph"):
             session_id = self.graph.session_id

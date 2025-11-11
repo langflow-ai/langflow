@@ -1,23 +1,106 @@
 import ast
 import json
 import uuid
-from altk.core.toolkit import AgentPhase, ComponentConfig
-from altk.post_tool.code_generation.code_generation import CodeGenerationComponent, CodeGenerationComponentConfig
-from altk.post_tool.core.toolkit import CodeGenerationRunInput
 from typing import Any
+
+from altk.core.toolkit import AgentPhase, ComponentConfig
+from altk.post_tool.code_generation.code_generation import (
+    CodeGenerationComponent,
+    CodeGenerationComponentConfig,
+)
+from altk.post_tool.core.toolkit import CodeGenerationRunInput
 from altk.pre_tool.core import SPARCExecutionMode, SPARCReflectionRunInput, Track
 from altk.pre_tool.sparc import SPARCReflectionComponent
 from langchain_core.messages import BaseMessage
 from langchain_core.messages.base import message_to_dict
 from langchain_core.tools import BaseTool
-from lfx.components.agents.altk_base_agent import ALTKBaseTool, BaseToolWrapper
+from pydantic import Field
+
+from lfx.base.agents.altk_base_agent import ALTKBaseTool, BaseToolWrapper
 from lfx.log.logger import logger
 from lfx.schema.data import Data
-from pydantic import Field
+
+# Maximum wrapper nesting depth to prevent infinite loops
+_MAX_WRAPPER_DEPTH = 10
+
+
+def _convert_pydantic_type_to_json_schema_type(param_info: dict) -> dict:
+    """Convert Pydantic parameter info to OpenAI function calling JSON schema format.
+
+    SPARC expects tools to be in OpenAI's function calling format, which uses
+    JSON Schema for parameter specifications.
+
+    Args:
+        param_info: Parameter info from LangChain tool.args
+
+    Returns:
+        Dict with 'type' and optionally other JSON schema properties compatible
+        with OpenAI function calling format
+    """
+    # Handle simple types first
+    if "type" in param_info:
+        schema_type = param_info["type"]
+
+        # Direct type mappings
+        if schema_type in ("string", "number", "integer", "boolean", "null", "object"):
+            return {
+                "type": schema_type,
+                "description": param_info.get("description", ""),
+            }
+
+        # Array type
+        if schema_type == "array":
+            result = {"type": "array", "description": param_info.get("description", "")}
+            # Add items schema if available
+            if "items" in param_info:
+                items_schema = _convert_pydantic_type_to_json_schema_type(param_info["items"])
+                result["items"] = items_schema
+            return result
+
+    # Handle complex types with anyOf (unions like list[str] | None)
+    if "anyOf" in param_info:
+        # Find the most specific non-null type
+        for variant in param_info["anyOf"]:
+            if variant.get("type") == "null":
+                continue  # Skip null variants
+
+            # Process the non-null variant
+            converted = _convert_pydantic_type_to_json_schema_type(variant)
+            converted["description"] = param_info.get("description", "")
+
+            # If it has a default value, it's optional
+            if "default" in param_info:
+                converted["default"] = param_info["default"]
+
+            return converted
+
+    # Handle oneOf (similar to anyOf)
+    if "oneOf" in param_info:
+        # Take the first non-null option
+        for variant in param_info["oneOf"]:
+            if variant.get("type") != "null":
+                converted = _convert_pydantic_type_to_json_schema_type(variant)
+                converted["description"] = param_info.get("description", "")
+                return converted
+
+    # Handle allOf (intersection types)
+    if param_info.get("allOf"):
+        # For now, take the first schema
+        converted = _convert_pydantic_type_to_json_schema_type(param_info["allOf"][0])
+        converted["description"] = param_info.get("description", "")
+        return converted
+
+    # Fallback: try to infer from title or default to string
+    logger.debug(f"Could not determine type for param_info: {param_info}")
+    return {
+        "type": "string",  # Safe fallback
+        "description": param_info.get("description", ""),
+    }
 
 
 class ValidatedTool(ALTKBaseTool):
     """A wrapper tool that validates calls before execution using SPARC reflection.
+
     Falls back to simple validation if SPARC is not available.
     """
 
@@ -58,7 +141,6 @@ class ValidatedTool(ALTKBaseTool):
         )
         return self._validate_and_run(*args, **kwargs)
 
-
     def _validate_and_run(self, *args, **kwargs) -> str:
         """Validate the tool call using SPARC and execute if valid."""
         # Check if validation should be bypassed
@@ -80,14 +162,13 @@ class ValidatedTool(ALTKBaseTool):
             and self.conversation_context
             and isinstance(self.conversation_context[0], BaseMessage)
         ):
-            logger.debug(
-                "Converting BaseMessages to list of dictionaries for conversation context of SPARC"
-            )
-            self.conversation_context = [
-                message_to_dict(msg) for msg in self.conversation_context
-            ]
+            logger.debug("Converting BaseMessages to list of dictionaries for conversation context of SPARC")
+            self.conversation_context = [message_to_dict(msg) for msg in self.conversation_context]
 
-        logger.debug(f"Converted conversation context for SPARC for tool call:\n{json.dumps(tool_call, indent=2)}\n{self.conversation_context=}")
+        logger.debug(
+            f"Converted conversation context for SPARC for tool call:\n"
+            f"{json.dumps(tool_call, indent=2)}\n{self.conversation_context=}"
+        )
 
         try:
             # Run SPARC validation
@@ -107,9 +188,7 @@ class ValidatedTool(ALTKBaseTool):
 
             # Check for missing tool specs and bypass if necessary
             if not self.tool_specs:
-                logger.warning(
-                    f"No tool specs available for SPARC validation of {self.name}, executing directly"
-                )
+                logger.warning(f"No tool specs available for SPARC validation of {self.name}, executing directly")
                 return self._execute_tool(*args, **kwargs)
 
             result = self.sparc_component.process(run_input, phase=AgentPhase.RUNTIME)
@@ -119,10 +198,9 @@ class ValidatedTool(ALTKBaseTool):
                 logger.info(f"✅ SPARC approved tool call for {self.name}")
                 return self._execute_tool(*args, **kwargs)
             logger.info(f"❌ SPARC rejected tool call for {self.name}")
-            error_msg = self._format_sparc_rejection(result.output.reflection_result)
-            return error_msg
+            return self._format_sparc_rejection(result.output.reflection_result)
 
-        except Exception as e:
+        except (AttributeError, TypeError, ValueError, RuntimeError) as e:
             logger.error(f"Error during SPARC validation: {e}")
             # Execute directly on error
             return self._execute_tool(*args, **kwargs)
@@ -141,7 +219,7 @@ class ValidatedTool(ALTKBaseTool):
                     for i, arg in enumerate(args):
                         if i < len(field_names):
                             clean_kwargs[field_names[i]] = arg
-            except Exception:
+            except (AttributeError, KeyError, TypeError):
                 # If schema parsing fails, just use kwargs
                 pass
 
@@ -161,17 +239,11 @@ class ValidatedTool(ALTKBaseTool):
                     correction_data = issue.correction
                     if isinstance(correction_data, dict):
                         if "corrected_function_name" in correction_data:
-                            error_parts.append(
-                                f"  💡 Suggested function: {correction_data['corrected_function_name']}"
-                            )
+                            error_parts.append(f"  💡 Suggested function: {correction_data['corrected_function_name']}")
                         elif "tool_call" in correction_data:
-                            suggested_args = correction_data["tool_call"].get(
-                                "arguments", {}
-                            )
-                            error_parts.append(
-                                f"  💡 Suggested parameters: {suggested_args}"
-                            )
-                except Exception:
+                            suggested_args = correction_data["tool_call"].get("arguments", {})
+                            error_parts.append(f"  💡 Suggested parameters: {suggested_args}")
+                except (AttributeError, KeyError, TypeError):
                     # If correction parsing fails, skip it
                     pass
 
@@ -208,9 +280,7 @@ class PreToolValidationWrapper(BaseToolWrapper):
             tool.tool_specs = self.tool_specs
             if "conversation_context" in kwargs:
                 tool.update_context(kwargs["conversation_context"])
-            logger.debug(
-                f"Updated existing ValidatedTool {tool.name} with {len(self.tool_specs)} tool specs"
-            )
+            logger.debug(f"Updated existing ValidatedTool {tool.name} with {len(self.tool_specs)} tool specs")
             return tool
 
         agent = kwargs.get("agent")
@@ -220,20 +290,42 @@ class PreToolValidationWrapper(BaseToolWrapper):
             return tool
 
         # Wrap with validation
-        validated_tool = ValidatedTool(
+        return ValidatedTool(
             wrapped_tool=tool,
             agent=agent,
             tool_specs=self.tool_specs,
             conversation_context=kwargs.get("conversation_context", []),
         )
 
-        return validated_tool
-
     @staticmethod
     def convert_langchain_tools_to_sparc_tool_specs_format(
         tools: list[BaseTool],
     ) -> list[dict]:
-        """Convert LangChain tools to SPARC tool specifications."""
+        """Convert LangChain tools to OpenAI function calling format for SPARC validation.
+
+        SPARC expects tools in OpenAI's function calling format, which is the standard
+        format used by OpenAI, Anthropic, Google, and other LLM providers for tool integration.
+
+        Args:
+            tools: List of LangChain BaseTool instances to convert
+
+        Returns:
+            List of tool specifications in OpenAI function calling format:
+            [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "tool_name",
+                        "description": "Tool description",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {...},
+                            "required": [...]
+                        }
+                    }
+                }
+            ]
+        """
         tool_specs = []
 
         for i, tool in enumerate(tools):
@@ -243,12 +335,10 @@ class PreToolValidationWrapper(BaseToolWrapper):
                 wrapper_count = 0
 
                 # Unwrap to get to the actual tool
-                while hasattr(unwrapped_tool, "wrapped_tool") and not isinstance(
-                    unwrapped_tool, ValidatedTool
-                ):
+                while hasattr(unwrapped_tool, "wrapped_tool") and not isinstance(unwrapped_tool, ValidatedTool):
                     unwrapped_tool = unwrapped_tool.wrapped_tool
                     wrapper_count += 1
-                    if wrapper_count > 10:  # Prevent infinite loops
+                    if wrapper_count > _MAX_WRAPPER_DEPTH:  # Prevent infinite loops
                         break
 
                 # Build tool spec from LangChain tool
@@ -256,8 +346,7 @@ class PreToolValidationWrapper(BaseToolWrapper):
                     "type": "function",
                     "function": {
                         "name": unwrapped_tool.name,
-                        "description": unwrapped_tool.description
-                        or f"Tool: {unwrapped_tool.name}",
+                        "description": unwrapped_tool.description or f"Tool: {unwrapped_tool.name}",
                         "parameters": {
                             "type": "object",
                             "properties": {},
@@ -270,33 +359,24 @@ class PreToolValidationWrapper(BaseToolWrapper):
                 args_dict = unwrapped_tool.args
                 if isinstance(args_dict, dict):
                     for param_name, param_info in args_dict.items():
-                        logger.debug("Field name:", param_name)
-                        logger.debug("Field info:", param_info)
-                        param_spec = {
-                            "type": param_info.get("type", "string"),
-                            "description": param_info.get("description", ""),
-                        }
+                        logger.debug(f"Processing parameter: {param_name}")
+                        logger.debug(f"Parameter info: {param_info}")
 
-                        if unwrapped_tool.args_schema and hasattr(
-                            unwrapped_tool.args_schema, "model_fields"
-                        ):
-                            field_info = unwrapped_tool.args_schema.model_fields.get(
-                                param_name
-                            )
-                            if field_info.is_required():
-                                tool_spec["function"]["parameters"]["required"].append(
-                                    param_name
-                                )
-                        tool_spec["function"]["parameters"]["properties"][
-                            param_name
-                        ] = param_spec
+                        # Use the new conversion function
+                        param_spec = _convert_pydantic_type_to_json_schema_type(param_info)
+
+                        # Check if parameter is required using Pydantic model fields
+                        if unwrapped_tool.args_schema and hasattr(unwrapped_tool.args_schema, "model_fields"):
+                            field_info = unwrapped_tool.args_schema.model_fields.get(param_name)
+                            if field_info and field_info.is_required():
+                                tool_spec["function"]["parameters"]["required"].append(param_name)
+
+                        tool_spec["function"]["parameters"]["properties"][param_name] = param_spec
 
                 tool_specs.append(tool_spec)
 
-            except Exception as e:
-                logger.warning(
-                    f"Could not convert tool {getattr(tool, 'name', 'unknown')} to spec: {e}"
-                )
+            except (AttributeError, KeyError, TypeError, ValueError) as e:
+                logger.warning(f"Could not convert tool {getattr(tool, 'name', 'unknown')} to spec: {e}")
                 # Create minimal spec
                 minimal_spec = {
                     "type": "function",
@@ -317,9 +397,7 @@ class PreToolValidationWrapper(BaseToolWrapper):
                 tool_specs.append(minimal_spec)
 
         if not tool_specs:
-            logger.error(
-                "⚠️ No tool specs were generated! This will cause SPARC validation to fail"
-            )
+            logger.error("⚠️ No tool specs were generated! This will cause SPARC validation to fail")
         return tool_specs
 
 
@@ -359,7 +437,7 @@ class PostToolProcessor(ALTKBaseTool):
         try:
             # Run postprocessing and return the output
             return self.process_tool_response(result)
-        except Exception as e:
+        except (AttributeError, TypeError, ValueError, RuntimeError) as e:
             # If post-processing fails, log the error and return the original result
             logger.error(f"Error in post-processing tool response: {e}")
             return result
@@ -370,9 +448,7 @@ class PostToolProcessor(ALTKBaseTool):
             tool_response_str = tool_response
         elif isinstance(tool_response, Data):
             tool_response_str = str(tool_response.data)
-        elif isinstance(tool_response, list) and all(
-            isinstance(item, Data) for item in tool_response
-        ):
+        elif isinstance(tool_response, list) and all(isinstance(item, Data) for item in tool_response):
             # get only the first element, not 100% sure if it should be the first or the last
             tool_response_str = str(tool_response[0].data)
         elif isinstance(tool_response, (dict, list)):
@@ -389,16 +465,12 @@ class PostToolProcessor(ALTKBaseTool):
 
         # First check if this looks like an error message with bullet points (SPARC rejection)
         if "❌" in tool_response_str or "•" in tool_response_str:
-            logger.info(
-                "Detected error message with special characters, skipping JSON parsing"
-            )
+            logger.info("Detected error message with special characters, skipping JSON parsing")
             return tool_response_str
 
         try:
             # Only attempt to parse content that looks like JSON
-            if (
-                tool_response_str.startswith("{") and tool_response_str.endswith("}")
-            ) or (
+            if (tool_response_str.startswith("{") and tool_response_str.endswith("}")) or (
                 tool_response_str.startswith("[") and tool_response_str.endswith("]")
             ):
                 tool_response_json = ast.literal_eval(tool_response_str)
@@ -412,15 +484,10 @@ class PostToolProcessor(ALTKBaseTool):
             )
             tool_response_json = None
 
-        if (
-            tool_response_json is not None
-            and len(str(tool_response_json)) > self.response_processing_size_threshold
-        ):
+        if tool_response_json is not None and len(str(tool_response_json)) > self.response_processing_size_threshold:
             llm_client_obj = self._get_altk_llm_object(use_output_val=False)
             if llm_client_obj is not None:
-                config = CodeGenerationComponentConfig(
-                    llm_client=llm_client_obj, use_docker_sandbox=False
-                )
+                config = CodeGenerationComponentConfig(llm_client=llm_client_obj, use_docker_sandbox=False)
 
                 middleware = CodeGenerationComponent(config=config)
                 input_data = CodeGenerationRunInput(
@@ -431,7 +498,7 @@ class PostToolProcessor(ALTKBaseTool):
                 output = None
                 try:
                     output = middleware.process(input_data, AgentPhase.RUNTIME)
-                except Exception as e:  # noqa: BLE001
+                except (AttributeError, TypeError, ValueError, RuntimeError) as e:
                     logger.error(f"Exception in executing CodeGenerationComponent: {e}")
                 if output is not None and hasattr(output, "result"):
                     logger.info(f"Output of CodeGenerationComponent: {output.result}")
