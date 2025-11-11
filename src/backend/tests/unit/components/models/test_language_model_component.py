@@ -88,7 +88,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
             "project_id": {"show": False},
             "ollama_base_url": {"show": False},
         }
-        updated_config = component.update_build_config(build_config, "Anthropic", "provider")
+        updated_config = await component.update_build_config(build_config, "Anthropic", "provider")
         assert updated_config["model_name"]["options"] == ANTHROPIC_MODELS
         assert updated_config["model_name"]["value"] == ANTHROPIC_MODELS[0]
         assert updated_config["api_key"]["display_name"] == "Anthropic API Key"
@@ -106,7 +106,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
             "project_id": {"show": False},
             "ollama_base_url": {"show": False},
         }
-        updated_config = component.update_build_config(build_config, "Google", "provider")
+        updated_config = await component.update_build_config(build_config, "Google", "provider")
         assert updated_config["model_name"]["options"] == GOOGLE_GENERATIVE_AI_MODELS
         assert updated_config["model_name"]["value"] == GOOGLE_GENERATIVE_AI_MODELS[0]
         assert updated_config["api_key"]["display_name"] == "Google API Key"
@@ -124,7 +124,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
             "project_id": {"show": False},
             "ollama_base_url": {"show": False},
         }
-        updated_config = component.update_build_config(build_config, "IBM watsonx.ai", "provider")
+        updated_config = await component.update_build_config(build_config, "IBM watsonx.ai", "provider")
         assert updated_config["model_name"]["options"] == IBM_WATSONX_DEFAULT_MODELS
         assert updated_config["model_name"]["value"] == IBM_WATSONX_DEFAULT_MODELS[0]
         assert updated_config["api_key"]["display_name"] == "IBM API Key"
@@ -146,7 +146,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
             "project_id": {"show": False},
             "ollama_base_url": {"show": False, "value": "http://localhost:11434"},
         }
-        updated_config = component.update_build_config(build_config, "Ollama", "provider")
+        updated_config = await component.update_build_config(build_config, "Ollama", "provider")
         assert updated_config["model_name"]["options"] == ["llama2", "mistral", "codellama"]
         assert updated_config["model_name"]["value"] == "llama2"
         assert updated_config["api_key"]["show"] is False
