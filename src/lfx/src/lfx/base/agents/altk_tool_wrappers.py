@@ -192,6 +192,7 @@ class ValidatedTool(ALTKBaseTool):
                 return self._execute_tool(*args, **kwargs)
 
             result = self.sparc_component.process(run_input, phase=AgentPhase.RUNTIME)
+            logger.debug(f"SPARC validation result for tool {self.name}: {result.output.reflection_result}")
 
             # Check validation result
             if result.output.reflection_result.decision.name == "APPROVE":

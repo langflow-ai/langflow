@@ -1,7 +1,10 @@
 """ALTK Agent Component that combines pre-tool validation and post-tool processing capabilities."""
 
 from lfx.base.agents.altk_base_agent import ALTKBaseAgentComponent
-from lfx.base.agents.altk_tool_wrappers import PostToolProcessingWrapper, PreToolValidationWrapper
+from lfx.base.agents.altk_tool_wrappers import (
+    PostToolProcessingWrapper,
+    PreToolValidationWrapper,
+)
 from lfx.base.models.model_input_constants import MODEL_PROVIDERS_DICT, MODELS_METADATA
 from lfx.components.helpers.memory import MemoryComponent
 from lfx.inputs.inputs import BoolInput
@@ -116,13 +119,28 @@ class ALTKAgentComponent(ALTKBaseAgentComponent):
 
     def update_runnable_instance(self, agent, runnable, tools):
         """Override to add tool specs update for validation wrappers."""
-        # Update tool specs for validation wrappers
+        # Get context info (copied from parent)
+        user_query = self.get_user_query()
+        conversation_context = self.build_conversation_context()
+
+        # Initialize pipeline (this ensures configure_tool_pipeline is called)
+        self._initialize_tool_pipeline()
+
+        # Update tool specs for validation wrappers BEFORE processing
         for wrapper in self.pipeline_manager.wrappers:
             if isinstance(wrapper, PreToolValidationWrapper) and tools:
                 wrapper.tool_specs = wrapper.convert_langchain_tools_to_sparc_tool_specs_format(tools)
-                logger.info(f"Updated tool specs for validation: {len(wrapper.tool_specs)} tools")
 
-        return super().update_runnable_instance(agent, runnable, tools)
+        # Process tools with updated specs
+        processed_tools = self.pipeline_manager.process_tools(
+            list(tools or []),
+            agent=agent,
+            user_query=user_query,
+            conversation_context=conversation_context,
+        )
+
+        runnable.tools = processed_tools
+        return runnable
 
     def __init__(self, **kwargs):
         """Initialize ALTK agent with input normalization for Data.to_lc_message() inconsistencies."""
@@ -152,7 +170,9 @@ class ALTKAgentComponent(ALTKBaseAgentComponent):
                 if hasattr(original_msg, "content") and isinstance(original_msg.content, list):
                     from langchain_core.messages import AIMessage, HumanMessage
 
-                    from lfx.base.agents.altk_base_agent import normalize_message_content
+                    from lfx.base.agents.altk_base_agent import (
+                        normalize_message_content,
+                    )
 
                     normalized_content = normalize_message_content(original_msg)
 
