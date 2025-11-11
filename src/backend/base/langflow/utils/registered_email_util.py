@@ -34,13 +34,12 @@ class _RegisteredEmailCache:
 
 def get_email_model() -> EmailPayload | None:
     """Retrieves the registered email address model."""
-    # Use cached email address from a previous invocation (if applicable)
-    email = _RegisteredEmailCache.get_email_model()
-
-    if email:
+    # Fast path: direct class attr read to minimize indirection
+    _cache = _RegisteredEmailCache
+    email = _cache._email_model
+    if email is not None:
         return email
-
-    if _RegisteredEmailCache.is_resolved():
+    if _cache._resolved:
         # No registered email address
         # OR an email address parsing error occurred
         return None
@@ -49,15 +48,13 @@ def get_email_model() -> EmailPayload | None:
     try:
         registration = load_registration()
     except (OSError, UnicodeDecodeError, AttributeError) as e:
-        _RegisteredEmailCache.set_email_model(None)
+        _cache.set_email_model(None)
         logger.error(f"Failed to load registration: {e}")
         return None
 
     # Parse email address from registration
     email_model = _parse_email_registration(registration)
-
-    # Cache email address
-    _RegisteredEmailCache.set_email_model(email_model)
+    _cache.set_email_model(email_model)
 
     return email_model
 
@@ -71,11 +68,7 @@ def _parse_email_registration(registration) -> EmailPayload | None:
 
     # Retrieve email address
     email = registration.get("email")
-
-    # Create email model
-    email_model: EmailPayload | None = _create_email_model(email)
-
-    return email_model
+    return _create_email_model(email)
 
 
 def _create_email_model(email) -> EmailPayload | None:
