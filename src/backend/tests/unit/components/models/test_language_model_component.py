@@ -70,7 +70,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
             "project_id": {"show": False},
             "ollama_base_url": {"show": False},
         }
-        updated_config = component.update_build_config(build_config, "OpenAI", "provider")
+        updated_config = await component.update_build_config(build_config, "OpenAI", "provider")
         assert updated_config["model_name"]["options"] == OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES
         assert updated_config["model_name"]["value"] == OPENAI_CHAT_MODEL_NAMES[0]
         assert updated_config["api_key"]["display_name"] == "OpenAI API Key"
