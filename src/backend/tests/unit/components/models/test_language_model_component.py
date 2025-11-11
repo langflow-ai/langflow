@@ -133,10 +133,14 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         assert updated_config["project_id"]["show"] is True
         assert updated_config["ollama_base_url"]["show"] is False
 
-    @patch.object(LanguageModelComponent, "fetch_ollama_models")
-    async def test_update_build_config_ollama(self, mock_fetch_ollama, component_class, default_kwargs):
-        # Mock the fetch_ollama_models method to return test models
-        mock_fetch_ollama.return_value = ["llama2", "mistral", "codellama"]
+    @patch("lfx.components.models.language_model.get_ollama_models")
+    @patch("lfx.components.models.language_model.is_valid_ollama_url")
+    async def test_update_build_config_ollama(
+        self, mock_is_valid_url, mock_get_ollama_models, component_class, default_kwargs
+    ):
+        # Mock the validation and model fetching
+        mock_is_valid_url.return_value = True
+        mock_get_ollama_models.return_value = ["llama2", "mistral", "codellama"]
 
         component = component_class(**default_kwargs)
         build_config = {
