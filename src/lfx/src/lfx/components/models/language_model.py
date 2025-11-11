@@ -12,12 +12,6 @@ from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, StrInput
 from lfx.io import MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput
 
-# Ollama API constants
-HTTP_STATUS_OK = 200
-JSON_MODELS_KEY = "models"
-JSON_NAME_KEY = "name"
-JSON_CAPABILITIES_KEY = "capabilities"
-DESIRED_CAPABILITY = "completion"
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
 
 
