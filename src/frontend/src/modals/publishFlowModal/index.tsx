@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,7 @@ import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { ALLOWED_IMAGE_INPUT_EXTENSIONS } from "@/constants/constants";
 import { AgentLogo } from "@/components/AgentLogo";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { cn } from "@/utils/utils";
 
 interface PublishFlowModalProps {
   open: boolean;
@@ -65,6 +66,14 @@ export default function PublishFlowModal({
   const [logoRemoved, setLogoRemoved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Sample input state
+  const DEFAULT_STORAGE_ACCOUNT = "autonomizestorageaccount";
+  const DEFAULT_CONTAINER_NAME = "ai-studio-v2";
+  const [isUploadingSamples, setIsUploadingSamples] = useState(false);
+  const [uploadedSampleFiles, setUploadedSampleFiles] = useState<{ name: string; path: string }[]>([]);
+  const sampleFilesInputRef = useRef<HTMLInputElement>(null);
+  const [sampleTexts, setSampleTexts] = useState<string[]>([""]); // show one placeholder by default
+
   const { mutate: publishFlow, isPending } = usePublishFlow();
   const { mutateAsync: getUploadUrl } = usePostUploadPresignedUrl();
   const { mutateAsync: uploadToBlob } = useUploadToBlob();
@@ -72,6 +81,20 @@ export default function PublishFlowModal({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
+
+  // Detect presence of inputs in the current flow to conditionally render sections
+  const hasTextOrChatInput = useMemo(() => {
+    const nodes = (currentFlow?.data?.nodes ?? []) as AllNodeType[];
+    return nodes.some((node) => {
+      const type = node.data?.type;
+      return type === "ChatInput" || type === "TextInput";
+    });
+  }, [currentFlow]);
+
+  const hasFilePathInput = useMemo(() => {
+    const nodes = (currentFlow?.data?.nodes ?? []) as AllNodeType[];
+    return nodes.some((node) => node.data?.type === "FilePathInput");
+  }, [currentFlow]);
 
   // Validate marketplace name with debouncing to reduce API calls
   const {
@@ -224,6 +247,70 @@ export default function PublishFlowModal({
     }
   };
 
+  // Sample images upload handlers
+  const uploadSampleFilesToAzure = async (files: File[]): Promise<string[]> => {
+    const uploaded: string[] = [];
+    try {
+      setIsUploadingSamples(true);
+
+      for (const file of files) {
+        // Validate size only; allow any file type (PDF, DOCX, etc.)
+        if (!validateFileSize(file.size)) {
+          continue; // Error shown by validator
+        }
+
+        // Use Marketplace flow name in blob path instead of UUID or original name
+        const fileName = `marketplace-samples/${flowId}/${marketplaceName}`;
+
+        const uploadResponse = await getUploadUrl({
+          sourceType: "azureblobstorage",
+          fileName,
+          sourceDetails: {
+            containerName: DEFAULT_CONTAINER_NAME,
+            storageAccount: DEFAULT_STORAGE_ACCOUNT,
+          },
+        });
+
+        await uploadToBlob({
+          presignedUrl: uploadResponse.presignedUrl.data.signedUrl,
+          file,
+        });
+
+        uploaded.push(fileName);
+        setUploadedSampleFiles((prev) => [...prev, { name: file.name, path: fileName }]);
+      }
+    } catch (error: any) {
+      console.error("Sample upload error:", error);
+      setErrorData({
+        title: "Sample Upload Failed",
+        list: [error?.message || "Failed to upload sample files"],
+      });
+    } finally {
+      setIsUploadingSamples(false);
+    }
+    return uploaded;
+  };
+
+  const handleSampleFilesSelect = async (filesList: FileList | null) => {
+    if (!filesList || filesList.length === 0) return;
+    const files = Array.from(filesList);
+    await uploadSampleFilesToAzure(files);
+    if (sampleFilesInputRef.current) {
+      sampleFilesInputRef.current.value = "";
+    }
+  };
+
+  const removeSampleFile = (index: number) => {
+    setUploadedSampleFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Sample text handlers
+  const addSampleText = () => setSampleTexts((prev) => [...prev, ""]);
+  const updateSampleText = (index: number, value: string) =>
+    setSampleTexts((prev) => prev.map((t, i) => (i === index ? value : t)));
+  const removeSampleText = (index: number) =>
+    setSampleTexts((prev) => prev.filter((_, i) => i !== index));
+
   const handlePublish = async () => {
     // Validate required fields
     if (!marketplaceName.trim()) {
@@ -299,6 +386,11 @@ export default function PublishFlowModal({
           description: description || undefined,
           tags: tags.length > 0 ? tags : undefined,
           flow_icon: finalLogoUrl || undefined,
+          // Sample input payload
+          storage_account: DEFAULT_STORAGE_ACCOUNT,
+          container_name: DEFAULT_CONTAINER_NAME,
+          file_names: uploadedSampleFiles.length ? uploadedSampleFiles.map((f) => f.path) : undefined,
+          sample_text: sampleTexts.filter((t) => t.trim().length > 0),
         },
       },
       {
@@ -313,6 +405,8 @@ export default function PublishFlowModal({
           setDescription("");
           setTags([]);
           handleRemoveLogo();
+          setUploadedSampleFiles([]);
+          setSampleTexts([]);
         },
         onError: (error: any) => {
           setErrorData({
@@ -492,6 +586,92 @@ export default function PublishFlowModal({
             </p>
           </div>
 
+          {/* Sample Inputs Section */}
+          {(hasFilePathInput || hasTextOrChatInput) && (
+            <div className="space-y-4">
+              <Label>Sample Inputs (Optional)</Label>
+              {/* Sample Input Files */}
+              {hasFilePathInput && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Sample Input files</span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => sampleFilesInputRef.current?.click()}
+                        disabled={isUploadingSamples}
+                      >
+                        {isUploadingSamples ? "Uploading..." : "Add File"}
+                      </Button>
+                      <button
+                        type="button"
+                        className="text-sm text-primary hover:underline"
+                        onClick={() => sampleFilesInputRef.current?.click()}
+                        disabled={isUploadingSamples}
+                      >
+                      </button>
+                    </div>
+                    <input
+                      ref={sampleFilesInputRef}
+                      type="file"
+                      hidden
+                      multiple
+                      onChange={(e) => handleSampleFilesSelect(e.target.files)}
+                    />
+                  </div>
+                  {uploadedSampleFiles.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {uploadedSampleFiles.map((f, idx) => (
+                        <div key={`${f.path}-${idx}`} className="flex items-center gap-2 bg-muted px-2 py-1 rounded">
+                          <span className="text-xs">{f.name}</span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={() => removeSampleFile(idx)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Sample Input Text */}
+              {hasTextOrChatInput && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Sample Input Text</span>
+                    <button type="button" className="text-sm text-primary hover:underline" onClick={addSampleText}>
+                      + Add More
+                    </button>
+                  </div>
+                  {sampleTexts.length > 0 && (
+                    <div className="space-y-3">
+                      {sampleTexts.map((text, idx) => (
+                        <div key={`sample-text-${idx}`} className="flex items-center gap-2">
+                          <Input
+                            value={text}
+                            onChange={(e) => updateSampleText(idx, e.target.value)}
+                            placeholder="Enter Sample Input Text"
+                          />
+                          <Button type="button" size="sm" variant="ghost" onClick={() => removeSampleText(idx)}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {validationErrors.length === 0 && (
             <div className="rounded-lg bg-muted p-4 text-sm space-y-2">
               <p className="font-medium">What happens when you publish?</p>
@@ -531,6 +711,7 @@ export default function PublishFlowModal({
             disabled={
               isPending ||
               isUploadingLogo ||
+              isUploadingSamples ||
               validationErrors.length > 0 ||
               isValidatingName ||
               (nameValidation && !nameValidation.available)
@@ -538,6 +719,8 @@ export default function PublishFlowModal({
           >
             {isUploadingLogo
               ? "Uploading Logo..."
+              : isUploadingSamples
+              ? "Uploading Samples..."
               : isPending
               ? "Publishing..."
               : "Publish to Marketplace"}

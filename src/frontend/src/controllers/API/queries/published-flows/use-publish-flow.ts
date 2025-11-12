@@ -9,6 +9,12 @@ export interface PublishFlowPayload {
   tags?: string[];
   description?: string;
   flow_icon?: string;
+  // Sample input fields for marketplace playground
+  storage_account?: string;
+  container_name?: string;
+  file_names?: string[];
+  sample_text?: string[];
+  sample_output?: Record<string, any>;
 }
 
 export const usePublishFlow = () => {

@@ -232,7 +232,8 @@ const handleStreamEvent = (eventData: any, localAgentMessageId: string) => {
   const sendMessage = async (
     userInputText: string,
     fileUrls: Record<string, string>,
-    fileInputComponents: FileInputComponent[]
+    fileInputComponents: FileInputComponent[],
+    attachments?: { url: string; name: string; type: string }[]
   ) => {
     if (!userInputText.trim() || isLoading) return;
 
@@ -241,6 +242,7 @@ const handleStreamEvent = (eventData: any, localAgentMessageId: string) => {
       type: "user",
       text: userInputText,
       timestamp: new Date(),
+      ...(attachments && attachments.length > 0 ? { files: attachments } : {}),
     };
 
     const localAgentMessageId = uuid();

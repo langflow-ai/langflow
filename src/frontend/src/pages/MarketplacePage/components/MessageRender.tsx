@@ -2,12 +2,15 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { hasMarkdownFormatting } from "@/utils/markdownUtils";
 import { Message } from "./Playground.types";
+import { Button } from "@/components/ui/button";
+import { File, Eye } from "lucide-react";
 
 interface MessageRendererProps {
   message: Message;
   displayedTexts: Map<string, string>;
   targetTexts: Map<string, string>;
   loadingDots: number;
+  onPreviewAttachment?: (file: { url: string; name: string; type: string }) => void;
 }
 
 // Helper function to strip markdown code fences
@@ -59,6 +62,7 @@ export function MessageRenderer({
   displayedTexts,
   targetTexts,
   loadingDots,
+  onPreviewAttachment,
 }: MessageRendererProps) {
   const renderMessageContent = () => {
     if (message.type === "agent") {
@@ -174,6 +178,32 @@ export function MessageRenderer({
               <span className="inline-block w-0.5 h-5 ml-0.5 bg-foreground animate-pulse"></span>
             )}
           </div>
+
+          {/* Attachments preview chips */}
+          {message.files && message.files.length > 0 && (
+            <div className={`mt-3 flex flex-wrap gap-2 ${message.type === "user" ? "text-white" : "text-[#444]"}`}>
+              {message.files.map((f, idx) => (
+                <div
+                  key={`${f.url}-${idx}`}
+                  className={`flex items-center gap-2 ${message.type === "user" ? "bg-[#4C23A6]" : "bg-white"} border rounded-lg px-3 py-2 text-sm group ${message.type === "user" ? "border-white/20" : "border-gray-200"}`}
+                >
+                  <File className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate max-w-[200px]" title={f.name}>{f.name}</span>
+                  {onPreviewAttachment && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onPreviewAttachment({ url: f.url, name: f.name, type: f.type })}
+                      className={`h-6 w-6 p-0 ml-1 ${message.type === "user" ? "text-white hover:text-white/90" : "text-muted-foreground hover:text-primary"}`}
+                      title="Preview file"
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

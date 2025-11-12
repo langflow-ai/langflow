@@ -1,5 +1,4 @@
 import json
-import os
 import re
 
 from langchain_core.tools import StructuredTool
@@ -526,18 +525,9 @@ class AgentComponent(ToolCallingAgentComponent):
                 # Add provider-specific fields
                 build_config.update(fields_to_add)
                 
-                # Apply provider-specific defaults
+                # Apply provider-specific defaults (only for Azure OpenAI currently)
                 if field_value == "Azure OpenAI":
                     build_config = apply_provider_defaults(field_value, build_config)
-                elif field_value == "Google Generative AI":
-                    # Prefill Google API Key from environment variable
-                    if "api_key" in build_config:
-                        build_config["api_key"]["value"] = os.getenv("GOOGLE_API_KEY", "")
-                    # Prefill Google Model from environment variable
-                    if "model_name" in build_config:
-                        google_model = os.getenv("GOOGLE_GENAI_MODEL", "")
-                        if google_model:
-                            build_config["model_name"]["value"] = google_model
                 
                 # Reset input types for agent_llm
                 build_config["agent_llm"]["input_types"] = []
