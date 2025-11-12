@@ -35,6 +35,7 @@ class Message(Data):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
     text_key: str = "text"
+    id: str | UUID | None = Field(default=None)
     text: str | AsyncIterator | Iterator | None = Field(default="")
     sender: str | None = None
     sender_name: str | None = None
@@ -52,6 +53,13 @@ class Message(Data):
     category: Literal["message", "error", "warning", "info"] | None = "message"
     content_blocks: list[ContentBlock] = Field(default_factory=list)
     duration: int | None = None
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def validate_id(cls, value):
+        if isinstance(value, UUID):
+            value = str(value)
+        return value
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -80,6 +88,12 @@ class Message(Data):
             value = Properties.model_validate_json(value)
         elif isinstance(value, dict):
             value = Properties.model_validate(value)
+        return value
+
+    @field_serializer("id")
+    def serialize_id(self, value):
+        if isinstance(value, UUID):
+            return str(value)
         return value
 
     @field_serializer("flow_id")
