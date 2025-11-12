@@ -94,7 +94,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_text_splitters",
-                    "version": null
+                    "version": "0.3.11"
                   },
                   {
                     "name": "lfx",
@@ -362,11 +362,11 @@
                   },
                   {
                     "name": "bs4",
-                    "version": null
+                    "version": "4.12.3"
                   },
                   {
                     "name": "langchain_community",
-                    "version": null
+                    "version": "0.3.21"
                   },
                   {
                     "name": "lfx",
@@ -375,7 +375,7 @@
                 ],
                 "total_dependencies": 4
               },
-              "module": "lfx.components.data.url.URLComponent"
+              "module": "lfx.components.data_source.url.URLComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -742,15 +742,15 @@
                 "dependencies": [
                   {
                     "name": "pandas",
-                    "version": null
+                    "version": "2.2.3"
                   },
                   {
                     "name": "cryptography",
-                    "version": null
+                    "version": "43.0.3"
                   },
                   {
                     "name": "langchain_chroma",
-                    "version": null
+                    "version": "0.2.6"
                   },
                   {
                     "name": "langflow",
@@ -762,20 +762,20 @@
                   },
                   {
                     "name": "langchain_openai",
-                    "version": null
+                    "version": "0.3.23"
                   },
                   {
                     "name": "langchain_huggingface",
-                    "version": null
+                    "version": "0.3.1"
                   },
                   {
                     "name": "langchain_cohere",
-                    "version": null
+                    "version": "0.3.3"
                   }
                 ],
                 "total_dependencies": 8
               },
-              "module": "lfx.components.knowledge_bases.ingestion.KnowledgeIngestionComponent"
+              "module": "lfx.components.files_and_knowledge.ingestion.KnowledgeIngestionComponent"
             },
             "minimized": false,
             "output_types": [],
