@@ -92,8 +92,6 @@ AI:
 
     await adjustScreenView(page);
 
-    await page.getByText("Check & Save").last().click();
-
     //connection 1
     await page
       .getByTestId("handle-memory-shownode-message-right")
