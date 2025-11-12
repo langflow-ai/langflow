@@ -72,6 +72,8 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
             "browser_enabled": False,
             "web_apps": "",
             "API": False,
+            "lite_mode": True,
+            "lite_mode_tool_threshold": 25,
         }
 
     async def test_build_config_update(self, component_class, default_kwargs):
@@ -389,6 +391,8 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert "browser_enabled" in input_names
         assert "web_apps" in input_names
         assert "API" in input_names
+        assert "lite_mode" in input_names
+        assert "lite_mode_tool_threshold" in input_names
 
         # Verify default values
         assert hasattr(component, "policies")
@@ -398,9 +402,13 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert hasattr(component, "browser_enabled")
         assert hasattr(component, "web_apps")
         assert hasattr(component, "API")
+        assert hasattr(component, "lite_mode")
+        assert hasattr(component, "lite_mode_tool_threshold")
         assert component.n_messages == 100
         assert component.browser_enabled is False
         assert component.API is False
+        assert component.lite_mode is True
+        assert component.lite_mode_tool_threshold == 25
 
     async def test_cuga_has_correct_outputs(self, component_class, default_kwargs):
         """Test that Cuga component has the correct output configuration.
