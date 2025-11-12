@@ -88,8 +88,7 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
     assert response.status_code == status.HTTP_200_OK, f"Response: {response.json()}"
     assert "template" in result
     assert "model" in result["template"], (
-        f"model field not in result. "
-        f"Available fields: {list(result['template'].keys())}"
+        f"model field not in result. Available fields: {list(result['template'].keys())}"
     )
     assert isinstance(result["template"]["model"].get("options", []), list)
     # Model options should be present (may be same or different depending on implementation)
