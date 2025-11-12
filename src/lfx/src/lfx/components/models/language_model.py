@@ -29,7 +29,6 @@ class LanguageModelComponent(LCModelComponent):
             providers=[],  # Will be populated dynamically
             info="Select your model provider",
             real_time_refresh=True,
-            refresh_button=True,
             required=True,
         ),
         SecretStrInput(

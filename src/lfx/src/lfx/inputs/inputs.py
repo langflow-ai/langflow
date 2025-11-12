@@ -129,10 +129,12 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
     Automatically includes:
     - input_types=["LanguageModel"] for connection support
     - external_options with "Connect other models" button
+    - refresh_button=True by default
     """
 
     field_type: SerializableFieldTypes = FieldTypes.MODEL
     input_types: list[str] = Field(default_factory=lambda: ["LanguageModel"])
+    refresh_button: bool | None = True
     external_options: dict = Field(
         default_factory=lambda: {
             "fields": {

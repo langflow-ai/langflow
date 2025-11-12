@@ -107,11 +107,12 @@ export default function NodeInputField({
     Array.isArray(optionalHandle) &&
     optionalHandle.length > 0;
 
+  // Allow refresh buttons and connection handles to coexist for ModelInput
   const displayHandle =
     (!LANGFLOW_SUPPORTED_TYPES.has(type ?? "") ||
       (optionalHandle && optionalHandle.length > 0)) &&
     !isToolMode &&
-    !hasRefreshButton &&
+    (!hasRefreshButton || isModelInput) &&
     (!isModelInput || hasInputTypes); // Hide handle for ModelInput when input_types is empty
 
   const isFlexView = FLEX_VIEW_TYPES.includes(type ?? "");
