@@ -1,0 +1,92 @@
+---
+title: Murf
+slug: /bundles-murf
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Murf** bundle.
+
+## Set up Murf AI
+
+To use Murf components in Langflow, you first need an API key.
+
+### Generate an API Key
+
+Go to the [Murf API Dashboard](https://murf.ai/api/dashboard?utm_source=langflow-docs) and sign up for an account.
+
+For more information about Murf API authentication and usage, see the [Murf API documentation](https://murf.ai/api/docs/introduction/overview).
+
+## Murf Text to Speech
+
+The **Murf Text to Speech** component lets you generate speech from text input. It provides high-quality voice synthesis with support for multiple voices, languages, and audio formats.
+
+### Features
+
+- **Multiple Voice Options**: Access to a wide variety of voices with different genders, accents, and styles
+- **Multi-language Support**: Support for multiple locales and languages
+- **Audio Customization**: Adjustable speed, pitch, and sample rate
+- **Multiple Output Formats**: Support for MP3, WAV, FLAC, and other audio formats
+
+### Murf Text to Speech Parameters
+
+You can inspect the component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Murf API documentation](https://murf.ai/api/docs/api-reference/text-to-speech/generate) or inspect [component code](/concepts-components#component-code).
+
+| Name | Type | Description |
+|------|------|-------------|
+| text | String | Input parameter. The text to convert to speech. Required. |
+| api_key | SecretString | Input parameter. Your Murf API key. Required. |
+| voice_id | String | Input parameter. The ID of the voice to use for speech synthesis. Dynamically populated based on available voices. |
+| locale | String | Input parameter. The locale/language for the voice. Dynamically populated based on selected voice. |
+| channel_type | String | Input parameter. Audio channel configuration. Options: "Mono", "Stereo". Default: "Mono". Advanced. |
+| format | String | Input parameter. Output audio format. Options: "mp3", "wav", "flac", "alaw", "ulaw", "pcm", "ogg". Default: "mp3". Advanced. |
+| rate | Integer | Input parameter. Speech speed adjustment. Range: -50 to 50. Default: 0. Advanced. |
+| pitch | Integer | Input parameter. Voice pitch adjustment. Range: -50 to 50. Default: 0. Advanced. |
+| sample_rate | String | Input parameter. Audio sample rate. Options: "8000", "24000", "44100", "48000". Default: "44100". Advanced. |
+
+### Outputs
+
+The Murf Text to Speech component provides three different output methods:
+
+| Output Name | Type | Description |
+|-------------|------|-------------|
+| response | Data | Returns the raw API response data |
+
+### Usage Examples
+
+#### Basic Text to Speech
+1. Add the Murf Text to Speech component to your flow
+2. Enter your Murf API key
+3. Input the text you want to convert to speech
+4. Select a voice from the dynamically populated list
+5. Choose your preferred locale
+6. Connect the `response` output to display the result
+
+ This example connects the **Murf Text to Speech** component to generate speech from text input.
+
+    ![Murf Text to Speech component in a text to speech generation flow](/img/component-murf-ai.png)
+
+#### Advanced Audio Customization
+For more control over the audio output:
+1. Enable advanced parameters
+2. Adjust the speed (rate) and pitch sliders
+3. Select a different audio format (e.g., WAV for higher quality)
+4. Choose between Mono or Stereo channel configuration
+5. Set the appropriate sample rate for your use case
+
+### Troubleshooting
+
+- **API Key Issues**: Ensure your API key is valid and has sufficient credits
+- **Voice Loading**: If voices don't load, check your internet connection and API key validity
+- **Audio Generation**: For large texts, consider breaking them into smaller chunks
+- **Format Compatibility**: Ensure your target system supports the chosen audio format

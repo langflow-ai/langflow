@@ -5542,6 +5542,7 @@ dev = [
     { name = "hypothesis" },
     { name = "ipykernel" },
     { name = "locust" },
+    { name = "murf" },
     { name = "mypy" },
     { name = "packaging" },
     { name = "pandas-stubs" },
@@ -5731,6 +5732,7 @@ dev = [
     { name = "hypothesis", specifier = ">=6.123.17" },
     { name = "ipykernel", specifier = ">=6.29.0" },
     { name = "locust", specifier = "~=2.40.5" },
+    { name = "murf", specifier = ">=2.1.0" },
     { name = "mypy", specifier = ">=1.11.0" },
     { name = "packaging", specifier = ">=24.1,<25.0" },
     { name = "pandas-stubs", specifier = ">=2.1.4.231227" },
@@ -5878,6 +5880,7 @@ dev = [
     { name = "dictdiffer" },
     { name = "httpx", extra = ["http2"] },
     { name = "ipykernel" },
+    { name = "murf" },
     { name = "mypy" },
     { name = "pandas-stubs" },
     { name = "pre-commit" },
@@ -6005,6 +6008,7 @@ dev = [
     { name = "dictdiffer", specifier = ">=0.9.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.27" },
     { name = "ipykernel", specifier = ">=6.29.0" },
+    { name = "murf", specifier = ">=2.1.0" },
     { name = "mypy", specifier = ">=1.11.0" },
     { name = "pandas-stubs", specifier = ">=2.1.4.231227" },
     { name = "pre-commit", specifier = ">=3.7.0" },
@@ -6205,6 +6209,7 @@ dependencies = [
     { name = "langchain" },
     { name = "langchain-core" },
     { name = "loguru" },
+    { name = "murf" },
     { name = "nanoid" },
     { name = "networkx" },
     { name = "orjson" },
@@ -6252,6 +6257,7 @@ requires-dist = [
     { name = "langchain", specifier = "~=0.3.23" },
     { name = "langchain-core", specifier = ">=0.3.66,<1.0.0" },
     { name = "loguru", specifier = ">=0.7.3,<1.0.0" },
+    { name = "murf", specifier = ">=2.1.0" },
     { name = "nanoid", specifier = ">=2.0.0,<3.0.0" },
     { name = "networkx", specifier = ">=3.4.2,<4.0.0" },
     { name = "orjson", specifier = ">=3.10.15,<4.0.0" },
@@ -7302,6 +7308,21 @@ name = "multitasking"
 version = "0.0.12"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/17/0d/74f0293dfd7dcc3837746d0138cbedd60b31701ecc75caec7d3f281feba0/multitasking-0.0.12.tar.gz", hash = "sha256:2fba2fa8ed8c4b85e227c5dd7dc41c7d658de3b6f247927316175a57349b84d1", size = 19984, upload-time = "2025-07-20T21:27:51.636Z" }
+
+[[package]]
+name = "murf"
+version = "2.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "pydantic-core" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/29/c7/929e2d2790002f6a72380f9c01043d929781a67bf1892934bc8d73dae373/murf-2.1.0.tar.gz", hash = "sha256:2c9bd88529b43a7d6327a67fb4e35aea09a1b9fb005719a44039dcf069d5b0cf", size = 40520, upload-time = "2025-09-17T12:48:34.459Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4f/92/5875ffb66794abcb643177c8d72868d2b60983374ca864ebe9924d093915/murf-2.1.0-py3-none-any.whl", hash = "sha256:9b45b970d9fea5427b4ad47f1cbc3b4195765c41ca831908598110cf1deed0f2", size = 76500, upload-time = "2025-09-17T12:48:33.514Z" },
+]
 
 [[package]]
 name = "mypy"
