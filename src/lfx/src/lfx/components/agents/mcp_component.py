@@ -568,6 +568,7 @@ class MCPToolsComponent(ComponentWithCache):
             text = item_dict.get("text")
             try:
                 return json.loads(text)
+                # convert it to dict
             except json.JSONDecodeError:
                 return item_dict
         return item_dict
