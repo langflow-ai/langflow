@@ -113,7 +113,7 @@ export default defineConfig({
         DO_NOT_TRACK: "true",
       },
       stdout: "ignore",
-
+      stderr: "pipe",
       reuseExistingServer: true,
       timeout: 120 * 750,
     },
