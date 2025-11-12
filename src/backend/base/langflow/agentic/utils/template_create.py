@@ -6,17 +6,20 @@ JSON (looked up by template id) and returns a link to open it in the UI.
 
 from __future__ import annotations
 
-from typing import Any
-from uuid import UUID
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.agentic.utils.template_search import get_template_by_id
 from langflow.api.v1.flows import _new_flow, _save_flow_to_fs
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.flow.model import FlowCreate
 from langflow.services.database.models.folder.model import Folder
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 async def create_flow_from_template_and_get_link(

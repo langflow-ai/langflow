@@ -62,7 +62,7 @@ def list_templates(
     for template_file in starter_projects_dir.glob("*.json"):
         try:
             # Load the template
-            with open(template_file, encoding="utf-8") as f:
+            with Path(template_file).open(encoding="utf-8") as f:
                 template_data = json.load(f)
 
             # Apply search filter if provided
@@ -132,7 +132,7 @@ def get_template_by_id(
 
     for template_file in starter_projects_dir.glob("*.json"):
         try:
-            with open(template_file, encoding="utf-8") as f:
+            with Path(template_file).open(encoding="utf-8") as f:
                 template_data = json.load(f)
 
             if template_data.get("id") == template_id:
@@ -172,12 +172,13 @@ def get_all_tags(starter_projects_path: str | Path | None = None) -> list[str]:
 
     for template_file in starter_projects_dir.glob("*.json"):
         try:
-            template_data = orjson.loads(template_file.read_text(encoding="utf-8"))
+            template_data = orjson.loads(Path(template_file).read_text(encoding="utf-8"))
 
             tags = template_data.get("tags", [])
             all_tags.update(tags)
 
-        except (json.JSONDecodeError, orjson.JSONDecodeError):
+        except (json.JSONDecodeError, orjson.JSONDecodeError)as e:
+            logger.aexception(f"Error loading template {template_file}: {e}")
             continue
 
     return sorted(all_tags)

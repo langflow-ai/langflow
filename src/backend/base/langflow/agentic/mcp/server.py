@@ -42,19 +42,19 @@ from langflow.services.deps import get_settings_service, session_scope
 # Initialize FastMCP server
 mcp = FastMCP("langflow-agentic")
 
+DEFAULT_TEMPLATE_FIELDS = ["id", "name", "description", "tags", "endpoint_name", "icon"]
+DEFAULT_COMPONENT_FIELDS = ["name", "type", "display_name", "description"]
+
 
 @mcp.tool()
-def search_templates(
-    query: str | None = None,
-    fields: list[str]= ["id", "name", "description", "tags", "endpoint_name", "icon"]
-) -> list[dict[str, Any]]:
+def search_templates(query: str | None = None, fields: list[str] = DEFAULT_TEMPLATE_FIELDS) -> list[dict[str, Any]]:
     """Search and load template data with configurable field selection.
 
     Args:
         query: Optional search term to filter templates by name or description.
                Case-insensitive substring matching.
         fields: List of fields to include in the results. If None, returns default fields:
-               ["id", "name", "description", "tags", "endpoint_name", "icon"]
+               DEFAULT_TEMPLATE_FIELDS
                Common fields: id, name, description, tags, is_component, last_tested_version,
                endpoint_name, data, icon, icon_bg_color, gradient, updated_at
         tags: Optional list of tags to filter templates. Returns templates that have ANY of these tags.
@@ -83,9 +83,8 @@ def search_templates(
     """
     # Set default fields if not provided
     if fields is None:
-        fields = ["id", "name", "description", "tags", "endpoint_name", "icon"]
+        fields = DEFAULT_TEMPLATE_FIELDS
     return list_templates(query=query, fields=fields)
-
 
 
 @mcp.tool()
@@ -172,7 +171,8 @@ async def search_components(
     query: str | None = None,
     component_type: str | None = None,
     fields: list[str] | None = None,
-    add_search_text: bool = True,
+    *,
+    add_search_text: bool | None = None,
 ) -> list[dict[str, Any]]:
     """Search and retrieve component data with configurable field selection.
 
@@ -181,9 +181,10 @@ async def search_components(
                Case-insensitive substring matching.
         component_type: Optional component type to filter by (e.g., "agents", "embeddings", "llms").
         fields: List of fields to include in the results. If None, returns default fields:
-               ["name", "type", "display_name", "description"]
+               DEFAULT_COMPONENT_FIELDS
                All fields: name, display_name, description, type, template, documentation,
                icon, is_input, is_output, lazy_loaded, field_order
+        add_search_text: Whether to add a 'text' key to each component with all key-value pairs joined by newline.
 
     Returns:
         List of dictionaries containing the selected fields for each matching component.
@@ -205,8 +206,10 @@ async def search_components(
         ... )
     """
     # Set default fields if not provided
+    if add_search_text is None:
+        add_search_text = True
     if fields is None:
-        fields = ["name", "type", "display_name", "description"]
+        fields = DEFAULT_COMPONENT_FIELDS
 
     settings_service = get_settings_service()
     result = await list_all_components(
@@ -214,14 +217,15 @@ async def search_components(
         component_type=component_type,
         fields=fields,
         settings_service=settings_service,
-    ) 
+    )
     # For each component dict in result, add a 'text' key with all key-value pairs joined by newline.
 
     if add_search_text:
         for comp in result:
             text_lines = [f"{k} {v}" for k, v in comp.items() if k != "text"]
             comp["text"] = "\n".join(text_lines)
-    return replace_none_and_null_with_empty_str(result,required_fields=fields)
+    return replace_none_and_null_with_empty_str(result, required_fields=fields)
+
 
 @mcp.tool()
 async def get_component(
@@ -313,7 +317,7 @@ async def get_components_by_type_tool(
     """
     # Set default fields if not provided
     if fields is None:
-        fields = ["name", "type", "display_name", "description"]
+        fields = DEFAULT_COMPONENT_FIELDS
 
     settings_service = get_settings_service()
     return await get_components_by_type(

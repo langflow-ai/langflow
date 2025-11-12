@@ -1,12 +1,15 @@
 import math
 
+from lfx.log.logger import logger
 
-def replace_none_and_null_with_empty_str(data: list[dict],required_fields: list[str] = []) -> list[dict]:
+
+def replace_none_and_null_with_empty_str(data: list[dict], required_fields: list[str] | None = None) -> list[dict]:
     """Replaces all None, 'null' (case-insensitive), and NaN/NaT float values with empty strings in a list of dicts.
-    Additionally, turns "NaN", "Infinity", "-Infinity" strings (case-insensitive, extra whitespace) into None as not available.
 
     Args:
-        data: List of dictionaries.
+        data: List of dictionaries.1
+        required_fields: List of field names that must be present in each dictionary.
+                        Missing fields will be added with value "Not available".
 
     Returns:
         List of dictionaries with None, 'null', and NaN/NaT values replaced with "",
@@ -23,8 +26,9 @@ def replace_none_and_null_with_empty_str(data: list[dict],required_fields: list[
             try:
                 if math.isnan(v):
                     return "Not available"
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                logger.aexception(f"Error converting value {v} to float: {e}")
+
         if hasattr(v, "isnat") and getattr(v, "isnat", False):
             return "Not available"
         return v

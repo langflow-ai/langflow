@@ -1,6 +1,6 @@
 """Flow graph visualization utilities for Langflow."""
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from lfx.graph.graph.ascii import draw_graph
@@ -8,7 +8,9 @@ from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
 
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
-from langflow.services.database.models.flow.model import FlowRead
+
+if TYPE_CHECKING:
+    from langflow.services.database.models.flow.model import FlowRead
 
 
 async def get_flow_graph_representations(
@@ -73,7 +75,7 @@ async def get_flow_graph_representations(
         if vertices and edges:
             try:
                 ascii_graph = draw_graph(vertices, edges, return_ascii=True)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 await logger.awarning(f"Failed to generate ASCII graph: {e}")
                 ascii_graph = "ASCII graph generation failed (graph may be too complex or have cycles)"
 
@@ -88,12 +90,15 @@ async def get_flow_graph_representations(
             "description": flow.description,
         }
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Error getting flow graph representations for {flow_id_or_name}: {e}")
         return {
             "error": str(e),
             "flow_id": flow_id_or_name,
         }
+
+    finally:
+        await logger.ainfo("Getting flow graph representations completed")
 
 
 async def get_flow_ascii_graph(

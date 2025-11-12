@@ -7,7 +7,7 @@ from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
 
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
-from langflow.services.database.models.flow.model import Flow, FlowUpdate
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
 
 
@@ -98,7 +98,7 @@ async def get_component_details(
             "flow_name": flow.name,
         }
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Error getting component details for {component_id} in {flow_id_or_name}: {e}")
         return {
             "error": str(e),
@@ -179,7 +179,7 @@ async def get_component_field_value(
             **field_config,
         }
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Error getting field {field_name} from {component_id} in {flow_id_or_name}: {e}")
         return {"error": str(e)}
 
@@ -280,6 +280,10 @@ async def update_component_field_value(
             await session.commit()
             await session.refresh(db_flow)
 
+    except Exception as e:  # noqa: BLE001
+        await logger.aerror(f"Error updating field {field_name} in {component_id} of {flow_id_or_name}: {e}")
+        return {"error": str(e), "success": False}
+    else:
         return {
             "success": True,
             "field_name": field_name,
@@ -289,10 +293,8 @@ async def update_component_field_value(
             "flow_id": flow_id_str,
             "flow_name": flow.name,
         }
-
-    except Exception as e:
-        await logger.aerror(f"Error updating field {field_name} in {component_id} of {flow_id_or_name}: {e}")
-        return {"error": str(e), "success": False}
+    finally:
+        await logger.ainfo("Updating field value completed")
 
 
 async def list_component_fields(
@@ -365,7 +367,7 @@ async def list_component_fields(
             "field_count": len(fields_info),
         }
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Error listing fields for {component_id} in {flow_id_or_name}: {e}")
         return {"error": str(e)}
 

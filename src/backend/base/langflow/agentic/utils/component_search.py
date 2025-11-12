@@ -96,11 +96,13 @@ async def list_all_components(
 
                 results.append(result)
 
-        return results
-
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Error listing components: {e}")
         return []
+    else:
+        return results
+    finally:
+        await logger.ainfo("Listing components completed")
 
 
 async def get_component_by_name(
@@ -166,11 +168,14 @@ async def get_component_by_name(
                         result.update(component_data)
                     return result
 
-        return None
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Error getting component {component_name}: {e}")
         return None
+    else:
+        return None
+    finally:
+        await logger.ainfo("Getting component completed")
 
 
 async def get_all_component_types(settings_service: SettingsService | None = None) -> list[str]:
@@ -196,9 +201,11 @@ async def get_all_component_types(settings_service: SettingsService | None = Non
         all_types_dict = await get_and_cache_all_types_dict(settings_service)
         return sorted(all_types_dict.keys())
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Error getting component types: {e}")
         return []
+    finally:
+        await logger.ainfo("Getting component types completed")
 
 
 async def get_components_count(
@@ -235,9 +242,11 @@ async def get_components_count(
         # Count all components across all types
         return sum(len(components) for components in all_types_dict.values())
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Error counting components: {e}")
         return 0
+    finally:
+        await logger.ainfo("Counting components completed")
 
 
 async def get_components_by_type(
