@@ -49,3 +49,12 @@ class CreateFlowResponse(BaseModel):
     message: str = Field(..., description="Success or error message")
     flow_id: Optional[str] = Field(None, description="ID of the created flow if successful")
     flow_name: Optional[str] = Field(None, description="Name of the created flow if successful")
+
+
+class ExportYamlResponse(BaseModel):
+    """Response model for YAML export."""
+
+    success: bool = Field(..., description="Whether the YAML export was successful")
+    message: str = Field(..., description="Success or error message")
+    yaml_content: Optional[str] = Field(None, description="Generated YAML specification if successful")
+    flow_name: Optional[str] = Field(None, description="Name of the exported flow")

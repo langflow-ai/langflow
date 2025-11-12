@@ -165,7 +165,7 @@ class NodeBuilder:
             "data": {
                 "node": node_template,
                 "showNode": True,
-                "type": template_display_name,  # Original template display name
+                "type": yaml_component.get("type"),  # Use YAML component type (e.g., "ChatInput" not "Chat Input")
                 "id": node_id,
                 "yaml_component_id": yaml_component.get("id"),  # Store YAML component ID for config matching
                 # "asTools": as_tools,  # Store asTools flag for EdgeBuilder

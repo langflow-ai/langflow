@@ -284,6 +284,64 @@ class ConfigBuilder:
 
         return node
 
+    def _process_prompt_template_fields(self, node: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Process PromptComponent nodes to create dynamic template fields.
+
+        Extracts {variables} from template string and creates corresponding input fields
+        automatically. This replicates the behavior of PromptComponent.update_frontend_node()
+        which is normally called in the UI but bypassed during YAML import.
+
+        Args:
+            node: Node dictionary with template
+
+        Returns:
+            Modified node with dynamic template fields created
+        """
+        from langflow.base.prompts.api_utils import process_prompt_template
+
+        # Only process PromptComponent nodes
+        node_type = node.get("data", {}).get("type")
+        if node_type not in ["PromptComponent", "Prompt"]:
+            return node
+
+        # Get node objects
+        node_obj = node.get("data", {}).get("node", {})
+        template_dict = node_obj.get("template", {})
+
+        # Get template string value
+        template_value = template_dict.get("template", {}).get("value", "")
+        if not template_value:
+            logger.debug(f"No template value found for node {node.get('id')}, skipping field creation")
+            return node
+
+        # Initialize custom_fields if not exists
+        custom_fields = node_obj.get("custom_fields", {})
+        if not custom_fields:
+            custom_fields = {"template": []}
+            node_obj["custom_fields"] = custom_fields
+
+        # Call process_prompt_template to extract variables and create fields
+        try:
+            input_variables = process_prompt_template(
+                template=template_value,
+                name="template",
+                custom_fields=custom_fields,
+                frontend_node_template=template_dict
+            )
+            logger.info(
+                f"Created {len(input_variables)} dynamic template fields for node {node.get('id')}: "
+                f"{input_variables}"
+            )
+        except Exception as e:
+            logger.error(
+                f"Error processing prompt template for node {node.get('id')}: {e}",
+                exc_info=True
+            )
+            # Don't fail the entire import, just log the error
+
+        return node
+
     async def apply_config(self, nodes: List[Dict[str, Any]], yaml_content: str) -> List[Dict[str, Any]]:
         """
         Apply configuration to nodes from YAML specification.
@@ -343,7 +401,14 @@ class ConfigBuilder:
 
             logger.info(f"Configuration applied to {nodes_with_config}/{len(nodes)} nodes")
 
-            return configured_nodes
+            # POST-PROCESSING: Create dynamic template fields for PromptComponents
+            logger.info("Post-processing: Creating dynamic template fields for PromptComponents")
+            final_nodes = []
+            for node in configured_nodes:
+                processed_node = self._process_prompt_template_fields(node)
+                final_nodes.append(processed_node)
+
+            return final_nodes
 
         except yaml.YAMLError as e:
             logger.error(f"Failed to parse YAML: {e}")
