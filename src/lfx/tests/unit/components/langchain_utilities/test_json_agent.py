@@ -1,13 +1,12 @@
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.components.langchain_utilities.json_agent import JsonAgentComponent
-from tests.base import ComponentTestBaseWithoutClient
 
 
-class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
+class TestJsonAgentComponent:
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
@@ -45,7 +44,7 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
             component.set_attributes({"llm": MagicMock(), "path": json_file})
 
             # Mock settings to indicate local storage
-            with patch("lfx.services.deps.get_settings_service") as mock_get_settings:
+            with patch("lfx.components.langchain_utilities.json_agent.get_settings_service") as mock_get_settings:
                 mock_settings = MagicMock()
                 mock_settings.settings.storage_type = "local"
                 mock_get_settings.return_value = mock_settings
@@ -67,8 +66,8 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
 
         # Mock S3 storage and read - real temp file creation
         with (
-            patch("lfx.services.deps.get_settings_service") as mock_get_settings,
-            patch("lfx.base.data.storage_utils.read_file_bytes") as mock_read_bytes,
+            patch("lfx.components.langchain_utilities.json_agent.get_settings_service") as mock_get_settings,
+            patch("lfx.components.langchain_utilities.json_agent.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
         ):
             mock_settings = MagicMock()
             mock_settings.settings.storage_type = "s3"
@@ -102,8 +101,8 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
         yaml_content = b"key: value\nnumber: 42"
 
         with (
-            patch("lfx.services.deps.get_settings_service") as mock_get_settings,
-            patch("lfx.base.data.storage_utils.read_file_bytes") as mock_read_bytes,
+            patch("lfx.components.langchain_utilities.json_agent.get_settings_service") as mock_get_settings,
+            patch("lfx.components.langchain_utilities.json_agent.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
         ):
             mock_settings = MagicMock()
             mock_settings.settings.storage_type = "s3"
@@ -154,7 +153,7 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
 
             # Mock settings and LangChain agent components
             with (
-                patch("lfx.services.deps.get_settings_service") as mock_get_settings,
+                patch("lfx.components.langchain_utilities.json_agent.get_settings_service") as mock_get_settings,
                 patch("lfx.components.langchain_utilities.json_agent.JsonSpec") as mock_json_spec,
                 patch("lfx.components.langchain_utilities.json_agent.JsonToolkit") as mock_json_toolkit,
                 patch("lfx.components.langchain_utilities.json_agent.create_json_agent") as mock_create_agent,
@@ -191,8 +190,8 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
             component.set_attributes({"llm": MagicMock(), "path": yaml_file, "verbose": True})
 
             with (
-                patch("lfx.services.deps.get_settings_service") as mock_get_settings,
-                patch("langflow.components.langchain_utilities.json_agent.JsonSpec") as mock_json_spec,
+                patch("lfx.components.langchain_utilities.json_agent.get_settings_service") as mock_get_settings,
+                patch("lfx.components.langchain_utilities.json_agent.JsonSpec") as mock_json_spec,
                 patch("lfx.components.langchain_utilities.json_agent.JsonToolkit") as mock_json_toolkit,
                 patch("lfx.components.langchain_utilities.json_agent.create_json_agent") as mock_create_agent,
                 patch("builtins.open", create=True),
@@ -228,11 +227,11 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
         json_content = b'{"users": []}'
 
         with (
-            patch("langflow.services.deps.get_settings_service") as mock_get_settings,
-            patch("langflow.base.data.storage_utils.read_file_bytes") as mock_read_bytes,
-            patch("langflow.components.langchain_utilities.json_agent.JsonSpec") as mock_json_spec,
-            patch("langflow.components.langchain_utilities.json_agent.JsonToolkit") as mock_json_toolkit,
-            patch("langflow.components.langchain_utilities.json_agent.create_json_agent") as mock_create_agent,
+            patch("lfx.components.langchain_utilities.json_agent.get_settings_service") as mock_get_settings,
+            patch("lfx.components.langchain_utilities.json_agent.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
+            patch("lfx.components.langchain_utilities.json_agent.JsonSpec") as mock_json_spec,
+            patch("lfx.components.langchain_utilities.json_agent.JsonToolkit") as mock_json_toolkit,
+            patch("lfx.components.langchain_utilities.json_agent.create_json_agent") as mock_create_agent,
         ):
             mock_settings = MagicMock()
             mock_settings.settings.storage_type = "s3"
@@ -268,10 +267,10 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
         json_content = b'{"invalid'
 
         with (
-            patch("langflow.services.deps.get_settings_service") as mock_get_settings,
-            patch("langflow.base.data.storage_utils.read_file_bytes") as mock_read_bytes,
+            patch("lfx.components.langchain_utilities.json_agent.get_settings_service") as mock_get_settings,
+            patch("lfx.components.langchain_utilities.json_agent.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
             patch(
-                "langflow.components.langchain_utilities.json_agent.JsonSpec",
+                "lfx.components.langchain_utilities.json_agent.JsonSpec",
                 side_effect=Exception("Invalid JSON"),
             ),
         ):

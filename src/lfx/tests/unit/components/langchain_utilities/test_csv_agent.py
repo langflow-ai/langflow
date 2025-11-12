@@ -5,10 +5,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from lfx.components.langchain_utilities.csv_agent import CSVAgentComponent
 from lfx.schema import Message
-from tests.base import ComponentTestBaseWithoutClient
 
 
-class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
+class TestCSVAgentComponent:
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
@@ -76,7 +75,7 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
         )
 
         # Mock settings to indicate local storage
-        with patch("lfx.services.deps.get_settings_service") as mock_get_settings:
+        with patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings:
             mock_settings = MagicMock()
             mock_settings.settings.storage_type = "local"
             mock_get_settings.return_value = mock_settings
@@ -103,8 +102,8 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
 
         # Mock S3 storage and read operations - real temp file creation and cleanup
         with (
-            patch("lfx.services.deps.get_settings_service") as mock_get_settings,
-            patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
+            patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings,
+            patch("lfx.components.langchain_utilities.csv_agent.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
         ):
             mock_settings = MagicMock()
             mock_settings.settings.storage_type = "s3"
@@ -148,7 +147,7 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
             )
 
             # Mock settings to indicate local storage
-            with patch("lfx.services.deps.get_settings_service") as mock_get_settings:
+            with patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings:
                 mock_settings = MagicMock()
                 mock_settings.settings.storage_type = "local"
                 mock_get_settings.return_value = mock_settings
@@ -214,7 +213,7 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
 
             # Mock settings and LangChain agent
             with (
-                patch("lfx.services.deps.get_settings_service") as mock_get_settings,
+                patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings,
                 patch("lfx.components.langchain_utilities.csv_agent.create_csv_agent") as mock_create_agent,
             ):
                 mock_settings = MagicMock()
@@ -255,8 +254,8 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
 
         # Mock S3 settings, storage read, and LangChain agent creation
         with (
-            patch("lfx.services.deps.get_settings_service") as mock_get_settings,
-            patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
+            patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings,
+            patch("lfx.components.langchain_utilities.csv_agent.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
             patch("lfx.components.langchain_utilities.csv_agent.create_csv_agent") as mock_create_agent,
         ):
             mock_settings = MagicMock()
@@ -304,8 +303,8 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
         temp_file_path = None
 
         with (
-            patch("lfx.services.deps.get_settings_service") as mock_get_settings,
-            patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
+            patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings,
+            patch("lfx.components.langchain_utilities.csv_agent.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
             patch(
                 "lfx.components.langchain_utilities.csv_agent.create_csv_agent",
                 side_effect=Exception("Agent creation failed"),
@@ -347,7 +346,7 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
             )
 
             with (
-                patch("lfx.services.deps.get_settings_service") as mock_get_settings,
+                patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings,
                 patch("lfx.components.langchain_utilities.csv_agent.create_csv_agent") as mock_create_agent,
             ):
                 mock_settings = MagicMock()
