@@ -903,7 +903,7 @@
                 ],
                 "total_dependencies": 1
               },
-              "module": "lfx.components.helpers.memory.MemoryComponent"
+              "module": "lfx.components.models_and_agents.memory.MemoryComponent"
             },
             "minimized": false,
             "output_types": [],

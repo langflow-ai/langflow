@@ -1088,7 +1088,7 @@
                 ],
                 "total_dependencies": 3
               },
-              "module": "lfx.components.processing.structured_output.StructuredOutputComponent"
+              "module": "lfx.components.llm_operations.structured_output.StructuredOutputComponent"
             },
             "minimized": false,
             "output_types": [],

@@ -2201,7 +2201,7 @@
                 ],
                 "total_dependencies": 1
               },
-              "module": "lfx.components.data.file.FileComponent"
+              "module": "lfx.components.files_and_knowledge.file.FileComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -5107,7 +5107,7 @@
                 ],
                 "total_dependencies": 2
               },
-              "module": "lfx.components.models.embedding_model.EmbeddingModelComponent"
+              "module": "lfx.components.models_and_agents.embedding_model.EmbeddingModelComponent"
             },
             "minimized": false,
             "output_types": [],

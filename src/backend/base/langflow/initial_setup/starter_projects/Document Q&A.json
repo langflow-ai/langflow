@@ -895,7 +895,7 @@
                 ],
                 "total_dependencies": 1
               },
-              "module": "lfx.components.data.file.FileComponent"
+              "module": "lfx.components.files_and_knowledge.file.FileComponent"
             },
             "minimized": false,
             "output_types": [],
