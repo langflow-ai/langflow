@@ -86,37 +86,35 @@ class TestS3CompatibleComponents:
             mock_storage_service.get_file.assert_called_with("user_123", "document.txt")
 
     @pytest.mark.asyncio
-    async def test_file_component_get_local_file_for_docling_s3(self, s3_settings):
+    async def test_file_component_get_local_file_for_docling_s3(self, s3_settings, mock_storage_service):
         """Test FileComponent._get_local_file_for_docling with S3 paths uses parse_storage_path and Path."""
-        with patch("lfx.services.deps.get_settings_service", return_value=s3_settings):
-            component = FileComponent()
-            s3_path = "user_123/document.pdf"
+        component = FileComponent()
+        s3_path = "user_123/document.pdf"
 
-            # Mock storage service
-            mock_storage_service = MagicMock()
-            mock_storage_service.get_file = AsyncMock(return_value=b"pdf content")
+        # Configure mock storage service
+        mock_storage_service.get_file = AsyncMock(return_value=b"pdf content")
 
-            # Mock tempfile
-            mock_temp_file = MagicMock()
-            mock_temp_file.name = "/tmp/temp_file.pdf"
-            mock_temp_file.write = MagicMock()
+        # Mock tempfile
+        mock_temp_file = MagicMock()
+        mock_temp_file.name = "/tmp/temp_file.pdf"
+        mock_temp_file.write = MagicMock()
 
-            with (
-                patch("lfx.services.deps.get_storage_service", return_value=mock_storage_service),
-                patch("lfx.components.data.file.parse_storage_path", return_value=("user_123", "document.pdf")) as mock_parse,
-                patch("lfx.components.data.file.NamedTemporaryFile") as mock_temp,
-            ):
-                mock_temp.return_value.__enter__.return_value = mock_temp_file
+        with (
+            mock_s3_environment(s3_settings, mock_storage_service),
+            patch("lfx.components.data.file.parse_storage_path", return_value=("user_123", "document.pdf")) as mock_parse,
+            patch("lfx.components.data.file.NamedTemporaryFile") as mock_temp,
+        ):
+            mock_temp.return_value.__enter__.return_value = mock_temp_file
 
-                local_path, should_delete = await component._get_local_file_for_docling(s3_path)
+            local_path, should_delete = await component._get_local_file_for_docling(s3_path)
 
-                # Verify parse_storage_path was called with S3 path (imported at module level)
-                mock_parse.assert_called_once_with(s3_path)
-                # Verify storage service was called
-                mock_storage_service.get_file.assert_called_once_with("user_123", "document.pdf")
-                # Verify temp file was created
-                assert should_delete is True
-                assert local_path == "/tmp/temp_file.pdf"
+            # Verify parse_storage_path was called with S3 path (imported at module level)
+            mock_parse.assert_called_once_with(s3_path)
+            # Verify storage service was called
+            mock_storage_service.get_file.assert_called_once_with("user_123", "document.pdf")
+            # Verify temp file was created
+            assert should_delete is True
+            assert local_path == "/tmp/temp_file.pdf"
 
     @pytest.mark.asyncio
     async def test_file_component_get_local_file_for_docling_local(self, local_settings):
@@ -134,7 +132,14 @@ class TestS3CompatibleComponents:
     @pytest.mark.asyncio
     async def test_save_file_component_s3_upload(self, s3_settings):
         """Test SaveToFileComponent with S3 storage."""
-        with patch("lfx.services.deps.get_settings_service", return_value=s3_settings):
+        # Mock boto3 S3 client
+        mock_s3_client = MagicMock()
+        mock_s3_client.put_object.return_value = {"ResponseMetadata": {"HTTPStatusCode": 200}}
+
+        with (
+            patch("lfx.services.deps.get_settings_service", return_value=s3_settings),
+            patch("boto3.client", return_value=mock_s3_client),
+        ):
             component = SaveToFileComponent()
 
             # Mock database and storage services
@@ -152,14 +157,21 @@ class TestS3CompatibleComponents:
                 from langflow.schema import Data, DataFrame
 
                 test_data = DataFrame(data=[Data(data={"text": "test content"})])
-                component.data = test_data
+                component.input = test_data  # Use 'input' not 'data'
                 component.file_name = "test_output.csv"
+                component.storage_location = [{"name": "AWS"}]  # Set S3 storage location
+                # Set required AWS credentials (will be mocked out anyway)
+                component.aws_access_key_id = "test_key"
+                component.aws_secret_access_key = "test_secret"
+                component.aws_region = "us-east-1"
+                component.bucket_name = "test-bucket"
 
                 result = await component.save_to_file()
 
                 # Should upload to S3 successfully
-                assert "saved successfully" in result.text
-                assert "s3_file.txt" in result.text
+                assert "successfully uploaded" in result.text
+                assert "s3://" in result.text
+                assert "test-bucket" in result.text
 
     @pytest.mark.asyncio
     async def test_csv_agent_s3_file_handling(self, s3_settings):
@@ -213,92 +225,80 @@ class TestS3CompatibleComponents:
                 # Should accept S3 paths
                 assert component.file_path == path
 
-    @pytest.mark.asyncio
-    async def test_s3_file_download_and_processing(self, s3_settings):
+    def test_s3_file_download_and_processing(self, s3_settings, mock_storage_service):
         """Test downloading and processing S3 files."""
-        with patch("lfx.services.deps.get_settings_service", return_value=s3_settings):
+        mock_storage_service.get_file.return_value = b"csv,content\n1,2"
+
+        with mock_s3_environment(s3_settings, mock_storage_service):
             component = FileComponent()
-            component.file_path = "user_123/large_file.csv"
+            component.path = "user_123/large_file.csv"
 
-            # Mock the download process
-            with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b"csv,content\n1,2"):
-                result = await component.load_files()
+            result = component.load_files()
 
-                # Should process downloaded content
-                assert result is not None
+            # Should process downloaded content
+            assert result is not None
+            mock_storage_service.get_file.assert_called_with("user_123", "large_file.csv")
 
-    @pytest.mark.asyncio
-    async def test_s3_error_handling(self, s3_settings):
+    def test_s3_error_handling(self, s3_settings, mock_storage_service):
         """Test error handling with S3 operations."""
-        with patch("lfx.services.deps.get_settings_service", return_value=s3_settings):
+        mock_storage_service.get_file.side_effect = FileNotFoundError("File not found")
+
+        with mock_s3_environment(s3_settings, mock_storage_service):
             component = FileComponent()
-            component.file_path = "user_123/nonexistent.txt"
+            component.path = "user_123/nonexistent.txt"
+            component.silent_errors = False
 
-            # Mock S3 error
-            with (
-                patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, side_effect=FileNotFoundError("File not found")),
-                pytest.raises(FileNotFoundError),
-            ):
-                await component.load_files()
+            # Should raise ValueError (wraps FileNotFoundError)
+            with pytest.raises(ValueError, match="Error loading file"):
+                component.load_files()
 
-    @pytest.mark.asyncio
-    async def test_s3_streaming_operations(self, s3_settings):
+    def test_s3_streaming_operations(self, s3_settings, mock_storage_service):
         """Test streaming operations with S3."""
-        with patch("lfx.services.deps.get_settings_service", return_value=s3_settings):
+        mock_storage_service.get_file.return_value = b"chunk1chunk2chunk3"
+
+        with mock_s3_environment(s3_settings, mock_storage_service):
             component = FileComponent()
-            component.file_path = "user_123/large_file.txt"
+            component.path = "user_123/large_file.txt"
 
-            # Mock streaming
-            async def mock_stream():
-                yield b"chunk1"
-                yield b"chunk2"
-                yield b"chunk3"
+            result = component.load_files()
 
-            with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b"chunk1chunk2chunk3"):
-                result = await component.load_files()
+            # Should handle streaming content
+            assert result is not None
+            mock_storage_service.get_file.assert_called_with("user_123", "large_file.txt")
 
-                # Should handle streaming content
-                assert result is not None
-
-    @pytest.mark.asyncio
-    async def test_s3_metadata_handling(self, s3_settings):
+    def test_s3_metadata_handling(self, s3_settings, mock_storage_service):
         """Test metadata handling with S3 files."""
-        with patch("lfx.services.deps.get_settings_service", return_value=s3_settings):
+        file_content = b'{"name": "test", "size": 1024, "type": "application/json"}'
+        mock_storage_service.get_file.return_value = file_content
+
+        with mock_s3_environment(s3_settings, mock_storage_service):
             component = FileComponent()
-            component.file_path = "user_123/metadata_file.json"
+            component.path = "user_123/metadata_file.json"
 
-            # Mock file with metadata
-            file_content = b'{"name": "test", "size": 1024, "type": "application/json"}'
-            with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=file_content):
-                result = await component.load_files()
+            result = component.load_files()
 
-                # Should preserve metadata
-                assert result is not None
+            # Should preserve metadata
+            assert result is not None
+            mock_storage_service.get_file.assert_called_with("user_123", "metadata_file.json")
 
-    @pytest.mark.asyncio
-    async def test_s3_concurrent_operations(self, s3_settings):
+    def test_s3_concurrent_operations(self, s3_settings, mock_storage_service):
         """Test concurrent S3 operations."""
-        with patch("lfx.services.deps.get_settings_service", return_value=s3_settings):
-            import asyncio
+        mock_storage_service.get_file.return_value = b"content"
 
-            async def process_file(file_path):
+        with mock_s3_environment(s3_settings, mock_storage_service):
+            # Process multiple files
+            results = []
+            for file_path in ["user_123/file1.txt", "user_123/file2.txt", "user_123/file3.txt"]:
                 component = FileComponent()
-                component.file_path = file_path
-                with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b"content"):
-                    return await component.load_files()
-
-            # Test concurrent file processing
-            tasks = [
-                process_file("user_123/file1.txt"),
-                process_file("user_123/file2.txt"),
-                process_file("user_123/file3.txt"),
-            ]
-
-            results = await asyncio.gather(*tasks)
+                component.path = file_path
+                result = component.load_files()
+                results.append(result)
 
             # All should succeed
             assert len(results) == 3
             assert all(result is not None for result in results)
+            # Verify all files were requested
+            assert mock_storage_service.get_file.call_count == 3
 
     @pytest.mark.asyncio
     async def test_csv_to_data_fileinput_local_only(self, s3_settings, local_settings):
