@@ -9,8 +9,14 @@ from sqlalchemy import Column, Text, UniqueConstraint, text
 from sqlalchemy import Enum as SQLEnum
 from sqlmodel import JSON, Field, Relationship, SQLModel
 
+# Import the Read schema at runtime to resolve forward references in Pydantic
+from langflow.services.database.models.published_flow_input_sample.model import (
+    PublishedFlowInputSampleRead,
+)
+
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
+    from langflow.services.database.models.published_flow_input_sample.model import PublishedFlowInputSample
     from langflow.services.database.models.published_flow_version.model import PublishedFlowVersion
     from langflow.services.database.models.user.model import User
 
@@ -83,6 +89,12 @@ class PublishedFlow(PublishedFlowBase, table=True):  # type: ignore[call-arg]
             "order_by": "PublishedFlowVersion.published_at.desc()",
         },
     )
+    input_samples: list["PublishedFlowInputSample"] = Relationship(
+        back_populates="published_flow",
+        sa_relationship_kwargs={
+            "cascade": "all, delete-orphan",
+        },
+    )
 
     __table_args__ = (UniqueConstraint("flow_cloned_from", name="uq_published_flow_cloned_from"),)
 
@@ -96,6 +108,12 @@ class PublishedFlowCreate(SQLModel):
     tags: list[str] | None = None
     description: str | None = None
     flow_icon: str | None = None
+    # Sample input fields
+    storage_account: str | None = None
+    container_name: str | None = None
+    file_names: list[str] | None = None
+    sample_text: list[str] | None = None
+    sample_output: dict | None = None
 
 
 class PublishedFlowRead(PublishedFlowBase):
@@ -113,6 +131,7 @@ class PublishedFlowRead(PublishedFlowBase):
     flow_icon: str | None = None
     published_by_username: str | None = None
     flow_data: dict | None = None  # Flow data from cloned flow for visualization
+    input_samples: list[PublishedFlowInputSampleRead] | None = None
 
 
 class PublishedFlowUpdate(SQLModel):
@@ -122,3 +141,6 @@ class PublishedFlowUpdate(SQLModel):
     description: str | None = None
     tags: list[str] | None = None
     category: str | None = None
+
+# Rebuild Pydantic models to resolve forward references used in annotations
+PublishedFlowRead.model_rebuild()

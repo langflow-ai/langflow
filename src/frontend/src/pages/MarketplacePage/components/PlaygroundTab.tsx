@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { v4 as uuid } from "uuid";
 import { Button } from "@/components/ui/button";
 import LoadingIcon from "@/components/ui/loading";
@@ -17,6 +17,7 @@ import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
 import { MessageRenderer } from "./MessageRender";
 import { usePlaygroundChat } from "./PlaygroundChat";
 import { useResizablePanel } from "./UseResizablePanel";
+import { usePostReadPresignedUrl } from "@/controllers/API/queries/flexstore";
 
 export default function PlaygroundTab({
   publishedFlowData,
@@ -29,6 +30,8 @@ export default function PlaygroundTab({
     name: string;
     type: string;
   } | null>(null);
+  // Controls when to show the sample files section
+  const [showSampleSection, setShowSampleSection] = useState(true);
 
   const { leftPanelWidth, isDragging, handleDragStart } = useResizablePanel(33.33);
 
@@ -57,6 +60,22 @@ export default function PlaygroundTab({
     tags: publishedFlowData?.tags || [],
     name: publishedFlowData?.name || "Agent",
   };
+
+  // Aggregate sample input file paths and names from input_samples
+  const sampleFilePaths: string[] = Array.isArray(publishedFlowData?.input_samples)
+    ? publishedFlowData!.input_samples.flatMap((s: any) =>
+        Array.isArray(s?.file_names) ? s.file_names : []
+      )
+    : [];
+
+  const sampleFileNames: string[] = sampleFilePaths.map((path: string) => {
+    try {
+      const idx = path.lastIndexOf("/");
+      return idx >= 0 ? path.slice(idx + 1) : path;
+    } catch {
+      return String(path);
+    }
+  });
 
   const getTagTitle = (tagId: string): string => {
     const tag = MARKETPLACE_TAGS.find((t) => t.id === tagId);
@@ -143,10 +162,25 @@ export default function PlaygroundTab({
     const currentFileUrls = { ...fileUrls };
     const messageText = hasChatInput ? input.trim() : "Processing uploaded file...";
 
+    // Build attachments from currently selected files so they appear in chat history
+    const attachments = selectedFiles.map((file) => ({
+      url: file.url,
+      name: file.filename,
+      type: file.fileType,
+    }));
+
+    // Keep sample section hidden until the run completes
+    setShowSampleSection(false);
+
     setFileUrls({});
     setInput("");
     
-    await sendMessageHook(messageText, currentFileUrls, fileInputComponents);
+    await sendMessageHook(
+      messageText,
+      currentFileUrls,
+      fileInputComponents,
+      attachments
+    );
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -157,6 +191,8 @@ export default function PlaygroundTab({
   };
 
   const handleFileUrlChange = (componentId: string, url: string) => {
+    // Hide sample section when a file is uploaded/selected
+    setShowSampleSection(false);
     setFileUrls((prev) => ({
       ...prev,
       [componentId]: url,
@@ -164,6 +200,8 @@ export default function PlaygroundTab({
   };
 
   const clearFileUrl = (componentId: string) => {
+    // Hide section until the next run completes
+    setShowSampleSection(false);
     setFileUrls((prev) => {
       const newUrls = { ...prev };
       delete newUrls[componentId];
@@ -172,6 +210,8 @@ export default function PlaygroundTab({
   };
 
   const removeSelectedFile = (componentId: string) => {
+    // Hide section and clear the file
+    setShowSampleSection(false);
     clearFileUrl(componentId);
   };
 
@@ -182,6 +222,74 @@ export default function PlaygroundTab({
       type: file.fileType,
     });
   };
+
+  // Presigned read URL for sample files in Agent Details
+  const readPresignedUrlMutation = usePostReadPresignedUrl();
+
+  const getFileTypeFromName = (name: string) => {
+    const ext = name.split(".").pop()?.toLowerCase() || "";
+    if (ext === "json") return "application/json";
+    if (ext === "png") return "image/png";
+    if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+    if (ext === "pdf") return "application/pdf";
+    return "application/octet-stream";
+  };
+
+  const getStorageDetails = () => {
+    const sample0 = Array.isArray(publishedFlowData?.input_samples)
+      ? publishedFlowData!.input_samples[0]
+      : undefined;
+    const containerName = sample0?.container_name || "ai-studio-v2";
+    const storageAccount = sample0?.storage_account || (process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT || "autonomizestorageaccount");
+    return { containerName, storageAccount };
+  };
+
+  const previewSampleFile = async (filePathOrName: string) => {
+    try {
+      const { containerName, storageAccount } = getStorageDetails();
+      const resp = await readPresignedUrlMutation.mutateAsync({
+        sourceType: "azureBlob",
+        fileName: filePathOrName,
+        sourceDetails: { containerName, storageAccount },
+      });
+      const signedUrl = resp?.presignedUrl?.data?.signedUrl || "";
+      if (!signedUrl) return;
+      const name = filePathOrName.includes("/")
+        ? filePathOrName.split("/").pop() || filePathOrName
+        : filePathOrName;
+      const type = getFileTypeFromName(name);
+      setPreviewFile({ url: signedUrl, name, type });
+    } catch (e) {
+      // Optional: add error toast
+    }
+  };
+
+  // Select sample file for payload (mutually exclusive with uploaded files)
+  const selectSampleFile = async (filePathOrName: string) => {
+    try {
+      const { containerName, storageAccount } = getStorageDetails();
+      const resp = await readPresignedUrlMutation.mutateAsync({
+        sourceType: "azureBlob",
+        fileName: filePathOrName,
+        sourceDetails: { containerName, storageAccount },
+      });
+      const signedUrl = resp?.presignedUrl?.data?.signedUrl || "";
+      if (!signedUrl || fileInputComponents.length === 0) return;
+      const targetComponentId = fileInputComponents[0].id;
+      // Clear previous selections and set only the sample file
+      setShowSampleSection(false);
+      setFileUrls({ [targetComponentId]: signedUrl });
+    } catch (e) {
+      // Optional: add error toast
+    }
+  };
+
+  // Show the sample section again only when a run is complete and no files are selected
+  useEffect(() => {
+    if (!isLoading && !streamingMessageId && selectedFiles.length === 0) {
+      setShowSampleSection(true);
+    }
+  }, [isLoading, streamingMessageId, selectedFiles.length]);
 
   return (
     <div className="flex h-full w-full flex-col ">
@@ -227,6 +335,28 @@ export default function PlaygroundTab({
                     </span>
                   ))}
                 </div>
+              </div>
+
+              {/* Sample Input files Section */}
+              <div className="space-y-2">
+                <p className="text-[#444] text-xs font-medium">Sample Input files:</p>
+                {sampleFileNames.length > 0 ? (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {sampleFileNames.map((name, idx) => (
+                      <button
+                        key={`${name}-${idx}`}
+                        type="button"
+                        className="bg-[#F5F2FF] text-[#64616A] text-xs px-2 py-1 rounded-[4px] hover:bg-[#EAE6FF] transition-colors"
+                        onClick={() => previewSampleFile(sampleFilePaths[idx])}
+                        title="Preview sample file"
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[#64616A] text-xs">No sample files provided.</p>
+                )}
               </div>
             </div>
           </div>
@@ -292,6 +422,7 @@ export default function PlaygroundTab({
                   displayedTexts={displayedTexts}
                   targetTexts={targetTexts}
                   loadingDots={loadingDots}
+                  onPreviewAttachment={(f) => setPreviewFile(f)}
                 />
               ))}
             </div>
@@ -447,6 +578,40 @@ export default function PlaygroundTab({
                 </div>
               )}
             </div>
+            {/* Right panel sample files selection (hidden until run completes or when a file is selected) */}
+            {sampleFileNames.length > 0 && selectedFiles.length === 0 && showSampleSection && (
+              <div className="mt-4">
+                <p className="text-xs text-[#444] font-medium mb-2">Or Choose from Sample Input files below</p>
+                <div className="flex flex-wrap gap-2">
+                  {sampleFileNames.map((name, idx) => (
+                    <div
+                      key={`${name}-${idx}`}
+                      className="flex items-center gap-2 bg-muted/50 border rounded-lg px-3 py-2 text-sm cursor-pointer hover:bg-muted"
+                      onClick={() => selectSampleFile(sampleFilePaths[idx])}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          selectSampleFile(sampleFilePaths[idx]);
+                        }
+                      }}
+                    >
+                      <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="truncate max-w-[180px]" title={name}>{name}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-1 text-muted-foreground hover:text-primary"
+                        onClick={(e) => { e.stopPropagation(); previewSampleFile(sampleFilePaths[idx]); }}
+                        title="Preview sample file"
+                      >
+                        Preview Sample
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

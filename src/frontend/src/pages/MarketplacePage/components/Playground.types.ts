@@ -10,6 +10,11 @@ export interface Message {
   text: string;
   timestamp: Date;
   isStreaming?: boolean;
+  files?: {
+    name: string;
+    url: string;
+    type: string;
+  }[];
 }
 
 export interface FileInputComponent {
