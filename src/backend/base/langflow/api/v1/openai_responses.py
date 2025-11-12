@@ -171,12 +171,29 @@ async def run_flow_for_openai_responses(
                                     sender = data.get("sender", "")
                                     content_blocks = data.get("content_blocks", [])
 
+                                    # Get message state from properties
+                                    properties = data.get("properties", {})
+                                    message_state = properties.get("state") if isinstance(properties, dict) else None
+
                                     await logger.adebug(
-                                        "[OpenAIResponses][stream] add_message: sender=%s sender_name=%s text_len=%d",
+                                        (
+                                            "[OpenAIResponses][stream] add_message: "
+                                            "sender=%s sender_name=%s text_len=%d state=%s"
+                                        ),
                                         sender,
                                         sender_name,
                                         len(text) if isinstance(text, str) else -1,
+                                        message_state,
                                     )
+
+                                    # Skip processing text content if state is "complete"
+                                    # All content has already been streamed via token events
+                                    if message_state == "complete":
+                                        await logger.adebug(
+                                            "[OpenAIResponses][stream] skipping add_message with state=complete"
+                                        )
+                                        # Still process content_blocks for tool calls, but skip text content
+                                        text = ""
 
                                     # Look for Agent Steps in content_blocks
                                     for block in content_blocks:
