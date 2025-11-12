@@ -326,8 +326,9 @@ SSRF protection prevents requests to internal or private network resources, such
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `False` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
-| `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks. For example: `192.168.1.0/24,10.0.0.5,*.internal.company.local`.|
+| `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `False` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. The default is `False` for backward compatibility, but the default will change to `True` in a future release.
+| `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks, such as `192.168.1.0/24,10.0.0.5,*.internal.company.local`.
+This setting only applies if `ssrf_protection_enabled` is `True`; otherwise, all hosts are allowed regardless of `ssrf_allowed_hosts`.|
 
 ## Start a Langflow server with authentication enabled
 
