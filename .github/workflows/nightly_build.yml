@@ -22,6 +22,11 @@ on:
         required: false
         type: boolean
         default: false
+      skip_slack:
+        description: "Skip slack message on failure. Only do this for testing purposes."
+        required: false
+        type: boolean
+        default: false
       push_to_registry:
         description: "Whether to push images to registries. Set to false for testing builds without publishing."
         required: false
@@ -229,7 +234,7 @@ jobs:
   slack-notification:
     name: Send Slack Notification
     needs: [frontend-tests, backend-unit-tests, release-nightly-build]
-    if: ${{ github.repository == 'langflow-ai/langflow' && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
+    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Send failure notification to Slack
