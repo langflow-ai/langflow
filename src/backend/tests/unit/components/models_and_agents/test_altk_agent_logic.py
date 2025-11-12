@@ -66,7 +66,7 @@ class TrackingWrapper(BaseToolWrapper):
 
             def _run(self, *args, **kwargs) -> str:
                 self.execution_order.append(f"{self.wrapper_name}_start")
-                result = self.original_tool._run(*args, **kwargs)
+                result = self.original_tool.run(*args, **kwargs)
                 self.execution_order.append(f"{self.wrapper_name}_end")
                 return f"[{self.wrapper_name}]{result}"
 
@@ -383,21 +383,28 @@ class TestToolExecutionOrder:
 class TestALTKBaseToolLogic:
     """Test ALTKBaseTool functionality and document design issues."""
 
-    def test_altk_base_tool_is_abstract(self):
-        """Test that ALTKBaseTool cannot be instantiated directly."""
+    def test_altk_base_tool_can_be_instantiated_with_valid_agent(self):
+        """Test that ALTKBaseTool can be instantiated with a proper agent."""
+        from langchain_core.runnables import RunnableLambda
         from lfx.base.agents.altk_base_agent import ALTKBaseTool
 
-        mock_agent = MagicMock()
+        # Create a proper mock agent that matches the expected types
+
+        mock_agent = RunnableLambda(lambda _: "agent response")
         wrapped_tool = MockTool()
 
-        # This should fail because ALTKBaseTool is abstract
-        with pytest.raises(TypeError, match="Can't instantiate abstract class ALTKBaseTool"):
-            ALTKBaseTool(
-                name="test_tool",
-                description="Test tool",
-                wrapped_tool=wrapped_tool,
-                agent=mock_agent,
-            )
+        # This should now work because ALTKBaseTool is no longer abstract
+        tool = ALTKBaseTool(
+            name="test_tool",
+            description="Test tool",
+            wrapped_tool=wrapped_tool,
+            agent=mock_agent,
+        )
+
+        # Test that the tool can be used
+        result = tool.run("test query")
+        assert result == "mock_response_1"
+        assert wrapped_tool.call_count == 1
 
     def test_execute_tool_logic_isolated(self):
         """Test the _execute_tool logic in isolation without full class instantiation."""
@@ -432,16 +439,16 @@ class TestALTKBaseToolLogic:
             description: str = "Tool that errors on config"
             call_count: int = 0
 
-            def _run(self, **kwargs) -> str:
+            def _run(self, query: str = "", **kwargs) -> str:
                 error_message = "Tool doesn't accept config parameter"
                 if "config" in kwargs:
                     raise TypeError(error_message)
                 self.call_count += 1
-                return f"success_{self.call_count}"
+                return f"success_{self.call_count}_{query}"
 
         tool2 = ConfigErrorTool()
         result2 = execute_tool_logic(tool2, "test query")
-        assert result2 == "success_1"
+        assert result2 == "success_1_test query"
         assert tool2.call_count == 1
 
 
@@ -637,7 +644,7 @@ class TestConversationContextBuilding:
 
         # When executed, it should raise the mock error
         with pytest.raises(ValueError, match="Mock tool error"):
-            processed_tools[0]._run("test query")
+            processed_tools[0].run("test query")
 
 
 class TestConfigurationCombinations:
