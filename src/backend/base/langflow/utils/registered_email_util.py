@@ -48,7 +48,7 @@ def get_email_model() -> EmailPayload | None:
     # Retrieve registration
     try:
         registration = load_registration()
-    except (OSError, UnicodeDecodeError, AttributeError) as e:
+    except (OSError, AttributeError, TypeError, MemoryError) as e:
         _RegisteredEmailCache.set_email_model(None)
         logger.error(f"Failed to load email registration: {e}")
         return None

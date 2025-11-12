@@ -122,10 +122,6 @@ async def _send_email_telemetry(email: str) -> None:
         logger.error(f"Email is not a valid email address: {email}: {err}.")
         return
 
-    if not payload:
-        logger.debug(f"Aborted operation to send email telemetry event: {email}.")
-        return
-
     logger.debug(f"Sending email telemetry event: {email}")
 
     telemetry_service = get_telemetry_service()
@@ -137,8 +133,6 @@ async def _send_email_telemetry(email: str) -> None:
         return
 
     logger.debug(f"Successfully sent email telemetry event: {payload.email}")
-
-    return
 
 
 @router.get("/")

@@ -143,8 +143,6 @@ class TelemetryService(Service):
 
         await logger.adebug(f"Successfully sent email telemetry event: {payload.email}")
 
-        return
-
     async def log_package_version(self) -> None:
         python_version = ".".join(platform.python_version().split(".")[:2])
         version_info = get_version_info()
