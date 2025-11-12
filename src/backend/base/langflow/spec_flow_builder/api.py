@@ -1,10 +1,12 @@
 """API endpoints for spec_flow_builder."""
 
 import logging
+import re
+from datetime import datetime, timezone
 from uuid import UUID
 
 import yaml
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -14,13 +16,14 @@ from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NA
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service
 from .component_resolver import ComponentResolver
-from .models import ValidateSpecRequest, ValidationReport, CreateFlowRequest, CreateFlowResponse
+from .models import ValidateSpecRequest, ValidationReport, CreateFlowRequest, CreateFlowResponse, ExportYamlResponse
 from .validator import SpecValidator
 from .provides_validator import ProvidesConnectionValidator
 from .config_validator import ConfigValidator
 from .node_builder import NodeBuilder
 from .config_builder import ConfigBuilder
 from .edge_builder import EdgeBuilder
+from .yaml_exporter import FlowToYamlConverter
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +61,35 @@ async def _get_or_create_folder(session: DbSession, user_id: UUID, folder_name: 
         await session.refresh(folder)
 
     return folder
+
+
+def _sanitize_filename(name: str) -> str:
+    """
+    Sanitize flow name for use in filename.
+
+    Converts flow name to a safe filename by:
+    - Converting to lowercase
+    - Replacing spaces and special characters with hyphens
+    - Collapsing multiple hyphens into one
+    - Removing leading/trailing hyphens
+
+    Args:
+        name: Flow name to sanitize
+
+    Returns:
+        Sanitized filename-safe string
+
+    Examples:
+        "EOC Check Agent" -> "eoc-check-agent"
+        "My Flow (v2)!" -> "my-flow-v2"
+        "Test___Flow" -> "test-flow"
+    """
+    # Convert to lowercase and replace non-alphanumeric chars with hyphens
+    sanitized = re.sub(r"[^a-z0-9_-]", "-", name.lower())
+    # Collapse multiple hyphens/underscores into single hyphen
+    sanitized = re.sub(r"[-_]+", "-", sanitized)
+    # Remove leading/trailing hyphens
+    return sanitized.strip("-")
 
 
 # ============================================================================
@@ -316,3 +348,197 @@ async def create_flow(
     except Exception as e:
         logger.error(f"Create-flow endpoint error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Flow creation failed: {str(e)}")
+
+
+@router.get("/export-yaml/{flow_id}", response_model=ExportYamlResponse)
+async def export_yaml(
+    flow_id: str, session: DbSession, current_user: CurrentActiveUser
+) -> ExportYamlResponse:
+    """
+    Export an existing flow to YAML specification format.
+
+    This endpoint takes a flow ID and converts it back to YAML specification by:
+    1. Fetching the flow from the database
+    2. Extracting metadata (name, description, etc.)
+    3. Converting nodes to YAML components
+    4. Analyzing edges to build 'provides' relationships
+    5. Generating formatted YAML string
+
+    Path parameters:
+        flow_id: UUID of the flow to export
+
+    Response:
+        {
+            "success": true,
+            "message": "Flow exported successfully",
+            "yaml_content": "id: urn:agent:...\ncomponents:\n- type: PromptComponent\n  ...",
+            "flow_name": "My Flow"
+        }
+
+    Args:
+        flow_id: UUID of the flow to export
+        session: Database session (injected)
+        current_user: Current authenticated user (injected)
+
+    Returns:
+        ExportYamlResponse with YAML content and export status
+
+    Raises:
+        HTTPException: If flow is not found or export fails
+    """
+    try:
+        logger.info(f"Received export-yaml request for flow {flow_id} from user {current_user.id}")
+
+        # Step 1: Validate flow_id format
+        try:
+            flow_uuid = UUID(flow_id)
+        except ValueError:
+            logger.error(f"Invalid flow_id format: {flow_id}")
+            return ExportYamlResponse(
+                success=False,
+                message=f"Invalid flow_id format: {flow_id}",
+                yaml_content=None,
+                flow_name=None,
+            )
+
+        # Step 2: Fetch flow from database
+        flow = await session.get(Flow, flow_uuid)
+        if not flow:
+            logger.warning(f"Flow with ID {flow_id} not found")
+            raise HTTPException(status_code=404, detail=f"Flow with ID {flow_id} not found")
+
+        # Check if user owns the flow
+        if flow.user_id != current_user.id:
+            logger.warning(f"User {current_user.id} attempted to export flow {flow_id} owned by {flow.user_id}")
+            raise HTTPException(status_code=403, detail="You do not have permission to export this flow")
+
+        # Step 3: Fetch component catalog
+        logger.info("Fetching component catalog for export")
+        settings_service = get_settings_service()
+        all_components = await get_and_cache_all_types_dict(settings_service)
+        total_components = sum(len(comps) for comps in all_components.values())
+        logger.info(f"Fetched {total_components} components for export")
+
+        # Step 4: Convert flow to YAML
+        logger.info(f"Converting flow '{flow.name}' to YAML specification")
+        converter = FlowToYamlConverter(all_components)
+
+        # Prepare flow data for conversion
+        flow_data = {
+            "id": str(flow.id),
+            "name": flow.name,
+            "description": flow.description or "",
+            "data": flow.data,  # Contains nodes and edges
+        }
+
+        yaml_content = await converter.convert_flow_to_yaml(flow_data)
+
+        logger.info(f"Successfully exported flow '{flow.name}' to YAML ({len(yaml_content)} chars)")
+
+        return ExportYamlResponse(
+            success=True,
+            message="Flow exported successfully",
+            yaml_content=yaml_content,
+            flow_name=flow.name,
+        )
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Export-yaml endpoint error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"YAML export failed: {str(e)}")
+
+
+@router.get("/download-yaml/{flow_id}")
+async def download_yaml(
+    flow_id: str, session: DbSession, current_user: CurrentActiveUser
+) -> Response:
+    """
+    Download an existing flow as a YAML file.
+
+    This endpoint is similar to export-yaml but returns the YAML as a downloadable file
+    with proper headers to trigger browser download dialog.
+
+    Path parameters:
+        flow_id: UUID of the flow to download
+
+    Response:
+        Raw YAML file with Content-Disposition header for download
+
+    Filename format:
+        {sanitized_flow_name}_{timestamp}.yaml
+        Example: eoc-check-agent_2025-11-10.yaml
+
+    Args:
+        flow_id: UUID of the flow to download
+        session: Database session (injected)
+        current_user: Current authenticated user (injected)
+
+    Returns:
+        Response with YAML content and download headers
+
+    Raises:
+        HTTPException: If flow is not found or download fails
+    """
+    try:
+        logger.info(f"Received download-yaml request for flow {flow_id} from user {current_user.id}")
+
+        # Step 1: Validate flow_id format
+        try:
+            flow_uuid = UUID(flow_id)
+        except ValueError:
+            logger.error(f"Invalid flow_id format: {flow_id}")
+            raise HTTPException(status_code=400, detail=f"Invalid flow_id format: {flow_id}")
+
+        # Step 2: Fetch flow from database
+        flow = await session.get(Flow, flow_uuid)
+        if not flow:
+            logger.warning(f"Flow with ID {flow_id} not found")
+            raise HTTPException(status_code=404, detail=f"Flow with ID {flow_id} not found")
+
+        # Check if user owns the flow
+        if flow.user_id != current_user.id:
+            logger.warning(f"User {current_user.id} attempted to download flow {flow_id} owned by {flow.user_id}")
+            raise HTTPException(status_code=403, detail="You do not have permission to download this flow")
+
+        # Step 3: Fetch component catalog
+        logger.info("Fetching component catalog for download")
+        settings_service = get_settings_service()
+        all_components = await get_and_cache_all_types_dict(settings_service)
+
+        # Step 4: Convert flow to YAML
+        logger.info(f"Converting flow '{flow.name}' to YAML for download")
+        converter = FlowToYamlConverter(all_components)
+
+        # Prepare flow data for conversion
+        flow_data = {
+            "id": str(flow.id),
+            "name": flow.name,
+            "description": flow.description or "",
+            "data": flow.data,
+        }
+
+        yaml_content = await converter.convert_flow_to_yaml(flow_data)
+
+        # Step 5: Generate filename
+        sanitized_name = _sanitize_filename(flow.name)
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        filename = f"{sanitized_name}_{timestamp}.yaml"
+
+        logger.info(f"Prepared download: {filename} ({len(yaml_content)} chars)")
+
+        # Step 6: Return YAML as downloadable file
+        return Response(
+            content=yaml_content,
+            media_type="text/yaml; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Content-Length": str(len(yaml_content.encode("utf-8"))),
+            },
+        )
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Download-yaml endpoint error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"YAML download failed: {str(e)}")

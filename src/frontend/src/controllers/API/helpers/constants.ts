@@ -34,7 +34,8 @@ export const URLs = {
   KNOWLEDGE_BASES: `knowledge_bases`,
   AGENT_MARKETPLACE: `agent-marketplace`,
   PUBLISHED_FLOWS: `published-flows`,
-  RUN: `run`
+  RUN: `run`,
+  SPEC_BUILDER: `spec-builder`
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility

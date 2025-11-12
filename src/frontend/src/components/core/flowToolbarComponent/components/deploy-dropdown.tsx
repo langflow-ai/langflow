@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
+import { useDownloadYaml } from "@/controllers/API/queries/flows/use-download-yaml";
 import { useCheckFlowPublished } from "@/controllers/API/queries/published-flows";
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
@@ -49,6 +50,19 @@ export default function PublishDropdown() {
 
   // Check if flow is published to marketplace
   const { data: publishCheck } = useCheckFlowPublished(flowId);
+
+  // Download YAML mutation
+  const { mutate: downloadYaml, isPending: isDownloadingYaml } = useDownloadYaml({
+    onSuccess: () => {
+      // No need to show success message as the file download is self-evident
+    },
+    onError: (error) => {
+      setErrorData({
+        title: "Failed to download YAML",
+        list: [(error as Error).message],
+      });
+    },
+  });
   const isPublishedToMarketplace = publishCheck?.is_published;
 
   const handlePublishedSwitch = async (checked: boolean) => {
@@ -83,6 +97,17 @@ export default function PublishDropdown() {
         },
       },
     );
+  };
+
+  const handleExportYaml = () => {
+    if (!flowId) {
+      setErrorData({
+        title: "Export failed",
+        list: ["No flow selected"],
+      });
+      return;
+    }
+    downloadYaml({ flowId });
   };
 
   return (
@@ -131,6 +156,14 @@ export default function PublishDropdown() {
           >
             <IconComponent name="Download" className={`icon-size mr-2`} />
             <span>Export</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="deploy-dropdown-item group"
+            onClick={handleExportYaml}
+            disabled={isDownloadingYaml || !flowId}
+          >
+            <IconComponent name="FileText" className={`icon-size mr-2`} />
+            <span>{isDownloadingYaml ? "Downloading..." : "Export Specification"}</span>
           </DropdownMenuItem>
           <CustomLink
             className={cn("flex-1")}
