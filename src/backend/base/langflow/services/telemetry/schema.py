@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 
 class BasePayload(BaseModel):
@@ -15,6 +15,10 @@ class RunPayload(BasePayload):
 
 class ShutdownPayload(BasePayload):
     time_running: int = Field(serialization_alias="timeRunning")
+
+
+class EmailPayload(BasePayload):
+    email: EmailStr
 
 
 class VersionPayload(BasePayload):
