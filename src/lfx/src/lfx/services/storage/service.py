@@ -5,11 +5,11 @@ from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
 import anyio
-from langflow.services.base import Service
+
+from lfx.services.base import Service
 
 if TYPE_CHECKING:
-    from langflow.services.session.service import SessionService
-    from langflow.services.settings.service import SettingsService
+    from lfx.services.settings.service import SettingsService
 
 
 class StorageService(Service):
@@ -24,7 +24,7 @@ class StorageService(Service):
 
     name = "storage_service"
 
-    def __init__(self, session_service: SessionService, settings_service: SettingsService):
+    def __init__(self, session_service, settings_service: SettingsService):
         """Initialize the storage service.
 
         Args:

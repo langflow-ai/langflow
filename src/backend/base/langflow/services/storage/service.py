@@ -24,7 +24,4 @@ class StorageService(LfxStorageService):
 
     def __init__(self, session_service: SessionService, settings_service: SettingsService):
         """Initialize the storage service with session and settings services."""
-        # Initialize lfx StorageService (which already inherits from Service)
         super().__init__(session_service=session_service, settings_service=settings_service)
-        # LfxStorageService already sets self.settings_service, self.session_service, and self.data_dir
-        # LfxStorageService already calls set_ready() internally

@@ -393,6 +393,8 @@ async def download_files_batch(
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
 
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=f"File not found: {e}") from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error downloading files: {e}") from e
 
@@ -496,6 +498,8 @@ async def download_file(
 
     except HTTPException:
         raise
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=f"File not found: {e}") from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error downloading file: {e}") from e
 
