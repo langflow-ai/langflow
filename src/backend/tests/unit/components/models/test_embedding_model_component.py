@@ -2,7 +2,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from lfx.components.models.embedding_model import (
-    OLLAMA_EMBEDDING_MODELS,
     OPENAI_EMBEDDING_MODEL_NAMES,
     WATSONX_EMBEDDING_MODEL_NAMES,
     EmbeddingModelComponent,
@@ -38,9 +37,11 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
             "model": {"options": [], "value": ""},
             "api_key": {"display_name": "API Key", "required": True, "show": True},
             "api_base": {"display_name": "API Base URL", "value": ""},
+            "base_url_ibm_watsonx": {"show": False},
             "project_id": {"show": False},
+            "ollama_base_url": {"show": False},
         }
-        updated_config = component.update_build_config(build_config, "OpenAI", "provider")
+        updated_config = await component.update_build_config(build_config, "OpenAI", "provider")
         assert updated_config["model"]["options"] == OPENAI_EMBEDDING_MODEL_NAMES
         assert updated_config["model"]["value"] == OPENAI_EMBEDDING_MODEL_NAMES[0]
         assert updated_config["api_key"]["display_name"] == "OpenAI API Key"
@@ -48,24 +49,38 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         assert updated_config["api_key"]["show"] is True
         assert updated_config["api_base"]["display_name"] == "OpenAI API Base URL"
         assert updated_config["project_id"]["show"] is False
+        assert updated_config["base_url_ibm_watsonx"]["show"] is False
+        assert updated_config["ollama_base_url"]["show"] is False
 
-    async def test_update_build_config_ollama(self, component_class, default_kwargs):
+    @patch("lfx.components.models.embedding_model.get_ollama_models")
+    @patch("lfx.components.models.embedding_model.is_valid_ollama_url")
+    async def test_update_build_config_ollama(
+        self, mock_is_valid_url, mock_get_ollama_models, component_class, default_kwargs
+    ):
+        # Mock the validation and model fetching
+        mock_is_valid_url.return_value = True
+        mock_get_ollama_models.return_value = ["nomic-embed-text", "mxbai-embed-large"]
+
         component = component_class(**default_kwargs)
+        component.ollama_base_url = "http://localhost:11434"
         build_config = {
             "model": {"options": [], "value": ""},
             "api_key": {"display_name": "API Key", "required": True, "show": True},
             "api_base": {"display_name": "API Base URL", "value": ""},
             "project_id": {"show": False},
+            "base_url_ibm_watsonx": {"show": False},
+            "ollama_base_url": {"show": False},
         }
-        updated_config = component.update_build_config(build_config, "Ollama", "provider")
-        assert updated_config["model"]["options"] == OLLAMA_EMBEDDING_MODELS
-        assert updated_config["model"]["value"] == OLLAMA_EMBEDDING_MODELS[0]
+        updated_config = await component.update_build_config(build_config, "Ollama", "provider")
+        assert updated_config["model"]["options"] == ["nomic-embed-text", "mxbai-embed-large"]
+        assert updated_config["model"]["value"] == "nomic-embed-text"
         assert updated_config["api_key"]["display_name"] == "API Key (Optional)"
         assert updated_config["api_key"]["required"] is False
         assert updated_config["api_key"]["show"] is False
-        assert updated_config["api_base"]["display_name"] == "Ollama Base URL"
-        assert updated_config["api_base"]["value"] == "http://localhost:11434"
+        assert updated_config["api_base"]["show"] is False
         assert updated_config["project_id"]["show"] is False
+        assert updated_config["base_url_ibm_watsonx"]["show"] is False
+        assert updated_config["ollama_base_url"]["show"] is True
 
     async def test_update_build_config_watsonx(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
@@ -74,16 +89,19 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
             "api_key": {"display_name": "API Key", "required": True, "show": True},
             "api_base": {"display_name": "API Base URL", "value": ""},
             "project_id": {"show": False},
+            "base_url_ibm_watsonx": {"show": False},
+            "ollama_base_url": {"show": False},
         }
-        updated_config = component.update_build_config(build_config, "WatsonX", "provider")
+        updated_config = await component.update_build_config(build_config, "IBM watsonx.ai", "provider")
         assert updated_config["model"]["options"] == WATSONX_EMBEDDING_MODEL_NAMES
         assert updated_config["model"]["value"] == WATSONX_EMBEDDING_MODEL_NAMES[0]
-        assert updated_config["api_key"]["display_name"] == "Watson AI API Key"
+        assert updated_config["api_key"]["display_name"] == "IBM watsonx.ai API Key"
         assert updated_config["api_key"]["required"] is True
         assert updated_config["api_key"]["show"] is True
-        assert updated_config["api_base"]["display_name"] == "Watson AI URL"
-        assert updated_config["api_base"]["value"] == "https://us-south.ml.cloud.ibm.com"
+        assert updated_config["api_base"]["show"] is False
+        assert updated_config["base_url_ibm_watsonx"]["show"] is True
         assert updated_config["project_id"]["show"] is True
+        assert updated_config["ollama_base_url"]["show"] is False
 
     @patch("lfx.components.models.embedding_model.OpenAIEmbeddings")
     async def test_build_embeddings_openai(self, mock_openai_embeddings, component_class, default_kwargs):
@@ -148,7 +166,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
 
         # Create and configure the component
         kwargs = default_kwargs.copy()
-        kwargs["provider"] = "WatsonX"
+        kwargs["provider"] = "IBM watsonx.ai"
         kwargs["model"] = "ibm/granite-embedding-125m-english"
         component = component_class(**kwargs)
         component.project_id = "test-project-id"
@@ -167,11 +185,11 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
 
     async def test_build_embeddings_watsonx_missing_project_id(self, component_class, default_kwargs):
         kwargs = default_kwargs.copy()
-        kwargs["provider"] = "WatsonX"
+        kwargs["provider"] = "IBM watsonx.ai"
         component = component_class(**kwargs)
         component.project_id = None
 
-        with pytest.raises(ValueError, match="Project ID is required for WatsonX"):
+        with pytest.raises(ValueError, match=r"Project ID is required for IBM watsonx.ai"):
             component.build_embeddings()
 
     async def test_build_embeddings_openai_missing_api_key(self, component_class, default_kwargs):
@@ -184,13 +202,13 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
 
     async def test_build_embeddings_watsonx_missing_api_key(self, component_class, default_kwargs):
         kwargs = default_kwargs.copy()
-        kwargs["provider"] = "WatsonX"
+        kwargs["provider"] = "IBM watsonx.ai"
         kwargs["api_key"] = None
         component = component_class(**kwargs)
         component.api_key = None
         component.project_id = "test-project"
 
-        with pytest.raises(ValueError, match="Watson AI API key is required when using WatsonX provider"):
+        with pytest.raises(ValueError, match=r"IBM watsonx.ai API key is required when using IBM watsonx.ai provider"):
             component.build_embeddings()
 
     async def test_build_embeddings_unknown_provider(self, component_class, default_kwargs):
