@@ -40,6 +40,21 @@ class TestParseStoragePath:
         assert parse_storage_path("flow_id/") is None
         assert parse_storage_path("/") is None
 
+    def test_parse_path_with_multiple_subdirs(self):
+        """Test parsing path with multiple subdirectory levels."""
+        result = parse_storage_path("flow_456/dir1/dir2/dir3/file.pdf")
+        assert result == ("flow_456", "dir1/dir2/dir3/file.pdf")
+
+    def test_parse_path_with_spaces(self):
+        """Test parsing path with spaces in filename."""
+        result = parse_storage_path("flow_789/my file with spaces.txt")
+        assert result == ("flow_789", "my file with spaces.txt")
+
+    def test_parse_path_with_special_chars(self):
+        """Test parsing path with special characters."""
+        result = parse_storage_path("flow_abc/file-name_v2.0.txt")
+        assert result == ("flow_abc", "file-name_v2.0.txt")
+
 
 @pytest.mark.asyncio
 class TestReadFileBytes:
@@ -111,6 +126,22 @@ class TestReadFileBytes:
 
         assert content == expected_content
         mock_storage.get_file.assert_called_once_with("flow_456", "custom.txt")
+
+    async def test_s3_mode_with_subdirectories(self):
+        """Test S3 mode correctly handles subdirectories in filename."""
+        mock_settings = Mock()
+        mock_settings.settings.storage_type = "s3"
+
+        mock_storage = AsyncMock()
+        mock_storage.get_file.return_value = b"Content from subdir"
+
+        with (
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.base.data.storage_utils.get_storage_service", return_value=mock_storage),
+        ):
+            content = await read_file_bytes("flow_456/subdir1/subdir2/file.txt")
+
+        mock_storage.get_file.assert_called_once_with("flow_456", "subdir1/subdir2/file.txt")
 
 
 @pytest.mark.asyncio
@@ -305,6 +336,20 @@ class TestStorageUtilsEdgeCases:
 
         assert content == binary_content
 
+    async def test_read_binary_file_with_null_bytes(self, tmp_path):
+        """Test reading binary file with null bytes."""
+        test_file = tmp_path / "binary.bin"
+        binary_content = b"\x00\x01\x02\xff\xfe\xfd"
+        test_file.write_bytes(binary_content)
+
+        mock_settings = Mock()
+        mock_settings.settings.storage_type = "local"
+
+        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):
+            content = await read_file_bytes(str(test_file))
+
+        assert content == binary_content
+
     async def test_read_empty_file(self, tmp_path):
         """Test reading empty file."""
         test_file = tmp_path / "empty.txt"
@@ -317,6 +362,23 @@ class TestStorageUtilsEdgeCases:
             content = await read_file_bytes(str(test_file))
 
         assert content == b""
+
+    async def test_s3_path_with_unicode_filename(self):
+        """Test S3 path with unicode characters in filename."""
+        mock_settings = Mock()
+        mock_settings.settings.storage_type = "s3"
+
+        mock_storage = AsyncMock()
+        mock_storage.get_file.return_value = b"Content"
+
+        with (
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.base.data.storage_utils.get_storage_service", return_value=mock_storage),
+        ):
+            content = await read_file_bytes("flow_123/文件名.txt")
+
+        assert content == b"Content"
+        mock_storage.get_file.assert_called_once_with("flow_123", "文件名.txt")
 
 
 class TestStorageUtilsSyncEdgeCases:

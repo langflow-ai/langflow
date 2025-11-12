@@ -3,6 +3,7 @@
 This test class focuses on components that are compatible with S3 storage.
 """
 
+from contextlib import contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -12,6 +13,37 @@ from lfx.components.data.csv_to_data import CSVToDataComponent
 from lfx.components.data.json_to_data import JSONToDataComponent
 from lfx.components.langchain_utilities.csv_agent import CSVAgentComponent
 from lfx.components.langchain_utilities.json_agent import JsonAgentComponent
+
+
+@contextmanager
+def mock_s3_environment(settings, storage_service):
+    """Context manager to mock S3 storage environment.
+
+    This patches all the necessary get_settings_service and get_storage_service
+    calls across the codebase to enable S3 testing.
+    """
+    patches = [
+        patch("lfx.services.deps.get_settings_service", return_value=settings),
+        patch("lfx.base.data.base_file.get_settings_service", return_value=settings),
+        patch("lfx.base.data.storage_utils.get_settings_service", return_value=settings),
+        patch("lfx.base.data.storage_utils.get_storage_service", return_value=storage_service),
+        patch("lfx.base.data.utils.get_settings_service", return_value=settings),
+        patch("lfx.components.data.csv_to_data.get_settings_service", return_value=settings),
+        patch("lfx.components.data.json_to_data.get_settings_service", return_value=settings),
+        patch("lfx.components.data.file.get_settings_service", return_value=settings),
+        patch("lfx.components.data.file.get_storage_service", return_value=storage_service),
+        patch("lfx.components.langchain_utilities.csv_agent.get_settings_service", return_value=settings),
+        patch("lfx.components.langchain_utilities.json_agent.get_settings_service", return_value=settings),
+    ]
+
+    # Start all patches
+    mocks = [p.start() for p in patches]
+    try:
+        yield
+    finally:
+        # Stop all patches
+        for p in patches:
+            p.stop()
 
 
 class TestS3CompatibleComponents:
@@ -31,22 +63,27 @@ class TestS3CompatibleComponents:
         settings.settings.storage_type = "local"
         return settings
 
-    @pytest.mark.asyncio
-    async def test_file_component_s3_path_handling(self, s3_settings):
+    @pytest.fixture
+    def mock_storage_service(self):
+        """Mock storage service for S3 operations."""
+        storage = AsyncMock()
+        return storage
+
+    def test_file_component_s3_path_handling(self, s3_settings, mock_storage_service):
         """Test FileComponent with S3 paths."""
-        with patch("lfx.services.deps.get_settings_service", return_value=s3_settings):
+        s3_path = "user_123/document.txt"
+        mock_storage_service.get_file.return_value = b"file content"
+
+        with mock_s3_environment(s3_settings, mock_storage_service):
             component = FileComponent()
+            component.path = s3_path  # Use 'path' property, not 'file_path'
 
-            # Test S3 path detection
-            s3_path = "user_123/document.pdf"
-            component.file_path = s3_path
+            result = component.load_files()
 
-            # Mock the storage utils
-            with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b"file content"):
-                result = await component.load_files()
-
-                # Should process S3 file successfully
-                assert result is not None
+            # Should process S3 file successfully
+            assert result is not None
+            assert len(result) > 0
+            mock_storage_service.get_file.assert_called_with("user_123", "document.txt")
 
     @pytest.mark.asyncio
     async def test_file_component_get_local_file_for_docling_s3(self, s3_settings):
@@ -293,19 +330,20 @@ class TestS3CompatibleComponents:
                     assert result[0].data == {"name": "Jane", "age": "25"}
 
     @pytest.mark.asyncio
-    async def test_csv_to_data_path_s3_key(self, s3_settings):
+    async def test_csv_to_data_path_s3_key(self, s3_settings, mock_storage_service):
         """Test CSVToDataComponent with text path input - handles S3 keys."""
-        with patch("lfx.services.deps.get_settings_service", return_value=s3_settings):
+        mock_storage_service.get_file.return_value = b"name,age\nBob,35"
+
+        with mock_s3_environment(s3_settings, mock_storage_service):
             component = CSVToDataComponent()
             component.csv_path = "user_123/data.csv"  # S3 key format
 
-            # Mock S3 read
-            with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b"name,age\nBob,35"):
-                result = component.load_csv_to_data()
+            result = component.load_csv_to_data()
 
-                # Should read from S3
-                assert len(result) == 1
-                assert result[0].data == {"name": "Bob", "age": "35"}
+            # Should read from S3
+            assert len(result) == 1
+            assert result[0].data == {"name": "Bob", "age": "35"}
+            mock_storage_service.get_file.assert_called_once_with("user_123", "data.csv")
 
     @pytest.mark.asyncio
     async def test_csv_to_data_path_local(self, local_settings):
@@ -359,20 +397,21 @@ class TestS3CompatibleComponents:
                     assert result.data == {"name": "test"}
 
     @pytest.mark.asyncio
-    async def test_json_to_data_path_s3_key(self, s3_settings):
+    async def test_json_to_data_path_s3_key(self, s3_settings, mock_storage_service):
         """Test JSONToDataComponent with text path input - handles S3 keys."""
-        with patch("lfx.services.deps.get_settings_service", return_value=s3_settings):
+        mock_storage_service.get_file.return_value = b'{"key": "s3_value"}'
+
+        with mock_s3_environment(s3_settings, mock_storage_service):
             component = JSONToDataComponent()
             component.json_path = "user_123/data.json"  # S3 key format
 
-            # Mock S3 read
-            with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b'{"key": "s3_value"}'):
-                result = component.convert_json_to_data()
+            result = component.convert_json_to_data()
 
-                # Should read from S3
-                from lfx.schema.data import Data
-                assert isinstance(result, Data)
-                assert result.data == {"key": "s3_value"}
+            # Should read from S3
+            from lfx.schema.data import Data
+            assert isinstance(result, Data)
+            assert result.data == {"key": "s3_value"}
+            mock_storage_service.get_file.assert_called_once_with("user_123", "data.json")
 
     @pytest.mark.asyncio
     async def test_json_to_data_path_local(self, local_settings):
