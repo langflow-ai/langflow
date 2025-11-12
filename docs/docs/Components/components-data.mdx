@@ -12,7 +12,7 @@ import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
 Data components bring data into your flows from various sources like files, API endpoints, and URLs.
 For example:
 
-* **Load files**: Import data from a file or directory with the [**File** component](#file) and [**Directory** component](#directory).
+* **Load files**: Import data from a file or directory with the [**Read File** component](#file) and [**Directory** component](#directory).
 
 * **Search the web**: Fetch data from the web with components like the [**News Search** component](#news-search), [**RSS Reader** component](#rss-reader), [**Web Search** component](#web-search), and [**URL** component](#url).
 
@@ -41,7 +41,7 @@ You can use these components to perform their base functions as isolated steps i
 
 For example flows, see the following:
 
-* [Create a chatbot that can ingest files](/chat-with-files): Learn how to use a **File** component to load a file as context for a chatbot.
+* [Create a chatbot that can ingest files](/chat-with-files): Learn how to use a **Read File** component to load a file as context for a chatbot.
 The file and user input are both passed to the LLM so you can ask questions about the file you uploaded.
 
 * [Create a vector RAG chatbot](/chat-with-rag): Learn how to ingest files for use in Retrieval-Augmented Generation (RAG), and then set up a chatbot that can use the ingested files as context.
@@ -110,12 +110,23 @@ Outputs either a [`Data`](/data-types#data) or [`DataFrame`](/data-types#datafra
 | silent_errors      | BoolInput        | Input parameter. If `true`, errors don't raise an exception.         |
 | use_multithreading | BoolInput        | Input parameter. If `true`, multithreading is used.                   |
 
-## File
+## Mock Data
 
-The **File** component loads and parses files, converts the content into a `Data`, `DataFrame`, or `Message` object.
+The **Mock Data** component generates sample data for testing and development.
+You can select these output types:
+
+* `message_output`: A [Message (text)](/data-types#message) output with Lorem Ipsum sample text.
+* `data_output`: A [Data (JSON)](/data-types#data) object containing a JSON structure with one sample record under `records` and a `summary` section.
+* `dataframe_output`: A [DataFrame (tabular)](/data-types#dataframe) with 50 mock records, including columns such as `customer_id`, `first_name`, and `last_name`. 
+
+## Read File {#file}
+
+In Langflow version 1.7.0, this component was renamed from **File** to **Read File**.
+
+The **Read File** component loads and parses files, converts the content into a `Data`, `DataFrame`, or `Message` object.
 It supports multiple file types, provides parameters for parallel processing and error handling, and supports advanced parsing with the Docling library.
 
-You can add files to the **File** component in the visual editor or at runtime, and you can upload multiple files at once.
+You can add files to the **Read File** component in the visual editor or at runtime, and you can upload multiple files at once.
 For more information about uploading files and working with files in flows, see [File management](/concepts-file-management) and [Create a chatbot that can ingest files](/chat-with-files).
 
 ### File type and size limits
@@ -126,7 +137,7 @@ To modify this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment va
 <details>
 <summary>Supported file types</summary>
 
-The following file types are supported by the **File** component.
+The following file types are supported by the **Read File** component.
 Use archive and compressed formats to bundle multiple files together, or use the [**Directory** component](#directory) to load all files in a directory.
 
 - `.bz2`
@@ -172,20 +183,20 @@ For videos, see the **Twelve Labs** and **YouTube** <Icon name="Blocks" aria-hid
 | separator | Separator | Input parameter. The separator to use between multiple outputs in `Message` format. |
 | silent_errors | Silent Errors | Input parameter. If `true`, errors in the component don't raise an exception. Default: Disabled (`false`). |
 | delete_server_file_after_processing | Delete Server File After Processing | Input parameter. If `true` (default), the **Server File Path** (`file_path`) is deleted after processing. |
-| ignore_unsupported_extensions | Ignore Unsupported Extensions | Input parameter. If enabled (`true`), files with unsupported extensions are accepted but not processed. If disabled (`false`), the **File** component either can throw an error if an unsupported file type is provided. The default is `true`. |
+| ignore_unsupported_extensions | Ignore Unsupported Extensions | Input parameter. If enabled (`true`), files with unsupported extensions are accepted but not processed. If disabled (`false`), the **Read File** component either can throw an error if an unsupported file type is provided. The default is `true`. |
 | ignore_unspecified_files | Ignore Unspecified Files | Input parameter. If `true`, `Data` with no `file_path` property is ignored. If `false` (default), the component errors when a file isn't specified. |
 | concurrency_multithreading | Processing Concurrency | Input parameter. The number of files to process concurrently if multiple files are uploaded. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. Ignored for single-file uploads and advanced parsing. |
 | advanced_parser | Advanced Parser | Input parameter. If `true`, enables [advanced parsing](#advanced-parsing). Only available for single-file uploads of compatible file types. Default: Disabled (`false`). |
 
 ### Advanced parsing
 
-Starting in Langflow version 1.6, the **File** component supports advanced document parsing using the [Docling](https://docling-project.github.io/docling/) library for supported file types.
+Starting in Langflow version 1.6, the **Read File** component supports advanced document parsing using the [Docling](https://docling-project.github.io/docling/) library for supported file types.
 
 To use advanced parsing, do the following:
 
 1. Complete the following prerequisites, if applicable:
 
-    * **Install Langflow version 1.6 or later**: Earlier versions don't support advanced parsing with the **File** component. For upgrade guidance, see the [Release notes](/release-notes).
+    * **Install Langflow version 1.6 or later**: Earlier versions don't support advanced parsing with the **Read File** component. For upgrade guidance, see the [Release notes](/release-notes).
 
     * **Install Docling dependency on macOS Intel (x86_64)**: The Docling dependency isn't installed by default for macOS Intel (x86_64). Use the [Docling installation guide](https://docling-project.github.io/docling/installation/) to install the Docling dependency.
 
@@ -196,14 +207,14 @@ To use advanced parsing, do the following:
 
         Developer Mode isn't required for Langflow OSS on Windows.
 
-2. Add one valid file to the **File** component.
+2. Add one valid file to the **Read File** component.
 
     :::info Advanced parsing limitations
     * Advanced parsing processes only one file.
-    If you select multiple files, the **File** component processes the first file only, ignoring any additional files.
-    To process multiple files with advanced parsing, pass each file to a separate **File** components, or use the dedicated [**Docling** components](/bundles-docling).
+    If you select multiple files, the **Read File** component processes the first file only, ignoring any additional files.
+    To process multiple files with advanced parsing, pass each file to a separate **Read File** components, or use the dedicated [**Docling** components](/bundles-docling).
 
-    * Advanced parsing can process any of the **File** component's supported file types except `.csv`, `.xlsx`, and `.parquet` files because it is designed for document processing, such as extracting text from PDFs.
+    * Advanced parsing can process any of the **Read File** component's supported file types except `.csv`, `.xlsx`, and `.parquet` files because it is designed for document processing, such as extracting text from PDFs.
     For structured data analysis, use the [**Parser** component](/components-processing#parser).
     :::
 
@@ -225,13 +236,13 @@ To use advanced parsing, do the following:
 
 ### File output
 
-The output of the **File** component depends on the number of files loaded and whether advanced parsing is enabled.
+The output of the **Read File** component depends on the number of files loaded and whether advanced parsing is enabled.
 If multiple options are available, you can set the output type near the component's output port.
 
 <Tabs>
 <TabItem value="zero" label="No files">
 
-If you run the **File** component with no file selected, it throws an error, or, if **Silent Errors** is enabled, produces no output.
+If you run the **Read File** component with no file selected, it throws an error, or, if **Silent Errors** is enabled, produces no output.
 
 </TabItem>
 <TabItem value="one-false" label="One file without advanced parsing">
@@ -600,7 +611,7 @@ The following Data components are in legacy status:
 * **Load CSV**
 * **Load JSON**
 
-Replace these components with the **File** component, which supports loading CSV and JSON files, as well as many other file types.
+Replace these components with the **Read File** component, which supports loading CSV and JSON files, as well as many other file types.
 
 ## See also
 
