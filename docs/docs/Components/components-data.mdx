@@ -67,10 +67,6 @@ For provider-specific API components, see <Icon name="Blocks" aria-hidden="true"
 
 ### API Request parameters
 
-:::info SSRF Protection
-Starting in Langflow version 1.7, the **Follow Redirects** parameter is disabled (`false`) by default to prevent SSRF bypass attacks where a public URL redirects to internal resources. Only enable redirects if you trust the target server.  For more information, see [SSRF protection environment variables](/api-keys-and-authentication#ssrf-protection).
-:::
-
 <PartialParams />
 
 | Name | Display Name | Info |
@@ -83,7 +79,7 @@ Starting in Langflow version 1.7, the **Follow Redirects** parameter is disabled
 | body | Body | Input parameter. The body to send with POST, PATCH, and PUT requests as a dictionary. |
 | headers | Headers | Input parameter. The headers to send with the request as a dictionary. |
 | timeout | Timeout | Input parameter. The timeout to use for the request. |
-| follow_redirects | Follow Redirects | Input parameter. Whether to follow HTTP redirects. The default setting is `false` to prevent SSRF bypass attacks. If `true`, HTTP redirects are followed. For more information, see [SSRF protection environment variables](/api-keys-and-authentication#ssrf-protection). |
+| follow_redirects | Follow Redirects | Input parameter. Whether to follow HTTP redirects. Starting in Langflow version 1.7, the **Follow Redirects** parameter is disabled (`false`) by default to prevent SSRF bypass attacks where a public URL redirects to internal resources. Only enable redirects if you trust the target server.  For more information, see [SSRF protection environment variables](/api-keys-and-authentication#ssrf-protection). |
 | save_to_file | Save to File | Input parameter. Whether to save the API response to a temporary file. Default: Disabled (`false`) |
 | include_httpx_metadata | Include HTTPx Metadata | Input parameter. Whether to include properties such as `headers`, `status_code`, `response_headers`, and `redirection_history` in the output. Default: Disabled (`false`) |
 
@@ -117,7 +113,7 @@ You can select these output types:
 
 * `message_output`: A [Message (text)](/data-types#message) output with Lorem Ipsum sample text.
 * `data_output`: A [Data (JSON)](/data-types#data) object containing a JSON structure with one sample record under `records` and a `summary` section.
-* `dataframe_output`: A [DataFrame (tabular)](/data-types#dataframe) with 50 mock records, including columns such as `customer_id`, `first_name`, and `last_name`. 
+* `dataframe_output`: A [DataFrame (tabular)](/data-types#dataframe) with 50 mock records, including columns such as `customer_id`, `first_name`, and `last_name`.
 
 ## Read File {#file}
 
