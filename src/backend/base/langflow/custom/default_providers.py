@@ -11,7 +11,7 @@ def get_provider_defaults(provider: str, build_config: dict) -> Dict[str, Any]:
     Get default field values for a specific provider.
     
     Args:
-        provider: The name of the provider (e.g., "Azure OpenAI", "Google Generative AI")
+        provider: The name of the provider (e.g., "Azure OpenAI")
         build_config: Current build configuration
         
     Returns:
@@ -21,8 +21,6 @@ def get_provider_defaults(provider: str, build_config: dict) -> Dict[str, Any]:
     
     if provider == "Azure OpenAI":
         defaults = _get_azure_openai_defaults(build_config)
-    elif provider == "Google Generative AI":
-        defaults = _get_google_genai_defaults(build_config)
     
     return defaults
 
@@ -42,22 +40,9 @@ def _get_azure_openai_defaults(build_config: dict) -> Dict[str, Any]:
             **build_config.get("azure_endpoint", {}),
             "value": os.environ.get("AZURE_OPENAI_ENDPOINT", "https://your-resource.openai.azure.com/")
         },
-        "api_version": {
-            **build_config.get("api_version", {}),
-            "value": os.environ.get("AZURE_API_VERSION", "2024-06-01")
-        }
-    }
-
-
-def _get_google_genai_defaults(build_config: dict) -> Dict[str, Any]:
-    """
-    Get default values for Google Generative AI provider.
-    Only prefills API key, model name should be selected by user.
-    """
-    return {
-        "api_key": {
-            **build_config.get("api_key", {}),
-            "value": os.environ.get("GOOGLE_API_KEY", "")
+        "azure_api_version": {
+            **build_config.get("azure_api_version", {}),
+            "value": os.environ.get("AZURE_API_VERSION", "2024-02-15-preview")
         }
     }
 
