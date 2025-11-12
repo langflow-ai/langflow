@@ -30,5 +30,5 @@ export async function adjustScreenView(
       await zoomOutButton.click();
     }
   }
-  await page.locator(".react-flow__pane").click();
+  await page.getByTestId("node-toolbar-component").click();
 }
