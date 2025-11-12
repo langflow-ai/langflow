@@ -63,7 +63,6 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
     # Initial template - check that model field exists and has options
     template = component_node["template"]
     assert "model" in template, f"model field not found. Available fields: {list(template.keys())}"
-    current_model_options = template["model"].get("options", [])
 
     # load the code from the file at lfx.components.models_and_agents.agent.py asynchronously
     # we are at str/backend/tests/unit/api/v1/test_endpoints.py
@@ -88,7 +87,10 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
     # Verify the response
     assert response.status_code == status.HTTP_200_OK, f"Response: {response.json()}"
     assert "template" in result
-    assert "model" in result["template"], f"model field not in result. Available fields: {list(result['template'].keys())}"
+    assert "model" in result["template"], (
+        f"model field not in result. "
+        f"Available fields: {list(result['template'].keys())}"
+    )
     assert isinstance(result["template"]["model"].get("options", []), list)
     # Model options should be present (may be same or different depending on implementation)
     updated_model_options = result["template"]["model"].get("options", [])
