@@ -292,7 +292,7 @@ class MultilineMixin(BaseModel):
 
 
 class AIMixin(BaseModel):
-    ai_enabled: CoalesceBool = True
+    ai_enabled: CoalesceBool = False
 
 
 class LinkMixin(BaseModel):

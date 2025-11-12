@@ -297,7 +297,7 @@ class Settings(BaseSettings):
     ~=0.1.0.7 allows patch updates (0.1.0.x) but prevents minor/major version changes."""
 
     # Agentic Experience
-    agentic_experience: bool = True
+    agentic_experience: bool = False
     """If set to True, Langflow will start the agentic MCP server that provides tools for
     flow/component operations, template search, and graph visualization."""
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import langflowLogo from "@/assets/LangflowLogoColor.svg";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
@@ -33,7 +33,7 @@ export const AssistantButton: React.FC<AssistantButtonProps> = ({
   const [elapsedTime, setElapsedTime] = useState(0);
   const [clicked, setClicked] = useState(false);
 
-  const { data, isFetching, refetch } = useGetAssistantPromptQuery({
+  const { isFetching, refetch } = useGetAssistantPromptQuery({
     compId: compData?.id,
     flowId,
     fieldName: compData?.fieldName,
@@ -100,7 +100,7 @@ export const AssistantButton: React.FC<AssistantButtonProps> = ({
       interval = setInterval(() => {
         setElapsedTime((prev) => prev + 1);
       }, 1000);
-    } else if (!isFetching && elapsedTime > 0) {
+    } else if (!isFetching) {
       // Cleanup when done
       clearInterval(interval!);
     }
@@ -119,7 +119,7 @@ export const AssistantButton: React.FC<AssistantButtonProps> = ({
       case "field": {
         setSelectedCompData(compData);
         setClicked(true);
-        // we use result instaed of data because data is undefined on first call
+        // we use result instead of data because data is undefined on first call
         const result = await refetch();
         handleOnNewValue({
           value:
