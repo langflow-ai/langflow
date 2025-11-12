@@ -392,7 +392,7 @@ class TestAPIRequestSSRFProtection:
         # Enable SSRF protection in enforcement mode
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
-            patch("lfx.components.data.api_request.validate_url_for_ssrf") as mock_validate,
+            patch("lfx.components.data_source.api_request.validate_url_for_ssrf") as mock_validate,
         ):
             from lfx.utils.ssrf_protection import SSRFProtectionError
 
@@ -414,7 +414,7 @@ class TestAPIRequestSSRFProtection:
             for url in private_ips:
                 component.url_input = url
 
-                with patch("lfx.components.data.api_request.validate_url_for_ssrf") as mock_validate:
+                with patch("lfx.components.data_source.api_request.validate_url_for_ssrf") as mock_validate:
                     from lfx.utils.ssrf_protection import SSRFProtectionError
 
                     mock_validate.side_effect = SSRFProtectionError(f"Access to {url} blocked")
@@ -428,7 +428,7 @@ class TestAPIRequestSSRFProtection:
 
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
-            patch("lfx.components.data.api_request.validate_url_for_ssrf") as mock_validate,
+            patch("lfx.components.data_source.api_request.validate_url_for_ssrf") as mock_validate,
         ):
             from lfx.utils.ssrf_protection import SSRFProtectionError
 
