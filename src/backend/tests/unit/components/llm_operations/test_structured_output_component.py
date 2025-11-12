@@ -283,7 +283,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="Invalid type: invalid_type"):
             component.build_structured_output()
 
-    @patch("lfx.components.processing.structured_output.get_chat_result")
+    @patch("lfx.components.llm_operations.structured_output.get_chat_result")
     @patch("lfx.base.models.unified_models.get_model_classes")
     def test_nested_output_schema(
         self, mock_get_model_classes, mock_get_chat_result, mock_llm, mock_model_classes, model_metadata
@@ -329,7 +329,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, list)
         assert result == [{"parent": {"child": "value"}}]
 
-    @patch("lfx.components.processing.structured_output.get_chat_result")
+    @patch("lfx.components.llm_operations.structured_output.get_chat_result")
     @patch("lfx.base.models.unified_models.get_model_classes")
     def test_large_input_value(
         self, mock_get_model_classes, mock_get_chat_result, mock_llm, mock_model_classes, model_metadata
