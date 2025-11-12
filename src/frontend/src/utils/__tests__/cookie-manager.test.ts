@@ -289,7 +289,7 @@ describe("CookieManager", () => {
     it("should clear all auth-related cookies", () => {
       cookieManager.clearAuthCookies();
 
-      expect(mockCookiesInstance.remove).toHaveBeenCalledTimes(3);
+      expect(mockCookiesInstance.remove).toHaveBeenCalledTimes(4);
       expect(mockCookiesInstance.remove).toHaveBeenCalledWith(
         "access_token_lf",
         {
@@ -314,6 +314,11 @@ describe("CookieManager", () => {
           sameSite: "lax",
         },
       );
+      expect(mockCookiesInstance.remove).toHaveBeenCalledWith("auto_login_lf", {
+        path: "/",
+        secure: false,
+        sameSite: "lax",
+      });
     });
   });
 
