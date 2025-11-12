@@ -42,7 +42,7 @@ class TestS3CompatibleComponents:
             component.file_path = s3_path
 
             # Mock the storage utils
-            with patch("lfx.base.data.storage_utils.read_file_bytes", return_value=b"file content"):
+            with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b"file content"):
                 result = await component.load_files()
 
                 # Should process S3 file successfully
@@ -132,7 +132,7 @@ class TestS3CompatibleComponents:
             component.set_attributes({"llm": MagicMock(), "path": "user_123/data.csv", "verbose": False})
 
             # Mock storage utils
-            with patch("lfx.base.data.storage_utils.read_file_bytes", return_value=b"name,age\nJohn,30"):
+            with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b"name,age\nJohn,30"):
                 local_path = component._get_local_path()
 
                 # Should handle S3 path correctly
@@ -146,7 +146,7 @@ class TestS3CompatibleComponents:
             component.set_attributes({"llm": MagicMock(), "path": "user_123/data.json", "verbose": False})
 
             # Mock storage utils
-            with patch("lfx.base.data.storage_utils.read_file_bytes", return_value=b'{"key": "value"}'):
+            with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b'{"key": "value"}'):
                 local_path = component._get_local_path()
 
                 # Should handle S3 path correctly
@@ -184,7 +184,7 @@ class TestS3CompatibleComponents:
             component.file_path = "user_123/large_file.csv"
 
             # Mock the download process
-            with patch("lfx.base.data.storage_utils.read_file_bytes", return_value=b"csv,content\n1,2"):
+            with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b"csv,content\n1,2"):
                 result = await component.load_files()
 
                 # Should process downloaded content
@@ -199,7 +199,7 @@ class TestS3CompatibleComponents:
 
             # Mock S3 error
             with (
-                patch("lfx.base.data.storage_utils.read_file_bytes", side_effect=FileNotFoundError("File not found")),
+                patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, side_effect=FileNotFoundError("File not found")),
                 pytest.raises(FileNotFoundError),
             ):
                 await component.load_files()
@@ -217,7 +217,7 @@ class TestS3CompatibleComponents:
                 yield b"chunk2"
                 yield b"chunk3"
 
-            with patch("lfx.base.data.storage_utils.read_file_bytes", return_value=b"chunk1chunk2chunk3"):
+            with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b"chunk1chunk2chunk3"):
                 result = await component.load_files()
 
                 # Should handle streaming content
@@ -232,7 +232,7 @@ class TestS3CompatibleComponents:
 
             # Mock file with metadata
             file_content = b'{"name": "test", "size": 1024, "type": "application/json"}'
-            with patch("lfx.base.data.storage_utils.read_file_bytes", return_value=file_content):
+            with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=file_content):
                 result = await component.load_files()
 
                 # Should preserve metadata
@@ -247,7 +247,7 @@ class TestS3CompatibleComponents:
             async def process_file(file_path):
                 component = FileComponent()
                 component.file_path = file_path
-                with patch("lfx.base.data.storage_utils.read_file_bytes", return_value=b"content"):
+                with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b"content"):
                     return await component.load_files()
 
             # Test concurrent file processing
@@ -300,7 +300,7 @@ class TestS3CompatibleComponents:
             component.csv_path = "user_123/data.csv"  # S3 key format
 
             # Mock S3 read
-            with patch("lfx.base.data.storage_utils.read_file_bytes", return_value=b"name,age\nBob,35"):
+            with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b"name,age\nBob,35"):
                 result = component.load_csv_to_data()
 
                 # Should read from S3
@@ -366,7 +366,7 @@ class TestS3CompatibleComponents:
             component.json_path = "user_123/data.json"  # S3 key format
 
             # Mock S3 read
-            with patch("lfx.base.data.storage_utils.read_file_bytes", return_value=b'{"key": "s3_value"}'):
+            with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b'{"key": "s3_value"}'):
                 result = component.convert_json_to_data()
 
                 # Should read from S3

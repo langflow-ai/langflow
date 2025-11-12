@@ -203,8 +203,8 @@ class TestGetFileSize:
         mock_storage.get_file_size = mock_get_size
 
         with (
-            patch("langflow.base.data.storage_utils.get_settings_service", return_value=mock_settings),
-            patch("langflow.base.data.storage_utils.get_storage_service", return_value=mock_storage),
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.base.data.storage_utils.get_storage_service", return_value=mock_storage),
         ):
             size = get_file_size("flow_abc/file.bin")
 
@@ -215,7 +215,7 @@ class TestGetFileSize:
         mock_settings = Mock()
         mock_settings.settings.storage_type = "s3"
 
-        with patch("langflow.base.data.storage_utils.get_settings_service", return_value=mock_settings):
+        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):
             with pytest.raises(ValueError, match="Invalid S3 path format"):
                 get_file_size("invalid_no_slash")
 
@@ -231,7 +231,7 @@ class TestFileExists:
         mock_settings = Mock()
         mock_settings.settings.storage_type = "local"
 
-        with patch("langflow.base.data.storage_utils.get_settings_service", return_value=mock_settings):
+        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):
             assert file_exists(str(test_file)) is True
 
     def test_file_exists_local_false(self):
@@ -239,7 +239,7 @@ class TestFileExists:
         mock_settings = Mock()
         mock_settings.settings.storage_type = "local"
 
-        with patch("langflow.base.data.storage_utils.get_settings_service", return_value=mock_settings):
+        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):
             assert file_exists("/nonexistent/file.txt") is False
 
     def test_file_exists_s3_true(self):
@@ -255,8 +255,8 @@ class TestFileExists:
         mock_storage.get_file_size = mock_get_size
 
         with (
-            patch("langflow.base.data.storage_utils.get_settings_service", return_value=mock_settings),
-            patch("langflow.base.data.storage_utils.get_storage_service", return_value=mock_storage),
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.base.data.storage_utils.get_storage_service", return_value=mock_storage),
         ):
             assert file_exists("flow_def/exists.txt") is True
 
@@ -273,8 +273,8 @@ class TestFileExists:
         mock_storage.get_file_size = mock_get_size
 
         with (
-            patch("langflow.base.data.storage_utils.get_settings_service", return_value=mock_settings),
-            patch("langflow.base.data.storage_utils.get_storage_service", return_value=mock_storage),
+            patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
+            patch("lfx.base.data.storage_utils.get_storage_service", return_value=mock_storage),
         ):
             assert file_exists("flow_ghi/nonexistent.txt") is False
 
@@ -283,7 +283,7 @@ class TestFileExists:
         mock_settings = Mock()
         mock_settings.settings.storage_type = "s3"
 
-        with patch("langflow.base.data.storage_utils.get_settings_service", return_value=mock_settings):
+        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):
             assert file_exists("invalid_no_slash") is False
 
 
@@ -300,7 +300,7 @@ class TestStorageUtilsEdgeCases:
         mock_settings = Mock()
         mock_settings.settings.storage_type = "local"
 
-        with patch("langflow.base.data.storage_utils.get_settings_service", return_value=mock_settings):
+        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):
             content = await read_file_bytes(str(test_file))
 
         assert content == binary_content
@@ -313,7 +313,7 @@ class TestStorageUtilsEdgeCases:
         mock_settings = Mock()
         mock_settings.settings.storage_type = "local"
 
-        with patch("langflow.base.data.storage_utils.get_settings_service", return_value=mock_settings):
+        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):
             content = await read_file_bytes(str(test_file))
 
         assert content == b""
@@ -330,7 +330,7 @@ class TestStorageUtilsSyncEdgeCases:
         mock_settings = Mock()
         mock_settings.settings.storage_type = "local"
 
-        with patch("langflow.base.data.storage_utils.get_settings_service", return_value=mock_settings):
+        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):
             size = get_file_size(str(test_file))
 
         assert size == 0
