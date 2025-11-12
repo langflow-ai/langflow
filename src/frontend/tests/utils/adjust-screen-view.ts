@@ -30,8 +30,5 @@ export async function adjustScreenView(
       await zoomOutButton.click();
     }
   }
-  if (fitViewButton > 0) {
-    // Click outside the dropdown to close it by clicking on the body
-    await page.locator("body").click();
-  }
+  await page.locator(".react-flow__pane").click();
 }
