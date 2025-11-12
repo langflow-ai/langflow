@@ -3,8 +3,10 @@
 import sys
 from uuid import UUID
 
+from fastapi import HTTPException
 from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
+from sqlalchemy import exc as sqlalchemy_exc
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -80,7 +82,7 @@ async def auto_configure_agentic_mcp_server(session: AsyncSession) -> None:
                         servers_skipped += 1
                         continue
 
-                except Exception as e:
+                except (HTTPException, sqlalchemy_exc.SQLAlchemyError) as e:
                     # If listing fails, skip this user to avoid duplicates
                     await logger.awarning(
                         f"Could not check existing servers for user {user.username}: {e}. "
@@ -102,7 +104,7 @@ async def auto_configure_agentic_mcp_server(session: AsyncSession) -> None:
                 servers_added += 1
                 await logger.adebug(f"Added agentic MCP server for user: {user.username}")
 
-            except Exception as e:
+            except (HTTPException, sqlalchemy_exc.SQLAlchemyError) as e:
                 await logger.aexception(f"Failed to configure agentic MCP server for user {user.username}: {e}")
                 continue
 
@@ -110,7 +112,16 @@ async def auto_configure_agentic_mcp_server(session: AsyncSession) -> None:
             f"Agentic MCP server configuration complete: {servers_added} added, {servers_skipped} skipped"
         )
 
-    except Exception as e:
+    except (
+        HTTPException,
+        sqlalchemy_exc.SQLAlchemyError,
+        OSError,
+        PermissionError,
+        FileNotFoundError,
+        RuntimeError,
+        ValueError,
+        AttributeError,
+    ) as e:
         await logger.aexception(f"Error during agentic MCP server auto-configuration: {e}")
 
 
@@ -155,13 +166,22 @@ async def remove_agentic_mcp_server(session: AsyncSession) -> None:
                 servers_removed += 1
                 await logger.adebug(f"Removed agentic MCP server for user: {user.username}")
 
-            except Exception as e:
+            except (HTTPException, sqlalchemy_exc.SQLAlchemyError) as e:
                 await logger.adebug(f"Could not remove agentic MCP server for user {user.username}: {e}")
                 continue
 
         await logger.ainfo(f"Removed agentic MCP server from {servers_removed} users")
 
-    except Exception as e:
+    except (
+        HTTPException,
+        sqlalchemy_exc.SQLAlchemyError,
+        OSError,
+        PermissionError,
+        FileNotFoundError,
+        RuntimeError,
+        ValueError,
+        AttributeError,
+    ) as e:
         await logger.aexception(f"Error removing agentic MCP server: {e}")
 
 
@@ -232,13 +252,31 @@ async def initialize_agentic_global_variables(session: AsyncSession) -> None:
                             await logger.adebug(
                                 f"Agentic variable {var_name} already exists for user {user.username}, skipping"
                             )
-                    except Exception as e:
+                    except (
+                        HTTPException,
+                        sqlalchemy_exc.SQLAlchemyError,
+                        OSError,
+                        PermissionError,
+                        FileNotFoundError,
+                        RuntimeError,
+                        ValueError,
+                        AttributeError,
+                    ) as e:
                         await logger.aexception(
                             f"Error creating agentic variable {var_name} for user {user.username}: {e}"
                         )
                         continue
 
-            except Exception as e:
+            except (
+                HTTPException,
+                sqlalchemy_exc.SQLAlchemyError,
+                OSError,
+                PermissionError,
+                FileNotFoundError,
+                RuntimeError,
+                ValueError,
+                AttributeError,
+            ) as e:
                 await logger.aexception(f"Failed to initialize agentic variables for user {user.username}: {e}")
                 continue
 
@@ -246,7 +284,16 @@ async def initialize_agentic_global_variables(session: AsyncSession) -> None:
             f"Agentic variables initialization complete: {variables_created} created, {variables_skipped} skipped"
         )
 
-    except Exception as e:
+    except (
+        HTTPException,
+        sqlalchemy_exc.SQLAlchemyError,
+        OSError,
+        PermissionError,
+        FileNotFoundError,
+        RuntimeError,
+        ValueError,
+        AttributeError,
+    ) as e:
         await logger.aexception(f"Error during agentic variables initialization: {e}")
 
 
@@ -293,10 +340,28 @@ async def initialize_agentic_user_variables(user_id: UUID | str, session: AsyncS
                         session=session,
                     )
                     await logger.adebug(f"Created agentic variable {var_name} for user {user_id}")
-                except Exception as e:
+                except (
+                    HTTPException,
+                    sqlalchemy_exc.SQLAlchemyError,
+                    OSError,
+                    PermissionError,
+                    FileNotFoundError,
+                    RuntimeError,
+                    ValueError,
+                    AttributeError,
+                ) as e:
                     await logger.aexception(f"Error creating agentic variable {var_name} for user {user_id}: {e}")
             else:
                 await logger.adebug(f"Agentic variable {var_name} already exists for user {user_id}, skipping")
 
-    except Exception as e:
+    except (
+        HTTPException,
+        sqlalchemy_exc.SQLAlchemyError,
+        OSError,
+        PermissionError,
+        FileNotFoundError,
+        RuntimeError,
+        ValueError,
+        AttributeError,
+    ) as e:
         await logger.aexception(f"Error initializing agentic variables for user {user_id}: {e}")
