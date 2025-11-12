@@ -20,7 +20,7 @@ from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComp
 from lfx.custom.custom_component.component import get_component_toolkit
 from lfx.custom.utils import update_component_build_config
 from lfx.helpers.base_model import build_model_from_schema
-from lfx.inputs.inputs import BoolInput
+from lfx.inputs.inputs import BoolInput, SecretStrInput, StrInput
 from lfx.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, TableInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
@@ -76,6 +76,32 @@ class AgentComponent(ToolCallingAgentComponent):
                     }
                 },
             },
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="The API key to use for the model.",
+            required=True,
+        ),
+        StrInput(
+            name="base_url",
+            display_name="Base URL",
+            info="The base URL of the API.",
+            required=True,
+            show=False,
+        ),
+        StrInput(
+            name="project_id",
+            display_name="Project ID",
+            info="The project ID of the model.",
+            required=True,
+            show=False,
+        ),
+        IntInput(
+            name="max_output_tokens",
+            display_name="Max Output Tokens",
+            info="The maximum number of tokens to generate.",
+            show=False,
         ),
         *openai_inputs_filtered,
         MultilineInput(
@@ -195,10 +221,15 @@ class AgentComponent(ToolCallingAgentComponent):
             if not isinstance(self.tools, list):  # type: ignore[has-type]
                 self.tools = []
             current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
+
             if not isinstance(current_date_tool, StructuredTool):
                 msg = "CurrentDateComponent must be converted to a StructuredTool"
                 raise TypeError(msg)
             self.tools.append(current_date_tool)
+
+        # Set shared callbacks for tracing the tools used by the agent
+        self.set_tools_callbacks(self.tools, self._get_shared_callbacks())
+
         return llm_model, self.chat_history, self.tools
 
     async def message_response(self) -> Message:
@@ -471,7 +502,8 @@ class AgentComponent(ToolCallingAgentComponent):
     def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:
         """Delete specified fields from build_config."""
         for field in fields:
-            build_config.pop(field, None)
+            if build_config is not None and field in build_config:
+                build_config.pop(field, None)
 
     def update_input_types(self, build_config: dotdict) -> dotdict:
         """Update input types for all fields in build_config."""
@@ -599,11 +631,14 @@ class AgentComponent(ToolCallingAgentComponent):
         agent_description = self.get_tool_description()
         # TODO: Agent Description Depreciated Feature to be removed
         description = f"{agent_description}{tools_names}"
+
         tools = component_toolkit(component=self).get_tools(
             tool_name="Call_Agent",
             tool_description=description,
+            # here we do not use the shared callbacks as we are exposing the agent as a tool
             callbacks=self.get_langchain_callbacks(),
         )
         if hasattr(self, "tools_metadata"):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+
         return tools

@@ -1,4 +1,5 @@
 import ExecutionEnvironment from '@docusaurus/ExecutionEnvironment';
+import { identifyUser, trackEvent } from './analytics-helpers';
 
 let isDataAttributeTrackingInitialized = false;
 
@@ -8,21 +9,30 @@ let isDataAttributeTrackingInitialized = false;
  * Usage: Add data-event and other data-* attributes to any clickable element.
  * The tracker will automatically send events to Segment when clicked.
  *
- * Example in navbar config:
+ * Example - UI Interaction:
  * {
  *   href: "https://github.com/langflow-ai/langflow",
- *   'data-event': 'GitHub Link Clicked',
- *   'data-source': 'navbar',
- *   'data-category': 'social'
+ *   'data-event': 'UI Interaction',
+ *   'data-action': 'clicked',
+ *   'data-channel': 'docs',
+ *   'data-element-id': 'social-github',
+ *   'data-namespace': 'header',
+ *   'data-platform-title': 'Langflow'
  * }
  *
- * This will automatically call:
- * window.analytics.track("GitHub Link Clicked", {
- *   source: "navbar",
- *   category: "social",
- *   url: "https://github.com/langflow-ai/langflow",
- *   page: "/current-page"
- * })
+ * Example - CTA Clicked:
+ * {
+ *   'data-event': 'CTA Clicked',
+ *   'data-cta': 'Get Started',
+ *   'data-channel': 'docs',
+ *   'data-text': 'Get Started for Free'
+ * }
+ *
+ * Note:
+ * - data-event is required (becomes the event name)
+ * - All other data-* attributes become event properties
+ * - Follows IBM Segment Common Schema standards
+ * - No onClick handler needed for tracking
  */
 function initializeDataAttributeTracking() {
   // Only run on client side and prevent duplicate initialization
@@ -42,18 +52,25 @@ function initializeDataAttributeTracking() {
 
     Object.keys(trackingElement.dataset).forEach(key => {
       if (key !== 'event') {
-        // Convert camelCase to snake_case for consistency
-        const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-        properties[snakeKey] = trackingElement.dataset[key];
+        // Map to IBM Segment property names (preserve exact casing per schema)
+        let propertyKey = key;
+
+        // Handle special IBM property mappings
+        if (key === 'cta') propertyKey = 'CTA';
+        else if (key === 'elementId') propertyKey = 'elementId';
+        else if (key === 'topLevel') propertyKey = 'topLevel';
+        else if (key === 'subLevel') propertyKey = 'subLevel';
+        else if (key === 'platformTitle') propertyKey = 'platformTitle';
+
+        properties[propertyKey] = trackingElement.dataset[key];
       }
     });
 
-    // Track the event
-    if (window.analytics && typeof window.analytics.track === 'function') {
-      window.analytics.track(eventName, properties);
-    } else {
-      console.warn('Analytics not available for tracking:', eventName, properties);
-    }
+    // Identify user before tracking
+    identifyUser();
+
+    // Track the event with common properties
+    trackEvent(eventName, properties);
   };
 
   // Remove existing listener if it exists
