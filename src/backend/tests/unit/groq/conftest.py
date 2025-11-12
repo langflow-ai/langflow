@@ -8,9 +8,6 @@ from unittest.mock import MagicMock, Mock
 import pytest
 import requests
 
-# Prevent loading heavy backend fixtures
-pytest_plugins = []
-
 
 # Pytest configuration for custom markers and API key handling
 def pytest_configure(config):
