@@ -112,20 +112,23 @@ class ALTKBaseTool(BaseTool):
     wrapped_tool: BaseTool = Field(...)
     agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor = Field(...)
 
+    def _run(self, *args, **kwargs) -> str:
+        """Abstract method implementation that uses the wrapped tool execution."""
+        return self._execute_tool(*args, **kwargs)
+
     def _execute_tool(self, *args, **kwargs) -> str:
         """Execute the wrapped tool with compatibility across LC versions."""
+        # First try with config (for newer LangChain versions)
         try:
-            if hasattr(self.wrapped_tool, "_run"):
-                if "config" not in kwargs:
-                    kwargs["config"] = {}
-                return self.wrapped_tool._run(*args, **kwargs)
+            if "config" not in kwargs:
+                kwargs["config"] = {}
             return self.wrapped_tool.run(*args, **kwargs)
-        except TypeError as e:
-            if "config" in str(e):
+        except (TypeError, AttributeError) as e:
+            if "config" in str(e) or "unexpected keyword argument" in str(e):
+                # Remove config and try again for older versions
                 kwargs.pop("config", None)
-                if hasattr(self.wrapped_tool, "_run"):
-                    return self.wrapped_tool._run(*args, **kwargs)
                 return self.wrapped_tool.run(*args, **kwargs)
+            # If run() doesn't exist or other error, re-raise
             raise
 
     def _get_altk_llm_object(self, *, use_output_val: bool = True) -> Any:
