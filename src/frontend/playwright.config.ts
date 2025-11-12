@@ -123,6 +123,8 @@ export default defineConfig({
       env: {
         VITE_PROXY_TARGET: "http://localhost:7860",
       },
+      stdout: "pipe",
+      stderr: "pipe",
       reuseExistingServer: true,
     },
   ],

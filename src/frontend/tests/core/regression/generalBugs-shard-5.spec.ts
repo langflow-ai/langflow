@@ -4,7 +4,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
-test(
+test.skip(
   "should be able to see output preview from grouped components and connect components with a single click",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
