@@ -104,7 +104,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        "uv run uvicorn --factory langflow.main:create_app --host localhost --port 7860 --loop asyncio --log-level warning",
+        "uv run uvicorn --factory langflow.main:create_app --host localhost --port 7860 --loop asyncio",
       port: 7860,
       env: {
         LANGFLOW_DATABASE_URL: "sqlite:///./temp",
@@ -113,7 +113,6 @@ export default defineConfig({
         DO_NOT_TRACK: "true",
       },
       stdout: "ignore",
-      stderr: "ignore",
       reuseExistingServer: true,
       timeout: 120 * 750,
     },
@@ -123,8 +122,6 @@ export default defineConfig({
       env: {
         VITE_PROXY_TARGET: "http://localhost:7860",
       },
-      stdout: "pipe",
-      stderr: "pipe",
       reuseExistingServer: true,
     },
   ],
