@@ -299,6 +299,7 @@ module.exports = {
             "Components/bundles-azure",
             "Components/bundles-baidu",
             "Components/bundles-bing",
+            "Components/bundles-burncloud",
             "Components/bundles-cassandra",
             "Components/bundles-chroma",
             "Components/bundles-cleanlab",

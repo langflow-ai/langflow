@@ -866,6 +866,7 @@
                 "name": "agent_llm",
                 "options": [
                   "Anthropic",
+                  "BurnCloud",
                   "Google Generative AI",
                   "OpenAI",
                   "IBM watsonx.ai",
