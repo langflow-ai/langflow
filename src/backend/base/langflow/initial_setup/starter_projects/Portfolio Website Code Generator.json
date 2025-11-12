@@ -941,7 +941,7 @@
                 ],
                 "total_dependencies": 1
               },
-              "module": "lfx.components.data.file.FileComponent"
+              "module": "lfx.components.files_and_knowledge.file.FileComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -2090,7 +2090,7 @@
                 ],
                 "total_dependencies": 3
               },
-              "module": "lfx.components.processing.structured_output.StructuredOutputComponent"
+              "module": "lfx.components.llm_operations.structured_output.StructuredOutputComponent"
             },
             "minimized": false,
             "output_types": [],

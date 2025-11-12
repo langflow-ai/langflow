@@ -65,7 +65,7 @@ test(
     await page.mouse.up();
 
     await page
-      .getByTestId("helpersMessage History")
+      .getByTestId("models_and_agentsMessage History")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 200, y: 600 },

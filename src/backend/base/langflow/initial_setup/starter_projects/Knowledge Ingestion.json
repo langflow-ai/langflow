@@ -375,7 +375,7 @@
                 ],
                 "total_dependencies": 4
               },
-              "module": "lfx.components.data.url.URLComponent"
+              "module": "lfx.components.data_source.url.URLComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -775,7 +775,7 @@
                 ],
                 "total_dependencies": 8
               },
-              "module": "lfx.components.knowledge_bases.ingestion.KnowledgeIngestionComponent"
+              "module": "lfx.components.files_and_knowledge.ingestion.KnowledgeIngestionComponent"
             },
             "minimized": false,
             "output_types": [],

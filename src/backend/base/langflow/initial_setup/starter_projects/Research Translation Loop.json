@@ -1178,7 +1178,7 @@
                 ],
                 "total_dependencies": 1
               },
-              "module": "lfx.components.logic.loop.LoopComponent"
+              "module": "lfx.components.flow_controls.loop.LoopComponent"
             },
             "minimized": false,
             "output_types": [],

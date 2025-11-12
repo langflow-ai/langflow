@@ -16,11 +16,11 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("directory");
 
-    await page.waitForSelector('[data-testid="dataDirectory"]', {
+    await page.waitForSelector('[data-testid="files_and_knowledgeDirectory"]', {
       timeout: 30000,
     });
     await page
-      .getByTestId("dataDirectory")
+      .getByTestId("files_and_knowledgeDirectory")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();

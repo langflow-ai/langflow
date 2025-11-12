@@ -24,12 +24,12 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("if else");
-    await page.waitForSelector('[data-testid="logicIf-Else"]', {
+    await page.waitForSelector('[data-testid="flow_controlsIf-Else"]', {
       timeout: 2000,
     });
 
     await page
-      .getByTestId("logicIf-Else")
+      .getByTestId("flow_controlsIf-Else")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-if-else").click();

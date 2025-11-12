@@ -995,7 +995,7 @@
                 ],
                 "total_dependencies": 4
               },
-              "module": "lfx.components.data.url.URLComponent"
+              "module": "lfx.components.data_source.url.URLComponent"
             },
             "minimized": false,
             "output_types": [],

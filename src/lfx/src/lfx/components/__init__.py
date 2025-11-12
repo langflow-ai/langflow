@@ -64,6 +64,7 @@ if TYPE_CHECKING:
         milvus,
         mistral,
         models,
+        models_and_agents,
         mongodb,
         needle,
         notdiamond,
@@ -166,6 +167,7 @@ _dynamic_imports = {
     "milvus": "__module__",
     "mistral": "__module__",
     "models": "__module__",
+    "models_and_agents": "__module__",
     "mongodb": "__module__",
     "needle": "__module__",
     "notdiamond": "__module__",
@@ -296,6 +298,7 @@ __all__ = [
     "milvus",
     "mistral",
     "models",
+    "models_and_agents",
     "mongodb",
     "needle",
     "notdiamond",
@@ -382,8 +385,16 @@ def __getattr__(attr_name: str) -> Any:
         elif "." in module_path:
             # This is a component import (e.g., components.AgentComponent -> agents.agent)
             module_name, component_file = module_path.split(".", 1)
-            # Import the specific component from its module
-            result = import_mod(attr_name, component_file, f"{__spec__.parent}.{module_name}")
+            # Check if this is an alias module (agents, data, helpers, logic, models)
+            # These modules forward to other modules, so we need to import directly from the module
+            # instead of trying to import from a submodule that doesn't exist
+            if module_name in ("agents", "data", "helpers", "logic", "models"):
+                # For alias modules, import the module and get the component directly
+                alias_module = import_mod(module_name, "__module__", __spec__.parent)
+                result = getattr(alias_module, attr_name)
+            else:
+                # Import the specific component from its module
+                result = import_mod(attr_name, component_file, f"{__spec__.parent}.{module_name}")
         else:
             # Fallback to regular import
             result = import_mod(attr_name, module_path, __spec__.parent)
