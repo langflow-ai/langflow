@@ -5,7 +5,7 @@ import contextlib
 import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID, uuid4
 
 import orjson
@@ -384,7 +384,7 @@ async def simple_run_flow_task(
             except Exception as e:  # noqa: BLE001
                 await logger.aerror(f"Error fetching vertex builds for event: {e}")
 
-            event_data = {
+            event_data: dict[str, Any] = {
                 "run_id": run_id,
                 "success": True,
             }
