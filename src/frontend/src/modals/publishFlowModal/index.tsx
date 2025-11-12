@@ -259,8 +259,7 @@ export default function PublishFlowModal({
           continue; // Error shown by validator
         }
 
-        // Use Marketplace flow name in blob path instead of UUID or original name
-        const fileName = `marketplace-samples/${flowId}/${marketplaceName}`;
+        const fileName = `marketplace-samples/${flowId}/${file.name}`;
 
         const uploadResponse = await getUploadUrl({
           sourceType: "azureblobstorage",
