@@ -211,6 +211,7 @@ jobs:
         with:
           version: latest
           driver: docker-container
+          install: true
           driver-opts: |
             image=moby/buildkit:v0.22.0
             network=host
@@ -291,6 +292,7 @@ jobs:
         with:
           version: latest
           driver: docker-container
+          install: true
           driver-opts: |
             image=moby/buildkit:v0.22.0
             network=host
