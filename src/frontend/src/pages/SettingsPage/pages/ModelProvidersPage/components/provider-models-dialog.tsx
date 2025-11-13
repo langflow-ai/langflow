@@ -317,11 +317,12 @@ const ProviderModelsDialog = ({
                 // Determine the current enabled state:
                 // 1. If it's the default model, force-check it
                 // 2. If backend has explicit value (true/false), use that
-                // 3. If backend has no value (undefined) for this provider, default to checked
+                // 3. If backend has no value (undefined), use the model's metadata.default flag
                 const hasBackendValue = isModelEnabledFromAPI !== undefined;
+                const isModelDefault = model.metadata?.default === true;
                 const currentEnabledState =
                   isDefaultModelInThisList ||
-                  (hasBackendValue ? isModelEnabledFromAPI === true : true);
+                  (hasBackendValue ? isModelEnabledFromAPI === true : isModelDefault);
                 const isModelEnabled = pendingModelToggles.has(model.model_name)
                   ? pendingModelToggles.get(model.model_name)!
                   : currentEnabledState;

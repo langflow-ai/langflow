@@ -3,8 +3,20 @@ from .model_metadata import create_model_metadata
 ANTHROPIC_MODELS_DETAILED = [
     # Current stable models
     create_model_metadata(provider="Anthropic", name="claude-3-7-sonnet-latest", icon="Anthropic", tool_calling=True),
-    create_model_metadata(provider="Anthropic", name="claude-3-5-sonnet-latest", icon="Anthropic", tool_calling=True),
-    create_model_metadata(provider="Anthropic", name="claude-3-5-haiku-latest", icon="Anthropic", tool_calling=True),
+    create_model_metadata(
+        provider="Anthropic",
+        name="claude-3-5-sonnet-latest",
+        icon="Anthropic",
+        tool_calling=True,
+        default=True,
+    ),
+    create_model_metadata(
+        provider="Anthropic",
+        name="claude-3-5-haiku-latest",
+        icon="Anthropic",
+        tool_calling=True,
+        default=True,
+    ),
     create_model_metadata(provider="Anthropic", name="claude-3-opus-latest", icon="Anthropic", tool_calling=True),
     # Future Claude 4 models (not yet released)
     create_model_metadata(

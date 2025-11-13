@@ -20,8 +20,50 @@ router = APIRouter(prefix="/models", tags=["Models"])
 
 # Variable names for storing disabled models and default models
 DISABLED_MODELS_VAR = "__disabled_models__"
+ENABLED_MODELS_VAR = "__enabled_models__"
 DEFAULT_LANGUAGE_MODEL_VAR = "__default_language_model__"
 DEFAULT_EMBEDDING_MODEL_VAR = "__default_embedding_model__"
+
+
+def get_provider_from_variable_name(variable_name: str) -> str | None:
+    """Get provider name from a model provider variable name.
+
+    Args:
+        variable_name: The variable name (e.g., "OPENAI_API_KEY")
+
+    Returns:
+        The provider name (e.g., "OpenAI") or None if not a model provider variable
+    """
+    provider_mapping = get_model_provider_variable_mapping()
+    # Reverse the mapping to get provider from variable name
+    for provider, var_name in provider_mapping.items():
+        if var_name == variable_name:
+            return provider
+    return None
+
+
+def get_model_names_for_provider(provider: str) -> set[str]:
+    """Get all model names for a given provider.
+
+    Args:
+        provider: The provider name (e.g., "OpenAI")
+
+    Returns:
+        A set of model names for that provider
+    """
+    models_by_provider = get_unified_models_detailed(
+        providers=[provider],
+        include_unsupported=True,
+        include_deprecated=True,
+    )
+
+    model_names = set()
+    for provider_dict in models_by_provider:
+        if provider_dict.get("provider") == provider:
+            for model in provider_dict.get("models", []):
+                model_names.add(model.get("model_name"))
+
+    return model_names
 
 
 class ModelStatusUpdate(BaseModel):
@@ -209,6 +251,30 @@ async def _get_disabled_models(session: DbSession, current_user: CurrentActiveUs
     return set()
 
 
+async def _get_enabled_models(session: DbSession, current_user: CurrentActiveUser) -> set[str]:
+    """Helper function to get the set of explicitly enabled model IDs.
+
+    These are models that were NOT default but were explicitly enabled by the user.
+    """
+    variable_service = get_variable_service()
+    if not isinstance(variable_service, DatabaseVariableService):
+        return set()
+
+    try:
+        var = await variable_service.get_variable_object(
+            user_id=current_user.id, name=ENABLED_MODELS_VAR, session=session
+        )
+        if var.value is not None:
+            try:
+                return set(json.loads(var.value))
+            except (json.JSONDecodeError, TypeError):
+                return set()
+    except ValueError:
+        # Variable not found, return empty set
+        pass
+    return set()
+
+
 @router.get("/enabled_models", status_code=200)
 async def get_enabled_models(
     *,
@@ -227,8 +293,9 @@ async def get_enabled_models(
     enabled_providers_result = await get_enabled_providers(session=session, current_user=current_user)
     provider_status = enabled_providers_result.get("provider_status", {})
 
-    # Get disabled models list
+    # Get disabled and explicitly enabled models lists
     disabled_models = await _get_disabled_models(session=session, current_user=current_user)
+    explicitly_enabled_models = await _get_enabled_models(session=session, current_user=current_user)
 
     # Build model status based on provider enablement
     enabled_models: dict[str, dict[str, bool]] = {}
@@ -249,15 +316,20 @@ async def get_enabled_models(
             # Check if model is deprecated or not supported
             is_deprecated = metadata.get("deprecated", False)
             is_not_supported = metadata.get("not_supported", False)
+            is_default = metadata.get("default", False)
 
             # Model is enabled if:
             # 1. Provider is enabled
             # 2. Model is not deprecated/unsupported
-            # 3. Model is not in the disabled list
+            # 3. Model is either:
+            #    - Marked as default (default=True), OR
+            #    - Explicitly enabled by user (in explicitly_enabled_models), AND
+            #    - NOT explicitly disabled by user (not in disabled_models)
             is_enabled = (
                 provider_status.get(provider, False)
                 and not is_deprecated
                 and not is_not_supported
+                and (is_default or model_name in explicitly_enabled_models)
                 and model_name not in disabled_models
             )
             # Store model status per provider (true/false)
@@ -300,22 +372,49 @@ async def update_enabled_models(
             detail="Variable service is not an instance of DatabaseVariableService",
         )
 
-    # Get current disabled models
+    # Get current disabled and explicitly enabled models
     disabled_models = await _get_disabled_models(session=session, current_user=current_user)
+    explicitly_enabled_models = await _get_enabled_models(session=session, current_user=current_user)
 
-    # Update disabled models based on the request
+    # Get model metadata to check default flag
+    all_models_by_provider = get_unified_models_detailed(
+        include_unsupported=True,
+        include_deprecated=True,
+    )
+
+    # Build a map of model names to their default flag
+    model_defaults = {}
+    for provider_dict in all_models_by_provider:
+        for model in provider_dict.get("models", []):
+            model_name = model.get("model_name")
+            is_default = model.get("metadata", {}).get("default", False)
+            model_defaults[model_name] = is_default
+
+    # Update disabled/enabled models based on the request
     for update in updates:
+        is_model_default = model_defaults.get(update.model_id, False)
+
         if update.enabled:
-            # Remove from disabled list (enable the model)
+            # User wants to enable the model
+            # Remove from disabled list
             disabled_models.discard(update.model_id)
+            # If it's not a default model, add to explicitly enabled list
+            if not is_model_default:
+                explicitly_enabled_models.add(update.model_id)
         else:
-            # Add to disabled list (disable the model)
+            # User wants to disable the model
+            # Add to disabled list
             disabled_models.add(update.model_id)
+            # Remove from explicitly enabled list if present
+            explicitly_enabled_models.discard(update.model_id)
 
     # Save updated disabled models list
     disabled_models_json = json.dumps(list(disabled_models))
+    explicitly_enabled_models_json = json.dumps(list(explicitly_enabled_models))
 
-    # Check if the variable already exists
+    from langflow.services.database.models.variable.model import VariableUpdate
+
+    # Update or create DISABLED_MODELS_VAR
     try:
         existing_var = await variable_service.get_variable_object(
             user_id=current_user.id, name=DISABLED_MODELS_VAR, session=session
@@ -323,9 +422,6 @@ async def update_enabled_models(
         if existing_var is None or existing_var.id is None:
             msg = f"Variable {DISABLED_MODELS_VAR} not found"
             raise ValueError(msg)
-        # Update existing variable
-        from langflow.services.database.models.variable.model import VariableUpdate
-
         await variable_service.update_variable_fields(
             user_id=current_user.id,
             variable_id=existing_var.id,
@@ -335,19 +431,58 @@ async def update_enabled_models(
             session=session,
         )
     except ValueError:
-        # Variable not found, create new one
-        await variable_service.create_variable(
-            user_id=current_user.id,
-            name=DISABLED_MODELS_VAR,
-            value=disabled_models_json,
-            type_=GENERIC_TYPE,
-            session=session,
-        )
+        # Variable not found, create new one if there are disabled models
+        if disabled_models:
+            await variable_service.create_variable(
+                user_id=current_user.id,
+                name=DISABLED_MODELS_VAR,
+                value=disabled_models_json,
+                type_=GENERIC_TYPE,
+                session=session,
+            )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    # Return the updated disabled models list
-    return {"disabled_models": list(disabled_models)}
+    # Update or create ENABLED_MODELS_VAR
+    try:
+        existing_var = await variable_service.get_variable_object(
+            user_id=current_user.id, name=ENABLED_MODELS_VAR, session=session
+        )
+        if existing_var is None or existing_var.id is None:
+            msg = f"Variable {ENABLED_MODELS_VAR} not found"
+            raise ValueError(msg)
+        if explicitly_enabled_models:
+            await variable_service.update_variable_fields(
+                user_id=current_user.id,
+                variable_id=existing_var.id,
+                variable=VariableUpdate(
+                    id=existing_var.id, name=ENABLED_MODELS_VAR, value=explicitly_enabled_models_json, type=GENERIC_TYPE
+                ),
+                session=session,
+            )
+        else:
+            # No explicitly enabled models, delete the variable
+            await variable_service.delete_variable(
+                user_id=current_user.id, name=ENABLED_MODELS_VAR, session=session
+            )
+    except ValueError:
+        # Variable not found, create new one if there are explicitly enabled models
+        if explicitly_enabled_models:
+            await variable_service.create_variable(
+                user_id=current_user.id,
+                name=ENABLED_MODELS_VAR,
+                value=explicitly_enabled_models_json,
+                type_=GENERIC_TYPE,
+                session=session,
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    # Return the updated model status
+    return {
+        "disabled_models": list(disabled_models),
+        "enabled_models": list(explicitly_enabled_models),
+    }
 
 
 class DefaultModelRequest(BaseModel):

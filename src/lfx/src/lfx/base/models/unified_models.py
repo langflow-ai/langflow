@@ -7,6 +7,8 @@ from uuid import UUID
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+import contextlib
+
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
 from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
@@ -115,6 +117,7 @@ def get_unified_models_detailed(
     *,
     include_unsupported: bool | None = None,
     include_deprecated: bool | None = None,
+    only_defaults: bool = False,
     **metadata_filters,
 ):
     """Return a list of providers and their models, optionally filtered.
@@ -133,6 +136,9 @@ def get_unified_models_detailed(
     include_deprecated : bool
         When False (default) models whose metadata contains ``deprecated=True``
         are filtered out.
+    only_defaults : bool
+        When True, only models marked as default (default=True) are returned.
+        Defaults to False to maintain backward compatibility.
     **metadata_filters
         Arbitrary key/value pairs to match against the model's metadata.
         Example: ``get_unified_models_detailed(size="4k", context_window=8192)``
@@ -161,6 +167,10 @@ def get_unified_models_detailed(
 
         # Skip models flagged as deprecated unless explicitly included
         if (not include_deprecated) and md.get("deprecated", False):
+            continue
+
+        # Skip models not marked as default if only_defaults is True
+        if only_defaults and not md.get("default", False):
             continue
 
         if providers and md.get("provider") not in providers:
@@ -335,37 +345,40 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
         include_unsupported=False,
     )
 
-    # Get disabled models for this user if user_id is provided
+    # Get disabled and explicitly enabled models for this user if user_id is provided
     disabled_models = set()
+    explicitly_enabled_models = set()
     if user_id:
         try:
 
-            async def _get_disabled():
+            async def _get_model_status():
                 async with session_scope() as session:
                     variable_service = get_variable_service()
                     if variable_service is None:
-                        return set()
+                        return set(), set()
                     from langflow.services.variable.service import DatabaseVariableService
 
                     if not isinstance(variable_service, DatabaseVariableService):
-                        return set()
+                        return set(), set()
                     all_vars = await variable_service.get_all(
                         user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
                         session=session,
                     )
+                    disabled = set()
+                    enabled = set()
+                    import json
                     for var in all_vars:
                         if var.name == "__disabled_models__" and var.value:
-                            import json
+                            with contextlib.suppress(json.JSONDecodeError, TypeError):
+                                disabled = set(json.loads(var.value))
+                        elif var.name == "__enabled_models__" and var.value:
+                            with contextlib.suppress(json.JSONDecodeError, TypeError):
+                                enabled = set(json.loads(var.value))
+                    return disabled, enabled
 
-                            try:
-                                return set(json.loads(var.value))
-                            except (json.JSONDecodeError, TypeError):
-                                return set()
-                    return set()
-
-            disabled_models = run_until_complete(_get_disabled())
+            disabled_models, explicitly_enabled_models = run_until_complete(_get_model_status())
         except Exception:  # noqa: BLE001, S110
-            # If we can't get disabled models, continue without filtering
+            # If we can't get model status, continue without filtering
             pass
 
     # Get enabled providers (those with credentials configured)
@@ -437,8 +450,14 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
         for model_data in models:
             model_name = model_data.get("model_name")
             metadata = model_data.get("metadata", {})
+            is_default = metadata.get("default", False)
 
-            # Skip if model is in disabled list
+            # Determine if model should be shown:
+            # - If not default and not explicitly enabled, skip it
+            # - If in disabled list, skip it
+            # - Otherwise, show it
+            if not is_default and model_name not in explicitly_enabled_models:
+                continue
             if model_name in disabled_models:
                 continue
 
@@ -511,37 +530,40 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
         include_unsupported=False,
     )
 
-    # Get disabled models for this user if user_id is provided
+    # Get disabled and explicitly enabled models for this user if user_id is provided
     disabled_models = set()
+    explicitly_enabled_models = set()
     if user_id:
         try:
 
-            async def _get_disabled():
+            async def _get_model_status():
                 async with session_scope() as session:
                     variable_service = get_variable_service()
                     if variable_service is None:
-                        return set()
+                        return set(), set()
                     from langflow.services.variable.service import DatabaseVariableService
 
                     if not isinstance(variable_service, DatabaseVariableService):
-                        return set()
+                        return set(), set()
                     all_vars = await variable_service.get_all(
                         user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
                         session=session,
                     )
+                    disabled = set()
+                    enabled = set()
+                    import json
                     for var in all_vars:
                         if var.name == "__disabled_models__" and var.value:
-                            import json
+                            with contextlib.suppress(json.JSONDecodeError, TypeError):
+                                disabled = set(json.loads(var.value))
+                        elif var.name == "__enabled_models__" and var.value:
+                            with contextlib.suppress(json.JSONDecodeError, TypeError):
+                                enabled = set(json.loads(var.value))
+                    return disabled, enabled
 
-                            try:
-                                return set(json.loads(var.value))
-                            except (json.JSONDecodeError, TypeError):
-                                return set()
-                    return set()
-
-            disabled_models = run_until_complete(_get_disabled())
+            disabled_models, explicitly_enabled_models = run_until_complete(_get_model_status())
         except Exception:  # noqa: BLE001, S110
-            # If we can't get disabled models, continue without filtering
+            # If we can't get model status, continue without filtering
             pass
 
     # Get enabled providers (those with credentials configured)
@@ -639,8 +661,15 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
 
         for model_data in models:
             model_name = model_data.get("model_name")
+            metadata = model_data.get("metadata", {})
+            is_default = metadata.get("default", False)
 
-            # Skip if model is in disabled list
+            # Determine if model should be shown:
+            # - If not default and not explicitly enabled, skip it
+            # - If in disabled list, skip it
+            # - Otherwise, show it
+            if not is_default and model_name not in explicitly_enabled_models:
+                continue
             if model_name in disabled_models:
                 continue
 

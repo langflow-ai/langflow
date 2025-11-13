@@ -8,12 +8,14 @@ WATSONX_MODELS_DETAILED = [
         name="ibm/granite-embedding-125m-english",
         icon="IBMWatsonx",
         model_type="embeddings",
+        default=True,
     ),
     create_model_metadata(
         provider="IBM Watsonx",
         name="ibm/granite-embedding-278m-multilingual",
         icon="IBMWatsonx",
         model_type="embeddings",
+        default=True,
     ),
     create_model_metadata(
         provider="IBM Watsonx",

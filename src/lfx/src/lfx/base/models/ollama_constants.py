@@ -8,12 +8,14 @@ OLLAMA_MODELS_DETAILED = [
         name="llama3.3",
         icon="Ollama",
         tool_calling=True,
+        default=True,
     ),
     create_model_metadata(
         provider="Ollama",
         name="qwq",
         icon="Ollama",
         tool_calling=True,
+        default=True,
     ),
     create_model_metadata(
         provider="Ollama",
@@ -184,7 +186,13 @@ OLLAMA_EMBEDDING_MODELS = [
 
 # Embedding models as detailed metadata
 OLLAMA_EMBEDDING_MODELS_DETAILED = [
-    create_model_metadata(provider="Ollama", name=name, icon="Ollama", model_type="embeddings")
+    create_model_metadata(
+        provider="Ollama",
+        name=name,
+        icon="Ollama",
+        model_type="embeddings",
+        default=(name == "nomic-embed-text"),  # Mark the most efficient as default
+    )
     for name in OLLAMA_EMBEDDING_MODELS
 ]
 
