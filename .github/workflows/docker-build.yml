@@ -240,36 +240,28 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and Push to Docker Hub (amd64)
-        uses: Wandalen/wretry.action@master
+        uses: docker/build-push-action@v6
         with:
-          attempt_limit: 3
-          attempt_delay: 60000
-          action: docker/build-push-action@v6
-          with: |
-            context: .
-            push: true
-            file: ${{ needs.setup.outputs.file }}
-            tags: ${{ needs.setup.outputs.docker_tags }}-amd64
-            platforms: linux/amd64
-            builder: ${{ steps.buildx.outputs.name }}
-            cache-from: type=gha,scope=amd64
-            cache-to: type=gha,mode=max,scope=amd64
+          context: .
+          push: true
+          file: ${{ needs.setup.outputs.file }}
+          tags: ${{ needs.setup.outputs.docker_tags }}-amd64
+          platforms: linux/amd64
+          builder: ${{ steps.buildx.outputs.name }}
+          cache-from: type=gha,scope=amd64
+          cache-to: type=gha,mode=max,scope=amd64
 
       - name: Build and Push to Docker Hub (arm64)
-        uses: Wandalen/wretry.action@master
+        uses: docker/build-push-action@v6
         with:
-          attempt_limit: 3
-          attempt_delay: 60000
-          action: docker/build-push-action@v6
-          with: |
-            context: .
-            push: true
-            file: ${{ needs.setup.outputs.file }}
-            tags: ${{ needs.setup.outputs.docker_tags }}-arm64
-            platforms: linux/arm64
-            builder: ${{ steps.buildx.outputs.name }}
-            cache-from: type=gha,scope=arm64
-            cache-to: type=gha,mode=max,scope=arm64
+          context: .
+          push: true
+          file: ${{ needs.setup.outputs.file }}
+          tags: ${{ needs.setup.outputs.docker_tags }}-arm64
+          platforms: linux/arm64
+          builder: ${{ steps.buildx.outputs.name }}
+          cache-from: type=gha,scope=arm64
+          cache-to: type=gha,mode=max,scope=arm64
 
       - name: Create and Push Multi-Arch Manifest
         run: |
@@ -289,36 +281,28 @@ jobs:
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
 
       - name: Build and push to Github Container Registry (amd64)
-        uses: Wandalen/wretry.action@master
+        uses: docker/build-push-action@v6
         with:
-          attempt_limit: 3
-          attempt_delay: 60000
-          action: docker/build-push-action@v6
-          with: |
-            context: .
-            push: true
-            file: ${{ needs.setup.outputs.file }}
-            tags: ${{ needs.setup.outputs.ghcr_tags }}-amd64
-            platforms: linux/amd64
-            builder: ${{ steps.buildx.outputs.name }}
-            cache-from: type=gha,scope=amd64
-            cache-to: type=gha,mode=max,scope=amd64
+          context: .
+          push: true
+          file: ${{ needs.setup.outputs.file }}
+          tags: ${{ needs.setup.outputs.ghcr_tags }}-amd64
+          platforms: linux/amd64
+          builder: ${{ steps.buildx.outputs.name }}
+          cache-from: type=gha,scope=amd64
+          cache-to: type=gha,mode=max,scope=amd64
 
       - name: Build and push to Github Container Registry (arm64)
-        uses: Wandalen/wretry.action@master
+        uses: docker/build-push-action@v6
         with:
-          attempt_limit: 3
-          attempt_delay: 60000
-          action: docker/build-push-action@v6
-          with: |
-            context: .
-            push: true
-            file: ${{ needs.setup.outputs.file }}
-            tags: ${{ needs.setup.outputs.ghcr_tags }}-arm64
-            platforms: linux/arm64
-            builder: ${{ steps.buildx.outputs.name }}
-            cache-from: type=gha,scope=arm64
-            cache-to: type=gha,mode=max,scope=arm64
+          context: .
+          push: true
+          file: ${{ needs.setup.outputs.file }}
+          tags: ${{ needs.setup.outputs.ghcr_tags }}-arm64
+          platforms: linux/arm64
+          builder: ${{ steps.buildx.outputs.name }}
+          cache-from: type=gha,scope=arm64
+          cache-to: type=gha,mode=max,scope=arm64
 
       - name: Create and Push Multi-Arch Manifest (GHCR)
         run: |
@@ -392,18 +376,16 @@ jobs:
         run: sleep 120
 
       - name: Build and push ${{ matrix.component }}
-        uses: Wandalen/wretry.action@master
+        uses: docker/build-push-action@v6
         with:
-          action: docker/build-push-action@v6
-          with: |
-            context: .
-            push: true
-            build-args: |
-              LANGFLOW_IMAGE=${{ matrix.langflow_image }}
-            file: ${{ matrix.dockerfile }}
-            tags: ${{ matrix.tags }}
-            # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
-            provenance: false
+          context: .
+          push: true
+          build-args: |
+            LANGFLOW_IMAGE=${{ matrix.langflow_image }}
+          file: ${{ matrix.dockerfile }}
+          tags: ${{ matrix.tags }}
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
 
   restart-space:
     name: Restart HuggingFace Spaces
