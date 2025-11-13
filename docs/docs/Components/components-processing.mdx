@@ -420,12 +420,12 @@ The output is a `DataFrame` containing all columns from the original `DataFrame`
 
 ## Dynamic Create Data
 
-The **Dynamic Create Data** component creates a [`Data`](/data-types#data) object with configurable fields.
+The **Dynamic Create Data** component creates a [`Data`](/data-types#data) object or [`Message`](/data-types#message) with configurable fields.
 Define the table in the **Input Configuration** field, and the component creates corresponding input or output handles in the component.
 
 ### Use the Dynamic Create Data component in a flow
 
-The following example demonstrates how to use a **Dynamic Create Data** component to create a structured `Data` object from multiple sources.
+The following example demonstrates how to use a **Dynamic Create Data** component to create a structured `Data` or `Message` object from multiple sources.
 
 1. Add the **Dynamic Create Data** component to your flow.
 
@@ -446,6 +446,8 @@ The following example demonstrates how to use a **Dynamic Create Data** componen
 
     For more information, see [Langflow data types](/data-types).
 4. Depending on your **Field Type** selections, either connect output from other components to dynamically populate the inputs, or enter values manually in the **Dynamic Create Data** component's fields.
+
+5. Select the desired output type at the component's output port. The component outputs either a [`Data`](/data-types#data) object containing all field values from the component's inputs, or a [`Message`](/data-types#message) containing all field values formatted as a text string.
 
 ### Dynamic Create Data parameters
 
