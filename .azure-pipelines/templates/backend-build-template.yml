@@ -13,11 +13,23 @@ jobs:
 - job: BuildAndPushBackend
   displayName: 'Build and Push Backend'
   pool:
-    vmImage: 'ubuntu-latest'
+    name: ad-vmss-p1
   steps:
   - checkout: self
     submodules: true
     persistCredentials: true
+
+  - script: |
+      sudo apt-get update
+      sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+      sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+      sudo apt-get update
+      sudo apt-get install -y docker-ce containerd.io
+      sudo systemctl start docker
+      sudo chmod 666 /var/run/docker.sock || true
+      docker version
+    displayName: Install Docker Engine
 
   - task: Docker@2
     displayName: 'Build Backend Image'
