@@ -211,7 +211,7 @@
                 "dependencies": [
                   {
                     "name": "httpx",
-                    "version": null
+                    "version": "0.28.1"
                   },
                   {
                     "name": "lfx",
@@ -885,11 +885,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": null
+                    "version": "3.10.15"
                   },
                   {
                     "name": "fastapi",
-                    "version": null
+                    "version": "0.120.0"
                   },
                   {
                     "name": "lfx",
@@ -1180,11 +1180,11 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": null
+                    "version": "0.3.79"
                   },
                   {
                     "name": "pydantic",
-                    "version": null
+                    "version": "2.10.6"
                   },
                   {
                     "name": "lfx",
@@ -1897,15 +1897,15 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": null
+                    "version": "3.10.15"
                   },
                   {
                     "name": "pandas",
-                    "version": null
+                    "version": "2.2.3"
                   },
                   {
                     "name": "fastapi",
-                    "version": null
+                    "version": "0.120.0"
                   },
                   {
                     "name": "lfx",
@@ -1921,7 +1921,7 @@
                   },
                   {
                     "name": "google",
-                    "version": "1.122.0"
+                    "version": "0.8.5"
                   },
                   {
                     "name": "googleapiclient",
