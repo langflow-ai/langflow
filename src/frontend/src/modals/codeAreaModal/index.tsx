@@ -170,8 +170,22 @@ export default function CodeAreaModal({
 
   return (
     <BaseModal
-      onEscapeKeyDown={(e) => {
+      onEscapeKeyDown={(e) => {        
         e.preventDefault();
+
+        // Check if AceEditor search box input is in the viewport
+        const searchInput = document.querySelector(
+          'input.ace_search_field',
+        ) as HTMLInputElement;
+        const isSearchBoxVisible =
+          searchInput &&
+          searchInput.offsetParent !== null; // Check if element is visible
+
+        // If search box is visible, don't close the modal - let AceEditor handle escape
+        if (isSearchBoxVisible) {
+          return;
+        }
+
         if (code === value) {
           setOpen(false);
         } else {
