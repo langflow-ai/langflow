@@ -4,9 +4,15 @@ React wrapper for the Langflow embedded chat web component.
 
 ## Install
 
-```bash
-npm install @langflow/chat-widget
-```
+- Create a new React app outside of the Langflow repository (for example, `npx create-react-app my-widget-playground` or `npm create vite@latest my-widget-playground -- --template react`).
+- Inside that app, install the widget package:
+
+  ```bash
+  npm install @langflow/chat-widget
+  ```
+
+- In your Langflow instance, create or choose a flow you want to expose. Copy its `flowId` (or published endpoint name) and generate a Langflow API key (`Settings → API Keys`).
+- Run the Langflow backend (locally via `langflow run` or against a deployed instance) so the widget can reach the API.
 
 ## Basic Usage
 
@@ -40,6 +46,8 @@ Optional props such as `chatPosition`, `chatWindowHeight`, `chatTriggerStyle`, e
 
 - Set `REACT_APP_LANGFLOW_URL`, `REACT_APP_FLOW_ID`, and `REACT_APP_LANGFLOW_KEY` in `.env` and restart the dev server.
 - Your Langflow flow must have both **Chat Input** and **Chat Output** components connected, and the LLM component inside the flow uses its own provider key (OpenAI, Anthropic, etc.).
+
+
 
 ## Troubleshooting
 
