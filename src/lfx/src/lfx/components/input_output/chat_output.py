@@ -1,8 +1,8 @@
+import uuid
 from collections.abc import Generator
 from typing import Any
 
 import orjson
-import uuid
 from fastapi.encoders import jsonable_encoder
 
 from lfx.base.io.chat import ChatComponent
