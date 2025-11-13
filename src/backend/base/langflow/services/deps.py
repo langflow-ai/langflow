@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 
+from fastapi import HTTPException
 from lfx.log.logger import logger
 
 from langflow.services.schema import ServiceType
@@ -178,9 +180,19 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
             await session.commit()
-        except Exception:
-            # Only log ERROR if rollback itself fails (critical situation)
-            # Normal exceptions are re-raised to be handled by the caller
+        except Exception as e:
+            # Log at appropriate level based on error type
+            if isinstance(e, HTTPException):
+                if HTTPStatus.BAD_REQUEST.value <= e.status_code < HTTPStatus.INTERNAL_SERVER_ERROR.value:
+                    # Client errors (4xx) - log at info level
+                    await logger.ainfo(f"Client error during session scope: {e.status_code}: {e.detail}")
+                else:
+                    # Server errors (5xx) or other - log at error level
+                    await logger.aexception("An error occurred during the session scope.", exception=e)
+            else:
+                # Non-HTTP exceptions - log at error level
+                await logger.aexception("An error occurred during the session scope.", exception=e)
+
             try:
                 await session.rollback()
                 await logger.adebug("Session rolled back successfully")
