@@ -125,7 +125,7 @@ def test_tool_with_list_parameter():
     # Check the urls parameter specifically
     assert "urls" in params["properties"], "urls parameter is missing"
     urls_spec = params["properties"]["urls"]
-    logger.debug("Generated URLs spec:", urls_spec)  # Debug print
+    logger.debug("Generated URLs spec: %s", urls_spec)  # Debug print
 
     # Now it should correctly identify as array type
     assert urls_spec["type"] == "array", "urls type should be array"

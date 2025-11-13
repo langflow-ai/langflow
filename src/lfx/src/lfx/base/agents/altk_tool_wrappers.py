@@ -215,8 +215,13 @@ class ValidatedTool(ALTKBaseTool):
         if args and hasattr(self.wrapped_tool, "args_schema"):
             try:
                 schema = self.wrapped_tool.args_schema
+                field_source = None
                 if hasattr(schema, "__fields__"):
-                    field_names = list(schema.__fields__.keys())
+                    field_source = schema.__fields__
+                elif hasattr(schema, "model_fields"):
+                    field_source = schema.model_fields
+                if field_source:
+                    field_names = list(field_source.keys())
                     for i, arg in enumerate(args):
                         if i < len(field_names):
                             clean_kwargs[field_names[i]] = arg
