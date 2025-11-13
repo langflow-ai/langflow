@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from langflow.custom import Component
+from langflow.inputs.inputs import DictInput
 from langflow.services.deps import get_knowledge_service
 from langflow.io import DropdownInput, IntInput, MultilineInput, MultiselectInput, Output
 from langflow.schema import Data
@@ -21,6 +22,36 @@ class KnowledgeHubSearchComponent(Component):
     documentation: str = "http://docs.langflow.org/components/custom"
     icon = "Autonomize"
     name = "KnowledgeHubSearch"
+
+    inputs = [
+        MultilineInput(
+            name="search_query",
+            display_name="Search Query",
+            tool_mode=True,
+        ),
+        MultiselectInput(
+            name="selected_hubs",
+            display_name="Data Sources",
+            value=[],
+            refresh_button=True,
+        ),
+        DictInput(
+            name="filters",
+            display_name="Filter on metadata",
+            info="filter on metadata",
+            show=True,
+            value={},
+            is_list=True,
+        )
+    ]
+
+    outputs = [
+        Output(
+            display_name="Query Results",
+            name="query_results",
+            method="build_output",
+        ),
+    ]
 
     def __init__(self, **kwargs):
         self._hub_data: list[dict[str, str]] = []
@@ -80,27 +111,6 @@ class KnowledgeHubSearchComponent(Component):
                 raise
         return build_config
 
-    inputs = [
-        MultilineInput(
-            name="search_query",
-            display_name="Search Query",
-            tool_mode=True,
-        ),
-        MultiselectInput(
-            name="selected_hubs",
-            display_name="Data Sources",
-            value=[],
-            refresh_button=True,
-        ),
-    ]
-
-    outputs = [
-        Output(
-            display_name="Query Results",
-            name="query_results",
-            method="build_output",
-        ),
-    ]
 
     async def _validate_and_refresh_data_sources(self) -> tuple[bool, list[str]]:
         """Validate that the selected data sources are still available, if not fetch and update them"""
@@ -225,7 +235,7 @@ class KnowledgeHubSearchComponent(Component):
                 return Data(value={"query_results": []})
             
             query_results = await service.query_vector_store(
-                knowledge_hub_ids=selected_hub_ids, query=self.search_query
+                knowledge_hub_ids=selected_hub_ids, query=self.search_query, filters=self.filters
             )
             logger.debug(f"query_results: {query_results}")
             
