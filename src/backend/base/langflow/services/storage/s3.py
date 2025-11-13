@@ -168,7 +168,7 @@ class S3StorageService(StorageService):
         except Exception as e:
             if hasattr(e, "response") and e.response.get("Error", {}).get("Code") == "NoSuchKey":
                 await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
-                msg = f"File {file_name} not found in flow {flow_id}"
+                msg = f"File not found: {file_name}"
                 raise FileNotFoundError(msg) from e
 
             logger.exception(f"Error retrieving file {file_name} from S3 in flow {flow_id}")
@@ -202,7 +202,7 @@ class S3StorageService(StorageService):
         except Exception as e:
             if hasattr(e, "response") and e.response.get("Error", {}).get("Code") == "NoSuchKey":
                 await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
-                msg = f"File {file_name} not found in flow {flow_id}"
+                msg = f"File not found: {file_name}"
                 raise FileNotFoundError(msg) from e
 
             logger.exception(f"Error streaming file {file_name} from S3 in flow {flow_id}")
@@ -296,7 +296,7 @@ class S3StorageService(StorageService):
             # Check if it's a 404 error
             if hasattr(e, "response") and e.response.get("Error", {}).get("Code") in ["NoSuchKey", "404"]:
                 await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
-                msg = f"File {file_name} not found in flow {flow_id}"
+                msg = f"File not found: {file_name}"
                 raise FileNotFoundError(msg) from e
 
             logger.exception(f"Error getting file size for {file_name} in S3 flow {flow_id}")

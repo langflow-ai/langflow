@@ -69,7 +69,7 @@ class StorageService(Service):
 
     def set_ready(self) -> None:
         """Mark the service as ready."""
-        self.ready = True
+        self._ready = True
 
     @abstractmethod
     async def save_file(self, flow_id: str, file_name: str, data: bytes) -> None:

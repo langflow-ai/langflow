@@ -479,6 +479,7 @@ async def active_user(client):  # noqa: ARG001
             user = active_user
         else:
             session.add(user)
+            await session.flush()
             await session.refresh(user)
         user = UserRead.model_validate(user, from_attributes=True)
     yield user
@@ -523,6 +524,7 @@ async def active_super_user(client):  # noqa: ARG001
             user = active_user
         else:
             session.add(user)
+            await session.flush()
             await session.refresh(user)
         user = UserRead.model_validate(user, from_attributes=True)
     yield user
@@ -556,6 +558,7 @@ async def flow(
     flow = Flow.model_validate(flow_data)
     async with session_getter(get_db_service()) as session:
         session.add(flow)
+        await session.flush()
         await session.refresh(flow)
         yield flow
         # Clean up
@@ -667,6 +670,7 @@ async def created_api_key(active_user):
             yield existing_api_key
             return
         session.add(api_key)
+        await session.flush()
         await session.refresh(api_key)
         yield api_key
         # Clean up
@@ -722,6 +726,7 @@ async def created_user_two_api_key(user_two: User) -> AsyncGenerator[ApiKey, Non
 
     async with session_scope() as session:
         session.add(api_key)
+        await session.flush()
         await session.refresh(api_key)
 
         yield api_key
@@ -783,6 +788,7 @@ async def get_starter_project(client, active_user):  # noqa: ARG001
         )
         new_flow = Flow.model_validate(new_flow_create, from_attributes=True)
         session.add(new_flow)
+        await session.flush()
         await session.refresh(new_flow)
         new_flow_dict = new_flow.model_dump()
         yield new_flow_dict

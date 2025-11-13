@@ -36,6 +36,7 @@ async def files_created_api_key(files_client, files_active_user):  # noqa: ARG00
             yield existing_api_key
             return
         session.add(api_key)
+        await session.flush()
         await session.refresh(api_key)
         yield api_key
         # Clean up
@@ -56,6 +57,7 @@ async def files_active_user(files_client):  # noqa: ARG001
             user = active_user
         else:
             session.add(user)
+            await session.flush()
             await session.refresh(user)
         user = UserRead.model_validate(user, from_attributes=True)
     yield user
@@ -554,6 +556,7 @@ async def s3_files_created_api_key(s3_files_client, s3_files_active_user):  # no
             yield existing_api_key
             return
         session.add(api_key)
+        await session.flush()
         await session.refresh(api_key)
         yield api_key
         # Clean up
@@ -574,6 +577,7 @@ async def s3_files_active_user(s3_files_client):  # noqa: ARG001
             user = active_user
         else:
             session.add(user)
+            await session.flush()
             await session.refresh(user)
         user = UserRead.model_validate(user, from_attributes=True)
     yield user

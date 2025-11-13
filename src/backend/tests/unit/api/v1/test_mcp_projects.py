@@ -112,6 +112,7 @@ async def other_test_user():
             is_superuser=False,
         )
         session.add(user)
+        await session.flush()
         await session.refresh(user)
     yield user
     # Clean up
@@ -128,6 +129,7 @@ async def other_test_project(other_test_user):
     async with session_scope() as session:
         project = Folder(id=project_id, name="Other Test Project", user_id=other_test_user.id)
         session.add(project)
+        await session.flush()
         await session.refresh(project)
     yield project
     # Clean up
@@ -216,6 +218,7 @@ async def test_flow_for_update(active_user, user_test_project):
     async with session_scope() as session:
         flow = Flow(**flow_data)
         session.add(flow)
+        await session.flush()
         await session.refresh(flow)
 
     yield flow
@@ -403,6 +406,7 @@ async def user_test_project(active_user):
     async with session_scope() as session:
         project = Folder(id=project_id, name="User Test Project", user_id=active_user.id)
         session.add(project)
+        await session.flush()
         await session.refresh(project)
     yield project
     # Clean up
@@ -428,6 +432,7 @@ async def user_test_flow(active_user, user_test_project):
             user_id=active_user.id,
         )
         session.add(flow)
+        await session.flush()
         await session.refresh(flow)
     yield flow
     # Clean up
