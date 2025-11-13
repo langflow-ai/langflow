@@ -473,7 +473,7 @@ class ComposioBaseComponent(Component):
                         # Extract version information from the tool
                         version = tool_dict.get("version")
                         available_versions = tool_dict.get("available_versions", [])
-                        
+
                         self._action_schemas[action_key] = tool_dict
                         self._actions_data[action_key] = {
                             "display_name": display_name,
@@ -497,7 +497,7 @@ class ComposioBaseComponent(Component):
                                 # Extract version information from the tool
                                 version = tool_dict.get("version")
                                 available_versions = tool_dict.get("available_versions", [])
-                                
+
                                 self._action_schemas[action_key] = tool_dict
                                 self._actions_data[action_key] = {
                                     "display_name": display_name,
@@ -546,7 +546,7 @@ class ComposioBaseComponent(Component):
                             # Extract version information from the tool
                             version = tool_dict.get("version")
                             available_versions = tool_dict.get("available_versions", [])
-                            
+
                             self._action_schemas[action_key] = tool_dict
                             self._actions_data[action_key] = {
                                 "display_name": display_name,
@@ -563,7 +563,7 @@ class ComposioBaseComponent(Component):
                             # Extract version information from the tool
                             version = tool_dict.get("version")
                             available_versions = tool_dict.get("available_versions", [])
-                            
+
                             self._action_schemas[action_key] = tool_dict
                             self._actions_data[action_key] = {
                                 "display_name": display_name,
@@ -646,7 +646,7 @@ class ComposioBaseComponent(Component):
                         # Extract version information from the tool
                         version = tool_dict.get("version")
                         available_versions = tool_dict.get("available_versions", [])
-                        
+
                         self._action_schemas[action_key] = tool_dict
                         self._actions_data[action_key] = {
                             "display_name": display_name,
@@ -661,7 +661,7 @@ class ComposioBaseComponent(Component):
                         # Extract version information from the tool
                         version = tool_dict.get("version")
                         available_versions = tool_dict.get("available_versions", [])
-                        
+
                         self._action_schemas[action_key] = tool_dict
                         self._actions_data[action_key] = {
                             "display_name": display_name,
@@ -2547,18 +2547,18 @@ class ComposioBaseComponent(Component):
             version = self._actions_data.get(action_key, {}).get("version")
             if version:
                 logger.info(f"Executing {action_key} with version: {version}")
-            
+
             # Execute using new SDK with version parameter
             execute_params = {
                 "slug": action_key,
                 "arguments": arguments,
                 "user_id": self.entity_id,
             }
-            
+
             # Only add version if it's available
             if version:
                 execute_params["version"] = version
-            
+
             result = composio.tools.execute(**execute_params)
 
             if isinstance(result, dict) and "successful" in result:
