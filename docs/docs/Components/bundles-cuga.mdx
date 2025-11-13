@@ -8,18 +8,18 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
-This page describes the **CUGA (ConfigUrable Generalist Agent)** bundled agent component.
+This page describes the **CUGA (ConfigUrable Generalist Agent)** component.
 
 The CUGA component is an advanced AI agent that executes complex tasks using tools, optional browser automation, and structured output generation.
 
-The CUGA agent component can be used in flows in place of an [**Agent** component](/agents).
+The CUGA component can be used in flows in place of an [**Agent** component](/agents).
 Like the Langflow agent, the CUGA component can use tools connected to its **Toolset** port, and can be used as a tool itself, but it also includes some additional features.
 
-The CUGA agent supports browser automation for web scraping with [Playwright](https://playwright.dev/docs/intro).
+The CUGA component supports browser automation for web scraping with [Playwright](https://playwright.dev/docs/intro).
 To enable web scraping, set the `browser_enabled` parameter to `true`, and specify a single URL in the `web_apps` parameter, in the format `https://example.com`.
 
-The CUGA agent includes a specialized API agent optimized for handling API requests and parsing responses.
-To use the API agent, set the `API` parameter to `true`.
+The CUGA component includes a specialized API sub-agent optimized for handling API requests and parsing responses.
+To use the API sub-agent, set the `API` parameter to `true`.
 
 The CUGA component's **Policies** input allows custom policies to be loaded for the agent to execute.
 A policy is a Markdown file with agent instructions.
@@ -29,11 +29,11 @@ For more information, see the [CUGA project repository](https://github.com/cuga-
 ### Use the CUGA agent in a flow
 
 1. Replace the Langflow agent in the simple agent template flow with the CUGA agent.
-2. Connect an [**MCP Tools** component](/mcp-client) and a [**Calculator** component](/components-helpers#calculator) to the CUGA agent's **Tools** port.
-3. Add a [**Read File** component](/components-data#file), and connect it to the CUGA agent's **Policies** port.
+2. Connect an [**MCP Tools** component](/mcp-client) and a [**Calculator** component](/components-helpers#calculator) to the CUGA component's **Tools** port.
+3. Add a [**Read File** component](/components-data#file), and connect it to the CUGA component's **Policies** port.
     Alternatively, click <Icon name="Scan" aria-hidden="true" /> **Edit text** to open the **Edit text content** pane, and enter your policy directly into the component.
 4. Create a Markdown file on your computer called `policy.md`, and populate it with the following.
-    You can configure the agent's behavior however you'd like, but it's important to clearly format the document with `##Plan` and `##Answer`.
+    It's important to clearly format the document with `##Plan` and `##Answer` for the agent to understand your instructions.
     ```markdown
     ## Plan
 
@@ -57,8 +57,8 @@ For more information, see the [CUGA project repository](https://github.com/cuga-
     ![A basic agent chat flow with Chat Input, Agent, and Chat Output components.](/img/component-cuga.png)
 
 6. Open the **Playground**, and ask the agent a question about the sales data, such as `Which accounts are available?`.
-    The agent describes the tool calls it makes and then returns an answer, and works according to the policy you connected.
-    For example, the list of available accounts is very large, but the CUGA agent returns a concise summary as requested in the connected policy.
+    The agent describes the tool calls it makes and then returns an answer according to the policy.
+    For example, the list of available accounts is very large, but the CUGA component returns a concise summary as requested in the policy.
     ```
     Based on the available data, here are the accounts:
 
