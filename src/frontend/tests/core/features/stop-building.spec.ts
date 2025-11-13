@@ -35,7 +35,7 @@ test(
     await page.getByTestId("sidebar-search-input").fill("url");
 
     await page
-      .getByTestId("dataURL")
+      .getByTestId("data_sourceURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 300 },
       });
