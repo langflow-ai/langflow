@@ -1,5 +1,5 @@
 import React, { forwardRef } from "react";
-import MiroIconSVG from "./miro";
+import SvgMiro from "./miro";
 
 export const MiroIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
   (props, ref) => {
@@ -7,13 +7,13 @@ export const MiroIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
       <span
         style={{
           display: "inline-grid",
-          width: 22,
-          height: 22,
+          width: 20,
+          height: 20,
           placeItems: "center",
           flexShrink: 0,
         }}
       >
-        <MiroIconSVG ref={ref} {...props} />
+        <SvgMiro ref={ref} {...props} />
       </span>
     );
   },

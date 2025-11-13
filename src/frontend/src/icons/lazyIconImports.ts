@@ -53,7 +53,7 @@ export const lazyIconsMapping = {
       default: mod.GooglesheetsIcon,
     })),
   Klaviyo: () =>
-    import("@/icons/klaviyo").then((mod) => ({ default: mod.KlaviyoIcon })),
+    import("@/icons/Klaviyo").then((mod) => ({ default: mod.KlaviyoIcon })),
   Klipfolio: () =>
     import("@/icons/Klipfolio").then((mod) => ({ default: mod.KlipfolioIcon })),
   One_Drive: () =>
@@ -184,8 +184,6 @@ export const lazyIconsMapping = {
     })),
   Firecrawl: () =>
     import("@/icons/Firecrawl").then((mod) => ({ default: mod.FirecrawlIcon })),
-  Fireflies: () =>
-    import("@/icons/Fireflies").then((mod) => ({ default: mod.FirefliesIcon })),
   Finage: () =>
     import("@/icons/Finage").then((mod) => ({ default: mod.FinageIcon })),
   Fixer: () =>
@@ -201,7 +199,7 @@ export const lazyIconsMapping = {
   GitLoader: () =>
     import("@/icons/GitLoader").then((mod) => ({ default: mod.GitLoaderIcon })),
   Github: () =>
-    import("@/icons/Github").then((mod) => ({ default: mod.GithubIcon })),
+    import("@/icons/github").then((mod) => ({ default: mod.GithubIcon })),
   Glean: () =>
     import("@/icons/Glean").then((mod) => ({ default: mod.GleanIcon })),
   GlobeOk: () =>

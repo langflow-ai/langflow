@@ -1,5 +1,5 @@
 import React, { forwardRef } from "react";
-import AsanaIconSVG from "./asana";
+import SvgAsana from "./asana";
 
 export const AsanaIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
   (props, ref) => {
@@ -7,13 +7,13 @@ export const AsanaIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
       <span
         style={{
           display: "inline-grid",
-          width: 22,
-          height: 22,
+          width: 20,
+          height: 20,
           placeItems: "center",
           flexShrink: 0,
         }}
       >
-        <AsanaIconSVG ref={ref} {...props} />
+        <SvgAsana ref={ref} {...props} />
       </span>
     );
   },

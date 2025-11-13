@@ -1,5 +1,5 @@
 import React, { forwardRef } from "react";
-import KlaviyoIconSVG from "./klaviyo";
+import SvgKlaviyo from "./klaviyo";
 
 export const KlaviyoIcon = forwardRef<
   SVGSVGElement,
@@ -9,13 +9,13 @@ export const KlaviyoIcon = forwardRef<
     <span
       style={{
         display: "inline-grid",
-        width: 22,
-        height: 22,
+        width: 20,
+        height: 20,
         placeItems: "center",
         flexShrink: 0,
       }}
     >
-      <KlaviyoIconSVG ref={ref} {...props} />
+      <SvgKlaviyo ref={ref} {...props} />
     </span>
   );
 });
