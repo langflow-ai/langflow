@@ -1,4 +1,4 @@
-from lfx.components.processing import DynamicCreateDataComponent
+from lfx.components.processing.dynamic_create_data import DynamicCreateDataComponent
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 
