@@ -1,50 +1,22 @@
-const Icon = (props) => (
+const SvgMiro = (props) => (
   <svg
+    width="1em"
+    height="1em"
+    viewBox="0 0 400 400"
+    fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 64 64"
-    width="24px"
-    height="24px"
-    fill-rule="evenodd"
-    clip-rule="evenodd"
-    baseProfile="basic"
+    {...props}
   >
-    <linearGradient
-      id="1dP_ejbheoOkMyPxlPY0Wa"
-      x1="32"
-      x2="32"
-      y1="57"
-      y2="7"
-      gradientUnits="userSpaceOnUse"
-      fill="#000000"
-    >
-      <stop offset="0" stop-color="#000000" fill="#000000" />
-      <stop offset="1" stop-color="#000000" fill="#000000" />
-    </linearGradient>
     <path
-      fill="none"
-      stroke="url(#1dP_ejbheoOkMyPxlPY0Wa)"
-      stroke-miterlimit="10"
-      stroke-width="2"
-      d="M18.4,8h27.2C51.344,8,56,12.656,56,18.4 v27.2C56,51.344,51.344,56,45.6,56H18.4C12.656,56,8,51.344,8,45.6V18.4C8,12.656,12.656,8,18.4,8z"
+      d="M3 100.754C3 46.2604 47.2435 2 101.754 2H299.246C353.756 2 398 46.2435 398 100.754V298.246C398 352.756 353.756 397 299.246 397H101.754C47.2435 397 3 352.756 3 298.246V100.754Z"
+      fill="#FFDD33"
     />
-    <linearGradient
-      id="1dP_ejbheoOkMyPxlPY0Wb"
-      x1="33"
-      x2="33"
-      y1="50"
-      y2="14"
-      gradientUnits="userSpaceOnUse"
-      fill="#000000"
-    >
-      <stop offset="0" stop-color="#120c00" fill="#000000" />
-      <stop offset="1" stop-color="#000000" fill="#000000" />
-    </linearGradient>
     <path
-      fill="#080808"
-      fill-rule="evenodd"
-      d="M41.341,14h-5.268l4.39,7.714L30.805,14h-5.268 l4.829,9.429L20.268,14H15l5.268,12L15,50h5.268l10.098-25.714L25.537,50h5.268l9.659-27.429L36.073,50h5.268L51,20L41.341,14z"
-      clip-rule="evenodd"
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M265.573 77.3491H229.74L259.629 129.85L193.906 77.3491H158.072L190.934 141.468L122.238 77.3491H86.4041L122.238 159.031L86.4041 322.377H122.238L190.934 147.396L158.072 322.377H193.906L259.629 135.693L229.74 322.377H265.573L331.297 118.232L265.573 77.4335V77.3491Z"
+      fill="#1C1C1E"
     />
   </svg>
 );
-export default Icon;
+export default SvgMiro;
