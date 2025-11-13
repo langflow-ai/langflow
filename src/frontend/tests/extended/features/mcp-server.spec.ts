@@ -91,6 +91,8 @@ test(
       },
     );
 
+    await page.getByText("Select a tool");
+
     await page.getByTestId("dropdown_str_tool").click();
 
     const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
@@ -282,6 +284,8 @@ test(
         state: "visible",
       },
     );
+
+    await page.getByText("Select a tool");
 
     await page.getByTestId("dropdown_str_tool").click();
 
@@ -769,6 +773,8 @@ test(
       },
     );
 
+    await page.getByText("Select a tool");
+
     await page.getByTestId("dropdown_str_tool").click();
 
     const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
@@ -977,6 +983,8 @@ test(
       },
     );
 
+    await page.getByText("Select a tool");
+
     await page.getByTestId("dropdown_str_tool").click();
 
     const fetchOptionCount2 = await page.getByTestId("fetch-0-option").count();
@@ -1161,6 +1169,8 @@ test(
         state: "visible",
       },
     );
+
+    await page.getByText("Select a tool");
 
     await page.getByTestId("dropdown_str_tool").click();
 
