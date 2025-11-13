@@ -30,8 +30,11 @@ export function LangflowChat({
     if (!document.querySelector('script[src*="langflow-embedded-chat"]')) {
       const script = document.createElement("script");
       script.src =
-        "https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js";
+        "https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.0/dist/build/static/js/bundle.min.js";
       script.async = true;
+      script.onerror = () => {
+        console.error("Failed to load langflow-embedded-chat script");
+      };
       document.body.appendChild(script);
     }
   }, []);

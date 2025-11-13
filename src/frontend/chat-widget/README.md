@@ -34,11 +34,11 @@ export function App() {
 | `flowId` | Flow ID or published endpoint name. |
 | `apiKey` | Langflow API key (from **Settings → API Keys**, format `sk-…`). |
 
-Optional props such as `chatPosition`, `chatWindowHeight`, `chatTriggerStyle`, etc. are forwarded directly to the underlying [`langflow-embedded-chat`](https://github.com/langflow-ai/langflow-embedded-chat#configuration) web component.
+Optional props such as `chatPosition`, `chatWindowHeight`, `chatTriggerStyle`, etc. are forwarded directly to the underlying `langflow-chat` custom element (from the [`langflow-embedded-chat` repository](https://github.com/langflow-ai/langflow-embedded-chat#configuration)).
 
 ## Environment tips
 
-- In Create React App / Vite, set `REACT_APP_LANGFLOW_URL`, `REACT_APP_FLOW_ID`, and `REACT_APP_LANGFLOW_KEY` in `.env` and restart the dev server.
+- Set `REACT_APP_LANGFLOW_URL`, `REACT_APP_FLOW_ID`, and `REACT_APP_LANGFLOW_KEY` in `.env` and restart the dev server.
 - Your Langflow flow must have both **Chat Input** and **Chat Output** components connected, and the LLM component inside the flow uses its own provider key (OpenAI, Anthropic, etc.).
 
 ## Troubleshooting
