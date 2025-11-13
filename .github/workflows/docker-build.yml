@@ -233,7 +233,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push to Docker Hub
+      - name: Build and Push to Docker Hub (amd64)
         uses: Wandalen/wretry.action@master
         with:
           attempt_limit: 3
@@ -243,10 +243,35 @@ jobs:
             context: .
             push: true
             file: ${{ needs.setup.outputs.file }}
-            tags: ${{ needs.setup.outputs.docker_tags }}
-            platforms: linux/amd64,linux/arm64
-            cache-from: type=gha
-            cache-to: type=gha,mode=max
+            tags: ${{ needs.setup.outputs.docker_tags }}-amd64
+            platforms: linux/amd64
+            cache-from: type=gha,scope=amd64
+            cache-to: type=gha,mode=max,scope=amd64
+
+      - name: Build and Push to Docker Hub (arm64)
+        uses: Wandalen/wretry.action@master
+        with:
+          attempt_limit: 3
+          attempt_delay: 60000
+          action: docker/build-push-action@v6
+          with: |
+            context: .
+            push: true
+            file: ${{ needs.setup.outputs.file }}
+            tags: ${{ needs.setup.outputs.docker_tags }}-arm64
+            platforms: linux/arm64
+            cache-from: type=gha,scope=arm64
+            cache-to: type=gha,mode=max,scope=arm64
+
+      - name: Create and Push Multi-Arch Manifest
+        run: |
+          # Parse tags
+          IFS=',' read -ra TAGS <<< "${{ needs.setup.outputs.docker_tags }}"
+          for tag in "${TAGS[@]}"; do
+            docker buildx imagetools create -t "$tag" \
+              "${tag}-amd64" \
+              "${tag}-arm64"
+          done
 
       - name: Login to Github Container Registry
         uses: docker/login-action@v3
@@ -255,7 +280,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
 
-      - name: Build and push to Github Container Registry
+      - name: Build and push to Github Container Registry (amd64)
         uses: Wandalen/wretry.action@master
         with:
           attempt_limit: 3
@@ -265,10 +290,35 @@ jobs:
             context: .
             push: true
             file: ${{ needs.setup.outputs.file }}
-            tags: ${{ needs.setup.outputs.ghcr_tags }}
-            platforms: linux/amd64,linux/arm64
-            cache-from: type=gha
-            cache-to: type=gha,mode=max
+            tags: ${{ needs.setup.outputs.ghcr_tags }}-amd64
+            platforms: linux/amd64
+            cache-from: type=gha,scope=amd64
+            cache-to: type=gha,mode=max,scope=amd64
+
+      - name: Build and push to Github Container Registry (arm64)
+        uses: Wandalen/wretry.action@master
+        with:
+          attempt_limit: 3
+          attempt_delay: 60000
+          action: docker/build-push-action@v6
+          with: |
+            context: .
+            push: true
+            file: ${{ needs.setup.outputs.file }}
+            tags: ${{ needs.setup.outputs.ghcr_tags }}-arm64
+            platforms: linux/arm64
+            cache-from: type=gha,scope=arm64
+            cache-to: type=gha,mode=max,scope=arm64
+
+      - name: Create and Push Multi-Arch Manifest (GHCR)
+        run: |
+          # Parse tags
+          IFS=',' read -ra TAGS <<< "${{ needs.setup.outputs.ghcr_tags }}"
+          for tag in "${TAGS[@]}"; do
+            docker buildx imagetools create -t "$tag" \
+              "${tag}-amd64" \
+              "${tag}-arm64"
+          done
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
