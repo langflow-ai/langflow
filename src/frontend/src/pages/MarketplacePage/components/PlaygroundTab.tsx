@@ -48,6 +48,17 @@ export default function PlaygroundTab({
   const isUserScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Auto-resize textarea up to a maximum height, then enable scroll
+  const MAX_TEXTAREA_HEIGHT = 200; // pixels
+  const autoResizeTextarea = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const newHeight = Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT);
+    el.style.height = `${newHeight}px`;
+    el.style.overflowY = el.scrollHeight > MAX_TEXTAREA_HEIGHT ? "auto" : "hidden";
+  };
+
   const { leftPanelWidth, isDragging, handleDragStart } = useResizablePanel(33.33);
 
   const {
@@ -238,6 +249,11 @@ export default function PlaygroundTab({
   useEffect(() => {
     scrollToBottom(true);
   }, [messages, displayedTexts]);
+
+  // Auto-resize textarea on mount and whenever input changes
+  useEffect(() => {
+    autoResizeTextarea();
+  }, [input]);
 
   // Focus input after sending message
   const focusInput = () => {
@@ -615,8 +631,9 @@ export default function PlaygroundTab({
                     value={input}
                     rows={1}
                     onChange={(e) => setInput(e.target.value)}
+                    onInput={autoResizeTextarea}
                     placeholder="Type your message..."
-                    className="w-full p-3 pr-20 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full p-3 pr-20 rounded-lg border border-input bg-background text-sm resize-none min-h-[40px] max-h-[200px] overflow-y-auto focus:outline-none focus:ring-1 focus:ring-primary"
                     onKeyDown={handleKeyPress}
                     disabled={isLoading || !!streamingMessageId}
                   />
