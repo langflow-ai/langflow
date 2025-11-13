@@ -7,6 +7,7 @@ from langchain_ibm import WatsonxEmbeddings
 from pydantic.v1 import SecretStr
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
+from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.field_typing import Embeddings
 from lfx.io import BoolInput, DropdownInput, IntInput, SecretStrInput, StrInput
 from lfx.log.logger import logger
@@ -33,14 +34,7 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
             display_name="watsonx API Endpoint",
             info="The base URL of the API.",
             value=None,
-            options=[
-                "https://us-south.ml.cloud.ibm.com",
-                "https://eu-de.ml.cloud.ibm.com",
-                "https://eu-gb.ml.cloud.ibm.com",
-                "https://au-syd.ml.cloud.ibm.com",
-                "https://jp-tok.ml.cloud.ibm.com",
-                "https://ca-tor.ml.cloud.ibm.com",
-            ],
+            options=IBM_WATSONX_URLS,
             real_time_refresh=True,
         ),
         StrInput(
