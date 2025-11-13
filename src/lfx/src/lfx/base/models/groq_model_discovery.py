@@ -6,7 +6,7 @@ eliminating the need for manual metadata updates.
 """
 
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -92,7 +92,7 @@ class GroqModelDiscovery:
                     "provider": self._get_provider_name(model_id),
                     "tool_calling": supports_tools,
                     "preview": "preview" in model_id.lower() or "/" in model_id,
-                    "last_tested": datetime.now(UTC).isoformat(),
+                    "last_tested": datetime.now(timezone.utc).isoformat(),
                 }
                 logger.debug(f"{model_id}: tool_calling={supports_tools}")
 
@@ -102,7 +102,7 @@ class GroqModelDiscovery:
                     "name": model_id,
                     "provider": self._get_provider_name(model_id),
                     "not_supported": True,
-                    "last_tested": datetime.now(UTC).isoformat(),
+                    "last_tested": datetime.now(timezone.utc).isoformat(),
                 }
 
             # Save to cache
@@ -208,7 +208,7 @@ class GroqModelDiscovery:
 
             # Check cache age
             cache_time = datetime.fromisoformat(cache_data["cached_at"])
-            if datetime.now(UTC) - cache_time > self.CACHE_DURATION:
+            if datetime.now(timezone.utc) - cache_time > self.CACHE_DURATION:
                 logger.info("Cache expired, will fetch fresh data")
                 return None
 
@@ -221,7 +221,7 @@ class GroqModelDiscovery:
     def _save_cache(self, models_metadata: dict[str, dict]) -> None:
         """Save model metadata to cache."""
         try:
-            cache_data = {"cached_at": datetime.now(UTC).isoformat(), "models": models_metadata}
+            cache_data = {"cached_at": datetime.now(timezone.utc).isoformat(), "models": models_metadata}
 
             self.CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
             with self.CACHE_FILE.open("w") as f:
