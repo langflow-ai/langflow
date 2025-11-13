@@ -167,17 +167,18 @@ async def delete_variable(
                                 from langflow.services.database.models.variable.model import VariableUpdate
                                 from langflow.services.variable.constants import GENERIC_TYPE
 
-                                await variable_service.update_variable_fields(
-                                    user_id=current_user.id,
-                                    variable_id=disabled_var.id,
-                                    variable=VariableUpdate(
-                                        id=disabled_var.id,
-                                        name=DISABLED_MODELS_VAR,
-                                        value=json.dumps(list(disabled_models_filtered)),
-                                        type=GENERIC_TYPE,
-                                    ),
-                                    session=session,
-                                )
+                                if disabled_var.id is not None:
+                                    await variable_service.update_variable_fields(
+                                        user_id=current_user.id,
+                                        variable_id=disabled_var.id,
+                                        variable=VariableUpdate(
+                                            id=disabled_var.id,
+                                            name=DISABLED_MODELS_VAR,
+                                            value=json.dumps(list(disabled_models_filtered)),
+                                            type=GENERIC_TYPE,
+                                        ),
+                                        session=session,
+                                    )
                             else:
                                 # No disabled models left for any provider, delete the variable
                                 await variable_service.delete_variable(
@@ -208,17 +209,18 @@ async def delete_variable(
                                 from langflow.services.database.models.variable.model import VariableUpdate
                                 from langflow.services.variable.constants import GENERIC_TYPE
 
-                                await variable_service.update_variable_fields(
-                                    user_id=current_user.id,
-                                    variable_id=enabled_var.id,
-                                    variable=VariableUpdate(
-                                        id=enabled_var.id,
-                                        name=ENABLED_MODELS_VAR,
-                                        value=json.dumps(list(enabled_models_filtered)),
-                                        type=GENERIC_TYPE,
-                                    ),
-                                    session=session,
-                                )
+                                if enabled_var.id is not None:
+                                    await variable_service.update_variable_fields(
+                                        user_id=current_user.id,
+                                        variable_id=enabled_var.id,
+                                        variable=VariableUpdate(
+                                            id=enabled_var.id,
+                                            name=ENABLED_MODELS_VAR,
+                                            value=json.dumps(list(enabled_models_filtered)),
+                                            type=GENERIC_TYPE,
+                                        ),
+                                        session=session,
+                                    )
                             else:
                                 # No enabled models left for any provider, delete the variable
                                 await variable_service.delete_variable(
