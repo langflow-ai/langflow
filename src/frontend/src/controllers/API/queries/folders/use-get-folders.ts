@@ -22,9 +22,17 @@ export const useGetFoldersQuery: useQueryFunctionType<
     if (!isAuthenticated) return [];
     const res = await api.get(`${getURL("PROJECTS")}/`);
     const data = res.data;
+    // Prefer persisted selection; only default if none or invalid
+    const defaultId =
+      data?.find((f) => f.name === DEFAULT_FOLDER)?.id || data?.[0]?.id || "";
+    const currentId = useFolderStore.getState().myCollectionId;
+    const isCurrentValid = currentId
+      ? data?.some((f: FolderType) => f.id === currentId)
+      : false;
 
-    const myCollectionId = data?.find((f) => f.name === DEFAULT_FOLDER)?.id;
-    setMyCollectionId(myCollectionId);
+    if (!isCurrentValid && defaultId) {
+      setMyCollectionId(defaultId);
+    }
     setFolders(data);
 
     return data;
