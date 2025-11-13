@@ -118,18 +118,16 @@ class ALTKBaseTool(BaseTool):
 
     def _execute_tool(self, *args, **kwargs) -> str:
         """Execute the wrapped tool with compatibility across LC versions."""
-        # First try with config (for newer LangChain versions)
-        try:
-            if "config" not in kwargs:
-                kwargs["config"] = {}
-            return self.wrapped_tool.run(*args, **kwargs)
-        except (TypeError, AttributeError) as e:
-            if "config" in str(e) or "unexpected keyword argument" in str(e):
-                # Remove config and try again for older versions
-                kwargs.pop("config", None)
-                return self.wrapped_tool.run(*args, **kwargs)
-            # If run() doesn't exist or other error, re-raise
-            raise
+        # BaseTool.run() expects tool_input as first argument
+        if args:
+            # Use first arg as tool_input, pass remaining args
+            tool_input = args[0]
+            return self.wrapped_tool.run(tool_input, *args[1:])
+        if kwargs:
+            # Use kwargs dict as tool_input
+            return self.wrapped_tool.run(kwargs)
+        # No arguments - pass empty dict as tool_input
+        return self.wrapped_tool.run({})
 
     def _get_altk_llm_object(self, *, use_output_val: bool = True) -> Any:
         """Extract the underlying LLM and map it to an ALTK client object."""
