@@ -772,7 +772,7 @@ async def load_agentic_flows() -> list[tuple[anyio.Path, dict]]:
             flow = orjson.loads(content)
             agentic_flows.append((file, flow))
             await logger.adebug(f"Loaded agentic flow: {file.name}")
-        except Exception as e:
+        except (OSError, orjson.JSONDecodeError) as e:
             await logger.aexception(f"Error loading agentic flow {file}: {e}")
 
     await logger.adebug(f"Loaded {len(agentic_flows)} agentic flows")
