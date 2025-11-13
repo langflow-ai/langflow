@@ -229,6 +229,143 @@ class MCPComposerService(Service):
             return False
         return False
 
+    async def _kill_zombie_mcp_processes(self, port: int) -> bool:
+        """Kill zombie MCP Composer processes that may be stuck.
+
+        On Windows, sometimes MCP Composer processes start but fail to bind to port.
+        These processes become "zombies" that need to be killed before retry.
+
+        Args:
+            port: The port that should be used
+
+        Returns:
+            True if zombie processes were found and killed
+        """
+        try:
+            os_type = platform.system()
+            if os_type != "Windows":
+                return False
+
+            await logger.adebug(f"Looking for zombie MCP Composer processes on Windows for port {port}...")
+
+            # First, try to find and kill any process using the port directly
+            netstat_result = await asyncio.to_thread(
+                subprocess.run,
+                ["netstat", "-ano"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            killed_any = False
+            if netstat_result.returncode == 0:
+                # Parse netstat output to find PIDs using our port
+                pids_on_port: list[int] = []
+                for line in netstat_result.stdout.split("\n"):
+                    if f":{port}" in line and "LISTENING" in line:
+                        parts = line.split()
+                        if parts:
+                            try:
+                                pid = int(parts[-1])
+                                # Only kill if not tracked by us
+                                if pid not in self._pid_to_project:
+                                    pids_on_port.append(pid)
+                                else:
+                                    project = self._pid_to_project[pid]
+                                    await logger.adebug(
+                                        f"Process {pid} on port {port} is tracked, skipping (project: {project})"
+                                    )
+                            except (ValueError, IndexError):
+                                continue
+
+                if pids_on_port:
+                    await logger.adebug(
+                        f"Found {len(pids_on_port)} untracked process(es) on port {port}: {pids_on_port}"
+                    )
+                    for pid in pids_on_port:
+                        try:
+                            await logger.adebug(f"Killing process {pid} on port {port}...")
+                            kill_result = await asyncio.to_thread(
+                                subprocess.run,
+                                ["taskkill", "/F", "/PID", str(pid)],
+                                capture_output=True,
+                                check=False,
+                            )
+                            if kill_result.returncode == 0:
+                                await logger.adebug(f"Successfully killed process {pid} on port {port}")
+                                killed_any = True
+                            else:
+                                await logger.awarning(
+                                    f"Failed to kill process {pid} on port {port}: {kill_result.stderr}"
+                                )
+                        except Exception as e:  # noqa: BLE001
+                            await logger.adebug(f"Error killing process {pid}: {e}")
+
+            # Also look for any orphaned mcp-composer processes (without checking port)
+            # This catches processes that failed to bind but are still running
+            tasklist_result = await asyncio.to_thread(
+                subprocess.run,
+                ["tasklist", "/FI", "IMAGENAME eq python.exe", "/FO", "CSV"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            if tasklist_result.returncode == 0:
+                import csv
+                from io import StringIO
+
+                csv_reader = csv.DictReader(StringIO(tasklist_result.stdout))
+                for row in csv_reader:
+                    try:
+                        pid = int(row.get("PID", "0"))
+                        if pid <= 0 or pid in self._pid_to_project:
+                            continue
+
+                        # Get command line to check if this is an orphaned mcp-composer
+                        cmd_result = await asyncio.to_thread(
+                            subprocess.run,
+                            ["wmic", "process", "where", f"ProcessId={pid}", "get", "CommandLine", "/format:list"],
+                            capture_output=True,
+                            text=True,
+                            check=False,
+                            timeout=2,
+                        )
+
+                        # Check if this is an mcp-composer process for our port
+                        if (
+                            cmd_result.returncode == 0
+                            and "mcp-composer" in cmd_result.stdout
+                            and (f"--port {port}" in cmd_result.stdout or f"--port={port}" in cmd_result.stdout)
+                        ):
+                            await logger.adebug(
+                                f"Found orphaned MCP Composer process {pid} for port {port}, killing it"
+                            )
+                            kill_result = await asyncio.to_thread(
+                                subprocess.run,
+                                ["taskkill", "/F", "/PID", str(pid)],
+                                capture_output=True,
+                                check=False,
+                            )
+                            if kill_result.returncode == 0:
+                                await logger.adebug(f"Successfully killed orphaned process {pid}")
+                                killed_any = True
+
+                    except (ValueError, KeyError, asyncio.TimeoutError) as e:
+                        await logger.adebug(f"Error checking process: {e}")
+                        continue
+
+            if killed_any:
+                # Give Windows time to clean up
+                await logger.adebug("Waiting 3 seconds for Windows to release port...")
+                await asyncio.sleep(3)
+
+            return killed_any  # noqa: TRY300
+
+        except Exception as e:  # noqa: BLE001
+            await logger.adebug(f"Error killing zombie processes: {e}")
+            return False
+
     def _is_port_used_by_another_project(self, port: int, current_project_id: str) -> tuple[bool, str | None]:
         """Check if a port is being used by another project.
 
@@ -361,15 +498,18 @@ class MCPComposerService(Service):
             error_msg = self._extract_error_message(stdout_content, stderr_content, oauth_server_url)
             return stdout_content, stderr_content, error_msg
 
-    async def _read_stream_non_blocking(self, stream, stream_name: str) -> None:
+    async def _read_stream_non_blocking(self, stream, stream_name: str) -> str:
         """Read from a stream without blocking and log the content.
 
         Args:
             stream: The stream to read from (stdout or stderr)
             stream_name: Name of the stream for logging ("stdout" or "stderr")
+
+        Returns:
+            The content read from the stream (empty string if nothing available)
         """
         if not stream:
-            return
+            return ""
 
         try:
             # On Windows, select.select() doesn't work with pipes (only sockets)
@@ -377,10 +517,32 @@ class MCPComposerService(Service):
             os_type = platform.system()
 
             if os_type == "Windows":
-                # On Windows, we can't reliably check if data is available without blocking
-                # So we skip non-blocking reads on Windows to avoid WinError 10038
-                # The output will still be captured when the process terminates
-                return
+                # On Windows, try to read using peek() to check for available data
+                # This avoids WinError 10038 from select.select()
+                try:
+                    # Use peek to check if data is available (non-blocking)
+                    if hasattr(stream, "peek"):
+                        peeked = stream.peek(1)
+                        if peeked:
+                            line_bytes = stream.readline()
+                            if line_bytes:
+                                line = (
+                                    line_bytes.decode("utf-8", errors="replace")
+                                    if isinstance(line_bytes, bytes)
+                                    else line_bytes
+                                )
+                                stripped = line.strip()
+                                if stripped:
+                                    # Log errors at error level, everything else at debug
+                                    if stream_name == "stderr" and ("ERROR" in stripped or "error" in stripped):
+                                        await logger.aerror(f"MCP Composer {stream_name}: {stripped}")
+                                    else:
+                                        await logger.adebug(f"MCP Composer {stream_name}: {stripped}")
+                                    return stripped
+                except Exception:  # noqa: BLE001, S110
+                    # If peek fails, just return empty - the output will be captured when process terminates
+                    pass
+                return ""
             # On Unix-like systems, use select
             if select.select([stream], [], [], 0)[0]:
                 line_bytes = stream.readline()
@@ -394,8 +556,10 @@ class MCPComposerService(Service):
                             await logger.aerror(f"MCP Composer {stream_name}: {stripped}")
                         else:
                             await logger.adebug(f"MCP Composer {stream_name}: {stripped}")
+                        return stripped
         except Exception as e:  # noqa: BLE001
             await logger.adebug(f"Error reading {stream_name}: {e}")
+        return ""
 
     async def _ensure_port_available(self, port: int, current_project_id: str) -> None:
         """Ensure a port is available, only killing untracked processes.
@@ -825,6 +989,14 @@ class MCPComposerService(Service):
             # Retry loop: try starting the process multiple times
             last_error = None
             try:
+                # Before first attempt, try to kill any zombie MCP Composer processes
+                await logger.adebug(
+                    f"Checking for zombie MCP Composer processes on port {project_port} before startup..."
+                )
+                zombies_killed = await self._kill_zombie_mcp_processes(project_port)
+                if zombies_killed:
+                    await logger.adebug(f"Killed zombie processes, port {project_port} should now be free")
+
                 # Ensure port is available (only kill untracked processes)
                 try:
                     await self._ensure_port_available(project_port, project_id)
@@ -864,10 +1036,16 @@ class MCPComposerService(Service):
                         if project_id in self.project_composers:
                             await self._do_stop_project_composer(project_id)
 
-                        # If not the last attempt, wait a bit before retrying
+                        # If not the last attempt, wait and try to clean up zombie processes
                         if retry_attempt < max_retries:
                             await logger.adebug(f"Waiting 2 seconds before retry attempt {retry_attempt + 1}...")
                             await asyncio.sleep(2)
+
+                            # On Windows, try to kill any zombie MCP Composer processes for this port
+                            await logger.adebug(f"Checking for zombie MCP Composer processes on port {project_port}...")
+                            zombies_killed = await self._kill_zombie_mcp_processes(project_port)
+                            if zombies_killed:
+                                await logger.adebug(f"Killed zombie processes, port {project_port} should now be free")
 
                     else:
                         # Success! Store the composer info and register the port and PID
