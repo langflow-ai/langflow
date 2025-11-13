@@ -28,6 +28,7 @@ from langflow.api.v1 import (
     users_router,
     validate_router,
     variables_router,
+    vector_db_router,
     spec_flow_builder_router,
 )
 from langflow.api.v1.voice_mode import router as voice_mode_router
@@ -69,6 +70,7 @@ router_v1.include_router(store_router)
 router_v1.include_router(users_router)
 router_v1.include_router(validate_router)
 router_v1.include_router(variables_router)
+router_v1.include_router(vector_db_router)
 router_v1.include_router(voice_mode_router)
 
 router_v2.include_router(files_router_v2)
