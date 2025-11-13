@@ -8071,6 +8071,11 @@
             "type": "boolean",
             "title": "Mvp Components",
             "default": false
+          },
+          "chat_widget_package": {
+            "type": "boolean",
+            "title": "Chat Widget Package",
+            "default": false
           }
         },
         "additionalProperties": false,
