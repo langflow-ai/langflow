@@ -225,22 +225,25 @@ describe("useDurationStore", () => {
   });
 
   describe("clearInterval", () => {
-    it("should clear interval for existing chat ID", () => {
+    it("should clear interval for existing chat ID but preserve startTime", () => {
       const { result } = renderHook(() => useDurationStore());
       const mockInterval = setInterval(() => {}, 1000) as NodeJS.Timeout;
 
       act(() => {
+        result.current.startTimer("chat-1");
         result.current.setInterval("chat-1", mockInterval);
       });
 
+      const originalStartTime = result.current.startTimes["chat-1"];
       expect(result.current.intervals["chat-1"]).toBe(mockInterval);
+      expect(originalStartTime).toBeDefined();
 
       act(() => {
         result.current.clearInterval("chat-1");
       });
 
       expect(result.current.intervals["chat-1"]).toBeUndefined();
-      expect(result.current.startTimes["chat-1"]).toBeUndefined();
+      expect(result.current.startTimes["chat-1"]).toBe(originalStartTime);
       expect(mockClearInterval).toHaveBeenCalledWith(mockInterval);
     });
 
@@ -290,6 +293,104 @@ describe("useDurationStore", () => {
 
       expect(result.current.intervals["chat-1"]).toBeUndefined();
       expect(mockClearInterval).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("clearStartTime", () => {
+    it("should clear startTime for existing chat ID", () => {
+      const { result } = renderHook(() => useDurationStore());
+
+      act(() => {
+        result.current.startTimer("chat-1");
+      });
+
+      expect(result.current.startTimes["chat-1"]).toBeDefined();
+
+      act(() => {
+        result.current.clearStartTime("chat-1");
+      });
+
+      expect(result.current.startTimes["chat-1"]).toBeUndefined();
+    });
+
+    it("should handle clearing non-existent chat ID gracefully", () => {
+      const { result } = renderHook(() => useDurationStore());
+
+      act(() => {
+        result.current.clearStartTime("non-existent-chat");
+      });
+
+      expect(result.current.startTimes).toEqual({});
+    });
+
+    it("should only remove specified chat ID startTime", () => {
+      const { result } = renderHook(() => useDurationStore());
+
+      act(() => {
+        result.current.startTimer("chat-1");
+        result.current.startTimer("chat-2");
+      });
+
+      const startTime2 = result.current.startTimes["chat-2"];
+
+      act(() => {
+        result.current.clearStartTime("chat-1");
+      });
+
+      expect(result.current.startTimes["chat-1"]).toBeUndefined();
+      expect(result.current.startTimes["chat-2"]).toBe(startTime2);
+    });
+
+    it("should clear startTime when duration is finalized", () => {
+      const { result } = renderHook(() => useDurationStore());
+      const mockInterval = setInterval(() => {}, 1000) as NodeJS.Timeout;
+
+      act(() => {
+        result.current.startTimer("chat-1");
+        result.current.setInterval("chat-1", mockInterval);
+      });
+
+      expect(result.current.startTimes["chat-1"]).toBeDefined();
+
+      // Simulate finalizing the duration
+      act(() => {
+        result.current.setDuration("chat-1", 5000);
+        result.current.clearInterval("chat-1");
+        result.current.clearStartTime("chat-1");
+      });
+
+      expect(result.current.startTimes["chat-1"]).toBeUndefined();
+      expect(result.current.durations["chat-1"]).toBe(5000);
+      expect(result.current.intervals["chat-1"]).toBeUndefined();
+
+      clearInterval(mockInterval);
+    });
+
+    it("should allow independent management of startTime and interval", () => {
+      const { result } = renderHook(() => useDurationStore());
+      const mockInterval = setInterval(() => {}, 1000) as NodeJS.Timeout;
+
+      act(() => {
+        result.current.startTimer("chat-1");
+        result.current.setInterval("chat-1", mockInterval);
+      });
+
+      const startTime = result.current.startTimes["chat-1"];
+
+      // Clear interval but preserve startTime
+      act(() => {
+        result.current.clearInterval("chat-1");
+      });
+
+      expect(result.current.intervals["chat-1"]).toBeUndefined();
+      expect(result.current.startTimes["chat-1"]).toBe(startTime);
+
+      // Now explicitly clear startTime
+      act(() => {
+        result.current.clearStartTime("chat-1");
+      });
+
+      expect(result.current.startTimes["chat-1"]).toBeUndefined();
     });
   });
 
@@ -367,6 +468,91 @@ describe("useDurationStore", () => {
       // Clean up
       clearInterval(mockInterval1);
       clearInterval(mockInterval3);
+    });
+
+    it("should preserve startTime when playground is closed and reopened", () => {
+      const { result } = renderHook(() => useDurationStore());
+      const mockInterval1 = setInterval(() => {}, 1000) as NodeJS.Timeout;
+
+      // Start initial timer
+      act(() => {
+        result.current.startTimer("chat-1");
+        result.current.setInterval("chat-1", mockInterval1);
+      });
+
+      const originalStartTime = result.current.startTimes["chat-1"];
+      expect(originalStartTime).toBeDefined();
+      expect(result.current.intervals["chat-1"]).toBe(mockInterval1);
+
+      // Simulate closing playground (only clears interval, not startTime)
+      act(() => {
+        result.current.clearInterval("chat-1");
+      });
+
+      expect(result.current.intervals["chat-1"]).toBeUndefined();
+      expect(result.current.startTimes["chat-1"]).toBe(originalStartTime);
+
+      // Simulate reopening playground with new interval
+      const mockInterval2 = setInterval(() => {}, 1000) as NodeJS.Timeout;
+      act(() => {
+        result.current.setInterval("chat-1", mockInterval2);
+      });
+
+      // StartTime should still be the original one
+      expect(result.current.startTimes["chat-1"]).toBe(originalStartTime);
+      expect(result.current.intervals["chat-1"]).toBe(mockInterval2);
+
+      // Clean up
+      clearInterval(mockInterval2);
+    });
+
+    it("should handle full timer lifecycle with startTime preservation", () => {
+      const { result } = renderHook(() => useDurationStore());
+
+      // Start timer
+      act(() => {
+        result.current.startTimer("chat-1");
+      });
+
+      const originalStartTime = result.current.startTimes["chat-1"];
+
+      // Set interval
+      const mockInterval1 = setInterval(() => {}, 1000) as NodeJS.Timeout;
+      act(() => {
+        result.current.setInterval("chat-1", mockInterval1);
+      });
+
+      // Close playground (preserves startTime)
+      act(() => {
+        result.current.clearInterval("chat-1");
+      });
+
+      expect(result.current.startTimes["chat-1"]).toBe(originalStartTime);
+
+      // Reopen playground multiple times
+      for (let i = 0; i < 3; i++) {
+        const mockInterval = setInterval(() => {}, 1000) as NodeJS.Timeout;
+        act(() => {
+          result.current.setInterval("chat-1", mockInterval);
+        });
+
+        expect(result.current.startTimes["chat-1"]).toBe(originalStartTime);
+
+        act(() => {
+          result.current.clearInterval("chat-1");
+        });
+
+        expect(result.current.startTimes["chat-1"]).toBe(originalStartTime);
+      }
+
+      // Finally, when duration is complete, clear everything
+      act(() => {
+        result.current.setDuration("chat-1", 5000);
+        result.current.clearStartTime("chat-1");
+      });
+
+      expect(result.current.startTimes["chat-1"]).toBeUndefined();
+      expect(result.current.durations["chat-1"]).toBe(5000);
     });
 
     it("should handle session restart", () => {
@@ -464,8 +650,6 @@ describe("useDurationStore", () => {
         result.current.setDuration("persistent-1", 100);
         result.current.setDuration("persistent-2", 200);
       });
-
-      const durations = result.current.durations;
 
       // Operations on one chat shouldn't affect others
       act(() => {
