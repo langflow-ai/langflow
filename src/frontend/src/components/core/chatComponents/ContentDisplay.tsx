@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Markdown from "react-markdown";
-import rehypeMathjax from "rehype-mathjax";
+import rehypeMathjax from "rehype-mathjax/browser";
 import remarkGfm from "remark-gfm";
 import type { ContentType } from "@/types/chat";
 import ForwardedIconComponent from "../../common/genericIconComponent";
