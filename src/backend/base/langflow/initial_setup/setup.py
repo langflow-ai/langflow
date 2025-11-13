@@ -816,7 +816,7 @@ async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -
         flows_created = 0
         flows_updated = 0
 
-        for file_path, flow_data in agentic_flows:
+        for _, flow_data in agentic_flows:
             # Extract flow metadata from JSON
             (
                 flow_name,
