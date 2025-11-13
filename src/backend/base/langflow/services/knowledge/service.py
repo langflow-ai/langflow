@@ -201,7 +201,8 @@ class KnowledgeService(Service):
         knowledge_hub_ids: List[str],
         query: str,
         embedding_model: str = "embedding-bge-base-3",
-        top_k: int = 20,
+        top_k: str = '20',
+        filters: Optional[List[Dict[str,Any]]]=None
     ) -> List[Any]:
         """Query the vector store with the given parameters."""
         if not self.ready:
@@ -210,12 +211,13 @@ class KnowledgeService(Service):
 
         try:
             url = f"{self.settings.ENDPOINT_URL}/v1/clients/{self.settings.GENESIS_CLIENT_ID}/knowledge-hub/query"
-
+            cleaned_filters = {k: v for k, v in filters.items() if k != "" and v != ""}
             payload = {
                 "knowledgeHubIds": knowledge_hub_ids,
                 "query": query,
                 "embeddingModel": embedding_model,
-                "topK": top_k,
+                "top_k": top_k,
+                "filters": cleaned_filters or None
             }
 
             async with self.get_client() as client:
