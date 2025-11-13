@@ -15,6 +15,7 @@ def replace_none_and_null_with_empty_str(data: list[dict], required_fields: list
         List of dictionaries with None, 'null', and NaN/NaT values replaced with "",
         and "NaN", "Infinity", "-Infinity" string values replaced with None.
     """
+
     def convert_value(v):
         if v is None:
             return "Not available"

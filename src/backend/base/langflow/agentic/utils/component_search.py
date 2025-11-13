@@ -168,7 +168,6 @@ async def get_component_by_name(
                         result.update(component_data)
                     return result
 
-
     except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Error getting component {component_name}: {e}")
         return None

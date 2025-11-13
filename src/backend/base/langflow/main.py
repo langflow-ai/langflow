@@ -34,7 +34,13 @@ from langflow.initial_setup.setup import (
     sync_flows_from_fs,
 )
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.deps import get_queue_service, get_service, get_settings_service, get_telemetry_service, session_scope
+from langflow.services.deps import (
+    get_queue_service,
+    get_service,
+    get_settings_service,
+    get_telemetry_service,
+    session_scope,
+)
 from langflow.services.schema import ServiceType
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
 

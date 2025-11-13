@@ -73,6 +73,7 @@ async def get_component_details(
 
         # Get full component data
         component_data = vertex.to_data()
+
         # Carefully serialize the 'input_flow' key to avoid non-serializable Edge objects
         def serialize_edges(edges):
             return [
@@ -370,5 +371,3 @@ async def list_component_fields(
     except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Error listing fields for {component_id} in {flow_id_or_name}: {e}")
         return {"error": str(e)}
-
-
