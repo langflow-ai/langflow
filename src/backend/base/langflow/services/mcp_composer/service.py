@@ -368,8 +368,21 @@ class MCPComposerService(Service):
             stream: The stream to read from (stdout or stderr)
             stream_name: Name of the stream for logging ("stdout" or "stderr")
         """
-        if stream and select.select([stream], [], [], 0)[0]:
-            try:
+        if not stream:
+            return
+
+        try:
+            # On Windows, select.select() doesn't work with pipes (only sockets)
+            # Use platform-specific approach
+            os_type = platform.system()
+
+            if os_type == "Windows":
+                # On Windows, we can't reliably check if data is available without blocking
+                # So we skip non-blocking reads on Windows to avoid WinError 10038
+                # The output will still be captured when the process terminates
+                return
+            # On Unix-like systems, use select
+            if select.select([stream], [], [], 0)[0]:
                 line_bytes = stream.readline()
                 if line_bytes:
                     # Decode bytes with error handling
@@ -381,8 +394,8 @@ class MCPComposerService(Service):
                             await logger.aerror(f"MCP Composer {stream_name}: {stripped}")
                         else:
                             await logger.adebug(f"MCP Composer {stream_name}: {stripped}")
-            except Exception as e:  # noqa: BLE001
-                await logger.adebug(f"Error reading {stream_name}: {e}")
+        except Exception as e:  # noqa: BLE001
+            await logger.adebug(f"Error reading {stream_name}: {e}")
 
     async def _ensure_port_available(self, port: int, current_project_id: str) -> None:
         """Ensure a port is available, only killing untracked processes.
