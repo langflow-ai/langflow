@@ -10,8 +10,8 @@ if TYPE_CHECKING:
     from lfx.components.agents.mcp_component import MCPToolsComponent
 
 _dynamic_imports = {
-    "AgentComponent": "agent", 
-    "MCPToolsComponent": "mcp_component", 
+    "AgentComponent": "agent",
+    "MCPToolsComponent": "mcp_component",
     "ALTKAgentComponent": "altk_agent",
 }
 
