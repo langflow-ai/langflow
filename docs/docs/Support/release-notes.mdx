@@ -54,6 +54,10 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
+- Langflow Executor (LFX)
+
+    Langflow Executor (LFX) is a new command-line tool for serving and running flows statelessly from JSON files without requiring the full Langflow UI or database setup. Use `lfx serve` to create lightweight REST API endpoints from your flows, or `lfx run` to execute flows locally and get results immediately. LFX automatically installs flow dependencies and runs flows with minimal overhead. For more information, see [Run flows with Langflow Executor (LFX)](/lfx-stateless-flows).
+
 - Webhook authentication
 
     Added the `LANGFLOW_WEBHOOK_AUTH_ENABLE` environment variable for authenticating requests to the [`/webhook` endpoint](/api-flows-run#webhook-run-flow). When `LANGFLOW_WEBHOOK_AUTH_ENABLE=TRUE`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `FALSE`, no Langflow API key is required and all requests to the webhook endpoint are treated as being sent by the flow owner.
