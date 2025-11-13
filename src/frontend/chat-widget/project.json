@@ -14,9 +14,17 @@
   "targets": {
     "build": {
       "executor": "@nx/vite:build",
+      "dependsOn": ["generate-types"],
       "outputs": ["{options.outputPath}"],
       "options": {
         "outputPath": "dist/chat-widget"
+      }
+    },
+    "generate-types": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx tsc -p chat-widget/tsconfig.lib.json --emitDeclarationOnly",
+        "cwd": "src/frontend"
       }
     },
     "nx-release-publish": {
