@@ -69,7 +69,6 @@ class CugaComponent(ToolCallingAgentComponent):
         description: Brief description of the component's purpose
         documentation: URL to component documentation
         icon: Icon identifier for the UI
-        beta: Whether the component is in beta status
         name: Internal component name
     """
 
@@ -77,7 +76,6 @@ class CugaComponent(ToolCallingAgentComponent):
     description: str = "Define the Cuga agent's policies, then assign it a task."
     documentation: str = "https://docs.langflow.org/agents"
     icon = "bot"
-    beta = True
     name = "Cuga"
 
     memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
@@ -223,13 +221,6 @@ class CugaComponent(ToolCallingAgentComponent):
             value="",
             advanced=False,
         ),
-        BoolInput(
-            name="API",
-            display_name="Enable API Sub-agent",
-            info="Toggle to enable a built-in sub-agent specialized for API interactions.",
-            value=False,
-            advanced=True,
-        ),
     ]
     outputs = [
         Output(name="response", display_name="Response", method="message_response"),
@@ -279,11 +270,11 @@ class CugaComponent(ToolCallingAgentComponent):
             settings.advanced_features.lite_mode_tool_threshold = self.lite_mode_tool_threshold
 
             if self.browser_enabled:
-                logger.info("browser_enabled is true, setting mode to hybrid")
+                logger.debug("browser_enabled is true, setting mode to hybrid")
                 settings.advanced_features.mode = "hybrid"
                 settings.advanced_features.use_vision = False
             else:
-                logger.info("browser_enabled is false, setting mode to api")
+                logger.debug("browser_enabled is false, setting mode to api")
                 settings.advanced_features.mode = "api"
 
             from cuga.backend.activity_tracker.tracker import ActivityTracker
@@ -301,19 +292,18 @@ class CugaComponent(ToolCallingAgentComponent):
             var_manager = VariablesManager()
 
             # Reset var_manager if this is the first message in history
-            logger.info(f"[CUGA] Checking history_messages: count={len(history_messages) if history_messages else 0}")
+            logger.debug(f"[CUGA] Checking history_messages: count={len(history_messages) if history_messages else 0}")
             if not history_messages or len(history_messages) == 0:
-                logger.info("[CUGA] First message in history detected, resetting var_manager")
+                logger.debug("[CUGA] First message in history detected, resetting var_manager")
                 var_manager.reset()
             else:
-                logger.info(f"[CUGA] Continuing conversation with {len(history_messages)} previous messages")
+                logger.debug(f"[CUGA] Continuing conversation with {len(history_messages)} previous messages")
 
             llm_manager = LLMManager()
             llm_manager.set_llm(llm)
             instructions_manager = InstructionsManager()
-            if self.policies:
-                logger.info(f"policies are: {self.policies}")
-                instructions_manager.set_instructions_from_one_file(self.policies)
+            logger.debug(f"policies are: {self.policies}")
+            instructions_manager.set_instructions_from_one_file(self.policies)
             tracker = ActivityTracker()
             tracker.set_tools(tools)
             cuga_agent = CugaAgent(browser_enabled=self.browser_enabled)
@@ -321,115 +311,116 @@ class CugaComponent(ToolCallingAgentComponent):
                 await cuga_agent.initialize_freemode_env(start_url=self.web_apps.strip(), interface_mode="browser_only")
             else:
                 await cuga_agent.initialize_appworld_env()
-        yield {
-            "event": "on_chain_start",
-            "run_id": str(uuid.uuid4()),
-            "name": "CUGA_thinking...",
-            "data": {"input": {"input": current_input, "chat_history": []}},
-        }
-        logger.info(f"[CUGA] current web apps are {self.web_apps}")
-        logger.info(f"[CUGA] Processing input: {current_input}")
-        try:
-            # Convert history to LangChain format for the event
-            lc_messages = []
-            for msg in history_messages:
-                if hasattr(msg, "sender") and msg.sender == "Human":
-                    lc_messages.append(HumanMessage(content=msg.text))
-                else:
-                    lc_messages.append(AIMessage(content=msg.text))
 
-            await asyncio.sleep(0.5)
+            yield {
+                "event": "on_chain_start",
+                "run_id": str(uuid.uuid4()),
+                "name": "CUGA_thinking...",
+                "data": {"input": {"input": current_input, "chat_history": []}},
+            }
+            logger.debug(f"[CUGA] current web apps are {self.web_apps}")
+            logger.debug(f"[CUGA] Processing input: {current_input}")
+            try:
+                # Convert history to LangChain format for the event
+                lc_messages = []
+                for msg in history_messages:
+                    if hasattr(msg, "sender") and msg.sender == "Human":
+                        lc_messages.append(HumanMessage(content=msg.text))
+                    else:
+                        lc_messages.append(AIMessage(content=msg.text))
 
-            tools_used = []
+                await asyncio.sleep(0.5)
 
-            # Simulate browser tool usage
-            if getattr(self, "BROWSER", False) and any(
-                word in current_input.lower() for word in ["search", "web", "browse"]
-            ):
-                tool_run_id = str(uuid.uuid4())
+                tools_used = []
 
-                yield {
-                    "event": "on_tool_start",
-                    "run_id": tool_run_id,
-                    "name": "BrowserTool",
-                    "data": {"input": {"query": current_input}},
-                }
-                await asyncio.sleep(0.3)
+                # Simulate browser tool usage
+                if getattr(self, "BROWSER", False) and any(
+                    word in current_input.lower() for word in ["search", "web", "browse"]
+                ):
+                    tool_run_id = str(uuid.uuid4())
 
-                yield {
-                    "event": "on_tool_end",
-                    "run_id": tool_run_id,
-                    "name": "BrowserTool",
-                    "data": {"output": "Simulated web search results for: " + current_input},
-                }
-                tools_used.append("Performed web search")
+                    yield {
+                        "event": "on_tool_start",
+                        "run_id": tool_run_id,
+                        "name": "BrowserTool",
+                        "data": {"input": {"query": current_input}},
+                    }
+                    await asyncio.sleep(0.3)
 
-            # 2. Build final response
-            response_parts = []
-
-            response_parts.append(f"Processed input: '{current_input}'")
-            response_parts.append(f"Available tools: {len(tools)}")
-            # final_response = "CUGA Agent Response:\n" + "\n".join(response_parts)
-            last_event: StreamEvent = None
-            tool_run_id = None
-            # 3. Chain end event with AgentFinish
-            async for event in cuga_agent.run_task_generic_yield(eval_mode=False, goal=current_input):
-                logger.debug(f"recieved event {event}")
-                if last_event is not None and tool_run_id is not None:
-                    logger.debug(f"last event {last_event}")
-                    try:
-                        # TODO: Extract data
-                        data_dict = json.loads(last_event.data)
-                    except json.JSONDecodeError:
-                        data_dict = last_event.data
-                    if last_event.name == "CodeAgent":
-                        data_dict = data_dict["code"]
                     yield {
                         "event": "on_tool_end",
                         "run_id": tool_run_id,
-                        "name": last_event.name,
-                        "data": {"output": data_dict},
+                        "name": "BrowserTool",
+                        "data": {"output": "Simulated web search results for: " + current_input},
                     }
-                if isinstance(event, StreamEvent):
-                    tool_run_id = str(uuid.uuid4())
-                    last_event = StreamEvent(name=event.name, data=event.data)
-                    tool_event = {
-                        "event": "on_tool_start",
-                        "run_id": tool_run_id,
-                        "name": event.name,
-                        "data": {"input": {}},
-                    }
-                    logger.debug(f"[CUGA] Yielding tool_start event: {event.name}")
-                    yield tool_event
+                    tools_used.append("Performed web search")
 
-                if isinstance(event, AgentResult):
-                    task_result = event
-                    end_event = {
-                        "event": "on_chain_end",
-                        "run_id": str(uuid.uuid4()),
-                        "name": "CugaAgent",
-                        "data": {"output": AgentFinish(return_values={"output": task_result.answer}, log="")},
-                    }
-                    answer_preview = task_result.answer[:100] if task_result.answer else "None"
-                    logger.info(f"[CUGA] Yielding chain_end event with answer: {answer_preview}...")
-                    yield end_event
-            # task_result: AgentResult = await cuga_agent.run_task_generic_yield(
-            #     eval_mode=False, goal=current_input, on_progress=on_progress
-            # )
+                # 2. Build final response
+                response_parts = []
 
-        except (ValueError, TypeError, RuntimeError, ConnectionError) as e:
-            logger.error(f"An error occurred: {e!s}")
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            error_msg = f"CUGA Agent error: {e!s}"
-            logger.error(f"[CUGA] Error occurred: {error_msg}")
+                response_parts.append(f"Processed input: '{current_input}'")
+                response_parts.append(f"Available tools: {len(tools)}")
+                # final_response = "CUGA Agent Response:\n" + "\n".join(response_parts)
+                last_event: StreamEvent = None
+                tool_run_id = None
+                # 3. Chain end event with AgentFinish
+                async for event in cuga_agent.run_task_generic_yield(eval_mode=False, goal=current_input):
+                    logger.debug(f"recieved event {event}")
+                    if last_event is not None and tool_run_id is not None:
+                        logger.debug(f"last event {last_event}")
+                        try:
+                            # TODO: Extract data
+                            data_dict = json.loads(last_event.data)
+                        except json.JSONDecodeError:
+                            data_dict = last_event.data
+                        if last_event.name == "CodeAgent":
+                            data_dict = data_dict["code"]
+                        yield {
+                            "event": "on_tool_end",
+                            "run_id": tool_run_id,
+                            "name": last_event.name,
+                            "data": {"output": data_dict},
+                        }
+                    if isinstance(event, StreamEvent):
+                        tool_run_id = str(uuid.uuid4())
+                        last_event = StreamEvent(name=event.name, data=event.data)
+                        tool_event = {
+                            "event": "on_tool_start",
+                            "run_id": tool_run_id,
+                            "name": event.name,
+                            "data": {"input": {}},
+                        }
+                        logger.debug(f"[CUGA] Yielding tool_start event: {event.name}")
+                        yield tool_event
 
-            # Emit error event
-            yield {
-                "event": "on_chain_error",
-                "run_id": str(uuid.uuid4()),
-                "name": "CugaAgent",
-                "data": {"error": error_msg},
-            }
+                    if isinstance(event, AgentResult):
+                        task_result = event
+                        end_event = {
+                            "event": "on_chain_end",
+                            "run_id": str(uuid.uuid4()),
+                            "name": "CugaAgent",
+                            "data": {"output": AgentFinish(return_values={"output": task_result.answer}, log="")},
+                        }
+                        answer_preview = task_result.answer[:100] if task_result.answer else "None"
+                        logger.info(f"[CUGA] Yielding chain_end event with answer: {answer_preview}...")
+                        yield end_event
+                # task_result: AgentResult = await cuga_agent.run_task_generic_yield(
+                #     eval_mode=False, goal=current_input, on_progress=on_progress
+                # )
+
+            except (ValueError, TypeError, RuntimeError, ConnectionError) as e:
+                logger.error(f"An error occurred: {e!s}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                error_msg = f"CUGA Agent error: {e!s}"
+                logger.error(f"[CUGA] Error occurred: {error_msg}")
+
+                # Emit error event
+                yield {
+                    "event": "on_chain_error",
+                    "run_id": str(uuid.uuid4()),
+                    "name": "CugaAgent",
+                    "data": {"error": error_msg},
+                }
 
     async def message_response(self) -> Message:
         """Generate a message response using the Cuga agent.
@@ -443,8 +434,8 @@ class CugaComponent(ToolCallingAgentComponent):
         Raises:
             Exception: If there's an error during agent execution
         """
-        logger.info("[CUGA] Starting Cuga agent run for message_response.")
-        logger.info(f"[CUGA] Agent input value: {self.input_value}")
+        logger.debug("[CUGA] Starting Cuga agent run for message_response.")
+        logger.debug(f"[CUGA] Agent input value: {self.input_value}")
 
         # Validate input is not empty
         if not self.input_value or not str(self.input_value).strip():
@@ -553,11 +544,11 @@ class CugaComponent(ToolCallingAgentComponent):
             self.tools.append(current_date_tool)
 
         # --- ADDED LOGGING START ---
-        logger.info("[CUGA] Retrieved agent requirements: LLM, chat history, and tools.")
-        logger.info(f"[CUGA] LLM model: {self.model_name}")
-        logger.info(f"[CUGA] Number of chat history messages: {len(self.chat_history)}")
-        logger.info(f"[CUGA] Tools available: {[tool.name for tool in self.tools]}")
-        logger.info(f"[CUGA] metadata: {[tool.metadata for tool in self.tools]}")
+        logger.debug("[CUGA] Retrieved agent requirements: LLM, chat history, and tools.")
+        logger.debug(f"[CUGA] LLM model: {self.model_name}")
+        logger.debug(f"[CUGA] Number of chat history messages: {len(self.chat_history)}")
+        logger.debug(f"[CUGA] Tools available: {[tool.name for tool in self.tools]}")
+        logger.debug(f"[CUGA] metadata: {[tool.metadata for tool in self.tools]}")
         # --- ADDED LOGGING END ---
 
         return llm_model, self.chat_history, self.tools
@@ -601,7 +592,7 @@ class CugaComponent(ToolCallingAgentComponent):
             dict or list: Parsed and optionally validated JSON data
         """
         # --- ADDED LOGGING START ---
-        logger.info(f"[CUGA] Attempting to build structured output from content: {content}")
+        logger.debug(f"[CUGA] Attempting to build structured output from content: {content}")
         # --- ADDED LOGGING END ---
 
         json_pattern = r"\{.*\}"
@@ -625,12 +616,12 @@ class CugaComponent(ToolCallingAgentComponent):
 
         # If no output schema provided, return parsed JSON without validation
         if not hasattr(self, "output_schema") or not self.output_schema or len(self.output_schema) == 0:
-            logger.info("[CUGA] No output schema provided. Returning parsed JSON without validation.")
+            logger.debug("[CUGA] No output schema provided. Returning parsed JSON without validation.")
             return json_data
 
         # Use BaseModel validation with schema
         try:
-            logger.info("[CUGA] Output schema detected. Validating structured output against schema.")
+            logger.debug("[CUGA] Output schema detected. Validating structured output against schema.")
             processed_schema = self._preprocess_schema(self.output_schema)
             output_model = build_model_from_schema(processed_schema)
 
@@ -675,8 +666,8 @@ class CugaComponent(ToolCallingAgentComponent):
             TypeError: If there's a type error in processing
         """
         # --- ADDED LOGGING START ---
-        logger.info("[CUGA] Starting Cuga agent run for json_response.")
-        logger.info(f"[CUGA] Agent input value: {self.input_value}")
+        logger.debug("[CUGA] Starting Cuga agent run for json_response.")
+        logger.debug(f"[CUGA] Agent input value: {self.input_value}")
         # --- ADDED LOGGING END ---
 
         try:
@@ -726,7 +717,7 @@ class CugaComponent(ToolCallingAgentComponent):
                 f"{combined_instructions}\n\nUser Input: {input_text}\n\nPlease provide a structured JSON response."
             )
 
-            logger.info(f"[CUGA] Combined system prompt for structured agent: {combined_instructions}")
+            logger.debug(f"[CUGA] Combined system prompt for structured agent: {combined_instructions}")
 
             content = await self.call_agent(
                 current_input=structured_input,
@@ -735,7 +726,7 @@ class CugaComponent(ToolCallingAgentComponent):
                 llm=llm_model,
             )
 
-            logger.info(f"[CUGA] Structured agent result: {content}")
+            logger.debug(f"[CUGA] Structured agent result: {content}")
 
         except (ExceptionWithMessageError, ValueError, TypeError, NotImplementedError, AttributeError) as e:
             await logger.aerror(f"[CUGA] Error with structured agent: {e}")
@@ -749,18 +740,18 @@ class CugaComponent(ToolCallingAgentComponent):
             # Handle different output formats
             if isinstance(structured_output, list) and structured_output:
                 if len(structured_output) == 1:
-                    logger.info("[CUGA] Structured output is a single object in a list.")
-                    logger.info(f"[CUGA] Final structured output: {structured_output[0]}")
+                    logger.debug("[CUGA] Structured output is a single object in a list.")
+                    logger.debug(f"[CUGA] Final structured output: {structured_output[0]}")
                     return Data(data=structured_output[0])
-                logger.info("[CUGA] Structured output is a list of multiple objects.")
-                logger.info(f"[CUGA] Final structured output: {structured_output}")
+                logger.debug("[CUGA] Structured output is a list of multiple objects.")
+                logger.debug(f"[CUGA] Final structured output: {structured_output}")
                 return Data(data={"results": structured_output})
             if isinstance(structured_output, dict):
-                logger.info("[CUGA] Structured output is a single dictionary.")
-                logger.info(f"[CUGA] Final structured output: {structured_output}")
+                logger.debug("[CUGA] Structured output is a single dictionary.")
+                logger.debug(f"[CUGA] Final structured output: {structured_output}")
                 return Data(data=structured_output)
-            logger.info("[CUGA] Structured output is not a list or dictionary. Returning raw content.")
-            logger.info(f"[CUGA] Final output content: {content}")
+            logger.debug("[CUGA] Structured output is not a list or dictionary. Returning raw content.")
+            logger.debug(f"[CUGA] Final output content: {content}")
             return Data(data={"content": content})
 
         except (ValueError, TypeError) as e:
@@ -776,14 +767,14 @@ class CugaComponent(ToolCallingAgentComponent):
         Returns:
             list: List of Message objects representing the chat history
         """
-        logger.info("[CUGA] Retrieving chat history messages.")
-        logger.info(f"[CUGA] Session ID: {self.graph.session_id}")
+        logger.debug("[CUGA] Retrieving chat history messages.")
+        logger.debug(f"[CUGA] Session ID: {self.graph.session_id}")
         messages = (
             await MemoryComponent(**self.get_base_args())
             .set(session_id=self.graph.session_id, order="Ascending", n_messages=self.n_messages)
             .retrieve_messages()
         )
-        logger.info(f"[CUGA] Retrieved {len(messages)} messages from memory")
+        logger.debug(f"[CUGA] Retrieved {len(messages)} messages from memory")
         return [
             message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
         ]
@@ -800,11 +791,11 @@ class CugaComponent(ToolCallingAgentComponent):
         Raises:
             ValueError: If the model provider is invalid or model initialization fails
         """
-        logger.info("[CUGA] Getting language model for the agent.")
-        logger.info(f"[CUGA] Requested LLM provider: {self.agent_llm}")
+        logger.debug("[CUGA] Getting language model for the agent.")
+        logger.debug(f"[CUGA] Requested LLM provider: {self.agent_llm}")
 
         if not isinstance(self.agent_llm, str):
-            logger.info("[CUGA] Agent LLM is already a model instance.")
+            logger.debug("[CUGA] Agent LLM is already a model instance.")
             return self.agent_llm, None
 
         try:
@@ -817,7 +808,7 @@ class CugaComponent(ToolCallingAgentComponent):
             display_name = component_class.display_name
             inputs = provider_info.get("inputs")
             prefix = provider_info.get("prefix", "")
-            logger.info(f"[CUGA] Successfully built LLM model from provider: {self.agent_llm}")
+            logger.debug(f"[CUGA] Successfully built LLM model from provider: {self.agent_llm}")
             return self._build_llm_model(component_class, inputs, prefix), display_name
 
         except (AttributeError, ValueError, TypeError, RuntimeError) as e:
@@ -1018,7 +1009,7 @@ class CugaComponent(ToolCallingAgentComponent):
         Returns:
             list[Tool]: List of available tools for the agent
         """
-        logger.info("[CUGA] Building agent tools.")
+        logger.debug("[CUGA] Building agent tools.")
         component_toolkit = _get_component_toolkit()
         tools_names = self._build_tools_names()
         agent_description = self.get_tool_description()
@@ -1028,5 +1019,5 @@ class CugaComponent(ToolCallingAgentComponent):
         )
         if hasattr(self, "tools_metadata"):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
-        logger.info(f"[CUGA] Tools built: {[tool.name for tool in tools]}")
+        logger.debug(f"[CUGA] Tools built: {[tool.name for tool in tools]}")
         return tools
