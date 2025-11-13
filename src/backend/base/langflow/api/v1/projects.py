@@ -497,9 +497,11 @@ async def delete_project(
 
     # Prevent deletion of the Langflow Assistant folder
     if project.name == ASSISTANT_FOLDER_NAME:
+        msg = f"Cannot delete the '{ASSISTANT_FOLDER_NAME}' folder, that contains pre-built flows."
+        await logger.adebug(msg)
         raise HTTPException(
             status_code=403,
-            detail=f"Cannot delete the '{ASSISTANT_FOLDER_NAME}' folder. This is a system folder that contains pre-built flows.",
+            detail=msg,
         )
 
     # Check if project has OAuth authentication and stop MCP Composer if needed

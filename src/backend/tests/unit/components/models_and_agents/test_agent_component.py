@@ -436,7 +436,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         # Set up the component
         default_kwargs["input_value"] = message
-        component = await self.component_setup(component_class, default_kwargs)
+        _ = await self.component_setup(component_class, default_kwargs)
 
         # Convert to LangChain message
         lc_message = message.to_lc_message()

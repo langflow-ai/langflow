@@ -519,7 +519,7 @@ class TestIntegrationScenarios:
 
             # Step 3: Filter by one of those tags
             if result_tags:
-                filtered = list_templates(tags=[list(result_tags)[0]])
+                filtered = list_templates(tags=[next(iter(result_tags))])
                 assert len(filtered) > 0
 
     def test_pagination_simulation(self):
