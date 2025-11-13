@@ -322,7 +322,9 @@ const ProviderModelsDialog = ({
                 const isModelDefault = model.metadata?.default === true;
                 const currentEnabledState =
                   isDefaultModelInThisList ||
-                  (hasBackendValue ? isModelEnabledFromAPI === true : isModelDefault);
+                  (hasBackendValue
+                    ? isModelEnabledFromAPI === true
+                    : isModelDefault);
                 const isModelEnabled = pendingModelToggles.has(model.model_name)
                   ? pendingModelToggles.get(model.model_name)!
                   : currentEnabledState;
