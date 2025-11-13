@@ -8,7 +8,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
-  "user must be able to send images in the playground with the agent component",
+  "user can run flow with If-Else component multiple times with different branches",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
@@ -24,12 +24,12 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("if else");
-    await page.waitForSelector('[data-testid="logicIf-Else"]', {
+    await page.waitForSelector('[data-testid="flow_controlsIf-Else"]', {
       timeout: 2000,
     });
 
     await page
-      .getByTestId("logicIf-Else")
+      .getByTestId("flow_controlsIf-Else")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-if-else").click();
@@ -142,8 +142,14 @@ test(
 
     // retest to make sure we can run again the flow with the first branch of the If-Else component
 
+    await page.waitForTimeout(500);
+
     await page.getByTestId("popover-anchor-input-input_text").fill("1");
+    await page.waitForTimeout(500);
+
     await page.getByTestId("button_run_text output").click();
+
+    await page.waitForTimeout(500);
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 

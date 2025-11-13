@@ -154,7 +154,7 @@ class Component(CustomComponent):
             self.trace_type = "chain"
 
         # Setup inputs and outputs
-        self._reset_all_output_values()
+        self.reset_all_output_values()
         if self.inputs is not None:
             self.map_inputs(self.inputs)
         self.map_outputs()
@@ -330,7 +330,8 @@ class Component(CustomComponent):
     def set_event_manager(self, event_manager: EventManager | None = None) -> None:
         self._event_manager = event_manager
 
-    def _reset_all_output_values(self) -> None:
+    def reset_all_output_values(self) -> None:
+        """Reset all output values to UNDEFINED."""
         if isinstance(self._outputs_map, dict):
             for output in self._outputs_map.values():
                 output.value = UNDEFINED
@@ -1590,7 +1591,12 @@ class Component(CustomComponent):
                 ):
                     complete_message = await self._stream_message(message.text, stored_message)
                     stored_message.text = complete_message
+                    if complete_message:
+                        stored_message.properties.state = "complete"
                     stored_message = await self._update_stored_message(stored_message)
+                    # Note: We intentionally do NOT send a message event here with state="complete"
+                    # The frontend already has all the content from streaming tokens
+                    # Only the database is updated with the complete state
                 else:
                     # Only send message event for non-streaming messages
                     await self._send_message_event(stored_message, id_=id_)
