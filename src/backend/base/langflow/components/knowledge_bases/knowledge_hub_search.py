@@ -42,6 +42,7 @@ class KnowledgeHubSearchComponent(Component):
             show=True,
             value={},
             is_list=True,
+            tool_mode=True
         )
     ]
 
