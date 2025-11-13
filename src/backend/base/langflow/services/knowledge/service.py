@@ -200,7 +200,7 @@ class KnowledgeService(Service):
         self,
         knowledge_hub_ids: List[str],
         query: str,
-        embedding_model: str = "bge_base",
+        embedding_model: str = "embedding-bge-base-3",
         top_k: int = 20,
     ) -> List[Any]:
         """Query the vector store with the given parameters."""
