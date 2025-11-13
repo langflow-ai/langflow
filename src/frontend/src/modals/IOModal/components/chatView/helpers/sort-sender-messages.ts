@@ -1,7 +1,25 @@
 import type { ChatMessageType } from "../../../../../types/chat";
 
-// Cache for parsed timestamps to improve performance during sorting
-const timestampCache = new WeakMap<ChatMessageType, number>();
+// Cache parsed timestamps to avoid repeatedly parsing identical values
+const messageTimestampCache = new WeakMap<ChatMessageType, number>();
+const timestampValueCache = new Map<string, number>();
+
+const parseTimestamp = (timestamp: string): number => {
+  const cached = timestampValueCache.get(timestamp);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  // Date.parse is slightly faster than instantiating a Date object
+  let parsed = Date.parse(timestamp);
+
+  if (Number.isNaN(parsed)) {
+    parsed = new Date(timestamp).getTime();
+  }
+
+  timestampValueCache.set(timestamp, parsed);
+  return parsed;
+};
 
 /**
  * Sorts chat messages by timestamp with proper handling of identical timestamps.
@@ -18,16 +36,16 @@ const timestampCache = new WeakMap<ChatMessageType, number>();
  */
 const sortSenderMessages = (a: ChatMessageType, b: ChatMessageType): number => {
   // Use WeakMap cache to avoid repeated Date parsing for same message objects
-  let timeA = timestampCache.get(a);
+  let timeA = messageTimestampCache.get(a);
   if (timeA === undefined) {
-    timeA = new Date(a.timestamp).getTime();
-    timestampCache.set(a, timeA);
+    timeA = parseTimestamp(a.timestamp);
+    messageTimestampCache.set(a, timeA);
   }
 
-  let timeB = timestampCache.get(b);
+  let timeB = messageTimestampCache.get(b);
   if (timeB === undefined) {
-    timeB = new Date(b.timestamp).getTime();
-    timestampCache.set(b, timeB);
+    timeB = parseTimestamp(b.timestamp);
+    messageTimestampCache.set(b, timeB);
   }
 
   // Primary sort: by timestamp
