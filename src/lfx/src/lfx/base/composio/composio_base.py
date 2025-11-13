@@ -723,6 +723,9 @@ class ComposioBaseComponent(Component):
                 parameters_schema = parameters_schema.copy()  # Don't modify the original
                 parameters_schema["required"] = []
 
+            # Also get top-level required fields from original schema
+            original_required = set(parameters_schema.get("required", []))
+
             try:
                 # Preserve original descriptions before flattening to restore if lost
                 original_descriptions = {}
@@ -946,6 +949,8 @@ class ComposioBaseComponent(Component):
                     if any(getattr(i, "name", None) == top_name for i in processed_inputs):
                         continue
                     top_schema = props_dict.get(top_name, {})
+                    # For MultilineInput fields (complex JSON objects/arrays)
+                    is_required = top_name in original_required
                     processed_inputs.append(
                         MultilineInput(
                             name=top_name,
@@ -953,7 +958,7 @@ class ComposioBaseComponent(Component):
                             info=(
                                 top_schema.get("description") or "Provide JSON for this parameter (object or array)."
                             ),
-                            required=top_name in required_fields_set,
+                            required=is_required,  # Setting original schema
                         )
                     )
 
