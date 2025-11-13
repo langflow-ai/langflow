@@ -18,7 +18,6 @@ from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.runnables import Runnable, RunnableBinding
 from langchain_core.tools import BaseTool
 from langchain_openai.chat_models.base import ChatOpenAI
-from pydantic import Field
 
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
@@ -28,6 +27,7 @@ from lfx.log.logger import logger
 from lfx.memory import delete_message
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data
+from pydantic import Field
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
