@@ -1800,7 +1800,7 @@ wheels = [
 
 [[package]]
 name = "cuga"
-version = "0.1.2"
+version = "0.1.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1825,9 +1825,9 @@ dependencies = [
     { name = "typer" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/50/44/fe12f258facf510f75fd5ff67e1afc01d753a976e9a76fd50ca677ed9167/cuga-0.1.2.tar.gz", hash = "sha256:cdc2d8f4651d6b97e4b3bff8e65e70d03f4668ddfe1e7bb5a6269a0fbbbdd660", size = 13102228, upload-time = "2025-10-16T15:48:09.486Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7b/b8/24514ec772f0a3401fd06fbe3d2c342abfbaf6fa0541223b32078c60cfde/cuga-0.1.4.tar.gz", hash = "sha256:74db548ec7217198e1542818c5f277f62510d868c76a59f21ae413ec2dfbb876", size = 12989068, upload-time = "2025-11-11T13:05:03.309Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/fb/92812a8bc40e2f2dc3d91732965373ada50d9dc32045e1b9ff1117a1532f/cuga-0.1.2-py3-none-any.whl", hash = "sha256:1976b47d60648d8e12a0b3a1109febe556f15be2116502c05a638d3c651399cd", size = 13648611, upload-time = "2025-10-16T15:48:04.705Z" },
+    { url = "https://files.pythonhosted.org/packages/75/3d/133813413b21bef2744bcb1c29563880b1a1482f79c67168d87c40486085/cuga-0.1.4-py3-none-any.whl", hash = "sha256:822b09035734718d1ac37d8253bab04a7356d220530397b31dc10538b6cb8f77", size = 13563221, upload-time = "2025-11-11T13:05:00.081Z" },
 ]
 
 [[package]]
@@ -5649,7 +5649,7 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "cryptography", specifier = ">=43.0.1,<44.0.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "cuga", specifier = "==0.1.2" },
+    { name = "cuga", specifier = "==0.1.4" },
     { name = "datasets", specifier = ">2.14.7,<4.0.0" },
     { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'", specifier = ">=2.36.1,<3.0.0" },
     { name = "docling-core", specifier = ">=2.36.1,<3.0.0" },
@@ -5761,7 +5761,7 @@ requires-dist = [
     { name = "wikipedia", specifier = "==1.4.0" },
     { name = "wolframalpha", specifier = "==5.1.3" },
     { name = "yfinance", specifier = "==0.2.50" },
-    { name = "youtube-transcript-api", specifier = "==0.6.3" },
+    { name = "youtube-transcript-api", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", specifier = "==2.0.2" },
 ]
 provides-extras = ["docling", "audio", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
@@ -5838,6 +5838,7 @@ dependencies = [
     { name = "duckdb" },
     { name = "elevenlabs", version = "1.58.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*'" },
     { name = "elevenlabs", version = "1.59.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version != '3.12.*'" },
+    { name = "email-validator" },
     { name = "emoji" },
     { name = "fastapi" },
     { name = "fastapi-pagination" },
@@ -5976,6 +5977,7 @@ requires-dist = [
     { name = "duckdb", specifier = ">=1.0.0,<2.0.0" },
     { name = "elevenlabs", marker = "python_full_version != '3.12.*'", specifier = ">=1.52.0,<2.0.0" },
     { name = "elevenlabs", marker = "python_full_version == '3.12.*'", specifier = "==1.58.1" },
+    { name = "email-validator", specifier = ">=2.0.0" },
     { name = "emoji", specifier = ">=2.12.0,<3.0.0" },
     { name = "fastapi", specifier = ">=0.115.2,<1.0.0" },
     { name = "fastapi-pagination", specifier = ">=0.13.1,<1.0.0" },
@@ -14365,15 +14367,15 @@ wheels = [
 
 [[package]]
 name = "youtube-transcript-api"
-version = "0.6.3"
+version = "1.2.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "defusedxml" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d7/f1/55ff16f7198bdf5204fd7be3c49122e07092a3da47bf4e1560989a4c0255/youtube_transcript_api-0.6.3.tar.gz", hash = "sha256:4d1f6451ae508390a5279f98519efb45e091bf60d3cca5ea0bb122800ab6a011", size = 612052, upload-time = "2024-11-18T09:53:40.79Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/87/03/68c69b2d3e282d45cb3c07e5836a9146ff9574cde720570ffc7eb124e56b/youtube_transcript_api-1.2.3.tar.gz", hash = "sha256:76016b71b410b124892c74df24b07b052702cf3c53afb300d0a2c547c0b71b68", size = 469757, upload-time = "2025-10-13T15:57:17.532Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/80/d4/be6fd091d29ae49d93813e598769e7ab453419a4de640e1755bf20911cce/youtube_transcript_api-0.6.3-py3-none-any.whl", hash = "sha256:297a74c1863d9df88f6885229f33a7eda61493d73ecb13ec80e876b65423e9b4", size = 622293, upload-time = "2024-11-18T09:53:38.049Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/75/a861661b73d862e323c12af96ecfb237fb4d1433e551183d4172d39d5275/youtube_transcript_api-1.2.3-py3-none-any.whl", hash = "sha256:0c1b32ea5e739f9efde8c42e3d43e67df475185af6f820109607577b83768375", size = 485140, upload-time = "2025-10-13T15:57:16.034Z" },
 ]
 
 [[package]]
