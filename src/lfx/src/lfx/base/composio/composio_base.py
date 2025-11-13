@@ -470,11 +470,17 @@ class ComposioBaseComponent(Component):
                     if parameters_schema is None:
                         logger.warning(f"Parameters schema is None for action key: {action_key}")
                         # Still add the action but with empty fields
+                        # Extract version information from the tool
+                        version = tool_dict.get("version")
+                        available_versions = tool_dict.get("available_versions", [])
+                        
                         self._action_schemas[action_key] = tool_dict
                         self._actions_data[action_key] = {
                             "display_name": display_name,
                             "action_fields": [],
                             "file_upload_fields": set(),
+                            "version": version,
+                            "available_versions": available_versions,
                         }
                         continue
 
@@ -488,11 +494,17 @@ class ComposioBaseComponent(Component):
                                 parameters_schema = parameters_schema.__dict__
                             else:
                                 logger.warning(f"Cannot process parameters schema for {action_key}, skipping")
+                                # Extract version information from the tool
+                                version = tool_dict.get("version")
+                                available_versions = tool_dict.get("available_versions", [])
+                                
                                 self._action_schemas[action_key] = tool_dict
                                 self._actions_data[action_key] = {
                                     "display_name": display_name,
                                     "action_fields": [],
                                     "file_upload_fields": set(),
+                                    "version": version,
+                                    "available_versions": available_versions,
                                 }
                                 continue
 
@@ -531,22 +543,34 @@ class ComposioBaseComponent(Component):
                                         elif field_name in original_descriptions:
                                             field_schema["description"] = original_descriptions[field_name]
                         except (KeyError, TypeError, ValueError):
+                            # Extract version information from the tool
+                            version = tool_dict.get("version")
+                            available_versions = tool_dict.get("available_versions", [])
+                            
                             self._action_schemas[action_key] = tool_dict
                             self._actions_data[action_key] = {
                                 "display_name": display_name,
                                 "action_fields": [],
                                 "file_upload_fields": set(),
+                                "version": version,
+                                "available_versions": available_versions,
                             }
                             continue
 
                         if flat_schema is None:
                             logger.warning(f"Flat schema is None for action key: {action_key}")
                             # Still add the action but with empty fields so the UI doesn't break
+                            # Extract version information from the tool
+                            version = tool_dict.get("version")
+                            available_versions = tool_dict.get("available_versions", [])
+                            
                             self._action_schemas[action_key] = tool_dict
                             self._actions_data[action_key] = {
                                 "display_name": display_name,
                                 "action_fields": [],
                                 "file_upload_fields": set(),
+                                "version": version,
+                                "available_versions": available_versions,
                             }
                             continue
 
@@ -619,20 +643,32 @@ class ComposioBaseComponent(Component):
                                     clean_field_name = p_name.replace("[0]", "")
                                     self._bool_variables.add(clean_field_name)
 
+                        # Extract version information from the tool
+                        version = tool_dict.get("version")
+                        available_versions = tool_dict.get("available_versions", [])
+                        
                         self._action_schemas[action_key] = tool_dict
                         self._actions_data[action_key] = {
                             "display_name": display_name,
                             "action_fields": action_fields,
                             "file_upload_fields": file_upload_fields,
+                            "version": version,
+                            "available_versions": available_versions,
                         }
 
                     except (KeyError, TypeError, ValueError) as flatten_error:
                         logger.error(f"flatten_schema failed for {action_key}: {flatten_error}")
+                        # Extract version information from the tool
+                        version = tool_dict.get("version")
+                        available_versions = tool_dict.get("available_versions", [])
+                        
                         self._action_schemas[action_key] = tool_dict
                         self._actions_data[action_key] = {
                             "display_name": display_name,
                             "action_fields": [],
                             "file_upload_fields": set(),
+                            "version": version,
+                            "available_versions": available_versions,
                         }
                         continue
 
@@ -2507,12 +2543,23 @@ class ComposioBaseComponent(Component):
 
                 arguments[final_field_name] = value
 
-            # Execute using new SDK
-            result = composio.tools.execute(
-                slug=action_key,
-                arguments=arguments,
-                user_id=self.entity_id,
-            )
+            # Get the version from the action data
+            version = self._actions_data.get(action_key, {}).get("version")
+            if version:
+                logger.info(f"Executing {action_key} with version: {version}")
+            
+            # Execute using new SDK with version parameter
+            execute_params = {
+                "slug": action_key,
+                "arguments": arguments,
+                "user_id": self.entity_id,
+            }
+            
+            # Only add version if it's available
+            if version:
+                execute_params["version"] = version
+            
+            result = composio.tools.execute(**execute_params)
 
             if isinstance(result, dict) and "successful" in result:
                 if result["successful"]:
