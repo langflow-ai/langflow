@@ -14,11 +14,11 @@ from altk.pre_tool.sparc import SPARCReflectionComponent
 from langchain_core.messages import BaseMessage
 from langchain_core.messages.base import message_to_dict
 from langchain_core.tools import BaseTool
+from pydantic import Field
 
 from lfx.base.agents.altk_base_agent import ALTKBaseTool, BaseToolWrapper
 from lfx.log.logger import logger
 from lfx.schema.data import Data
-from pydantic import Field
 
 # Maximum wrapper nesting depth to prevent infinite loops
 _MAX_WRAPPER_DEPTH = 10
@@ -144,10 +144,10 @@ class ValidatedTool(ALTKBaseTool):
     @staticmethod
     def _custom_message_to_dict(message: BaseMessage) -> dict:
         """Convert a BaseMessage to a dictionary."""
-        if isinstance(message,BaseMessage):
+        if isinstance(message, BaseMessage):
             return message_to_dict(message)
         msg = f"Invalid message type: {type(message)}"
-        logger.error(msg,exc_info=True)
+        logger.error(msg, exc_info=True)
         raise ValueError(msg) from None
 
     def _validate_and_run(self, *args, **kwargs) -> str:
