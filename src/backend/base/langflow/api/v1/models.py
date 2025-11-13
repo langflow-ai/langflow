@@ -462,9 +462,7 @@ async def update_enabled_models(
             )
         else:
             # No explicitly enabled models, delete the variable
-            await variable_service.delete_variable(
-                user_id=current_user.id, name=ENABLED_MODELS_VAR, session=session
-            )
+            await variable_service.delete_variable(user_id=current_user.id, name=ENABLED_MODELS_VAR, session=session)
     except ValueError:
         # Variable not found, create new one if there are explicitly enabled models
         if explicitly_enabled_models:

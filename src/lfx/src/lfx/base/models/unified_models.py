@@ -367,6 +367,7 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
                     disabled = set()
                     enabled = set()
                     import json
+
                     for var in all_vars:
                         if var.name == "__disabled_models__" and var.value:
                             with contextlib.suppress(json.JSONDecodeError, TypeError):
@@ -552,6 +553,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                     disabled = set()
                     enabled = set()
                     import json
+
                     for var in all_vars:
                         if var.name == "__disabled_models__" and var.value:
                             with contextlib.suppress(json.JSONDecodeError, TypeError):

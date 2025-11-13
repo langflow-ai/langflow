@@ -230,6 +230,7 @@ async def delete_variable(
             except ValueError:
                 # Log the exception if provider model retrieval fails
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.exception("Provider model retrieval failed")
     except Exception as e:
