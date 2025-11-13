@@ -155,11 +155,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.10.15"
+                    "version": null
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.120.0"
+                    "version": null
                   },
                   {
                     "name": "lfx",
@@ -1094,7 +1094,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.10.6"
+                    "version": null
                   },
                   {
                     "name": "trustcall",
