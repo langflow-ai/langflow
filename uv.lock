@@ -4131,6 +4131,38 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f3/ff/c9baf0997266d398ae08347951a2970e5e96ed6232ed0252f649f2b9a7eb/ibm_cos_sdk_s3transfer-2.14.3.tar.gz", hash = "sha256:2251ebfc4a46144401e431f4a5d9f04c262a0d6f95c88a8e71071da056e55f72", size = 139594, upload-time = "2025-08-01T06:35:46.403Z" }
 
 [[package]]
+name = "ibm-db"
+version = "3.2.7"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/dd/a5/182413f7fe28ee7a67d8be5afa1139ccc60cfb5c13c0e9be81e2205bddbb/ibm_db-3.2.7.tar.gz", hash = "sha256:b3c3b4550364a43bf1daa4519b668e6e00e7c3935291f8c444c4ec989417e861", size = 269073, upload-time = "2025-09-07T18:35:11.977Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/50/cd/a6549ed35424875f07ea89dbd44093b7d9dc4a03d9e29e56c5167bd7d568/ibm_db-3.2.7-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:7c2b451ffe67be602e93d94b2d2042dd051ec0757cfd6e4d7344cb594f2d3508", size = 24180199, upload-time = "2025-09-07T18:33:08.209Z" },
+    { url = "https://files.pythonhosted.org/packages/50/5a/be83503ec6ef9b2a47175b38b1099595a8d06237ac3fcc82d967b834672a/ibm_db-3.2.7-cp310-cp310-macosx_14_0_arm64.whl", hash = "sha256:9a1b139a9c21ff7216aac83ba29dceb6c8a9df3d6aee44ff1fe845cb60d3caed", size = 20362643, upload-time = "2025-09-07T18:33:11.325Z" },
+    { url = "https://files.pythonhosted.org/packages/cc/fa/379405785d27d10110992ee17f150c8ef1ee0c3eadca2d1451c8c03ff075/ibm_db-3.2.7-cp310-cp310-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:1e5e60297b4680cc566caa67f513aa68883ef48b0c612028a38883620807b09c", size = 40537485, upload-time = "2025-09-07T18:33:14.66Z" },
+    { url = "https://files.pythonhosted.org/packages/52/e1/c18aee07888666b3249b4f54d3cb67ae5041600b5fc3ed281817e868eaa8/ibm_db-3.2.7-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bf1c30e67e9e573e33524c393a1426e0dffa2da34ba42a0ec510e0f75766976f", size = 43857598, upload-time = "2025-09-07T18:33:17.797Z" },
+    { url = "https://files.pythonhosted.org/packages/26/01/f80a407192351aa304206504d6b15ccbb061f45dc9fc3e37c8c00c7e222b/ibm_db-3.2.7-cp310-cp310-win32.whl", hash = "sha256:171014c2caa0419055943ff3badae5118cc3a191360f03b80c8366ef374d5c28", size = 24576920, upload-time = "2025-09-07T18:33:21.849Z" },
+    { url = "https://files.pythonhosted.org/packages/98/1b/29f98a0d4d9896635d7b7fa53a51f8753214f0deed23ac7987d726299b12/ibm_db-3.2.7-cp310-cp310-win_amd64.whl", hash = "sha256:3425c158a65dd43e4b09dc968c18042a656ed6ef2e1db0164f032e97681823b7", size = 28718448, upload-time = "2025-09-07T18:33:25.043Z" },
+    { url = "https://files.pythonhosted.org/packages/c8/04/18e42549f498569db7a437453db51ae3d61105ad4da7b1fe64e9e59aedee/ibm_db-3.2.7-cp311-cp311-macosx_10_15_x86_64.whl", hash = "sha256:ba493d07e1845b8b1169ad27ace92f0ff540cc9a623f2753b8c68dc66c59d7df", size = 24180197, upload-time = "2025-09-07T18:33:28.224Z" },
+    { url = "https://files.pythonhosted.org/packages/c5/f3/85c8963ee8047183c435059abaf40771d40c6e9268ca32d66be0b66b7a6c/ibm_db-3.2.7-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:abed0a7c644b9ddf2c49bf5c0938f936f0b2dffd1703c9819440021be141716e", size = 20362644, upload-time = "2025-09-07T18:33:31.594Z" },
+    { url = "https://files.pythonhosted.org/packages/6d/fb/8d2ff4b6bcd6b05d13af855bedc47e597430a6c3372e0ab7579659cad9bb/ibm_db-3.2.7-cp311-cp311-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:1cabd3d3e8c879ef60d91e1fe1356cf8603f8b4b69cc7dda39d4a8698a055044", size = 40542303, upload-time = "2025-09-07T18:33:34.538Z" },
+    { url = "https://files.pythonhosted.org/packages/77/26/c43e02bb4cf62b1e93bf617440f5da6d3888935ef09d4fbd86fe07f3f920/ibm_db-3.2.7-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:aab5dceec45d69b0bbd333be66597dbaedf663c6c56a0fbd6196ecd1836e4095", size = 43863508, upload-time = "2025-09-07T18:33:38.566Z" },
+    { url = "https://files.pythonhosted.org/packages/05/d0/787d7a9864d3782238ca3b14a4484c642931e1363a760b0828c9ee26ad58/ibm_db-3.2.7-cp311-cp311-win32.whl", hash = "sha256:16272ad07912051d9ab5cbe3a9e2d3d888365d071334f9620d8e0b2ed69ee4f9", size = 24577123, upload-time = "2025-09-07T18:33:41.631Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/7c/998c663d0a65984c76c2c2c8d01cdbdd174bd817359e0e4024b9b316a9cc/ibm_db-3.2.7-cp311-cp311-win_amd64.whl", hash = "sha256:4b479e92b6954ab7f65c9d247a65fb0cde6a48899f71a8881b58023c0ace1f49", size = 28718421, upload-time = "2025-09-07T18:33:44.359Z" },
+    { url = "https://files.pythonhosted.org/packages/4d/0f/048679ca8516b73f3547c64f968b9654181d79f6cd2706914f37c2486da3/ibm_db-3.2.7-cp312-cp312-macosx_10_15_x86_64.whl", hash = "sha256:24e8a538475997f20569f221247808507b63349df51119fe9b2f8e48a0bf6f9b", size = 24179993, upload-time = "2025-09-07T18:33:47.064Z" },
+    { url = "https://files.pythonhosted.org/packages/f0/36/4cc64c70ebc74b2765005cd5357df18512c358cc6f5e87c6b0e70cff4053/ibm_db-3.2.7-cp312-cp312-macosx_14_0_arm64.whl", hash = "sha256:24a53fb8e3c200bf2a55095f1ae4c065f2136f8be87ca1db89a874bd82d88ea5", size = 20362915, upload-time = "2025-09-07T18:33:49.695Z" },
+    { url = "https://files.pythonhosted.org/packages/09/d7/ae63f1257736c5e6a06cd2be133b4bc38f68893504f046b4c850144b65cd/ibm_db-3.2.7-cp312-cp312-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:91f68be7bd0d2940023da43d0a94f196fe267ca825df7874b8174583c8678ea0", size = 40505667, upload-time = "2025-09-07T18:33:52.564Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/24/af465d93f549b0dbc944f256cdb2b470574018285e1478b6c50305a609ac/ibm_db-3.2.7-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5d39fe5001c078f2b824d1805ca9737060203a00a9dd9a8fe4b6f6b32b271cb5", size = 43820400, upload-time = "2025-09-07T18:33:55.884Z" },
+    { url = "https://files.pythonhosted.org/packages/48/04/c512eed2c701e8762e90f000fd1a768dd749ffb070a62b8cd92722c16327/ibm_db-3.2.7-cp312-cp312-win32.whl", hash = "sha256:20388753f52050e07e845b74146dbbe3f892dcfdfb015638e8f57c2fb2e056b8", size = 24576235, upload-time = "2025-09-07T18:33:59.304Z" },
+    { url = "https://files.pythonhosted.org/packages/07/cc/ae978e6d020f3b17f2e68cc2c60fe8381fffd1271608e871b5b4ee6434f2/ibm_db-3.2.7-cp312-cp312-win_amd64.whl", hash = "sha256:6e507ddf93b8406b0b88ff6bf07658a3100ce98cb1e735e5ec8e0a56e30ea856", size = 28719302, upload-time = "2025-09-07T18:34:02.024Z" },
+    { url = "https://files.pythonhosted.org/packages/04/0c/a5401b3f826fe62f56b77c07f6ec7e2623b06477337a7d1bfe57d36374f8/ibm_db-3.2.7-cp313-cp313-macosx_10_15_x86_64.whl", hash = "sha256:5fead45b6e1a448d90d7bc4fd8a28783988915a7598418f53191a17f4ddac173", size = 24179892, upload-time = "2025-09-07T18:34:05.045Z" },
+    { url = "https://files.pythonhosted.org/packages/c3/bd/61fc85752aab993662808b0ad9b50c5babbe5414d58e0814b528d2ba70eb/ibm_db-3.2.7-cp313-cp313-macosx_14_0_arm64.whl", hash = "sha256:c6462dfd79a23824ce726696531a41a6861555ef27e9f050436bf42ad000734d", size = 20362907, upload-time = "2025-09-07T18:34:07.691Z" },
+    { url = "https://files.pythonhosted.org/packages/f4/75/bdd71860b28698480ee0e02eaac1f1ad04ee2e709b7d38eb776dd94980b0/ibm_db-3.2.7-cp313-cp313-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:c133f3ed5fae6065a8ccd386fd08d8d07d783343635e5d7c0b7a704419a398dc", size = 40505702, upload-time = "2025-09-07T18:34:10.87Z" },
+    { url = "https://files.pythonhosted.org/packages/05/0c/d0d1d3a0b775a5694444d241aa6e0927d40dfee7329d714d64d667d55e20/ibm_db-3.2.7-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6eb2d36cfcb1c8b7c25cbdd278ac7be381f7f0c0c8bc330349db166ffd0cf3c5", size = 43820404, upload-time = "2025-09-07T18:34:14.031Z" },
+    { url = "https://files.pythonhosted.org/packages/c5/09/083b591869b6baa603d50ef981eafb693b3975eec9e75c71af3a35564741/ibm_db-3.2.7-cp313-cp313-win32.whl", hash = "sha256:3dc814d7824b4917f73e35c3c050ed1286ccccc1c3433a7c37984a3069664ac2", size = 24576237, upload-time = "2025-09-07T18:34:16.879Z" },
+    { url = "https://files.pythonhosted.org/packages/ce/97/fab277a0b2c5722ee0020da028d00fdd27aaf4b3dd387f90a16d2cd1ffc3/ibm_db-3.2.7-cp313-cp313-win_amd64.whl", hash = "sha256:ff07632b4514f3af8a64e5c8c38b8aef0833642182a737119e5866a320dd0392", size = 28719302, upload-time = "2025-09-07T18:34:19.784Z" },
+]
+
+[[package]]
 name = "ibm-watsonx-ai"
 version = "1.3.42"
 source = { registry = "https://pypi.org/simple" }
@@ -5034,6 +5066,20 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-db2"
+version = "0.1.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ibm-db" },
+    { name = "langchain-community" },
+    { name = "langchain-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/62/40/5e67071117a4e568f452834d2a873340ab9c9e0c2622ee57542ddbc66400/langchain_db2-0.1.7.tar.gz", hash = "sha256:c68a6c4b237fe9d26ec103b94df0bb1de71492e43b0f010b7833d6b4189b82ff", size = 9138, upload-time = "2025-10-09T09:51:10.04Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c0/a8/859ad213aa1c479f0ea24308b03e1c426f762f8f481a68a5f8008b176656/langchain_db2-0.1.7-py3-none-any.whl", hash = "sha256:44984794c7bac79fa56f9f00c571588cfeada3597c00d8550f7bb1e356b2fe11", size = 9592, upload-time = "2025-10-09T09:51:09.345Z" },
+]
+
+[[package]]
 name = "langchain-docling"
 version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -5424,6 +5470,7 @@ dependencies = [
     { name = "langchain-chroma" },
     { name = "langchain-cohere" },
     { name = "langchain-community" },
+    { name = "langchain-db2" },
     { name = "langchain-elasticsearch" },
     { name = "langchain-google-calendar-tools" },
     { name = "langchain-google-community" },
@@ -5634,6 +5681,7 @@ requires-dist = [
     { name = "langchain-chroma", specifier = ">=0.2.6,<1.0.0" },
     { name = "langchain-cohere", specifier = "==0.3.3" },
     { name = "langchain-community", specifier = ">=0.3.21,<1.0.0" },
+    { name = "langchain-db2", specifier = ">=0.1.7,<1.0.0" },
     { name = "langchain-docling", marker = "extra == 'docling'", specifier = ">=1.1.0" },
     { name = "langchain-elasticsearch", specifier = "==0.3.0" },
     { name = "langchain-google-calendar-tools", specifier = "==0.0.1" },
