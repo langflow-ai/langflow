@@ -1,0 +1,41 @@
+---
+title: Security
+slug: /security
+---
+
+The Langflow UI is an IDE and code execution platform, which means that Langflow is inherently capable of executing arbitrary,
+developer-provided code.
+By design, the Langflow UI includes a code editor allowing developers to author and execute arbitrary Python with full access to the host
+Langflow backend process, filesystem, and network.
+In addition, various components wrap and make use of code execution, in some cases using AI models to generate the code to be executed based
+on user input.
+
+Langflow does not enforce isolation between users within a single Langflow process, nor does it restrict access to the local disk or network resources. Flow visibility and user access controls are designed for usability, not security enforcement. Users can access underlying database connections and system resources directly. For multi-tenant deployments, Langflow relies on infrastructure-level security rather than application-level isolation, which means it's your responsibility to enforce tenant isolation.
+
+## Secure Langflow during local development
+
+Langflow is a code execution platform with full access to your local system.
+You are responsible for ensuring the safety of flows you execute.
+When Langflow will execute untrusted or LLM-generated code, consider using isolated or containerized execution environments. For more information, see [Containerize a Langflow application](/develop-application).
+
+## Secure first-party deployments
+
+When you are serving APIs backed by flows that you or your organization authored, you are responsible for ensuring Langflow-based APIs provide security to your end users.
+
+Use a secure API gateway to provide authentication and authorization, ensure user data is appropriately isolated, and sanitize inputs and outputs against XSS and injection attacks.
+
+For more information on setting up a reverse proxy, see [Deploy Langflow with Nginx and SSL](/deployment-nginx-ssl).
+For more information on authentication configuration, see [API keys and authentication](/api-keys-and-authentication).
+
+## Secure third-party deployments
+
+When you are providing Langflow as a service to third parties, you must assume that any code executed by Langflow is potentially malicious.
+
+Langflow provides no isolation between tenants, so it's your responsibility to enforce isolation at the infrastructure level.
+
+You must ensure process-level isolation to prevent tenants from sharing a single Langflow process, disk-level isolation to prevent shared access to writable persistent storage, network-level isolation to prevent access to private networks, and database-level isolation to prevent access to or modification of shared database resources.
+
+Authentication and authorization should be provided and enforced outside of the Langflow container.
+For shared services such as databases, enforce access limitations externally through credentials and security policies.
+
+For more information, see [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices).
