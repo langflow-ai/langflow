@@ -17,6 +17,7 @@ export default function DurationDisplay({
     setDuration,
     startTimer,
     clearInterval: clearDurationInterval,
+    clearStartTime,
     setInterval: setDurationInterval,
   } = useDurationStore();
 
@@ -24,11 +25,16 @@ export default function DurationDisplay({
     if (duration !== undefined) {
       setDuration(chatId, duration);
       clearDurationInterval(chatId);
+      clearStartTime(chatId);
       return;
     }
 
-    // Start timer with current timestamp
-    startTimer(chatId);
+    // Only start timer if one doesn't already exist for this chatId
+    // This prevents resetting the timer when the playground is reopened
+    const state = useDurationStore.getState();
+    if (!state.startTimes[chatId]) {
+      startTimer(chatId);
+    }
 
     const intervalId = setInterval(() => {
       // Update duration based on elapsed time from start
