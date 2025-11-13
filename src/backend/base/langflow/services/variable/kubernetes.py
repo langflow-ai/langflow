@@ -203,16 +203,14 @@ class KubernetesSecretService(VariableService, Service):
         return variables_read
 
     @override
-    async def get_variable_by_id(
-        self, user_id: UUID | str, variable_id: UUID | str, session: AsyncSession
-    ) -> Variable:
+    async def get_variable_by_id(self, user_id: UUID | str, variable_id: UUID | str, session: AsyncSession) -> Variable:
         """Get a variable by ID.
 
         Note: Kubernetes secrets don't have IDs, so we use the variable_id as the name.
         """
         secret_name = encode_user_id(user_id)
         key, value = await asyncio.to_thread(self.resolve_variable, secret_name, user_id, str(variable_id))
-        
+
         name = key
         type_ = GENERIC_TYPE
         if key.startswith(CREDENTIAL_TYPE + "_"):
@@ -232,7 +230,7 @@ class KubernetesSecretService(VariableService, Service):
         """Get a variable object by name."""
         secret_name = encode_user_id(user_id)
         key, value = await asyncio.to_thread(self.resolve_variable, secret_name, user_id, name)
-        
+
         var_name = key
         type_ = GENERIC_TYPE
         if key.startswith(CREDENTIAL_TYPE + "_"):
@@ -252,7 +250,7 @@ class KubernetesSecretService(VariableService, Service):
         self, user_id: UUID | str, variable_id: UUID | str, variable: VariableUpdate, session: AsyncSession
     ) -> Variable:
         """Update specific fields of a variable.
-        
+
         Note: Kubernetes secrets don't have IDs, so we use the variable name for updates.
         """
         if variable.name:
@@ -261,9 +259,9 @@ class KubernetesSecretService(VariableService, Service):
             # Try to get the current variable to find its name
             current_var = await self.get_variable_by_id(user_id, variable_id, session)
             name = current_var.name
-        
+
         if variable.value is not None:
             await self.update_variable(user_id, name, variable.value, session)
-        
+
         # Return the updated variable
         return await self.get_variable_object(user_id, name, session)

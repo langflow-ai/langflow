@@ -119,9 +119,7 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    async def get_variable_by_id(
-        self, user_id: UUID | str, variable_id: UUID | str, session: AsyncSession
-    ) -> Variable:
+    async def get_variable_by_id(self, user_id: UUID | str, variable_id: UUID | str, session: AsyncSession) -> Variable:
         """Get a variable by ID.
 
         Args:
