@@ -53,7 +53,7 @@ export const lazyIconsMapping = {
       default: mod.GooglesheetsIcon,
     })),
   Klaviyo: () =>
-    import("@/icons/Klaviyo").then((mod) => ({ default: mod.KlaviyoIcon })),
+    import("@/icons/klaviyo").then((mod) => ({ default: mod.KlaviyoIcon })),
   Klipfolio: () =>
     import("@/icons/Klipfolio").then((mod) => ({ default: mod.KlipfolioIcon })),
   One_Drive: () =>
