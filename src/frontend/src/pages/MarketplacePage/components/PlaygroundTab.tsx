@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { v4 as uuid } from "uuid";
 import { Button } from "@/components/ui/button";
 import LoadingIcon from "@/components/ui/loading";
@@ -7,6 +7,7 @@ import { Square, Upload, X, File, Eye } from "lucide-react";
 import SvgAutonomize from "@/icons/Autonomize/Autonomize";
 import { FileUploadManager } from "./FileUploadManager";
 import { FilePreviewModal } from "./FilePreviewModal";
+import { SampleTextModal } from "./SampleTextModal";
 import {
   PlaygroundTabProps,
   Message,
@@ -30,8 +31,22 @@ export default function PlaygroundTab({
     name: string;
     type: string;
   } | null>(null);
-  // Controls when to show the sample files section
   const [showSampleSection, setShowSampleSection] = useState(true);
+  const [sampleTextModal, setSampleTextModal] = useState<{
+    isOpen: boolean;
+    text: string;
+    index: number;
+  }>({
+    isOpen: false,
+    text: "",
+    index: 0,
+  });
+
+  // Refs for auto-scroll and input focus
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isUserScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { leftPanelWidth, isDragging, handleDragStart } = useResizablePanel(33.33);
 
@@ -61,7 +76,6 @@ export default function PlaygroundTab({
     name: publishedFlowData?.name || "Agent",
   };
 
-  // Aggregate sample input file paths and names from input_samples
   const sampleFilePaths: string[] = Array.isArray(publishedFlowData?.input_samples)
     ? publishedFlowData!.input_samples.flatMap((s: any) =>
         Array.isArray(s?.file_names) ? s.file_names : []
@@ -77,9 +91,40 @@ export default function PlaygroundTab({
     }
   });
 
+  // Aggregate sample input texts from input_samples
+  const sampleTexts: string[] = Array.isArray(publishedFlowData?.input_samples)
+    ? publishedFlowData!.input_samples.flatMap((s: any) =>
+        Array.isArray(s?.sample_text) ? s.sample_text : []
+      )
+    : [];
+
   const getTagTitle = (tagId: string): string => {
     const tag = MARKETPLACE_TAGS.find((t) => t.id === tagId);
     return tag ? tag.title : tagId;
+  };
+
+  // Helper to truncate text for preview
+  const truncateText = (text: string, maxLength: number = 80): string => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
+  };
+
+  // Helper to open sample text modal
+  const openSampleTextModal = (text: string, index: number) => {
+    setSampleTextModal({
+      isOpen: true,
+      text,
+      index,
+    });
+  };
+
+  // Helper to close sample text modal
+  const closeSampleTextModal = () => {
+    setSampleTextModal({
+      isOpen: false,
+      text: "",
+      index: 0,
+    });
   };
 
   const hasChatInput = useMemo(() => {
@@ -154,6 +199,56 @@ export default function PlaygroundTab({
       .filter((file): file is NonNullable<typeof file> => file !== null);
   }, [fileUrls, fileInputComponents]);
 
+  // Auto-scroll functionality
+  const scrollToBottom = (smooth: boolean = true) => {
+    if (chatContainerRef.current && !isUserScrollingRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto',
+      });
+    }
+  };
+
+  // Detect user manual scrolling
+  const handleScroll = () => {
+    if (!chatContainerRef.current) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+    
+    // If user scrolls up, mark as user scrolling
+    if (!isNearBottom) {
+      isUserScrollingRef.current = true;
+      
+      // Clear existing timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      
+      // Reset user scrolling flag after 2 seconds of no scrolling
+      scrollTimeoutRef.current = setTimeout(() => {
+        isUserScrollingRef.current = false;
+      }, 2000);
+    } else {
+      isUserScrollingRef.current = false;
+    }
+  };
+
+  // Auto-scroll when messages change or streaming updates
+  useEffect(() => {
+    scrollToBottom(true);
+  }, [messages, displayedTexts]);
+
+  // Focus input after sending message
+  const focusInput = () => {
+    if (textareaRef.current && hasChatInput) {
+      // Small delay to ensure DOM updates are complete
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+    }
+  };
+
   const sendMessage = async () => {
     if (hasChatInput && !input.trim()) return;
     if (!hasChatInput && selectedFiles.length === 0) return;
@@ -162,18 +257,18 @@ export default function PlaygroundTab({
     const currentFileUrls = { ...fileUrls };
     const messageText = hasChatInput ? input.trim() : "Processing uploaded file...";
 
-    // Build attachments from currently selected files so they appear in chat history
     const attachments = selectedFiles.map((file) => ({
       url: file.url,
       name: file.filename,
       type: file.fileType,
     }));
 
-    // Keep sample section hidden until the run completes
     setShowSampleSection(false);
-
     setFileUrls({});
     setInput("");
+    
+    // Reset user scrolling flag when sending a new message
+    isUserScrollingRef.current = false;
     
     await sendMessageHook(
       messageText,
@@ -181,6 +276,9 @@ export default function PlaygroundTab({
       fileInputComponents,
       attachments
     );
+
+    // Focus input after sending
+    focusInput();
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -191,7 +289,6 @@ export default function PlaygroundTab({
   };
 
   const handleFileUrlChange = (componentId: string, url: string) => {
-    // Hide sample section when a file is uploaded/selected
     setShowSampleSection(false);
     setFileUrls((prev) => ({
       ...prev,
@@ -200,7 +297,6 @@ export default function PlaygroundTab({
   };
 
   const clearFileUrl = (componentId: string) => {
-    // Hide section until the next run completes
     setShowSampleSection(false);
     setFileUrls((prev) => {
       const newUrls = { ...prev };
@@ -210,7 +306,6 @@ export default function PlaygroundTab({
   };
 
   const removeSelectedFile = (componentId: string) => {
-    // Hide section and clear the file
     setShowSampleSection(false);
     clearFileUrl(componentId);
   };
@@ -223,7 +318,6 @@ export default function PlaygroundTab({
     });
   };
 
-  // Presigned read URL for sample files in Agent Details
   const readPresignedUrlMutation = usePostReadPresignedUrl();
 
   const getFileTypeFromName = (name: string) => {
@@ -264,7 +358,6 @@ export default function PlaygroundTab({
     }
   };
 
-  // Select sample file for payload (mutually exclusive with uploaded files)
   const selectSampleFile = async (filePathOrName: string) => {
     try {
       const { containerName, storageAccount } = getStorageDetails();
@@ -276,7 +369,6 @@ export default function PlaygroundTab({
       const signedUrl = resp?.presignedUrl?.data?.signedUrl || "";
       if (!signedUrl || fileInputComponents.length === 0) return;
       const targetComponentId = fileInputComponents[0].id;
-      // Clear previous selections and set only the sample file
       setShowSampleSection(false);
       setFileUrls({ [targetComponentId]: signedUrl });
     } catch (e) {
@@ -284,12 +376,20 @@ export default function PlaygroundTab({
     }
   };
 
-  // Show the sample section again only when a run is complete and no files are selected
   useEffect(() => {
     if (!isLoading && !streamingMessageId && selectedFiles.length === 0) {
       setShowSampleSection(true);
     }
   }, [isLoading, streamingMessageId, selectedFiles.length]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="flex h-full w-full flex-col ">
@@ -358,6 +458,28 @@ export default function PlaygroundTab({
                   <p className="text-[#64616A] text-xs">No sample files provided.</p>
                 )}
               </div>
+
+              {/* Sample Input Text Section */}
+              <div className="space-y-2">
+                <p className="text-[#444] text-xs font-medium">Sample Input Text:</p>
+                {sampleTexts.length > 0 ? (
+                  <div className="flex flex-col gap-2 mt-1">
+                    {sampleTexts.map((text, idx) => (
+                      <button
+                        key={`sample-text-${idx}`}
+                        type="button"
+                        className="bg-[#F5F2FF] text-[#64616A] text-xs px-3 py-2 rounded-[4px] hover:bg-[#EAE6FF] transition-colors text-left break-words"
+                        onClick={() => openSampleTextModal(text, idx)}
+                        title="Click to view full text"
+                      >
+                        {truncateText(text, 80)}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[#64616A] text-xs">No sample text provided.</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -378,7 +500,11 @@ export default function PlaygroundTab({
             pointerEvents: isDragging ? "none" : "auto",
           }}
         >
-          <div className="bg-white rounded-lg p-3 flex-1 overflow-y-auto scrollbar-hide">
+          <div 
+            ref={chatContainerRef}
+            onScroll={handleScroll}
+            className="bg-white rounded-lg p-3 flex-1 overflow-y-auto scrollbar-hide"
+          >
             {messages.length === 0 && (
               <div className="flex h-full items-center justify-center text-muted-foreground">
                 <div className="text-center">
@@ -485,6 +611,7 @@ export default function PlaygroundTab({
               {hasChatInput ? (
                 <div className="relative">
                   <textarea
+                    ref={textareaRef}
                     value={input}
                     rows={1}
                     onChange={(e) => setInput(e.target.value)}
@@ -578,7 +705,7 @@ export default function PlaygroundTab({
                 </div>
               )}
             </div>
-            {/* Right panel sample files selection (hidden until run completes or when a file is selected) */}
+            {/* Right panel sample files selection */}
             {sampleFileNames.length > 0 && selectedFiles.length === 0 && showSampleSection && (
               <div className="mt-4">
                 <p className="text-xs text-[#444] font-medium mb-2">Or Choose from Sample Input files below</p>
@@ -635,6 +762,13 @@ export default function PlaygroundTab({
           fileType={previewFile.type}
         />
       )}
+
+      <SampleTextModal
+        isOpen={sampleTextModal.isOpen}
+        onClose={closeSampleTextModal}
+        text={sampleTextModal.text}
+        index={sampleTextModal.index}
+      />
     </div>
   );
 }

@@ -132,9 +132,12 @@ async def read_projects(
                 )
             )
         ).all()
-        # Filter out starter folder, but keep Builder Agent folder visible to all users
+        # Filter out starter folder and marketplace agent folder, but keep Builder Agent folder visible to all users
         # TODO: Add role-based access control - only admins should see Builder Agent folder
-        projects = [project for project in projects if project.name != STARTER_FOLDER_NAME]
+        projects = [
+            project for project in projects 
+            if project.name not in [STARTER_FOLDER_NAME, "Marketplace Agent"]
+        ]
         return sorted(projects, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

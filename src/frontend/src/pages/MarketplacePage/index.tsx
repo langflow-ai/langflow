@@ -139,17 +139,21 @@ export default function MarketplacePage() {
   const debouncedSetSearchQuery = useCallback(
     debounce((value: string) => {
       setSearchQuery(value);
-      setPageIndex(1);
+      // Only reset to first page when the search actually changes
+      setPageIndex((prev) => (value !== searchQuery ? 1 : prev));
     }, 500),
-    []
+    [searchQuery]
   );
 
   useEffect(() => {
-    debouncedSetSearchQuery(debouncedSearch);
+    // Avoid resetting pagination on mount if the stored search equals current
+    if (debouncedSearch !== searchQuery) {
+      debouncedSetSearchQuery(debouncedSearch);
+    }
     return () => {
       debouncedSetSearchQuery.cancel();
     };
-  }, [debouncedSearch, debouncedSetSearchQuery]);
+  }, [debouncedSearch, searchQuery, debouncedSetSearchQuery]);
 
   useEffect(() => {
     if (isFilterOpen) {
