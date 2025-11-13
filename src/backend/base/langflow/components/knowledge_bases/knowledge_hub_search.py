@@ -29,7 +29,7 @@ class KnowledgeHubSearchComponent(Component):
             display_name="Search Query",
             tool_mode=True,
         ),
-        MultiselectInput(
+        DropdownInput(
             name="selected_hubs",
             display_name="Data Sources",
             value=[],
