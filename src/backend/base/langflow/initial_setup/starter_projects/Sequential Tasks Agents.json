@@ -362,11 +362,11 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": null
+                    "version": "0.3.79"
                   },
                   {
                     "name": "pydantic",
-                    "version": null
+                    "version": "2.10.6"
                   },
                   {
                     "name": "lfx",
@@ -1091,11 +1091,11 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": null
+                    "version": "0.3.79"
                   },
                   {
                     "name": "pydantic",
-                    "version": null
+                    "version": "2.10.6"
                   },
                   {
                     "name": "lfx",
@@ -2591,11 +2591,11 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": null
+                    "version": "0.3.79"
                   },
                   {
                     "name": "pydantic",
-                    "version": null
+                    "version": "2.10.6"
                   },
                   {
                     "name": "lfx",
@@ -3309,11 +3309,11 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": null
+                    "version": "0.3.79"
                   },
                   {
                     "name": "pydantic",
-                    "version": null
+                    "version": "2.10.6"
                   },
                   {
                     "name": "lfx",
@@ -3706,7 +3706,7 @@
                 "dependencies": [
                   {
                     "name": "httpx",
-                    "version": null
+                    "version": "0.28.1"
                   },
                   {
                     "name": "lfx",
@@ -4119,11 +4119,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": null
+                    "version": "3.10.15"
                   },
                   {
                     "name": "fastapi",
-                    "version": null
+                    "version": "0.120.0"
                   },
                   {
                     "name": "lfx",
