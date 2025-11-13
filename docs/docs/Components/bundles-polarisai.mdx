@@ -1,0 +1,27 @@
+---
+title: Polaris AI DataInsight
+slug: /bundles-polaris-ai-datainsight
+---
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Polaris AI DataInsight** bundle.
+
+For more information, see the [Polaris AI DataInsight documentation](https://datainsight.polarisoffice.com/documentation?docType=overview).
+
+## Polaris AI DataInsight loader
+
+This component uses the `PolarisAIDataInsightLoader` from LangChain to extract structured document elements (text, images, complex tables, charts, etc.) from various file formats.  
+The extracted content is returned as structured JSON and can be consumed as a [`Data`](/data-types#data).
+
+### Polaris AI DataInsight parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| file_path | String | The path to the file to be parsed (supported file types are listed [here](https://datainsight.polarisoffice.com/_api/reference)). |
+| api_key | SecretString | Polaris AI DataInsight API Key. See [Quickstart Guide](https://datainsight.polarisoffice.com/documentation?docType=quickstart) to obtain a key. |
+| resources_dir | String | Directory path for storing extracted image resources. If the directory does not exist, it will be created. Defaults to `tmp/`. |
