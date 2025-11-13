@@ -630,9 +630,12 @@ async def install_mcp_config(
 
             # For OAuth/MCP Composer, use the special format
             settings = get_settings_service().settings
-            command = "uvx"
+            command = "uv"
             args = [
-                f"mcp-composer{settings.mcp_composer_version}",
+                "run",
+                "python",
+                "-m",
+                "mcp_composer",
                 "--mode",
                 "stdio",
                 "--sse-url",

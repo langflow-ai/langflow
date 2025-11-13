@@ -419,8 +419,11 @@ class MCPComposerService(Service):
         """Start the MCP Composer subprocess for a specific project."""
         settings = get_settings_service().settings
         cmd = [
-            "uvx",
-            f"mcp-composer{settings.mcp_composer_version}",
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "mcp_composer",
             "--mode",
             "sse",
             "--sse-url",
@@ -463,6 +466,11 @@ class MCPComposerService(Service):
                         cmd.extend(["--env", env_key, str(value)])
 
         # Start the subprocess with both stdout and stderr captured
+        # TEMPORARY DEBUG: Print command being executed
+        safe_cmd = self._obfuscate_command_secrets(cmd)
+        await logger.adebug(f"Starting MCP Composer with command: {' '.join(safe_cmd)}")
+        print(f"[MCP Composer] Starting command: {' '.join(safe_cmd)}")
+
         process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)  # noqa: ASYNC220, S603
 
         # Monitor the process startup with multiple checks
@@ -470,6 +478,7 @@ class MCPComposerService(Service):
         port_bound = False
 
         await logger.adebug(f"Monitoring MCP Composer startup for project {project_id} (PID: {process.pid})")
+        print(f"[MCP Composer] Process started with PID: {process.pid}")
 
         for check in range(max_startup_checks):
             await asyncio.sleep(startup_delay)
@@ -516,12 +525,27 @@ class MCPComposerService(Service):
                 f"(check {check + 1}/{max_startup_checks})"
             )
 
-            # Try to read any available stderr without blocking (only log if there's an error)
+            # Try to read any available stderr/stdout without blocking
+            # TEMPORARY DEBUG: Print all output, not just errors
             if process.stderr and select.select([process.stderr], [], [], 0)[0]:
                 try:
                     stderr_line = process.stderr.readline()
-                    if stderr_line and "ERROR" in stderr_line:
-                        await logger.aerror(f"MCP Composer error: {stderr_line.strip()}")
+                    if stderr_line:
+                        print(f"[MCP Composer STDERR] {stderr_line.strip()}")
+                        if "ERROR" in stderr_line:
+                            await logger.aerror(f"MCP Composer error: {stderr_line.strip()}")
+                        else:
+                            await logger.adebug(f"MCP Composer stderr: {stderr_line.strip()}")
+                except Exception:  # noqa: BLE001
+                    pass
+
+            # TEMPORARY DEBUG: Also check stdout
+            if process.stdout and select.select([process.stdout], [], [], 0)[0]:
+                try:
+                    stdout_line = process.stdout.readline()
+                    if stdout_line:
+                        print(f"[MCP Composer STDOUT] {stdout_line.strip()}")
+                        await logger.adebug(f"MCP Composer stdout: {stdout_line.strip()}")
                 except Exception:  # noqa: BLE001
                     pass
 
