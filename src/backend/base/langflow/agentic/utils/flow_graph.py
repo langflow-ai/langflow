@@ -200,4 +200,3 @@ async def get_flow_graph_summary(
     except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Error getting flow graph summary for {flow_id_or_name}: {e}")
         return {"error": str(e)}
-

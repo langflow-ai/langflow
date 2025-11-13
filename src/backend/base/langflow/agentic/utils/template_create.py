@@ -81,5 +81,3 @@ async def create_flow_from_template_and_get_link(
     # 5) Build relative UI link
     link = f"/flow/{db_flow.id}/folder/{folder_id}"
     return {"id": str(db_flow.id), "link": link}
-
-

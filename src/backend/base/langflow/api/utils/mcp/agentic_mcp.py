@@ -76,9 +76,7 @@ async def auto_configure_agentic_mcp_server(session: AsyncSession) -> None:
                     server_exists = server_name in server_list.get("mcpServers", {})
 
                     if server_exists:
-                        await logger.adebug(
-                            f"Agentic MCP server already exists for user {user.username}, skipping"
-                        )
+                        await logger.adebug(f"Agentic MCP server already exists for user {user.username}, skipping")
                         servers_skipped += 1
                         continue
 

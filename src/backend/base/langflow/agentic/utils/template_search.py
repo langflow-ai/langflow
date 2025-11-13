@@ -85,11 +85,7 @@ def list_templates(
 
             # Extract only the requested fields
             if fields:
-                filtered_data = {
-                    field: template_data.get(field)
-                    for field in fields
-                    if field in template_data
-                }
+                filtered_data = {field: template_data.get(field) for field in fields if field in template_data}
             else:
                 # Return all fields if none specified
                 filtered_data = template_data
@@ -137,11 +133,7 @@ def get_template_by_id(
 
             if template_data.get("id") == template_id:
                 if fields:
-                    return {
-                        field: template_data.get(field)
-                        for field in fields
-                        if field in template_data
-                    }
+                    return {field: template_data.get(field) for field in fields if field in template_data}
                 return template_data
 
         except (json.JSONDecodeError, orjson.JSONDecodeError):
@@ -177,7 +169,7 @@ def get_all_tags(starter_projects_path: str | Path | None = None) -> list[str]:
             tags = template_data.get("tags", [])
             all_tags.update(tags)
 
-        except (json.JSONDecodeError, orjson.JSONDecodeError)as e:
+        except (json.JSONDecodeError, orjson.JSONDecodeError) as e:
             logger.aexception(f"Error loading template {template_file}: {e}")
             continue
 
