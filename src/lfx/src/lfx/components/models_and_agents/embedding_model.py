@@ -190,7 +190,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
 
             params = {
                 "model_id": model,
-                "url": base_url_ibm_watsonx or "https://us-south.ml.cloud.ibm.com",
+                "url": base_url_ibm_watsonx or IBM_WATSONX_URLS[0],
                 "apikey": api_key,
             }
 
