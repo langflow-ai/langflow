@@ -1,7 +1,7 @@
-import requests
 from pydantic.v1 import SecretStr
 
-from lfx.base.models.groq_constants import GROQ_MODELS, TOOL_CALLING_UNSUPPORTED_GROQ_MODELS, UNSUPPORTED_GROQ_MODELS
+from lfx.base.models.groq_constants import GROQ_MODELS
+from lfx.base.models.groq_model_discovery import get_groq_models
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
@@ -52,7 +52,7 @@ class GroqModel(LCModelComponent):
         DropdownInput(
             name="model_name",
             display_name="Model",
-            info="The name of the model to use.",
+            info="The name of the model to use. Add your Groq API key to access additional available models.",
             options=GROQ_MODELS,
             value=GROQ_MODELS[0],
             refresh_button=True,
@@ -71,35 +71,42 @@ class GroqModel(LCModelComponent):
     ]
 
     def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
-        try:
-            url = f"{self.base_url}/openai/v1/models"
-            headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        """Get available Groq models using the dynamic discovery system.
 
-            response = requests.get(url, headers=headers, timeout=10)
-            response.raise_for_status()
-            model_list = response.json()
+        This method uses the groq_model_discovery module which:
+        - Fetches models directly from Groq API
+        - Automatically tests tool calling support
+        - Caches results for 24 hours
+        - Falls back to hardcoded list if API fails
+
+        Args:
+            tool_model_enabled: If True, only return models that support tool calling
+
+        Returns:
+            List of available model IDs
+        """
+        try:
+            # Get models with metadata from dynamic discovery system
+            api_key = self.api_key if hasattr(self, "api_key") and self.api_key else None
+            models_metadata = get_groq_models(api_key=api_key)
+
+            # Filter out non-LLM models (audio, TTS, guards)
             model_ids = [
-                model["id"] for model in model_list.get("data", []) if model["id"] not in UNSUPPORTED_GROQ_MODELS
+                model_id for model_id, metadata in models_metadata.items() if not metadata.get("not_supported", False)
             ]
-        except (ImportError, ValueError, requests.exceptions.RequestException) as e:
+
+            # Filter by tool calling support if requested
+            if tool_model_enabled:
+                model_ids = [model_id for model_id in model_ids if models_metadata[model_id].get("tool_calling", False)]
+                logger.info(f"Loaded {len(model_ids)} Groq models with tool calling support")
+            else:
+                logger.info(f"Loaded {len(model_ids)} Groq models")
+        except (ValueError, KeyError, TypeError, ImportError) as e:
             logger.exception(f"Error getting model names: {e}")
-            model_ids = GROQ_MODELS
-        if tool_model_enabled:
-            try:
-                from langchain_groq import ChatGroq
-            except ImportError as e:
-                msg = "langchain_groq is not installed. Please install it with `pip install langchain_groq`."
-                raise ImportError(msg) from e
-            for model in model_ids:
-                model_with_tool = ChatGroq(
-                    model=model,
-                    api_key=self.api_key,
-                    base_url=self.base_url,
-                )
-                if not self.supports_tool_calling(model_with_tool) or model in TOOL_CALLING_UNSUPPORTED_GROQ_MODELS:
-                    model_ids.remove(model)
+            # Fallback to hardcoded list from groq_constants.py
+            return GROQ_MODELS
+        else:
             return model_ids
-        return model_ids
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
@@ -107,13 +114,13 @@ class GroqModel(LCModelComponent):
                 if len(self.api_key) != 0:
                     try:
                         ids = self.get_models(tool_model_enabled=self.tool_model_enabled)
-                    except (ImportError, ValueError, requests.exceptions.RequestException) as e:
+                    except (ValueError, KeyError, TypeError, ImportError) as e:
                         logger.exception(f"Error getting model names: {e}")
                         ids = GROQ_MODELS
                     build_config.setdefault("model_name", {})
                     build_config["model_name"]["options"] = ids
                     build_config["model_name"].setdefault("value", ids[0])
-            except Exception as e:
+            except (ValueError, KeyError, TypeError, AttributeError) as e:
                 msg = f"Error getting model names: {e}"
                 raise ValueError(msg) from e
         return build_config
