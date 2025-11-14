@@ -331,38 +331,13 @@ class CugaComponent(ToolCallingAgentComponent):
 
                 await asyncio.sleep(0.5)
 
-                tools_used = []
-
-                # Simulate browser tool usage
-                if getattr(self, "BROWSER", False) and any(
-                    word in current_input.lower() for word in ["search", "web", "browse"]
-                ):
-                    tool_run_id = str(uuid.uuid4())
-
-                    yield {
-                        "event": "on_tool_start",
-                        "run_id": tool_run_id,
-                        "name": "BrowserTool",
-                        "data": {"input": {"query": current_input}},
-                    }
-                    await asyncio.sleep(0.3)
-
-                    yield {
-                        "event": "on_tool_end",
-                        "run_id": tool_run_id,
-                        "name": "BrowserTool",
-                        "data": {"output": "Simulated web search results for: " + current_input},
-                    }
-                    tools_used.append("Performed web search")
-
                 # 2. Build final response
                 response_parts = []
 
                 response_parts.append(f"Processed input: '{current_input}'")
                 response_parts.append(f"Available tools: {len(tools)}")
-                # final_response = "CUGA Agent Response:\n" + "\n".join(response_parts)
-                last_event: StreamEvent = None
-                tool_run_id = None
+                last_event: StreamEvent | None = None
+                tool_run_id: str | None = None
                 # 3. Chain end event with AgentFinish
                 async for event in cuga_agent.run_task_generic_yield(eval_mode=False, goal=current_input):
                     logger.debug(f"recieved event {event}")
@@ -404,9 +379,6 @@ class CugaComponent(ToolCallingAgentComponent):
                         answer_preview = task_result.answer[:100] if task_result.answer else "None"
                         logger.info(f"[CUGA] Yielding chain_end event with answer: {answer_preview}...")
                         yield end_event
-                # task_result: AgentResult = await cuga_agent.run_task_generic_yield(
-                #     eval_mode=False, goal=current_input, on_progress=on_progress
-                # )
 
             except (ValueError, TypeError, RuntimeError, ConnectionError) as e:
                 logger.error(f"An error occurred: {e!s}")
