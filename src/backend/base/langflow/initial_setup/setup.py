@@ -756,7 +756,7 @@ async def load_agentic_flows() -> list[tuple[anyio.Path, dict]]:
     Returns:
         List of tuples containing (file_path, flow_data)
     """
-    agentic_flows = []
+    agentic_flows: list[tuple[anyio.Path, dict]] = []
     # Get the path to the agentic/flows directory
     folder = anyio.Path(__file__).parent.parent / "agentic" / "flows"
 

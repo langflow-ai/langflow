@@ -35,7 +35,7 @@ def replace_none_and_null_with_empty_str(data: list[dict], required_fields: list
         return v
 
     not_avail = "Not available"
-    required_fields_set = set(required_fields)
+    required_fields_set = set(required_fields) if required_fields else set()
     result = []
     for d in data:
         if not isinstance(d, dict):
