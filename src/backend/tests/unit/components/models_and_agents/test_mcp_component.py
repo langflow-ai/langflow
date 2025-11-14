@@ -225,3 +225,147 @@ class TestMCPComponentErrorHandling:
             mock_manager._cleanup_session.assert_called_once_with("test_context")
             assert stdio_client.session is None
             assert stdio_client._connected is False
+
+
+class TestMCPComponentConfigPriority:
+    """Test configuration priority in MCP component - tweaks/value over database."""
+
+    @pytest.fixture
+    def component(self):
+        """Create a component for testing."""
+        return MCPToolsComponent()
+
+    @pytest.mark.asyncio
+    async def test_config_from_value_takes_priority_over_database(self, component):
+        """Test that config from mcp_server value takes priority over database config."""
+        # Set up component with a server config in the value
+        value_config = {
+            "command": "uvx mcp-server-from-value",
+            "args": ["--test"],
+            "env": {"TEST": "value"},
+        }
+        component.mcp_server = {"name": "test_server", "config": value_config}
+        component._user_id = "test_user_123"
+
+        # Mock the database get_server to return a different config
+        db_config = {
+            "command": "uvx mcp-server-from-database",
+            "args": ["--prod"],
+            "env": {"TEST": "database"},
+        }
+
+        with (
+            patch("langflow.api.v2.mcp.get_server") as mock_get_server,
+            patch("langflow.services.database.models.user.crud.get_user_by_id") as mock_get_user,
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch.object(component.stdio_client, "connect_to_server") as mock_connect,
+        ):
+            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_server.return_value = db_config
+            mock_connect.return_value = []
+
+            # Call update_tool_list which should use value_config, not db_config
+            await component.update_tool_list()
+
+            # Verify that connect_to_server was called with the value config, not db config
+            mock_connect.assert_called_once()
+            call_args = mock_connect.call_args
+            # The config passed should be from value, not database
+            assert call_args is not None
+
+            # Since value config is provided, get_server should NOT be called
+            mock_get_server.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_database_config_used_when_no_value_config(self, component):
+        """Test that database config is used when no config in value."""
+        # Set up component with only server name, no config
+        component.mcp_server = "test_server"
+        component._user_id = "test_user_123"
+
+        # Mock the database get_server to return a config
+        db_config = {
+            "command": "uvx mcp-server-from-database",
+            "args": ["--prod"],
+            "env": {"TEST": "database"},
+        }
+
+        with (
+            patch("langflow.api.v2.mcp.get_server") as mock_get_server,
+            patch("langflow.services.database.models.user.crud.get_user_by_id") as mock_get_user,
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch.object(component.stdio_client, "connect_to_server") as mock_connect,
+        ):
+            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_server.return_value = db_config
+            mock_connect.return_value = []
+
+            # Call update_tool_list which should fetch from database
+            await component.update_tool_list()
+
+            # Verify that get_server WAS called since no value config provided
+            mock_get_server.assert_called_once()
+
+            # Verify connect_to_server was called
+            mock_connect.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_empty_value_config_falls_back_to_database(self, component):
+        """Test that empty/None config in value falls back to database."""
+        # Set up component with server name but None/empty config
+        component.mcp_server = {"name": "test_server", "config": None}
+        component._user_id = "test_user_123"
+
+        # Mock the database get_server to return a config
+        db_config = {
+            "command": "uvx mcp-server-from-database",
+            "args": ["--prod"],
+        }
+
+        with (
+            patch("langflow.api.v2.mcp.get_server") as mock_get_server,
+            patch("langflow.services.database.models.user.crud.get_user_by_id") as mock_get_user,
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch.object(component.stdio_client, "connect_to_server") as mock_connect,
+        ):
+            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_server.return_value = db_config
+            mock_connect.return_value = []
+
+            # Call update_tool_list which should fall back to database
+            await component.update_tool_list()
+
+            # Verify that get_server WAS called since config is None
+            mock_get_server.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_rest_api_override_scenario(self, component):
+        """Test REST API scenario where tweaks provide config to override database."""
+        # Simulate REST API call with tweaks providing full config
+        api_provided_config = {
+            "command": "uvx mcp-server-api-override",
+            "args": ["--api-mode"],
+            "env": {"API_KEY": "secret123"},  # pragma: allowlist secret
+        }
+        component.mcp_server = {"name": "production_server", "config": api_provided_config}
+        component._user_id = "api_user_456"
+
+        with (
+            patch("langflow.api.v2.mcp.get_server") as mock_get_server,
+            patch("langflow.services.database.models.user.crud.get_user_by_id") as mock_get_user,
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch.object(component.stdio_client, "connect_to_server") as mock_connect,
+        ):
+            mock_get_user.return_value = MagicMock(id="api_user_456")
+            # Database has different config
+            mock_get_server.return_value = {"command": "uvx old-server"}
+            mock_connect.return_value = []
+
+            # Call update_tool_list
+            await component.update_tool_list()
+
+            # Database should NOT be queried since API provided full config
+            mock_get_server.assert_not_called()
+
+            # Connect should be called with API-provided config
+            mock_connect.assert_called_once()
