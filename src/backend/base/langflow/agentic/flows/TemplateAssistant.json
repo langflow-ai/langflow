@@ -1127,7 +1127,7 @@
             ],
             "frozen": false,
             "icon": "Mcp",
-            "last_updated": "2025-11-06T20:15:55.032Z",
+            "last_updated": "2025-11-14T17:38:33.071Z",
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
@@ -1920,7 +1920,7 @@
             "field_order": [],
             "frozen": false,
             "icon": "code",
-            "last_updated": "2025-11-06T19:59:34.682Z",
+            "last_updated": "2025-11-14T17:38:33.072Z",
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
@@ -2075,7 +2075,7 @@
             ],
             "frozen": false,
             "icon": "bot",
-            "last_updated": "2025-11-06T19:59:34.682Z",
+            "last_updated": "2025-11-11T18:33:19.368Z",
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
@@ -2767,7 +2767,7 @@
         "dragging": false,
         "id": "Agent-hmAIg",
         "measured": {
-          "height": 594,
+          "height": 603,
           "width": 320
         },
         "position": {
@@ -4270,9 +4270,9 @@
       }
     ],
     "viewport": {
-      "x": 1533.3325669606234,
-      "y": -861.9953353305639,
-      "zoom": 0.8304700240908968
+      "x": 1103.2654077868212,
+      "y": -438.3378689293462,
+      "zoom": 0.4894066225411566
     }
   },
   "description": "Langflow assistant to support on templates and components.",
