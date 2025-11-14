@@ -11,7 +11,10 @@ import CustomAccountMenu from "@/customization/components/custom-AccountMenu";
 import CustomLangflowCounts from "@/customization/components/custom-langflow-counts";
 import { CustomOrgSelector } from "@/customization/components/custom-org-selector";
 import { CustomProductSelector } from "@/customization/components/custom-product-selector";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import {
+  ENABLE_DATASTAX_LANGFLOW,
+  ENABLE_LANGFLOW_ASSISTANT,
+} from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import useAlertStore from "@/stores/alertStore";
@@ -90,7 +93,7 @@ export default function AppHeader(): JSX.Element {
         className={`relative left-3 z-30 flex shrink-0 items-center gap-3`}
         data-testid="header_right_section_wrapper"
       >
-        <AssistantButton type="header" />
+        {ENABLE_LANGFLOW_ASSISTANT && <AssistantButton type="header" />}
         <>
           <Button
             unstyled
