@@ -18,9 +18,6 @@ Like the Langflow agent, the CUGA component can use tools connected to its **Too
 The CUGA component supports browser automation for web scraping with [Playwright](https://playwright.dev/docs/intro).
 To enable web scraping, set the `browser_enabled` parameter to `true`, and specify a single URL in the `web_apps` parameter, in the format `https://example.com`.
 
-The CUGA component includes a specialized API sub-agent optimized for handling API requests and parsing responses.
-To use the API sub-agent, set the `API` parameter to `true`.
-
 The CUGA component's **Policies** input allows custom policies to be loaded for the agent to execute.
 A policy is a Markdown file with agent instructions.
 
@@ -62,16 +59,16 @@ For more information, see the [CUGA project repository](https://github.com/cuga-
     ```
     Based on the available data, here are the accounts:
 
-        Apex Industries (NY) - Revenue: $1,200,000
-        Phoenix Holdings (CA) - Revenue: $9,500,000
-        Zenith Group (TX) - Revenue: $4,500,000
-        Frontier Tech (CO) - Revenue: $2,100,000
-        Innovate Inc. (CA) - Revenue: $5,500,000
-        Cloud Sphere LLC (WA) - Revenue: $4,300,000
-        Info Stream Tech (CA) - Revenue: $8,900,000
-        Terra Firm Ltd. (CO) - Revenue: $3,200,000
-        Red River LLC (TX) - Revenue: $500,000
-        Keystone Industries (PA) - Revenue: $3,400,000
+        Summit Solutions (NY) - Revenue: $1,200,000
+        Pacific Ventures (CA) - Revenue: $9,500,000
+        Lone Star Corp (TX) - Revenue: $4,500,000
+        Mountain Peak Systems (CO) - Revenue: $2,100,000
+        Digital Dynamics (CA) - Revenue: $5,500,000
+        Cascade Computing (WA) - Revenue: $4,300,000
+        Data Flow Systems (CA) - Revenue: $8,900,000
+        Rocky Mountain Enterprises (CO) - Revenue: $3,200,000
+        Blue Sky Partners (TX) - Revenue: $500,000
+        Liberty Manufacturing (PA) - Revenue: $3,400,000
 
     This is a partial list; there are more accounts available. The total revenue across all accounts is $210,200,000.
     ```
@@ -88,6 +85,7 @@ For more information, see the [CUGA project repository](https://github.com/cuga-
 | format_instructions | Multiline String | Template for structured output. |
 | output_schema | Table | When `output_schema` is provided, structured responses are validated against a dynamically built schema. Invalid items are returned alongside validation errors. Fields: `name`, `description`, `type` (`str`, `int`, `float`, `bool`, `dict`), `multiple` (as list).|
 | add_current_date_tool | Boolean | If true, adds a tool that returns the current date. Default: `true`. |
+| lite_mode | Boolean | Set to `true` to enable CugaLite mode for faster execution when using a smaller number of tools. Default: `true`. |
+| lite_mode_tool_threshold | Integer | The threshold to automatically enable CugaLite. If the CUGA component has fewer tools connected than this threshold, CugaLite is activated. Default: `25`. |
 | browser_enabled | Boolean | Enable a built-in browser for web scraping and search. Default: `false`. |
 | web_apps | Multiline String | When `browser_enabled` is true, specify a single URL such as `https://example.com` that the agent can open with the built-in browser.|
-| API | Boolean | Enable API sub-agent specialized for API interactions. Default: `false`. |
