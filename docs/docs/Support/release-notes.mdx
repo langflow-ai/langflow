@@ -54,6 +54,12 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
+- Support for streamable HTTP protocol for MCP clients
+
+    When using Langflow as an MCP client, you can now connect to MCP servers with [streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http).
+    SSE transport is still supported as a fallback for backwards compatibility.
+    Streamable HTTP transport support for Langflow as an MCP server is planned for a future release.
+
 - Webhook authentication
 
     Added the `LANGFLOW_WEBHOOK_AUTH_ENABLE` environment variable for authenticating requests to the [`/webhook` endpoint](/api-flows-run#webhook-run-flow). When `LANGFLOW_WEBHOOK_AUTH_ENABLE=TRUE`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `FALSE`, no Langflow API key is required and all requests to the webhook endpoint are treated as being sent by the flow owner.
@@ -86,7 +92,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
   New [**Mock Data** component](/components-data#mock-data)
 
   New [**Dynamic Create Data** component](/components-processing#dynamic-create-data)
-  
+
   New [**ALTK** bundle](/bundles-altk)
 
   New [**CometAPI** bundle](/bundles-cometapi)
@@ -94,7 +100,6 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
   New [**Docling Remote VLM** component](/bundles-docling#docling-remote-vlm)
 
 ### Deprecations
-
 
 ## 1.6.0
 
