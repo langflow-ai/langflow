@@ -1,3 +1,5 @@
+import json
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
@@ -5,13 +7,101 @@ from lfx.base.models.unified_models import get_model_provider_variable_mapping, 
 from sqlalchemy.exc import NoResultFound
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.v1.models import (
+    DISABLED_MODELS_VAR,
+    ENABLED_MODELS_VAR,
+    get_model_names_for_provider,
+    get_provider_from_variable_name,
+)
 from langflow.services.database.models.variable.model import VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
-from langflow.services.variable.constants import CREDENTIAL_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 
 router = APIRouter(prefix="/variables", tags=["Variables"])
 model_provider_variable_mapping = get_model_provider_variable_mapping()
+logger = logging.getLogger(__name__)
+
+
+async def _cleanup_model_list_variable(
+    variable_service: DatabaseVariableService,
+    user_id: UUID,
+    variable_name: str,
+    models_to_remove: set[str],
+    session: DbSession,
+) -> None:
+    """Remove specified models from a model list variable (disabled or enabled models).
+
+    If all models are removed, the variable is deleted entirely.
+    If the variable doesn't exist, this is a no-op.
+    """
+    try:
+        model_list_var = await variable_service.get_variable_object(
+            user_id=user_id, name=variable_name, session=session
+        )
+    except ValueError:
+        # Variable doesn't exist, nothing to clean up
+        return
+
+    if not model_list_var or not model_list_var.value:
+        return
+
+    # Parse current models
+    try:
+        current_models = set(json.loads(model_list_var.value))
+    except (json.JSONDecodeError, TypeError):
+        current_models = set()
+
+    # Filter out the provider's models
+    filtered_models = current_models - models_to_remove
+
+    # Nothing changed, no update needed
+    if filtered_models == current_models:
+        return
+
+    if filtered_models:
+        # Update with filtered list
+        if model_list_var.id is not None:
+            await variable_service.update_variable_fields(
+                user_id=user_id,
+                variable_id=model_list_var.id,
+                variable=VariableUpdate(
+                    id=model_list_var.id,
+                    name=variable_name,
+                    value=json.dumps(list(filtered_models)),
+                    type=GENERIC_TYPE,
+                ),
+                session=session,
+            )
+    else:
+        # No models left, delete the variable
+        await variable_service.delete_variable(
+            user_id=user_id, name=variable_name, session=session
+        )
+
+
+async def _cleanup_provider_models(
+    variable_service: DatabaseVariableService,
+    user_id: UUID,
+    provider: str,
+    session: DbSession,
+) -> None:
+    """Clean up disabled and enabled model lists for a deleted provider credential."""
+    try:
+        provider_models = get_model_names_for_provider(provider)
+    except ValueError:
+        logger.exception("Provider model retrieval failed")
+        return
+
+    # Clean up disabled models
+    await _cleanup_model_list_variable(
+        variable_service, user_id, DISABLED_MODELS_VAR, provider_models, session
+    )
+
+    # Clean up enabled models
+    await _cleanup_model_list_variable(
+        variable_service, user_id, ENABLED_MODELS_VAR, provider_models, session
+    )
 
 
 @router.post("/", response_model=VariableRead, status_code=201)
@@ -126,15 +216,6 @@ async def delete_variable(
         )
 
         # Check if this variable is a model provider credential
-        import json
-
-        from langflow.api.v1.models import (
-            DISABLED_MODELS_VAR,
-            ENABLED_MODELS_VAR,
-            get_model_names_for_provider,
-            get_provider_from_variable_name,
-        )
-
         provider = get_provider_from_variable_name(variable_to_delete.name)
 
         # Delete the variable
@@ -142,98 +223,7 @@ async def delete_variable(
 
         # If this was a provider credential, clean up disabled and enabled models for that provider
         if provider:
-            try:
-                # Get all model names for this provider
-                provider_models = get_model_names_for_provider(provider)
+            await _cleanup_provider_models(variable_service, current_user.id, provider, session)
 
-                # Clean up disabled models
-                try:
-                    disabled_var = await variable_service.get_variable_object(
-                        user_id=current_user.id, name=DISABLED_MODELS_VAR, session=session
-                    )
-                    if disabled_var and disabled_var.value:
-                        try:
-                            disabled_models = set(json.loads(disabled_var.value))
-                        except (json.JSONDecodeError, TypeError):
-                            disabled_models = set()
-
-                        # Remove provider's models from disabled list
-                        disabled_models_filtered = disabled_models - provider_models
-
-                        # Update the disabled models variable if anything changed
-                        if disabled_models_filtered != disabled_models:
-                            if disabled_models_filtered:
-                                # Update with filtered list
-                                from langflow.services.database.models.variable.model import VariableUpdate
-                                from langflow.services.variable.constants import GENERIC_TYPE
-
-                                if disabled_var.id is not None:
-                                    await variable_service.update_variable_fields(
-                                        user_id=current_user.id,
-                                        variable_id=disabled_var.id,
-                                        variable=VariableUpdate(
-                                            id=disabled_var.id,
-                                            name=DISABLED_MODELS_VAR,
-                                            value=json.dumps(list(disabled_models_filtered)),
-                                            type=GENERIC_TYPE,
-                                        ),
-                                        session=session,
-                                    )
-                            else:
-                                # No disabled models left for any provider, delete the variable
-                                await variable_service.delete_variable(
-                                    user_id=current_user.id, name=DISABLED_MODELS_VAR, session=session
-                                )
-                except ValueError:
-                    # DISABLED_MODELS_VAR doesn't exist, nothing to clean up
-                    pass
-
-                # Clean up explicitly enabled models
-                try:
-                    enabled_var = await variable_service.get_variable_object(
-                        user_id=current_user.id, name=ENABLED_MODELS_VAR, session=session
-                    )
-                    if enabled_var and enabled_var.value:
-                        try:
-                            enabled_models = set(json.loads(enabled_var.value))
-                        except (json.JSONDecodeError, TypeError):
-                            enabled_models = set()
-
-                        # Remove provider's models from enabled list
-                        enabled_models_filtered = enabled_models - provider_models
-
-                        # Update the enabled models variable if anything changed
-                        if enabled_models_filtered != enabled_models:
-                            if enabled_models_filtered:
-                                # Update with filtered list
-                                from langflow.services.database.models.variable.model import VariableUpdate
-                                from langflow.services.variable.constants import GENERIC_TYPE
-
-                                if enabled_var.id is not None:
-                                    await variable_service.update_variable_fields(
-                                        user_id=current_user.id,
-                                        variable_id=enabled_var.id,
-                                        variable=VariableUpdate(
-                                            id=enabled_var.id,
-                                            name=ENABLED_MODELS_VAR,
-                                            value=json.dumps(list(enabled_models_filtered)),
-                                            type=GENERIC_TYPE,
-                                        ),
-                                        session=session,
-                                    )
-                            else:
-                                # No enabled models left for any provider, delete the variable
-                                await variable_service.delete_variable(
-                                    user_id=current_user.id, name=ENABLED_MODELS_VAR, session=session
-                                )
-                except ValueError:
-                    # ENABLED_MODELS_VAR doesn't exist, nothing to clean up
-                    pass
-            except ValueError:
-                # Log the exception if provider model retrieval fails
-                import logging
-
-                logger = logging.getLogger(__name__)
-                logger.exception("Provider model retrieval failed")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
