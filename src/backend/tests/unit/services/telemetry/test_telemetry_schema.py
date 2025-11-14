@@ -6,7 +6,6 @@ Testing library and framework: pytest
 import re
 
 import pytest
-
 from langflow.services.telemetry.schema import (
     ComponentPayload,
     EmailPayload,
