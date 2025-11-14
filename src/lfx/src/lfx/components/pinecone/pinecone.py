@@ -100,8 +100,8 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             vector_store = self.build_vector_store()
 
             # Query Pinecone directly to ensure namespace is properly used
-            from pinecone import Pinecone
             from langchain_core.documents import Document
+            from pinecone import Pinecone
 
             # Initialize Pinecone client
             pc = Pinecone(api_key=self.pinecone_api_key)
