@@ -68,8 +68,6 @@ async def login_to_get_access_token(
         )
         await get_variable_service().initialize_user_variables(user.id, db)
         # Initialize agentic variables if agentic experience is enabled
-        from lfx.services.deps import get_settings_service
-
         from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
 
         if get_settings_service().settings.agentic_experience:
