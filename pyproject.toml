@@ -134,8 +134,8 @@ dependencies = [
     "fastparquet>=2024.11.0,<2025.0.0",
     "traceloop-sdk>=0.43.1,<1.0.0",
     "vlmrun[all]>=0.2.0",
-    "cuga==0.1.4",
-    "agent-lifecycle-toolkit",
+    "cuga==0.1.7",
+    "agent-lifecycle-toolkit~=0.4.1",
     "astrapy>=2.1.0,<3.0.0",
 ]
 
@@ -435,6 +435,13 @@ external = ["RUF027"]
     "S110",  # Try-except-pass for optional error logging
 ]
 "src/backend/tests/*" = [
+    "D1",
+    "PLR2004",
+    "S101",
+    "SLF001",
+    "BLE001",  # allow broad-exception catching in tests
+]
+"src/backend/base/langflow/tests/*" = [
     "D1",
     "PLR2004",
     "S101",
