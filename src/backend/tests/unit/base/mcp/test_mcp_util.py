@@ -498,6 +498,41 @@ class TestFieldNameConversion:
         result = await tool_coroutine(weather_main="Rain", top_n=8)
         assert result == "Success"
 
+    @pytest.mark.asyncio
+    async def test_object_field_conversion_in_tool(self):
+        """Test that object field conversion works."""
+        from lfx.schema.json_schema import create_input_schema_from_json_schema
+
+        # Create a JSON schema with an object field
+        test_schema = {
+            "type": "object",
+            "properties": {"object_main": {"type": "object", "description": "Main object"}},
+            "required": ["object_main"],
+        }
+
+        # Create the Pydantic model using our function
+        input_schema = create_input_schema_from_json_schema(test_schema)
+
+        # object as object
+        input_args = {"object_main": {}}
+        converted_args = await util._convert_string_objects_to_objects(input_args, input_schema)
+        assert converted_args == {"object_main": {}}
+
+        # object as string
+        input_args = {"object_main": "{}"}
+        converted_args = await util._convert_string_objects_to_objects(input_args, input_schema)
+        assert converted_args == {"object_main": {}}
+
+        # more complicated object as object
+        input_args = {"object_main": {"test": "me"}}
+        converted_args = await util._convert_string_objects_to_objects(input_args, input_schema)
+        assert converted_args == {"object_main": {"test": "me"}}
+
+        # more complicated object as string
+        input_args = {"object_main": '{"test": "me"}'}
+        converted_args = await util._convert_string_objects_to_objects(input_args, input_schema)
+        assert converted_args == {"object_main": {"test": "me"}}
+
 
 class TestToolExecutionWithFieldConversion:
     """Test that field name conversion works in actual tool execution."""
@@ -696,6 +731,44 @@ class TestToolExecutionWithFieldConversion:
 
             assert result == "sync_result"
             mock_loop.run_until_complete.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_tool_object_string_functionality(self):
+        """Test that tools convert to objects when called with object string argument."""
+        from unittest.mock import AsyncMock
+
+        from lfx.schema.json_schema import create_input_schema_from_json_schema
+
+        # Create a JSON schema with an object field
+        test_schema = {
+            "type": "object",
+            "properties": {"object_main": {"type": "object", "description": "Main object"}},
+            "required": ["object_main"],
+        }
+
+        # Create the Pydantic model using our function
+        input_schema = create_input_schema_from_json_schema(test_schema)
+
+        # Create a mock client
+        mock_client = AsyncMock()
+
+        # Create the tool coroutine
+        input_schema.model_validate = MagicMock()
+        tool_coroutine = util.create_tool_coroutine("test_tool", input_schema, mock_client)
+
+        # Test that calling with correct arguments works
+        await tool_coroutine(object_main={})
+        input_schema.model_validate.assert_called_with({"object_main": {}})
+
+        await tool_coroutine(object_main="{}")
+        input_schema.model_validate.assert_called_with({"object_main": {}})
+
+        # Test that calling with a more complicated object works
+        await tool_coroutine(object_main={"test": "me"})
+        input_schema.model_validate.assert_called_with({"object_main": {"test": "me"}})
+
+        await tool_coroutine(object_main='{"test": "me"}')
+        input_schema.model_validate.assert_called_with({"object_main": {"test": "me"}})
 
 
 class TestMCPUtilityFunctions:
