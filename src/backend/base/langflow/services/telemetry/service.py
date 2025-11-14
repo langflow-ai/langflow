@@ -25,7 +25,6 @@ from langflow.services.telemetry.schema import (
     ShutdownPayload,
     VersionPayload,
 )
-from langflow.utils.registered_email_util import get_email_model
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -129,6 +128,8 @@ class TelemetryService(Service):
 
     async def _send_email_telemetry(self) -> None:
         """Send the telemetry event for the registered email address."""
+        from langflow.utils.registered_email_util import get_email_model
+
         payload: EmailPayload | None = get_email_model()
 
         if not payload:
@@ -250,9 +251,15 @@ class TelemetryService(Service):
             if self.worker_task:
                 await self._cancel_task(self.worker_task, "Cancel telemetry worker task")
             if self.log_package_version_task:
-                await self._cancel_task(self.log_package_version_task, "Cancel telemetry log package version task")
+                await self._cancel_task(
+                    self.log_package_version_task,
+                    "Cancel telemetry log package version task",
+                )
             if self.log_package_email_task:
-                await self._cancel_task(self.log_package_email_task, "Cancel telemetry log package email task")
+                await self._cancel_task(
+                    self.log_package_email_task,
+                    "Cancel telemetry log package email task",
+                )
             await self.client.aclose()
         except Exception:  # noqa: BLE001
             await logger.aexception("Error stopping tracing service")
