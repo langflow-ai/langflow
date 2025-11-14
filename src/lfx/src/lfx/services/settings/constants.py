@@ -39,4 +39,5 @@ AGENTIC_VARIABLES = [
     "FLOW_ID",
     "COMPONENT_ID",
     "FIELD_NAME",
+    "ASTRA_TOKEN",
 ]
