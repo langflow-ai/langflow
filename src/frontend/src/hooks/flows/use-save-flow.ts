@@ -1,5 +1,5 @@
 import type { ReactFlowJsonObject } from "@xyflow/react";
-import { applyPatch, compare } from "fast-json-patch";
+import { applyPatch } from "fast-json-patch";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import type { PatchOperation } from "@/controllers/API/queries/flows/use-patch-json-patch-flow";
 import { usePatchJsonPatchFlow } from "@/controllers/API/queries/flows/use-patch-json-patch-flow";
@@ -7,6 +7,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
+import { compareFlows } from "@/utils/flowPatchUtils";
 import { customStringify } from "@/utils/reactflowUtils";
 
 const useSaveFlow = () => {
@@ -63,19 +64,14 @@ const useSaveFlow = () => {
             );
           }
 
-          const {
-            id,
-            name,
-            data,
-            description,
-            folder_id,
-            endpoint_name,
-            locked,
-          } = flow;
-          if (!currentSavedFlow?.data?.nodes.length || data!.nodes.length > 0) {
-            // Use fast-json-patch to automatically detect changes
-            // This is more efficient than manually building operations
-            const operations = compare(
+          const { id } = flow;
+          if (
+            !currentSavedFlow?.data?.nodes.length ||
+            flow.data!.nodes.length > 0
+          ) {
+            // Use jsondiffpatch with ID-aware array diffing
+            // This generates ~2 operations for node removal vs ~225 with index-based diffing
+            const operations = compareFlows(
               currentSavedFlow || {},
               flow,
             ) as PatchOperation[];
