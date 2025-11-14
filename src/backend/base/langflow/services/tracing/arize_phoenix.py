@@ -5,6 +5,7 @@ import math
 import os
 import traceback
 import types
+import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
@@ -77,8 +78,8 @@ class ArizePhoenixTracer(BaseTracer):
 
             self.child_spans: dict[str, Span] = {}
 
-        except Exception:  # noqa: BLE001
-            logger.debug("Error setting up Arize/Phoenix tracer", exc_info=True)
+        except Exception as e:  # noqa: BLE001
+            logger.error("[Arize/Phoenix] Error Setting Up Tracer: %s", str(e), exc_info=True)
             self._ready = False
 
     @property
@@ -164,7 +165,8 @@ class ArizePhoenixTracer(BaseTracer):
             self.tracer_provider = tracer_provider
         except ImportError:
             logger.exception(
-                "Could not import arize-phoenix-otel. Please install it with `pip install arize-phoenix-otel`."
+                "[Arize/Phoenix] Could not import OTEL package."
+                "Please install it with `pip install arize-phoenix-otel`."
             )
             return False
 
@@ -174,7 +176,7 @@ class ArizePhoenixTracer(BaseTracer):
             LangChainInstrumentor().instrument(tracer_provider=self.tracer_provider, skip_dep_check=True)
         except ImportError:
             logger.exception(
-                "Could not import LangChainInstrumentor."
+                "[Arize/Phoenix] Could not import LangChainInstrumentor."
                 "Please install it with `pip install openinference-instrumentation-langchain`."
             )
             return False
@@ -216,6 +218,9 @@ class ArizePhoenixTracer(BaseTracer):
         if processed_metadata:
             for key, value in processed_metadata.items():
                 child_span.set_attribute(f"{SpanAttributes.METADATA}.{key}", value)
+
+        if vertex and vertex.id is not None:
+            child_span.set_attribute("vertex_id", vertex.id)
 
         component_name = trace_id.split("-")[0]
         if component_name == "ChatInput":
@@ -279,16 +284,39 @@ class ArizePhoenixTracer(BaseTracer):
                 for key, value in processed_metadata.items():
                     self.root_span.set_attribute(f"{SpanAttributes.METADATA}.{key}", value)
 
-            self._set_span_status(self.root_span, error)
-            self.root_span.end()
+            langflow_unique_id = str(uuid.uuid4())
+            self.root_span.set_attribute("langflow_unique_id", langflow_unique_id)
 
+            try:
+                from openinference.instrumentation.langchain import get_current_span
+
+                langchain_span = get_current_span()
+                logger.info("[Arize/Phoenix] LangChain Current Span: %s", str(langchain_span))
+                if langchain_span is not None:
+                    langchain_span.set_attribute("langflow_unique_id", langflow_unique_id)
+            except Exception as e:  # noqa: BLE001
+                logger.error("[Arize/Phoenix] Error Getting LangChain Current Span: %s", str(e), exc_info=True)
+
+            try:
+                from openinference.instrumentation.langchain import get_ancestor_spans
+
+                langchain_spans = get_ancestor_spans()
+                logger.info("[Arize/Phoenix] LangChain Ancestor Spans: %s", str(langchain_spans))
+                for langchain_span in langchain_spans:
+                    if langchain_span is not None:
+                        langchain_span.set_attribute("langflow_unique_id", langflow_unique_id)
+            except Exception as e:  # noqa: BLE001
+                logger.error("[Arize/Phoenix] Error Getting LangChain Ancestor Spans: %s", str(e), exc_info=True)
+
+            self._set_span_status(self.root_span, error)
+            self.root_span.end(end_time=self._get_current_timestamp())
         try:
             from openinference.instrumentation.langchain import LangChainInstrumentor
 
             LangChainInstrumentor().uninstrument(tracer_provider=self.tracer_provider, skip_dep_check=True)
         except ImportError:
             logger.exception(
-                "Could not import LangChainInstrumentor."
+                "[Arize/Phoenix] Could not import LangChainInstrumentor."
                 "Please install it with `pip install openinference-instrumentation-langchain`."
             )
 
@@ -373,3 +401,13 @@ class ArizePhoenixTracer(BaseTracer):
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         """Returns the LangChain callback handler if applicable."""
         return None
+
+    def close(self):
+        try:
+            if hasattr(self.tracer_provider, "force_flush"):
+                self.tracer_provider.force_flush(timeout_millis=3000)
+        except (ValueError, RuntimeError, OSError) as e:
+            logger.error("[Arize/Phoenix] Error Flushing Spans: %s", str(e), exc_info=True)
+
+    def __del__(self):
+        self.close()
