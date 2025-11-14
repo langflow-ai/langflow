@@ -1,3 +1,4 @@
+import uuid
 from collections.abc import Generator
 from typing import Any
 
@@ -118,9 +119,13 @@ class ChatOutput(ChatComponent):
 
         # Create or use existing Message object
         if isinstance(self.input_value, Message):
-            message = self.input_value
-            # Update message properties
-            message.text = text
+            # Create a new message to avoid mutating shared instances
+            message = Message(
+                text=text,
+                sender=self.input_value.sender if hasattr(self.input_value, "sender") else None,
+                sender_name=self.input_value.sender_name if hasattr(self.input_value, "sender_name") else None,
+            )
+            message.id = uuid.uuid4()
         else:
             message = Message(text=text)
 
