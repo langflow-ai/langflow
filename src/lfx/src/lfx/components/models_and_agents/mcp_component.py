@@ -194,7 +194,7 @@ class MCPToolsComponent(ComponentWithCache):
             if server_config_from_value:
                 server_config = server_config_from_value
             else:
-                # Fall back to fetching from database if no config provided in tweaks
+                # Fetch from database if no config provided in tweaks
                 try:
                     from langflow.api.v2.mcp import get_server
                     from langflow.services.database.models.user.crud import get_user_by_id
