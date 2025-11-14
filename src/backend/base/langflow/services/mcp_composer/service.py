@@ -7,6 +7,7 @@ import re
 import select
 import socket
 import subprocess
+import typing
 from collections.abc import Callable
 from functools import wraps
 from typing import Any
@@ -127,10 +128,11 @@ class MCPComposerService(Service):
 
             # Platform-specific command to find PID
             if os_type == "Windows":
-                # Use netstat on Windows
+                # Use netstat on Windows - use full path to avoid PATH issues
+                netstat_cmd = os.path.join(os.environ.get("SYSTEMROOT", "C:\\Windows"), "System32", "netstat.exe")  # noqa: PTH118
                 result = await asyncio.to_thread(
                     subprocess.run,
-                    ["netstat", "-ano"],
+                    [netstat_cmd, "-ano"],
                     capture_output=True,
                     text=True,
                     check=False,
@@ -155,10 +157,13 @@ class MCPComposerService(Service):
                     for pid in windows_pids:
                         try:
                             await logger.adebug(f"Attempting to kill process {pid} on port {port}...")
-                            # Use taskkill on Windows
+                            # Use taskkill on Windows - use full path to avoid PATH issues
+                            taskkill_cmd = os.path.join(  # noqa: PTH118
+                                os.environ.get("SYSTEMROOT", "C:\\Windows"), "System32", "taskkill.exe"
+                            )
                             kill_result = await asyncio.to_thread(
                                 subprocess.run,
-                                ["taskkill", "/F", "/PID", str(pid)],
+                                [taskkill_cmd, "/F", "/PID", str(pid)],
                                 capture_output=True,
                                 check=False,
                             )
@@ -228,6 +233,169 @@ class MCPComposerService(Service):
             await logger.aerror(f"Error finding/killing process on port {port}: {e}")
             return False
         return False
+
+    async def _kill_zombie_mcp_processes(self, port: int) -> bool:
+        """Kill zombie MCP Composer processes that may be stuck.
+
+        On Windows, sometimes MCP Composer processes start but fail to bind to port.
+        These processes become "zombies" that need to be killed before retry.
+
+        Args:
+            port: The port that should be used
+
+        Returns:
+            True if zombie processes were found and killed
+        """
+        try:
+            os_type = platform.system()
+            if os_type != "Windows":
+                return False
+
+            await logger.adebug(f"Looking for zombie MCP Composer processes on Windows for port {port}...")
+
+            # First, try to find and kill any process using the port directly
+            # Use full path to netstat on Windows to avoid PATH issues
+            netstat_cmd = os.path.join(os.environ.get("SYSTEMROOT", "C:\\Windows"), "System32", "netstat.exe")  # noqa: PTH118
+            netstat_result = await asyncio.to_thread(
+                subprocess.run,
+                [netstat_cmd, "-ano"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            killed_any = False
+            if netstat_result.returncode == 0:
+                # Parse netstat output to find PIDs using our port
+                pids_on_port: list[int] = []
+                for line in netstat_result.stdout.split("\n"):
+                    if f":{port}" in line and "LISTENING" in line:
+                        parts = line.split()
+                        if parts:
+                            try:
+                                pid = int(parts[-1])
+                                # Only kill if not tracked by us
+                                if pid not in self._pid_to_project:
+                                    pids_on_port.append(pid)
+                                else:
+                                    project = self._pid_to_project[pid]
+                                    await logger.adebug(
+                                        f"Process {pid} on port {port} is tracked, skipping (project: {project})"
+                                    )
+                            except (ValueError, IndexError):
+                                continue
+
+                if pids_on_port:
+                    await logger.adebug(
+                        f"Found {len(pids_on_port)} untracked process(es) on port {port}: {pids_on_port}"
+                    )
+                    for pid in pids_on_port:
+                        try:
+                            await logger.adebug(f"Killing process {pid} on port {port}...")
+                            # Use full path to taskkill on Windows to avoid PATH issues
+                            taskkill_cmd = os.path.join(  # noqa: PTH118
+                                os.environ.get("SYSTEMROOT", "C:\\Windows"), "System32", "taskkill.exe"
+                            )
+                            kill_result = await asyncio.to_thread(
+                                subprocess.run,
+                                [taskkill_cmd, "/F", "/PID", str(pid)],
+                                capture_output=True,
+                                check=False,
+                            )
+                            if kill_result.returncode == 0:
+                                await logger.adebug(f"Successfully killed process {pid} on port {port}")
+                                killed_any = True
+                            else:
+                                stderr_output = (
+                                    kill_result.stderr.decode()
+                                    if isinstance(kill_result.stderr, bytes)
+                                    else kill_result.stderr
+                                )
+                                await logger.awarning(f"Failed to kill process {pid} on port {port}: {stderr_output}")
+                        except Exception as e:  # noqa: BLE001
+                            await logger.adebug(f"Error killing process {pid}: {e}")
+
+            # Also look for any orphaned mcp-composer processes (without checking port)
+            # This catches processes that failed to bind but are still running
+            # Use PowerShell instead of deprecated wmic.exe for Windows 10/11 compatibility
+            try:
+                # Use PowerShell to get Python processes with command line info
+                # Build PowerShell command to find MCP Composer processes
+                ps_filter = (
+                    f"$_.Name -eq 'python.exe' -and $_.CommandLine -like '*mcp-composer*' "
+                    f"-and ($_.CommandLine -like '*--port {port}*' -or $_.CommandLine -like '*--port={port}*')"
+                )
+                ps_cmd = (
+                    f"Get-WmiObject Win32_Process | Where-Object {{ {ps_filter} }} | "
+                    "Select-Object ProcessId,CommandLine | ConvertTo-Json"
+                )
+                powershell_cmd = ["powershell.exe", "-NoProfile", "-Command", ps_cmd]
+
+                ps_result = await asyncio.to_thread(
+                    subprocess.run,
+                    powershell_cmd,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=5,
+                )
+
+                if ps_result.returncode == 0 and ps_result.stdout.strip():
+                    try:
+                        import json
+
+                        # PowerShell may return single object or array
+                        processes = json.loads(ps_result.stdout)
+                        if isinstance(processes, dict):
+                            processes = [processes]
+                        elif not isinstance(processes, list):
+                            processes = []
+
+                        for proc in processes:
+                            try:
+                                pid = int(proc.get("ProcessId", 0))
+                                if pid <= 0 or pid in self._pid_to_project:
+                                    continue
+
+                                await logger.adebug(
+                                    f"Found orphaned MCP Composer process {pid} for port {port}, killing it"
+                                )
+                                # Use full path to taskkill on Windows to avoid PATH issues
+                                taskkill_cmd = os.path.join(  # noqa: PTH118
+                                    os.environ.get("SYSTEMROOT", "C:\\Windows"), "System32", "taskkill.exe"
+                                )
+                                kill_result = await asyncio.to_thread(
+                                    subprocess.run,
+                                    [taskkill_cmd, "/F", "/PID", str(pid)],
+                                    capture_output=True,
+                                    check=False,
+                                )
+                                if kill_result.returncode == 0:
+                                    await logger.adebug(f"Successfully killed orphaned process {pid}")
+                                    killed_any = True
+
+                            except (ValueError, KeyError) as e:
+                                await logger.adebug(f"Error processing PowerShell result: {e}")
+                                continue
+
+                    except json.JSONDecodeError as e:
+                        await logger.adebug(f"Failed to parse PowerShell output: {e}")
+
+            except asyncio.TimeoutError:
+                await logger.adebug("PowerShell command timed out while checking for orphaned processes")
+            except Exception as e:  # noqa: BLE001
+                await logger.adebug(f"Error using PowerShell to find orphaned processes: {e}")
+
+            if killed_any:
+                # Give Windows time to clean up
+                await logger.adebug("Waiting 3 seconds for Windows to release port...")
+                await asyncio.sleep(3)
+
+            return killed_any  # noqa: TRY300
+
+        except Exception as e:  # noqa: BLE001
+            await logger.adebug(f"Error killing zombie processes: {e}")
+            return False
 
     def _is_port_used_by_another_project(self, port: int, current_project_id: str) -> tuple[bool, str | None]:
         """Check if a port is being used by another project.
@@ -335,7 +503,12 @@ class MCPComposerService(Service):
         await asyncio.to_thread(process.wait)
 
     async def _read_process_output_and_extract_error(
-        self, process: subprocess.Popen, oauth_server_url: str | None, timeout: float = 2.0
+        self,
+        process: subprocess.Popen,
+        oauth_server_url: str | None,
+        timeout: float = 2.0,
+        stdout_file=None,
+        stderr_file=None,
     ) -> tuple[str, str, str]:
         """Read process output and extract user-friendly error message.
 
@@ -343,33 +516,81 @@ class MCPComposerService(Service):
             process: The subprocess to read from
             oauth_server_url: OAuth server URL for error messages
             timeout: Timeout for reading output
+            stdout_file: Optional file handle for stdout (Windows)
+            stderr_file: Optional file handle for stderr (Windows)
 
         Returns:
             Tuple of (stdout, stderr, error_message)
         """
+        stdout_content = ""
+        stderr_content = ""
+
         try:
-            # Use asyncio.to_thread to avoid blocking the event loop
-            # Process returns bytes, decode with error handling
-            stdout_bytes, stderr_bytes = await asyncio.to_thread(process.communicate, timeout=timeout)
-            stdout_content = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
-            stderr_content = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
+            # On Windows with temp files, read from files instead of pipes
+            if stdout_file and stderr_file:
+                # Close file handles to flush and allow reading
+                try:
+                    stdout_file.close()
+                    stderr_file.close()
+                except Exception as e:  # noqa: BLE001
+                    await logger.adebug(f"Error closing temp files: {e}")
+
+                # Read from temp files using asyncio.to_thread
+                from pathlib import Path
+
+                try:
+
+                    def read_file(filepath):
+                        return Path(filepath).read_bytes()
+
+                    stdout_bytes = await asyncio.to_thread(read_file, stdout_file.name)
+                    stdout_content = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
+                except Exception as e:  # noqa: BLE001
+                    await logger.adebug(f"Error reading stdout file: {e}")
+
+                try:
+
+                    def read_file(filepath):
+                        return Path(filepath).read_bytes()
+
+                    stderr_bytes = await asyncio.to_thread(read_file, stderr_file.name)
+                    stderr_content = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
+                except Exception as e:  # noqa: BLE001
+                    await logger.adebug(f"Error reading stderr file: {e}")
+
+                # Clean up temp files
+                try:
+                    Path(stdout_file.name).unlink()
+                    Path(stderr_file.name).unlink()
+                except Exception as e:  # noqa: BLE001
+                    await logger.adebug(f"Error removing temp files: {e}")
+            else:
+                # Use asyncio.to_thread to avoid blocking the event loop
+                # Process returns bytes, decode with error handling
+                stdout_bytes, stderr_bytes = await asyncio.to_thread(process.communicate, timeout=timeout)
+                stdout_content = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
+                stderr_content = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
+
         except subprocess.TimeoutExpired:
             process.kill()
             error_msg = self._extract_error_message("", "", oauth_server_url)
             return "", "", error_msg
-        else:
-            error_msg = self._extract_error_message(stdout_content, stderr_content, oauth_server_url)
-            return stdout_content, stderr_content, error_msg
 
-    async def _read_stream_non_blocking(self, stream, stream_name: str) -> None:
+        error_msg = self._extract_error_message(stdout_content, stderr_content, oauth_server_url)
+        return stdout_content, stderr_content, error_msg
+
+    async def _read_stream_non_blocking(self, stream, stream_name: str) -> str:
         """Read from a stream without blocking and log the content.
 
         Args:
             stream: The stream to read from (stdout or stderr)
             stream_name: Name of the stream for logging ("stdout" or "stderr")
+
+        Returns:
+            The content read from the stream (empty string if nothing available)
         """
         if not stream:
-            return
+            return ""
 
         try:
             # On Windows, select.select() doesn't work with pipes (only sockets)
@@ -377,10 +598,10 @@ class MCPComposerService(Service):
             os_type = platform.system()
 
             if os_type == "Windows":
-                # On Windows, we can't reliably check if data is available without blocking
-                # So we skip non-blocking reads on Windows to avoid WinError 10038
-                # The output will still be captured when the process terminates
-                return
+                # On Windows, select.select() doesn't work with pipes
+                # Skip stream reading during monitoring - output will be captured when process terminates
+                # This prevents blocking on peek() which can cause the monitoring loop to hang
+                return ""
             # On Unix-like systems, use select
             if select.select([stream], [], [], 0)[0]:
                 line_bytes = stream.readline()
@@ -394,8 +615,10 @@ class MCPComposerService(Service):
                             await logger.aerror(f"MCP Composer {stream_name}: {stripped}")
                         else:
                             await logger.adebug(f"MCP Composer {stream_name}: {stripped}")
+                        return stripped
         except Exception as e:  # noqa: BLE001
             await logger.adebug(f"Error reading {stream_name}: {e}")
+        return ""
 
     async def _ensure_port_available(self, port: int, current_project_id: str) -> None:
         """Ensure a port is available, only killing untracked processes.
@@ -688,8 +911,8 @@ class MCPComposerService(Service):
         sse_url: str,
         auth_config: dict[str, Any] | None,
         max_retries: int = 3,
-        max_startup_checks: int = 20,
-        startup_delay: float = 1.5,
+        max_startup_checks: int = 40,
+        startup_delay: float = 2.0,
     ) -> None:
         """Start an MCP Composer instance for a specific project.
 
@@ -698,8 +921,8 @@ class MCPComposerService(Service):
             sse_url: The SSE URL to connect to
             auth_config: Authentication configuration
             max_retries: Maximum number of retry attempts (default: 3)
-            max_startup_checks: Number of checks per retry attempt (default: 60)
-            startup_delay: Delay between checks in seconds (default: 3.0)
+            max_startup_checks: Number of checks per retry attempt (default: 40)
+            startup_delay: Delay between checks in seconds (default: 2.0)
 
         Raises:
             MCPComposerError: Various specific errors if startup fails
@@ -743,8 +966,8 @@ class MCPComposerService(Service):
         sse_url: str,
         auth_config: dict[str, Any] | None,
         max_retries: int = 3,
-        max_startup_checks: int = 20,
-        startup_delay: float = 1.5,
+        max_startup_checks: int = 40,
+        startup_delay: float = 2.0,
     ) -> None:
         """Internal method to start an MCP Composer instance.
 
@@ -753,8 +976,8 @@ class MCPComposerService(Service):
             sse_url: The SSE URL to connect to
             auth_config: Authentication configuration
             max_retries: Maximum number of retry attempts (default: 3)
-            max_startup_checks: Number of checks per retry attempt (default: 60)
-            startup_delay: Delay between checks in seconds (default: 3.0)
+            max_startup_checks: Number of checks per retry attempt (default: 40)
+            startup_delay: Delay between checks in seconds (default: 2.0)
 
         Raises:
             MCPComposerError: Various specific errors if startup fails
@@ -825,6 +1048,21 @@ class MCPComposerService(Service):
             # Retry loop: try starting the process multiple times
             last_error = None
             try:
+                # Before first attempt, try to kill any zombie MCP Composer processes
+                # This is a best-effort operation - don't fail startup if it errors
+                try:
+                    await logger.adebug(
+                        f"Checking for zombie MCP Composer processes on port {project_port} before startup..."
+                    )
+                    zombies_killed = await self._kill_zombie_mcp_processes(project_port)
+                    if zombies_killed:
+                        await logger.adebug(f"Killed zombie processes, port {project_port} should now be free")
+                except Exception as zombie_error:  # noqa: BLE001
+                    # Log but continue - zombie cleanup is optional
+                    await logger.awarning(
+                        f"Failed to check/kill zombie processes (non-fatal): {zombie_error}. Continuing with startup..."
+                    )
+
                 # Ensure port is available (only kill untracked processes)
                 try:
                     await self._ensure_port_available(project_port, project_id)
@@ -864,10 +1102,23 @@ class MCPComposerService(Service):
                         if project_id in self.project_composers:
                             await self._do_stop_project_composer(project_id)
 
-                        # If not the last attempt, wait a bit before retrying
+                        # If not the last attempt, wait and try to clean up zombie processes
                         if retry_attempt < max_retries:
                             await logger.adebug(f"Waiting 2 seconds before retry attempt {retry_attempt + 1}...")
                             await asyncio.sleep(2)
+
+                            # On Windows, try to kill any zombie MCP Composer processes for this port
+                            # This is a best-effort operation - don't fail retry if it errors
+                            try:
+                                msg = f"Checking for zombie MCP Composer processes on port {project_port}"
+                                await logger.adebug(msg)
+                                zombies_killed = await self._kill_zombie_mcp_processes(project_port)
+                                if zombies_killed:
+                                    await logger.adebug(f"Killed zombie processes, port {project_port} should be free")
+                            except Exception as retry_zombie_error:  # noqa: BLE001
+                                # Log but continue - zombie cleanup is optional
+                                msg = f"Failed to check/kill zombie processes during retry: {retry_zombie_error}"
+                                await logger.awarning(msg)
 
                     else:
                         # Success! Store the composer info and register the port and PID
@@ -912,8 +1163,8 @@ class MCPComposerService(Service):
         port: int,
         sse_url: str,
         auth_config: dict[str, Any] | None = None,
-        max_startup_checks: int = 60,
-        startup_delay: float = 3.0,
+        max_startup_checks: int = 40,
+        startup_delay: float = 2.0,
     ) -> subprocess.Popen:
         """Start the MCP Composer subprocess for a specific project.
 
@@ -923,8 +1174,8 @@ class MCPComposerService(Service):
             port: Port to bind to
             sse_url: SSE URL to connect to
             auth_config: Authentication configuration
-            max_startup_checks: Number of port binding checks (default: 60)
-            startup_delay: Delay between checks in seconds (default: 3.0)
+            max_startup_checks: Number of port binding checks (default: 40)
+            startup_delay: Delay between checks in seconds (default: 2.0)
 
         Returns:
             The started subprocess
@@ -988,8 +1239,31 @@ class MCPComposerService(Service):
         await logger.adebug(f"Starting MCP Composer with command: {' '.join(safe_cmd)}")
 
         # Start the subprocess with both stdout and stderr captured
-        # Use binary mode and decode manually to handle encoding errors gracefully
-        process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)  # noqa: ASYNC220, S603
+        # On Windows, use temp files to avoid pipe buffering issues that can cause process to hang
+        stdout_handle: int | typing.IO[bytes] = subprocess.PIPE
+        stderr_handle: int | typing.IO[bytes] = subprocess.PIPE
+        stdout_file = None
+        stderr_file = None
+
+        if platform.system() == "Windows":
+            import tempfile
+
+            # Create temp files for stdout/stderr on Windows to avoid pipe deadlocks
+            # Note: We intentionally don't use context manager as we need files to persist
+            # for the subprocess and be cleaned up manually later
+            stdout_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
+                mode="w+b", delete=False, prefix=f"mcp_composer_{project_id}_stdout_", suffix=".log"
+            )
+            stderr_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
+                mode="w+b", delete=False, prefix=f"mcp_composer_{project_id}_stderr_", suffix=".log"
+            )
+            stdout_handle = stdout_file
+            stderr_handle = stderr_file
+            stdout_name = stdout_file.name
+            stderr_name = stderr_file.name
+            await logger.adebug(f"Using temp files for MCP Composer logs: stdout={stdout_name}, stderr={stderr_name}")
+
+        process = subprocess.Popen(cmd, env=env, stdout=stdout_handle, stderr=stderr_handle)  # noqa: ASYNC220, S603
 
         # Monitor the process startup with multiple checks
         process_running = False
@@ -1013,7 +1287,9 @@ class MCPComposerService(Service):
                         stdout_content,
                         stderr_content,
                         startup_error_msg,
-                    ) = await self._read_process_output_and_extract_error(process, oauth_server_url)
+                    ) = await self._read_process_output_and_extract_error(
+                        process, oauth_server_url, stdout_file=stdout_file, stderr_file=stderr_file
+                    )
                     await self._log_startup_error_details(
                         project_id, cmd, host, port, stdout_content, stderr_content, startup_error_msg, poll_result
                     )
@@ -1065,7 +1341,7 @@ class MCPComposerService(Service):
             if poll_result is not None:
                 # Process died
                 stdout_content, stderr_content, startup_error_msg = await self._read_process_output_and_extract_error(
-                    process, oauth_server_url
+                    process, oauth_server_url, stdout_file=stdout_file, stderr_file=stderr_file
                 )
                 await self._log_startup_error_details(
                     project_id, cmd, host, port, stdout_content, stderr_content, startup_error_msg, poll_result
@@ -1079,18 +1355,30 @@ class MCPComposerService(Service):
             # Get any available output before terminating
             process.terminate()
             stdout_content, stderr_content, startup_error_msg = await self._read_process_output_and_extract_error(
-                process, oauth_server_url
+                process, oauth_server_url, stdout_file=stdout_file, stderr_file=stderr_file
             )
             await self._log_startup_error_details(
                 project_id, cmd, host, port, stdout_content, stderr_content, startup_error_msg, pid=process.pid
             )
             raise MCPComposerStartupError(startup_error_msg, project_id)
 
-        # Close the pipes if everything is successful
-        if process.stdout:
-            process.stdout.close()
-        if process.stderr:
-            process.stderr.close()
+        # Close the pipes/files if everything is successful
+        if stdout_file and stderr_file:
+            # Clean up temp files on success
+            from pathlib import Path
+
+            try:
+                stdout_file.close()
+                stderr_file.close()
+                Path(stdout_file.name).unlink()
+                Path(stderr_file.name).unlink()
+            except Exception as e:  # noqa: BLE001
+                await logger.adebug(f"Error cleaning up temp files on success: {e}")
+        else:
+            if process.stdout:
+                process.stdout.close()
+            if process.stderr:
+                process.stderr.close()
 
         return process
 
