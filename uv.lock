@@ -6200,6 +6200,7 @@ dependencies = [
     { name = "docstring-parser" },
     { name = "emoji" },
     { name = "fastapi" },
+    { name = "filelock" },
     { name = "httpx", extra = ["http2"] },
     { name = "json-repair" },
     { name = "langchain" },
@@ -6247,6 +6248,7 @@ requires-dist = [
     { name = "docstring-parser", specifier = ">=0.16,<1.0.0" },
     { name = "emoji", specifier = ">=2.14.1,<3.0.0" },
     { name = "fastapi", specifier = ">=0.115.13,<1.0.0" },
+    { name = "filelock", specifier = ">=3.20.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.24.0,<1.0.0" },
     { name = "json-repair", specifier = ">=0.30.3,<1.0.0" },
     { name = "langchain", specifier = "~=0.3.23" },
@@ -6934,7 +6936,7 @@ name = "mlx"
 version = "0.29.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "mlx-metal", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
+    { name = "mlx-metal", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a4/8a/743ff24a07f8cfd6fb14b3fe05f122f1d8e04e8a912b2f6d0e14369c8caf/mlx-0.29.3-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:340d46443fe0b1e5d84c1e36aa633310de70365ce79aefcaa6f618e62bd4b045", size = 548930, upload-time = "2025-10-17T19:16:49.872Z" },
@@ -6956,12 +6958,12 @@ name = "mlx-lm"
 version = "0.28.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "jinja2", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "mlx", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "protobuf", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "pyyaml", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "transformers", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
+    { name = "jinja2", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "mlx", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "protobuf", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "pyyaml", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "transformers", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/51/f6/15e002d52c28d8c544ec3aaf9053677468333e6ef0e76ea68579fd77b76d/mlx_lm-0.28.3.tar.gz", hash = "sha256:75df2b925d343ebaf50b63008dede4fe98cd3b02b1b24b7da71ebeb198d674f0", size = 214455, upload-time = "2025-10-17T21:44:33.921Z" }
 wheels = [
@@ -6983,19 +6985,19 @@ name = "mlx-vlm"
 version = "0.3.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "datasets", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "fastapi", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "mlx", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "mlx-lm", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "opencv-python", version = "4.12.0.88", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "pillow", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "requests", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "scipy", version = "1.16.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "soundfile", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "tqdm", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "transformers", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "uvicorn", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
+    { name = "datasets", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "fastapi", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "mlx", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "mlx-lm", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "opencv-python", version = "4.12.0.88", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "pillow", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "requests", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "scipy", version = "1.16.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "soundfile", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "tqdm", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "transformers", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "uvicorn", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ff/9f/de419334820da334203de28eaf861b57ae0d06b0882770e5e5d0671dc5dd/mlx_vlm-0.3.3.tar.gz", hash = "sha256:5a08c802d1bf32cc47bd6aebe348d3554ce21bfce417a585bba83f9d213a6e66", size = 231935, upload-time = "2025-08-20T14:52:51.323Z" }
 wheels = [
@@ -12309,8 +12311,8 @@ name = "soundfile"
 version = "0.13.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi", marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
+    { name = "cffi", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e1/41/9b873a8c055582859b239be17902a85339bec6a30ad162f98c9b0288a2cc/soundfile-0.13.1.tar.gz", hash = "sha256:b2c68dab1e30297317080a5b43df57e302584c49e2942defdde0acccc53f0e5b", size = 46156, upload-time = "2025-01-25T09:17:04.831Z" }
 wheels = [
