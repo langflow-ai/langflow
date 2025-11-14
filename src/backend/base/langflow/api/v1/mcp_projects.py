@@ -312,7 +312,7 @@ async def handle_project_sse(
     req_vars_token = current_request_variables_ctx.set(variables or None)
 
     try:
-        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
+        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:  # noqa: SLF001
             try:
                 await logger.adebug("Starting SSE connection for project %s", project_id)
 
@@ -357,7 +357,7 @@ async def handle_project_messages(
 
     try:
         sse = get_project_sse(project_id)
-        await sse.handle_post_message(request.scope, request.receive, request._send)
+        await sse.handle_post_message(request.scope, request.receive, request._send)  # noqa: SLF001
     except BrokenResourceError as e:
         await logger.ainfo("Project MCP Server disconnected for project %s", project_id)
         raise HTTPException(status_code=404, detail=f"Project MCP Server disconnected, error: {e}") from e
@@ -629,9 +629,10 @@ async def install_mcp_config(
                 raise HTTPException(status_code=500, detail=error_detail) from e
 
             # For OAuth/MCP Composer, use the special format
+            settings = get_settings_service().settings
             command = "uvx"
             args = [
-                "mcp-composer",
+                f"mcp-composer{settings.mcp_composer_version}",
                 "--mode",
                 "stdio",
                 "--sse-url",

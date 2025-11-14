@@ -9,6 +9,7 @@ class AssistantsCreateThread(ComponentWithCache):
     display_name = "Create Assistant Thread"
     description = "Creates a thread and returns the thread id"
     icon = "AstraDB"
+    legacy = True
     inputs = [
         MultilineInput(
             name="env_set",

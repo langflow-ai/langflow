@@ -137,6 +137,12 @@ def schema_to_langflow_inputs(schema: type[BaseModel]) -> list[InputTypes]:
 
         is_list = False
 
+        # Handle unparameterized list (e.g., coming from nullable array schemas)
+        # Treat it as a list of strings for input purposes
+        if ann is list:
+            is_list = True
+            ann = str
+
         if get_origin(ann) is list:
             is_list = True
             ann = get_args(ann)[0]

@@ -44,12 +44,12 @@ test(
 
     await page.getByTestId("sidebar-search-input").fill("webhook");
 
-    await page.waitForSelector('[data-testid="dataWebhook"]', {
+    await page.waitForSelector('[data-testid="input_outputWebhook"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("dataWebhook")
+      .getByTestId("input_outputWebhook")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-webhook").click();
@@ -99,12 +99,12 @@ test(
 
     await page.getByTestId("sidebar-search-input").fill("webhook");
 
-    await page.waitForSelector('[data-testid="dataWebhook"]', {
+    await page.waitForSelector('[data-testid="input_outputWebhook"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("dataWebhook")
+      .getByTestId("input_outputWebhook")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-webhook").click();

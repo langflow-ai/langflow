@@ -3,7 +3,7 @@ from lfx.base.composio.composio_base import ComposioBaseComponent
 
 class ComposioDiscordAPIComponent(ComposioBaseComponent):
     display_name: str = "Discord"
-    icon = "Discord"
+    icon = "discord"
     documentation: str = "https://docs.composio.dev"
     app_name = "discord"
 

@@ -304,11 +304,12 @@ class BaseFileComponent(Component, ABC):
                     parts.append(str(data_text))
                 elif isinstance(d.data, dict):
                     # convert the data dict to a readable string
-                    parts.append(orjson.dumps(d.data, default=str).decode())
+                    parts.append(orjson.dumps(d.data, option=orjson.OPT_INDENT_2, default=str).decode())
                 else:
                     parts.append(str(d))
-            except (AttributeError, TypeError, ValueError):
+            except Exception:  # noqa: BLE001
                 # Final fallback - just try to convert to string
+                # TODO: Consider downstream error case more. Should this raise an error?
                 parts.append(str(d))
 
         return Message(text=sep.join(parts), **metadata)
@@ -671,6 +672,9 @@ class BaseFileComponent(Component, ABC):
         def _safe_extract_zip(bundle: ZipFile, output_dir: Path):
             """Safely extract ZIP files."""
             for member in bundle.namelist():
+                # Filter out resource fork information for automatic production of mac
+                if Path(member).name.startswith("._"):
+                    continue
                 member_path = output_dir / member
                 # Ensure no path traversal outside `output_dir`
                 if not member_path.resolve().is_relative_to(output_dir.resolve()):
@@ -681,6 +685,9 @@ class BaseFileComponent(Component, ABC):
         def _safe_extract_tar(bundle: tarfile.TarFile, output_dir: Path):
             """Safely extract TAR files."""
             for member in bundle.getmembers():
+                # Filter out resource fork information for automatic production of mac
+                if Path(member.name).name.startswith("._"):
+                    continue
                 member_path = output_dir / member.name
                 # Ensure no path traversal outside `output_dir`
                 if not member_path.resolve().is_relative_to(output_dir.resolve()):
