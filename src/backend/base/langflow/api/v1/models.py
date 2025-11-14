@@ -404,9 +404,7 @@ async def _save_model_list_variable(
             await variable_service.update_variable_fields(
                 user_id=current_user.id,
                 variable_id=existing_var.id,
-                variable=VariableUpdate(
-                    id=existing_var.id, name=var_name, value=models_json, type=GENERIC_TYPE
-                ),
+                variable=VariableUpdate(id=existing_var.id, name=var_name, value=models_json, type=GENERIC_TYPE),
                 session=session,
             )
         else:
@@ -558,9 +556,7 @@ async def update_enabled_models(
     )
 
     # Save updated model lists
-    await _save_model_list_variable(
-        variable_service, session, current_user, DISABLED_MODELS_VAR, disabled_models
-    )
+    await _save_model_list_variable(variable_service, session, current_user, DISABLED_MODELS_VAR, disabled_models)
     await _save_model_list_variable(
         variable_service, session, current_user, ENABLED_MODELS_VAR, explicitly_enabled_models
     )
