@@ -4,21 +4,21 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-export const useGetAssistantPromptQuery: useQueryFunctionType<any, any> = (
-  { compId, flowId, fieldName, inputValue },
-  options,
-) => {
+export const useGetSystemMessageGenQuery: useQueryFunctionType<
+  { compId; flowId; fieldName; inputValue },
+  {}
+> = ({ compId, flowId, fieldName, inputValue }, options) => {
   const { query } = UseRequestProcessor();
 
-  const getGeneratedPromptFn = async (
+  const getSystemMessageGenFn = async (
     compId,
     flowId,
     fieldName,
     inputValue,
   ) => {
-    return await api.post<any>(
+    return await api.post(
       getURL("RUN_SESSION", {
-        assistantFlowId: "TemplateAssistant",
+        assistantFlowId: "SystemMessageGen",
       }),
       {
         input_value: inputValue || "",
@@ -37,11 +37,11 @@ export const useGetAssistantPromptQuery: useQueryFunctionType<any, any> = (
   };
 
   const responseFn = async () => {
-    return await getGeneratedPromptFn(compId, flowId, fieldName, inputValue);
+    return await getSystemMessageGenFn(compId, flowId, fieldName, inputValue);
   };
 
   const queryResult = query(
-    ["useGetAssistantPromptQuery", { compId, flowId, fieldName, inputValue }],
+    ["useGetSystemMessageGenQuery", { compId, flowId, fieldName, inputValue }],
     responseFn,
     {
       enabled: false,

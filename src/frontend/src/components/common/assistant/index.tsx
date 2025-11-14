@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import langflowLogo from "@/assets/LangflowLogoColor.svg";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { useGetAssistantPromptQuery } from "@/controllers/API/queries/assistant";
+import { useGetSystemMessageGenQuery } from "@/controllers/API/queries/assistant";
 import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -33,7 +33,7 @@ export const AssistantButton: React.FC<AssistantButtonProps> = ({
   const [elapsedTime, setElapsedTime] = useState(0);
   const [clicked, setClicked] = useState(false);
 
-  const { isFetching, refetch } = useGetAssistantPromptQuery({
+  const { isFetching, refetch } = useGetSystemMessageGenQuery({
     compId: compData?.id,
     flowId,
     fieldName: compData?.fieldName,
