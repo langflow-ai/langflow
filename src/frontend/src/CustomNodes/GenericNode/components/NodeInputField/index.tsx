@@ -9,6 +9,7 @@ import {
   CustomParameterLabel,
   getCustomParameterTitle,
 } from "@/customization/components/custom-parameter";
+import { ENABLE_LANGFLOW_ASSISTANT } from "@/customization/feature-flags";
 import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import { cn } from "@/utils/utils";
@@ -198,14 +199,15 @@ export default function NodeInputField({
                 </ShadTooltip>
               )}
             </div>
-            {data.node?.template[name]?.ai_enabled && (
-              <AssistantButton
-                compData={id}
-                handleOnNewValue={handleOnNewValue}
-                inputValue={data.node?.template[name]?.value}
-                type="field"
-              />
-            )}
+            {ENABLE_LANGFLOW_ASSISTANT &&
+              data.node?.template[name]?.ai_enabled && (
+                <AssistantButton
+                  compData={id}
+                  handleOnNewValue={handleOnNewValue}
+                  inputValue={data.node?.template[name]?.value}
+                  type="field"
+                />
+              )}
           </div>
           <CustomParameterLabel
             name={name}
