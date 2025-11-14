@@ -17,8 +17,6 @@ from langflow.services.auth.utils import (
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_settings_service, get_variable_service
 
-settings_service = get_settings_service()
-
 router = APIRouter(tags=["Login"])
 
 
@@ -28,7 +26,7 @@ async def login_to_get_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: DbSession,
 ):
-    auth_settings = settings_service.auth_settings
+    auth_settings = get_settings_service().auth_settings
     try:
         user = await authenticate_user(form_data.username, form_data.password, db)
     except Exception as exc:
