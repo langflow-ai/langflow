@@ -34,7 +34,13 @@ from langflow.initial_setup.setup import (
     sync_flows_from_fs,
 )
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.deps import get_queue_service, get_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import (
+    get_queue_service,
+    get_service,
+    get_settings_service,
+    get_telemetry_service,
+    session_scope,
+)
 from langflow.services.schema import ServiceType
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
 
@@ -219,6 +225,21 @@ def get_lifespan(*, fix_migration=False, version=None):
                     f"Failed to acquire lock for starter projects: {e}. Starter projects may not be created or updated."
                 )
 
+            # Initialize agentic global variables early (before MCP server and flows)
+            if get_settings_service().settings.agentic_experience:
+                from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_global_variables
+
+                current_time = asyncio.get_event_loop().time()
+                await logger.ainfo("Initializing agentic global variables...")
+                try:
+                    async with session_scope() as session:
+                        await initialize_agentic_global_variables(session)
+                    await logger.adebug(
+                        f"Agentic global variables initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                    )
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Failed to initialize agentic global variables: {e}")
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Starting telemetry service")
             telemetry_service.start()
@@ -231,6 +252,21 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug(
                 f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s"
             )
+
+            # Auto-configure Agentic MCP server if enabled (after variables are initialized)
+            if get_settings_service().settings.agentic_experience:
+                from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
+
+                current_time = asyncio.get_event_loop().time()
+                await logger.ainfo("Configuring Agentic MCP server...")
+                try:
+                    async with session_scope() as session:
+                        await auto_configure_agentic_mcp_server(session)
+                    await logger.adebug(
+                        f"Agentic MCP server configured in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                    )
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Failed to configure agentic MCP server: {e}")
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Loading flows")

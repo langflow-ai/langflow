@@ -307,6 +307,10 @@ class MultilineMixin(BaseModel):
     multiline: CoalesceBool = True
 
 
+class AIMixin(BaseModel):
+    ai_enabled: CoalesceBool = False
+
+
 class LinkMixin(BaseModel):
     icon: str | None = None
     """Icon to be displayed in the link."""
