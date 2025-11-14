@@ -97,8 +97,8 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             if not self.search_query or not isinstance(self.search_query, str) or not self.search_query.strip():
                 return []
 
-            from pinecone import Pinecone
             from langchain_core.documents import Document
+            from pinecone import Pinecone
 
             # Create wrapped embeddings directly to avoid accessing private members
             wrapped_embeddings = Float32Embeddings(self.embedding)
