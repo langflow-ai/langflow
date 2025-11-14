@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -5581,7 +5581,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-lifecycle-toolkit" },
+    { name = "agent-lifecycle-toolkit", specifier = "~=0.4.1" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "aiosqlite", specifier = "==0.21.0" },
     { name = "apify-client", specifier = ">=1.8.1,<2.0.0" },
