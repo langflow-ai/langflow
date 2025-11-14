@@ -24,9 +24,11 @@ class TransactionBase(SQLModel):
     def __init__(self, **data):
         # Filter out the 'code' key from inputs before creating the model
         if "inputs" in data and isinstance(data["inputs"], dict) and "code" in data["inputs"]:
-            # Create a shallow copy and remove the code key
-            data["inputs"] = data["inputs"].copy()
-            data["inputs"].pop("code")
+            # IMPORTANT: Copy the inputs dict before mutation to avoid modifying the original
+            # dictionary that was passed in. Without this copy, we would mutate the caller's data.
+            inputs_copy = data["inputs"].copy()
+            inputs_copy.pop("code")
+            data["inputs"] = inputs_copy
         super().__init__(**data)
 
     @field_validator("flow_id", mode="before")
@@ -50,9 +52,11 @@ class TransactionBase(SQLModel):
         """
         # Filter out the "code" key from inputs if present
         if isinstance(data, dict) and "code" in data:
-            # Create a shallow copy and remove the code key
-            data = data.copy()
-            data.pop("code")
+            # IMPORTANT: Copy the data dict before mutation to avoid modifying the original
+            # dictionary. Without this copy, we would mutate the field's actual data.
+            data_copy = data.copy()
+            data_copy.pop("code")
+            data = data_copy
 
         return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
