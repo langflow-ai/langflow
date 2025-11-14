@@ -7,6 +7,7 @@ import re
 import select
 import socket
 import subprocess
+import typing
 from collections.abc import Callable
 from functools import wraps
 from typing import Any
@@ -305,9 +306,12 @@ class MCPComposerService(Service):
                                 await logger.adebug(f"Successfully killed process {pid} on port {port}")
                                 killed_any = True
                             else:
-                                await logger.awarning(
-                                    f"Failed to kill process {pid} on port {port}: {kill_result.stderr}"
+                                stderr_output = (
+                                    kill_result.stderr.decode()
+                                    if isinstance(kill_result.stderr, bytes)
+                                    else kill_result.stderr
                                 )
+                                await logger.awarning(f"Failed to kill process {pid} on port {port}: {stderr_output}")
                         except Exception as e:  # noqa: BLE001
                             await logger.adebug(f"Error killing process {pid}: {e}")
 
@@ -1236,8 +1240,8 @@ class MCPComposerService(Service):
 
         # Start the subprocess with both stdout and stderr captured
         # On Windows, use temp files to avoid pipe buffering issues that can cause process to hang
-        stdout_handle = subprocess.PIPE
-        stderr_handle = subprocess.PIPE
+        stdout_handle: int | typing.IO[bytes] = subprocess.PIPE
+        stderr_handle: int | typing.IO[bytes] = subprocess.PIPE
         stdout_file = None
         stderr_file = None
 
