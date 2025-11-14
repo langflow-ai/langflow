@@ -214,7 +214,7 @@ async def delete_variable(
         await variable_service.delete_variable_by_id(user_id=current_user.id, variable_id=variable_id, session=session)
 
         # If this was a provider credential, clean up disabled and enabled models for that provider
-        if provider:
+        if provider and isinstance(variable_service, DatabaseVariableService):
             await _cleanup_provider_models(variable_service, current_user.id, provider, session)
 
     except Exception as e:
