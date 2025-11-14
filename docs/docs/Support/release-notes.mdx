@@ -47,6 +47,55 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
+## 1.7.0
+
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### New features and enhancements
+
+- Webhook authentication
+
+    Added the `LANGFLOW_WEBHOOK_AUTH_ENABLE` environment variable for authenticating requests to the [`/webhook` endpoint](/api-flows-run#webhook-run-flow). When `LANGFLOW_WEBHOOK_AUTH_ENABLE=TRUE`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `FALSE`, no Langflow API key is required and all requests to the webhook endpoint are treated as being sent by the flow owner.
+
+- SSRF protection
+
+    Added SSRF (Server-Side Request Forgery) protection to the [**API Request** component](/components-data#api-request). HTTP redirects are disabled by default to prevent SSRF bypass attacks. To enable SSRF protection, set `LANGFLOW_SSRF_PROTECTION_ENABLED=TRUE`. Configure allowed hosts with `LANGFLOW_SSRF_ALLOWED_HOSTS`. Flows that relied on automatic redirects will need to enable it manually.
+
+- Changes to read/write file components
+
+    The **Save File** component was renamed to **Write File**, and it can now save to S3 and Google Drive.
+    The **Read File** component was renamed to **Read File**.
+    Both components support **Tool Mode**.
+
+- New integrations, bundles, and components:
+
+  New filter operator for **DataFrame Operations** component
+
+    The [**DataFrame Operations** component](components-processing#dataframe-operations) now includes a `not contains` filter operator.
+    Use it to clean data by extracting only records that _don't_ contain specific values.
+    For example, you can filter out invalid email addresses that don't contain `@`.
+
+  New JSON operations for **Data Operations** component
+
+    The [**Data Operations** component](components-processing#data-operations) now includes two operations for advanced JSON data manipulation.
+    The **Path Selection** operation extracts values from nested JSON structures, and the **JQ Expression** operation uses the [`jq`](https://jqlang.org/) query language to perform advanced JSON filtering, projections, and transformations.
+
+  New [**Smart Router** component](/components-logic#smart-router)
+
+  New [**Mock Data** component](/components-data#mock-data)
+
+  New [**Dynamic Create Data** component](/components-processing#dynamic-create-data)
+  
+  New [**ALTK** bundle](/bundles-altk)
+
+  New [**CometAPI** bundle](/bundles-cometapi)
+
+  New [**Docling Remote VLM** component](/bundles-docling#docling-remote-vlm)
+
+### Deprecations
+
+
 ## 1.6.0
 
 Highlights of this release include the following changes.
@@ -127,9 +176,9 @@ This is expected behavior.
 
 - Advanced document parsing with built-in Docling support
 
-  The **File** component supports advanced parsing with the Docling library.
+  The **Read File** component supports advanced parsing with the Docling library.
 
-  To make it easier to use the [**Docling** components](/bundles-docling) and the **File** component's new advanced parsing feature, the Docling dependency is now included with Langflow for all operating systems except macOS Intel (x86_64).
+  To make it easier to use the [**Docling** components](/bundles-docling) and the **Read File** component's new advanced parsing feature, the Docling dependency is now included with Langflow for all operating systems except macOS Intel (x86_64).
 
   For more information, see [Advanced parsing](/components-data#advanced-parsing).
 

@@ -27,6 +27,7 @@ You can use Langflow API keys to interact with Langflow programmatically.
 
 By default, most Langflow API endpoints, such as `/v1/run/$FLOW_ID`, require authentication with a Langflow API key.
 
+To require API key authentication for flow webhook endpoints, use the [`LANGFLOW_WEBHOOK_AUTH_ENABLE`](/webhook#require-authentication-for-webhooks) environment variable.
 To configure authentication for Langflow MCP servers, see [Use Langflow as an MCP server](/mcp-server).
 
 ### Langflow API key permissions
@@ -317,6 +318,16 @@ LANGFLOW_CORS_ALLOW_HEADERS=Content-Type,Authorization
 LANGFLOW_CORS_ALLOW_METHODS=GET,POST,PUT
 ```
 :::
+
+### SSRF protection {#ssrf-protection}
+
+The following environment variables configure Server-Side Request Forgery (SSRF) protection for the [**API Request** component](/components-data#api-request).
+SSRF protection prevents requests to internal or private network resources, such as private IP ranges, loopback addresses, and cloud metadata endpoints.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `False` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
+| `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks. For example: `192.168.1.0/24,10.0.0.5,*.internal.company.local`.|
 
 ## Start a Langflow server with authentication enabled
 
