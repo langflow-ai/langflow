@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 # Maximum URL length for telemetry GET requests (Scarf pixel tracking)
 # Scarf supports up to 2KB (2048 bytes) for query parameters
@@ -21,6 +21,10 @@ class RunPayload(BasePayload):
 
 class ShutdownPayload(BasePayload):
     time_running: int = Field(serialization_alias="timeRunning")
+
+
+class EmailPayload(BasePayload):
+    email: EmailStr
 
 
 class VersionPayload(BasePayload):
