@@ -14,7 +14,9 @@ from lfx.log.logger import logger
 from langflow.services.base import Service
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
 from langflow.services.telemetry.schema import (
+    MAX_TELEMETRY_URL_SIZE,
     ComponentIndexPayload,
+    ComponentInputsPayload,
     ComponentPayload,
     EmailPayload,
     ExceptionPayload,
@@ -169,6 +171,19 @@ class TelemetryService(Service):
 
     async def log_package_component(self, payload: ComponentPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "component"))
+
+    async def log_package_component_inputs(self, payload: ComponentInputsPayload) -> None:
+        """Log component input values, splitting into multiple requests if needed.
+
+        Args:
+            payload: Component inputs payload to log
+        """
+        # Split payload if it exceeds URL size limit
+        chunks = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+
+        # Queue each chunk separately
+        for chunk in chunks:
+            await self._queue_event((self.send_telemetry_data, chunk, "component_inputs"))
 
     async def log_component_index(self, payload: ComponentIndexPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "component_index"))
