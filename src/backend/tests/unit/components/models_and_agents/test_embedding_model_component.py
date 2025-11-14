@@ -52,8 +52,8 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         assert updated_config["base_url_ibm_watsonx"]["show"] is False
         assert updated_config["ollama_base_url"]["show"] is False
 
-    @patch("lfx.components.models.embedding_model.get_ollama_models")
-    @patch("lfx.components.models.embedding_model.is_valid_ollama_url")
+    @patch("lfx.components.models_and_agents.embedding_model.get_ollama_models")
+    @patch("lfx.components.models_and_agents.embedding_model.is_valid_ollama_url")
     async def test_update_build_config_ollama(
         self, mock_is_valid_url, mock_get_ollama_models, component_class, default_kwargs
     ):

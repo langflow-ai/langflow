@@ -189,33 +189,35 @@ class MCPToolsComponent(ComponentWithCache):
                 return self.tools, {"name": server_name, "config": server_config_from_value}
 
         try:
-            try:
-                from langflow.api.v2.mcp import get_server
-                from langflow.services.database.models.user.crud import get_user_by_id
-            except ImportError as e:
-                msg = (
-                    "Langflow MCP server functionality is not available. "
-                    "This feature requires the full Langflow installation."
-                )
-                raise ImportError(msg) from e
-            async with session_scope() as db:
-                if not self.user_id:
-                    msg = "User ID is required for fetching MCP tools."
-                    raise ValueError(msg)
-                current_user = await get_user_by_id(db, self.user_id)
-
-                # Try to get server config from DB/API
-                server_config = await get_server(
-                    server_name,
-                    current_user,
-                    db,
-                    storage_service=get_storage_service(),
-                    settings_service=get_settings_service(),
-                )
-
-            # If get_server returns empty but we have a config, use it
-            if not server_config and server_config_from_value:
+            # Prioritize config from tweaks/value over database config
+            # This allows REST API calls to override stored configurations
+            if server_config_from_value:
                 server_config = server_config_from_value
+            else:
+                # Fall back to fetching from database if no config provided in tweaks
+                try:
+                    from langflow.api.v2.mcp import get_server
+                    from langflow.services.database.models.user.crud import get_user_by_id
+                except ImportError as e:
+                    msg = (
+                        "Langflow MCP server functionality is not available. "
+                        "This feature requires the full Langflow installation."
+                    )
+                    raise ImportError(msg) from e
+                async with session_scope() as db:
+                    if not self.user_id:
+                        msg = "User ID is required for fetching MCP tools."
+                        raise ValueError(msg)
+                    current_user = await get_user_by_id(db, self.user_id)
+
+                    # Try to get server config from DB/API
+                    server_config = await get_server(
+                        server_name,
+                        current_user,
+                        db,
+                        storage_service=get_storage_service(),
+                        settings_service=get_settings_service(),
+                    )
 
             if not server_config:
                 self.tools = []
