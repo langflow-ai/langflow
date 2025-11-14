@@ -379,6 +379,7 @@ function GenericNode({
     return shouldShowToolbar ? (
       <>
         <div
+          data-testid="node-toolbar-component"
           className={cn(
             "absolute -top-12 left-1/2 z-50 -translate-x-1/2",
             "transform transition-all duration-300 ease-out",

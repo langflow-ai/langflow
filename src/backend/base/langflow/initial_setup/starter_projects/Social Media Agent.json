@@ -1409,10 +1409,17 @@
                   },
                   {
                     "icon": "OpenAI"
+                  },
+                  {
+                    "icon": "WatsonxAI"
+                  },
+                  {
+                    "icon": "Ollama"
                   }
                 ],
                 "placeholder": "",
                 "real_time_refresh": true,
+                "refresh_button": false,
                 "required": false,
                 "show": true,
                 "title_case": false,
@@ -1631,8 +1638,8 @@
                 "name": "max_tokens",
                 "placeholder": "",
                 "range_spec": {
-                  "max": 128000,
-                  "min": 0,
+                  "max": 128000.0,
+                  "min": 0.0,
                   "step": 0.1,
                   "step_type": "float"
                 },
@@ -1669,8 +1676,8 @@
                 "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
+                "external_options": {},
                 "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
-                "load_from_db": false,
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -1703,7 +1710,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4.1"
+                "value": "gpt-4o-mini"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -1879,8 +1886,8 @@
                 "name": "temperature",
                 "placeholder": "",
                 "range_spec": {
-                  "max": 1,
-                  "min": 0,
+                  "max": 1.0,
+                  "min": 0.0,
                   "step": 0.01,
                   "step_type": "float"
                 },

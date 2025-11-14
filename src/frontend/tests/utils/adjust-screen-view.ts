@@ -30,7 +30,5 @@ export async function adjustScreenView(
       await zoomOutButton.click();
     }
   }
-  if (fitViewButton > 0) {
-    await page.getByTestId("canvas_controls_dropdown").click();
-  }
+  await page.getByTestId("node-toolbar-component").click();
 }
