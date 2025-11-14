@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query
@@ -9,12 +10,14 @@ from lfx.base.models.unified_models import (
     get_model_providers,
     get_unified_models_detailed,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/models", tags=["Models"])
 
@@ -23,6 +26,10 @@ DISABLED_MODELS_VAR = "__disabled_models__"
 ENABLED_MODELS_VAR = "__enabled_models__"
 DEFAULT_LANGUAGE_MODEL_VAR = "__default_language_model__"
 DEFAULT_EMBEDDING_MODEL_VAR = "__default_embedding_model__"
+
+# Security limits
+MAX_STRING_LENGTH = 200  # Maximum length for model IDs and provider names
+MAX_BATCH_UPDATE_SIZE = 100  # Maximum number of models that can be updated at once
 
 
 def get_provider_from_variable_name(variable_name: str) -> str | None:
@@ -72,6 +79,18 @@ class ModelStatusUpdate(BaseModel):
     provider: str
     model_id: str
     enabled: bool
+
+    @field_validator("model_id", "provider")
+    @classmethod
+    def validate_non_empty_string(cls, v: str) -> str:
+        """Ensure strings are non-empty and reasonable length."""
+        if not v or not v.strip():
+            msg = "Field cannot be empty"
+            raise ValueError(msg)
+        if len(v) > MAX_STRING_LENGTH:
+            msg = f"Field exceeds maximum length of {MAX_STRING_LENGTH} characters"
+            raise ValueError(msg)
+        return v.strip()
 
 
 @router.get("/providers", status_code=200)
@@ -129,8 +148,10 @@ async def list_models(
             )
             if default_model_result.get("default_model"):
                 default_provider = default_model_result["default_model"].get("provider")
-        except Exception as _:  # noqa: BLE001, S110
-            pass
+        except Exception:  # noqa: BLE001
+            # Default model fetch failed, continue without it
+            # This is not critical for the main operation - we suppress to avoid breaking the list
+            logger.debug("Failed to fetch default model, continuing without it", exc_info=True)
 
     # Get filtered models - pass providers directly to avoid filtering after
     filtered_models = get_unified_models_detailed(
@@ -224,8 +245,14 @@ async def get_enabled_providers(
                 "enabled_providers": filtered_enabled,
                 "provider_status": filtered_status,
             }
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        logger.exception("Failed to get enabled providers for user %s", current_user.id)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve enabled providers. Please try again later.",
+        ) from e
     else:
         return result
 
@@ -242,8 +269,15 @@ async def _get_disabled_models(session: DbSession, current_user: CurrentActiveUs
         )
         if var.value is not None:
             try:
-                return set(json.loads(var.value))
+                parsed_value = json.loads(var.value)
+                # Validate it's a list of strings
+                if not isinstance(parsed_value, list):
+                    logger.warning("Invalid disabled models format for user %s: not a list", current_user.id)
+                    return set()
+                # Ensure all items are strings
+                return {str(item) for item in parsed_value if isinstance(item, str)}
             except (json.JSONDecodeError, TypeError):
+                logger.warning("Failed to parse disabled models for user %s", current_user.id, exc_info=True)
                 return set()
     except ValueError:
         # Variable not found, return empty set
@@ -266,13 +300,140 @@ async def _get_enabled_models(session: DbSession, current_user: CurrentActiveUse
         )
         if var.value is not None:
             try:
-                return set(json.loads(var.value))
+                parsed_value = json.loads(var.value)
+                # Validate it's a list of strings
+                if not isinstance(parsed_value, list):
+                    logger.warning("Invalid enabled models format for user %s: not a list", current_user.id)
+                    return set()
+                # Ensure all items are strings
+                return {str(item) for item in parsed_value if isinstance(item, str)}
             except (json.JSONDecodeError, TypeError):
+                logger.warning("Failed to parse enabled models for user %s", current_user.id, exc_info=True)
                 return set()
     except ValueError:
         # Variable not found, return empty set
         pass
     return set()
+
+
+def _build_model_default_flags() -> dict[str, bool]:
+    """Build a map of model names to their default flag status.
+
+    Returns:
+        Dictionary mapping model names to whether they are default models
+    """
+    all_models_by_provider = get_unified_models_detailed(
+        include_unsupported=True,
+        include_deprecated=True,
+    )
+
+    is_default_model = {}
+    for provider_dict in all_models_by_provider:
+        for model in provider_dict.get("models", []):
+            model_name = model.get("model_name")
+            is_default = model.get("metadata", {}).get("default", False)
+            is_default_model[model_name] = is_default
+
+    return is_default_model
+
+
+def _update_model_sets(
+    updates: list[ModelStatusUpdate],
+    disabled_models: set[str],
+    explicitly_enabled_models: set[str],
+    is_default_model: dict[str, bool],
+) -> None:
+    """Update disabled and enabled model sets based on user requests.
+
+    Args:
+        updates: List of model status updates from user
+        disabled_models: Set of disabled model IDs (modified in place)
+        explicitly_enabled_models: Set of explicitly enabled model IDs (modified in place)
+        is_default_model: Map of model names to their default flag status
+    """
+    for update in updates:
+        model_is_default = is_default_model.get(update.model_id, False)
+
+        if update.enabled:
+            # User wants to enable the model
+            disabled_models.discard(update.model_id)
+            # If it's not a default model, add to explicitly enabled list
+            if not model_is_default:
+                explicitly_enabled_models.add(update.model_id)
+        else:
+            # User wants to disable the model
+            disabled_models.add(update.model_id)
+            explicitly_enabled_models.discard(update.model_id)
+
+
+async def _save_model_list_variable(
+    variable_service: DatabaseVariableService,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    var_name: str,
+    model_set: set[str],
+) -> None:
+    """Save or update a model list variable.
+
+    Args:
+        variable_service: The database variable service
+        session: Database session
+        current_user: Current active user
+        var_name: Name of the variable to save
+        model_set: Set of model names to save
+
+    Raises:
+        HTTPException: If there's an error saving the variable
+    """
+    from langflow.services.database.models.variable.model import VariableUpdate
+
+    models_json = json.dumps(list(model_set))
+
+    try:
+        existing_var = await variable_service.get_variable_object(
+            user_id=current_user.id, name=var_name, session=session
+        )
+        if existing_var is None or existing_var.id is None:
+            msg = f"Variable {var_name} not found"
+            raise ValueError(msg)
+
+        # Update or delete based on whether there are models
+        if model_set or var_name == DISABLED_MODELS_VAR:
+            # Always update disabled models, even if empty
+            # Only update enabled models if non-empty
+            await variable_service.update_variable_fields(
+                user_id=current_user.id,
+                variable_id=existing_var.id,
+                variable=VariableUpdate(
+                    id=existing_var.id, name=var_name, value=models_json, type=GENERIC_TYPE
+                ),
+                session=session,
+            )
+        else:
+            # No explicitly enabled models, delete the variable
+            await variable_service.delete_variable(user_id=current_user.id, name=var_name, session=session)
+    except ValueError:
+        # Variable not found, create new one if there are models
+        if model_set:
+            await variable_service.create_variable(
+                user_id=current_user.id,
+                name=var_name,
+                value=models_json,
+                type_=GENERIC_TYPE,
+                session=session,
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(
+            "Failed to save model list variable %s for user %s",
+            var_name,
+            current_user.id,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to save model configuration. Please try again later.",
+        ) from e
 
 
 @router.get("/enabled_models", status_code=200)
@@ -372,109 +533,37 @@ async def update_enabled_models(
             detail="Variable service is not an instance of DatabaseVariableService",
         )
 
+    # Limit batch size to prevent abuse
+    if len(updates) > MAX_BATCH_UPDATE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot update more than {MAX_BATCH_UPDATE_SIZE} models at once",
+        )
+
     # Get current disabled and explicitly enabled models
     disabled_models = await _get_disabled_models(session=session, current_user=current_user)
     explicitly_enabled_models = await _get_enabled_models(session=session, current_user=current_user)
 
-    # Get model metadata to check default flag
-    all_models_by_provider = get_unified_models_detailed(
-        include_unsupported=True,
-        include_deprecated=True,
+    # Build map of model names to their default flag
+    is_default_model = _build_model_default_flags()
+
+    # Update model sets based on user requests
+    _update_model_sets(updates, disabled_models, explicitly_enabled_models, is_default_model)
+
+    # Log the operation for audit trail
+    logger.info(
+        "User %s updated model status: %d models affected",
+        current_user.id,
+        len(updates),
     )
 
-    # Build a map of model names to their default flag
-    model_defaults = {}
-    for provider_dict in all_models_by_provider:
-        for model in provider_dict.get("models", []):
-            model_name = model.get("model_name")
-            is_default = model.get("metadata", {}).get("default", False)
-            model_defaults[model_name] = is_default
-
-    # Update disabled/enabled models based on the request
-    for update in updates:
-        is_model_default = model_defaults.get(update.model_id, False)
-
-        if update.enabled:
-            # User wants to enable the model
-            # Remove from disabled list
-            disabled_models.discard(update.model_id)
-            # If it's not a default model, add to explicitly enabled list
-            if not is_model_default:
-                explicitly_enabled_models.add(update.model_id)
-        else:
-            # User wants to disable the model
-            # Add to disabled list
-            disabled_models.add(update.model_id)
-            # Remove from explicitly enabled list if present
-            explicitly_enabled_models.discard(update.model_id)
-
-    # Save updated disabled models list
-    disabled_models_json = json.dumps(list(disabled_models))
-    explicitly_enabled_models_json = json.dumps(list(explicitly_enabled_models))
-
-    from langflow.services.database.models.variable.model import VariableUpdate
-
-    # Update or create DISABLED_MODELS_VAR
-    try:
-        existing_var = await variable_service.get_variable_object(
-            user_id=current_user.id, name=DISABLED_MODELS_VAR, session=session
-        )
-        if existing_var is None or existing_var.id is None:
-            msg = f"Variable {DISABLED_MODELS_VAR} not found"
-            raise ValueError(msg)
-        await variable_service.update_variable_fields(
-            user_id=current_user.id,
-            variable_id=existing_var.id,
-            variable=VariableUpdate(
-                id=existing_var.id, name=DISABLED_MODELS_VAR, value=disabled_models_json, type=GENERIC_TYPE
-            ),
-            session=session,
-        )
-    except ValueError:
-        # Variable not found, create new one if there are disabled models
-        if disabled_models:
-            await variable_service.create_variable(
-                user_id=current_user.id,
-                name=DISABLED_MODELS_VAR,
-                value=disabled_models_json,
-                type_=GENERIC_TYPE,
-                session=session,
-            )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
-
-    # Update or create ENABLED_MODELS_VAR
-    try:
-        existing_var = await variable_service.get_variable_object(
-            user_id=current_user.id, name=ENABLED_MODELS_VAR, session=session
-        )
-        if existing_var is None or existing_var.id is None:
-            msg = f"Variable {ENABLED_MODELS_VAR} not found"
-            raise ValueError(msg)
-        if explicitly_enabled_models:
-            await variable_service.update_variable_fields(
-                user_id=current_user.id,
-                variable_id=existing_var.id,
-                variable=VariableUpdate(
-                    id=existing_var.id, name=ENABLED_MODELS_VAR, value=explicitly_enabled_models_json, type=GENERIC_TYPE
-                ),
-                session=session,
-            )
-        else:
-            # No explicitly enabled models, delete the variable
-            await variable_service.delete_variable(user_id=current_user.id, name=ENABLED_MODELS_VAR, session=session)
-    except ValueError:
-        # Variable not found, create new one if there are explicitly enabled models
-        if explicitly_enabled_models:
-            await variable_service.create_variable(
-                user_id=current_user.id,
-                name=ENABLED_MODELS_VAR,
-                value=explicitly_enabled_models_json,
-                type_=GENERIC_TYPE,
-                session=session,
-            )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    # Save updated model lists
+    await _save_model_list_variable(
+        variable_service, session, current_user, DISABLED_MODELS_VAR, disabled_models
+    )
+    await _save_model_list_variable(
+        variable_service, session, current_user, ENABLED_MODELS_VAR, explicitly_enabled_models
+    )
 
     # Return the updated model status
     return {
@@ -489,6 +578,27 @@ class DefaultModelRequest(BaseModel):
     model_name: str
     provider: str
     model_type: str  # 'language' or 'embedding'
+
+    @field_validator("model_name", "provider")
+    @classmethod
+    def validate_non_empty_string(cls, v: str) -> str:
+        """Ensure strings are non-empty and reasonable length."""
+        if not v or not v.strip():
+            msg = "Field cannot be empty"
+            raise ValueError(msg)
+        if len(v) > MAX_STRING_LENGTH:
+            msg = f"Field exceeds maximum length of {MAX_STRING_LENGTH} characters"
+            raise ValueError(msg)
+        return v.strip()
+
+    @field_validator("model_type")
+    @classmethod
+    def validate_model_type(cls, v: str) -> str:
+        """Ensure model_type is valid."""
+        if v not in ("language", "embedding"):
+            msg = "model_type must be 'language' or 'embedding'"
+            raise ValueError(msg)
+        return v
 
 
 @router.get("/default_model", status_code=200)
@@ -509,9 +619,18 @@ async def get_default_model(
         var = await variable_service.get_variable_object(user_id=current_user.id, name=var_name, session=session)
         if var.value:
             try:
-                return {"default_model": json.loads(var.value)}
+                parsed_value = json.loads(var.value)
             except (json.JSONDecodeError, TypeError):
+                logger.warning("Failed to parse default model for user %s", current_user.id, exc_info=True)
                 return {"default_model": None}
+            else:
+                # Validate structure
+                if not isinstance(parsed_value, dict) or not all(
+                    k in parsed_value for k in ("model_name", "provider", "model_type")
+                ):
+                    logger.warning("Invalid default model format for user %s", current_user.id)
+                    return {"default_model": None}
+                return {"default_model": parsed_value}
     except ValueError:
         # Variable not found
         pass
@@ -534,6 +653,15 @@ async def set_default_model(
         )
 
     var_name = DEFAULT_LANGUAGE_MODEL_VAR if request.model_type == "language" else DEFAULT_EMBEDDING_MODEL_VAR
+
+    # Log the operation for audit trail
+    logger.info(
+        "User %s setting default %s model to %s (%s)",
+        current_user.id,
+        request.model_type,
+        request.model_name,
+        request.provider,
+    )
 
     # Prepare the model data
     model_data = {
@@ -569,8 +697,17 @@ async def set_default_model(
             type_=GENERIC_TYPE,
             session=session,
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        logger.exception(
+            "Failed to set default model for user %s",
+            current_user.id,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to set default model. Please try again later.",
+        ) from e
 
     return {"default_model": model_data}
 
@@ -592,6 +729,13 @@ async def clear_default_model(
 
     var_name = DEFAULT_LANGUAGE_MODEL_VAR if model_type == "language" else DEFAULT_EMBEDDING_MODEL_VAR
 
+    # Log the operation for audit trail
+    logger.info(
+        "User %s clearing default %s model",
+        current_user.id,
+        model_type,
+    )
+
     # Check if the variable exists and delete it
     try:
         existing_var = await variable_service.get_variable_object(
@@ -601,7 +745,16 @@ async def clear_default_model(
     except ValueError:
         # Variable not found, nothing to delete
         pass
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        logger.exception(
+            "Failed to clear default model for user %s",
+            current_user.id,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to clear default model. Please try again later.",
+        ) from e
 
     return {"default_model": None}
