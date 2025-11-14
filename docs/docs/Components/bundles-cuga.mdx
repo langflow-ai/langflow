@@ -14,11 +14,10 @@ The **CUGA** component can be used in flows in place of an [**Agent** component]
 Like the core **Agent** component, the **CUGA** component can use tools connected to its **Toolset** port, and can be used as a tool itself.
 It also includes some additional features:
 
-The CUGA component supports browser automation for web scraping with [Playwright](https://playwright.dev/docs/intro).
-To enable web scraping, set the `browser_enabled` parameter to `true`, and specify a single URL in the `web_apps` parameter, in the format `https://example.com`.
-
-The CUGA component's **Policies** input allows custom policies to be loaded for the agent to execute.
-A policy is a Markdown file with agent instructions.
+* Browser automation for web scraping with [Playwright](https://playwright.dev/docs/intro).
+To enable web scraping, set the component's `browser_enabled` parameter to `true`, and specify a single URL in the `web_apps` parameter, in the format `https://example.com`.
+* Load custom policies for the agent to execute.
+To use this feature, use the component's **Policies** input to attach markdown files containing agent instructions
 
 For more information, see the [CUGA project repository](https://github.com/cuga-project/cuga-agent).
 
@@ -88,4 +87,4 @@ This example asked about the sales data provided by the MCP Server, such as `Whi
 | lite_mode | Boolean | Set to `true` to enable CugaLite mode for faster execution when using a smaller number of tools. Default: `true`. |
 | lite_mode_tool_threshold | Integer | The threshold to automatically enable CugaLite. If the CUGA component has fewer tools connected than this threshold, CugaLite is activated. Default: `25`. |
 | browser_enabled | Boolean | Enable a built-in browser for web scraping and search. Allows the agent to use general web search in its responses. Disable (`false`) to restrict the agent to the context provided in the flow. Default: `false`. |
-| web_apps | Multiline String | When `browser_enabled` is true, specify a single URL such as `https://example.com` that the agent can open with the built-in browser.|
+| web_apps | Multiline String | When `browser_enabled` is true, specify a single URL such as `https://example.com` that the agent can open with the built-in browser. The CUGA component can access both public and private internet resources. |
