@@ -75,9 +75,7 @@ async def _cleanup_model_list_variable(
             )
     else:
         # No models left, delete the variable
-        await variable_service.delete_variable(
-            user_id=user_id, name=variable_name, session=session
-        )
+        await variable_service.delete_variable(user_id=user_id, name=variable_name, session=session)
 
 
 async def _cleanup_provider_models(
@@ -93,15 +91,9 @@ async def _cleanup_provider_models(
         logger.exception("Provider model retrieval failed")
         return
 
-    # Clean up disabled models
-    await _cleanup_model_list_variable(
-        variable_service, user_id, DISABLED_MODELS_VAR, provider_models, session
-    )
-
-    # Clean up enabled models
-    await _cleanup_model_list_variable(
-        variable_service, user_id, ENABLED_MODELS_VAR, provider_models, session
-    )
+    # Clean up disabled and enabled models
+    await _cleanup_model_list_variable(variable_service, user_id, DISABLED_MODELS_VAR, provider_models, session)
+    await _cleanup_model_list_variable(variable_service, user_id, ENABLED_MODELS_VAR, provider_models, session)
 
 
 @router.post("/", response_model=VariableRead, status_code=201)
