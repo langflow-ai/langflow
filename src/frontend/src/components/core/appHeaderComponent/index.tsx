@@ -13,7 +13,7 @@ import { CustomOrgSelector } from "@/customization/components/custom-org-selecto
 import { CustomProductSelector } from "@/customization/components/custom-product-selector";
 import {
   ENABLE_DATASTAX_LANGFLOW,
-  ENABLE_LANGFLOW_ASSISTANT,
+  LANGFLOW_AGENTIC_EXPERIENCE,
 } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
@@ -93,7 +93,7 @@ export default function AppHeader(): JSX.Element {
         className={`relative left-3 z-30 flex shrink-0 items-center gap-3`}
         data-testid="header_right_section_wrapper"
       >
-        {ENABLE_LANGFLOW_ASSISTANT && <AssistantButton type="header" />}
+        {LANGFLOW_AGENTIC_EXPERIENCE && <AssistantButton type="header" />}
         <>
           <Button
             unstyled
