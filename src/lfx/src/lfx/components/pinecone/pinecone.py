@@ -97,11 +97,42 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             if not self.search_query or not isinstance(self.search_query, str) or not self.search_query.strip():
                 return []
 
-            vector_store = self.build_vector_store()
-            docs = vector_store.similarity_search(
-                query=self.search_query,
-                k=self.number_of_results,
-            )
+            from langchain_core.documents import Document
+            from pinecone import Pinecone
+
+            # Create wrapped embeddings directly to avoid accessing private members
+            wrapped_embeddings = Float32Embeddings(self.embedding)
+
+            # Initialize Pinecone client
+            pc = Pinecone(api_key=self.pinecone_api_key)
+            index = pc.Index(self.index_name)
+
+            # Get query embedding using the wrapped embeddings
+            query_vector = wrapped_embeddings.embed_query(self.search_query)
+
+            # Build query parameters
+            query_params = {
+                "vector": query_vector,
+                "top_k": self.number_of_results,
+                "include_metadata": True,
+            }
+
+            # Add namespace if provided
+            if self.namespace:
+                query_params["namespace"] = self.namespace
+
+            # Query Pinecone directly
+            results = index.query(**query_params)
+
+            # Convert results to Documents
+            docs = []
+            for match in results.matches:
+                # Extract text from metadata using the configured text_key
+                text = match.metadata.get(self.text_key, "") if match.metadata else ""
+                # Create Document with text and metadata
+                doc = Document(page_content=text, metadata=match.metadata or {})
+                docs.append(doc)
+
         except Exception as e:
             error_msg = "Error searching documents"
             raise ValueError(error_msg) from e
