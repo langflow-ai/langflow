@@ -48,6 +48,7 @@
     "file-saver": "^2.0.5",
     "framer-motion": "^11.2.10",
     "fuse.js": "^7.0.0",
+    "jsondiffpatch": "^0.7.3",
     "lodash": "^4.17.21",
     "lucide-react": "^0.503.0",
     "million": "^3.1.11",
