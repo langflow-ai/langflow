@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.6.4"
+version = "0.7.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 
 dependencies = [
-    "lfx~=0.1.0",
+    "lfx~=0.2.0",
     "fastapi>=0.115.2,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
@@ -34,6 +34,7 @@ dependencies = [
     "sqlmodel==0.0.22",
     "pydantic~=2.10.1",
     "pydantic-settings>=2.2.0,<3.0.0",
+    "email-validator>=2.0.0",
     "typer>=0.13.0,<1.0.0",
     "cachetools>=5.5.0,<6.0.0",
     "platformdirs>=4.2.0,<5.0.0",
