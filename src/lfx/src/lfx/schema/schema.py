@@ -149,6 +149,11 @@ class InputValueRequest(BaseModel):
         description="Defines on which components the input value should be applied. "
         "'any' applies to all input components.",
     )
+    client_request_time: int | None = Field(
+        None,
+        description="Client-side timestamp in milliseconds when the request was initiated. "
+        "Used to calculate accurate end-to-end duration.",
+    )
 
     # add an example
     model_config = ConfigDict(
