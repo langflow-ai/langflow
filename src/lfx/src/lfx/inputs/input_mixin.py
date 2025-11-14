@@ -37,6 +37,7 @@ class FieldTypes(str, Enum):
     QUERY = "query"
     TOOLS = "tools"
     MCP = "mcp"
+    MODEL = "model"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
@@ -131,6 +132,31 @@ class BaseInputMixin(CrossModuleModel, validate_assignment=True):  # type: ignor
             dump["type"] = dump.pop("field_type")
         dump["_input_type"] = self.__class__.__name__
         return dump
+
+
+class ModelInputMixin(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    """Mixin for model input fields."""
+    model_name: str | None = None
+    """Name of the model to be used in the input."""
+    model_type: str | None = "language"
+    """Type of model: 'language' or 'embedding'. Defaults to 'language'."""
+    model_options: list[dict[str, Any]] | None = Field(
+        default=None,
+        validation_alias="options",
+        serialization_alias="options",
+    )
+    """List of model options with name, icon, category, provider, and metadata."""
+    providers: list[str] | None = None
+    """List of provider names to prioritize (e.g., ['OpenAI', 'Anthropic'])."""
+    temperature: float | None = None
+    """Temperature parameter for model generation."""
+    max_tokens: int | None = None
+    """Maximum tokens for model generation."""
+    limit: int | None = None
+    """Limit for the number of options to display."""
+    external_options: dict[str, Any] | None = None
+    """Dictionary of external options to display below the dropdown options (e.g., 'Connect other models')."""
 
 
 class ToolModeMixin(BaseModel):

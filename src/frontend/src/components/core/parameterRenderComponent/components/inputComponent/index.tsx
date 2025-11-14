@@ -167,7 +167,6 @@ export default function InputComponent({
               commandWidth={commandWidth}
               blockAddNewGlobalVariable={blockAddNewGlobalVariable}
               hasRefreshButton={hasRefreshButton}
-              allowCustomValue={allowCustomValue}
             />
           )}
         </>

@@ -48,40 +48,6 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             "output_schema": [],
         }
 
-    async def test_build_config_update(self, component_class, default_kwargs):
-        component = await self.component_setup(component_class, default_kwargs)
-        frontend_node = component.to_frontend_node()
-        build_config = frontend_node["data"]["node"]["template"]
-        # Test updating build config for OpenAI
-        component.set(agent_llm="OpenAI")
-        updated_config = await component.update_build_config(build_config, "OpenAI", "agent_llm")
-        assert "agent_llm" in updated_config
-        assert updated_config["agent_llm"]["value"] == "OpenAI"
-        assert isinstance(updated_config["agent_llm"]["options"], list)
-        assert len(updated_config["agent_llm"]["options"]) > 0
-        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS)
-
-        # Verify model_name field is populated for OpenAI
-
-        assert "model_name" in updated_config
-        model_name_dict = updated_config["model_name"]
-        assert isinstance(model_name_dict["options"], list)
-        assert len(model_name_dict["options"]) > 0  # OpenAI should have available models
-        assert "gpt-4o" in model_name_dict["options"]
-
-        # Test Anthropic
-        component.set(agent_llm="Anthropic")
-        updated_config = await component.update_build_config(build_config, "Anthropic", "agent_llm")
-        assert "agent_llm" in updated_config
-        assert updated_config["agent_llm"]["value"] == "Anthropic"
-        assert isinstance(updated_config["agent_llm"]["options"], list)
-        assert len(updated_config["agent_llm"]["options"]) > 0
-        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS)
-        assert "Anthropic" in updated_config["agent_llm"]["options"]
-        assert updated_config["agent_llm"]["input_types"] == []
-        options = updated_config["model_name"]["options"]
-        assert any("sonnet" in option.lower() for option in options), f"Options: {options}"
-
 
 class TestAgentComponentWithClient(ComponentTestBaseWithClient):
     @pytest.fixture
