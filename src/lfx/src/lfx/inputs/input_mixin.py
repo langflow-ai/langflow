@@ -61,6 +61,9 @@ class BaseInputMixin(CrossModuleModel, validate_assignment=True):  # type: ignor
 
     field_type: SerializableFieldTypes = Field(default=FieldTypes.TEXT, alias="type")
 
+    override_skip: bool = False
+    """Specifies if the field should never be skipped. Defaults to False."""
+
     required: bool = False
     """Specifies if the field is required. Defaults to False."""
 

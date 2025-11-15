@@ -1,7 +1,6 @@
 from typing import Any
 
 from lfx.base.tools.run_flow import RunFlowBaseComponent
-from lfx.helpers import run_flow
 from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
 
@@ -9,7 +8,7 @@ from lfx.schema.dotdict import dotdict
 class RunFlowComponent(RunFlowBaseComponent):
     display_name = "Run Flow"
     description = (
-        "Creates a tool component from a Flow that takes all its inputs and runs it. "
+        "Executes another flow from within the same project. Can also be used as a tool for agents."
         " \n **Select a Flow to use the tool mode**"
     )
     documentation: str = "https://docs.langflow.org/components-logic#run-flow"
@@ -20,52 +19,42 @@ class RunFlowComponent(RunFlowBaseComponent):
     inputs = RunFlowBaseComponent.get_base_inputs()
     outputs = RunFlowBaseComponent.get_base_outputs()
 
-    async def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        if field_name == "flow_name_selected":
-            build_config["flow_name_selected"]["options"] = await self.get_flow_names()
-            missing_keys = [key for key in self.default_keys if key not in build_config]
-            if missing_keys:
-                msg = f"Missing required keys in build_config: {missing_keys}"
-                raise ValueError(msg)
-            if field_value is not None:
-                try:
-                    graph = await self.get_graph(field_value)
-                    build_config = self.update_build_config_from_graph(build_config, graph)
-                except Exception as e:
-                    msg = f"Error building graph for flow {field_value}"
-                    await logger.aexception(msg)
-                    raise RuntimeError(msg) from e
+    async def update_build_config(
+        self,
+        build_config: dotdict,
+        field_value: Any,
+        field_name: str | None = None,
+    ):
+        missing_keys = [key for key in self.default_keys if key not in build_config]
+        for key in missing_keys:
+            if key == "flow_name_selected":
+                build_config[key] = {"options": [], "options_metadata": [], "value": None}
+            elif key == "flow_id_selected":
+                build_config[key] = {"value": None}
+            elif key == "cache_flow":
+                build_config[key] = {"value": False}
+            else:
+                build_config[key] = {}
+        if field_name in {"flow_name_selected", "flow_id_selected"} and field_value is not None:
+            try:
+                # derive flow id in case field_name is flow_name_selected
+                build_config["flow_id_selected"]["value"] = (
+                    build_config["flow_name_selected"].get("selected_metadata", {}).get("id", None)
+                    or build_config["flow_id_selected"]["value"]
+                )
+
+                graph = await self.get_graph(
+                    flow_name_selected=field_value,
+                    flow_id_selected=build_config["flow_id_selected"]["value"],
+                )
+                self.update_build_config_from_graph(build_config, graph)
+            except Exception as e:
+                msg = f"Error building graph for flow {field_value}"
+                await logger.aexception(msg)
+                raise RuntimeError(msg) from e
+        elif field_name == "flow_name_selected" and (build_config.get("is_refresh", False) or field_value is None):
+            # list flows on refresh button click or initial load
+            options: list[str] = await self.alist_flows_by_flow_folder()
+            build_config["flow_name_selected"]["options"] = [flow.data["name"] for flow in options]
+            build_config["flow_name_selected"]["options_metadata"] = [{"id": flow.data["id"]} for flow in options]
         return build_config
-
-    async def run_flow_with_tweaks(self):
-        tweaks: dict = {}
-
-        flow_name_selected = self._attributes.get("flow_name_selected")
-        parsed_flow_tweak_data = self._attributes.get("flow_tweak_data", {})
-        if not isinstance(parsed_flow_tweak_data, dict):
-            parsed_flow_tweak_data = parsed_flow_tweak_data.dict()
-
-        if parsed_flow_tweak_data != {}:
-            for field in parsed_flow_tweak_data:
-                if "~" in field:
-                    [node, name] = field.split("~")
-                    if node not in tweaks:
-                        tweaks[node] = {}
-                    tweaks[node][name] = parsed_flow_tweak_data[field]
-        else:
-            for field in self._attributes:
-                if field not in self.default_keys and "~" in field:
-                    [node, name] = field.split("~")
-                    if node not in tweaks:
-                        tweaks[node] = {}
-                    tweaks[node][name] = self._attributes[field]
-
-        return await run_flow(
-            inputs=None,
-            output_type="all",
-            flow_id=None,
-            flow_name=flow_name_selected,
-            tweaks=tweaks,
-            user_id=str(self.user_id),
-            session_id=self.graph.session_id or self.session_id,
-        )
