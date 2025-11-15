@@ -24,7 +24,7 @@ class RunFlowComponent(RunFlowBaseComponent):
         build_config: dotdict,
         field_value: Any,
         field_name: str | None = None,
-        ):
+    ):
         missing_keys = [key for key in self.default_keys if key not in build_config]
         for key in missing_keys:
             if key == "flow_name_selected":
@@ -41,7 +41,7 @@ class RunFlowComponent(RunFlowBaseComponent):
                 build_config["flow_id_selected"]["value"] = (
                     build_config["flow_name_selected"].get("selected_metadata", {}).get("id", None)
                     or build_config["flow_id_selected"]["value"]
-                    )
+                )
 
                 graph = await self.get_graph(
                     flow_name_selected=field_value,
@@ -56,7 +56,5 @@ class RunFlowComponent(RunFlowBaseComponent):
             # list flows on refresh button click or initial load
             options: list[str] = await self.alist_flows_by_flow_folder()
             build_config["flow_name_selected"]["options"] = [flow.data["name"] for flow in options]
-            build_config["flow_name_selected"]["options_metadata"] = [
-                {"id": flow.data["id"]} for flow in options
-            ]
+            build_config["flow_name_selected"]["options_metadata"] = [{"id": flow.data["id"]} for flow in options]
         return build_config

@@ -30,9 +30,7 @@ class TestRunFlowComponentUpdateBuildConfig:
         build_config = dotdict({})  # Empty config
 
         result = await component.update_build_config(
-            build_config=build_config,
-            field_value=None,
-            field_name="flow_name_selected"
+            build_config=build_config, field_value=None, field_name="flow_name_selected"
         )
 
         # Verify that all default keys are now present
@@ -53,14 +51,16 @@ class TestRunFlowComponentUpdateBuildConfig:
         component._user_id = str(uuid4())
         component._flow_id = str(uuid4())
 
-        build_config = dotdict({
-            "code": {},
-            "_type": {},
-            "flow_name_selected": {"options": [], "options_metadata": []},
-            "flow_id_selected": {},
-            "session_id": {},
-            "cache_flow": {},
-        })
+        build_config = dotdict(
+            {
+                "code": {},
+                "_type": {},
+                "flow_name_selected": {"options": [], "options_metadata": []},
+                "flow_id_selected": {},
+                "session_id": {},
+                "cache_flow": {},
+            }
+        )
 
         mock_flows = [
             Data(data={"name": "Flow 1", "id": str(uuid4())}),
@@ -73,7 +73,7 @@ class TestRunFlowComponentUpdateBuildConfig:
             result = await component.update_build_config(
                 build_config=build_config,
                 field_value=None,  # Triggers refresh
-                field_name="flow_name_selected"
+                field_name="flow_name_selected",
             )
 
             assert "Flow 1" in result["flow_name_selected"]["options"]
@@ -87,15 +87,17 @@ class TestRunFlowComponentUpdateBuildConfig:
         component._user_id = str(uuid4())
         component._flow_id = str(uuid4())
 
-        build_config = dotdict({
-            "code": {},
-            "_type": {},
-            "flow_name_selected": {"options": [], "options_metadata": []},
-            "flow_id_selected": {},
-            "session_id": {},
-            "cache_flow": {},
-            "is_refresh": True,
-        })
+        build_config = dotdict(
+            {
+                "code": {},
+                "_type": {},
+                "flow_name_selected": {"options": [], "options_metadata": []},
+                "flow_id_selected": {},
+                "session_id": {},
+                "cache_flow": {},
+                "is_refresh": True,
+            }
+        )
 
         mock_flows = [
             Data(data={"name": "Flow 1", "id": str(uuid4())}),
@@ -108,7 +110,7 @@ class TestRunFlowComponentUpdateBuildConfig:
             result = await component.update_build_config(
                 build_config=build_config,
                 field_value=None,  # Change to None to test refresh path
-                field_name="flow_name_selected"
+                field_name="flow_name_selected",
             )
 
             assert "Flow 1" in result["flow_name_selected"]["options"]
@@ -125,37 +127,35 @@ class TestRunFlowComponentUpdateBuildConfig:
         flow_id = str(uuid4())
         flow_name = "Test Flow"
 
-        build_config = dotdict({
-            "code": {},
-            "_type": {},
-            "flow_name_selected": {
-                "options": [flow_name],
-                "options_metadata": [{"id": flow_id}],
-                "selected_metadata": {"id": flow_id},
-            },
-            "flow_id_selected": {"value": None},
-            "session_id": {},
-            "cache_flow": {},
-        })
+        build_config = dotdict(
+            {
+                "code": {},
+                "_type": {},
+                "flow_name_selected": {
+                    "options": [flow_name],
+                    "options_metadata": [{"id": flow_id}],
+                    "selected_metadata": {"id": flow_id},
+                },
+                "flow_id_selected": {"value": None},
+                "session_id": {},
+                "cache_flow": {},
+            }
+        )
 
         mock_graph = MagicMock(spec=Graph)
         mock_graph.vertices = []
 
-        with patch.object(component, "get_graph", new_callable=AsyncMock) as mock_get_graph, \
-             patch.object(component, "update_build_config_from_graph") as mock_update:
-
+        with (
+            patch.object(component, "get_graph", new_callable=AsyncMock) as mock_get_graph,
+            patch.object(component, "update_build_config_from_graph") as mock_update,
+        ):
             mock_get_graph.return_value = mock_graph
 
             result = await component.update_build_config(
-                build_config=build_config,
-                field_value=flow_name,
-                field_name="flow_name_selected"
+                build_config=build_config, field_value=flow_name, field_name="flow_name_selected"
             )
 
-            mock_get_graph.assert_called_once_with(
-                flow_name_selected=flow_name,
-                flow_id_selected=flow_id
-            )
+            mock_get_graph.assert_called_once_with(flow_name_selected=flow_name, flow_id_selected=flow_id)
             mock_update.assert_called_once_with(build_config, mock_graph)
             assert result["flow_id_selected"]["value"] == flow_id
 
@@ -168,26 +168,26 @@ class TestRunFlowComponentUpdateBuildConfig:
 
         flow_name = "Test Flow"
 
-        build_config = dotdict({
-            "code": {},
-            "_type": {},
-            "flow_name_selected": {
-                "options": [flow_name],
-                "selected_metadata": {"id": str(uuid4())},
-            },
-            "flow_id_selected": {"value": None},
-            "session_id": {},
-            "cache_flow": {},
-        })
+        build_config = dotdict(
+            {
+                "code": {},
+                "_type": {},
+                "flow_name_selected": {
+                    "options": [flow_name],
+                    "selected_metadata": {"id": str(uuid4())},
+                },
+                "flow_id_selected": {"value": None},
+                "session_id": {},
+                "cache_flow": {},
+            }
+        )
 
         with patch.object(component, "get_graph", new_callable=AsyncMock) as mock_get_graph:
             mock_get_graph.side_effect = Exception("Test error")
 
             with pytest.raises(RuntimeError, match="Error building graph for flow"):
                 await component.update_build_config(
-                    build_config=build_config,
-                    field_value=flow_name,
-                    field_name="flow_name_selected"
+                    build_config=build_config, field_value=flow_name, field_name="flow_name_selected"
                 )
 
     @pytest.mark.asyncio
@@ -195,19 +195,19 @@ class TestRunFlowComponentUpdateBuildConfig:
         """Test that update_build_config returns unchanged config for non-flow_name_selected fields."""
         component = RunFlowComponent()
 
-        build_config = dotdict({
-            "code": {},
-            "_type": {},
-            "flow_name_selected": {},
-            "flow_id_selected": {},
-            "session_id": {},
-            "cache_flow": {},
-        })
+        build_config = dotdict(
+            {
+                "code": {},
+                "_type": {},
+                "flow_name_selected": {},
+                "flow_id_selected": {},
+                "session_id": {},
+                "cache_flow": {},
+            }
+        )
 
         result = await component.update_build_config(
-            build_config=build_config,
-            field_value="some_value",
-            field_name="session_id"
+            build_config=build_config, field_value="some_value", field_name="session_id"
         )
 
         assert result == build_config
@@ -222,33 +222,36 @@ class TestRunFlowComponentUpdateBuildConfig:
         flow_id = str(uuid4())
         flow_name = "Test Flow"
 
-        build_config = dotdict({
-            "code": {},
-            "_type": {},
-            "flow_name_selected": {
-                "options": ["Old Flow"],
-                "options_metadata": [{"id": "old_id"}],
-                "selected_metadata": {"id": flow_id},
-            },
-            "flow_id_selected": {"value": flow_id},
-            "session_id": {},
-            "cache_flow": {},
-            "is_refresh": False,  # Not refreshing
-        })
+        build_config = dotdict(
+            {
+                "code": {},
+                "_type": {},
+                "flow_name_selected": {
+                    "options": ["Old Flow"],
+                    "options_metadata": [{"id": "old_id"}],
+                    "selected_metadata": {"id": flow_id},
+                },
+                "flow_id_selected": {"value": flow_id},
+                "session_id": {},
+                "cache_flow": {},
+                "is_refresh": False,  # Not refreshing
+            }
+        )
 
         mock_graph = MagicMock(spec=Graph)
         mock_graph.vertices = []
 
-        with patch.object(component, "alist_flows_by_flow_folder", new_callable=AsyncMock) as mock_list, \
-             patch.object(component, "get_graph", new_callable=AsyncMock) as mock_get_graph, \
-             patch.object(component, "update_build_config_from_graph") as mock_update:
-
+        with (
+            patch.object(component, "alist_flows_by_flow_folder", new_callable=AsyncMock) as mock_list,
+            patch.object(component, "get_graph", new_callable=AsyncMock) as mock_get_graph,
+            patch.object(component, "update_build_config_from_graph") as mock_update,
+        ):
             mock_get_graph.return_value = mock_graph
 
             await component.update_build_config(
                 build_config=build_config,
                 field_value=flow_name,  # Non-None value
-                field_name="flow_name_selected"
+                field_name="flow_name_selected",
             )
 
             # Should NOT have called list flows (no refresh)
@@ -268,37 +271,35 @@ class TestRunFlowComponentUpdateBuildConfig:
         flow_id = str(uuid4())
         flow_name = "Test Flow"
 
-        build_config = dotdict({
-            "code": {},
-            "_type": {},
-            "flow_name_selected": {
-                "options": [flow_name],
-                "selected_metadata": {"id": flow_id},
-            },
-            "flow_id_selected": {"value": flow_id},
-            "session_id": {},
-            "cache_flow": {},
-        })
+        build_config = dotdict(
+            {
+                "code": {},
+                "_type": {},
+                "flow_name_selected": {
+                    "options": [flow_name],
+                    "selected_metadata": {"id": flow_id},
+                },
+                "flow_id_selected": {"value": flow_id},
+                "session_id": {},
+                "cache_flow": {},
+            }
+        )
 
         mock_graph = MagicMock(spec=Graph)
         mock_graph.vertices = []
 
-        with patch.object(component, "get_graph", new_callable=AsyncMock) as mock_get_graph, \
-             patch.object(component, "update_build_config_from_graph") as mock_update:
-
+        with (
+            patch.object(component, "get_graph", new_callable=AsyncMock) as mock_get_graph,
+            patch.object(component, "update_build_config_from_graph") as mock_update,
+        ):
             mock_get_graph.return_value = mock_graph
 
             await component.update_build_config(
-                build_config=build_config,
-                field_value=flow_id,
-                field_name="flow_id_selected"
+                build_config=build_config, field_value=flow_id, field_name="flow_id_selected"
             )
 
             # Should call get_graph with the flow_id
-            mock_get_graph.assert_called_once_with(
-                flow_name_selected=flow_id,
-                flow_id_selected=flow_id
-            )
+            mock_get_graph.assert_called_once_with(flow_name_selected=flow_id, flow_id_selected=flow_id)
             mock_update.assert_called_once_with(build_config, mock_graph)
 
     @pytest.mark.asyncio
@@ -311,38 +312,36 @@ class TestRunFlowComponentUpdateBuildConfig:
         flow_id = str(uuid4())
         flow_name = "Test Flow"
 
-        build_config = dotdict({
-            "code": {},
-            "_type": {},
-            "flow_name_selected": {
-                "options": [flow_name],
-                "selected_metadata": {"id": flow_id},
-            },
-            "flow_id_selected": {"value": None},  # No existing value
-            "session_id": {},
-            "cache_flow": {},
-        })
+        build_config = dotdict(
+            {
+                "code": {},
+                "_type": {},
+                "flow_name_selected": {
+                    "options": [flow_name],
+                    "selected_metadata": {"id": flow_id},
+                },
+                "flow_id_selected": {"value": None},  # No existing value
+                "session_id": {},
+                "cache_flow": {},
+            }
+        )
 
         mock_graph = MagicMock(spec=Graph)
         mock_graph.vertices = []
 
-        with patch.object(component, "get_graph", new_callable=AsyncMock) as mock_get_graph, \
-             patch.object(component, "update_build_config_from_graph") as mock_update:
-
+        with (
+            patch.object(component, "get_graph", new_callable=AsyncMock) as mock_get_graph,
+            patch.object(component, "update_build_config_from_graph") as mock_update,
+        ):
             mock_get_graph.return_value = mock_graph
 
             result = await component.update_build_config(
-                build_config=build_config,
-                field_value=flow_name,
-                field_name="flow_name_selected"
+                build_config=build_config, field_value=flow_name, field_name="flow_name_selected"
             )
 
             # Should have derived the flow_id from selected_metadata
             assert result["flow_id_selected"]["value"] == flow_id
-            mock_get_graph.assert_called_once_with(
-                flow_name_selected=flow_name,
-                flow_id_selected=flow_id
-            )
+            mock_get_graph.assert_called_once_with(flow_name_selected=flow_name, flow_id_selected=flow_id)
             mock_update.assert_called_once_with(build_config, mock_graph)
 
     @pytest.mark.asyncio
@@ -355,37 +354,34 @@ class TestRunFlowComponentUpdateBuildConfig:
         existing_flow_id = str(uuid4())
         flow_name = "Test Flow"
 
-        build_config = dotdict({
-            "code": {},
-            "_type": {},
-            "flow_name_selected": {
-                "options": [flow_name],
-                # No selected_metadata
-            },
-            "flow_id_selected": {"value": existing_flow_id},
-            "session_id": {},
-            "cache_flow": {},
-        })
+        build_config = dotdict(
+            {
+                "code": {},
+                "_type": {},
+                "flow_name_selected": {
+                    "options": [flow_name],
+                    # No selected_metadata
+                },
+                "flow_id_selected": {"value": existing_flow_id},
+                "session_id": {},
+                "cache_flow": {},
+            }
+        )
 
         mock_graph = MagicMock(spec=Graph)
         mock_graph.vertices = []
 
-        with patch.object(component, "get_graph", new_callable=AsyncMock) as mock_get_graph, \
-             patch.object(component, "update_build_config_from_graph") as mock_update:
-
+        with (
+            patch.object(component, "get_graph", new_callable=AsyncMock) as mock_get_graph,
+            patch.object(component, "update_build_config_from_graph") as mock_update,
+        ):
             mock_get_graph.return_value = mock_graph
 
             result = await component.update_build_config(
-                build_config=build_config,
-                field_value=flow_name,
-                field_name="flow_name_selected"
+                build_config=build_config, field_value=flow_name, field_name="flow_name_selected"
             )
 
             # Should have kept the existing flow_id
             assert result["flow_id_selected"]["value"] == existing_flow_id
-            mock_get_graph.assert_called_once_with(
-                flow_name_selected=flow_name,
-                flow_id_selected=existing_flow_id
-            )
+            mock_get_graph.assert_called_once_with(flow_name_selected=flow_name, flow_id_selected=existing_flow_id)
             mock_update.assert_called_once_with(build_config, mock_graph)
-

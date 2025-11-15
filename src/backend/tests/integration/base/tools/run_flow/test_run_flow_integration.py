@@ -22,7 +22,7 @@ class TestRunFlowEndToEnd:
         folder_response = await client.post(
             "api/v1/folders/",
             json={"name": "Test Folder", "description": "Folder for integration tests"},
-            headers=logged_in_headers
+            headers=logged_in_headers,
         )
         assert folder_response.status_code == 201
         folder_id = folder_response.json()["id"]
@@ -68,20 +68,20 @@ class TestRunFlowEndToEnd:
             component.cache_flow = False
 
             # Step 1: Build config with flow list
-            build_config = dotdict({
-                "code": {},
-                "_type": {},
-                "flow_name_selected": {"is_refresh": True, "options": [], "options_metadata": []},
-                "flow_id_selected": {},
-                "session_id": {},
-                "cache_flow": {},
-            })
+            build_config = dotdict(
+                {
+                    "code": {},
+                    "_type": {},
+                    "flow_name_selected": {"is_refresh": True, "options": [], "options_metadata": []},
+                    "flow_id_selected": {},
+                    "session_id": {},
+                    "cache_flow": {},
+                }
+            )
 
             # NO MOCKING - Use real component methods that will hit real database
             updated_config = await component.update_build_config(
-                build_config=build_config,
-                field_value=None,
-                field_name="flow_name_selected"
+                build_config=build_config, field_value=None, field_name="flow_name_selected"
             )
 
             # Verify the real flow appears in options (should see target flow in same folder)
@@ -114,16 +114,14 @@ class TestRunFlowEndToEnd:
         graph = Graph(start=chat_input, end=text_output)
 
         # Execute run_flow with real graph
-        inputs = [
-            {"components": [chat_input.get_id()], "input_value": "Hello, world!", "type": "chat"}
-        ]
+        inputs = [{"components": [chat_input.get_id()], "input_value": "Hello, world!", "type": "chat"}]
 
         result = await run_flow(
             user_id=user_id,
             session_id=session_id,
             inputs=inputs,
             graph=graph,
-            output_type="any"  # Get all outputs
+            output_type="any",  # Get all outputs
         )
 
         # Verify graph properties were set correctly
@@ -151,7 +149,7 @@ class TestRunFlowComponentWithTools:
         folder_response = await client.post(
             "api/v1/folders/",
             json={"name": "Tool Test Folder", "description": "Folder for tool generation tests"},
-            headers=logged_in_headers
+            headers=logged_in_headers,
         )
         assert folder_response.status_code == 201
         folder_id = folder_response.json()["id"]
@@ -264,10 +262,7 @@ class TestRunFlowOutputResolution:
             component._pre_run_setup()
 
             # Get the real graph
-            real_graph = await component.get_graph(
-                flow_name_selected=flow_name,
-                flow_id_selected=flow_id
-            )
+            real_graph = await component.get_graph(flow_name_selected=flow_name, flow_id_selected=flow_id)
 
             # Verify the flow has multiple output vertices
             output_vertices = [v for v in real_graph.vertices if v.is_output]
@@ -280,6 +275,7 @@ class TestRunFlowOutputResolution:
         finally:
             # Cleanup
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
 
 class TestRunFlowCaching:
     """Integration tests for run_flow caching behavior with real flows.
@@ -313,10 +309,7 @@ class TestRunFlowCaching:
             component.cache_flow = True  # Caching enabled
 
             # First access - should fetch from database
-            graph1 = await component.get_graph(
-                flow_name_selected=flow_name,
-                flow_id_selected=flow_id
-            )
+            graph1 = await component.get_graph(flow_name_selected=flow_name, flow_id_selected=flow_id)
 
             # Verify it's a real graph
             assert graph1 is not None
@@ -324,10 +317,7 @@ class TestRunFlowCaching:
             assert len(graph1.vertices) > 0
 
             # Second access - should reuse cached graph (same instance)
-            graph2 = await component.get_graph(
-                flow_name_selected=flow_name,
-                flow_id_selected=flow_id
-            )
+            graph2 = await component.get_graph(flow_name_selected=flow_name, flow_id_selected=flow_id)
 
             # With caching, should return the same graph instance
             assert graph2 is not None
