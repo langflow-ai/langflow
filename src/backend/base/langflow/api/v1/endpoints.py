@@ -46,7 +46,7 @@ from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user, get_webhook_user
 from langflow.services.cache.utils import save_uploaded_file
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
@@ -350,7 +350,7 @@ async def check_flow_user_permission(
 async def simplified_run_flow(
     *,
     background_tasks: BackgroundTasks,
-    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
+    flow_id_or_name: str,
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
@@ -364,7 +364,7 @@ async def simplified_run_flow(
 
     Args:
         background_tasks (BackgroundTasks): FastAPI background task manager
-        flow (FlowRead | None): The flow to execute, loaded via dependency
+        flow_id_or_name (str): The flow ID or endpoint name to execute
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
         api_key_user (UserRead): Authenticated user from API key
@@ -399,6 +399,9 @@ async def simplified_run_flow(
     # This happens when FastAPI can't automatically parse it due to the Request parameter
     if input_request is None:
         input_request = await parse_input_request_from_body(http_request)
+
+    # SECURITY FIX: Retrieve flow with user ownership validation
+    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, str(api_key_user.id))
 
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
@@ -501,7 +504,6 @@ async def simplified_run_flow(
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)  # noqa: RUF100, FAST003
 async def webhook_run_flow(
     flow_id_or_name: str,
-    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     request: Request,
     background_tasks: BackgroundTasks,
 ):
@@ -509,7 +511,6 @@ async def webhook_run_flow(
 
     Args:
         flow_id_or_name (str): The flow ID or endpoint name.
-        flow (Flow): The flow to be executed.
         request (Request): The incoming HTTP request.
         background_tasks (BackgroundTasks): The background tasks manager.
 
@@ -525,7 +526,13 @@ async def webhook_run_flow(
     error_msg = ""
 
     # Get the appropriate user for webhook execution based on auth settings
+    # This will also validate flow ownership when auth is enabled
     webhook_user = await get_webhook_user(flow_id_or_name, request)
+
+    # SECURITY FIX: Retrieve flow with user ownership validation
+    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, str(webhook_user.id))
+    if not flow:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
     try:
         data = await request.body()
