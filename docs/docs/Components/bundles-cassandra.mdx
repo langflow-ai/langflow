@@ -113,6 +113,10 @@ It also supports writing to the vector store.
 | search_score_threshold | Search Score Threshold | Input parameter. The minimum similarity score threshold for search results. Only relevant for reads using the `Similarity with score threshold` search type. |
 | search_filter | Search Metadata Filter | Input parameter. An optional dictionary of metadata search filters to apply in addition to graph traversal and similarity search. |
 
+## ScyllaDB Compatibility
+
+**ScyllaDB is a drop-in replacement for Apache Cassandra** in Langflow. All Cassandra components work with ScyllaDB without any code modifications. Simply update the `database_ref` parameter to point to your ScyllaDB cluster instead of Cassandra.
+
 ### See also
 
 * [**DataStax** bundle](/bundles-datastax)
