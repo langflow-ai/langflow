@@ -127,13 +127,21 @@ class DatabaseService(Service):
 
         poolclass_key = kwargs.get("poolclass")
         if poolclass_key is not None:
-            pool_class = getattr(sa, poolclass_key, None)
-            if pool_class and isinstance(pool_class, type) and issubclass(pool_class, sa.pool.Pool):
-                logger.debug(f"Using poolclass: {poolclass_key}.")
-                kwargs["poolclass"] = pool_class
-            else:
-                logger.error(f"Invalid poolclass '{poolclass_key}' specified. Using default pool class.")
+            # Validate that poolclass_key is a string before using with getattr
+            if not isinstance(poolclass_key, str):
+                logger.error(
+                    f"Invalid poolclass '{poolclass_key}' specified. Poolclass must be a string. "
+                    "Using default pool class."
+                )
                 kwargs.pop("poolclass", None)
+            else:
+                pool_class = getattr(sa, poolclass_key, None)
+                if pool_class and isinstance(pool_class, type) and issubclass(pool_class, sa.pool.Pool):
+                    logger.debug(f"Using poolclass: {poolclass_key}.")
+                    kwargs["poolclass"] = pool_class
+                else:
+                    logger.error(f"Invalid poolclass '{poolclass_key}' specified. Using default pool class.")
+                    kwargs.pop("poolclass", None)
 
         return create_async_engine(
             self.database_url,
