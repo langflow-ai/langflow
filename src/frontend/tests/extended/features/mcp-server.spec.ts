@@ -526,181 +526,181 @@ test(
   },
 );
 
-// test(
-//   "HTTP/SSE MCP server fields should persist after saving and editing",
-//   { tag: ["@release", "@workspace", "@components"] },
-//   async ({ page }) => {
-//     await awaitBootstrapTest(page);
+test(
+  "HTTP/SSE MCP server fields should persist after saving and editing",
+  { tag: ["@release", "@workspace", "@components"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
 
-//     await page.waitForSelector('[data-testid="blank-flow"]', {
-//       timeout: 30000,
-//     });
-//     await page.getByTestId("blank-flow").click();
-//     await page.getByTestId("sidebar-search-input").click();
-//     await page.getByTestId("sidebar-search-input").fill("mcp tools");
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
+    await page.getByTestId("blank-flow").click();
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("mcp tools");
 
-//     await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
-//       timeout: 30000,
-//     });
+    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
+      timeout: 30000,
+    });
 
-//     await page
-//       .getByTestId("models_and_agentsMCP Tools")
-//       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-//         targetPosition: { x: 100, y: 100 },
-//       });
-//     await adjustScreenView(page, { numberOfZoomOut: 3 });
+    await page
+      .getByTestId("models_and_agentsMCP Tools")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 100, y: 100 },
+      });
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-//     try {
-//       await page.getByText("Add MCP Server", { exact: true }).click({
-//         timeout: 5000,
-//       });
-//     } catch (_error) {
-//       await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
-//       await page.getByText("Add MCP Server", { exact: true }).click({
-//         timeout: 5000,
-//       });
-//     }
+    try {
+      await page.getByText("Add MCP Server", { exact: true }).click({
+        timeout: 5000,
+      });
+    } catch (_error) {
+      await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
+      await page.getByText("Add MCP Server", { exact: true }).click({
+        timeout: 5000,
+      });
+    }
 
-//     await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
-//       state: "visible",
-//       timeout: 30000,
-//     });
+    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
+      state: "visible",
+      timeout: 30000,
+    });
 
-//     // Go to HTTP tab and fill all fields
-//     await page.getByTestId("http-tab").click();
-//     await page.waitForSelector('[data-testid="http-name-input"]', {
-//       state: "visible",
-//       timeout: 30000,
-//     });
+    // Go to HTTP tab and fill all fields
+    await page.getByTestId("http-tab").click();
+    await page.waitForSelector('[data-testid="http-name-input"]', {
+      state: "visible",
+      timeout: 30000,
+    });
 
-//     // Test data with random suffix
-//     const randomSuffix = Math.floor(Math.random() * 90000) + 10000; // 5-digit random number
-//     const testName = `test_http_server_${randomSuffix}`;
-//     const testUrl = "https://api.example.com/mcp";
-//     const testHeaderKey1 = "Authorization";
-//     const testHeaderValue1 = "Bearer token123";
-//     const testHeaderKey2 = "Content-Type";
-//     const testHeaderValue2 = "application/json";
-//     const testEnvKey1 = "API_TIMEOUT";
-//     const testEnvValue1 = "30000";
-//     const testEnvKey2 = "RETRY_COUNT";
-//     const testEnvValue2 = "3";
+    // Test data with random suffix
+    const randomSuffix = Math.floor(Math.random() * 90000) + 10000; // 5-digit random number
+    const testName = `test_http_server_${randomSuffix}`;
+    const testUrl = "https://api.example.com/mcp";
+    const testHeaderKey1 = "Authorization";
+    const testHeaderValue1 = "Bearer token123";
+    const testHeaderKey2 = "Content-Type";
+    const testHeaderValue2 = "application/json";
+    const testEnvKey1 = "API_TIMEOUT";
+    const testEnvValue1 = "30000";
+    const testEnvKey2 = "RETRY_COUNT";
+    const testEnvValue2 = "3";
 
-//     // Fill basic fields
-//     await page.getByTestId("http-name-input").fill(testName);
-//     await page.getByTestId("http-url-input").fill(testUrl);
+    // Fill basic fields
+    await page.getByTestId("http-name-input").fill(testName);
+    await page.getByTestId("http-url-input").fill(testUrl);
 
-//     // Add first header
-//     await page.getByTestId("http-headers-key-0").fill(testHeaderKey1);
-//     await page.getByTestId("http-headers-value-0").fill(testHeaderValue1);
+    // Add first header
+    await page.getByTestId("http-headers-key-0").fill(testHeaderKey1);
+    await page.getByTestId("http-headers-value-0").fill(testHeaderValue1);
 
-//     // Add second header
-//     await page.getByTestId("http-headers-plus-btn-0").click();
-//     await page.getByTestId("http-headers-key-1").fill(testHeaderKey2);
-//     await page.getByTestId("http-headers-value-1").fill(testHeaderValue2);
+    // Add second header
+    await page.getByTestId("http-headers-plus-btn-0").click();
+    await page.getByTestId("http-headers-key-1").fill(testHeaderKey2);
+    await page.getByTestId("http-headers-value-1").fill(testHeaderValue2);
 
-//     // Add first environment variable
-//     await page.getByTestId("http-env-key-0").fill(testEnvKey1);
-//     await page.getByTestId("http-env-value-0").fill(testEnvValue1);
+    // Add first environment variable
+    await page.getByTestId("http-env-key-0").fill(testEnvKey1);
+    await page.getByTestId("http-env-value-0").fill(testEnvValue1);
 
-//     // Add second environment variable
-//     await page.getByTestId("http-env-plus-btn-0").click();
-//     await page.getByTestId("http-env-key-1").fill(testEnvKey2);
-//     await page.getByTestId("http-env-value-1").fill(testEnvValue2);
+    // Add second environment variable
+    await page.getByTestId("http-env-plus-btn-0").click();
+    await page.getByTestId("http-env-key-1").fill(testEnvKey2);
+    await page.getByTestId("http-env-value-1").fill(testEnvValue2);
 
-//     // Save the server
-//     await page.getByTestId("add-mcp-server-button").click();
+    // Save the server
+    await page.getByTestId("add-mcp-server-button").click();
 
-//     // Wait for server to be created
-//     await page.waitForTimeout(2000);
+    // Wait for server to be created
+    await page.waitForTimeout(2000);
 
-//     // Go to settings to edit the server
-//     await page.getByTestId("user_menu_button").click({ timeout: 3000 });
-//     await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
+    // Go to settings to edit the server
+    await page.getByTestId("user_menu_button").click({ timeout: 3000 });
+    await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
 
-//     await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
-//       timeout: 30000,
-//     });
-//     await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 3000 });
+    await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
+      timeout: 30000,
+    });
+    await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 3000 });
 
-//     await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
-//       timeout: 3000,
-//     });
+    await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
+      timeout: 3000,
+    });
 
-//     // Find and edit the server
-//     await expect(page.getByText(testName)).toBeVisible({
-//       timeout: 3000,
-//     });
+    // Find and edit the server
+    await expect(page.getByText(testName)).toBeVisible({
+      timeout: 3000,
+    });
 
-//     await page
-//       .getByTestId(`mcp-server-menu-button-${testName}`)
-//       .click({ timeout: 3000 });
+    await page
+      .getByTestId(`mcp-server-menu-button-${testName}`)
+      .click({ timeout: 3000 });
 
-//     await page
-//       .getByText("Edit", { exact: true })
-//       .first()
-//       .click({ timeout: 3000 });
+    await page
+      .getByText("Edit", { exact: true })
+      .first()
+      .click({ timeout: 3000 });
 
-//     await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
-//       state: "visible",
-//       timeout: 30000,
-//     });
+    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
+      state: "visible",
+      timeout: 30000,
+    });
 
-//     // Verify all fields persisted correctly
-//     expect(await page.getByTestId("http-name-input").inputValue()).toBe(
-//       testName,
-//     );
-//     expect(await page.getByTestId("http-url-input").inputValue()).toBe(testUrl);
-//     expect(await page.getByTestId("http-headers-key-0").inputValue()).toBe(
-//       testHeaderKey1,
-//     );
-//     expect(await page.getByTestId("http-headers-value-0").inputValue()).toBe(
-//       testHeaderValue1,
-//     );
-//     expect(await page.getByTestId("http-headers-key-1").inputValue()).toBe(
-//       testHeaderKey2,
-//     );
-//     expect(await page.getByTestId("http-headers-value-1").inputValue()).toBe(
-//       testHeaderValue2,
-//     );
-//     expect(await page.getByTestId("http-env-key-0").inputValue()).toBe(
-//       testEnvKey1,
-//     );
-//     expect(await page.getByTestId("http-env-value-0").inputValue()).toBe(
-//       testEnvValue1,
-//     );
-//     expect(await page.getByTestId("http-env-key-1").inputValue()).toBe(
-//       testEnvKey2,
-//     );
-//     expect(await page.getByTestId("http-env-value-1").inputValue()).toBe(
-//       testEnvValue2,
-//     );
+    // Verify all fields persisted correctly
+    expect(await page.getByTestId("http-name-input").inputValue()).toBe(
+      testName,
+    );
+    expect(await page.getByTestId("http-url-input").inputValue()).toBe(testUrl);
+    expect(await page.getByTestId("http-headers-key-0").inputValue()).toBe(
+      testHeaderKey1,
+    );
+    expect(await page.getByTestId("http-headers-value-0").inputValue()).toBe(
+      testHeaderValue1,
+    );
+    expect(await page.getByTestId("http-headers-key-1").inputValue()).toBe(
+      testHeaderKey2,
+    );
+    expect(await page.getByTestId("http-headers-value-1").inputValue()).toBe(
+      testHeaderValue2,
+    );
+    expect(await page.getByTestId("http-env-key-0").inputValue()).toBe(
+      testEnvKey1,
+    );
+    expect(await page.getByTestId("http-env-value-0").inputValue()).toBe(
+      testEnvValue1,
+    );
+    expect(await page.getByTestId("http-env-key-1").inputValue()).toBe(
+      testEnvKey2,
+    );
+    expect(await page.getByTestId("http-env-value-1").inputValue()).toBe(
+      testEnvValue2,
+    );
 
-//     // Clean up - cancel the edit modal
-//     await page.keyboard.press("Escape");
+    // Clean up - cancel the edit modal
+    await page.keyboard.press("Escape");
 
-//     // Delete the test server
-//     await page
-//       .getByTestId(`mcp-server-menu-button-${testName}`)
-//       .click({ timeout: 3000 });
+    // Delete the test server
+    await page
+      .getByTestId(`mcp-server-menu-button-${testName}`)
+      .click({ timeout: 3000 });
 
-//     await page
-//       .getByText("Delete", { exact: true })
-//       .first()
-//       .click({ timeout: 3000 });
+    await page
+      .getByText("Delete", { exact: true })
+      .first()
+      .click({ timeout: 3000 });
 
-//     await page.waitForSelector(
-//       '[data-testid="btn_delete_delete_confirmation_modal"]',
-//       {
-//         timeout: 3000,
-//       },
-//     );
+    await page.waitForSelector(
+      '[data-testid="btn_delete_delete_confirmation_modal"]',
+      {
+        timeout: 3000,
+      },
+    );
 
-//     await page
-//       .getByTestId("btn_delete_delete_confirmation_modal")
-//       .click({ timeout: 3000 });
-//   },
-// );
+    await page
+      .getByTestId("btn_delete_delete_confirmation_modal")
+      .click({ timeout: 3000 });
+  },
+);
 
 // test(
 //   "mcp server tools should be refreshed when editing a server",
