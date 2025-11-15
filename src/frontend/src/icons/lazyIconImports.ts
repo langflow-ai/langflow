@@ -117,6 +117,10 @@ export const lazyIconsMapping = {
     import("@/icons/Brightdata").then((mod) => ({
       default: mod.BrightdataIcon,
     })),
+  BurnCloud: () =>
+    import("@/icons/BurnCloud").then((mod) => ({
+      default: mod.BurnCloudIcon,
+    })),
   BWPython: () =>
     import("@/icons/BW python").then((mod) => ({ default: mod.BWPythonIcon })),
   Cassandra: () =>
