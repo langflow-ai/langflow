@@ -1,5 +1,4 @@
-"""
-Integration tests for Cassandra Chat Memory component.
+"""Integration tests for Cassandra Chat Memory component.
 
 These tests verify drop-in compatibility between Apache Cassandra and ScyllaDB
 for the chat memory functionality.
@@ -25,8 +24,7 @@ from tests.api_keys import (
 
 @pytest.fixture(params=["cassandra", "scylladb"])
 def db_config(request):
-    """
-    Parametrized fixture providing database configuration.
+    """Parametrized fixture providing database configuration.
 
     Returns:
         dict: Database configuration with host, port, keyspace, and db_name
@@ -38,13 +36,12 @@ def db_config(request):
             "keyspace": get_cassandra_keyspace(),
             "db_name": "Cassandra",
         }
-    else:
-        return {
-            "host": get_scylladb_host(),
-            "port": get_scylladb_port(),
-            "keyspace": get_scylladb_keyspace(),
-            "db_name": "ScyllaDB",
-        }
+    return {
+        "host": get_scylladb_host(),
+        "port": get_scylladb_port(),
+        "keyspace": get_scylladb_keyspace(),
+        "db_name": "ScyllaDB",
+    }
 
 
 @pytest.fixture
@@ -69,8 +66,7 @@ def cassandra_session(db_config):
 
 
 def test_cassandra_chat_memory_connection(db_config):
-    """
-    Test that CassandraChatMessageHistory can connect to the database.
+    """Test that CassandraChatMessageHistory can connect to the database.
 
     Verifies:
         - Component can import successfully
@@ -104,8 +100,7 @@ def test_cassandra_chat_memory_connection(db_config):
 
 
 def test_cassandra_chat_memory_add_messages(db_config):
-    """
-    Test adding and retrieving messages from chat memory.
+    """Test adding and retrieving messages from chat memory.
 
     Verifies:
         - Messages can be added
@@ -154,8 +149,7 @@ def test_cassandra_chat_memory_add_messages(db_config):
 
 
 def test_cassandra_chat_memory_persistence(db_config):
-    """
-    Test that messages persist across chat memory instances.
+    """Test that messages persist across chat memory instances.
 
     Verifies:
         - Messages are stored in the database
@@ -211,8 +205,7 @@ def test_cassandra_chat_memory_persistence(db_config):
 
 
 def test_cassandra_chat_memory_clear(db_config):
-    """
-    Test clearing chat memory.
+    """Test clearing chat memory.
 
     Verifies:
         - Messages can be cleared
@@ -260,8 +253,7 @@ def test_cassandra_chat_memory_clear(db_config):
 
 
 def test_cassandra_chat_memory_multiple_sessions(db_config):
-    """
-    Test that multiple sessions can coexist independently.
+    """Test that multiple sessions can coexist independently.
 
     Verifies:
         - Sessions are isolated

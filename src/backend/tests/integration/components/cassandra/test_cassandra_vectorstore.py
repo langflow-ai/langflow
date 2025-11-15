@@ -1,5 +1,4 @@
-"""
-Integration tests for Cassandra Vector Store component.
+"""Integration tests for Cassandra Vector Store component.
 
 These tests verify drop-in compatibility between Apache Cassandra and ScyllaDB.
 The tests should pass identically for both databases using the same code.
@@ -38,7 +37,6 @@ from tests.api_keys import (
 from tests.integration.components.mock_components import TextToData
 from tests.integration.utils import ComponentInputHandle, run_single_component
 
-
 VECTOR_STORE_COLLECTION = "test_vector_store"
 SEARCH_COLLECTION = "test_search"
 INGEST_COLLECTION = "test_ingest"
@@ -52,8 +50,7 @@ ALL_COLLECTIONS = [
 
 @pytest.fixture(params=["cassandra", "scylladb"])
 def db_config(request):
-    """
-    Parametrized fixture providing database configuration.
+    """Parametrized fixture providing database configuration.
 
     This fixture enables tests to run against both Cassandra and ScyllaDB
     automatically, verifying drop-in compatibility.
@@ -68,19 +65,17 @@ def db_config(request):
             "keyspace": get_cassandra_keyspace(),
             "db_name": "Cassandra",
         }
-    else:
-        return {
-            "host": get_scylladb_host(),
-            "port": get_scylladb_port(),
-            "keyspace": get_scylladb_keyspace(),
-            "db_name": "ScyllaDB",
-        }
+    return {
+        "host": get_scylladb_host(),
+        "port": get_scylladb_port(),
+        "keyspace": get_scylladb_keyspace(),
+        "db_name": "ScyllaDB",
+    }
 
 
 @pytest.fixture
 def cassandra_client(db_config):
-    """
-    Fixture providing a Cassandra/ScyllaDB client for test cleanup.
+    """Fixture providing a Cassandra/ScyllaDB client for test cleanup.
 
     Yields:
         Cluster: cassandra.cluster.Cluster instance
@@ -109,8 +104,7 @@ def cassandra_client(db_config):
 
 @pytest.mark.api_key_required
 async def test_cassandra_vector_store_basic(db_config, cassandra_client):
-    """
-    Test basic vector store creation and connectivity.
+    """Test basic vector store creation and connectivity.
 
     Verifies:
         - Component can connect to the database
@@ -146,8 +140,7 @@ async def test_cassandra_vector_store_basic(db_config, cassandra_client):
 
 @pytest.mark.api_key_required
 async def test_cassandra_ingest_and_search(db_config, cassandra_client):
-    """
-    Test document ingestion and similarity search.
+    """Test document ingestion and similarity search.
 
     Verifies:
         - Documents can be ingested with embeddings
@@ -196,8 +189,7 @@ async def test_cassandra_ingest_and_search(db_config, cassandra_client):
 
 @pytest.mark.api_key_required
 async def test_cassandra_document_ingestion(db_config, cassandra_client):
-    """
-    Test ingesting structured Document objects.
+    """Test ingesting structured Document objects.
 
     Verifies:
         - Document objects can be converted to Data and ingested
@@ -245,8 +237,7 @@ async def test_cassandra_document_ingestion(db_config, cassandra_client):
 
 @pytest.mark.api_key_required
 async def test_cassandra_connection_formats(db_config):
-    """
-    Test different connection string formats.
+    """Test different connection string formats.
 
     Verifies:
         - Single host connection works
@@ -276,8 +267,7 @@ async def test_cassandra_connection_formats(db_config):
 
 
 def test_cassandra_driver_compatibility(db_config):
-    """
-    Test that the cassandra-driver works with both databases.
+    """Test that the cassandra-driver works with both databases.
 
     This test verifies the core drop-in compatibility claim:
     The same driver library works unchanged with both Cassandra and ScyllaDB.
@@ -304,8 +294,7 @@ def test_cassandra_driver_compatibility(db_config):
 
 
 def test_cassandra_keyspace_exists(db_config):
-    """
-    Verify the test keyspace exists and is accessible.
+    """Verify the test keyspace exists and is accessible.
 
     This test checks that the setup script ran successfully.
     """
