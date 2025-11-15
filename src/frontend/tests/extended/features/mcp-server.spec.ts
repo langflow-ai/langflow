@@ -885,6 +885,17 @@ test(
 
     await page.getByTestId("dropdown_str_tool").click();
 
+    // Wait for tools to actually load after server refresh
+    await page.waitForFunction(
+      () => {
+        const options = document.querySelectorAll(
+          '[data-testid*="get_current_time"]',
+        );
+        return options.length > 0;
+      },
+      { timeout: 15000 },
+    );
+
     const timeOptionCount = await page
       .getByTestId("get_current_time-0-option")
       .count();
