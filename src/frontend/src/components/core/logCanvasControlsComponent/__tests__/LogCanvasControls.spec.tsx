@@ -20,6 +20,6 @@ describe("LogCanvasControls", () => {
   it("renders panel and button", () => {
     render(<LogCanvasControls />);
     expect(screen.getByTestId("canvas_controls")).toBeInTheDocument();
-    expect(screen.getByText("Logs")).toBeInTheDocument();
+    expect(screen.getByText("Executions")).toBeInTheDocument();
   });
 });
