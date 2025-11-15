@@ -1,3 +1,9 @@
+"""User CRUD operations.
+
+Most operations should use langflow.services.database.crud.user_crud.
+This module contains specialized user operations.
+"""
+
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -5,22 +11,38 @@ from fastapi import HTTPException, status
 from lfx.log.logger import logger
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.attributes import flag_modified
-from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.services.database.crud import user_crud
 from langflow.services.database.models.user.model import User, UserUpdate
 
 
 async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
-    stmt = select(User).where(User.username == username)
-    return (await db.exec(stmt)).first()
+    """Get user by username.
+
+    Args:
+        db: Database session
+        username: Username
+
+    Returns:
+        User instance or None if not found
+    """
+    return await user_crud.get_by_username(db, username)
 
 
 async def get_user_by_id(db: AsyncSession, user_id: UUID) -> User | None:
+    """Get user by ID.
+
+    Args:
+        db: Database session
+        user_id: User identifier
+
+    Returns:
+        User instance or None if not found
+    """
     if isinstance(user_id, str):
         user_id = UUID(user_id)
-    stmt = select(User).where(User.id == user_id)
-    return (await db.exec(stmt)).first()
+    return await user_crud.get(db, user_id)
 
 
 async def update_user(user_db: User | None, user: UserUpdate, db: AsyncSession) -> User:
@@ -63,7 +85,12 @@ async def update_user_last_login_at(user_id: UUID, db: AsyncSession):
 
 
 async def get_all_superusers(db: AsyncSession) -> list[User]:
-    """Get all superuser accounts from the database."""
-    stmt = select(User).where(User.is_superuser == True)  # noqa: E712
-    result = await db.exec(stmt)
-    return list(result.all())
+    """Get all superuser accounts from the database.
+
+    Args:
+        db: Database session
+
+    Returns:
+        List of superuser instances
+    """
+    return await user_crud.get_superusers(db)
