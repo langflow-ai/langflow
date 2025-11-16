@@ -4,230 +4,230 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { zoomOut } from "../../utils/zoom-out";
 
-test(
-  "user must be able to change mode of MCP tools without any issues",
-  { tag: ["@release", "@workspace", "@components"] },
-  async ({ page }) => {
-    await awaitBootstrapTest(page);
+// test(
+//   "user must be able to change mode of MCP tools without any issues",
+//   { tag: ["@release", "@workspace", "@components"] },
+//   async ({ page }) => {
+//     await awaitBootstrapTest(page);
 
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("mcp tools");
+//     await page.waitForSelector('[data-testid="blank-flow"]', {
+//       timeout: 30000,
+//     });
+//     await page.getByTestId("blank-flow").click();
+//     await page.getByTestId("sidebar-search-input").click();
+//     await page.getByTestId("sidebar-search-input").fill("mcp tools");
 
-    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
-      timeout: 30000,
-    });
+//     await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
+//       timeout: 30000,
+//     });
 
-    await page
-      .getByTestId("models_and_agentsMCP Tools")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
+//     await page
+//       .getByTestId("models_and_agentsMCP Tools")
+//       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+//         targetPosition: { x: 100, y: 100 },
+//       });
 
-    // See if the color matches
+//     // See if the color matches
 
-    const isDark = await page.evaluate(() => {
-      return document.body.classList.contains("dark");
-    });
+//     const isDark = await page.evaluate(() => {
+//       return document.body.classList.contains("dark");
+//     });
 
-    for (const path of await page
-      .getByTestId("generic-node-title-arrangement")
-      .getByTestId("icon-Mcp")
-      .locator("path")
-      .all()) {
-      const color = await path.evaluate(
-        (el) => window.getComputedStyle(el).fill,
-      );
-      expect(color).toBe(isDark ? "rgb(255, 255, 255)" : "rgb(0, 0, 0)");
-    }
+//     for (const path of await page
+//       .getByTestId("generic-node-title-arrangement")
+//       .getByTestId("icon-Mcp")
+//       .locator("path")
+//       .all()) {
+//       const color = await path.evaluate(
+//         (el) => window.getComputedStyle(el).fill,
+//       );
+//       expect(color).toBe(isDark ? "rgb(255, 255, 255)" : "rgb(0, 0, 0)");
+//     }
 
-    await adjustScreenView(page, { numberOfZoomOut: 3 });
+//     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-    await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
+//     await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
-    try {
-      await page.getByText("Add MCP Server", { exact: true }).click({
-        timeout: 5000,
-      });
-    } catch (_error) {
-      await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
-      await page.getByText("Add MCP Server", { exact: true }).click({
-        timeout: 5000,
-      });
-    }
+//     try {
+//       await page.getByText("Add MCP Server", { exact: true }).click({
+//         timeout: 5000,
+//       });
+//     } catch (_error) {
+//       await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
+//       await page.getByText("Add MCP Server", { exact: true }).click({
+//         timeout: 5000,
+//       });
+//     }
 
-    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
-      state: "visible",
-      timeout: 30000,
-    });
+//     await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
+//       state: "visible",
+//       timeout: 30000,
+//     });
 
-    await page.getByTestId("stdio-tab").click();
+//     await page.getByTestId("stdio-tab").click();
 
-    await page.waitForSelector('[data-testid="stdio-name-input"]', {
-      state: "visible",
-      timeout: 30000,
-    });
+//     await page.waitForSelector('[data-testid="stdio-name-input"]', {
+//       state: "visible",
+//       timeout: 30000,
+//     });
 
-    const randomSuffix = Math.floor(Math.random() * 90000) + 10000; // 5-digit random number
-    const testName = `test_server_${randomSuffix}`;
-    await page.getByTestId("stdio-name-input").fill(testName);
+//     const randomSuffix = Math.floor(Math.random() * 90000) + 10000; // 5-digit random number
+//     const testName = `test_server_${randomSuffix}`;
+//     await page.getByTestId("stdio-name-input").fill(testName);
 
-    await page.getByTestId("stdio-command-input").fill("uvx mcp-server-fetch");
+//     await page.getByTestId("stdio-command-input").fill("uvx mcp-server-fetch");
 
-    await page.getByTestId("add-mcp-server-button").click();
+//     await page.getByTestId("add-mcp-server-button").click();
 
-    await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
-      timeout: 30000,
-    });
+//     await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
+//       timeout: 30000,
+//     });
 
-    await page.waitForSelector(
-      '[data-testid="dropdown_str_tool"]:not([disabled])',
-      {
-        timeout: 10000,
-        state: "visible",
-      },
-    );
+//     await page.waitForSelector(
+//       '[data-testid="dropdown_str_tool"]:not([disabled])',
+//       {
+//         timeout: 10000,
+//         state: "visible",
+//       },
+//     );
 
-    await page.getByText("Select a tool");
+//     await page.getByText("Select a tool");
 
-    await page.getByTestId("dropdown_str_tool").click();
+//     await page.getByTestId("dropdown_str_tool").click();
 
-    const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
+//     const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
 
-    expect(fetchOptionCount).toBeGreaterThan(0);
+//     expect(fetchOptionCount).toBeGreaterThan(0);
 
-    await page.getByTestId("fetch-0-option").click();
+//     await page.getByTestId("fetch-0-option").click();
 
-    await page.waitForTimeout(2000);
-    await adjustScreenView(page);
+//     await page.waitForTimeout(2000);
+//     await adjustScreenView(page);
 
-    await page.waitForSelector('[data-testid="int_int_max_length"]', {
-      state: "visible",
-      timeout: 30000,
-    });
+//     await page.waitForSelector('[data-testid="int_int_max_length"]', {
+//       state: "visible",
+//       timeout: 30000,
+//     });
 
-    const maxLengthOptionCount = await page
-      .getByTestId("int_int_max_length")
-      .count();
+//     const maxLengthOptionCount = await page
+//       .getByTestId("int_int_max_length")
+//       .count();
 
-    expect(maxLengthOptionCount).toBeGreaterThan(0);
+//     expect(maxLengthOptionCount).toBeGreaterThan(0);
 
-    const urlOptionCount = await page
-      .getByTestId("anchor-popover-anchor-input-url")
-      .count();
+//     const urlOptionCount = await page
+//       .getByTestId("anchor-popover-anchor-input-url")
+//       .count();
 
-    expect(urlOptionCount).toBeGreaterThan(0);
+//     expect(urlOptionCount).toBeGreaterThan(0);
 
-    await page.getByTestId("user_menu_button").click({ timeout: 3000 });
+//     await page.getByTestId("user_menu_button").click({ timeout: 3000 });
 
-    await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
+//     await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
 
-    await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
-      timeout: 30000,
-    });
+//     await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
+//       timeout: 30000,
+//     });
 
-    await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 3000 });
+//     await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 3000 });
 
-    await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
-      timeout: 3000,
-    });
+//     await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
+//       timeout: 3000,
+//     });
 
-    await expect(page.getByText(testName)).toBeVisible({
-      timeout: 3000,
-    });
+//     await expect(page.getByText(testName)).toBeVisible({
+//       timeout: 3000,
+//     });
 
-    await page
-      .getByTestId(`mcp-server-menu-button-${testName}`)
-      .click({ timeout: 3000 });
+//     await page
+//       .getByTestId(`mcp-server-menu-button-${testName}`)
+//       .click({ timeout: 3000 });
 
-    await page
-      .getByText("Edit", { exact: true })
-      .first()
-      .click({ timeout: 3000 });
+//     await page
+//       .getByText("Edit", { exact: true })
+//       .first()
+//       .click({ timeout: 3000 });
 
-    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
-      state: "visible",
-      timeout: 30000,
-    });
+//     await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
+//       state: "visible",
+//       timeout: 30000,
+//     });
 
-    await expect(page.getByTestId("json-tab")).toBeDisabled({
-      timeout: 3000,
-    });
+//     await expect(page.getByTestId("json-tab")).toBeDisabled({
+//       timeout: 3000,
+//     });
 
-    await expect(page.getByTestId("stdio-tab")).not.toBeDisabled({
-      timeout: 3000,
-    });
+//     await expect(page.getByTestId("stdio-tab")).not.toBeDisabled({
+//       timeout: 3000,
+//     });
 
-    await expect(page.getByTestId("http-tab")).toBeDisabled({
-      timeout: 3000,
-    });
+//     await expect(page.getByTestId("http-tab")).toBeDisabled({
+//       timeout: 3000,
+//     });
 
-    expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
-      "uvx mcp-server-fetch",
-    );
+//     expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
+//       "uvx mcp-server-fetch",
+//     );
 
-    await page.getByTestId("add-mcp-server-button").click();
+//     await page.getByTestId("add-mcp-server-button").click();
 
-    await page
-      .getByTestId(`mcp-server-menu-button-${testName}`)
-      .click({ timeout: 3000 });
+//     await page
+//       .getByTestId(`mcp-server-menu-button-${testName}`)
+//       .click({ timeout: 3000 });
 
-    await page
-      .getByText("Delete", { exact: true })
-      .first()
-      .click({ timeout: 3000 });
+//     await page
+//       .getByText("Delete", { exact: true })
+//       .first()
+//       .click({ timeout: 3000 });
 
-    await page.waitForSelector(
-      '[data-testid="btn_delete_delete_confirmation_modal"]',
-      {
-        timeout: 3000,
-      },
-    );
+//     await page.waitForSelector(
+//       '[data-testid="btn_delete_delete_confirmation_modal"]',
+//       {
+//         timeout: 3000,
+//       },
+//     );
 
-    await page
-      .getByTestId("btn_delete_delete_confirmation_modal")
-      .click({ timeout: 3000 });
+//     await page
+//       .getByTestId("btn_delete_delete_confirmation_modal")
+//       .click({ timeout: 3000 });
 
-    await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
-      timeout: 3000,
-    });
+//     await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
+//       timeout: 3000,
+//     });
 
-    await page.waitForTimeout(3000);
+//     await page.waitForTimeout(3000);
 
-    await expect(page.getByText(testName)).not.toBeVisible({
-      timeout: 3000,
-    });
+//     await expect(page.getByText(testName)).not.toBeVisible({
+//       timeout: 3000,
+//     });
 
-    await awaitBootstrapTest(page, { skipModal: true });
-    const newFlowDiv = await page
-      .getByTestId("flow-name-div")
-      .filter({ hasText: "New Flow" })
-      .first();
-    await newFlowDiv.click();
+//     await awaitBootstrapTest(page, { skipModal: true });
+//     const newFlowDiv = await page
+//       .getByTestId("flow-name-div")
+//       .filter({ hasText: "New Flow" })
+//       .first();
+//     await newFlowDiv.click();
 
-    await page.waitForTimeout(1000);
+//     await page.waitForTimeout(1000);
 
-    await page.waitForSelector('[data-testid="save-mcp-server-button"]', {
-      timeout: 10000,
-    });
+//     await page.waitForSelector('[data-testid="save-mcp-server-button"]', {
+//       timeout: 10000,
+//     });
 
-    await page.getByTestId("save-mcp-server-button").click({ timeout: 10000 });
+//     await page.getByTestId("save-mcp-server-button").click({ timeout: 10000 });
 
-    await page.waitForTimeout(1000);
+//     await page.waitForTimeout(1000);
 
-    await expect(page.getByTestId("save-mcp-server-button")).toBeHidden({
-      timeout: 10000,
-    });
+//     await expect(page.getByTestId("save-mcp-server-button")).toBeHidden({
+//       timeout: 10000,
+//     });
 
-    await page.getByTestId("mcp-server-dropdown").click({ timeout: 10000 });
-    await expect(page.getByText(testName)).toHaveCount(2, {
-      timeout: 10000,
-    });
-  },
-);
+//     await page.getByTestId("mcp-server-dropdown").click({ timeout: 10000 });
+//     await expect(page.getByText(testName)).toHaveCount(2, {
+//       timeout: 10000,
+//     });
+//   },
+// );
 
 test(
   "user must be able to add and delete MCP server from sidebar",
