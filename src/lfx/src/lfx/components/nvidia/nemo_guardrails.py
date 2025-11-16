@@ -2,26 +2,19 @@ import json
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import LanguageModel
 from langflow.inputs import (
     DropdownInput,
-    FloatInput,
-    IntInput,
     MultilineInput,
     MultiselectInput,
     SecretStrInput,
     StrInput,
-    TabInput,
 )
 from langflow.io import MessageTextInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 from loguru import logger
 from nemo_microservices import AsyncNeMoMicroservices
-from pydantic import Field
 
 # GUARDRAIL_MODEL_INTERNAL_URL = "http://ai-platform-proxy.ai-platform.svc.cluster.local:8080/v1"
 GUARDRAIL_MODEL_INTERNAL_URL = "http://nvidia-nim-proxy-nemo-nim-proxy.nvidia-nim-proxy.svc.cluster.local:8000/v1"
@@ -240,439 +233,11 @@ class GuardrailsConfigInput:
     )
 
 
-class GuardrailsMicroserviceModel(BaseChatModel):
-    """Language model implementation that uses the guardrails microservice."""
-
-    base_url: str = Field(description="Base URL for NeMo microservices")
-    auth_token: str = Field(description="Authentication token for NeMo microservices")
-    config_id: str = Field(description="Guardrails configuration ID")
-    model_name: str = Field(description="Model name to use")
-    streaming: bool = Field(default=False, description="Whether to stream responses")
-    max_tokens: int = Field(default=1024, description="Maximum tokens to generate")
-    temperature: float = Field(default=0.7, description="Temperature for generation")
-    top_p: float = Field(default=0.9, description="Top-p for generation")
-    client: Any = Field(default=None, description="NeMo microservices client")
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.client = AsyncNeMoMicroservices(base_url=self.base_url)
-        logger.info(
-            f"Initialized GuardrailsMicroserviceModel with config_id: {self.config_id}, "
-            f"model: {self.model_name}, streaming: {self.streaming}"
-        )
-        logger.debug(
-            f"LLM parameters: max_tokens={self.max_tokens}, temperature={self.temperature}, top_p={self.top_p}"
-        )
-
-    def get_auth_headers(self):
-        """Get authentication headers for API requests."""
-        return {
-            "accept": "application/json",
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.auth_token}",
-            "X-Model-Authorization": self.auth_token,
-        }
-
-    def invoke(self, inputs, **kwargs):
-        """Sync invoke method - delegates to _generate."""
-        # Convert inputs to messages format for _generate
-        if isinstance(inputs, list):
-            messages = inputs
-        elif isinstance(inputs, dict) and "messages" in inputs:
-            # Convert dict messages to LangChain message objects
-            messages = []
-            for msg in inputs["messages"]:
-                if isinstance(msg, dict):
-                    if msg.get("role") == "user":
-                        messages.append(HumanMessage(content=msg["content"]))
-                    elif msg.get("role") == "system":
-                        messages.append(SystemMessage(content=msg["content"]))
-                    elif msg.get("role") == "assistant":
-                        messages.append(AIMessage(content=msg["content"]))
-                    else:
-                        messages.append(HumanMessage(content=str(msg.get("content", ""))))
-                else:
-                    messages.append(msg)
-        else:
-            messages = [HumanMessage(content=str(inputs))]
-
-        # Use _generate method which handles sync execution
-        result = self._generate(messages, **kwargs)
-        return result.generations[0].message
-
-    async def ainvoke(self, inputs, **kwargs):
-        """Async invoke method."""
-        return await self._ainvoke_impl(inputs, **kwargs)
-
-    async def _ainvoke_impl(self, inputs, **kwargs):
-        """Async invoke implementation."""
-        # Convert LangChain messages to the format expected by NeMo API
-        if isinstance(inputs, list):
-            # Convert LangChain messages to dict format
-            messages = []
-            for msg in inputs:
-                if isinstance(msg, HumanMessage):
-                    messages.append({"role": "user", "content": msg.content})
-                elif isinstance(msg, SystemMessage):
-                    messages.append({"role": "system", "content": msg.content})
-                elif isinstance(msg, AIMessage):
-                    messages.append({"role": "assistant", "content": msg.content})
-                # Handle case where msg might not have content attribute
-                elif hasattr(msg, "content"):
-                    messages.append({"role": "user", "content": str(msg.content)})
-                else:
-                    messages.append({"role": "user", "content": str(msg)})
-        else:
-            # Handle dict format (backward compatibility)
-            messages = inputs.get("messages", [])
-
-        logger.info(
-            f"Invoking guardrails microservice with config_id: {self.config_id}, "
-            f"model: {self.model_name}, streaming: {self.streaming}"
-        )
-        logger.debug(f"Input messages: {messages}")
-
-        try:
-            # Prepare the request payload with only supported parameters
-            payload = {
-                "model": self.model_name,
-                "messages": messages,
-                "guardrails": {"config_id": self.config_id},
-                "max_tokens": self.max_tokens,
-                "temperature": self.temperature,
-                "top_p": self.top_p,
-                "stream": self.streaming,
-                **kwargs,
-            }
-
-            # Use the microservice client for both streaming and non-streaming
-            logger.debug(f"Making request with payload: {json.dumps(payload, indent=2)}")
-
-            # Prepare parameters for the client call
-            client_params = {
-                "model": self.model_name,
-                "messages": messages,
-                "guardrails": {"config_id": self.config_id},
-                "extra_headers": self.get_auth_headers(),
-                "max_tokens": self.max_tokens,
-                "temperature": self.temperature,
-                "top_p": self.top_p,
-                "stream": self.streaming,
-                **kwargs,
-            }
-
-            response = await self.client.guardrail.chat.completions.create(**client_params)
-            logger.debug(f"Response received: {type(response)}")
-
-            # Extract content from response
-            content = None
-            if hasattr(response, "choices") and response.choices:
-                choice = response.choices[0]
-                if hasattr(choice, "message") and hasattr(choice.message, "content"):
-                    content = choice.message.content
-                elif hasattr(choice, "content"):
-                    content = choice.content
-            elif hasattr(response, "content"):
-                content = response.content
-            elif isinstance(response, dict) and "choices" in response:
-                choice = response["choices"][0]
-                if "message" in choice and "content" in choice["message"]:
-                    content = choice["message"]["content"]
-                elif "content" in choice:
-                    content = choice["content"]
-
-            # Fallback if content extraction failed
-            if content is None:
-                logger.warning(f"Could not extract content from response: {response}")
-                content = str(response)
-
-            # Create AIMessage with metadata
-            metadata = {}
-            if hasattr(response, "usage"):
-                metadata["usage"] = response.usage
-            if hasattr(response, "model"):
-                metadata["model"] = response.model
-
-            return AIMessage(content=content, response_metadata=metadata)
-        except Exception as e:
-            logger.error(f"Error during guardrails inference: {e}")
-            logger.error(f"Exception type: {type(e)}")
-            if hasattr(e, "response") and e.response:
-                logger.error(f"Response status: {e.response.status_code}")
-                logger.error(f"Response text: {e.response.text}")
-            raise
-
-    def _generate(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ARG002
-        """Required abstract method for BaseChatModel."""
-        import asyncio
-
-        from langchain_core.outputs import ChatGeneration, ChatResult
-
-        # Convert LangChain messages to our format and run async invoke
-        try:
-            # Check if we're already in an async context
-            try:
-                asyncio.get_running_loop()
-                # We're in an async context, use ThreadPoolExecutor
-                import concurrent.futures
-
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(lambda: asyncio.run(self._ainvoke_impl(messages, **kwargs)))
-                    result = future.result()
-            except RuntimeError:
-                # No event loop running, we can create one
-                result = asyncio.run(self._ainvoke_impl(messages, **kwargs))
-
-            # Convert AIMessage result to ChatResult format
-            generation = ChatGeneration(message=result)
-            return ChatResult(generations=[generation])
-
-        except Exception as e:
-            logger.error(f"Error in _generate: {e}")
-            raise
-
-    async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ARG002
-        """Async version of _generate method."""
-        from langchain_core.outputs import ChatGeneration, ChatResult
-
-        try:
-            # Use our async invoke method directly
-            result = await self._ainvoke_impl(messages, **kwargs)
-
-            # Convert AIMessage result to ChatResult format
-            generation = ChatGeneration(message=result)
-            return ChatResult(generations=[generation])
-
-        except Exception as e:
-            logger.error(f"Error in _agenerate: {e}")
-            raise
-
-    @property
-    def _llm_type(self) -> str:
-        """Required property for BaseChatModel."""
-        return "nemo_guardrails"
-
-    def with_config(self, config, **kwargs):  # noqa: ARG002
-        """Support for LangChain configuration."""
-        # Create a new instance with updated config
-        return GuardrailsMicroserviceModel(
-            base_url=self.base_url,
-            auth_token=self.auth_token,
-            config_id=self.config_id,
-            model_name=self.model_name,
-            streaming=self.streaming,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            top_p=self.top_p,
-        )
-
-    def bind_tools(self, tools, **kwargs):  # noqa: ARG002
-        """Support for tool binding (if needed)."""
-        # For now, return self as tools may not be supported in guardrails
-        return self
-
-    def stream(self, inputs, **kwargs):
-        """Stream method required for LangChain streaming interface."""
-        # This method is called by LangChain when streaming is enabled
-        # It should return an iterator that yields chunks
-        if not self.streaming:
-            # If streaming is disabled, just return the result as a single chunk
-            result = self.invoke(inputs, **kwargs)
-            if hasattr(result, "content"):
-                yield result.content
-            else:
-                yield str(result)
-            return
-
-        # For real streaming, we need to handle the async streaming from NeMo
-        try:
-            # Convert inputs to messages format
-            if isinstance(inputs, list):
-                messages = inputs
-            elif isinstance(inputs, dict) and "messages" in inputs:
-                messages = []
-                for msg in inputs["messages"]:
-                    if isinstance(msg, dict):
-                        if msg.get("role") == "user":
-                            messages.append(HumanMessage(content=msg["content"]))
-                        elif msg.get("role") == "system":
-                            messages.append(SystemMessage(content=msg["content"]))
-                        elif msg.get("role") == "assistant":
-                            messages.append(AIMessage(content=msg["content"]))
-                        else:
-                            messages.append(HumanMessage(content=str(msg.get("content", ""))))
-                    else:
-                        messages.append(msg)
-            else:
-                messages = [HumanMessage(content=str(inputs))]
-
-            # Use asyncio to run the async streaming
-            import asyncio
-
-            # Create a wrapper function to collect all chunks from the async generator
-            def collect_chunks():
-                async def _collect():
-                    return [chunk async for chunk in self._astream_impl(messages, **kwargs)]
-
-                try:
-                    asyncio.get_running_loop()
-                    # We're in an async context, use ThreadPoolExecutor
-                    import concurrent.futures
-
-                    with concurrent.futures.ThreadPoolExecutor() as executor:
-                        future = executor.submit(lambda: asyncio.run(_collect()))
-                        return future.result()
-                except RuntimeError:
-                    # No event loop running, we can create one
-                    return asyncio.run(_collect())
-
-            # Create a proper chunk class that Langflow expects
-            # The streaming system expects chunks with .content attribute
-            class Chunk:
-                def __init__(self, content):
-                    self.content = content
-
-            # Get all chunks and yield them as proper message chunks
-            debug_chunk_limit = 3
-            for chunk_count, chunk in enumerate(collect_chunks(), 1):
-                if chunk_count <= debug_chunk_limit:
-                    logger.info(f"Stream yielding chunk {chunk_count}: '{chunk}'")
-                yield Chunk(chunk)
-
-        except (RuntimeError, AttributeError, TypeError) as e:
-            logger.error(f"Error in stream method: {e}")
-            yield f"Error: {e!s}"
-
-    async def _astream_impl(self, messages, **kwargs):
-        """Async implementation of streaming."""
-        try:
-            # Convert LangChain messages to the format expected by NeMo API
-            nemo_messages = []
-            for msg in messages:
-                if isinstance(msg, HumanMessage):
-                    nemo_messages.append({"role": "user", "content": msg.content})
-                elif isinstance(msg, SystemMessage):
-                    nemo_messages.append({"role": "system", "content": msg.content})
-                elif isinstance(msg, AIMessage):
-                    nemo_messages.append({"role": "assistant", "content": msg.content})
-                # Handle case where msg might not have content attribute
-                elif hasattr(msg, "content"):
-                    nemo_messages.append({"role": "user", "content": str(msg.content)})
-                else:
-                    nemo_messages.append({"role": "user", "content": str(msg)})
-
-            logger.info(
-                f"Starting streaming with config_id: {self.config_id}, "
-                f"model: {self.model_name}, streaming: {self.streaming}"
-            )
-
-            # Prepare the request payload
-            payload = {
-                "model": self.model_name,
-                "messages": nemo_messages,
-                "guardrails": {"config_id": self.config_id},
-                "max_tokens": self.max_tokens,
-                "temperature": self.temperature,
-                "top_p": self.top_p,
-                "stream": True,  # Force streaming for this method
-                **kwargs,
-            }
-
-            # Prepare parameters for the client call
-            client_params = {
-                "model": self.model_name,
-                "messages": nemo_messages,
-                "guardrails": {"config_id": self.config_id},
-                "extra_headers": self.get_auth_headers(),
-                "max_tokens": self.max_tokens,
-                "temperature": self.temperature,
-                "top_p": self.top_p,
-                "stream": True,  # Force streaming
-                **kwargs,
-            }
-
-            # Use the microservice client for streaming
-            logger.debug(f"Making streaming request with payload: {json.dumps(payload, indent=2)}")
-
-            # According to NeMo documentation, streaming is done with regular create method + stream=True
-            # The client should handle the streaming internally when stream=True is passed
-            try:
-                logger.info("Attempting streaming with regular create method...")
-                # Use the regular create method - the client should handle streaming internally
-                # The create method returns a coroutine, so we need to await it
-                stream_response = await self.client.guardrail.chat.completions.create(**client_params)
-
-                # Log the response type and structure for debugging
-                logger.info(f"Response type: {type(stream_response)}")
-                logger.info(f"Response attributes: {dir(stream_response)}")
-
-                # Check if the response is iterable (streaming response)
-                if hasattr(stream_response, "__aiter__"):
-                    logger.info("Response is async iterable, processing streaming chunks...")
-                    chunk_count = 0
-                    async for chunk in stream_response:
-                        chunk_count += 1
-
-                        # Extract content from the chunk - simplified approach
-                        content = None
-
-                        # Try to get content from the chunk
-                        try:
-                            if hasattr(chunk, "choices") and chunk.choices:
-                                choice = chunk.choices[0]
-                                if hasattr(choice, "delta") and hasattr(choice.delta, "content"):
-                                    content = choice.delta.content
-                        except (AttributeError, IndexError, KeyError):
-                            pass
-
-                        # Only yield if we have actual content (not empty string)
-                        if content and content.strip():
-                            yield content
-                else:
-                    # Response is not iterable, treat as single response
-                    logger.info("Response is not iterable, treating as single response...")
-                    logger.info(f"Response content: {stream_response}")
-
-                    # Extract content from single response
-                    content = None
-                    if hasattr(stream_response, "choices") and stream_response.choices:
-                        choice = stream_response.choices[0]
-                        if hasattr(choice, "message") and hasattr(choice.message, "content"):
-                            content = choice.message.content
-                        elif hasattr(choice, "content"):
-                            content = choice.content
-                    elif hasattr(stream_response, "content"):
-                        content = stream_response.content
-
-                    if content:
-                        # Simulate streaming by yielding in chunks
-                        chunk_size = 50
-                        for i in range(0, len(content), chunk_size):
-                            yield content[i : i + chunk_size]
-                    else:
-                        logger.warning(f"No content found in response. Response: {stream_response}")
-                        yield "No content found in response"
-
-            except (RuntimeError, AttributeError, TypeError, ValueError) as stream_error:
-                logger.warning(f"Error with streaming: {stream_error}")
-                # If streaming fails, just return an error message
-                yield f"Error: {stream_error!s}"
-                return
-
-        except (RuntimeError, AttributeError, TypeError, ValueError) as e:
-            logger.error(f"Error during streaming: {e}")
-            logger.error(f"Exception type: {type(e)}")
-            if hasattr(e, "response") and e.response:
-                logger.error(f"Response status: {e.response.status_code}")
-                logger.error(f"Response text: {e.response.text}")
-            yield f"Error: {e!s}"
-
-
 class NVIDIANeMoGuardrailsComponent(LCModelComponent):
     display_name = "NeMo Guardrails"
     description = (
-        "Apply guardrails to LLM interactions using the NeMo Guardrails microservice. "
-        "Select a guardrails configuration and model to apply safety checks."
+        "Apply guardrails validation to LLM interactions using the NeMo Guardrails microservice. "
+        "Select a guardrails configuration to validate input or output messages."
     )
     icon = "NVIDIA"
     name = "NVIDIANemoGuardrails"
@@ -705,16 +270,6 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             required=True,
             real_time_refresh=True,
         ),
-        # Mode selection
-        TabInput(
-            name="mode",
-            display_name="Mode",
-            options=["chat", "check"],
-            value="chat",
-            info="Chat mode: Generate responses with guardrails. Check mode: Validate input/output only.",
-            required=True,
-            real_time_refresh=True,
-        ),
         # Guardrails configuration selection
         DropdownInput(
             name="config",
@@ -726,97 +281,34 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             real_time_refresh=True,
             dialog_inputs=asdict(GuardrailsConfigInput()),
         ),
-        # LLM parameters (only shown in chat mode)
-        IntInput(
-            name="max_tokens",
-            display_name="Max Tokens",
-            info="Maximum number of tokens to generate.",
-            advanced=True,
-            value=1024,
-        ),
-        FloatInput(
-            name="temperature",
-            display_name="Temperature",
-            info="Controls randomness in the response. Lower values are more deterministic.",
-            advanced=True,
-            value=0.7,
-        ),
-        FloatInput(
-            name="top_p",
-            display_name="Top P",
-            info="Controls diversity via nucleus sampling. Lower values are more focused.",
-            advanced=True,
-            value=0.9,
-        ),
-        DropdownInput(
-            name="model",
-            display_name="Model",
-            info="Select a model to use with the guardrails configuration",
-            options=[],
-            refresh_button=True,
-            required=True,
-            combobox=True,
-            real_time_refresh=True,
-        ),
-        # Validation mode (only shown in check mode)
+        # Validation mode
         DropdownInput(
             name="validation_mode",
             display_name="Validation Mode",
             options=["input", "output"],
             value="input",
-            info="Validate input (before LLM) or output (after LLM) - only used in check mode",
-            required=False,
-            show=False,  # Initially hidden, shown in check mode
+            info="Validate input (before LLM) or output (after LLM)",
+            required=True,
         ),
     ]
 
-    # Default outputs (will be updated dynamically based on mode)
+    # Outputs for check mode
     outputs = [
-        Output(display_name="Model Response", name="text_output", method="text_response", dynamic=True),
-        Output(display_name="Language Model", name="model_output", method="build_model", dynamic=True),
+        Output(display_name="Validated Output", name="validated_output", method="validated_output", dynamic=True),
     ]
 
-    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
-        """Dynamically show only the relevant outputs based on the selected mode."""
-        logger.info(f"update_outputs called with field_name: {field_name}, field_value: {field_value}")
-
-        # Handle initial state - if no mode is set, default to chat mode
-        if field_name == "mode" or (field_name is None and "outputs" not in frontend_node):
-            # Get the current mode value, default to "chat"
-            current_mode = field_value if field_name == "mode" else "chat"
-            logger.info(f"Setting outputs for mode: {current_mode}")
-
-            # Start with empty outputs
-            frontend_node["outputs"] = []
-
-            if current_mode == "chat":
-                # In chat mode: show LLM outputs
-                frontend_node["outputs"] = [
-                    Output(
-                        display_name="Model Response",
-                        name="text_output",
-                        method="text_response",
-                        dynamic=True,
-                    ),
-                    Output(
-                        display_name="Language Model",
-                        name="model_output",
-                        method="build_model",
-                        dynamic=True,
-                    ),
-                ]
-            elif current_mode == "check":
-                # In check mode: show single validation output
-                frontend_node["outputs"] = [
-                    Output(
-                        display_name="Validated Output",
-                        name="validated_output",
-                        method="validated_output",
-                        dynamic=True,
-                    ),
-                ]
-
-            logger.info(f"Updated frontend_node outputs for {current_mode} mode: {frontend_node['outputs']}")
+    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:  # noqa: ARG002
+        """Update outputs for check mode."""
+        # Component only supports check mode, so outputs are always the same
+        if "outputs" not in frontend_node:
+            frontend_node["outputs"] = [
+                Output(
+                    display_name="Validated Output",
+                    name="validated_output",
+                    method="validated_output",
+                    dynamic=True,
+                ),
+            ]
         return frontend_node
 
     def get_auth_headers(self):
@@ -1167,7 +659,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                 message = e.body.get("message")
                 if message:
                     return message
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S110
             pass
         return None
 
@@ -1176,58 +668,6 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
     ) -> dotdict | str:
         """Update build configuration for the guardrails component."""
         logger.info(f"Updating build config for field: {field_name}, value: {field_value}")
-
-        # Handle mode changes - update visibility of inputs and outputs
-        if field_name == "mode":
-            mode = field_value
-            logger.info(f"Mode changed to: {mode}")
-
-            # Update visibility of LLM-specific inputs
-            if mode == "chat":
-                build_config["max_tokens"]["show"] = True
-                build_config["temperature"]["show"] = True
-                build_config["top_p"]["show"] = True
-                build_config["model"]["show"] = True
-                build_config["validation_mode"]["show"] = False
-            else:  # check mode
-                build_config["max_tokens"]["show"] = False
-                build_config["temperature"]["show"] = False
-                build_config["top_p"]["show"] = False
-                build_config["model"]["show"] = False
-                build_config["validation_mode"]["show"] = True
-
-            # Update outputs based on mode
-            if "outputs" not in build_config:
-                build_config["outputs"] = []
-
-            if mode == "chat":
-                # In chat mode: show LLM outputs
-                build_config["outputs"] = [
-                    Output(
-                        display_name="Model Response",
-                        name="text_output",
-                        method="text_response",
-                        dynamic=True,
-                    ),
-                    Output(
-                        display_name="Language Model",
-                        name="model_output",
-                        method="build_model",
-                        dynamic=True,
-                    ),
-                ]
-            elif mode == "check":
-                # In check mode: show single validation output
-                build_config["outputs"] = [
-                    Output(
-                        display_name="Validated Output",
-                        name="validated_output",
-                        method="validated_output",
-                        dynamic=True,
-                    ),
-                ]
-
-            logger.info(f"Updated outputs for {mode} mode: {build_config['outputs']}")
 
         # Handle config creation dialog
         if field_name == "config" and isinstance(field_value, dict) and "01_config_name" in field_value:
@@ -1274,11 +714,6 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
 
             build_config["config"]["value"] = field_value
             return build_config
-
-        # Handle model refresh
-        if field_name == "model" and (field_value is None or field_value == ""):
-            logger.debug("Model refresh requested")
-            return await self._handle_model_refresh(build_config)
 
         return build_config
 
@@ -1430,197 +865,8 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             raise RuntimeError(error_msg)
         return validated_output
 
-    async def fetch_guardrails_models(self) -> list[str]:
-        """Fetch available models for guardrails using the general models endpoint."""
-        logger.info("Fetching available models using general models endpoint")
-        try:
-            client = self.get_nemo_client()
-            logger.debug("Using NeMo microservices client to fetch models")
-
-            # Use the client's models resource
-            models_response = await client.models.list(extra_headers=self.get_auth_headers())
-            logger.debug(f"Models response: {models_response}")
-
-            # Import ChatNVIDIA's model filtering logic
-            try:
-                from langchain_nvidia_ai_endpoints._statics import determine_model
-            except ImportError:
-                logger.warning("langchain-nvidia-ai-endpoints not available, falling back to basic filtering")
-                return self._fallback_model_filtering(models_response)
-
-            model_names = []
-            total_models = 0
-            chat_models = 0
-
-            if hasattr(models_response, "data") and models_response.data:
-                for model in models_response.data:
-                    total_models += 1
-                    model_id = None
-
-                    # Extract model ID
-                    if hasattr(model, "id") and model.id:
-                        model_id = model.id
-                    elif hasattr(model, "name") and model.name:
-                        model_id = model.name
-
-                    if model_id:
-                        # Use ChatNVIDIA's lookup table to determine model type
-                        known_model = determine_model(model_id)
-                        if known_model and known_model.model_type == "chat":
-                            model_names.append(model_id)
-                            chat_models += 1
-                            logger.debug(f"Added chat model: {model_id}")
-                        elif known_model:
-                            logger.debug(f"Skipped {known_model.model_type} model: {model_id}")
-                        # Unknown model - use name-based filtering as fallback
-                        elif self._is_likely_chat_model(model_id):
-                            model_names.append(model_id)
-                            chat_models += 1
-                            logger.debug(f"Added likely chat model (fallback): {model_id}")
-                        else:
-                            logger.debug(f"Skipped unknown model: {model_id}")
-
-            logger.info(f"Found {chat_models} chat models out of {total_models} total models")
-            return model_names  # noqa: TRY300
-
-        except Exception as exc:  # noqa: BLE001
-            logger.error(f"Error fetching models using NeMo microservices client: {exc}")
-            return []
-
-    def _is_likely_chat_model(self, model_id: str) -> bool:
-        """Fallback method to determine if a model is likely a chat model based on name."""
-        model_id_lower = model_id.lower()
-
-        # Exclude known non-chat models
-        if any(keyword in model_id_lower for keyword in ["embed", "embedqa", "rerank", "rerankqa", "nemoguard"]):
-            return False
-
-        # Include likely chat models
-        chat_indicators = ["instruct", "chat", "completion", "nemotron", "llama-3", "gpt", "claude"]
-        return any(indicator in model_id_lower for indicator in chat_indicators)
-
-    def _fallback_model_filtering(self, models_response) -> list[str]:
-        """Fallback method when ChatNVIDIA's lookup table is not available."""
-        logger.info("Using fallback model filtering")
-        model_names = []
-
-        if hasattr(models_response, "data") and models_response.data:
-            for model in models_response.data:
-                model_id = None
-                if hasattr(model, "id") and model.id:
-                    model_id = model.id
-                elif hasattr(model, "name") and model.name:
-                    model_id = model.name
-
-                if model_id and self._is_likely_chat_model(model_id):
-                    model_names.append(model_id)
-
-        return model_names
-
-    async def _handle_model_refresh(self, build_config: dotdict) -> dotdict:
-        """Handle model refresh with selection preservation."""
-        logger.info("Handling model refresh request")
-
-        try:
-            # Preserve the current selection before refreshing
-            current_value = build_config.get("model", {}).get("value")
-            logger.debug(f"Preserving current model selection: {current_value}")
-
-            # Fetch all available models for guardrails
-            logger.debug("Refreshing available models for guardrails")
-            models = await self.fetch_guardrails_models()
-            build_config["model"]["options"] = models
-
-            # Restore the current selection if it's still valid
-            if current_value and current_value in models:
-                build_config["model"]["value"] = current_value
-                logger.debug(f"Restored model selection: {current_value}")
-            elif models and not current_value:
-                # Only set default if no current selection
-                build_config["model"]["value"] = models[0]
-                logger.debug(f"Set default model selection: {models[0]}")
-            elif current_value:
-                logger.warning(f"Previously selected model '{current_value}' no longer available in refreshed list")
-                # Clear the value when the selected model is no longer available
-                build_config["model"]["value"] = ""
-            else:
-                # No models available, clear the value
-                build_config["model"]["value"] = ""
-
-            logger.info(f"Refreshed {len(models)} available models for guardrails")
-
-        except Exception as e:  # noqa: BLE001
-            logger.error(f"Error refreshing models: {e}")
-            build_config["model"]["options"] = []
-            build_config["model"]["value"] = ""
-
-        return build_config
-
-    def build_model(self) -> LanguageModel:
-        """Build a language model that uses the guardrails microservice."""
-        mode = getattr(self, "mode", "chat")
-
-        if mode == "check":
-            error_msg = "Check mode does not provide a language model. Use the validation outputs instead."
-            raise NotImplementedError(error_msg)
-
-        logger.info(
-            f"Building guardrails model with config: {getattr(self, 'config', 'None')}, "
-            f"model: {getattr(self, 'model', 'None')}"
-        )
-
-        # Validate configuration
-        base_url_required = "Base URL is required"
-        auth_token_required = "Authentication token is required"
-        namespace_required = "Namespace is required"
-        model_required = "Model selection is required"
-
-        if not hasattr(self, "model") or not self.model:
-            logger.error("Model selection is required but not set")
-            raise ValueError(model_required)
-
-        # temp fix for config
-        config = self.config or "content-safety"
-
-        # if not hasattr(self, "config") or not self.config:
-        #    logger.error("Guardrails configuration is required but not set")
-        #    raise ValueError(config_required)
-
-        if not hasattr(self, "base_url") or not self.base_url:
-            logger.error("Base URL is required but not set")
-            raise ValueError(base_url_required)
-
-        if not hasattr(self, "auth_token") or not self.auth_token:
-            logger.error("Authentication token is required but not set")
-            raise ValueError(auth_token_required)
-
-        if not hasattr(self, "namespace") or not self.namespace:
-            logger.error("Namespace is required but not set")
-            raise ValueError(namespace_required)
-
-        logger.info(
-            f"Creating GuardrailsMicroserviceModel with base_url: {self.base_url}, "
-            f"config_id: {self.config}, model: {self.model}"
-        )
-
-        return GuardrailsMicroserviceModel(
-            base_url=self.base_url,
-            auth_token=self.auth_token,
-            config_id=config,
-            model_name=self.model,
-            streaming=self.stream,
-            max_tokens=getattr(self, "max_tokens", 1024),
-            temperature=getattr(self, "temperature", 0.7),
-            top_p=getattr(self, "top_p", 0.9),
-        )
-
     async def text_response(self) -> Message:
-        """Handle text response based on mode."""
-        mode = getattr(self, "mode", "chat")
-
-        if mode == "check":
-            # In check mode, perform validation and return the validated output
-            result = await self.process()
-            return result.get("validated_output", Message(text="Validation completed", error=False, category="message"))
-        # In chat mode, use the normal LLM response
-        return await super().text_response()
+        """Handle text response in check mode."""
+        # Component only supports check mode, perform validation and return the validated output
+        result = await self.process()
+        return result.get("validated_output", Message(text="Validation completed", error=False, category="message"))

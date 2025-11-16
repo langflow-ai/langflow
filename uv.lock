@@ -5420,6 +5420,7 @@ dependencies = [
     { name = "mlx", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "mlx-vlm", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "needle-python" },
+    { name = "nemo-microservices" },
     { name = "networkx" },
     { name = "nltk" },
     { name = "numexpr" },
@@ -5636,6 +5637,7 @@ requires-dist = [
     { name = "mlx", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'", specifier = ">=0.29.0" },
     { name = "mlx-vlm", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'", specifier = "==0.3.3" },
     { name = "needle-python", specifier = ">=0.4.0,<1.0.0" },
+    { name = "nemo-microservices", specifier = ">=1.2.0" },
     { name = "networkx", specifier = "==3.4.2" },
     { name = "nltk", specifier = "==3.9.1" },
     { name = "numexpr", specifier = "==2.10.2" },
@@ -7461,6 +7463,22 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/6f/c4/034f43a01d41c7c8d220b1f48a3e471c5fb54ba3092581ee848d98cc167d/needle_python-0.6.0.tar.gz", hash = "sha256:6fb2aa99ef56e8f63171add525ab4756c91504dc39b6fd3e33f14cec9ce33b46", size = 6697 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/51/d0/86aa7949a35e5097e144b24d57e38eea34ee6a13ef0a3a226b25b4473e38/needle_python-0.6.0-py3-none-any.whl", hash = "sha256:5349cd16da8ffb6a6e8593df41a49995f52faab6aed37499cc4c9f6872196c40", size = 9592 },
+]
+
+[[package]]
+name = "nemo-microservices"
+version = "1.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "distro" },
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/32/27/31bd9fce8243b8db045e7cb77a2fbdbe3fcb8e9567f5e31ce89100ea43b7/nemo_microservices-1.4.0-py3-none-any.whl", hash = "sha256:ed0cb67baa6692176490c764aba973a2892e2b86247e2cd0834cf41f9a086f4f", size = 1191580 },
 ]
 
 [[package]]
