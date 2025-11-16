@@ -355,7 +355,7 @@ import { zoomOut } from "../../utils/zoom-out";
 //     });
 //   },
 // );
-
+//
 test(
   "STDIO MCP server fields should persist after saving and editing",
   { tag: ["@release", "@workspace", "@components"] },
