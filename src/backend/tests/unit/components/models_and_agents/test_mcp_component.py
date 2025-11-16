@@ -228,7 +228,7 @@ class TestMCPComponentErrorHandling:
 
 
 class TestMCPComponentConfigPriority:
-    """Test configuration priority in MCP component - tweaks/value over database."""
+    """Test configuration priority in MCP component - database over tweaks/value."""
 
     @pytest.fixture
     def component(self):
@@ -236,8 +236,8 @@ class TestMCPComponentConfigPriority:
         return MCPToolsComponent()
 
     @pytest.mark.asyncio
-    async def test_config_from_value_takes_priority_over_database(self, component):
-        """Test that config from mcp_server value takes priority over database config."""
+    async def test_database_config_takes_priority_over_value(self, component):
+        """Test that database config takes priority over config from mcp_server value."""
         # Set up component with a server config in the value
         value_config = {
             "command": "uvx mcp-server-from-value",
@@ -264,17 +264,17 @@ class TestMCPComponentConfigPriority:
             mock_get_server.return_value = db_config
             mock_connect.return_value = []
 
-            # Call update_tool_list which should use value_config, not db_config
+            # Call update_tool_list which should use db_config, not value_config
             await component.update_tool_list()
 
-            # Verify that connect_to_server was called with the value config, not db config
+            # Verify that connect_to_server was called
             mock_connect.assert_called_once()
             call_args = mock_connect.call_args
-            # The config passed should be from value, not database
+            # The config passed should be from database, not value
             assert call_args is not None
 
-            # Since value config is provided, get_server should NOT be called
-            mock_get_server.assert_not_called()
+            # Database should be queried first
+            mock_get_server.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_database_config_used_when_no_value_config(self, component):
@@ -310,17 +310,15 @@ class TestMCPComponentConfigPriority:
             mock_connect.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_empty_value_config_falls_back_to_database(self, component):
-        """Test that empty/None config in value falls back to database."""
-        # Set up component with server name but None/empty config
-        component.mcp_server = {"name": "test_server", "config": None}
-        component._user_id = "test_user_123"
-
-        # Mock the database get_server to return a config
-        db_config = {
-            "command": "uvx mcp-server-from-database",
-            "args": ["--prod"],
+    async def test_value_config_used_as_fallback_when_not_in_database(self, component):
+        """Test that value config is used as fallback when server not in database."""
+        # Set up component with server name and config in value
+        value_config = {
+            "command": "uvx mcp-server-from-value",
+            "args": ["--test"],
         }
+        component.mcp_server = {"name": "new_server", "config": value_config}
+        component._user_id = "test_user_123"
 
         with (
             patch("langflow.api.v2.mcp.get_server") as mock_get_server,
@@ -329,25 +327,29 @@ class TestMCPComponentConfigPriority:
             patch.object(component.stdio_client, "connect_to_server") as mock_connect,
         ):
             mock_get_user.return_value = MagicMock(id="test_user_123")
-            mock_get_server.return_value = db_config
+            # Database returns None (server not found)
+            mock_get_server.return_value = None
             mock_connect.return_value = []
 
-            # Call update_tool_list which should fall back to database
+            # Call update_tool_list which should fall back to value config
             await component.update_tool_list()
 
-            # Verify that get_server WAS called since config is None
+            # Verify that get_server WAS called to check database first
             mock_get_server.assert_called_once()
 
+            # Connect should be called with value config as fallback
+            mock_connect.assert_called_once()
+
     @pytest.mark.asyncio
-    async def test_rest_api_override_scenario(self, component):
-        """Test REST API scenario where tweaks provide config to override database."""
-        # Simulate REST API call with tweaks providing full config
+    async def test_rest_api_new_server_scenario(self, component):
+        """Test REST API scenario where tweaks provide config for a new server not in database."""
+        # Simulate REST API call with tweaks providing full config for a new server
         api_provided_config = {
-            "command": "uvx mcp-server-api-override",
+            "command": "uvx mcp-server-api-new",
             "args": ["--api-mode"],
             "env": {"API_KEY": "secret123"},  # pragma: allowlist secret
         }
-        component.mcp_server = {"name": "production_server", "config": api_provided_config}
+        component.mcp_server = {"name": "new_api_server", "config": api_provided_config}
         component._user_id = "api_user_456"
 
         with (
@@ -357,15 +359,15 @@ class TestMCPComponentConfigPriority:
             patch.object(component.stdio_client, "connect_to_server") as mock_connect,
         ):
             mock_get_user.return_value = MagicMock(id="api_user_456")
-            # Database has different config
-            mock_get_server.return_value = {"command": "uvx old-server"}
+            # Database returns None (server not in database yet)
+            mock_get_server.return_value = None
             mock_connect.return_value = []
 
             # Call update_tool_list
             await component.update_tool_list()
 
-            # Database should NOT be queried since API provided full config
-            mock_get_server.assert_not_called()
+            # Database should be queried first
+            mock_get_server.assert_called_once()
 
-            # Connect should be called with API-provided config
+            # Connect should be called with API-provided config as fallback
             mock_connect.assert_called_once()
