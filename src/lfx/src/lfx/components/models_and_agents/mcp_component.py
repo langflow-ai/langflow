@@ -189,6 +189,8 @@ class MCPToolsComponent(ComponentWithCache):
                 return self.tools, {"name": server_name, "config": server_config_from_value}
 
         try:
+            # Try to fetch from database first to ensure we have the latest config
+            # This ensures database updates (like editing a server) take effect
             try:
                 from langflow.api.v2.mcp import get_server
                 from langflow.services.database.models.user.crud import get_user_by_id
@@ -198,6 +200,8 @@ class MCPToolsComponent(ComponentWithCache):
                     "This feature requires the full Langflow installation."
                 )
                 raise ImportError(msg) from e
+
+            server_config = None
             async with session_scope() as db:
                 if not self.user_id:
                     msg = "User ID is required for fetching MCP tools."
@@ -213,7 +217,8 @@ class MCPToolsComponent(ComponentWithCache):
                     settings_service=get_settings_service(),
                 )
 
-            # If get_server returns empty but we have a config, use it
+            # Fall back to config from tweaks/value if database doesn't have it
+            # This allows REST API calls to provide config for servers not yet in the database
             if not server_config and server_config_from_value:
                 server_config = server_config_from_value
 
@@ -268,7 +273,10 @@ class MCPToolsComponent(ComponentWithCache):
         try:
             if field_name == "tool":
                 try:
-                    if len(self.tools) == 0:
+                    # Always refresh tools when cache is disabled, or when tools list is empty
+                    # This ensures database edits are reflected immediately when cache is disabled
+                    use_cache = getattr(self, "use_cache", False)
+                    if len(self.tools) == 0 or not use_cache:
                         try:
                             self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
                             build_config["tool"]["options"] = [tool.name for tool in self.tools]
@@ -360,6 +368,14 @@ class MCPToolsComponent(ComponentWithCache):
                         return build_config
                 safe_cache_set(self._shared_component_cache, "last_selected_server", current_server_name)
 
+                # When cache is disabled, clear any cached data for this server
+                # This ensures we always fetch fresh data from the database
+                if not use_cache and current_server_name:
+                    servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+                    if isinstance(servers_cache, dict) and current_server_name in servers_cache:
+                        servers_cache.pop(current_server_name)
+                        safe_cache_set(self._shared_component_cache, "servers", servers_cache)
+
                 # Check if tools are already cached for this server before clearing
                 cached_tools = None
                 if current_server_name and use_cache:
@@ -378,9 +394,10 @@ class MCPToolsComponent(ComponentWithCache):
                                 await logger.awarning(msg)
                                 cached_tools = None
 
-                # Only clear tools if we don't have cached tools for the current server
-                if not cached_tools:
-                    self.tools = []  # Clear previous tools only if no cache
+                # Clear tools when cache is disabled OR when we don't have cached tools
+                # This ensures fresh tools are fetched after database edits
+                if not cached_tools or not use_cache:
+                    self.tools = []  # Clear previous tools to force refresh
 
                 # Clear previous tool inputs if:
                 # 1. Server actually changed
