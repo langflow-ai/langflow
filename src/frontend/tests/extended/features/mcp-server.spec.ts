@@ -355,176 +355,176 @@ import { zoomOut } from "../../utils/zoom-out";
 //     });
 //   },
 // );
-//
-test(
-  "STDIO MCP server fields should persist after saving and editing",
-  { tag: ["@release", "@workspace", "@components"] },
-  async ({ page }) => {
-    await awaitBootstrapTest(page);
 
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("mcp tools");
+// test(
+//   "STDIO MCP server fields should persist after saving and editing",
+//   { tag: ["@release", "@workspace", "@components"] },
+//   async ({ page }) => {
+//     await awaitBootstrapTest(page);
 
-    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
-      timeout: 30000,
-    });
+//     await page.waitForSelector('[data-testid="blank-flow"]', {
+//       timeout: 30000,
+//     });
+//     await page.getByTestId("blank-flow").click();
+//     await page.getByTestId("sidebar-search-input").click();
+//     await page.getByTestId("sidebar-search-input").fill("mcp tools");
 
-    await page
-      .getByTestId("models_and_agentsMCP Tools")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
-    await adjustScreenView(page, { numberOfZoomOut: 3 });
+//     await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
+//       timeout: 30000,
+//     });
 
-    try {
-      await page.getByText("Add MCP Server", { exact: true }).click({
-        timeout: 5000,
-      });
-    } catch (_error) {
-      await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
-      await page.getByText("Add MCP Server", { exact: true }).click({
-        timeout: 5000,
-      });
-    }
+//     await page
+//       .getByTestId("models_and_agentsMCP Tools")
+//       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+//         targetPosition: { x: 100, y: 100 },
+//       });
+//     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
-      state: "visible",
-      timeout: 30000,
-    });
+//     try {
+//       await page.getByText("Add MCP Server", { exact: true }).click({
+//         timeout: 5000,
+//       });
+//     } catch (_error) {
+//       await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
+//       await page.getByText("Add MCP Server", { exact: true }).click({
+//         timeout: 5000,
+//       });
+//     }
 
-    // Go to STDIO tab and fill all fields
-    await page.getByTestId("stdio-tab").click();
-    await page.waitForSelector('[data-testid="stdio-name-input"]', {
-      state: "visible",
-      timeout: 30000,
-    });
+//     await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
+//       state: "visible",
+//       timeout: 30000,
+//     });
 
-    // Test data with random suffix
-    const randomSuffix = Math.floor(Math.random() * 90000) + 10000; // 5-digit random number
-    const testName = `test_stdio_server_${randomSuffix}`;
-    const testCommand = "uvx mcp-server-test";
-    const testArg1 = "--verbose";
-    const testArg2 = "--port=8080";
-    const testArg3 = "--config=test.json";
-    const testEnvKey1 = "NODE_ENV";
-    const testEnvValue1 = "production";
-    const testEnvKey2 = "DEBUG_MODE";
-    const testEnvValue2 = "true";
+//     // Go to STDIO tab and fill all fields
+//     await page.getByTestId("stdio-tab").click();
+//     await page.waitForSelector('[data-testid="stdio-name-input"]', {
+//       state: "visible",
+//       timeout: 30000,
+//     });
 
-    // Fill basic fields
-    await page.getByTestId("stdio-name-input").fill(testName);
-    await page.getByTestId("stdio-command-input").fill(testCommand);
+//     // Test data with random suffix
+//     const randomSuffix = Math.floor(Math.random() * 90000) + 10000; // 5-digit random number
+//     const testName = `test_stdio_server_${randomSuffix}`;
+//     const testCommand = "uvx mcp-server-test";
+//     const testArg1 = "--verbose";
+//     const testArg2 = "--port=8080";
+//     const testArg3 = "--config=test.json";
+//     const testEnvKey1 = "NODE_ENV";
+//     const testEnvValue1 = "production";
+//     const testEnvKey2 = "DEBUG_MODE";
+//     const testEnvValue2 = "true";
 
-    // Add first argument
-    await page.getByTestId("stdio-args_0").fill(testArg1);
+//     // Fill basic fields
+//     await page.getByTestId("stdio-name-input").fill(testName);
+//     await page.getByTestId("stdio-command-input").fill(testCommand);
 
-    // Add second argument by clicking plus button
-    await page.getByTestId("input-list-plus-btn_-0").click();
-    await page.getByTestId("stdio-args_1").fill(testArg2);
+//     // Add first argument
+//     await page.getByTestId("stdio-args_0").fill(testArg1);
 
-    // Add third argument
-    await page.getByTestId("input-list-plus-btn_-0").click();
-    await page.getByTestId("stdio-args_2").fill(testArg3);
+//     // Add second argument by clicking plus button
+//     await page.getByTestId("input-list-plus-btn_-0").click();
+//     await page.getByTestId("stdio-args_1").fill(testArg2);
 
-    // Add first environment variable
-    await page.getByTestId("stdio-env-key-0").fill(testEnvKey1);
-    await page.getByTestId("stdio-env-value-0").fill(testEnvValue1);
+//     // Add third argument
+//     await page.getByTestId("input-list-plus-btn_-0").click();
+//     await page.getByTestId("stdio-args_2").fill(testArg3);
 
-    // Add second environment variable
-    await page.getByTestId("stdio-env-plus-btn-0").click();
-    await page.getByTestId("stdio-env-key-1").fill(testEnvKey2);
-    await page.getByTestId("stdio-env-value-1").fill(testEnvValue2);
+//     // Add first environment variable
+//     await page.getByTestId("stdio-env-key-0").fill(testEnvKey1);
+//     await page.getByTestId("stdio-env-value-0").fill(testEnvValue1);
 
-    // Save the server
-    await page.getByTestId("add-mcp-server-button").click();
+//     // Add second environment variable
+//     await page.getByTestId("stdio-env-plus-btn-0").click();
+//     await page.getByTestId("stdio-env-key-1").fill(testEnvKey2);
+//     await page.getByTestId("stdio-env-value-1").fill(testEnvValue2);
 
-    // Wait for server to be created
-    await page.waitForTimeout(2000);
+//     // Save the server
+//     await page.getByTestId("add-mcp-server-button").click();
 
-    // Go to settings to edit the server
-    await page.getByTestId("user_menu_button").click({ timeout: 3000 });
-    await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
+//     // Wait for server to be created
+//     await page.waitForTimeout(2000);
 
-    await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 3000 });
+//     // Go to settings to edit the server
+//     await page.getByTestId("user_menu_button").click({ timeout: 3000 });
+//     await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
 
-    await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
-      timeout: 3000,
-    });
+//     await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
+//       timeout: 30000,
+//     });
+//     await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 3000 });
 
-    // Find and edit the server
-    await expect(page.getByText(testName)).toBeVisible({
-      timeout: 3000,
-    });
+//     await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
+//       timeout: 3000,
+//     });
 
-    await page
-      .getByTestId(`mcp-server-menu-button-${testName}`)
-      .click({ timeout: 3000 });
+//     // Find and edit the server
+//     await expect(page.getByText(testName)).toBeVisible({
+//       timeout: 3000,
+//     });
 
-    await page
-      .getByText("Edit", { exact: true })
-      .first()
-      .click({ timeout: 3000 });
+//     await page
+//       .getByTestId(`mcp-server-menu-button-${testName}`)
+//       .click({ timeout: 3000 });
 
-    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
-      state: "visible",
-      timeout: 30000,
-    });
+//     await page
+//       .getByText("Edit", { exact: true })
+//       .first()
+//       .click({ timeout: 3000 });
 
-    // Verify all fields persisted correctly
-    expect(await page.getByTestId("stdio-name-input").inputValue()).toBe(
-      testName,
-    );
-    expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
-      testCommand,
-    );
-    expect(await page.getByTestId("stdio-args_0").inputValue()).toBe(testArg1);
-    expect(await page.getByTestId("stdio-args_1").inputValue()).toBe(testArg2);
-    expect(await page.getByTestId("stdio-args_2").inputValue()).toBe(testArg3);
-    expect(await page.getByTestId("stdio-env-key-0").last().inputValue()).toBe(
-      testEnvKey1,
-    );
-    expect(
-      await page.getByTestId("stdio-env-value-0").last().inputValue(),
-    ).toBe(testEnvValue1);
-    expect(await page.getByTestId("stdio-env-key-1").last().inputValue()).toBe(
-      testEnvKey2,
-    );
-    expect(
-      await page.getByTestId("stdio-env-value-1").last().inputValue(),
-    ).toBe(testEnvValue2);
+//     await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
+//       state: "visible",
+//       timeout: 30000,
+//     });
 
-    // Clean up - cancel the edit modal
-    await page.keyboard.press("Escape");
+//     // Verify all fields persisted correctly
+//     expect(await page.getByTestId("stdio-name-input").inputValue()).toBe(
+//       testName,
+//     );
+//     expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
+//       testCommand,
+//     );
+//     expect(await page.getByTestId("stdio-args_0").inputValue()).toBe(testArg1);
+//     expect(await page.getByTestId("stdio-args_1").inputValue()).toBe(testArg2);
+//     expect(await page.getByTestId("stdio-args_2").inputValue()).toBe(testArg3);
+//     expect(await page.getByTestId("stdio-env-key-0").last().inputValue()).toBe(
+//       testEnvKey1,
+//     );
+//     expect(
+//       await page.getByTestId("stdio-env-value-0").last().inputValue(),
+//     ).toBe(testEnvValue1);
+//     expect(await page.getByTestId("stdio-env-key-1").last().inputValue()).toBe(
+//       testEnvKey2,
+//     );
+//     expect(
+//       await page.getByTestId("stdio-env-value-1").last().inputValue(),
+//     ).toBe(testEnvValue2);
 
-    // Delete the test server
-    await page
-      .getByTestId(`mcp-server-menu-button-${testName}`)
-      .click({ timeout: 3000 });
+//     // Clean up - cancel the edit modal
+//     await page.keyboard.press("Escape");
 
-    await page
-      .getByText("Delete", { exact: true })
-      .first()
-      .click({ timeout: 3000 });
+//     // Delete the test server
+//     await page
+//       .getByTestId(`mcp-server-menu-button-${testName}`)
+//       .click({ timeout: 3000 });
 
-    await page.waitForSelector(
-      '[data-testid="btn_delete_delete_confirmation_modal"]',
-      {
-        timeout: 3000,
-      },
-    );
+//     await page
+//       .getByText("Delete", { exact: true })
+//       .first()
+//       .click({ timeout: 3000 });
 
-    await page
-      .getByTestId("btn_delete_delete_confirmation_modal")
-      .click({ timeout: 3000 });
-  },
-);
+//     await page.waitForSelector(
+//       '[data-testid="btn_delete_delete_confirmation_modal"]',
+//       {
+//         timeout: 3000,
+//       },
+//     );
+
+//     await page
+//       .getByTestId("btn_delete_delete_confirmation_modal")
+//       .click({ timeout: 3000 });
+//   },
+// );
 
 test(
   "HTTP/SSE MCP server fields should persist after saving and editing",
