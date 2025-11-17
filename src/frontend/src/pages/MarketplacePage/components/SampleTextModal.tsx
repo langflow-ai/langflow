@@ -13,6 +13,7 @@ interface SampleTextModalProps {
   onClose: () => void;
   text: string;
   index: number;
+  title?: string;
 }
 
 export const SampleTextModal: React.FC<SampleTextModalProps> = ({
@@ -20,6 +21,7 @@ export const SampleTextModal: React.FC<SampleTextModalProps> = ({
   onClose,
   text,
   index,
+  title,
 }) => {
   const [copied, setCopied] = React.useState(false);
 
@@ -71,7 +73,7 @@ export const SampleTextModal: React.FC<SampleTextModalProps> = ({
         <DialogHeader className="flex-shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-lg font-semibold">
-              Sample Input Text {index + 1}
+              {title ?? `Sample Input Text ${index + 1}`}
             </DialogTitle>
             <Button
               onClick={handleCopy}

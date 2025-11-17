@@ -7,7 +7,7 @@ export function usePlaygroundChat(publishedFlowData: any) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sessionId] = useState(() => uuid());
+  const [sessionId, setSessionId] = useState(() => uuid());
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [loadingDots, setLoadingDots] = useState(1);
   const [targetTexts, setTargetTexts] = useState<Map<string, string>>(new Map());
@@ -375,6 +375,17 @@ const handleStreamEvent = (eventData: any, localAgentMessageId: string) => {
     }
   };
 
+  const clearConversation = () => {
+    // Stop any active stream
+    stopStreaming();
+    // Clear all chat state
+    setMessages([]);
+    setError(null);
+    setStreamingMessageId(null);
+    setTargetTexts(new Map());
+    setDisplayedTexts(new Map());
+  };
+
   return {
     messages,
     isLoading,
@@ -386,5 +397,8 @@ const handleStreamEvent = (eventData: any, localAgentMessageId: string) => {
     sendMessage,
     stopStreaming,
     setError,
+    sessionId,
+    setSessionId,
+    clearConversation,
   };
 }

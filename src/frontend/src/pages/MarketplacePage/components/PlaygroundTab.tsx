@@ -1,10 +1,4 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { v4 as uuid } from "uuid";
-import { Button } from "@/components/ui/button";
-import LoadingIcon from "@/components/ui/loading";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Square, Upload, X, File, Eye } from "lucide-react";
-import SvgAutonomize from "@/icons/Autonomize/Autonomize";
 import { FileUploadManager } from "./FileUploadManager";
 import { FilePreviewModal } from "./FilePreviewModal";
 import { SampleTextModal } from "./SampleTextModal";
@@ -14,11 +8,15 @@ import {
   FileInputComponent,
 } from "./Playground.types";
 import { DragIcon } from "@/assets/icons/DragIcon";
-import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
-import { MessageRenderer } from "./MessageRender";
 import { usePlaygroundChat } from "./PlaygroundChat";
 import { useResizablePanel } from "./UseResizablePanel";
 import { usePostReadPresignedUrl } from "@/controllers/API/queries/flexstore";
+import { AgentDetailsPanel } from "./AgentDetailsPanel";
+import { ChatArea } from "./ChatArea";
+import { useThreadManager } from "./ThreadManager";
+import { ThreadLogsModal } from "./ThreadLogsModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export default function PlaygroundTab({
   publishedFlowData,
@@ -36,6 +34,7 @@ export default function PlaygroundTab({
     isOpen: boolean;
     text: string;
     index: number;
+    title?: string;
   }>({
     isOpen: false,
     text: "",
@@ -72,7 +71,15 @@ export default function PlaygroundTab({
     sendMessage: sendMessageHook,
     stopStreaming,
     setError,
+    sessionId,
+    setSessionId,
+    clearConversation,
   } = usePlaygroundChat(publishedFlowData);
+
+  // Thread management
+  const { currentThreadId, threadLogs, newThread, clearLogs } = useThreadManager();
+  const [isThreadLogsOpen, setIsThreadLogsOpen] = useState(false);
+  const [isConfirmNewThreadOpen, setIsConfirmNewThreadOpen] = useState(false);
 
   const agentDetails = {
     createdOn: publishedFlowData?.created_at
@@ -109,23 +116,24 @@ export default function PlaygroundTab({
       )
     : [];
 
-  const getTagTitle = (tagId: string): string => {
-    const tag = MARKETPLACE_TAGS.find((t) => t.id === tagId);
-    return tag ? tag.title : tagId;
-  };
-
-  // Helper to truncate text for preview
-  const truncateText = (text: string, maxLength: number = 80): string => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + "...";
-  };
+  // First available sample output across input_samples
+  const sampleOutputs: string[] = Array.isArray(publishedFlowData?.input_samples)
+    ? publishedFlowData!.input_samples.flatMap((s: any) => {
+        const out = s?.sample_output;
+        if (Array.isArray(out)) return out.filter((t: any) => typeof t === "string");
+        if (typeof out === "string") return [out];
+        return [];
+      })
+    : [];
+  const sampleOutput: string | undefined = sampleOutputs[0];
 
   // Helper to open sample text modal
-  const openSampleTextModal = (text: string, index: number) => {
+  const openSampleTextModal = (text: string, index: number, title?: string) => {
     setSampleTextModal({
       isOpen: true,
       text,
       index,
+      title,
     });
   };
 
@@ -297,6 +305,17 @@ export default function PlaygroundTab({
     focusInput();
   };
 
+  const performNewThread = () => {
+    const nextId = newThread(messages.length);
+    clearConversation();
+    setSessionId(nextId);
+    setShowSampleSection(true);
+  };
+
+  const handleNewThread = () => {
+    setIsConfirmNewThreadOpen(true);
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -415,89 +434,16 @@ export default function PlaygroundTab({
           className="flex flex-col rounded-lg border border-border dark:border-white/20 h-full"
           style={{ width: `${leftPanelWidth}%` }}
         >
-          <div className="bg-white rounded-lg p-4 flex-1 overflow-y-auto">
-            <h3 className="text-sm font-medium mb-4 text-[#444]">
-              Agent Details
-            </h3>
-            <div className="text-sm space-y-4">
-              <p className="">
-                <span className="text-[#64616A] text-xs">
-                  Created On: {agentDetails.createdOn} {"  "}
-                </span>
-                {"  "}
-                <span className="text-[#64616A] text-xs">
-                  Last Updated On: {agentDetails.lastUpdatedOn}
-                </span>
-              </p>
-
-              <div className="space-y-2">
-                <p className="text-[#444] text-xs font-medium">Description:</p>
-                <p className="text-[#64616A] text-xs">
-                  {agentDetails.description}
-                </p>
-                <p className="text-[#64616A] text-xs font-medium">
-                  Version: {agentDetails.version}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-[#444] text-xs font-medium">Domain:</p>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {agentDetails.tags.map((tag: string, index: number) => (
-                    <span
-                      key={index}
-                      className="bg-[#F5F2FF] text-[#64616A] text-xs px-2 py-1 rounded-[4px]"
-                    >
-                      {getTagTitle(tag)}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sample Input files Section */}
-              <div className="space-y-2">
-                <p className="text-[#444] text-xs font-medium">Sample Input files:</p>
-                {sampleFileNames.length > 0 ? (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {sampleFileNames.map((name, idx) => (
-                      <button
-                        key={`${name}-${idx}`}
-                        type="button"
-                        className="bg-[#F5F2FF] text-[#64616A] text-xs px-2 py-1 rounded-[4px] hover:bg-[#EAE6FF] transition-colors"
-                        onClick={() => previewSampleFile(sampleFilePaths[idx])}
-                        title="Preview sample file"
-                      >
-                        {name}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[#64616A] text-xs">No sample files provided.</p>
-                )}
-              </div>
-
-              {/* Sample Input Text Section */}
-              <div className="space-y-2">
-                <p className="text-[#444] text-xs font-medium">Sample Input Text:</p>
-                {sampleTexts.length > 0 ? (
-                  <div className="flex flex-col gap-2 mt-1">
-                    {sampleTexts.map((text, idx) => (
-                      <button
-                        key={`sample-text-${idx}`}
-                        type="button"
-                        className="bg-[#F5F2FF] text-[#64616A] text-xs px-3 py-2 rounded-[4px] hover:bg-[#EAE6FF] transition-colors text-left break-words"
-                        onClick={() => openSampleTextModal(text, idx)}
-                        title="Click to view full text"
-                      >
-                        {truncateText(text, 80)}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[#64616A] text-xs">No sample text provided.</p>
-                )}
-              </div>
-            </div>
-          </div>
+          <AgentDetailsPanel
+            agentDetails={agentDetails}
+            sampleFileNames={sampleFileNames}
+            sampleFilePaths={sampleFilePaths}
+            sampleTexts={sampleTexts}
+            sampleOutput={sampleOutput}
+            onPreviewSampleFile={previewSampleFile}
+            onOpenSampleText={(text, idx) => openSampleTextModal(text, idx)}
+            onOpenSampleOutput={(text) => openSampleTextModal(text, 0, "Sample Output")}
+          />
         </div>
 
         {/* Drag Handle */}
@@ -510,253 +456,43 @@ export default function PlaygroundTab({
 
         {/* Chat Panel */}
         <div
-          className="flex flex-col bg-background overflow-hidden rounded-lg border border-border dark:border-white/20 h-full"
-          style={{
-            width: `${100 - leftPanelWidth}%`,
-            pointerEvents: isDragging ? "none" : "auto",
-          }}
+          className="h-full flex flex-col" 
+          style={{ width: `${100 - leftPanelWidth}%`, pointerEvents: isDragging ? "none" : "auto" }}
         >
-          <div 
-            ref={chatContainerRef}
+          <ChatArea
+            messages={messages}
+            displayedTexts={displayedTexts}
+            targetTexts={targetTexts}
+            loadingDots={loadingDots}
+            onPreviewAttachment={(f) => setPreviewFile(f)}
+            onPreviewSampleFile={previewSampleFile}
+            threadId={sessionId}
+            onNewThread={handleNewThread}
+            onOpenThreadLogs={() => setIsThreadLogsOpen(true)}
+            disableThreadLogs={true}
+            chatContainerRef={chatContainerRef}
             onScroll={handleScroll}
-            className="bg-white rounded-lg p-3 flex-1 overflow-y-auto scrollbar-hide"
-          >
-            {messages.length === 0 && (
-              <div className="flex h-full items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <div className="mb-4">
-                    <SvgAutonomize
-                      title="Autonomize logo"
-                      className="h-10 w-10 scale-[1.5] mx-auto opacity-60"
-                    />
-                  </div>
-                  {hasChatInput ? (
-                    <>
-                      <p className="text-sm mt-2">
-                        Send a message to see how your agent responds
-                      </p>
-                      {fileInputComponents.length > 0 && (
-                        <p className="text-xs mt-2 text-muted-foreground">
-                          This agent accepts file inputs. Use the attachment button
-                          to provide files.
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-sm mt-2">
-                        Upload a file to process with this agent
-                      </p>
-                      <p className="text-xs mt-2 text-muted-foreground">
-                        This agent processes files without requiring text input
-                      </p>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-4 max-w-full">
-              {messages.map((message) => (
-                <MessageRenderer
-                  key={message.id}
-                  message={message}
-                  displayedTexts={displayedTexts}
-                  targetTexts={targetTexts}
-                  loadingDots={loadingDots}
-                  onPreviewAttachment={(f) => setPreviewFile(f)}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Input Area */}
-          <div className="bg-background p-4 pt-0">
-            {error && (
-              <div className="mb-2 text-sm text-destructive">{error}</div>
-            )}
-
-            {selectedFiles.length > 0 && (
-              <div className="mb-3 flex flex-wrap gap-2">
-                {selectedFiles.map((file) => (
-                  <div
-                    key={file.componentId}
-                    className="flex items-center gap-2 bg-muted/50 border rounded-lg px-3 py-2 text-sm group hover:border-primary/50 transition-colors"
-                  >
-                    <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <div className="flex flex-col min-w-0">
-                      <span
-                        className="font-medium truncate max-w-[200px]"
-                        title={file.filename}
-                      >
-                        {file.filename}
-                      </span>
-                      <span
-                        className="text-xs text-muted-foreground truncate"
-                        title={file.componentName}
-                      >
-                        for {file.componentName}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1 ml-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handlePreviewFile(file)}
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-primary flex-shrink-0"
-                        title="Preview file"
-                      >
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeSelectedFile(file.componentId)}
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
-                        title="Remove file"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="max-w-full">
-              {hasChatInput ? (
-                <div className="relative">
-                  <textarea
-                    ref={textareaRef}
-                    value={input}
-                    rows={1}
-                    onChange={(e) => setInput(e.target.value)}
-                    onInput={autoResizeTextarea}
-                    placeholder="Type your message..."
-                    className="w-full p-3 pr-20 rounded-lg border border-input bg-background text-sm resize-none min-h-[40px] max-h-[200px] overflow-y-auto focus:outline-none focus:ring-1 focus:ring-primary"
-                    onKeyDown={handleKeyPress}
-                    disabled={isLoading || !!streamingMessageId}
-                  />
-
-                  <div className="absolute right-2 top-1.5 flex items-center gap-1">
-                    {fileInputComponents.length > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={isLoading || !!streamingMessageId}
-                        className="h-8 w-8 p-0 hover:bg-muted"
-                        onClick={() => setIsFileModalOpen(true)}
-                      >
-                        <Upload className="h-4 w-4" />
-                      </Button>
-                    )}
-
-                    <button
-                      onClick={streamingMessageId ? stopStreaming : sendMessage}
-                      disabled={
-                        !streamingMessageId && (!input.trim() || isLoading)
-                      }
-                      className={`p-2 rounded-md transition-colors ${
-                        streamingMessageId
-                          ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          : "bg-primary text-primary-foreground hover:bg-primary/90"
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      aria-label={
-                        streamingMessageId ? "Stop generation" : "Submit message"
-                      }
-                    >
-                      {streamingMessageId ? (
-                        <Square className="h-4 w-4" />
-                      ) : isLoading ? (
-                        <LoadingIcon />
-                      ) : (
-                        <ForwardedIconComponent name="Send" className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center gap-3">
-                  <Button
-                    onClick={() => setIsFileModalOpen(true)}
-                    disabled={isLoading || !!streamingMessageId}
-                    variant="outline"
-                    size="lg"
-                    className="flex-1 max-w-md gap-2"
-                  >
-                    <Upload className="h-5 w-5" />
-                    {selectedFiles.length > 0 ? "Change File" : "Upload File"}
-                  </Button>
-
-                  {selectedFiles.length > 0 && (
-                    <button
-                      onClick={streamingMessageId ? stopStreaming : sendMessage}
-                      disabled={!streamingMessageId && isLoading}
-                      className={`px-6 py-2.5 rounded-md transition-colors ${
-                        streamingMessageId
-                          ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          : "bg-primary text-primary-foreground hover:bg-primary/90"
-                      } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
-                      aria-label={
-                        streamingMessageId ? "Stop generation" : "Process file"
-                      }
-                    >
-                      {streamingMessageId ? (
-                        <>
-                          <Square className="h-4 w-4" />
-                          Stop
-                        </>
-                      ) : isLoading ? (
-                        <>
-                          <LoadingIcon />
-                          Processing
-                        </>
-                      ) : (
-                        <>
-                          <ForwardedIconComponent name="Play" className="h-4 w-4" />
-                          Process
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-            {/* Right panel sample files selection */}
-            {sampleFileNames.length > 0 && selectedFiles.length === 0 && showSampleSection && (
-              <div className="mt-4">
-                <p className="text-xs text-[#444] font-medium mb-2">Or Choose from Sample Input files below</p>
-                <div className="flex flex-wrap gap-2">
-                  {sampleFileNames.map((name, idx) => (
-                    <div
-                      key={`${name}-${idx}`}
-                      className="flex items-center gap-2 bg-muted/50 border rounded-lg px-3 py-2 text-sm cursor-pointer hover:bg-muted"
-                      onClick={() => selectSampleFile(sampleFilePaths[idx])}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          selectSampleFile(sampleFilePaths[idx]);
-                        }
-                      }}
-                    >
-                      <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <span className="truncate max-w-[180px]" title={name}>{name}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-1 text-muted-foreground hover:text-primary"
-                        onClick={(e) => { e.stopPropagation(); previewSampleFile(sampleFilePaths[idx]); }}
-                        title="Preview sample file"
-                      >
-                        Preview Sample
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+            error={error}
+            selectedFiles={selectedFiles}
+            onPreviewFile={handlePreviewFile}
+            onRemoveSelectedFile={removeSelectedFile}
+            hasChatInput={hasChatInput}
+            input={input}
+            setInput={setInput}
+            streamingMessageId={streamingMessageId}
+            isLoading={isLoading}
+            onSend={sendMessage}
+            onStop={stopStreaming}
+            fileInputComponents={fileInputComponents}
+            onOpenFileModal={() => setIsFileModalOpen(true)}
+            textareaRef={textareaRef}
+            autoResizeTextarea={autoResizeTextarea}
+            onKeyPress={handleKeyPress}
+            showSampleSection={showSampleSection}
+            sampleFileNames={sampleFileNames}
+            sampleFilePaths={sampleFilePaths}
+            onSelectSampleFile={selectSampleFile}
+          />
         </div>
       </div>
 
@@ -786,6 +522,38 @@ export default function PlaygroundTab({
         text={sampleTextModal.text}
         index={sampleTextModal.index}
       />
+
+      <ThreadLogsModal
+        open={isThreadLogsOpen}
+        onClose={() => setIsThreadLogsOpen(false)}
+        logs={threadLogs}
+        onClearAll={clearLogs}
+      />
+
+      {/* Confirm New Thread Modal */}
+      <Dialog open={isConfirmNewThreadOpen} onOpenChange={setIsConfirmNewThreadOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you sure you want to create a new thread?</DialogTitle>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setIsConfirmNewThreadOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                performNewThread();
+                setIsConfirmNewThreadOpen(false);
+              }}
+            >
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
