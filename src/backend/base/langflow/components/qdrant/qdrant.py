@@ -12,11 +12,14 @@ from langflow.io import (
     IntInput,
     SecretStrInput,
     StrInput,
-    BoolInput
+    BoolInput,
+    DictInput
 )
 from langflow.schema.data import Data
 import uuid
-
+from loguru import logger
+from qdrant_client import QdrantClient
+from qdrant_client.models import Filter, FieldCondition, MatchValue
 
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Qdrant"
@@ -25,7 +28,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
     inputs = [
         StrInput(name="collection_name", display_name="Collection Name", required=True),
-        MessageTextInput(name="document_uuid", display_name="Document UUID", required=False,tool_mode=True),
+        MessageTextInput(name="document_hash", display_name="Document Hash", required=False, tool_mode=True),
         StrInput(name="host", display_name="Host", value="localhost", advanced=True),
         IntInput(name="port", display_name="Port", value=6333, advanced=True),
         IntInput(name="grpc_port", display_name="gRPC Port", value=6334, advanced=True),
@@ -52,14 +55,62 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             value=4,
             advanced=True,
         ),
-        BoolInput(
-            name="return_doc_uuids",
-            display_name="Return Document UUIDs",
-            value=True,
-            advanced=True,
-            info="will return list of unique document ids",
-        ),
+        DictInput(    
+            name="filters",
+            display_name="Filters ",
+            info=(
+                "Filters on Metadata"
+            ),
+            input_types=["Data"],
+            show=True,
+            required=False,
+            is_list=True,
+            tool_mode=True
+        )
     ]
+
+    def _check_document_exists(self, client: QdrantClient, document_hash: str) -> bool:
+        """Check if a document with the given hash already exists in the collection."""
+        if not document_hash:
+            return False
+            
+        try:
+            # Check if collection exists first
+            collections = client.get_collections().collections
+            collection_exists = any(col.name == self.collection_name for col in collections)
+            
+            if not collection_exists:
+                logger.info(f"Collection {self.collection_name} does not exist yet")
+                return False
+            
+            # Search for documents with matching hash
+            search_result = client.scroll(
+                collection_name=self.collection_name,
+                scroll_filter=Filter(
+                    must=[
+                        FieldCondition(
+                            key="metadata.file_hash",
+                            match=MatchValue(value=document_hash)
+                        )
+                    ]
+                ),
+                limit=1
+            )
+            
+            # If we found any points, the document exists
+            points, _ = search_result
+            exists = len(points) > 0
+            
+            if exists:
+                logger.info(f"Document with hash {document_hash} already exists in collection {self.collection_name}")
+            else:
+                logger.info(f"Document with hash {document_hash} not found, will proceed with ingestion")
+            
+            return exists
+            
+        except Exception as e:
+            logger.error(f"Error checking document existence: {e}")
+            return False
 
     @check_cached_vector_store
     def build_vector_store(self) -> Qdrant:
@@ -73,11 +124,10 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
         server_kwargs = {
             "host": self.host or None,
-            "port": int(self.port),  # Ensure port is an integer
-            "grpc_port": int(self.grpc_port),  # Ensure grpc_port is an integer
+            "port": int(self.port),
+            "grpc_port": int(self.grpc_port),
             "api_key": api_key,
             "prefix": self.prefix,
-            # Ensure timeout is an integer
             "timeout": int(self.timeout) if self.timeout else None,
             "path": self.path or None,
             "url": self.url or None,
@@ -85,23 +135,52 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
         server_kwargs = {k: v for k, v in server_kwargs.items() if v is not None}
 
+        # Create Qdrant client
+        client = QdrantClient(**server_kwargs)
+
+        # Check if document already exists before processing
+        logger.warning(f"ingestion - document with hash {self.document_hash} checking")
+        if self.document_hash:
+            if self._check_document_exists(client, self.document_hash):
+                logger.info(f"Skipping ingestion - document with hash {self.document_hash} already exists")
+                # Return existing vector store without ingesting
+                return Qdrant(embeddings=self.embedding, client=client, **qdrant_kwargs)
+
         # Convert DataFrame to Data if needed using parent's method
         self.ingest_data = self._prepare_ingest_data()
 
         documents = []
         for _input in self.ingest_data or []:
-            # document_uuid = str(uuid.uuid4())
-
             if isinstance(_input, Data):
-                if _input.model_dump().get('data',{}).get('result',[]):
-                    for page in _input.model_dump().get('data',{}).get('result',[]):
-                        # page['document_uuid'] =document_uuid
-                        page = Data(data=page)
-                        documents.append(page.to_lc_document())
+                if _input.model_dump().get('data', {}).get('result', []):
+                    for page in _input.model_dump().get('data', {}).get('result', []):
+                        page_data = Data(data=page)
+                        doc = page_data.to_lc_document()
+                        
+                        # Add hash to metadata if provided
+                        if self.document_hash:
+                            if not hasattr(doc, 'metadata') or doc.metadata is None:
+                                doc.metadata = {}
+                            doc.metadata['file_hash'] = self.document_hash
+                        
+                        documents.append(doc)
                 else:
-                    # _input.document_uuid = document_uuid
-                    documents.append(_input.to_lc_document())
+                    doc = _input.to_lc_document()
+                    
+                    # Add hash to metadata if provided
+                    if self.document_hash:
+                        if not hasattr(doc, 'metadata') or doc.metadata is None:
+                            doc.metadata = {}
+                        doc.metadata['file_hash'] = self.document_hash
+                    
+                    documents.append(doc)
             else:
+                # Add hash to metadata if provided
+                if self.document_hash:
+                    if not hasattr(_input, 'metadata') or _input.metadata is None:
+                        _input.metadata = {}
+                    _input.metadata['file_hash'] = self.document_hash
+                
                 documents.append(_input)
 
         if not isinstance(self.embedding, Embeddings):
@@ -109,40 +188,26 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             raise TypeError(msg)
 
         if documents:
+            logger.info(f"Ingesting {len(documents)} documents with hash {self.document_hash}")
             qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs, **server_kwargs)
         else:
-            from qdrant_client import QdrantClient
-
-            client = QdrantClient(**server_kwargs)
             qdrant = Qdrant(embeddings=self.embedding, client=client, **qdrant_kwargs)
 
         return qdrant
 
     def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
-        base_filter: Dict = {"document_uuid": self.document_uuid}
-        print(f'base filter {base_filter}')
+        cleaned_filters = [] if not self.filters else self.filters 
+        cleaned_filters = {k: v for k, v in self.filters.items() if k != "" and v != ""}
+        logger.warning(f'base filter {cleaned_filters}')
+        
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
                 query=self.search_query,
                 k=self.number_of_results,
-                filter = base_filter
+                filter=cleaned_filters
             )
             data = docs_to_data(docs)
-            # logger.warning(f'from qdrant db : {data[0].model_dump()['data']}')
             self.status = data
-            if self.return_doc_uuids:
-                
-                new_data=[]
-                for page in data:
-                    x=page.model_dump()['data']
-                    x = x['document_uuid']
-                    page=Data(text=x)
-                    new_data.append(page)
-                return new_data
-                # x= data[0].model_dump()['data']
-                # logger.warning(f'qdrant logs : {(x['document_uuid'])}')
-                # data = [item['document_uuid'] for item in x]
-                # data =x['document_uuid']
             return data
         return []

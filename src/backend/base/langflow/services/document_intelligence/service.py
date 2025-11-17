@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 import uuid
 
 try:
@@ -84,6 +84,7 @@ class DocumentIntelligenceService(Service):
         include_confidence: bool = False,
         extract_tables: bool = True,
         extract_key_value_pairs: bool = True,
+        file_hash: Optional[str]=None
     ) -> tuple[list[dict[str, Any]], str]:
         """Process a document using Azure Document Intelligence.
 
@@ -146,7 +147,8 @@ class DocumentIntelligenceService(Service):
                     "height": page.height if hasattr(page, 'height') else None,
                     "unit": page.unit if hasattr(page, 'unit') else None,
                     "chunks_metadata":chunks_metadata,
-                    "document_uuid":document_uuid
+                    "document_uuid":document_uuid,
+                    "file_hash":file_hash
                 }
             # Extract text content for each page
             for page in result.pages:
@@ -231,7 +233,8 @@ class DocumentIntelligenceService(Service):
                     "height": page_data.get("height"),
                     "unit": page_data.get("unit"),
                     "chunks_metadata": page_data.get("chunks_metadata"),
-                    "document_uuid": page_data.get("document_uuid")
+                    "document_uuid": page_data.get("document_uuid"),
+                    "file_hash": page_data.get("file_hash")
 
                 }
                 for page_num, page_data in sorted(pages_data.items())
