@@ -115,21 +115,39 @@ class MigrationValidator:
         """Check upgrade operations for violations."""
         violations = []
 
+        # Cache op_calls by type to avoid repeated _is_op_call checks
+        op_calls = {"add_column": [], "alter_column": [], "drop_column": [], "rename_table": [], "rename_column": []}
+
+        # Flatten AST nodes for one-pass processing and op call grouping
+        all_calls = []
         for child in ast.walk(node):
             if isinstance(child, ast.Call):
-                if self._is_op_call(child, "add_column"):
-                    violations.extend(self._check_add_column(child, phase, node))
+                func = child.func
+                if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name) and func.value.id == "op":
+                    method = func.attr
+                    if method in op_calls:
+                        op_calls[method].append(child)
+                all_calls.append(child)
 
-                elif self._is_op_call(child, "alter_column"):
-                    violations.extend(self._check_alter_column(child, phase))
+        # Process grouped calls by type, improving locality/branch prediction
+        for call in op_calls["add_column"]:
+            violations.extend(self._check_add_column(call, phase, node))
 
-                elif self._is_op_call(child, "drop_column"):
-                    violations.extend(self._check_drop_column(child, phase))
+        for call in op_calls["alter_column"]:
+            violations.extend(self._check_alter_column(call, phase))
 
-                elif self._is_op_call(child, "rename_table") or self._is_op_call(child, "rename_column"):
-                    violations.append(
-                        Violation("DIRECT_RENAME", "Use expand-contract pattern instead of direct rename", child.lineno)
-                    )
+        for call in op_calls["drop_column"]:
+            violations.extend(self._check_drop_column(call, phase))
+
+        # For renaming, combine list and do a single append per hit
+        for call in op_calls["rename_table"]:
+            violations.append(
+                Violation("DIRECT_RENAME", "Use expand-contract pattern instead of direct rename", call.lineno)
+            )
+        for call in op_calls["rename_column"]:
+            violations.append(
+                Violation("DIRECT_RENAME", "Use expand-contract pattern instead of direct rename", call.lineno)
+            )
 
         return violations
 
@@ -146,7 +164,30 @@ class MigrationValidator:
             )
 
         # Check for idempotency
-        if not self._has_existence_check_nearby(func_node, call):
+        # Major performance bottleneck: _has_existence_check_nearby does a full ast.walk(func_node) for every call.
+        # Optimization: Pre-index all ast.If nodes with existence-relevant conditions and store relevant calls for O(1) lookup.
+        # This can only be done ONCE per func_node, not per call.
+        # To preserve behavioral semantics, we'll cache a mapping using a helper and pass it into each check.
+
+        # Index if statements on first call per FunctionDef
+        if not hasattr(func_node, "_existence_if_index"):
+            existence_if_index = set()
+            for node in ast.walk(func_node):
+                if isinstance(node, ast.If):
+                    condition = ast.unparse(node.test)
+                    # Direct substring search with lowercase for any relevant keyword
+                    cond_low = condition.lower()
+                    if "column" in cond_low or "inspector" in cond_low or "not in" in cond_low or "if not" in cond_low:
+                        # Store all calls under this if statement for O(1) lookup
+                        for child in ast.walk(node):
+                            if isinstance(child, ast.Call):
+                                existence_if_index.add(child)
+            func_node._existence_if_index = existence_if_index
+        else:
+            existence_if_index = func_node._existence_if_index
+
+        # The original _has_existence_check_nearby returns True if any enclosing if contains this call and condition is relevant
+        if call not in existence_if_index:
             violations.append(
                 Violation(
                     "NO_EXISTENCE_CHECK", "add_column should check if column exists first (idempotency)", call.lineno
