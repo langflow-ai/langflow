@@ -1,4 +1,4 @@
-import type { Page } from "playwright/test";
+import type { Page } from "@playwright/test";
 
 export async function extractAndCleanCode(page: Page): Promise<string> {
   const outerHTML = await page
