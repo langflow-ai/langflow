@@ -1538,6 +1538,12 @@ class Component(CustomComponent):
         from lfx.graph.utils import has_chat_output
 
         return has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
+    
+    def is_connected_to_chat_input(self) -> bool:
+        # Lazy import to avoid circular dependency
+        from lfx.graph.utils import has_chat_input
+
+        return has_chat_input(self.graph.get_vertex_neighbors(self._vertex))
 
     def _should_skip_message(self, message: Message) -> bool:
         """Check if the message should be skipped based on vertex configuration and message type."""
