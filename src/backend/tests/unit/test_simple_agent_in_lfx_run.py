@@ -13,6 +13,8 @@ from pathlib import Path
 import pytest
 from lfx.utils.async_helpers import run_until_complete
 
+from tests.api_keys import has_api_key
+
 
 class TestAgentInLfxRun:
     """Test the agent workflow that demonstrates lfx run functionality."""
@@ -126,7 +128,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         # Verify the key logging components are present
         assert "LogConfig" in content, "Script should configure logging properly"
 
-    @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY required for full execution test")
+    @pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY required for full execution test")
     def test_agent_script_api_configuration(self, simple_agent_script_file):
         """Test that the script is properly configured for API usage."""
         # Verify the script file exists and has API key configuration
@@ -312,7 +314,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         # Should return None if not set, string if set
         assert api_key is None or isinstance(api_key, str)
 
-    @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY required for integration test")
+    @pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY required for integration test")
     def test_complete_workflow_integration(self):
         """Test the complete agent workflow integration."""
         try:

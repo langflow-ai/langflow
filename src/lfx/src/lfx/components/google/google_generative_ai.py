@@ -4,6 +4,7 @@ import requests
 from pydantic.v1 import SecretStr
 
 from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
+from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
@@ -74,12 +75,6 @@ class GoogleGenerativeAIComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        try:
-            from langchain_google_genai import ChatGoogleGenerativeAI
-        except ImportError as e:
-            msg = "The 'langchain_google_genai' package is required to use the Google Generative AI model."
-            raise ImportError(msg) from e
-
         google_api_key = self.api_key
         model = self.model_name
         max_output_tokens = self.max_output_tokens
@@ -88,7 +83,9 @@ class GoogleGenerativeAIComponent(LCModelComponent):
         top_p = self.top_p
         n = self.n
 
-        return ChatGoogleGenerativeAI(
+        # Use modified ChatGoogleGenerativeAIFixed class for multiple function support
+        # TODO: Potentially remove when fixed upstream
+        return ChatGoogleGenerativeAIFixed(
             model=model,
             max_output_tokens=max_output_tokens or None,
             temperature=temperature,

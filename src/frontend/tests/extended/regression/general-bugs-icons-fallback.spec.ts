@@ -13,7 +13,7 @@ test(
       timeout: 100000,
     });
 
-    await page.getByTestId("disclosure-data").click();
+    await page.getByTestId("disclosure-data sources").click();
     await page.waitForTimeout(500);
     await page.getByTestId("disclosure-processing").click();
     await page.waitForTimeout(500);
