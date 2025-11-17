@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -4937,7 +4937,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.6.7"
+version = "1.6.8"
 source = { editable = "." }
 dependencies = [
     { name = "aiofile" },
@@ -5329,7 +5329,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.6.7"
+version = "0.6.8"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
