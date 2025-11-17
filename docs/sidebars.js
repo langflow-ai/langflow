@@ -308,6 +308,7 @@ module.exports = {
             "Components/bundles-cohere",
             "Components/bundles-cometapi",
             "Components/bundles-couchbase",
+            "Components/bundles-cuga",
             "Components/bundles-datastax",
             "Components/bundles-deepseek",
             "Components/bundles-docling",
