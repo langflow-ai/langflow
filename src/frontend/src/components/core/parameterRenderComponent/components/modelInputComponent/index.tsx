@@ -190,12 +190,7 @@ export default function ModelInputComponent({
     });
 
     return sortedGroups;
-  }, [
-    filteredOptions,
-    options,
-    globalVariablesEntries,
-    defaultModelData,
-  ]);
+  }, [filteredOptions, options, globalVariablesEntries, defaultModelData]);
 
   // Utility functions
   const handleModelSelect = useCallback(
