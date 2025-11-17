@@ -265,6 +265,9 @@ async def import_langflow_components(
     Falls back to dynamic module scanning if index is unavailable or invalid. When dynamic loading is used,
     the generated index is cached for future use.
 
+    In dev mode with specific modules (e.g., LFX_DEV=flow_controls), loads the index first and then
+    replaces only the specified modules with dynamically loaded versions.
+
     Scans the `lfx.components` package and its submodules in parallel, instantiates classes that are subclasses
     of `Component` or `CustomComponent`, and generates their templates. Components are grouped by their
     top-level subpackage name.
@@ -283,9 +286,15 @@ async def import_langflow_components(
     # Track if we need to save the index after building
     should_save_index = False
 
-    # Fast path: load from prebuilt index if not in dev mode
+    # Parse dev mode settings
     dev_mode_enabled, target_modules = _parse_dev_mode()
-    if not dev_mode_enabled:
+
+    # Initialize modules_dict - will be populated from index or built dynamically
+    modules_dict: dict[str, Any] = {}
+
+    # Try to load from index first (unless in full dev mode without specific modules)
+    # This allows partial reloading when specific modules are targeted
+    if not dev_mode_enabled or target_modules:
         # Get custom index path from settings if available
         custom_index_path = None
         if settings_service and settings_service.settings.components_index_path:
@@ -298,97 +307,118 @@ async def import_langflow_components(
             await logger.adebug(f"Loading components from {source}")
             index_source = "builtin"
             # Reconstruct modules_dict from index entries
-            modules_dict = {}
             for top_level, components in index["entries"]:
                 if top_level not in modules_dict:
                     modules_dict[top_level] = {}
                 modules_dict[top_level].update(components)
             await logger.adebug(f"Loaded {len(modules_dict)} component categories from index")
-            await _send_telemetry(
-                telemetry_service, index_source, modules_dict, dev_mode_enabled, target_modules, start_time_ms
-            )
+
+            # If not in dev mode, return the index as-is
+            if not dev_mode_enabled:
+                await _send_telemetry(
+                    telemetry_service, index_source, modules_dict, dev_mode_enabled, target_modules, start_time_ms
+                )
+                return {"components": modules_dict}
+        else:
+            # Index failed to load - try cache before building
+            await logger.adebug("Prebuilt index not available, checking cache")
+            try:
+                cache_path = _get_cache_path()
+                if cache_path.exists():
+                    await logger.adebug(f"Attempting to load from cache: {cache_path}")
+                    index = _read_component_index(str(cache_path))
+                    if index and "entries" in index:
+                        await logger.adebug("Loading components from cached index")
+                        index_source = "cache"
+                        for top_level, components in index["entries"]:
+                            if top_level not in modules_dict:
+                                modules_dict[top_level] = {}
+                            modules_dict[top_level].update(components)
+                        await logger.adebug(f"Loaded {len(modules_dict)} component categories from cache")
+
+                        # If not in dev mode, return the cache as-is
+                        if not dev_mode_enabled:
+                            await _send_telemetry(
+                                telemetry_service,
+                                index_source,
+                                modules_dict,
+                                dev_mode_enabled,
+                                target_modules,
+                                start_time_ms,
+                            )
+                            return {"components": modules_dict}
+            except Exception as e:  # noqa: BLE001
+                await logger.adebug(f"Cache load failed: {e}")
+
+            # No cache available and not in dev mode - will build and save
+            if not dev_mode_enabled:
+                await logger.adebug("Falling back to dynamic loading")
+                should_save_index = True
+
+    # Dynamic loading: either full dev mode or reloading specific modules
+    # If target_modules is set, we already have modules_dict from index and will replace specific modules
+    # If target_modules is None (full dev mode), modules_dict is empty and we'll load everything
+    if dev_mode_enabled:
+        if target_modules:
+            await logger.adebug(f"LFX_DEV module filter active: reloading only {target_modules}")
+        else:
+            await logger.adebug("LFX_DEV full mode: loading all modules dynamically")
+
+        try:
+            import lfx.components as components_pkg
+        except ImportError as e:
+            await logger.aerror(f"Failed to import langflow.components package: {e}", exc_info=True)
             return {"components": modules_dict}
 
-        # Index failed to load in production - try cache before building
-        await logger.adebug("Prebuilt index not available, checking cache")
-        try:
-            cache_path = _get_cache_path()
-            if cache_path.exists():
-                await logger.adebug(f"Attempting to load from cache: {cache_path}")
-                index = _read_component_index(str(cache_path))
-                if index and "entries" in index:
-                    await logger.adebug("Loading components from cached index")
-                    index_source = "cache"
-                    modules_dict = {}
-                    for top_level, components in index["entries"]:
-                        if top_level not in modules_dict:
-                            modules_dict[top_level] = {}
-                        modules_dict[top_level].update(components)
-                    await logger.adebug(f"Loaded {len(modules_dict)} component categories from cache")
-                    await _send_telemetry(
-                        telemetry_service, index_source, modules_dict, dev_mode_enabled, target_modules, start_time_ms
-                    )
-                    return {"components": modules_dict}
-        except Exception as e:  # noqa: BLE001
-            await logger.adebug(f"Cache load failed: {e}")
-
-        # No cache available, will build and save
-        await logger.adebug("Falling back to dynamic loading")
-        should_save_index = True
-
-    # Fallback: dynamic loading (dev mode or index unavailable)
-    modules_dict = {}
-    try:
-        import lfx.components as components_pkg
-    except ImportError as e:
-        await logger.aerror(f"Failed to import langflow.components package: {e}", exc_info=True)
-        return {"components": modules_dict}
-
-    # Collect all module names to process
-    module_names = []
-    for _, modname, _ in pkgutil.walk_packages(components_pkg.__path__, prefix=components_pkg.__name__ + "."):
-        # Skip if the module is in the deactivated folder
-        if "deactivated" in modname:
-            continue
-
-        # If specific modules requested, filter by top-level module name
-        if target_modules:
-            # Extract top-level: "lfx.components.mistral.xyz" -> "mistral"
-            parts = modname.split(".")
-            if len(parts) > MIN_MODULE_PARTS and parts[2].lower() not in target_modules:
+        # Collect all module names to process
+        module_names = []
+        for _, modname, _ in pkgutil.walk_packages(components_pkg.__path__, prefix=components_pkg.__name__ + "."):
+            # Skip if the module is in the deactivated folder
+            if "deactivated" in modname:
                 continue
 
-        module_names.append(modname)
+            # If specific modules requested, filter by top-level module name
+            if target_modules:
+                # Extract top-level: "lfx.components.mistral.xyz" -> "mistral"
+                parts = modname.split(".")
+                if len(parts) > MIN_MODULE_PARTS and parts[2].lower() not in target_modules:
+                    continue
 
-    if target_modules:
-        await logger.adebug(f"LFX_DEV module filter active: loading only {target_modules}")
-        await logger.adebug(f"Found {len(module_names)} modules matching filter")
+            module_names.append(modname)
 
-    if not module_names:
-        return {"components": modules_dict}
+        if target_modules:
+            await logger.adebug(f"Found {len(module_names)} modules matching filter")
 
-    # Create tasks for parallel module processing
-    tasks = [asyncio.to_thread(_process_single_module, modname) for modname in module_names]
+        if not module_names:
+            return {"components": modules_dict}
 
-    # Wait for all modules to be processed
-    try:
-        module_results = await asyncio.gather(*tasks, return_exceptions=True)
-    except Exception as e:  # noqa: BLE001
-        await logger.aerror(f"Error during parallel module processing: {e}", exc_info=True)
-        return {"components": modules_dict}
+        # Create tasks for parallel module processing
+        tasks = [asyncio.to_thread(_process_single_module, modname) for modname in module_names]
 
-    # Merge results from all modules
-    for result in module_results:
-        if isinstance(result, Exception):
-            await logger.awarning(f"Module processing failed: {result}")
-            continue
+        # Wait for all modules to be processed
+        try:
+            module_results = await asyncio.gather(*tasks, return_exceptions=True)
+        except Exception as e:  # noqa: BLE001
+            await logger.aerror(f"Error during parallel module processing: {e}", exc_info=True)
+            return {"components": modules_dict}
 
-        if result and isinstance(result, tuple) and len(result) == EXPECTED_RESULT_LENGTH:
-            top_level, components = result
-            if top_level and components:
-                if top_level not in modules_dict:
-                    modules_dict[top_level] = {}
-                modules_dict[top_level].update(components)
+        # Merge results from all modules
+        # If target_modules is set, this will replace those specific modules in modules_dict
+        for result in module_results:
+            if isinstance(result, Exception):
+                await logger.awarning(f"Module processing failed: {result}")
+                continue
+
+            if result and isinstance(result, tuple) and len(result) == EXPECTED_RESULT_LENGTH:
+                top_level, components = result
+                if top_level and components:
+                    if top_level not in modules_dict:
+                        modules_dict[top_level] = {}
+                    # Replace the entire module category with newly loaded components
+                    modules_dict[top_level].update(components)
+
+        if target_modules:
+            await logger.adebug(f"Reloaded {len(target_modules)} module(s), kept others from index")
 
     # Save the generated index to cache if needed (production mode with missing index)
     if should_save_index and modules_dict:
@@ -396,7 +426,9 @@ async def import_langflow_components(
         _save_generated_index(modules_dict)
 
     # Send telemetry for dynamic loading
-    index_source = "dynamic"
+    if dev_mode_enabled or not index_source:
+        index_source = "dynamic"
+
     await _send_telemetry(
         telemetry_service, index_source, modules_dict, dev_mode_enabled, target_modules, start_time_ms
     )
