@@ -4,9 +4,8 @@ import json
 from pathlib import Path
 
 import pytest
-from typer.testing import CliRunner
-
 from lfx.__main__ import app
+from typer.testing import CliRunner
 
 runner = CliRunner()
 
@@ -49,7 +48,7 @@ class TestExecuteRealFlows:
         """Test executing with verbose output."""
         result = runner.invoke(
             app,
-            ["run", "--verbose", str(simple_chat_json), "Test verbose"],
+            ["run", "-vv", str(simple_chat_json), "Test verbose"],
         )
 
         # Should succeed
@@ -238,7 +237,8 @@ class TestExecuteRealFlows:
         if json_line:
             error_output = json.loads(json_line)
             assert error_output["success"] is False
-            assert "does not exist" in error_output["error"]
+            assert "exception_message" in error_output, f"Got: {error_output}"
+            assert "does not exist" in error_output["exception_message"], f"Got: {error_output}"
 
         # Invalid file extension
         result = runner.invoke(app, ["run", "test.txt"])
@@ -252,7 +252,11 @@ class TestExecuteRealFlows:
             assert error_output["success"] is False
             # The error could be either "does not exist" or "must be a .py or .json file"
             # depending on whether the file exists
-            assert "does not exist" in error_output["error"] or "must be a .py or .json file" in error_output["error"]
+            assert "exception_message" in error_output, f"Got: {error_output}"
+            assert (
+                "does not exist" in error_output["exception_message"]
+                or "must be a .py or .json file" in error_output["exception_message"]
+            ), f"Got: {error_output}"
 
         # Multiple input sources
         result = runner.invoke(
@@ -266,7 +270,8 @@ class TestExecuteRealFlows:
         if json_line:
             error_output = json.loads(json_line)
             assert error_output["success"] is False
-            assert "Multiple input sources" in error_output["error"]
+            assert "exception_message" in error_output, f"Got: {error_output}"
+            assert "Multiple input sources" in error_output["exception_message"], f"Got: {error_output}"
 
     def test_run_input_precedence(self, simple_chat_json):
         """Test input value precedence (positional over option)."""
@@ -362,10 +367,9 @@ class TestExecuteRealFlows:
             # If there's any stdout, it shouldn't be a JSON error
             try:
                 output = json.loads(result.stdout)
-                assert output.get("success", True) is not False
+                assert output.get("success") is False, f"Got: {output}"
             except json.JSONDecodeError:
-                # That's fine, it's not JSON
-                pass
+                pytest.fail(f"Unexpected non-JSON stdout: {result.stdout}")
 
 
 class TestAsyncFunctionality:

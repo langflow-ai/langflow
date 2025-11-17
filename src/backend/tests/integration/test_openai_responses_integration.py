@@ -1,12 +1,10 @@
 import asyncio
 import json
-import os
 import pathlib
 
 import pytest
 from dotenv import find_dotenv, load_dotenv
 from httpx import AsyncClient
-
 from lfx.log.logger import logger
 
 load_dotenv(find_dotenv())
@@ -31,8 +29,11 @@ async def load_and_prepare_flow(client: AsyncClient, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
 
     # Create OPENAI_API_KEY global variable
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    if not openai_api_key:
+    from tests.api_keys import get_openai_api_key
+
+    try:
+        openai_api_key = get_openai_api_key()
+    except ValueError:
         pytest.skip("OPENAI_API_KEY environment variable not set")
 
     await create_global_variable(client, headers, "OPENAI_API_KEY", openai_api_key)

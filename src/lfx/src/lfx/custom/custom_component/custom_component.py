@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from lfx.custom import validate
 from lfx.custom.custom_component.base_component import BaseComponent
-from lfx.helpers.flow import list_flows, load_flow, run_flow
+from lfx.helpers import list_flows, load_flow, run_flow
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.services.deps import get_storage_service, get_variable_service, session_scope

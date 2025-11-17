@@ -7,7 +7,7 @@ import { useTypesStore } from "@/stores/typesStore";
 import type { useQueryFunctionType } from "@/types/api";
 import type { FlowType, PaginatedFlowsType } from "@/types/flow";
 import {
-  extractFieldsFromComponenents,
+  extractSecretFieldsFromComponents,
   processFlows,
 } from "@/utils/reactflowUtils";
 import { api } from "../../api";
@@ -58,7 +58,7 @@ export const useGetRefreshFlowsQuery: useQueryFunctionType<
         const { data } = processFlows(dbDataComponents);
         useTypesStore.setState((state) => ({
           data: { ...state.data, ["saved_components"]: data },
-          ComponentFields: extractFieldsFromComponenents({
+          ComponentFields: extractSecretFieldsFromComponents({
             ...state.data,
             ["saved_components"]: data,
           }),

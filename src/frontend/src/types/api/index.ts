@@ -43,6 +43,7 @@ export type APIClassType = {
   custom_fields?: CustomFieldsType;
   beta?: boolean;
   legacy?: boolean;
+  replacement?: string[];
   documentation: string;
   error?: string;
   official?: boolean;
@@ -321,6 +322,7 @@ export type FieldValidatorType =
   | "password";
 
 export type FieldParserType =
+  | "mcp_name_case"
   | "snake_case"
   | "camel_case"
   | "pascal_case"

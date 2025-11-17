@@ -1,7 +1,8 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import React from "react";
-import { APIClassType } from "@/types/api";
+import type React from "react";
+import type { APIClassType } from "@/types/api";
 import McpSidebarGroup from "../McpSidebarGroup";
 
 // Mock the UI components
@@ -32,7 +33,7 @@ jest.mock("@/components/ui/sidebar", () => ({
 jest.mock("@/components/ui/button", () => ({
   Button: ({ children, onClick, disabled, variant, size, ...props }: any) => (
     <button
-      data-testid="add-mcp-server-button"
+      data-testid="add-mcp-server-button-sidebar"
       onClick={onClick}
       disabled={disabled}
       data-variant={variant}
@@ -114,10 +115,53 @@ jest.mock("@/modals/addMcpServerModal", () => ({
   ),
 }));
 
-// Mock utils
+// Mock DeleteConfirmationModal
+jest.mock("@/modals/deleteConfirmationModal", () => ({
+  __esModule: true,
+  default: ({ open, setOpen, onConfirm }: any) => (
+    <div data-testid="delete-confirmation-modal" data-open={open}>
+      <button onClick={() => setOpen(false)}>Cancel</button>
+      <button onClick={onConfirm}>Confirm</button>
+    </div>
+  ),
+}));
+
+// Mock useDeleteMCPServer hook
+jest.mock("@/controllers/API/queries/mcp/use-delete-mcp-server", () => ({
+  useDeleteMCPServer: () => ({
+    mutate: jest.fn(),
+  }),
+}));
+
+// Mock alertStore
+jest.mock("@/stores/alertStore", () => ({
+  __esModule: true,
+  default: (selector: any) =>
+    selector({
+      setSuccessData: jest.fn(),
+      setErrorData: jest.fn(),
+    }),
+}));
+
+// Mock className utility function (cn)
 jest.mock("@/utils/utils", () => ({
   removeCountFromString: (str: string) => str.replace(/\s*\(\d+\)$/, ""),
+  cn: (...args: any[]) => args.filter(Boolean).join(" "),
 }));
+
+// Test wrapper with QueryClient
+const createTestWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+};
 
 describe("McpSidebarGroup", () => {
   const mockOnDragStart = jest.fn();
@@ -139,13 +183,16 @@ describe("McpSidebarGroup", () => {
   const mockMcpComponent: APIClassType = {
     name: "test-mcp-component",
     display_name: "Test MCP Component",
+    description: "Test MCP component description",
+    template: {},
+    documentation: "Test documentation",
     mcpServerName: "Test Server",
     icon: "TestIcon",
-    error: false,
+    error: undefined,
     official: true,
     beta: false,
     legacy: false,
-  } as APIClassType;
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -153,7 +200,8 @@ describe("McpSidebarGroup", () => {
 
   describe("Visibility and Rendering", () => {
     it("should render when MCP category is open", () => {
-      render(<McpSidebarGroup {...defaultProps} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...defaultProps} />, { wrapper: TestWrapper });
 
       expect(screen.getByTestId("sidebar-group")).toBeInTheDocument();
     });
@@ -167,7 +215,8 @@ describe("McpSidebarGroup", () => {
         search: "", // empty search - component will still render due to logic
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
       expect(screen.getByTestId("sidebar-group")).toBeInTheDocument();
     });
 
@@ -178,7 +227,8 @@ describe("McpSidebarGroup", () => {
         search: "test", // and we have search
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
       expect(screen.getByTestId("sidebar-group")).toBeInTheDocument();
     });
 
@@ -192,7 +242,10 @@ describe("McpSidebarGroup", () => {
       // With search !== "" and MCP not in openCategories:
       // isOpen = false || false = false
       // So component should not render
-      const { container } = render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      const { container } = render(<McpSidebarGroup {...props} />, {
+        wrapper: TestWrapper,
+      });
       expect(container.firstChild).toBeNull();
     });
   });
@@ -205,10 +258,13 @@ describe("McpSidebarGroup", () => {
         hasMcpServers: false,
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       expect(screen.getByText("No MCP Servers Added")).toBeInTheDocument();
-      expect(screen.getByTestId("add-mcp-server-button")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("add-mcp-server-button-sidebar"),
+      ).toBeInTheDocument();
     });
 
     it("should open AddMcpServerModal when Add MCP Server button is clicked", async () => {
@@ -219,9 +275,10 @@ describe("McpSidebarGroup", () => {
         hasMcpServers: false,
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
-      const addButton = screen.getByTestId("add-mcp-server-button");
+      const addButton = screen.getByTestId("add-mcp-server-button-sidebar");
       await user.click(addButton);
 
       expect(screen.getByTestId("add-mcp-server-modal")).toHaveAttribute(
@@ -238,9 +295,12 @@ describe("McpSidebarGroup", () => {
         hasMcpServers: false,
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
-      expect(screen.getByTestId("add-mcp-server-button")).toBeDisabled();
+      expect(
+        screen.getByTestId("add-mcp-server-button-sidebar"),
+      ).toBeDisabled();
     });
 
     it("should apply full height class when no MCP servers", () => {
@@ -250,7 +310,8 @@ describe("McpSidebarGroup", () => {
         hasMcpServers: false,
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       expect(screen.getByTestId("sidebar-group")).toHaveClass("h-full");
       expect(screen.getByTestId("sidebar-menu")).toHaveClass("h-full");
@@ -264,7 +325,8 @@ describe("McpSidebarGroup", () => {
         mcpLoading: true,
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       expect(screen.getByText("Loading...")).toBeInTheDocument();
     });
@@ -279,7 +341,8 @@ describe("McpSidebarGroup", () => {
         mcpComponents: [mockMcpComponent],
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       expect(screen.getByTestId("sidebar-group-label")).toHaveTextContent(
         "MCP Servers",
@@ -292,6 +355,7 @@ describe("McpSidebarGroup", () => {
     it("should render multiple MCP components", () => {
       const secondComponent: APIClassType = {
         ...mockMcpComponent,
+        mcpServerName: "Test Other Server",
         name: "second-mcp-component",
         display_name: "Second MCP Component",
       };
@@ -303,7 +367,8 @@ describe("McpSidebarGroup", () => {
         mcpComponents: [mockMcpComponent, secondComponent],
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       expect(
         screen.getByTestId(`draggable-component-${mockMcpComponent.name}`),
@@ -321,7 +386,8 @@ describe("McpSidebarGroup", () => {
         mcpComponents: [mockMcpComponent],
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       const tooltip = screen.getByTestId("tooltip");
       expect(tooltip).toHaveAttribute(
@@ -340,7 +406,8 @@ describe("McpSidebarGroup", () => {
         showSearchConfigTrigger: true,
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       expect(screen.getByTestId("search-config-trigger")).toBeInTheDocument();
     });
@@ -352,7 +419,8 @@ describe("McpSidebarGroup", () => {
         showSearchConfigTrigger: false,
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       expect(
         screen.queryByTestId("search-config-trigger"),
@@ -366,7 +434,8 @@ describe("McpSidebarGroup", () => {
         showSearchConfigTrigger: true,
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       expect(
         screen.queryByTestId("search-config-trigger"),
@@ -382,7 +451,8 @@ describe("McpSidebarGroup", () => {
         showConfig: false,
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       const configTrigger = screen.getByTestId("search-config-trigger");
       await user.click(configTrigger);
@@ -400,7 +470,8 @@ describe("McpSidebarGroup", () => {
         mcpComponents: [mockMcpComponent],
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       const draggableComponent = screen.getByTestId(
         `draggable-component-${mockMcpComponent.name}`,
@@ -416,7 +487,8 @@ describe("McpSidebarGroup", () => {
     it("should pass correct props to SidebarDraggableComponent", () => {
       const componentWithError: APIClassType = {
         ...mockMcpComponent,
-        error: true,
+        error: "Test error message",
+        mcpServerName: "Test Other Other Server",
         beta: true,
         official: false,
       };
@@ -428,7 +500,8 @@ describe("McpSidebarGroup", () => {
         mcpComponents: [componentWithError],
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       const draggableComponent = screen.getByTestId(
         `draggable-component-${componentWithError.name}`,
@@ -460,7 +533,8 @@ describe("McpSidebarGroup", () => {
         mcpComponents: [componentWithServerName],
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       const draggableComponent = screen.getByTestId(
         `draggable-component-${componentWithServerName.name}`,
@@ -485,7 +559,8 @@ describe("McpSidebarGroup", () => {
         mcpComponents: [componentWithoutServerName],
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       const draggableComponent = screen.getByTestId(
         `draggable-component-${componentWithoutServerName.name}`,
@@ -510,7 +585,8 @@ describe("McpSidebarGroup", () => {
         mcpComponents: [componentWithoutIcon],
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       const draggableComponent = screen.getByTestId(
         `draggable-component-${componentWithoutIcon.name}`,
@@ -527,9 +603,14 @@ describe("McpSidebarGroup", () => {
         hasMcpServers: false,
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
-      expect(screen.getByTestId("sidebar-group")).toHaveClass("p-3", "h-full");
+      expect(screen.getByTestId("sidebar-group")).toHaveClass(
+        "p-3",
+        "pr-2",
+        "h-full",
+      );
     });
 
     it("should not apply h-full class when hasMcpServers is true", () => {
@@ -538,10 +619,11 @@ describe("McpSidebarGroup", () => {
         hasMcpServers: true,
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       const sidebarGroup = screen.getByTestId("sidebar-group");
-      expect(sidebarGroup).toHaveClass("p-3");
+      expect(sidebarGroup).toHaveClass("p-3", "pr-2");
       expect(sidebarGroup).not.toHaveClass("h-full");
     });
   });
@@ -555,7 +637,10 @@ describe("McpSidebarGroup", () => {
         mcpComponents: undefined,
       };
 
-      expect(() => render(<McpSidebarGroup {...props} />)).not.toThrow();
+      const TestWrapper = createTestWrapper();
+      expect(() =>
+        render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper }),
+      ).not.toThrow();
     });
 
     it("should handle empty mcpComponents array", () => {
@@ -566,7 +651,8 @@ describe("McpSidebarGroup", () => {
         mcpComponents: [],
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       expect(screen.getByTestId("sidebar-group-label")).toHaveTextContent(
         "MCP Servers",
@@ -579,7 +665,7 @@ describe("McpSidebarGroup", () => {
     it("should handle missing display_name in tooltip", () => {
       const componentWithoutDisplayName: APIClassType = {
         ...mockMcpComponent,
-        display_name: undefined,
+        display_name: "",
       };
 
       const props = {
@@ -589,7 +675,8 @@ describe("McpSidebarGroup", () => {
         mcpComponents: [componentWithoutDisplayName],
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       const tooltip = screen.getByTestId("tooltip");
       expect(tooltip).toHaveAttribute(
@@ -607,7 +694,8 @@ describe("McpSidebarGroup", () => {
         hasMcpServers: false,
       };
 
-      render(<McpSidebarGroup {...props} />);
+      const TestWrapper = createTestWrapper();
+      render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       // Verify that the component doesn't call state setters during render
       expect(mockSetOpenCategories).not.toHaveBeenCalled();

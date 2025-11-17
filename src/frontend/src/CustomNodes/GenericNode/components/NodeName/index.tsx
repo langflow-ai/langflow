@@ -12,6 +12,7 @@ export default function NodeName({
   nodeId,
   showNode,
   beta,
+  legacy,
   editNameDescription,
   toggleEditNameDescription,
   setHasChangedNodeDescription,
@@ -21,6 +22,7 @@ export default function NodeName({
   nodeId: string;
   showNode: boolean;
   beta: boolean;
+  legacy?: boolean;
   editNameDescription: boolean;
   toggleEditNameDescription: () => void;
   setHasChangedNodeDescription: (hasChanged: boolean) => void;
@@ -98,6 +100,13 @@ export default function NodeName({
           <span className={cn("cursor-grab truncate text-sm")}>
             {display_name}
           </span>
+          {legacy && (
+            <div className="shrink-0">
+              <div className="flex items-center text-xxs justify-center rounded-sm border border-accent-amber text-accent-amber-foreground px-1">
+                Legacy
+              </div>
+            </div>
+          )}
         </div>
       </div>
       {beta && (

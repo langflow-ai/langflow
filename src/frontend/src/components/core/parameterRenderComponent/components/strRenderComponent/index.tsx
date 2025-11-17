@@ -69,6 +69,7 @@ export function StrRenderComponent({
       <DropdownComponent
         {...baseInputProps}
         dialogInputs={templateData.dialog_inputs}
+        externalOptions={templateData.external_options}
         options={templateData.options ?? []}
         nodeId={nodeId}
         nodeClass={nodeClass}

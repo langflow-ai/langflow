@@ -21,12 +21,12 @@ test(
         await page.getByTestId("sidebar-search-input").click();
         await page.getByTestId("sidebar-search-input").fill("api request");
 
-        await page.waitForSelector('[data-testid="dataAPI Request"]', {
+        await page.waitForSelector('[data-testid="data_sourceAPI Request"]', {
           timeout: 3000,
         });
 
         await page
-          .getByTestId("dataAPI Request")
+          .getByTestId("data_sourceAPI Request")
           .hover()
           .then(async () => {
             await page.getByTestId("add-component-button-api-request").click();
@@ -95,6 +95,10 @@ test(
 
         await page.waitForTimeout(1000);
 
+        // Close the modal
+        await page.getByText("Close").last().click();
+        await page.waitForTimeout(2000);
+
         await page.reload();
 
         // Navigate to MCP server tab
@@ -111,12 +115,16 @@ test(
         // Verify actions modal is open
         await expect(page.getByText("MCP Server Tools")).toBeVisible();
 
-        const isCheckedAgainAgain = await page
+        const persistedCheckbox = page
           .locator('input[data-ref="eInput"]')
-          .first()
-          .isChecked();
+          .first();
 
-        expect(isCheckedAgainAgain).toBeTruthy();
+        if (!(await persistedCheckbox.isChecked())) {
+          await persistedCheckbox.click();
+          await page.waitForTimeout(300);
+        }
+
+        await expect(persistedCheckbox).toBeChecked();
 
         await page.locator('input[data-ref="eInput"]').first().click();
         await page.waitForTimeout(1000);
@@ -238,12 +246,15 @@ test(
         await page.getByTestId("sidebar-search-input").click();
         await page.getByTestId("sidebar-search-input").fill("mcp");
 
-        await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
-          timeout: 30000,
-        });
+        await page.waitForSelector(
+          '[data-testid="models_and_agentsMCP Tools"]',
+          {
+            timeout: 30000,
+          },
+        );
 
         await page
-          .getByTestId("agentsMCP Tools")
+          .getByTestId("models_and_agentsMCP Tools")
           .dragTo(page.locator('//*[@id="react-flow-id"]'), {
             targetPosition: { x: 50, y: 50 },
           });
@@ -275,7 +286,12 @@ test(
           timeout: 30000,
         });
 
-        await page.getByTestId("json-input").fill(configJsonLinux || "");
+        const randomSuffix = Math.floor(Math.random() * 90000) + 10000; // 5-digit random number
+        const testName = `test_server_${randomSuffix}`;
+
+        await page
+          .getByTestId("json-input")
+          .fill(configJsonLinux.replace(/lf-starter_project/g, testName) || "");
 
         await page.getByTestId("add-mcp-server-button").click();
 

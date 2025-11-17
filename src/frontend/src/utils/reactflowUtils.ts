@@ -61,6 +61,10 @@ import type {
   generateFlowType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
+import {
+  cleanMcpConfig,
+  type MCPServerValue,
+} from "./helpers/clean-mcp-config";
 import { getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
 
@@ -475,8 +479,21 @@ export function removeApiKeys(flow: FlowType): FlowType {
   cleanFLow.data!.nodes.forEach((node) => {
     if (node.type !== "genericNode") return;
     for (const key in node.data.node!.template) {
-      if (node.data.node!.template[key].password) {
-        node.data.node!.template[key].value = "";
+      const field = node.data.node!.template[key];
+
+      // Remove password fields
+      if (field.password) {
+        field.value = "";
+      }
+
+      // Handle MCP server configurations
+      if (
+        key === "mcp_server" &&
+        field.value &&
+        typeof field.value === "object"
+      ) {
+        // Type assertion is safe here as we've verified it's an object with runtime checks
+        cleanMcpConfig(field.value as MCPServerValue);
       }
     }
   });
@@ -1821,6 +1838,84 @@ export function templatesGenerator(data: APIObjectType) {
   }, {});
 }
 
+/**
+ * Determines if a field is a SecretStr field type
+ */
+function isSecretField(fieldData: any): boolean {
+  // Check if field type is specifically SecretStr
+  if (fieldData?.type === "SecretStr") {
+    return true;
+  }
+
+  // Also check for fields that have both password=true and load_from_db=true
+  // which are characteristics of SecretStrInput fields
+  if (fieldData?.password === true && fieldData?.load_from_db === true) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Extract only SecretStr type fields from components for global variables
+ */
+export function extractSecretFieldsFromComponents(data: APIObjectType) {
+  const fields = new Set<string>();
+
+  // Check if data exists
+  if (!data) {
+    console.warn(
+      "[Types] Data is undefined in extractSecretFieldsFromComponents",
+    );
+    return fields;
+  }
+
+  Object.keys(data).forEach((key) => {
+    // Check if data[key] exists
+    if (!data[key]) {
+      console.warn(
+        `[Types] data["${key}"] is undefined in extractSecretFieldsFromComponents`,
+      );
+      return;
+    }
+
+    Object.keys(data[key]).forEach((kind) => {
+      // Check if data[key][kind] exists
+      if (!data[key][kind]) {
+        console.warn(
+          `[Types] data["${key}"]["${kind}"] is undefined in extractSecretFieldsFromComponents`,
+        );
+        return;
+      }
+
+      // Skip legacy components
+      if (data[key][kind].legacy === true) {
+        return;
+      }
+
+      // Check if template exists
+      if (!data[key][kind].template) {
+        console.warn(
+          `[Types] data["${key}"]["${kind}"].template is undefined in extractSecretFieldsFromComponents`,
+        );
+        return;
+      }
+
+      Object.keys(data[key][kind].template).forEach((field) => {
+        const fieldData = data[key][kind].template[field];
+        if (
+          fieldData?.display_name &&
+          fieldData?.show &&
+          isSecretField(fieldData)
+        )
+          fields.add(fieldData.display_name!);
+      });
+    });
+  });
+
+  return fields;
+}
+
 export function extractFieldsFromComponenents(data: APIObjectType) {
   const fields = new Set<string>();
 
@@ -1847,7 +1942,6 @@ export function extractFieldsFromComponenents(data: APIObjectType) {
         );
         return;
       }
-
       // Check if template exists
       if (!data[key][kind].template) {
         console.warn(

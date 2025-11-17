@@ -34,7 +34,7 @@ class CombinatorialReasonerComponent(Component):
         ),
         SecretStrInput(
             name="password",
-            display_name="Password",
+            display_name="Combinatorial Reasoner Password",
             info="Password to authenticate access to Icosa CR API.",
             advanced=False,
             required=True,

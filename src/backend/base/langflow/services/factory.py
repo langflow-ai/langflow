@@ -75,7 +75,13 @@ def import_all_services_into_a_dict():
     for service_type in ServiceType:
         try:
             service_name = ServiceType(service_type).value.replace("_service", "")
-            module_name = f"langflow.services.{service_name}.service"
+
+            # Special handling for mcp_composer which is now in lfx module
+            if service_name == "mcp_composer":
+                module_name = f"lfx.services.{service_name}.service"
+            else:
+                module_name = f"langflow.services.{service_name}.service"
+
             module = importlib.import_module(module_name)
             services.update(
                 {

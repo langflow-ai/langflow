@@ -39,7 +39,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
             required=True,
         ),
         MessageTextInput(name="azure_deployment", display_name="Deployment Name", required=True),
-        SecretStrInput(name="api_key", display_name="API Key", required=True),
+        SecretStrInput(name="api_key", display_name="Azure Chat OpenAI API Key", required=True),
         DropdownInput(
             name="api_version",
             display_name="API Version",

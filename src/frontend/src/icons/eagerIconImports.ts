@@ -106,6 +106,7 @@ import { UnstructuredIcon } from "@/icons/Unstructured";
 import { UpstashSvgIcon } from "@/icons/Upstash";
 import { VectaraIcon } from "@/icons/VectaraIcon";
 import { VertexAIIcon } from "@/icons/VertexAI";
+import { VLMRunIcon } from "@/icons/VLMRun";
 import { WeaviateIcon } from "@/icons/Weaviate";
 import { WikipediaIcon } from "@/icons/Wikipedia";
 import { WolframIcon } from "@/icons/Wolfram";
@@ -222,6 +223,7 @@ export const eagerIconsMapping = {
   ThumbUpCustom: ThumbUpIconCustom,
   TwelveLabs: TwelveLabsIcon,
   Unstructured: UnstructuredIcon,
+  VLMRun: VLMRunIcon,
   Upstash: UpstashSvgIcon,
   Vectara: VectaraIcon,
   VertexAI: VertexAIIcon,

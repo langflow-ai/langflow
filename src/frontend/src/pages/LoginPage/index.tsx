@@ -1,13 +1,15 @@
 import * as Form from "@radix-ui/react-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { useContext, useState } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
+import { useSanitizeRedirectUrl } from "@/hooks/use-sanitize-redirect-url";
 import InputComponent from "../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { SIGNIN_ERROR_ALERT } from "../../constants/alerts_constants";
-import { CONTROL_LOGIN_STATE } from "../../constants/constants";
+import { CONTROL_LOGIN_STATE, IS_AUTO_LOGIN } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
 import type { LoginType } from "../../types/api";
@@ -21,7 +23,10 @@ export default function LoginPage(): JSX.Element {
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
 
   const { password, username } = inputState;
-  const { login } = useContext(AuthContext);
+
+  useSanitizeRedirectUrl();
+
+  const { login, clearAuthSession } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   function handleInput({
@@ -31,6 +36,7 @@ export default function LoginPage(): JSX.Element {
   }
 
   const { mutate } = useLoginUser();
+  const queryClient = useQueryClient();
 
   function signIn() {
     const user: LoginType = {
@@ -40,7 +46,9 @@ export default function LoginPage(): JSX.Element {
 
     mutate(user, {
       onSuccess: (data) => {
+        clearAuthSession();
         login(data.access_token, "login", data.refresh_token);
+        queryClient.clear();
       },
       onError: (error) => {
         setErrorData({

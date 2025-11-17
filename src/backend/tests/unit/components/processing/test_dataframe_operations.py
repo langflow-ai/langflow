@@ -1,6 +1,5 @@
 import pandas as pd
 import pytest
-
 from lfx.components.processing.dataframe_operations import DataFrameOperationsComponent
 from lfx.schema.dataframe import DataFrame
 

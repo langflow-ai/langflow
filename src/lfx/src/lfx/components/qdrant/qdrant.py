@@ -1,5 +1,5 @@
-from langchain.embeddings.base import Embeddings
 from langchain_community.vectorstores import Qdrant
+from langchain_core.embeddings import Embeddings
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
@@ -23,7 +23,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="host", display_name="Host", value="localhost", advanced=True),
         IntInput(name="port", display_name="Port", value=6333, advanced=True),
         IntInput(name="grpc_port", display_name="gRPC Port", value=6334, advanced=True),
-        SecretStrInput(name="api_key", display_name="API Key", advanced=True),
+        SecretStrInput(name="api_key", display_name="Qdrant API Key", advanced=True),
         StrInput(name="prefix", display_name="Prefix", advanced=True),
         IntInput(name="timeout", display_name="Timeout", advanced=True),
         StrInput(name="path", display_name="Path", advanced=True),

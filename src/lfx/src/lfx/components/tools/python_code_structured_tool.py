@@ -37,6 +37,7 @@ class PythonCodeStructuredTool(LCToolComponent):
     icon = "Python"
     field_order = ["name", "description", "tool_code", "return_direct", "tool_function"]
     legacy: bool = True
+    replacement = ["processing.PythonREPLComponent"]
 
     inputs = [
         MultilineInput(

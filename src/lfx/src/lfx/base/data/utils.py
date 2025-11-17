@@ -13,17 +13,17 @@ from lfx.schema.data import Data
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
 TEXT_FILE_TYPES = [
+    "csv",
+    "json",
+    "pdf",
     "txt",
     "md",
     "mdx",
-    "csv",
-    "json",
     "yaml",
     "yml",
     "xml",
     "html",
     "htm",
-    "pdf",
     "docx",
     "py",
     "sh",

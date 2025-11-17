@@ -1,4 +1,3 @@
-import { Cookies } from "react-cookie";
 import {
   IS_AUTO_LOGIN,
   LANGFLOW_AUTO_LOGIN_OPTION,
@@ -8,6 +7,7 @@ import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import type { useMutationFunctionType } from "@/types/api";
+import { getCookiesInstance } from "@/utils/cookie-manager";
 import { getAuthCookie } from "@/utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -17,7 +17,7 @@ export const useLogout: useMutationFunctionType<undefined, void> = (
   options?,
 ) => {
   const { mutate, queryClient } = UseRequestProcessor();
-  const cookies = new Cookies();
+  const cookies = getCookiesInstance();
   const logout = useAuthStore((state) => state.logout);
   const isAutoLoginEnv = IS_AUTO_LOGIN;
 
@@ -42,14 +42,14 @@ export const useLogout: useMutationFunctionType<undefined, void> = (
       useFlowsManagerStore.getState().resetStore();
       useFolderStore.getState().resetStore();
 
-      queryClient.invalidateQueries({ queryKey: ["useGetRefreshFlowsQuery"] });
-      queryClient.invalidateQueries({ queryKey: ["useGetFolders"] });
-      queryClient.invalidateQueries({ queryKey: ["useGetFolder"] });
+      // Clear all React Query cache to prevent data leakage between users
+      queryClient.clear();
     },
     onError: (error) => {
       console.error(error);
     },
     ...options,
+    retry: false,
   });
 
   return mutation;

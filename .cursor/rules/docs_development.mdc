@@ -43,13 +43,16 @@ yarn start        # Start dev server (usually port 3001)
 ```
 docs/
 ├── docs/                    # Main documentation content
-│   ├── getting-started/     # Getting started guides
+│   ├── agents/              # Agent and MCP guides
+│   ├── get-started/         # Getting started guides
+│   ├── tutorials/           # Langflow tutorials
 │   ├── components/          # Component documentation
-│   ├── integrations/        # Third-party integrations
-│   ├── administration/      # Admin and deployment guides
+│   ├── flows/               # Guides to build, run, and test flows
+│   ├── deployment/          # Guides for deploying and hosting a Langflow server
+│   ├── develop/             # Guides for developing apps with Langflow
+│   ├── support/             # Help and release notes
 │   ├── contributing/        # Contribution guidelines
 │   └── api-reference/       # API documentation
-├── blog/                    # Blog posts and announcements
 ├── src/                     # Custom React components
 ├── static/                  # Static assets (images, etc.)
 ├── sidebars.js             # Sidebar configuration

@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import mockAPIData from "@/utils/testUtils/mockData/mockAPIData";
-import { SidebarHeaderComponentProps } from "../../types";
+import type { SidebarHeaderComponentProps } from "../../types";
 import { SidebarHeaderComponent } from "../sidebarHeader";
 
 // Mock the UI components
@@ -104,12 +103,11 @@ jest.mock("../searchInput", () => ({
 }));
 
 jest.mock("../sidebarFilterComponent", () => ({
-  SidebarFilterComponent: ({ isInput, type, color, resetFilters }: any) => (
+  SidebarFilterComponent: ({ name, description, resetFilters }: any) => (
     <div
       data-testid="sidebar-filter"
-      data-is-input={isInput}
-      data-type={type}
-      data-color={color}
+      data-name={name}
+      data-description={description}
       data-reset-filters={resetFilters?.toString()}
     >
       Sidebar Filter
@@ -129,8 +127,7 @@ describe("SidebarHeaderComponent", () => {
   const mockHandleInputFocus = jest.fn();
   const mockHandleInputBlur = jest.fn();
   const mockHandleInputChange = jest.fn();
-  const mockSetFilterEdge = jest.fn();
-  const mockSetFilterData = jest.fn();
+  const mockResetFilters = jest.fn();
 
   const defaultProps: SidebarHeaderComponentProps = {
     showConfig: false,
@@ -145,10 +142,9 @@ describe("SidebarHeaderComponent", () => {
     handleInputFocus: mockHandleInputFocus,
     handleInputBlur: mockHandleInputBlur,
     handleInputChange: mockHandleInputChange,
-    filterType: undefined,
-    setFilterEdge: mockSetFilterEdge,
-    setFilterData: mockSetFilterData,
-    data: mockAPIData,
+    filterName: "",
+    filterDescription: "",
+    resetFilters: mockResetFilters,
   };
 
   beforeEach(() => {
@@ -219,9 +215,8 @@ describe("SidebarHeaderComponent", () => {
         "w-full",
         "flex-col",
         "gap-2",
-        "p-4",
-        "pb-1",
         "group-data-[collapsible=icon]:hidden",
+        "border-b",
       );
     });
 
@@ -349,66 +344,80 @@ describe("SidebarHeaderComponent", () => {
   });
 
   describe("Filter Component Conditional Rendering", () => {
-    it("should not render filter component when filterType is null", () => {
+    it("should not render filter component when filterName and filterDescription are empty", () => {
       render(<SidebarHeaderComponent {...defaultProps} />);
 
       expect(screen.queryByTestId("sidebar-filter")).not.toBeInTheDocument();
     });
 
-    it("should render filter component when filterType is provided", () => {
+    it("should not render filter component when only filterName is provided", () => {
+      const propsWithOnlyName = {
+        ...defaultProps,
+        filterName: "Test Filter",
+        filterDescription: "",
+      };
+
+      render(<SidebarHeaderComponent {...propsWithOnlyName} />);
+
+      expect(screen.queryByTestId("sidebar-filter")).not.toBeInTheDocument();
+    });
+
+    it("should not render filter component when only filterDescription is provided", () => {
+      const propsWithOnlyDescription = {
+        ...defaultProps,
+        filterName: "",
+        filterDescription: "Test Description",
+      };
+
+      render(<SidebarHeaderComponent {...propsWithOnlyDescription} />);
+
+      expect(screen.queryByTestId("sidebar-filter")).not.toBeInTheDocument();
+    });
+
+    it("should render filter component when both filterName and filterDescription are provided", () => {
       const propsWithFilter = {
         ...defaultProps,
-        filterType: {
-          source: "input",
-          sourceHandle: "input",
-          target: undefined,
-          targetHandle: undefined,
-          type: "input",
-          color: "#FF0000",
-        },
+        filterName: "Input Filter",
+        filterDescription: "Showing input components",
       };
 
       render(<SidebarHeaderComponent {...propsWithFilter} />);
 
       const filterComponent = screen.getByTestId("sidebar-filter");
       expect(filterComponent).toBeInTheDocument();
-      expect(filterComponent).toHaveAttribute("data-is-input", "true");
-      expect(filterComponent).toHaveAttribute("data-type", "input");
-      expect(filterComponent).toHaveAttribute("data-color", "#FF0000");
+      expect(filterComponent).toHaveAttribute("data-name", "Input Filter");
+      expect(filterComponent).toHaveAttribute(
+        "data-description",
+        "Showing input components",
+      );
     });
 
-    it("should pass correct props to filter component for output", () => {
-      const propsWithOutputFilter = {
+    it("should pass correct props to filter component", () => {
+      const propsWithFilter = {
         ...defaultProps,
-        filterType: {
-          source: undefined,
-          sourceHandle: undefined,
-          target: "output",
-          targetHandle: "output",
-          type: "output",
-          color: "#00FF00",
-        },
+        filterName: "Output Filter",
+        filterDescription: "Showing output components",
       };
 
-      render(<SidebarHeaderComponent {...propsWithOutputFilter} />);
+      render(<SidebarHeaderComponent {...propsWithFilter} />);
 
       const filterComponent = screen.getByTestId("sidebar-filter");
-      expect(filterComponent).toHaveAttribute("data-is-input", "false");
-      expect(filterComponent).toHaveAttribute("data-type", "output");
-      expect(filterComponent).toHaveAttribute("data-color", "#00FF00");
+      expect(filterComponent).toHaveAttribute("data-name", "Output Filter");
+      expect(filterComponent).toHaveAttribute(
+        "data-description",
+        "Showing output components",
+      );
+      expect(filterComponent).toHaveAttribute(
+        "data-reset-filters",
+        expect.stringContaining("function"),
+      );
     });
 
     it("should handle filter reset correctly", () => {
       const propsWithFilter = {
         ...defaultProps,
-        filterType: {
-          source: "input",
-          sourceHandle: "input",
-          target: "output",
-          targetHandle: "output",
-          type: "input",
-          color: "#FF0000",
-        },
+        filterName: "Test Filter",
+        filterDescription: "Test Description",
       };
 
       render(<SidebarHeaderComponent {...propsWithFilter} />);
@@ -416,7 +425,7 @@ describe("SidebarHeaderComponent", () => {
       const filterComponent = screen.getByTestId("sidebar-filter");
       expect(filterComponent).toHaveAttribute(
         "data-reset-filters",
-        expect.stringContaining("function"),
+        mockResetFilters.toString(),
       );
     });
   });
@@ -440,14 +449,8 @@ describe("SidebarHeaderComponent", () => {
     it("should maintain structure with filter component", () => {
       const propsWithFilter = {
         ...defaultProps,
-        filterType: {
-          source: "input",
-          sourceHandle: "input",
-          target: "output",
-          targetHandle: "output",
-          type: "input",
-          color: "#FF0000",
-        },
+        filterName: "Test Filter",
+        filterDescription: "Test Description",
       };
 
       render(<SidebarHeaderComponent {...propsWithFilter} />);
@@ -515,6 +518,7 @@ describe("SidebarHeaderComponent", () => {
         handleInputFocus: undefined as any,
         handleInputBlur: undefined as any,
         handleInputChange: undefined as any,
+        resetFilters: undefined as any,
       };
 
       expect(() => {
@@ -522,36 +526,39 @@ describe("SidebarHeaderComponent", () => {
       }).not.toThrow();
     });
 
-    it("should handle undefined filterType gracefully", () => {
-      const propsWithUndefinedFilter = {
+    it("should handle empty filter strings gracefully", () => {
+      const propsWithEmptyFilters = {
         ...defaultProps,
-        filterType: undefined,
+        filterName: "",
+        filterDescription: "",
       };
 
-      render(<SidebarHeaderComponent {...propsWithUndefinedFilter} />);
+      render(<SidebarHeaderComponent {...propsWithEmptyFilters} />);
       expect(screen.queryByTestId("sidebar-filter")).not.toBeInTheDocument();
     });
 
-    it("should handle complex filterType objects", () => {
-      const propsWithComplexFilter = {
+    it("should handle long filter names and descriptions", () => {
+      const propsWithLongFilters = {
         ...defaultProps,
-        filterType: {
-          source: "input",
-          sourceHandle: "input",
-          target: undefined,
-          targetHandle: undefined,
-          type: "complex-input",
-          color: "#ABCDEF",
-          additionalProp: "ignored",
-        },
+        filterName: "Very Long Filter Name That Might Cause Issues",
+        filterDescription:
+          "This is a very long description that might contain multiple lines and special characters @#$%",
       };
 
       expect(() => {
-        render(<SidebarHeaderComponent {...propsWithComplexFilter} />);
+        render(<SidebarHeaderComponent {...propsWithLongFilters} />);
       }).not.toThrow();
 
       const filterComponent = screen.getByTestId("sidebar-filter");
       expect(filterComponent).toBeInTheDocument();
+      expect(filterComponent).toHaveAttribute(
+        "data-name",
+        "Very Long Filter Name That Might Cause Issues",
+      );
+      expect(filterComponent).toHaveAttribute(
+        "data-description",
+        "This is a very long description that might contain multiple lines and special characters @#$%",
+      );
     });
   });
 
@@ -582,14 +589,8 @@ describe("SidebarHeaderComponent", () => {
         showBeta: true,
         showLegacy: false,
         isInputFocused: true,
-        filterType: {
-          source: "input",
-          sourceHandle: "input",
-          target: undefined,
-          targetHandle: undefined,
-          type: "input",
-          color: "#123456",
-        },
+        filterName: "Integration Filter",
+        filterDescription: "Testing integration",
       };
 
       render(<SidebarHeaderComponent {...fullProps} />);
@@ -601,8 +602,12 @@ describe("SidebarHeaderComponent", () => {
         "integration test",
       );
       expect(screen.getByTestId("sidebar-filter")).toHaveAttribute(
-        "data-type",
-        "input",
+        "data-name",
+        "Integration Filter",
+      );
+      expect(screen.getByTestId("sidebar-filter")).toHaveAttribute(
+        "data-description",
+        "Testing integration",
       );
       expect(screen.getByTestId("disclosure")).toHaveAttribute(
         "data-open",

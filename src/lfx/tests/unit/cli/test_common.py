@@ -9,7 +9,6 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import typer
-
 from lfx.cli.common import (
     create_verbose_printer,
     execute_graph_with_capture,
@@ -116,7 +115,7 @@ class TestApiKey:
 
     def test_get_api_key_success(self):
         """Test getting API key when it exists."""
-        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):
+        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):  # pragma: allowlist secret
             assert get_api_key() == "test-api-key"
 
     def test_get_api_key_not_set(self):
@@ -236,7 +235,7 @@ class TestGraphExecution:
         mock_graph = MagicMock()
         mock_graph.async_start = mock_async_start
 
-        results, logs = await execute_graph_with_capture(mock_graph, "test input")
+        results, _ = await execute_graph_with_capture(mock_graph, "test input")
 
         assert len(results) == 1
         assert results[0].message.text == "Message text"

@@ -1,13 +1,9 @@
 //import LangflowLogoColor from "@/assets/LangflowLogocolor.svg?react";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { v5 as uuidv5 } from "uuid";
 import { useShallow } from "zustand/react/shallow";
 import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
-import {
-  useDeleteMessages,
-  useGetMessagesQuery,
-} from "@/controllers/API/queries/messages";
+import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import { ENABLE_PUBLISH } from "@/customization/feature-flags";
@@ -31,6 +27,7 @@ import { ChatViewWrapper } from "./components/chat-view-wrapper";
 import { createNewSessionName } from "./components/chatView/chatInput/components/voice-assistant/helpers/create-new-session-name";
 import { SelectedViewField } from "./components/selected-view-field";
 import { SidebarOpenView } from "./components/sidebar-open-view";
+import { useGetFlowId } from "./hooks/useGetFlowId";
 
 export default function IOModal({
   children,
@@ -78,11 +75,7 @@ export default function IOModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
-  const clientId = useUtilityStore((state) => state.clientId);
-  const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const currentFlowId = playgroundPage
-    ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
-    : realFlowId;
+  const currentFlowId = useGetFlowId();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const { mutate: deleteSessionFunction } = useDeleteSession();
@@ -235,6 +228,9 @@ export default function IOModal({
   );
 
   useEffect(() => {
+    if (playgroundPage && messages.length > 0) {
+      window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
+    }
     if (newChatOnPlayground && !sessionsLoading) {
       const handleRefetchAndSetSession = async () => {
         try {
@@ -252,7 +248,7 @@ export default function IOModal({
       handleRefetchAndSetSession();
       setNewChatOnPlayground(false);
     }
-  }, [messages]);
+  }, [messages, playgroundPage]);
 
   useEffect(() => {
     if (!visibleSession) {
@@ -308,12 +304,6 @@ export default function IOModal({
     track("LangflowButtonClick");
     customOpenNewTab(LangflowButtonRedirectTarget());
   };
-
-  useEffect(() => {
-    if (playgroundPage && messages.length > 0) {
-      window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
-    }
-  }, [playgroundPage, messages]);
 
   const swatchIndex =
     (flowGradient && !isNaN(parseInt(flowGradient))

@@ -36,6 +36,7 @@ export const SidebarDraggableComponent = forwardRef(
       onDragStart,
       apiClass,
       official,
+      onDelete,
       beta,
       legacy,
       disabled,
@@ -50,6 +51,7 @@ export const SidebarDraggableComponent = forwardRef(
       color: string;
       onDragStart: DragEventHandler<HTMLDivElement>;
       official: boolean;
+      onDelete?: () => void;
       beta: boolean;
       legacy: boolean;
       disabled?: boolean;
@@ -89,6 +91,10 @@ export const SidebarDraggableComponent = forwardRef(
           break;
         }
         case "delete": {
+          if (onDelete) {
+            onDelete();
+            break;
+          }
           const flowId = flows?.find((f) => f.name === display_name);
           if (flowId) deleteFlow({ id: flowId.id });
           break;
@@ -125,17 +131,17 @@ export const SidebarDraggableComponent = forwardRef(
             data-tooltip-id={itemName}
             tabIndex={0}
             onKeyDown={handleKeyDown}
-            className="m-[1px] rounded-md outline-none ring-ring focus-visible:ring-1"
+            className="rounded-md outline-none ring-ring focus-visible:ring-1"
             data-testid={`${sectionName.toLowerCase()}_${display_name.toLowerCase()}_draggable`}
           >
             <div
               data-testid={sectionName + display_name}
               id={sectionName + display_name}
               className={cn(
-                "group/draggable flex cursor-grab items-center gap-2 rounded-md bg-muted p-3 hover:bg-secondary-hover/75",
+                "group/draggable flex cursor-grab items-center gap-2 rounded-md bg-muted p-1 px-2 hover:bg-secondary-hover/75",
                 error && "cursor-not-allowed select-none",
                 disabled
-                  ? "pointer-events-none bg-accent text-placeholder-foreground"
+                  ? "pointer-events-none bg-accent text-placeholder-foreground h-8"
                   : "bg-muted text-foreground",
               )}
               draggable={!error}
@@ -143,6 +149,11 @@ export const SidebarDraggableComponent = forwardRef(
                 borderLeftColor: color,
               }}
               onDragStart={onDragStart}
+              onDoubleClick={() => {
+                if (!disabled) {
+                  addComponent(apiClass, itemName);
+                }
+              }}
               onDragEnd={() => {
                 if (
                   document.getElementsByClassName("cursor-grabbing").length > 0
@@ -155,7 +166,7 @@ export const SidebarDraggableComponent = forwardRef(
             >
               <ForwardedIconComponent
                 name={icon}
-                className="h-5 w-5 shrink-0"
+                className="h-[18px] w-[18px] shrink-0"
               />
               <div className="flex flex-1 items-center overflow-hidden">
                 <ShadTooltip content={display_name} styleClasses="z-50">
@@ -168,7 +179,7 @@ export const SidebarDraggableComponent = forwardRef(
                 </ShadTooltip>
                 {beta && (
                   <Badge
-                    variant="pinkStatic"
+                    variant="purpleStatic"
                     size="xq"
                     className="ml-1.5 shrink-0"
                   >
@@ -228,8 +239,11 @@ export const SidebarDraggableComponent = forwardRef(
                         Download{" "}
                       </div>{" "}
                     </SelectItem>
-                    {!official && (
-                      <SelectItem value={"delete"}>
+                    {(!official || onDelete) && (
+                      <SelectItem
+                        value={"delete"}
+                        data-testid="draggable-component-menu-delete"
+                      >
                         <div className="flex">
                           <IconComponent
                             name="Trash2"

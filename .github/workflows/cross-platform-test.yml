@@ -33,7 +33,7 @@ jobs:
       main-artifact-name: ${{ steps.set-names.outputs.main-artifact-name }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -89,15 +89,10 @@ jobs:
             arch: amd64
             runner: ubuntu-latest
             python-version: "3.12"
-          # macOS AMD64
-          - os: macos
-            arch: amd64
-            runner: macos-13
-            python-version: "3.10"
-          - os: macos
-            arch: amd64
-            runner: macos-13
-            python-version: "3.12"
+          # macOS-13 Brown out
+          # TODO add macos-15-intel
+          # https://github.com/actions/runner-images/issues/13046
+          # https://github.com/godot-rust/gdext/pull/1402
           # macOS ARM64 (Apple Silicon)
           - os: macos
             arch: arm64
@@ -148,21 +143,21 @@ jobs:
       # Download artifacts for wheel installation
       - name: Download LFX package artifact
         if: steps.install-method.outputs.method == 'wheel' && inputs.lfx-artifact-name != ''
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: ${{ inputs.lfx-artifact-name }}
           path: ./lfx-dist
 
       - name: Download base package artifact
         if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
           path: ./base-dist
 
       - name: Download main package artifact
         if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}
           path: ./main-dist
@@ -392,10 +387,8 @@ jobs:
             arch: amd64
             runner: ubuntu-latest
             python-version: "3.13"
-          - os: macos
-            arch: amd64
-            runner: macos-13
-            python-version: "3.13"
+          # macOS-13 Brown out
+          # TODO add macos-15-intel
           - os: macos
             arch: arm64
             runner: macos-latest
@@ -436,21 +429,21 @@ jobs:
       # Download artifacts for wheel installation
       - name: Download LFX package artifact
         if: steps.install-method.outputs.method == 'wheel' && inputs.lfx-artifact-name != ''
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: ${{ inputs.lfx-artifact-name }}
           path: ./lfx-dist
 
       - name: Download base package artifact
         if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
           path: ./base-dist
 
       - name: Download main package artifact
         if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}
           path: ./main-dist

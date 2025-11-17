@@ -25,14 +25,14 @@ test(
     // Add URL component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("url");
-    await page.waitForSelector('[data-testid="dataURL"]', {
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 1000,
     });
 
     await zoomOut(page, 3);
 
     await page
-      .getByTestId("dataURL")
+      .getByTestId("data_sourceURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 100 },
       });
@@ -40,12 +40,12 @@ test(
     // Add Loop component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("loop");
-    await page.waitForSelector('[data-testid="logicLoop"]', {
+    await page.waitForSelector('[data-testid="flow_controlsLoop"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("logicLoop")
+      .getByTestId("flow_controlsLoop")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 280, y: 100 },
@@ -79,13 +79,13 @@ test(
 
     //This one is for testing the wrong loop message
 
-    await page.getByTestId("sidebar-search-input").fill("File");
-    await page.waitForSelector('[data-testid="dataFile"]', {
+    await page.getByTestId("sidebar-search-input").fill("Read File");
+    await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("dataFile")
+      .getByTestId("files_and_knowledgeRead File")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 720, y: 400 },
       });
@@ -157,23 +157,14 @@ test(
       .first()
       .click();
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
+    await zoomOut(page, 2);
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("div-generic-node").nth(5).click();
 
     await page.waitForTimeout(1000);
-
-    await page.waitForSelector('[data-testid="more-options-modal"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("more-options-modal").click();
-
-    await page.waitForTimeout(1000);
-
-    await page.waitForSelector('[data-testid="expand-button-modal"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("expand-button-modal").click();
 
     await page.getByTestId("input-list-plus-btn_urls-0").click();
 
@@ -197,13 +188,13 @@ test(
     await uploadFile(page, "test_file.txt");
 
     // Build and run, expect the wrong loop message
-    await page.getByTestId("button_run_file").click();
+    await page.getByTestId("button_run_read file").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     // Delete the second parse data used to test
 
-    await page.getByTestId("title-File").last().click();
+    await page.getByTestId("title-Read File").last().click();
 
     await page.getByTestId("more-options-modal").click();
 
@@ -221,6 +212,8 @@ test(
       .click();
 
     // Build and run
+    await page.getByTestId("title-Chat Output").click();
+    await page.keyboard.press(`ControlOrMeta+.`);
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 

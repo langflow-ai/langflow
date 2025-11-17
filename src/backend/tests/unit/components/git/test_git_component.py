@@ -2,7 +2,6 @@ import tempfile
 from pathlib import Path
 
 import pytest
-
 from lfx.components.git import GitLoaderComponent
 
 

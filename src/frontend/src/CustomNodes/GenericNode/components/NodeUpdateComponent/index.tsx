@@ -1,6 +1,4 @@
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { cn } from "@/utils/utils";
 
 export default function NodeUpdateComponent({

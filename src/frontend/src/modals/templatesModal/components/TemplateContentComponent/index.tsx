@@ -1,7 +1,7 @@
 import Fuse from "fuse.js";
-import { SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
@@ -17,11 +17,23 @@ export default function TemplateContentComponent({
   currentTab,
   categories,
 }: TemplateContentProps) {
-  const examples = useFlowsManagerStore((state) => state.examples).filter(
-    (example) =>
-      example.tags?.includes(currentTab ?? "") ||
-      currentTab === "all-templates",
-  );
+  const allExamples = useFlowsManagerStore((state) => state.examples);
+
+  const examples = useMemo(() => {
+    return allExamples
+      .filter((example) => {
+        if (!ENABLE_KNOWLEDGE_BASES && example.name?.includes("Knowledge")) {
+          return false;
+        }
+        return true;
+      })
+      .filter(
+        (example) =>
+          example.tags?.includes(currentTab ?? "") ||
+          currentTab === "all-templates",
+      );
+  }, [allExamples, currentTab]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredExamples, setFilteredExamples] = useState(examples);
   const addFlow = useAddFlow();
@@ -53,7 +65,7 @@ export default function TemplateContentComponent({
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
-  }, [searchQuery, currentTab]);
+  }, [searchQuery, currentTab, examples, fuse]);
 
   const handleCardClick = (example) => {
     updateIds(example.data);

@@ -1,0 +1,132 @@
+---
+title: Manage files
+slug: /concepts-file-management
+---
+
+import Icon from "@site/src/components/icon";
+
+Each Langflow server has a file management system where you can store files that you want to use in your flows.
+
+Files uploaded to Langflow file management are stored locally in your [Langflow configuration directory](/memory), and they are available to all of your flows.
+Local storage is set by `LANGFLOW_STORAGE_TYPE`, which has only one allowed value (`local`).
+
+Uploading files to Langflow file management keeps your files in a central location, and allows you to reuse files across flows without repeated manual uploads.
+
+## Use the file management UI
+
+You can use the file management UI to upload files from your local machine to your own Langflow server.
+You can also manage all files that have been uploaded to your Langflow server.
+
+1. Navigate to Langflow file management:
+
+    * **Langflow Desktop**: In Langflow, on the [**Projects** page](/concepts-flows#projects) page, click **My Files** below the list of projects.
+    * **Langflow OSS**: From a browser, navigate to your Langflow server's `/files` endpoint, such as `http://localhost:7860/files`. Modify the base URL as needed for your Langflow server.
+    * **Backend-only**: For programmatic file management, use the [Langflow API files endpoints](/api-files). However, the following steps assume you're using the file management UI.
+
+2. On the **My Files** page, click **Upload**.
+
+3. Select one or more files to upload.
+
+After uploading files, you can rename, download, copy, or delete files within the file management UI.
+To delete a file, hover over a file's icon, select it, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
+You can delete multiple files in a single action.
+To download a file, hover over a file's icon, select it, and then click <Icon name="Download" aria-hidden="true"/> **Download**.
+If you download multiple files in a single action, they are saved together in a zip file.
+
+## Upload and manage files with the Langflow API
+
+With the Langflow API, you can upload and manage files in Langflow file management, and you can send files to flows programmatically at runtime.
+
+For more information and examples, see [Files endpoints](/api-files) and [Create a chatbot that can ingest files](/chat-with-files).
+
+## Set the maximum file size
+
+By default, the maximum file size is 1024 MB.
+To modify this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment variable](/environment-variables).
+
+## Use files in a flow
+
+To use files in your Langflow file management system in a flow, add a component that accepts file input to your flow, such as the **File** component.
+
+For example, add a **File** component to your flow, click **Select files**, and then select files from the **My Files** list.
+
+This list includes all files in your server's file management system, but you can only select [file types that are supported by the **File** component](/components-data#file).
+If you need another file type, you must use a different component that supports that file type, or you need to convert it to a supported type before uploading it.
+
+For more information about the **File** component and other data loading components, see [Data components](/components-data).
+
+### Load files at runtime
+
+You can use preloaded files in your flows, and you can load files at runtime, if your flow accepts file input.
+To enable file input in your flow, do the following:
+
+1. Add a [**File** component](/components-data#file) to your flow.
+
+2. Click **Share**, select **API access**, and then click **Input Schema** to add [`tweaks`](/concepts-publish#input-schema) to the request payload in the flow's automatically generated code snippets.
+
+3. Expand the **File** section, find the **Files** row, and then enable **Expose Input** to allow the parameter to be set at runtime through the Langflow API.
+
+4. Close the **Input Schema** pane to return to the **API access** pane.
+The payload in each code snippet now includes `tweaks` with your **File** component's ID and the `path` key that you enabled in **Input Schema**:
+
+    ```json
+    "tweaks": {
+	    "File-qYD5w": {
+		    "path": []
+	    }
+	}
+    ```
+
+5. When you run this flow programmatically, your script must upload a file to Langflow file management, and then pass the returned `file_path` to the `path` tweak in the `/run` request:
+
+    ```json
+    "tweaks": {
+        "FILE_COMPONENT_ID": {
+            "path": [ "file_path" ]
+        }
+    }
+    ```
+
+    For a complete example see [Create a chatbot that can ingest files](/chat-with-files) and [Files endpoints](/api-files).
+
+    If you want to upload multiple files, you can pass multiple `file_path` values in the `path` array, such as `[ "path1", "path2" ]`.
+
+## Upload images
+
+Langflow supports base64 images in the following formats:
+
+* PNG
+* JPG/JPEG
+* GIF
+* BMP
+* WebP
+
+You can upload images to the **Playground** chat interface and as runtime input with the Langflow API.
+
+* In the **Playground**, you can drag-and-drop images into the chat input area, or you can click the **Attach image** icon to select an image to upload.
+
+* When you trigger a flow with the `/api/v1/run/$FLOW_ID` endpoint, you can use the `files` parameter to attach image data as a base64-encoded string:
+
+   ```bash
+   curl -X POST "http://$LANGFLOW_SERVER_ADDRESS/api/v1/run/$FLOW_ID" \
+   -H "Content-Type: application/json" \
+   -H "x-api-key: $LANGFLOW_API_KEY" \
+   -d '{
+      "session_id": "custom_session_123",
+      "input_value": "What is in this image?",
+      "input_type": "chat",
+      "output_type": "chat",
+      "files": ["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."]
+   }'
+   ```
+
+For more specialized image processing, browse <Icon name="Blocks" aria-hidden="true" /> [**Bundles**] or [create your own components](/components-custom-components).
+
+## Work with video files
+
+For videos, see the **Twelve Labs** and **YouTube** <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
+
+## See also
+
+* [Data components](/components-data)
+* [Processing components](/components-processing)

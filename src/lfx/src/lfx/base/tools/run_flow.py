@@ -5,7 +5,7 @@ from lfx.custom.custom_component.component import Component, get_component_toolk
 from lfx.field_typing import Tool
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
-from lfx.helpers.flow import get_flow_inputs
+from lfx.helpers import get_flow_inputs
 from lfx.inputs.inputs import DropdownInput, InputTypes, MessageInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
@@ -36,7 +36,6 @@ class RunFlowBaseComponent(Component):
             name="session_id",
             display_name="Session ID",
             info="The session ID to run the flow in.",
-            value="",
             advanced=True,
         ),
     ]
@@ -58,7 +57,10 @@ class RunFlowBaseComponent(Component):
             tool_mode=False,  # This output is not intended to be used as a tool, so tool_mode is disabled.
         ),
         Output(
-            name="flow_outputs_message", group_outputs=True, display_name="Flow Message Output", method="message_output"
+            name="flow_outputs_message",
+            group_outputs=True,
+            display_name="Flow Message Output",
+            method="message_output",
         ),
     ]
     default_keys = ["code", "_type", "flow_name_selected", "session_id"]

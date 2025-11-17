@@ -150,7 +150,7 @@ async def test_get_messages_with_url_encoded_datetime_session_id(
     client: AsyncClient, messages_with_datetime_session_id, logged_in_headers
 ):
     """Test that URL-encoded datetime session IDs are properly decoded and matched."""
-    created_messages, datetime_session_id = messages_with_datetime_session_id
+    _created_messages, datetime_session_id = messages_with_datetime_session_id
 
     # URL encode the datetime session ID (spaces become %20, colons become %3A)
     encoded_session_id = quote(datetime_session_id)
@@ -178,7 +178,7 @@ async def test_get_messages_with_non_encoded_datetime_session_id(
     client: AsyncClient, messages_with_datetime_session_id, logged_in_headers
 ):
     """Test that non-URL-encoded datetime session IDs also work correctly."""
-    created_messages, datetime_session_id = messages_with_datetime_session_id
+    _created_messages, datetime_session_id = messages_with_datetime_session_id
 
     # Test with non-encoded session ID (should still work due to unquote being safe for non-encoded strings)
     response = await client.get(

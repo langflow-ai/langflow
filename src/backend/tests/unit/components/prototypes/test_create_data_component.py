@@ -1,8 +1,7 @@
 import re
 
 import pytest
-
-from lfx.components.processing import CreateDataComponent
+from lfx.components.processing.create_data import CreateDataComponent
 from lfx.schema import Data
 
 

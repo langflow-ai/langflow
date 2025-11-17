@@ -6,7 +6,7 @@ import TableDropdownCellEditor from "@/components/core/parameterRenderComponent/
 import useAlertStore from "@/stores/alertStore";
 import { type ColumnField, FormatterType } from "@/types/utils/functions";
 import "moment-timezone";
-import { Cookies } from "react-cookie";
+import type { Cookies } from "react-cookie";
 import { twMerge } from "tailwind-merge";
 import {
   DRAG_EVENTS_CUSTOM_TYPESS,
@@ -28,6 +28,7 @@ import type {
 import type { AllNodeType, NodeDataType } from "../types/flow";
 import type { FlowState } from "../types/tabs";
 import { isErrorLog } from "../types/utils/typeCheckingUtils";
+import { getLocalStorage } from "./local-storage-util";
 import { parseString } from "./stringManipulation";
 
 export function classNames(...classes: Array<string>): string {
@@ -550,7 +551,10 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       field: col.name,
       sortable: col.sortable,
       filter: col.filterable,
-      context: col.description ? { info: col.description } : {},
+      context: {
+        ...(col.description ? { info: col.description } : {}),
+        ...(col.load_from_db ? { globalVariable: col.load_from_db } : {}),
+      },
       cellClass: col.disable_edit ? "cell-disable-edit" : "",
       hide: col.hidden,
       valueParser: (params: ValueParserParams) => {
@@ -616,6 +620,10 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
           newCol.cellClass = "no-border !py-2";
           newCol.type = "boolean";
         } else {
+          if (col.load_from_db) {
+            newCol.editable = false;
+            newCol.cellClass = "no-border !py-0 !pr-0";
+          }
           newCol.cellRenderer = TableAutoCellRender;
         }
       }
@@ -1016,9 +1024,21 @@ export const setAuthCookie = (
   tokenName: string,
   value: string,
 ) => {
+  // Only use secure flag if the connection is HTTPS
+  const isSecure =
+    typeof window !== "undefined" && window.location.protocol === "https:";
+
   cookies.set(tokenName, value, {
     path: "/",
-    secure: true,
-    sameSite: "strict",
+    secure: isSecure,
+    sameSite: isSecure ? "strict" : "lax",
   });
+};
+
+export const getBooleanFromStorage = (
+  key: string,
+  defaultValue: boolean,
+): boolean => {
+  const stored = getLocalStorage(key);
+  return stored === null ? defaultValue : stored === "true";
 };

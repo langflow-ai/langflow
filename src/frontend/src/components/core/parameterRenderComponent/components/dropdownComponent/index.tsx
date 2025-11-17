@@ -12,6 +12,7 @@ export default function DropdownComponent({
   options,
   name,
   dialogInputs,
+  externalOptions,
   optionsMetaData,
   placeholder,
   nodeClass,
@@ -45,6 +46,7 @@ export default function DropdownComponent({
         id={`dropdown_${id}`}
         name={name}
         dialogInputs={dialogInputs}
+        externalOptions={externalOptions}
         handleOnNewValue={handleOnNewValue}
         hasRefreshButton={hasRefreshButton}
         {...baseInputProps}

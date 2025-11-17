@@ -2,6 +2,7 @@ import asyncio
 import os
 import tempfile
 import uuid
+from copy import deepcopy
 from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
@@ -23,9 +24,6 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, session_scope
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
-
-from lfx.constants import BASE_COMPONENTS_PATH
-from lfx.custom.directory_reader.utils import abuild_custom_component_list_from_path
 
 
 async def test_load_starter_projects():
@@ -143,12 +141,11 @@ def add_edge(source, target, from_output, to_input):
 
 
 async def test_refresh_starter_projects():
-    # Use lfx components path since components have been moved there
-    data_path = BASE_COMPONENTS_PATH
-    components = await abuild_custom_component_list_from_path(data_path)
+    all_types = await get_and_cache_all_types_dict(get_settings_service())
+    copy_all_types = deepcopy(all_types)
 
-    chat_input = find_component_by_name(components, "ChatInput")
-    chat_output = find_component_by_name(components, "ChatOutput")
+    chat_input = find_component_by_name(copy_all_types, "ChatInput")
+    chat_output = find_component_by_name(copy_all_types, "ChatOutput")
     chat_output["template"]["code"]["value"] = "changed !"
     del chat_output["template"]["should_store_message"]
     graph_data = {
@@ -158,7 +155,7 @@ async def test_refresh_starter_projects():
         ],
         "edges": [add_edge("ChatInput" + "chat-input-1", "ChatOutput" + "chat-output-1", "message", "input_value")],
     }
-    all_types = await get_and_cache_all_types_dict(get_settings_service())
+
     new_change = update_projects_components_with_latest_component_versions(graph_data, all_types)
     assert graph_data["nodes"][1]["data"]["node"]["template"]["code"]["value"] == "changed !"
     assert new_change["nodes"][1]["data"]["node"]["template"]["code"]["value"] != "changed !"
@@ -246,7 +243,11 @@ async def test_load_bundles_from_urls():
     async with session_scope() as session:
         await create_super_user(
             username=settings_service.auth_settings.SUPERUSER,
-            password=settings_service.auth_settings.SUPERUSER_PASSWORD,
+            password=(
+                settings_service.auth_settings.SUPERUSER_PASSWORD.get_secret_value()
+                if hasattr(settings_service.auth_settings.SUPERUSER_PASSWORD, "get_secret_value")
+                else settings_service.auth_settings.SUPERUSER_PASSWORD
+            ),
             db=session,
         )
 

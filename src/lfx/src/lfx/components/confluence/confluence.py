@@ -29,7 +29,7 @@ class ConfluenceComponent(Component):
         ),
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
+            display_name="Confluence API Key",
             required=True,
             info="Atlassian Key. Create at: https://id.atlassian.com/manage-profile/security/api-tokens",
         ),

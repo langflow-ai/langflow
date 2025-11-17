@@ -5,6 +5,7 @@ slug: /troubleshoot
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
 
 This page provides troubleshooting advice for issues you might encounter when using Langflow or contributing to Langflow.
 
@@ -12,10 +13,11 @@ This page provides troubleshooting advice for issues you might encounter when us
 
 As Langflow development continues, components are often recategorized or deprecated for better alignment or to prepare for new components.
 
-If a component appears to be missing from the expected location on the **Components** menu, try the following:
+If a component appears to be missing from the <Icon name="Component" aria-hidden="true" /> **Core components** and  menus, try the following:
 
-* Search for the component or check other component categories, including [bundles](/components-bundle-components).
-* [Expose legacy components](/concepts-components#component-menus), which are hidden by default.
+* <Icon name="Search" aria-hidden="true" /> **Search** for the component.
+* Check other component categories and <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
+* Check [legacy components](/concepts-components#legacy-components), which are hidden by default.
 * Check the [Changelog](https://github.com/langflow-ai/langflow/releases/latest) for component changes in recent releases.
 * Make sure the component isn't already present in your flow if it is a single-use component.
 
@@ -163,7 +165,7 @@ To resolve this error, clear the cache by deleting the contents of your Langflow
 The filepath depends on your operating system, installation type, and configuration options.
 For more information and default filepaths, see [Memory management options](/memory).
 
-:::important
+:::danger
 Clearing the cache erases your settings.
 If you want to retain your settings files, create a backup of those files before clearing the cache folder.
 :::
@@ -176,6 +178,18 @@ This happens because the automatic update feature in the UI was introduced in ve
 Earlier versions can't automatically detect or apply updates.
 
 To resolve this issue, uninstall Langflow Desktop, and then [download and install the latest version of Langflow Desktop](https://langflow.org/desktop).
+
+### 422 error when freezing components after upgrading Pydantic/FastAPI dependencies
+
+If you locally upgrade your Pydantic and FastAPI dependencies, you may encounter a 422 error when trying to freeze components.
+
+This error occurs due to changes in how request bodies are handled in newer versions of these dependencies.
+
+If you're experiencing this issue, update your Langflow installation to version 1.6.5 or later, which includes a fix for this issue.
+
+```bash
+uv pip install langflow -U
+```
 
 ## Langflow uninstall issues
 
@@ -193,10 +207,78 @@ To fully remove a Langflow Desktop macOS installation, you must also delete `~/.
     rm -rf .langflow
     ```
 
-## MCP server issues
+## Langflow MCP issues {#mcp}
 
-- [Use MCP Inspector to test and debug flows](/mcp-server#test-and-debug-flows)
-- [Troubleshooting MCP server](/mcp-server#troubleshooting-mcp-server)
+The following issues can occur when using Langflow as an MCP server or client.
+
+### Claude for Desktop doesn't use MCP server tools correctly
+
+If Claude for Desktop doesn't use your server's tools correctly, try explicitly defining the path to your local `uvx` or `npx` executable file in the `claude_desktop_config.json` configuration file:
+
+1. To find your `uvx` path, run `which uvx`.
+
+    To find your `npx` path, run `which npx`.
+
+2. In your `claude_desktop_config.json` file, add the path to your Langflow MCP server configuration, as shown in the following examples.
+
+    <Tabs>
+    <TabItem value="uvx" label="uvx" default>
+
+    ```json
+    {
+      "mcpServers": {
+        "PROJECT_NAME": {
+          "command": "PATH_TO_UVX",
+          "args": [
+            "mcp-proxy",
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
+          ]
+        }
+      }
+    }
+    ```
+
+    </TabItem>
+    <TabItem value="npx" label="npx">
+
+    ```json
+    {
+      "mcpServers": {
+        "PROJECT_NAME": {
+          "command": "PATH_TO_NPX",
+          "args": [
+            "-y",
+            "supergateway",
+            "--sse",
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
+          ]
+        }
+      }
+    }
+    ```
+
+    </TabItem>
+    </Tabs>
+
+### MCP browser-based flows don't open a browser on Windows
+
+This is a known issue when using MCP Tools with browser navigation actions, such as Playwright, on Windows: The agent can execute the tool successfully but the browser tab or window doesn't open.
+
+This issue occurs because the MCP server runs from a Python process, which prevents it from opening browser windows in WSL or Windows.
+
+To work around this issue, use the standalone MCP server approach documented in the [Playwright MCP repository](https://github.com/microsoft/playwright-mcp?tab=readme-ov-file#standalone-mcp-server).
+After the server is up and running, you can add it as an SSE server in Langflow.
+For other browser navigation tools, see the provider's documentation for specific troubleshooting guidance.
+
+### "No tools or prompts connected" on MCP servers in mixed Windows/WSL environments
+
+If you encounter "No tools or prompts connected" errors or connection failures when using Langflow Desktop as an MCP server with clients running in different environments, such as Langflow on a Windows host and an MCP client in WSL, this is due to network isolation between Windows and WSL environments.
+
+WSL cannot directly access Windows localhost services, and Langflow running on a Windows host is not accessible from WSL clients at `localhost:7860`.
+
+To work around this issue, run the server and host in the same operating environment.
+
+Alternatively, configure Langflow Desktop to accept connections from WSL at the default Windows IP address of `10.255.255.254:7860` instead of `localhost`.
 
 ## Token length limit errors in Embedding Model components
 

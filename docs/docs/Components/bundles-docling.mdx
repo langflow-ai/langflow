@@ -1,0 +1,134 @@
+---
+title: Docling
+slug: /bundles-docling
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
+
+Langflow integrates with [Docling](https://docling-project.github.io/docling/) through a bundle of components for parsing documents.
+
+## Prerequisites
+
+* **Enable Developer Mode for Windows**:
+<PartialDevModeWindows />
+
+* **Install Docling dependency**:
+The Docling dependency is required to use the Docling components in Langflow.
+
+    * **Langflow version 1.6 and later**: The Docling dependency is included by default for all operating systems except macOS Intel (x86_64).
+
+        For macOS Intel (x86_64), use the [Docling installation guide](https://docling-project.github.io/docling/installation/) to install the Docling dependency.
+
+    * **Earlier versions**: Langflow versions earlier than 1.6 don't include the Docling dependency.
+    For Langflow OSS, install the Docling extra with `uv pip install 'langflow[docling]'`.
+    For Langflow Desktop, add the Docling dependency to Langflow Desktop's `requirements.txt`.
+    For more information, see [Install custom dependencies](/install-custom-dependencies).
+
+## Use Docling components in a flow
+
+:::tip
+To learn more about content extraction with Docling, see the video tutorial [Docling + Langflow: Document Processing for AI Workflows](https://www.youtube.com/watch?v=5DuS6uRI5OM).
+:::
+
+This example demonstrates how to use Docling components to split a PDF in a flow:
+
+1. Connect a **Docling** and an **Export DoclingDocument** component to a [**Split Text** component](/components-processing#split-text).
+
+    The **Docling** component loads the document, and the **Export DoclingDocument** component converts the `DoclingDocument` into the format you select. This example converts the document to Markdown, with images represented as placeholders.
+    The **Split Text** component will split the Markdown into chunks for the vector database to store in the next part of the flow.
+
+2. Connect a [**Chroma DB** vector store component](/bundles-chroma#chroma-db) to the **Split Text** component's **Chunks** output.
+3. Connect an [embedding model component](/components-embedding-models) to the **Chroma DB** component's **Embedding** port and a **Chat Output** component to view the extracted [`DataFrame`](/data-types#dataframe).
+4. In the embedding model component, select your preferred model, provide credentials, and configure other settings as needed.
+
+    ![Docling and ExportDoclingDocument extracting and splitting text to vector database](/img/integrations-docling-split-text.png)
+
+5. Add a file to the **Docling** component.
+6. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
+
+    The chunked document is loaded as vectors into your vector database.
+
+## Docling components
+
+The following sections describe the purpose and configuration options for each component in the **Docling** bundle.
+
+### Docling language model
+
+The **Docling** language model component ingest documents, and then uses Docling to process them by running the Docling models locally.
+
+It outputs `files`, which is the processed files with `DoclingDocument` data.
+
+For more information, see the [Docling IBM models project repository](https://github.com/docling-project/docling-ibm-models).
+
+#### Docling parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| files | File | The files to process. |
+| pipeline | String | Docling pipeline to use (standard, vlm). |
+| ocr_engine | String | OCR engine to use (easyocr, tesserocr, rapidocr, ocrmac). |
+
+### Docling Serve
+
+The **Docling Serve** component runs Docling as an API service.
+
+It outputs `files`, which is the processed files with `DoclingDocument` data.
+
+For more information, see the [Docling serve project repository](https://github.com/docling-project/docling-serve).
+
+#### Docling Serve parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| files | File | The files to process. |
+| api_url | String | URL of the Docling Serve instance. |
+| max_concurrency | Integer | Maximum number of concurrent requests for the server. |
+| max_poll_timeout | Float | Maximum waiting time for the document conversion to complete. |
+| api_headers | Dict | Optional dictionary of additional headers required for connecting to Docling Serve. |
+| docling_serve_opts | Dict | Optional dictionary of additional options for Docling Serve. |
+
+### Chunk DoclingDocument
+
+The **Chunk DoclingDocument** component uses the `DoclingDocument` chunkers to split a document into chunks.
+
+It outputs the chunked documents as a [`DataFrame`](/data-types#dataframe).
+
+For more information, see the [Docling core project repository](https://github.com/docling-project/docling-core).
+
+#### Chunk DoclingDocument parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| data_inputs | Data/DataFrame | The data with documents to split in chunks. |
+| chunker | String | Which chunker to use (HybridChunker, HierarchicalChunker). |
+| provider | String | Which tokenizer provider (Hugging Face, OpenAI). |
+| hf_model_name | String | Model name of the tokenizer to use with the HybridChunker when Hugging Face is chosen. |
+| openai_model_name | String | Model name of the tokenizer to use with the HybridChunker when OpenAI is chosen. |
+| max_tokens | Integer | Maximum number of tokens for the HybridChunker. |
+| doc_key | String | The key to use for the `DoclingDocument` column. |
+
+### Export DoclingDocument
+
+The **Export DoclingDocument** component exports `DoclingDocument` to Markdown, HTML, and other formats.
+
+It can output the exported data as either [`Data`](/data-types#data) or [`DataFrame`](/data-types#dataframe).
+
+For more information, see the [Docling core project repository](https://github.com/docling-project/docling-core).
+
+#### Export DoclingDocument parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| data_inputs | Data/DataFrame | The data with documents to export. |
+| export_format | String | Select the export format to convert the input (Markdown, HTML, Plaintext, DocTags). |
+| image_mode | String | Specify how images are exported in the output (placeholder, embedded). |
+| md_image_placeholder | String | Specify the image placeholder for markdown exports. |
+| md_page_break_placeholder | String | Add this placeholder between pages in the markdown output. |
+| doc_key | String | The key to use for the `DoclingDocument` column. |
+
+## See also
+
+* [**File** component](/components-data#file)

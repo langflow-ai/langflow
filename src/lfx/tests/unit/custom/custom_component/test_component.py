@@ -2,7 +2,6 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.custom.custom_component.component import Component
 from lfx.custom.custom_component.custom_component import CustomComponent
@@ -138,7 +137,7 @@ async def test_agent_component_send_message_events(monkeypatch):  # noqa: ARG001
     except ImportError:
         pytest.skip("Langchain is not installed")
 
-    from lfx.components.agents.agent import AgentComponent
+    from lfx.components.models_and_agents.agent import AgentComponent
 
     event_manager = MagicMock()
     agent = AgentComponent(

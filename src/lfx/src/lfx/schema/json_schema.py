@@ -2,11 +2,41 @@
 
 from typing import Any
 
-from pydantic import BaseModel, Field, create_model
+from pydantic import AliasChoices, BaseModel, Field, create_model
 
 from lfx.log.logger import logger
 
 NULLABLE_TYPE_LENGTH = 2  # Number of types in a nullable union (the type itself + null)
+
+
+def _snake_to_camel(name: str) -> str:
+    """Convert snake_case to camelCase, preserving leading/trailing underscores."""
+    if not name:
+        return name
+
+    # Handle leading underscores
+    leading = ""
+    start_idx = 0
+    while start_idx < len(name) and name[start_idx] == "_":
+        leading += "_"
+        start_idx += 1
+
+    # Handle trailing underscores
+    trailing = ""
+    end_idx = len(name)
+    while end_idx > start_idx and name[end_idx - 1] == "_":
+        trailing += "_"
+        end_idx -= 1
+
+    # Convert the middle part
+    middle = name[start_idx:end_idx]
+    if not middle:
+        return name  # All underscores
+
+    components = middle.split("_")
+    camel = components[0] + "".join(word.capitalize() for word in components[1:])
+
+    return leading + camel + trailing
 
 
 def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseModel]:
@@ -118,7 +148,14 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             else:
                 default = ...  # required by Pydantic
 
-            fields[prop_name] = (py_type, Field(default, description=prop_schema.get("description")))
+            # Add alias for camelCase if field name is snake_case
+            field_kwargs = {"description": prop_schema.get("description")}
+            if "_" in prop_name:
+                camel_case_name = _snake_to_camel(prop_name)
+                if camel_case_name != prop_name:  # Only add alias if it's different
+                    field_kwargs["validation_alias"] = AliasChoices(prop_name, camel_case_name)
+
+            fields[prop_name] = (py_type, Field(default, **field_kwargs))
 
         model_cls = create_model(name, **fields)
         model_cache[name] = model_cls
@@ -136,6 +173,14 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             default = fdef.get("default", None)
         else:
             default = ...
-        top_fields[fname] = (py_type, Field(default, description=fdef.get("description")))
+
+        # Add alias for camelCase if field name is snake_case
+        field_kwargs = {"description": fdef.get("description")}
+        if "_" in fname:
+            camel_case_name = _snake_to_camel(fname)
+            if camel_case_name != fname:  # Only add alias if it's different
+                field_kwargs["validation_alias"] = AliasChoices(fname, camel_case_name)
+
+        top_fields[fname] = (py_type, Field(default, **field_kwargs))
 
     return create_model("InputSchema", **top_fields)
