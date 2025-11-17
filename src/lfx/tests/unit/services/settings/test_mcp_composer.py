@@ -30,7 +30,7 @@ class TestPortAvailability:
         test_port = 59998
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            sock.bind(("0.0.0.0", test_port))  # noqa: S104
+            sock.bind(("0.0.0.0", test_port))
             sock.listen(1)
             # Port should now be unavailable
             assert mcp_service._is_port_available(test_port) is False
