@@ -71,7 +71,6 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
             "output_schema": [],
             "browser_enabled": False,
             "web_apps": "",
-            "API": False,
             "lite_mode": True,
             "lite_mode_tool_threshold": 25,
         }
@@ -296,7 +295,6 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert "add_current_date_tool" in build_config
         assert "browser_enabled" in build_config
         assert "web_apps" in build_config
-        assert "API" in build_config
 
     async def test_preprocess_schema(self, component_class, default_kwargs):
         """Test that _preprocess_schema correctly handles schema validation.
@@ -390,7 +388,6 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert "n_messages" in input_names
         assert "browser_enabled" in input_names
         assert "web_apps" in input_names
-        assert "API" in input_names
         assert "lite_mode" in input_names
         assert "lite_mode_tool_threshold" in input_names
 
@@ -401,12 +398,10 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert hasattr(component, "n_messages")
         assert hasattr(component, "browser_enabled")
         assert hasattr(component, "web_apps")
-        assert hasattr(component, "API")
         assert hasattr(component, "lite_mode")
         assert hasattr(component, "lite_mode_tool_threshold")
         assert component.n_messages == 100
         assert component.browser_enabled is False
-        assert component.API is False
         assert component.lite_mode is True
         assert component.lite_mode_tool_threshold == 25
 
@@ -461,21 +456,6 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         component.web_apps = "https://example.com"
         assert component.browser_enabled is True
         assert component.web_apps == "https://example.com"
-
-    async def test_api_subagent_configuration(self, component_class, default_kwargs):
-        """Test API sub-agent configuration.
-
-        This test verifies that the API sub-agent configuration option
-        works correctly.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Test default API setting
-        assert component.API is False
-
-        # Test setting API enabled
-        component.API = True
-        assert component.API is True
 
 
 class TestCugaComponentWithClient(ComponentTestBaseWithClient):
