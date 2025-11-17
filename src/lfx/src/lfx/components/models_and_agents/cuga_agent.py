@@ -449,6 +449,7 @@ class CugaComponent(ToolCallingAgentComponent):
                     f"[CUGA] Sending message update - state: {message.properties.state}, "
                     f"content_blocks: {content_blocks_len}"
                 )
+                message.id = id_
                 result = await self.send_message(message, id_=id_, skip_db_update=False)
                 logger.debug(f"[CUGA] Message saved to DB with ID: {result.id if result else 'None'}")
                 return result
