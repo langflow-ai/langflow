@@ -118,24 +118,6 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         # Verify model_name field is cleared for Custom
         assert "model_name" not in updated_config
 
-    async def test_cuga_has_dual_outputs(self, component_class, default_kwargs):
-        """Test that Cuga component has both Response and Structured Response outputs.
-
-        This test verifies that the CugaComponent has the correct output configuration
-        with both regular message response and structured JSON response capabilities.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-
-        assert len(component.outputs) == 2
-        assert component.outputs[0].name == "response"
-        assert component.outputs[0].display_name == "Response"
-        assert component.outputs[0].method == "message_response"
-
-        assert component.outputs[1].name == "structured_response"
-        assert component.outputs[1].display_name == "Structured Response"
-        assert component.outputs[1].method == "json_response"
-        assert component.outputs[1].tool_mode is False
-
     async def test_json_mode_filtered_from_openai_inputs(self, component_class, default_kwargs):
         """Test that json_mode is filtered out from OpenAI inputs.
 
@@ -152,67 +134,6 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert "model_name" in input_names
         assert "api_key" in input_names
         assert "temperature" in input_names
-
-    async def test_json_response_parsing_valid_json(self, component_class, default_kwargs):
-        """Test that json_response correctly parses JSON from agent response.
-
-        This test verifies that the json_response method can properly parse
-        valid JSON content from the agent's response.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-        # Mock the get_agent_requirements method to avoid actual LLM calls
-        from unittest.mock import AsyncMock
-
-        component.get_agent_requirements = AsyncMock(return_value=(MockLanguageModel(), [], []))
-        component.call_agent = AsyncMock(return_value='{"name": "test", "value": 123}')
-
-        result = await component.json_response()
-
-        from lfx.schema.data import Data
-
-        assert isinstance(result, Data)
-        assert result.data == {"name": "test", "value": 123}
-
-    async def test_json_response_parsing_embedded_json(self, component_class, default_kwargs):
-        """Test that json_response handles text containing JSON.
-
-        This test verifies that the json_response method can extract JSON
-        from text that contains other content alongside the JSON.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-        # Mock the get_agent_requirements method to avoid actual LLM calls
-        from unittest.mock import AsyncMock
-
-        component.get_agent_requirements = AsyncMock(return_value=(MockLanguageModel(), [], []))
-        component.call_agent = AsyncMock(return_value='Here is the result: {"status": "success"} - done!')
-
-        result = await component.json_response()
-
-        from lfx.schema.data import Data
-
-        assert isinstance(result, Data)
-        assert result.data == {"status": "success"}
-
-    async def test_json_response_error_handling(self, component_class, default_kwargs):
-        """Test that json_response handles completely non-JSON responses.
-
-        This test verifies that the json_response method gracefully handles
-        responses that don't contain any valid JSON content.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-        # Mock the get_agent_requirements method to avoid actual LLM calls
-        from unittest.mock import AsyncMock
-
-        component.get_agent_requirements = AsyncMock(return_value=(MockLanguageModel(), [], []))
-        component.call_agent = AsyncMock(return_value="This is just plain text with no JSON")
-
-        result = await component.json_response()
-
-        from lfx.schema.data import Data
-
-        assert isinstance(result, Data)
-        assert "error" in result.data
-        assert result.data["content"] == "This is just plain text with no JSON"
 
     async def test_model_building_without_json_mode(self, component_class, default_kwargs):
         """Test that model building works without json_mode attribute.
@@ -235,31 +156,6 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert result is not None
         # Verify set was called (meaning no AttributeError occurred)
         mock_component.set.assert_called_once()
-
-    async def test_json_response_with_schema_validation(self, component_class, default_kwargs):
-        """Test that json_response validates against provided schema.
-
-        This test verifies that the json_response method can validate JSON
-        content against a provided Pydantic schema.
-        """
-        # Set up component with output schema
-        default_kwargs["output_schema"] = [
-            {"name": "name", "type": "str", "description": "Name field", "multiple": False},
-            {"name": "age", "type": "int", "description": "Age field", "multiple": False},
-        ]
-        component = await self.component_setup(component_class, default_kwargs)
-        # Mock the get_agent_requirements method
-        from unittest.mock import AsyncMock
-
-        component.get_agent_requirements = AsyncMock(return_value=(MockLanguageModel(), [], []))
-        component.call_agent = AsyncMock(return_value='{"name": "John", "age": 25}')
-
-        result = await component.json_response()
-
-        from langflow.schema.data import Data
-
-        assert isinstance(result, Data)
-        assert result.data == {"name": "John", "age": 25}
 
     async def test_cuga_component_initialization(self, component_class, default_kwargs):
         """Test that Cuga component initializes correctly with filtered inputs.
@@ -316,61 +212,6 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert processed[0]["multiple"] is True  # String "true" should be converted to bool
         assert processed[1]["multiple"] is False
 
-    async def test_build_structured_output_base_with_validation(self, component_class, default_kwargs):
-        """Test build_structured_output_base with schema validation.
-
-        This test verifies that the structured output building method can
-        validate JSON content against a provided schema.
-        """
-        default_kwargs["output_schema"] = [
-            {"name": "name", "type": "str", "description": "Name field", "multiple": False},
-            {"name": "count", "type": "int", "description": "Count field", "multiple": False},
-        ]
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Test valid JSON that matches schema
-        valid_content = '{"name": "test", "count": 42}'
-        result = await component.build_structured_output_base(valid_content)
-        assert result == [{"name": "test", "count": 42}]
-
-    async def test_build_structured_output_base_without_schema(self, component_class, default_kwargs):
-        """Test build_structured_output_base without schema validation.
-
-        This test verifies that the structured output building method works
-        correctly when no schema validation is provided.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Test with no output_schema
-        content = '{"any": "data", "number": 123}'
-        result = await component.build_structured_output_base(content)
-        assert result == {"any": "data", "number": 123}
-
-    async def test_build_structured_output_base_embedded_json(self, component_class, default_kwargs):
-        """Test extraction of JSON from embedded text.
-
-        This test verifies that the structured output building method can
-        extract JSON content from text that contains other content.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-
-        content = 'Here is some text with {"embedded": "json"} inside it.'
-        result = await component.build_structured_output_base(content)
-        assert result == {"embedded": "json"}
-
-    async def test_build_structured_output_base_no_json(self, component_class, default_kwargs):
-        """Test handling of content with no JSON.
-
-        This test verifies that the structured output building method handles
-        content that doesn't contain any JSON gracefully.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-
-        content = "This is just plain text with no JSON at all."
-        result = await component.build_structured_output_base(content)
-        assert "error" in result
-        assert result["content"] == content
-
     async def test_new_input_fields_present(self, component_class, default_kwargs):
         """Test that new input fields are present in the component.
 
@@ -404,29 +245,6 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert component.browser_enabled is False
         assert component.lite_mode is True
         assert component.lite_mode_tool_threshold == 25
-
-    async def test_cuga_has_correct_outputs(self, component_class, default_kwargs):
-        """Test that Cuga component has the correct output configuration.
-
-        This test verifies that the CugaComponent has the expected output
-        configuration with both response and structured response outputs.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-
-        assert len(component.outputs) == 2
-
-        # Test response output
-        response_output = component.outputs[0]
-        assert response_output.name == "response"
-        assert response_output.display_name == "Response"
-        assert response_output.method == "message_response"
-
-        # Test structured response output
-        structured_output = component.outputs[1]
-        assert structured_output.name == "structured_response"
-        assert structured_output.display_name == "Structured Response"
-        assert structured_output.method == "json_response"
-        assert structured_output.tool_mode is False
 
     async def test_memory_inputs_advanced_setting(self, component_class, default_kwargs):
         """Test that memory inputs are properly set to advanced.

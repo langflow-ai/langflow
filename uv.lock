@@ -1837,7 +1837,7 @@ requires-dist = [
     { name = "html2text" },
     { name = "langchain" },
     { name = "langchain-core" },
-    { name = "langchain-ibm", specifier = "~=0.3.19" },
+    { name = "langchain-ibm", specifier = ">=0.3.9,<1.0.0" },
     { name = "langchain-mcp-adapters", specifier = ">=0.1.9" },
     { name = "langchain-openai" },
     { name = "langfuse" },
