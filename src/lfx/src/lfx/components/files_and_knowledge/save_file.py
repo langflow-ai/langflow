@@ -341,11 +341,11 @@ class SaveToFileComponent(Component):
                 except (json.JSONDecodeError, FileNotFoundError):
                     # Treat parse errors or missing file as empty array
                     existing_data = []
-                
+
                 # Append new data
                 new_records = json.loads(dataframe.to_json(orient="records"))
                 existing_data.extend(new_records)
-                
+
                 # Write back as a single JSON array
                 path.write_text(json.dumps(existing_data, indent=2), encoding="utf-8")
             else:
@@ -393,13 +393,13 @@ class SaveToFileComponent(Component):
                 except (json.JSONDecodeError, FileNotFoundError):
                     # Treat parse errors or missing file as empty array
                     existing_data = []
-                
+
                 # Append new data
                 if isinstance(new_data, list):
                     existing_data.extend(new_data)
                 else:
                     existing_data.append(new_data)
-                
+
                 # Write back as a single JSON array
                 path.write_text(json.dumps(existing_data, indent=2), encoding="utf-8")
             else:
@@ -456,10 +456,10 @@ class SaveToFileComponent(Component):
                 except (json.JSONDecodeError, FileNotFoundError):
                     # Treat parse errors or missing file as empty array
                     existing_data = []
-                
+
                 # Append new message
                 existing_data.append(new_message)
-                
+
                 # Write back as a single JSON array
                 path.write_text(json.dumps(existing_data, indent=2), encoding="utf-8")
             else:
