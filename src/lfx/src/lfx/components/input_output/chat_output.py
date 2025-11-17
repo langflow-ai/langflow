@@ -118,14 +118,10 @@ class ChatOutput(ChatComponent):
         source, _, display_name, source_id = self.get_properties_from_source_component()
 
         # Create or use existing Message object
-        if isinstance(self.input_value, Message):
-            # Create a new message to avoid mutating shared instances
-            message = Message(
-                text=text,
-                sender=self.input_value.sender if hasattr(self.input_value, "sender") else None,
-                sender_name=self.input_value.sender_name if hasattr(self.input_value, "sender_name") else None,
-            )
-            message.id = uuid.uuid4()
+        if isinstance(self.input_value, Message) and not self.is_connected_to_chat_input():
+            message = self.input_value
+            # Update message properties
+            message.text = text
         else:
             message = Message(text=text)
 
