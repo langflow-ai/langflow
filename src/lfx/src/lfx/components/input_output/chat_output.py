@@ -2,6 +2,7 @@ from collections.abc import Generator
 from typing import Any
 
 import orjson
+import uuid
 from fastapi.encoders import jsonable_encoder
 
 from lfx.base.io.chat import ChatComponent
@@ -121,6 +122,7 @@ class ChatOutput(ChatComponent):
             message = self.input_value
             # Update message properties
             message.text = text
+            message.id = uuid.uuid4()
         else:
             message = Message(text=text)
 
