@@ -320,7 +320,7 @@ class SaveToFileComponent(Component):
         """Save a DataFrame to the specified file format."""
         append_mode = getattr(self, "append_mode", True)
         should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
-        
+
         if fmt == "csv":
             dataframe.to_csv(path, index=False, mode="a" if should_append else "w", header=not should_append)
         elif fmt == "excel":
@@ -348,9 +348,14 @@ class SaveToFileComponent(Component):
         """Save a Data object to the specified file format."""
         append_mode = getattr(self, "append_mode", True)
         should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
-        
+
         if fmt == "csv":
-            pd.DataFrame(data.data).to_csv(path, index=False, mode="a" if should_append else "w", header=not should_append)
+            pd.DataFrame(data.data).to_csv(
+                path,
+                index=False,
+                mode="a" if should_append else "w",
+                header=not should_append,
+            )
         elif fmt == "excel":
             pd.DataFrame(data.data).to_excel(path, index=False, engine="openpyxl")
         elif fmt == "json":
@@ -388,7 +393,7 @@ class SaveToFileComponent(Component):
 
         append_mode = getattr(self, "append_mode", True)
         should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
-        
+
         if fmt == "txt":
             if should_append:
                 path.write_text(path.read_text(encoding="utf-8") + "\n" + content, encoding="utf-8")
