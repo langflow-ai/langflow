@@ -3,6 +3,12 @@ title: Files and knowledge
 slug: /components-files
 ---
 
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
+
 ## Directory
 
 The **Directory** component recursively loads files from a directory, with options for file types, depth, and concurrency.
@@ -26,7 +32,7 @@ Outputs either a [`Data`](/data-types#data) or [`DataFrame`](/data-types#datafra
 | silent_errors      | BoolInput        | Input parameter. If `true`, errors don't raise an exception.         |
 | use_multithreading | BoolInput        | Input parameter. If `true`, multithreading is used.                   |
 
-## Read File {#file}
+## Read File {#read-file}
 
 In Langflow version 1.7.0, this component was renamed from **File** to **Read File**.
 

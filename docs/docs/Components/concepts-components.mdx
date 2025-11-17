@@ -120,7 +120,7 @@ Some components can produce multiple types of output:
 
 For example, a language model component can output _either_ a **Model Response** or **Language Model**.
 The **Model Response** output produces [`Message`](/data-types#message) data that can be passed to another component's `Message` port.
-The **Language Model** output must be connected to a component with a **Language Model** input, such as the [**Structured Output** component](/components-processing#structured-output), that uses the attached LLM to power the receiving component's reasoning.
+The **Language Model** output must be connected to a component with a **Language Model** input, such as the [**Structured Output** component](/components-llm-operations#structured-output), that uses the attached LLM to power the receiving component's reasoning.
 
 ![Output type selection in the Language Model component](/img/select-output.png)
 

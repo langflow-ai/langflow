@@ -14,71 +14,17 @@ They have many uses, including:
 
 * Feed instructions and context to your LLMs and agents with the [**Prompt Template** component](#prompt-template).
 * Extract content from larger chunks of data with a [**Parser** component](#parser).
-* Filter data with natural language with the [**Smart Transform** component](#smart-transform).
+* Filter data with natural language with the [**Smart Transform** component](/components-llm-operations#smart-transform).
 * Create structured data dynamically with the [**Dynamic Create Data** component](#dynamic-create-data).
 * Perform advanced JSON queries with the [**Data Operations** component](#data-operations) using `jq` expressions.
-* Save data to your local machine with the [**Write File** component](#save-file).
+* Save data to your local machine with the [**Write File** component](/components-files#save-file).
 * Transform data into a different data type with the [**Type Convert** component](#type-convert) to pass it between incompatible components.
 
 ## Prompt Template
 
 See [**Prompt Template** component](/components-prompts).
 
-## Batch Run
 
-The **Batch Run** component runs a language model over _each row of one text column_ in a [`DataFrame`](/data-types#dataframe), and then returns a new `DataFrame` with the original text and an LLM response.
-The output contains the following columns:
-
-* `text_input`: The original text from the input `DataFrame`
-* `model_response`: The model's response for each input
-* `batch_index`: The 0-indexed processing order for all rows in the `DataFrame`
-* `metadata` (optional): Additional information about the processing
-
-### Use the Batch Run component in a flow
-
-If you pass the **Batch Run** output to a [**Parser** component](/components-processing#parser), you can use variables in the parsing template to reference these keys, such as `{text_input}` and `{model_response}`.
-This is demonstrated in the following example.
-
-![A batch run component connected to OpenAI and a Parser](/img/component-batch-run.png)
-
-1. Connect any language model component to a **Batch Run** component's **Language model** port.
-
-2. Connect `DataFrame` output from another component to the **Batch Run** component's **DataFrame** input.
-For example, you could connect a **Read File** component with a CSV file.
-
-3. In the **Batch Run** component's **Column Name** field, enter the name of the column in the incoming `DataFrame` that contains the text to process.
-For example, if you want to extract text from a `name` column in a CSV file, enter `name` in the **Column Name** field.
-
-4. Connect the **Batch Run** component's **Batch Results** output to a **Parser** component's **DataFrame** input.
-
-5. Optional: In the **Batch Run** [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable the **System Message** parameter, click **Close**, and then enter an instruction for how you want the LLM to process each cell extracted from the file.
-For example, `Create a business card for each name.`
-
-6. In the **Parser** component's **Template** field, enter a template for processing the **Batch Run** component's new `DataFrame` columns (`text_input`, `model_response`, and `batch_index`):
-
-    For example, this template uses three columns from the resulting, post-batch `DataFrame`:
-
-    ```text
-    record_number: {batch_index}, name: {text_input}, summary: {model_response}
-    ```
-
-7. To test the processing, click the **Parser** component, click <Icon name="Play" aria-hidden="true" /> **Run component**, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to view the final `DataFrame`.
-
-    You can also connect a **Chat Output** component to the **Parser** component if you want to see the output in the **Playground**.
-
-### Batch Run parameters
-
-<PartialParams />
-
-| Name | Type | Description |
-|------|------|-------------|
-| model | HandleInput | Input parameter. Connect the 'Language Model' output from a language model component. Required. |
-| system_message | MultilineInput | Input parameter. A multi-line system instruction for all rows in the DataFrame. |
-| df | DataFrameInput | Input parameter. The DataFrame whose column is treated as text messages, as specified by 'column_name'. Required. |
-| column_name | MessageTextInput | Input parameter. The name of the DataFrame column to treat as text messages. If empty, all columns are formatted in TOML. |
-| output_column_name | MessageTextInput | Input parameter. Name of the column where the model's response is stored. Default=`model_response`. |
-| enable_metadata | BoolInput | Input parameter. If `True`, add metadata to the output DataFrame. |
-| batch_results | DataFrame | Output parameter. A DataFrame with all original columns plus the model's response column. |
 
 ## Data Operations
 
@@ -267,7 +213,7 @@ The only requirement is that the preceding component must create `DataFrame` out
         * **Smart Transform**
         * **Type Convert**
 
-    2. Configure the [**Smart Transform** component](#smart-transform) and its dependencies:
+    2. Configure the [**Smart Transform** component](/components-llm-operations#smart-transform) and its dependencies:
 
         * **API Request**: Configure the [**API Request** component](/components-data#api-request) to get JSON data from an endpoint of your choice, and then connect the **API Response** output to the **Smart Transform** component's **Data** input.
         * **Language Model**: Select your preferred provider and model, and then enter a valid API key.
@@ -460,61 +406,6 @@ The following example demonstrates how to use a **Dynamic Create Data** componen
 | `form_data` | **Data** | Output parameter. A `Data` object containing all field values from the dynamic inputs. |
 | `message` | **Message** | Output parameter. A formatted `Text` message containing all field values in a human-readable format. |
 
-## LLM Router
-
-The **LLM Router** component routes requests to the most appropriate LLM based on [OpenRouter](https://openrouter.ai/docs/quickstart) model specifications.
-
-To use the component in a flow, you connect multiple language model components to the **LLM Router** components.
-One model is the judge LLM that analyzes input messages to understand the evaluation context, selects the most appropriate model from the other attached LLMs, and then routes the input to the selected model.
-The selected model processes the input, and then returns the generated response.
-
-The following example flow has three language model components.
-One is the judge LLM, and the other two are in the LLM pool for request routing.
-The input and output components create a seamless chat interaction where you send a message and receive a response without any user awareness of the underlying routing.
-
-![LLM Router component](/img/component-llm-router.png)
-
-### LLM Router parameters
-
-<PartialParams />
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| `models` | **Language Models** | Input parameter. Connect [`LanguageModel`](/data-types#languagemodel) output from multiple [language model components](/components-models) to create a pool of models. The `judge_llm` selects models from this pool when routing requests. The first model you connect is the default model if there is a problem with model selection or routing. |
-| `input_value` | **Input** | Input parameter. The incoming query to be routed to the model selected by the judge LLM. |
-| `judge_llm` | **Judge LLM** | Input parameter. Connect `LanguageModel` output from _one_ **Language Model** component to serve as the judge LLM for request routing. |
-| `optimization` | **Optimization** | Input parameter. Set a preferred characteristic for model selection by the judge LLM. The options are `quality` (highest response quality), `speed` (fastest response time), `cost` (most cost-effective model), or `balanced` (equal weight for quality, speed, and cost). Default: `balanced` |
-| `use_openrouter_specs` | **Use OpenRouter Specs** | Input parameter. Whether to fetch model specifications from the OpenRouter API.
-If `false`, only the model name is provided to the judge LLM. Default: Enabled (`true`) |
-| `timeout` | **API Timeout** | Input parameter. Set a timeout duration in seconds for API requests made by the router. Default: `10` |
-| `fallback_to_first` | **Fallback to First Model** | Input parameter. Whether to use the first LLM in `models` as a backup if routing fails to reach the selected model. Default: Enabled (`true`) |
-
-### LLM Router outputs
-
-The **LLM Router** component provides three output options.
-You can set the desired output type near the component's output port.
-
-* **Output**: A `Message` containing the response to the original query as generated by the selected LLM.
-Use this output for regular chat interactions.
-
-* **Selected Model Info**: A `Data` object containing information about the selected model, such as its name and version.
-
-* **Routing Decision**: A `Message` containing the judge model's reasoning for selecting a particular model, including input query length and number of models considered.
-For example:
-
-    ```text
-    Model Selection Decision:
-    - Selected Model Index: 0
-    - Selected Langflow Model Name: gpt-4o-mini
-    - Selected API Model ID (if resolved): openai/gpt-4o-mini
-    - Optimization Preference: cost
-    - Input Query Length: 27 characters (~5 tokens)
-    - Number of Models Considered: 2
-    - Specifications Source: OpenRouter API
-    ```
-
-    This is useful for debugging if you feel the judge model isn't selecting the best model.
-
 ## Parser {#parser}
 
 The **Parser** component extracts text from structured data (`DataFrame` or `Data`) using a template or direct stringification.
@@ -523,8 +414,8 @@ The output is a `Message` containing the parsed text.
 This is a versatile component for data extraction and manipulation in your flows.
 For examples of **Parser** components in flows, see the following:
 
-* [**Batch Run** component example](#batch-run)
-* [**Structured Output** component example](#structured-output)
+* [**Batch Run** component example](/components-llm-operations#batch-run)
+* [**Structured Output** component example](/components-llm-operations#structured-output)
 * **Financial Report Parser** template
 * [Trigger flows with webhooks](/webhook)
 * [Create a vector RAG chatbot](/chat-with-rag)
@@ -648,184 +539,6 @@ There are several ways you can address these inconsistencies:
     There are many components you can use for this depending on your goal, such as the **Data Operations**, **Structured Output**, and **Smart Transform** components.
     * Enable the **Parser** component's **Clean Data** parameter to skip empty rows or lines.
 
-## Python Interpreter
-
-This component allows you to execute Python code with imported packages.
-
-The **Python Interpreter** component can only import packages that are already installed in your Langflow environment.
-If you encounter an `ImportError` when trying to use a package, you need to install it first.
-
-To install custom packages, see [Install custom dependencies](/install-custom-dependencies).
-
-### Use the Python Interpreter in a flow
-
-1. To use this component in a flow, in the **Global Imports** field, add the packages you want to import as a comma-separated list, such as `math,pandas`.
-At least one import is required.
-2. In the **Python Code** field, enter the Python code you want to execute. Use `print()` to see the output.
-3. Optional: Enable **Tool Mode**, and then connect the **Python Interpreter** component to an **Agent** component as a tool.
-For example, connect a **Python Interpreter** component and a [**Calculator** component](/components-helpers#calculator) as tools for an **Agent** component, and then test how it chooses different tools to solve math problems.
-![Python Interpreter and Calculator components connected to an Agent component](/img/component-python-interpreter.png)
-4. Ask the agent an easier math question.
-The **Calculator** tool can add, subtract, multiple, divide, or perform exponentiation.
-The agent executes the `evaluate_expression` tool to correctly answer the question.
-
-Result:
-```text
-Executed evaluate_expression
-Input:
-{
-  "expression": "2+5"
-}
-Output:
-{
-  "result": "7"
-}
-```
-
-5. Give the agent complete Python code.
-This example creates a Pandas DataFrame table with the imported `pandas` packages, and returns the square root of the mean squares.
-
-```python
-import pandas as pd
-import math
-
-# Create a simple DataFrame
-df = pd.DataFrame({
-    'numbers': [1, 2, 3, 4, 5],
-    'squares': [x**2 for x in range(1, 6)]
-})
-
-# Calculate the square root of the mean
-result = math.sqrt(df['squares'].mean())
-print(f"Square root of mean squares: {result}")
-```
-
-The agent correctly chooses the `run_python_repl` tool to solve the problem.
-
-Result:
-```text
-Executed run_python_repl
-
-Input:
-
-{
-  "python_code": "import pandas as pd\nimport math\n\n# Create a simple DataFrame\ndf = pd.DataFrame({\n    'numbers': [1, 2, 3, 4, 5],\n    'squares': [x**2 for x in range(1, 6)]\n})\n\n# Calculate the square root of the mean\nresult = math.sqrt(df['squares'].mean())\nprint(f\"Square root of mean squares: {result}\")"
-}
-Output:
-
-{
-  "result": "Square root of mean squares: 3.3166247903554"
-}
-```
-
-If you don't include the package imports in the chat, the agent can still create the table using `pd.DataFrame`, because the `pandas` package is imported globally by the **Python Interpreter** component in the **Global Imports** field.
-
-### Python Interpreter parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| global_imports | String | Input parameter. A comma-separated list of modules to import globally, such as `math,pandas,numpy`. |
-| python_code | Code | Input parameter. The Python code to execute. Only modules specified in Global Imports can be used. |
-| results | Data | Output parameter. The output of the executed Python code, including any printed results or errors. |
-
-## Write File {#save-file}
-
-In Langflow version 1.7.0, this component was renamed from **Save File** to **Write File**.
-
-The **Write File** component creates a file containing data produced by another component.
-Several file formats are supported, and you can store files in [Langflow storage](/memory), AWS S3, Google Drive, or the local file system.
-
-To configure the **Write File** component and use it in a flow, do the following:
-
-1. Connect [`DataFrame`](/data-types#dataframe), [`Data`](/data-types#data), or [`Message`](/data-types#message) output from another component to the **Write File** component's **Input** port.
-
-    You can connect the same output to multiple **Write File** components if you want to create multiple files, save the data in different file formats, or save files to multiple locations.
-
-2. In **File Name**, enter a file name and an optional path.
-
-    The **File Name** parameter controls where the file is saved.
-    It can contain a file name or an entire file path:
-
-    * **Default location**: If you only provide a file name, then the file is stored in the Langflow data directory. For example,`~/Library/Caches/langflow/data` on macOS.
-
-    * **Subdirectory**: To store files in subdirectories, add the path to the **File Name** parameter.
-    If a given subdirectory doesn't already exist, Langflow automatically creates it.
-    For example, `files/my_file` creates `my_file` in `/data/files`, and it creates the `files` subdirectory if it doesn't already exist.
-
-    * **Absolute or relative path**: To store files elsewhere in your environment or local file storage, provide the absolute or relative path to the desired location.
-    For example, `~/Desktop/my_file` saves `my_file` to the desktop.
-
-    Don't include an extension in the file name.
-    If you do, the extension is treated as part of the file name; it has no impact on the **File Format** parameter.
-
-3. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, select the desired file format, and then click **Close**.
-
-    The available **File Format** options depend on the input data type:
-
-    * `DataFrame` can be saved to CSV (default), Excel (requires `openpyxl` [custom dependency](/install-custom-dependencies)), JSON (fallback default), or Markdown.
-
-    * `Data` can be saved to CSV, Excel (requires `openpyxl` [custom dependency](/install-custom-dependencies)), JSON (default), or Markdown.
-
-    * `Message` can be saved to TXT, JSON (default), or Markdown.
-
-    :::warning Overwrites allowed
-    If you have multiple **Write File** components, in one or more flows, with the same file name, path, and extension, the file contains the data from the most recent run only.
-    Langflow doesn't block overwrites if a matching file already exists.
-    To avoid unintended overwrites, use unique file names and paths.
-    :::
-
-4. To test the **Write File** component, click <Icon name="Play" aria-hidden="true" /> **Run component**, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to get the filepath where the file was saved.
-
-    The component's literal output is a `Message` containing the original data type, the file name and extension, and the absolute filepath to the file based on the **File Name** parameter.
-    For example:
-
-    ```text
-    DataFrame saved successfully as 'my_file.csv' at /Users/user.name/Library/Caches/langflow/data/my_file.csv
-    ```
-
-    If the **File Name** contains a subdirectory or other non-default path, this is reflected in the `Message` output.
-    For example, a CSV file with the file name `~/Desktop/my_file` could produce the following output:
-
-    ```text
-    DataFrame saved successfully as '/Users/user.name/Desktop/my_file.csv' at /Users/user.name/Desktop/my_file.csv
-    ```
-
-5. Optional: If you want to use the saved file in a flow, you must use an API call or another component to retrieve the file from the given filepath.
-
-## Smart Transform {#smart-transform}
-
-This component has been renamed multiple times.
-Its previous names include **Lambda Filter** and **Smart Function**.
-
-The **Smart Transform** component uses an LLM to generate a Lambda function to filter or transform structured data based on natural language instructions.
-You must connect this component to a [language model component](/components-models), which is used to generate a function based on the natural language instructions you provide in the **Instructions** parameter.
-The LLM runs the function against the data input, and then outputs the results as [`Data`](/data-types#data).
-
-:::tip
-Provide brief, clear instructions, focusing on the desired outcome or specific actions, such as `Filter the data to only include items where the 'status' is 'active'`.
-One sentence or less is preferred because end punctuation, like periods, can cause errors or unexpected behavior.
-
-If you need to provide more details instructions that aren't directly relevant to the Lambda function, you can input them in the **Language Model** component's **Input** field or through a **Prompt Template** component.
-:::
-
-The following example uses the **API Request** endpoint to pass JSON data from the `https://jsonplaceholder.typicode.com/users` endpoint to the **Smart Transform** component.
-Then, the **Smart Transform** component passes the data and the instruction `extract emails` to the attached **Language Model** component.
-From there, the LLM generates a filter function that extracts email addresses from the JSON data, returning the filtered data as chat output.
-
-![A small flow using a Smart Transform component to extract data from an API response.](/img/component-lambda-filter.png)
-
-### Smart Transform parameters
-
-<PartialParams />
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | Input parameter. The structured data to filter or transform using a Lambda function. |
-| llm | Language Model | Input parameter. Connect [`LanguageModel`](/data-types#languagemodel) output from a **Language Model** component. |
-| filter_instruction | Instructions | Input parameter. The natural language instructions for how to filter or transform the data. The LLM uses these instructions to create a Lambda function. |
-| sample_size | Sample Size | Input parameter. For large datasets, the number of characters to sample from the dataset head and tail. Only applied if the dataset meets or exceeds `max_size`. Default: `1000`. |
-| max_size | Max Size | Input parameter. The number of characters for the dataset to be considered large, which triggers sampling by the `sample_size` value. Default: `30000`. |
-
 ## Split Text
 
 The **Split Text** component splits data into chunks based on parameters like chunk size and separator.
@@ -866,117 +579,6 @@ Then, test your configuration by running the flow and inspecting the component's
 ### Other text splitters
 
 See [LangChain text splitter components](/bundles-langchain#text-splitters).
-
-## Structured Output
-
-The **Structured Output** component uses an LLM to transform any input into structured data (`Data` or `DataFrame`) using natural language formatting instructions and an output schema definition.
-For example, you can extract specific details from documents, like email messages or scientific papers.
-
-### Use the Structured Output component in a flow
-
-To use the **Structured Output** component in a flow, do the following:
-
-1. Provide an **Input Message**, which is the source material from which you want to extract structured data.
-This can come from practically any component, but it is typically a **Chat Input**, **Read File**, or other component that provides some unstructured or semi-structured input.
-
-    :::tip
-    Not all source material has to become structured output.
-    The power of the **Structured Output** component is that you can specify the information you want to extract, even if that data isn't explicitly labeled or an exact keyword match.
-    Then, the LLM can use your instructions to analyze the source material, extract the relevant data, and format it according to your specifications.
-    Any irrelevant source material isn't included in the structured output.
-    :::
-
-2. Define **Format Instructions** and an **Output Schema** to specify the data to extract from the source material and how to structure it in the final `Data` or `DataFrame` output.
-
-    The instructions are a prompt that tell the LLM what data to extract, how to format it, how to handle exceptions, and any other instructions relevant to preparing the structured data.
-
-    The schema is a table that defines the fields (keys) and data types to organize the data extracted by the LLM into a structured `Data` or `DataFrame` object.
-    For more information, see [Output Schema options](#output-schema-options)
-
-3. Attach a [language model component](/components-models) that is set to emit [`LanguageModel`](/data-types#languagemodel) output.
-
-    The LLM uses the **Input Message** and **Format Instructions** from the **Structured Output** component to extract specific pieces of data from the input text.
-    The output schema is applied to the model's response to produce the final `Data` or `DataFrame` structured object.
-
-4. Optional: Typically, the structured output is passed to downstream components that use the extracted data for other processes, such as the **Parser** or **Data Operations** components.
-
-![A basic flow with Structured Output, Language Model, Type Convert, and Chat Input and Output components.](/img/component-structured-output.png)
-
-<details>
-<summary>Structured Output example: Financial Report Parser template</summary>
-
-The **Financial Report Parser** template provides an example of how the **Structured Output** component can be used to extract structured data from unstructured text.
-
-The template's **Structured Output** component has the following configuration:
-
-* The **Input Message** comes from a **Chat Input** component that is preloaded with quotes from sample financial reports
-
-* The **Format Instructions** are as follows:
-
-    ```text
-    You are an AI that extracts structured JSON objects from unstructured text.
-    Use a predefined schema with expected types (str, int, float, bool, dict).
-    Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all.
-    Fill missing or ambiguous values with defaults: null for missing values.
-    Remove exact duplicates but keep variations that have different field values.
-    Always return valid JSON in the expected format, never throw errors.
-    If multiple objects can be extracted, return them all in the structured format.
-    ```
-
-* The **Output Schema** includes keys for `EBITDA`, `NET_INCOME`, and `GROSS_PROFIT`.
-
-The structured `Data` object is passed to a **Parser** component that produces a text string by mapping the schema keys to variables in the parsing template:
-
-```text
-EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}
-```
-
-When printed to the **Playground**, the resulting `Message` replaces the variables with the actual values extracted by the **Structured Output** component. For example:
-
-```text
-EBITDA: 900 million , Net Income: 500 million , GROSS_PROFIT: 1.2 billion
-```
-
-</details>
-
-### Structured Output parameters
-
-<PartialParams />
-
-| Name | Type | Description |
-|------|------|-------------|
-| Language Model (`llm`) | `LanguageModel` | Input parameter. The [`LanguageModel`](/data-types#languagemodel) output from a **Language Model** component that defines the LLM to use to analyze, extract, and prepare the structured output. |
-| Input Message (`input_value`) | String | Input parameter. The input message containing source material for extraction. |
-| Format Instructions (`system_prompt`) | String | Input parameter. The instructions to the language model for extracting and formatting the output. |
-| Schema Name (`schema_name`) | String | Input parameter. An optional title for the **Output Schema**. |
-| Output Schema (`output_schema`)| Table | Input parameter. A table describing the schema of the desired structured output, ultimately determining the content of the `Data` or `DataFrame` output. See [Output Schema options](#output-schema-options). |
-| Structured Output (`structured_output`) | `Data` or `DataFrame` | Output parameter. The final structured output produced by the component. Near the component's output port, you can select the output data type as either **Structured Output Data** or **Structured Output DataFrame**. The specific content and structure of the output depends on the input parameters. |
-
-#### Output Schema options {#output-schema-options}
-
-After the LLM extracts the relevant data from the **Input Message** and **Format Instructions**, the data is organized according to the **Output Schema**.
-
-The schema is a table that defines the fields (keys) and data types for the final `Data` or `DataFrame` output from the **Structured Output** component.
-
-The default schema is a single `field` string.
-
-To add a key to the schema, click <Icon name="Plus" aria-hidden="true"/> **Add a new row**, and then edit each column to define the schema:
-
-* **Name**: The name of the output field. Typically a specific key for which you want to extract a value.
-
-    You can reference these keys as variables in downstream components, such as a **Parser** component's template.
-    For example, the schema key `NET_INCOME` could be referenced by the variable `{NET_INCOME}`.
-
-* **Description**: An optional metadata description of the field's contents and purpose.
-
-* **Type**: The data type of the value stored in the field.
-Supported types are `str` (default), `int`, `float`, `bool`, and `dict`.
-
-* **As List**: Enable this setting if you want the field to contain a list of values rather than a single value.
-
-For simple schemas, you might only extract a few `string` or `int` fields.
-For more complex schemas with lists and dictionaries, it might help to refer to the `Data` and `DataFrame` structures and attributes, as described in [Langflow data types](/data-types).
-You can also emit a rough `Data` or `DataFrame`, and then use downstream components for further refinement, such as a **Data Operations** component.
 
 ## Type Convert
 

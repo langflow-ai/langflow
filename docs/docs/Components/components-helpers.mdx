@@ -16,7 +16,7 @@ Utility components provide functions to help manage data and perform simple task
 The **Calculator** component performs basic arithmetic operations on mathematical expressions.
 It supports addition, subtraction, multiplication, division, and exponentiation operations.
 
-For an example of using this component in a flow, see the [**Python Interpreter** component](/components-processing#python-interpreter).
+For an example of using this component in a flow, see the [**Python Interpreter** component](/components-helpers#python-interpreter).
 
 ### Calculator parameters
 
@@ -436,7 +436,7 @@ The following Helper components are in legacy status:
 * **Message Store**: Replaced by the [**Message History** component](#message-history)
 * **Create List**: Replace with [Processing components](/components-processing)
 * **ID Generator**: Replace with a component that executes arbitrary code to generate an ID or embed an ID generator script your application code (external to your Langflow flows).
-* **Output Parser**: Replace with the [**Structured Output** component](/components-processing#structured-output) and [**Parser** component](/components-processing#parser).
+* **Output Parser**: Replace with the [**Structured Output** component](/components-llm-operations#structured-output) and [**Parser** component](/components-processing#parser).
 The components you need depend on the data types and complexity of the parsing task.
 
     The **Output Parser** component transformed the output of a language model into comma-separated values (CSV) format, such as `["item1", "item2", "item3"]`, using LangChain's `CommaSeparatedListOutputParser`.

@@ -50,7 +50,7 @@ To do this, edit the **Template** field, and then replace the default prompt wit
     For this tutorial, the variables are named after the components that connect to them: **chat-input** for the **Chat Input** component and **file** for the **Read File** component.
     :::
 
-5. Add a [**Read File** component](/components-data#file) to the flow, and then connect the **Raw Content** output port to the **Prompt Template** component's **file** input port.
+5. Add a [**Read File** component](/components-files#read-file) to the flow, and then connect the **Raw Content** output port to the **Prompt Template** component's **file** input port.
 To connect ports, click and drag from one port to the other.
 
     You can add files directly to the **Read File** component to pre-load input before running the flow, or you can load files at runtime. The next section of this tutorial covers runtime file uploads.
@@ -211,7 +211,7 @@ def chat_with_flow(input_message, file_paths):
         tweaks[component_id] = {"path": file_path}
 ```
 
-You can also use a [**Directory** component](/components-data#directory) to load all files in a directory or pass an archive file to the **Read File** component.
+You can also use a [**Directory** component](/components-files#directory) to load all files in a directory or pass an archive file to the **Read File** component.
 
 ### Upload external files at runtime
 

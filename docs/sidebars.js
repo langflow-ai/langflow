@@ -267,6 +267,8 @@ module.exports = {
           label: "Core components",
           items: [
             "Components/components-io",
+            "Components/components-files",
+            "Components/components-llm-operations",
 
             {
               type: "category",
@@ -283,7 +285,7 @@ module.exports = {
                 {
                   type: "link",
                   label: "Message history",
-                  href: "/components-helpers#messagehistory",
+                  href: "/components-helpers#message-history",
                 },
               ]
             },
