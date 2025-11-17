@@ -299,7 +299,7 @@ class MigrationValidator:
 
     def _extract_phase(self, content: str) -> MigrationPhase:
         """Extract migration phase from documentation."""
-        # TODO: Improve phase extraction logic
+        # TODO: Support phase detection from inline comments and function annotations, not just docstrings or top-level comments.
         # Look in docstring or comments
         phase_pattern = r"Phase:\s*(EXPAND|MIGRATE|CONTRACT)"
         match = re.search(phase_pattern, content, re.IGNORECASE)
