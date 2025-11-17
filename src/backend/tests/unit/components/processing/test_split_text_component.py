@@ -253,7 +253,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         data_frame = URLComponent(urls=url, format="Text").fetch_content()
         assert isinstance(data_frame, DataFrame), "Expected DataFrame instance"
         assert len(data_frame) == 2, f"Expected DataFrame with 2 rows, got {len(data_frame)}"
-        
+
         # Use a reasonable chunk size that will work with varying URL content lengths
         # The test validates that URL-loaded content can be split, not the exact number of chunks
         component.set_attributes(
