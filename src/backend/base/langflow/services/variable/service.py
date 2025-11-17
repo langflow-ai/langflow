@@ -43,12 +43,23 @@ class DatabaseVariableService(VariableService, Service):
         for var_name in self.settings_service.settings.variables_to_get_from_environment:
             if var_name in os.environ and os.environ[var_name].strip():
                 value = os.environ[var_name].strip()
+
+                # Skip placeholder/test values like "dummy" for API key variables only
+                # This prevents test environments from overwriting user-configured model provider keys
+                is_api_key_variable = var_name in var_to_provider
+                if is_api_key_variable and value.lower() == "dummy":
+                    await logger.adebug(
+                        f"Skipping API key variable {var_name} with placeholder value 'dummy' "
+                        "to preserve user configuration"
+                    )
+                    continue
+
                 query = select(Variable).where(Variable.user_id == user_id, Variable.name == var_name)
                 existing = (await session.exec(query)).first()
 
                 # Set default_fields if this is a known provider variable
                 default_fields = []
-                if var_name in var_to_provider:
+                if is_api_key_variable:
                     provider_name = var_to_provider[var_name]
                     default_fields = [provider_name, "api_key"]
 

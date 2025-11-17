@@ -711,6 +711,112 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
     return options
 
 
+def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[str, Any]]:
+    """Convert simple model name(s) to list of dicts format.
+
+    Args:
+        model_names: A string or list of strings representing model names
+
+    Returns:
+        A list of dicts with full model metadata including runtime info
+
+    Examples:
+        >>> normalize_model_names_to_dicts('gpt-4o')
+        [{'name': 'gpt-4o', 'provider': 'OpenAI', 'metadata': {'model_class': 'ChatOpenAI', ...}}]
+
+        >>> normalize_model_names_to_dicts(['gpt-4o', 'claude-3'])
+        [{'name': 'gpt-4o', ...}, {'name': 'claude-3', ...}]
+    """
+    # Convert single string to list
+    if isinstance(model_names, str):
+        model_names = [model_names]
+
+    # Get all available models to look up metadata
+    try:
+        all_models = get_unified_models_detailed()
+    except Exception:  # noqa: BLE001
+        # If we can't get models, just create basic dicts
+        return [{"name": name} for name in model_names]
+
+    # Model class mapping for runtime metadata
+    model_class_mapping = {
+        "OpenAI": "ChatOpenAI",
+        "Anthropic": "ChatAnthropic",
+        "Google Generative AI": "ChatGoogleGenerativeAIFixed",
+        "Ollama": "ChatOllama",
+        "IBM WatsonX": "ChatWatsonx",
+    }
+
+    api_key_param_mapping = {
+        "OpenAI": "api_key",
+        "Anthropic": "api_key",
+        "Google Generative AI": "google_api_key",
+        "Ollama": "base_url",
+        "IBM WatsonX": "apikey",
+    }
+
+    # Build a lookup map of model_name -> full model data with runtime metadata
+    model_lookup = {}
+    for provider_data in all_models:
+        provider = provider_data.get("provider")
+        icon = provider_data.get("icon", "Bot")
+        for model_data in provider_data.get("models", []):
+            model_name = model_data.get("model_name")
+            base_metadata = model_data.get("metadata", {})
+
+            # Build runtime metadata similar to get_language_model_options
+            runtime_metadata = {
+                "context_length": 128000,  # Default
+                "model_class": model_class_mapping.get(provider, "ChatOpenAI"),
+                "model_name_param": "model",
+                "api_key_param": api_key_param_mapping.get(provider, "api_key"),
+            }
+
+            # Add reasoning models list for OpenAI
+            if provider == "OpenAI" and base_metadata.get("reasoning"):
+                runtime_metadata["reasoning_models"] = [model_name]
+
+            # Add base_url_param for Ollama
+            if provider == "Ollama":
+                runtime_metadata["base_url_param"] = "base_url"
+
+            # Add extra params for WatsonX
+            if provider == "IBM WatsonX":
+                runtime_metadata["model_name_param"] = "model_id"
+                runtime_metadata["url_param"] = "url"
+                runtime_metadata["project_id_param"] = "project_id"
+
+            # Merge base metadata with runtime metadata
+            full_metadata = {**base_metadata, **runtime_metadata}
+
+            model_lookup[model_name] = {
+                "name": model_name,
+                "icon": icon,
+                "category": provider,
+                "provider": provider,
+                "metadata": full_metadata,
+            }
+
+    # Convert string list to dict list
+    result = []
+    for name in model_names:
+        if name in model_lookup:
+            result.append(model_lookup[name])
+        else:
+            # Model not found in registry, create basic entry with minimal required metadata
+            result.append({
+                "name": name,
+                "provider": "Unknown",
+                "metadata": {
+                    "model_class": "ChatOpenAI",  # Default fallback
+                    "model_name_param": "model",
+                    "api_key_param": "api_key",
+                },
+            })
+
+    return result
+
+
 def get_llm(model, user_id: UUID | str | None, api_key=None, temperature=None, *, stream=False) -> Any:
     # Check if model is already a BaseLanguageModel instance (from a connection)
     try:
@@ -826,23 +932,21 @@ def update_model_options_in_build_config(
     )
 
     if should_refresh:
-        # Fetch options based on user's enabled models and providers
+        # Fetch options based on user's enabled models
         try:
             options = get_options_func(user_id=component.user_id)
-            providers = list({opt["provider"] for opt in options})
             # Cache the results with timestamp
-            component.cache[cache_key] = {"options": options, "providers": providers}
+            component.cache[cache_key] = {"options": options}
             component.cache[cache_timestamp_key] = time.time()
         except KeyError as exc:
             # If we can't get user-specific options, fall back to empty
             component.log("Failed to fetch user-specific model options: %s", exc)
-            component.cache[cache_key] = {"options": [], "providers": []}
+            component.cache[cache_key] = {"options": []}
             component.cache[cache_timestamp_key] = time.time()
 
     # Use cached results
-    cached = component.cache.get(cache_key, {"options": [], "providers": []})
+    cached = component.cache.get(cache_key, {"options": []})
     build_config["model"]["options"] = cached["options"]
-    build_config["model"]["providers"] = cached["providers"]
 
     # Simple logic: ONLY hide the handle when we're explicitly setting a model value
     # Check if field_value is a model selection (list with model dict)

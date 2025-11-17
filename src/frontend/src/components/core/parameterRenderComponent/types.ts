@@ -29,7 +29,6 @@ export type BaseInputProps<valueType = any> = {
   helperMetadata?: any;
   options?: any[];
   searchCategory?: string[];
-  providers?: string[];
   buttonMetadata?: { variant?: string; icon?: string };
   connectionLink?: string;
 };

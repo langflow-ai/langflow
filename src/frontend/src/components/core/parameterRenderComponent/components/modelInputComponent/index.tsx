@@ -42,7 +42,6 @@ export type ModelInputComponentType = {
     metadata?: any;
   }[];
   placeholder?: string;
-  providers?: string[];
   externalOptions?: any;
 };
 
@@ -61,7 +60,6 @@ export default function ModelInputComponent({
   handleOnNewValue,
   options = [],
   placeholder = "Select or Connect a Model",
-  providers = ["OpenAI", "Anthropic"],
   helperText,
   hasRefreshButton,
   nodeId,
@@ -194,7 +192,6 @@ export default function ModelInputComponent({
     return sortedGroups;
   }, [
     filteredOptions,
-    providers,
     options,
     globalVariablesEntries,
     defaultModelData,

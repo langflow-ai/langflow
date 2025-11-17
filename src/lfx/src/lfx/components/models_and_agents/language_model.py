@@ -25,8 +25,6 @@ class LanguageModelComponent(LCModelComponent):
         ModelInput(
             name="model",
             display_name="Language Model",
-            options=[],  # Will be populated dynamically
-            providers=[],  # Will be populated dynamically
             info="Select your model provider",
             real_time_refresh=True,
             required=True,
