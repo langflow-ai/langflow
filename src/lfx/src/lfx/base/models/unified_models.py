@@ -804,15 +804,17 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
             result.append(model_lookup[name])
         else:
             # Model not found in registry, create basic entry with minimal required metadata
-            result.append({
-                "name": name,
-                "provider": "Unknown",
-                "metadata": {
-                    "model_class": "ChatOpenAI",  # Default fallback
-                    "model_name_param": "model",
-                    "api_key_param": "api_key",
-                },
-            })
+            result.append(
+                {
+                    "name": name,
+                    "provider": "Unknown",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",  # Default fallback
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            )
 
     return result
 

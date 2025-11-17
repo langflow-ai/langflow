@@ -181,6 +181,7 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
             # Avoid circular import by importing the module directly (not through package __init__)
             try:
                 from lfx.base.models.unified_models import normalize_model_names_to_dicts
+
                 return normalize_model_names_to_dicts(v)
             except Exception:  # noqa: BLE001
                 # Fallback if import or normalization fails
