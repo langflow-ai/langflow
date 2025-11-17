@@ -1,6 +1,5 @@
 import asyncio
 import json
-import re
 import traceback
 import uuid
 from collections.abc import AsyncIterator
@@ -10,17 +9,11 @@ from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import StructuredTool
 from langflow.field_typing import Tool
-from langflow.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output, TableInput
-
-# from langflow.logging import logger
-from langflow.schema.data import Data
+from langflow.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
-from langflow.schema.table import EditMode
-from pydantic import ValidationError
 
 from lfx.base.agents.agent import LCToolsAgentComponent
-from lfx.base.agents.events import ExceptionWithMessageError
 from lfx.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
     MODEL_DYNAMIC_UPDATE_FIELDS,
@@ -34,7 +27,6 @@ from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComp
 from lfx.components.models_and_agents.memory import MemoryComponent
 from lfx.custom.custom_component.component import _get_component_toolkit
 from lfx.custom.utils import update_component_build_config
-from lfx.helpers.base_model import build_model_from_schema
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
@@ -61,8 +53,8 @@ class CugaComponent(ToolCallingAgentComponent):
     """Cuga Agent Component for advanced AI task execution.
 
     The Cuga component is an advanced AI agent that can execute complex tasks using
-    various tools, browser automation, and structured output generation. It supports
-    custom policies, web applications, and API interactions.
+    various tools and browser automation. It supports custom policies, web applications,
+    and API interactions.
 
     Attributes:
         display_name: Human-readable name for the component
@@ -80,13 +72,6 @@ class CugaComponent(ToolCallingAgentComponent):
 
     memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
 
-    # Filter out json_mode from OpenAI inputs since we handle structured output differently
-    openai_inputs_filtered = [
-        input_field
-        for input_field in MODEL_PROVIDERS_DICT["OpenAI"]["inputs"]
-        if not (hasattr(input_field, "name") and input_field.name == "json_mode")
-    ]
-
     inputs = [
         DropdownInput(
             name="agent_llm",
@@ -98,7 +83,7 @@ class CugaComponent(ToolCallingAgentComponent):
             input_types=[],
             options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST] + [{"icon": "brain"}],
         ),
-        *openai_inputs_filtered,
+        *MODEL_PROVIDERS_DICT["OpenAI"]["inputs"],
         MultilineInput(
             name="policies",
             display_name="Policies",
@@ -120,67 +105,6 @@ class CugaComponent(ToolCallingAgentComponent):
             info="Number of chat history messages to retrieve.",
             advanced=True,
             show=True,
-        ),
-        MultilineInput(
-            name="format_instructions",
-            display_name="Output Format Instructions",
-            info="Generic Template for structured output formatting. Valid only with Structured response.",
-            value=(
-                "You are an AI that extracts structured JSON objects from unstructured text. "
-                "Use a predefined schema with expected types (str, int, float, bool, dict). "
-                "Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. "
-                "Fill missing or ambiguous values with defaults: null for missing values. "
-                "Remove exact duplicates but keep variations that have different field values. "
-                "Always return valid JSON in the expected format, never throw errors. "
-                "If multiple objects can be extracted, return them all in the structured format."
-            ),
-            advanced=True,
-        ),
-        TableInput(
-            name="output_schema",
-            display_name="Output Schema",
-            info=(
-                "Schema Validation: Define the structure and data types for structured output. "
-                "No validation if no output schema."
-            ),
-            advanced=True,
-            required=False,
-            value=[],
-            table_schema=[
-                {
-                    "name": "name",
-                    "display_name": "Name",
-                    "type": "str",
-                    "description": "Specify the name of the output field.",
-                    "default": "field",
-                    "edit_mode": EditMode.INLINE,
-                },
-                {
-                    "name": "description",
-                    "display_name": "Description",
-                    "type": "str",
-                    "description": "Describe the purpose of the output field.",
-                    "default": "description of field",
-                    "edit_mode": EditMode.POPOVER,
-                },
-                {
-                    "name": "type",
-                    "display_name": "Type",
-                    "type": "str",
-                    "edit_mode": EditMode.INLINE,
-                    "description": ("Indicate the data type of the output field (e.g., str, int, float, bool, dict)."),
-                    "options": ["str", "int", "float", "bool", "dict"],
-                    "default": "str",
-                },
-                {
-                    "name": "multiple",
-                    "display_name": "As List",
-                    "type": "boolean",
-                    "description": "Set to True if this output field should be a list of the specified type.",
-                    "default": "False",
-                    "edit_mode": EditMode.INLINE,
-                },
-            ],
         ),
         *LCToolsAgentComponent.get_base_inputs(),
         BoolInput(
@@ -224,7 +148,6 @@ class CugaComponent(ToolCallingAgentComponent):
     ]
     outputs = [
         Output(name="response", display_name="Response", method="message_response"),
-        Output(name="structured_response", display_name="Structured Response", method="json_response", tool_mode=False),
     ]
 
     async def call_agent(
@@ -302,8 +225,10 @@ class CugaComponent(ToolCallingAgentComponent):
             llm_manager = LLMManager()
             llm_manager.set_llm(llm)
             instructions_manager = InstructionsManager()
-            logger.debug(f"policies are: {self.policies}")
-            instructions_manager.set_instructions_from_one_file(self.policies)
+
+            policies_to_use = self.policies or ""
+            logger.debug(f"policies are: {policies_to_use}")
+            instructions_manager.set_instructions_from_one_file(policies_to_use)
             tracker = ActivityTracker()
             tracker.set_tools(tools)
             cuga_agent = CugaAgent(browser_enabled=self.browser_enabled)
@@ -460,9 +385,6 @@ class CugaComponent(ToolCallingAgentComponent):
             logger.info("[CUGA] Agent run finished successfully.")
             logger.info(f"[CUGA] Agent output: {result}")
 
-            # Store result for potential JSON output
-            self._agent_result = result
-
         except Exception as e:
             logger.error(f"[CUGA] Error in message_response: {e}")
             logger.error(f"An error occurred: {e!s}")
@@ -524,211 +446,6 @@ class CugaComponent(ToolCallingAgentComponent):
         # --- ADDED LOGGING END ---
 
         return llm_model, self.chat_history, self.tools
-
-    def _preprocess_schema(self, schema):
-        """Preprocess schema to ensure correct data types for build_model_from_schema.
-
-        This method validates and normalizes the output schema to ensure it's compatible
-        with the Pydantic model building process.
-
-        Args:
-            schema: List of schema field definitions
-
-        Returns:
-            list: Processed schema with validated data types
-        """
-        processed_schema = []
-        for field in schema:
-            processed_field = {
-                "name": str(field.get("name", "field")),
-                "type": str(field.get("type", "str")),
-                "description": str(field.get("description", "")),
-                "multiple": field.get("multiple", False),
-            }
-            # Ensure multiple is handled correctly
-            if isinstance(processed_field["multiple"], str):
-                processed_field["multiple"] = processed_field["multiple"].lower() in ["true", "1", "t", "y", "yes"]
-            processed_schema.append(processed_field)
-        return processed_schema
-
-    async def build_structured_output_base(self, content: str):
-        """Build structured output with optional BaseModel validation.
-
-        This method parses JSON content from the agent response and optionally validates
-        it against a provided schema using Pydantic models.
-
-        Args:
-            content: The raw content from the agent response
-
-        Returns:
-            dict or list: Parsed and optionally validated JSON data
-        """
-        # --- ADDED LOGGING START ---
-        logger.debug(f"[CUGA] Attempting to build structured output from content: {content}")
-        # --- ADDED LOGGING END ---
-
-        json_pattern = r"\{.*\}"
-        schema_error_msg = "Try setting an output schema"
-
-        # Try to parse content as JSON first
-        json_data = None
-        try:
-            json_data = json.loads(content)
-        except json.JSONDecodeError:
-            json_match = re.search(json_pattern, content, re.DOTALL)
-            if json_match:
-                try:
-                    json_data = json.loads(json_match.group())
-                except json.JSONDecodeError:
-                    logger.warning("[CUGA] Could not parse content as JSON even with regex match.")
-                    return {"content": content, "error": schema_error_msg}
-            else:
-                logger.warning("[CUGA] No JSON pattern found in the content.")
-                return {"content": content, "error": schema_error_msg}
-
-        # If no output schema provided, return parsed JSON without validation
-        if not hasattr(self, "output_schema") or not self.output_schema or len(self.output_schema) == 0:
-            logger.debug("[CUGA] No output schema provided. Returning parsed JSON without validation.")
-            return json_data
-
-        # Use BaseModel validation with schema
-        try:
-            logger.debug("[CUGA] Output schema detected. Validating structured output against schema.")
-            processed_schema = self._preprocess_schema(self.output_schema)
-            output_model = build_model_from_schema(processed_schema)
-
-            # Validate against the schema
-            if isinstance(json_data, list):
-                # Multiple objects
-                validated_objects = []
-                for item in json_data:
-                    try:
-                        validated_obj = output_model.model_validate(item)
-                        validated_objects.append(validated_obj.model_dump())
-                    except ValidationError as e:
-                        await logger.aerror(f"[CUGA] Validation error for item: {e}")
-                        validated_objects.append({"data": item, "validation_error": str(e)})
-                return validated_objects
-
-            # Single object
-            try:
-                validated_obj = output_model.model_validate(json_data)
-                return [validated_obj.model_dump()]
-            except ValidationError as e:
-                await logger.aerror(f"[CUGA] Validation error: {e}")
-                return [{"data": json_data, "validation_error": str(e)}]
-
-        except (TypeError, ValueError) as e:
-            await logger.aerror(f"[CUGA] Error building structured output: {e}")
-            return json_data
-
-    async def json_response(self) -> Data:
-        """Convert agent response to structured JSON Data output with schema validation.
-
-        This method generates a structured JSON response by combining system instructions,
-        format instructions, and schema information, then processing the agent's response
-        through structured output validation.
-
-        Returns:
-            Data: Structured data object containing the validated JSON response
-
-        Raises:
-            ExceptionWithMessageError: If there's an error in structured processing
-            ValueError: If there's a validation error
-            TypeError: If there's a type error in processing
-        """
-        # --- ADDED LOGGING START ---
-        logger.debug("[CUGA] Starting Cuga agent run for json_response.")
-        logger.debug(f"[CUGA] Agent input value: {self.input_value}")
-        # --- ADDED LOGGING END ---
-
-        try:
-            system_components = []
-
-            # 1. Agent Instructions
-            agent_instructions = getattr(self, "instructions", "") or ""
-            if agent_instructions:
-                system_components.append(f"{agent_instructions}")
-
-            # 3. Format Instructions
-            format_instructions = getattr(self, "format_instructions", "") or ""
-            if format_instructions:
-                system_components.append(f"Format instructions: {format_instructions}")
-
-            # 4. Schema Information
-            if hasattr(self, "output_schema") and self.output_schema and len(self.output_schema) > 0:
-                try:
-                    processed_schema = self._preprocess_schema(self.output_schema)
-                    output_model = build_model_from_schema(processed_schema)
-                    schema_dict = output_model.model_json_schema()
-                    schema_info = (
-                        "You are given some text that may include format instructions, "
-                        "explanations, or other content alongside a JSON schema.\n\n"
-                        "Your task:\n"
-                        "- Extract only the JSON schema.\n"
-                        "- Return it as valid JSON.\n"
-                        "- Do not include format instructions, explanations, or extra text.\n\n"
-                        "Input:\n"
-                        f"{json.dumps(schema_dict, indent=2)}\n\n"
-                        "Output (only JSON schema):"
-                    )
-                    system_components.append(schema_info)
-                except (ValidationError, ValueError, TypeError, KeyError) as e:
-                    await logger.aerror(f"[CUGA] Could not build schema for prompt: {e}", exc_info=True)
-
-            # Combine all components
-            combined_instructions = "\n\n".join(system_components) if system_components else ""
-
-            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
-
-            # Use call_agent for structured response
-            input_text = self.input_value.text if hasattr(self.input_value, "text") else str(self.input_value)
-
-            # Modify the input to include structured output requirements
-            structured_input = (
-                f"{combined_instructions}\n\nUser Input: {input_text}\n\nPlease provide a structured JSON response."
-            )
-
-            logger.debug(f"[CUGA] Combined system prompt for structured agent: {combined_instructions}")
-
-            content = await self.call_agent(
-                current_input=structured_input,
-                tools=self.tools or [],
-                history_messages=self.chat_history,
-                llm=llm_model,
-            )
-
-            logger.debug(f"[CUGA] Structured agent result: {content}")
-
-        except (ExceptionWithMessageError, ValueError, TypeError, NotImplementedError, AttributeError) as e:
-            await logger.aerror(f"[CUGA] Error with structured agent: {e}")
-            content_str = "No content returned from Cuga agent"
-            return Data(data={"content": content_str, "error": str(e)})
-
-        # Process with structured output validation
-        try:
-            structured_output = await self.build_structured_output_base(content)
-
-            # Handle different output formats
-            if isinstance(structured_output, list) and structured_output:
-                if len(structured_output) == 1:
-                    logger.debug("[CUGA] Structured output is a single object in a list.")
-                    logger.debug(f"[CUGA] Final structured output: {structured_output[0]}")
-                    return Data(data=structured_output[0])
-                logger.debug("[CUGA] Structured output is a list of multiple objects.")
-                logger.debug(f"[CUGA] Final structured output: {structured_output}")
-                return Data(data={"results": structured_output})
-            if isinstance(structured_output, dict):
-                logger.debug("[CUGA] Structured output is a single dictionary.")
-                logger.debug(f"[CUGA] Final structured output: {structured_output}")
-                return Data(data=structured_output)
-            logger.debug("[CUGA] Structured output is not a list or dictionary. Returning raw content.")
-            logger.debug(f"[CUGA] Final output content: {content}")
-            return Data(data={"content": content})
-
-        except (ValueError, TypeError) as e:
-            await logger.aerror(f"[CUGA] Error in structured output processing: {e}")
-            return Data(data={"content": content, "error": str(e)})
 
     async def get_memory_data(self):
         """Retrieve chat history messages.
