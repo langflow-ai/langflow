@@ -265,7 +265,10 @@ class MigrationValidator:
 
     def _has_server_default(self, call: ast.Call) -> bool:
         """Check if call has server_default."""
-        return any(kw.arg == "server_default" for kw in call.keywords)
+        for kw in call.keywords:
+            if kw.arg == "server_default":
+                return True
+        return False
 
     def _has_type_change(self, call: ast.Call) -> bool:
         """Check if alter_column changes type."""
