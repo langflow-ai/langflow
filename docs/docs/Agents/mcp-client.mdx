@@ -19,7 +19,7 @@ The **MCP Tools** component connects to an MCP server so that a [Langflow agent]
 
 This component has two modes, depending on the type of server you want to access:
 
-* [Connect to a non-Langflow MCP server](#mcp-stdio-mode) with a JSON configuration file, a server start command (STDIO mode), or a Streamable HTTP URL to access tools provided by external, non-Langflow MCP servers.
+* [Connect to a non-Langflow MCP server](#mcp-stdio-mode) with a JSON configuration file, a server start command (STDIO mode), or a Streamable HTTP/SSE URL to access tools provided by external, non-Langflow MCP servers.
 * [Connect to a Langflow MCP server](#mcp-sse-mode) to use flows from your [Langflow projects](/concepts-flows#projects) as MCP tools. You must use SSE transport because Langflow MCP servers currently only support SSE.
 
 ### Connect to a non-Langflow MCP server {#mcp-stdio-mode}
@@ -33,7 +33,7 @@ This component has two modes, depending on the type of server you want to access
     * **JSON**: Paste the MCP server's JSON configuration object into the field, including required and optional parameters that you want to use, and then click **Add Server**.
     * **STDIO**: Enter the MCP server's **Name**, **Command**, and any **Arguments** and **Environment Variables** the server uses, and then click **Add Server**.
     For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the **Command** is `uvx mcp-server-fetch`.
-    * **Streamable HTTP**: Enter the MCP server's **Name**, **URL**, and any **Headers** and **Environment Variables** the server uses, and then click **Add Server**.
+    * **Streamable HTTP/SSE**: Enter the MCP server's **Name**, **URL**, and any **Headers** and **Environment Variables** the server uses, and then click **Add Server**.
     Langflow automatically tries Streamable HTTP transport first, and falls back to Server-Sent Events (SSE) transport if Streamable HTTP is not available.
     The URL depends on the specific MCP server you're connecting to. For information about connecting to a Langflow MCP server, see [Connect a Langflow MCP server](#mcp-sse-mode).
 
