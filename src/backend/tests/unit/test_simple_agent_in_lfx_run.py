@@ -11,9 +11,9 @@ import os
 from pathlib import Path
 
 import pytest
-from tests.api_keys import has_api_key
-
 from lfx.utils.async_helpers import run_until_complete
+
+from tests.api_keys import has_api_key
 
 
 class TestAgentInLfxRun:
@@ -164,9 +164,10 @@ async def get_graph() -> Graph:
         """Test the agent workflow by executing the graph directly."""
         # Import the components for direct execution
         try:
-            from lfx import components as cp
             from lfx.graph import Graph
             from lfx.log.logger import LogConfig
+
+            from lfx import components as cp
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 
@@ -232,8 +233,9 @@ async def get_graph() -> Graph:
     async def test_url_component_to_toolkit_functionality(self):
         """Test that URLComponent.to_toolkit() works properly."""
         try:
-            from lfx import components as cp
             from lfx.utils.async_helpers import run_until_complete
+
+            from lfx import components as cp
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 
@@ -263,7 +265,7 @@ async def get_graph() -> Graph:
         agent.set(
             model_name="gpt-4o-mini",
             agent_llm="OpenAI",
-            api_key="test-key",  # Use test key
+            api_key="test-key",  # pragma: allowlist secret
             input_value="Test message",
             tools=[],  # Empty tools for this test
         )
@@ -271,14 +273,15 @@ async def get_graph() -> Graph:
         # Verify configuration was applied
         assert agent.model_name == "gpt-4o-mini"
         assert agent.agent_llm == "OpenAI"
-        assert agent.api_key == "test-key"
+        assert agent.api_key == "test-key"  # pragma: allowlist secret
         assert agent.input_value == "Test message"
 
     def test_chat_output_chaining_pattern(self):
         """Test the chat output chaining pattern."""
         try:
-            from lfx import components as cp
             from lfx.schema.message import Message
+
+            from lfx import components as cp
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 
@@ -333,9 +336,10 @@ async def get_graph() -> Graph:
     def test_complete_workflow_integration(self):
         """Test the complete agent workflow integration."""
         try:
-            from lfx import components as cp
             from lfx.graph import Graph
             from lfx.log.logger import LogConfig
+
+            from lfx import components as cp
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 
