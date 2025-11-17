@@ -244,8 +244,13 @@ class MigrationValidator:
 
     def _is_op_call(self, call: ast.Call, method: str) -> bool:
         """Check if call is op.method()."""
-        if isinstance(call.func, ast.Attribute) and isinstance(call.func.value, ast.Name):
-            return call.func.value.id == "op" and call.func.attr == method
+        func = call.func
+
+        # Avoid multiple attribute resolutions and isinstance checks
+        if type(func) is ast.Attribute:
+            val = func.value
+            if type(val) is ast.Name:
+                return val.id == "op" and func.attr == method
         return False
 
     def _has_nullable_true(self, call: ast.Call) -> bool:
