@@ -368,15 +368,27 @@ class CugaComponent(ToolCallingAgentComponent):
             # Create a wrapper that forces DB updates for event handlers
             # This ensures the UI can see loading steps in real-time via polling
             async def force_db_update_send_message(message, id_=None, *, skip_db_update=False):  # noqa: ARG001
+                from uuid import uuid4
+
                 # Always persist to DB so polling-based UI shows loading steps in real-time
                 content_blocks_len = len(message.content_blocks[0].contents) if message.content_blocks else 0
                 logger.debug(
                     f"[CUGA] Sending message update - state: {message.properties.state}, "
                     f"content_blocks: {content_blocks_len}"
                 )
-                message.id = id_
+
                 result = await self.send_message(message, id_=id_, skip_db_update=False)
-                logger.debug(f"[CUGA] Message saved to DB with ID: {result.id if result else 'None'}")
+
+                # When not connected to ChatOutput, send_message returns message without storing to DB
+                # The message won't have an 'id' in its data dict. Add one manually to satisfy event processing
+                try:
+                    result_id = result.id
+                except AttributeError:
+                    # Message doesn't have id - add it to the data dict
+                    result_id = str(uuid4())
+                    result.data["id"] = result_id
+
+                logger.debug(f"[CUGA] Message processed with ID: {result_id}")
                 return result
 
             result = await process_agent_events(
