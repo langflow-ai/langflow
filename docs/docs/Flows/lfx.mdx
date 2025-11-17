@@ -10,7 +10,7 @@ The Langflow Executor (LFX) is a command-line tool that serves and runs flows st
 
 Flows are run without the flow builder UI or database, and any flow dependencies are automatically added to complete the run.
 The flow graph is stored in memory at all times, so there is less overhead for loading the graph from a database.
-Running a flow with LFX is similar to running flows with the [`--backend-only` environment variable](/environment-variables#server) enabled, but even more lightweight, because the Langflow package and all of its dependencies don't need to be installed.
+Running a flow with LFX is similar to running flows with the [`--backend-only` environment variable](/environment-variables#server) enabled, but even more lightweight because the Langflow package and all of its dependencies don't need to be installed.
 
 Use LFX to share flows with other developers, test flows in different environments, and run flows in production applications without requiring the full Langflow UI or database setup.
 
@@ -21,11 +21,11 @@ LFX includes two commands for executing flows:
 
 ## Prerequisites
 
-- Install [Python](https://www.python.org/downloads/release/python-3100/)
-- Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- Create or download a [flow JSON file](/concepts-flows)
-- Create an [OpenAI API key](https://platform.openai.com/api-keys)
-- Create a [Langflow API key](/api-keys-and-authentication)
+- Install [Python](https://www.python.org/downloads/release/python-3100/).
+- Install [uv](https://docs.astral.sh/uv/getting-started/installation/).
+- Create or download a [flow JSON file](/concepts-flows).
+- Create an [OpenAI API key](https://platform.openai.com/api-keys).
+- Create a [Langflow API key](/api-keys-and-authentication).
 
 ## Install LFX
 
@@ -148,13 +148,10 @@ If you want to use a different provider, edit the model provider, model name, an
     uv run lfx serve simple-agent-flow.json
     ```
 
-    To export new values, stop the server, export the variables, and start the server again.
+    To export new values, stop the server, export the variables, and then start the server again.
 
     </TabItem>
     </Tabs>
-
-
-
 3. The startup process displays a `flow_id` value in the output.
    Copy the `flow_id` to use in the test API call in the next step.
    In this example, the `flow_id` is `c1dab29d-3364-58ef-8fef-99311d32ee42`.
@@ -181,13 +178,13 @@ If you want to use a different provider, edit the model provider, model name, an
      ╰──────────────────────────────────────────────────────────────────────╯
     ```
 
-4. In a new terminal, export your `flow_id` and Langflow API key values as variables.
+4. In a new terminal, export your `flow_id` and Langflow API key values as variables:
     ```bash
     export LANGFLOW_API_KEY="sk..."
     export FLOW_ID="c1dab29d-3364-58ef-8fef-99311d32ee42"
     ```
 
-5. Test the server with an API call to the `/flows/flow_id/run` endpoint.
+5. Test the server with an API call to the `/flows/flow_id/run` endpoint:
 
     ```bash
     curl -X POST http://localhost:8000/flows/$FLOW_ID/run \
@@ -196,7 +193,7 @@ If you want to use a different provider, edit the model provider, model name, an
       -d '{"input_value": "Hello, world!"}'
     ```
 
-    Successful response:
+    Successful response example:
     ```json
     {
       "result": "Hello world! 👋\n\nHow can I help you today? If you have any questions or need assistance, just let me know!",
@@ -221,7 +218,7 @@ To make your server publicly accessible, use a [tunneling service like ngrok](/d
 | `--host`, `-h`                         | Host to bind server. Default: `127.0.0.1` (localhost only). Use `0.0.0.0` to make it publicly accessible from other machines. |
 | `--log-level`                          | Set logging level. Options are `debug`, `info`, `warning`, `error`, or `critical`.            |
 | `--port`, `-p`                         | Port to bind server. Default:`8000`.                                                          |
-| `--verbose`, `-v`                      | Display diagnostic output.                                                                    |
+| `--verbose`, `-v`                      | Print diagnostic output.                                                                    |
 
 ## Run the simple agent flow with `lfx run` {#run}
 
@@ -232,7 +229,7 @@ No Langflow API key is required.
 This example uses the **Agent** component's built-in OpenAI model, which requires an OpenAI API key.
 If you want to use a different provider, edit the model provider, model name, and credentials accordingly.
 
-1. Export your variables in the same terminal session where you'll run the flow.
+1. Export your variables in the same terminal session where you'll run the flow:
     ```bash
     export OPENAI_API_KEY="sk-..."
     ```
@@ -250,7 +247,7 @@ If you want to use a different provider, edit the model provider, model name, an
       --input-value '{"question": "What is the weather in Paris?", "context": "weather"}'
     ```
 
-In addition to running flows from JSON files, `lfx run` supports other input methods, which are described in the sections below.
+In addition to running flows from JSON files, `lfx run` supports other input methods, which are described in the following sections.
 
 ### Run flows from stdin
 
