@@ -269,7 +269,12 @@ class MigrationValidator:
 
     def _has_type_change(self, call: ast.Call) -> bool:
         """Check if alter_column changes type."""
-        return any(kw.arg in ["type_", "type"] for kw in call.keywords)
+        # Optimize: Use a set for lookup and compare kw.arg directly.
+        type_args = {"type_", "type"}
+        for kw in call.keywords:
+            if kw.arg in type_args:
+                return True
+        return False
 
     def _changes_nullable_to_false(self, call: ast.Call) -> bool:
         """Check if alter_column sets nullable=False."""
