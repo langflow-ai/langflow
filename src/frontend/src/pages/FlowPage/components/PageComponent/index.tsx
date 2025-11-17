@@ -131,6 +131,9 @@ export default function Page({
     (state) => state.setLastCopiedSelection,
   );
   const onConnect = useFlowStore((state) => state.onConnect);
+  const setRightClickedNodeId = useFlowStore(
+    (state) => state.setRightClickedNodeId,
+  );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const updateCurrentFlow = useFlowStore((state) => state.updateCurrentFlow);
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
@@ -328,6 +331,12 @@ export default function Page({
     }
   }
 
+  function handleEscape(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+      setRightClickedNodeId(null);
+    }
+  }
+
   function handleDownload(e: KeyboardEvent) {
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
@@ -368,6 +377,8 @@ export default function Page({
   useHotkeys(downloadAction, handleDownload);
   //@ts-ignore
   useHotkeys("delete", handleDelete);
+  //@ts-ignore
+  useHotkeys("escape", handleEscape);
 
   const onConnectMod = useCallback(
     (params: Connection) => {
@@ -588,14 +599,38 @@ export default function Page({
   const onSelectionChange = useCallback(
     (flow: OnSelectionChangeParams): void => {
       setLastSelection(flow);
+      if (flow.nodes && (flow.nodes.length === 0 || flow.nodes.length > 1)) {
+        setRightClickedNodeId(null);
+      }
     },
-    [],
+    [setRightClickedNodeId],
+  );
+
+  const onNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: AllNodeType) => {
+      event.preventDefault();
+      if (isLocked) return;
+
+      // Set the right-clicked node ID to show its dropdown menu
+      setRightClickedNodeId(node.id);
+
+      // Focus/select the right-clicked node (same as left-click behavior)
+      setNodes((currentNodes) => {
+        return currentNodes.map((n) => ({
+          ...n,
+          selected: n.id === node.id,
+        }));
+      });
+    },
+    [isLocked, setRightClickedNodeId, setNodes],
   );
 
   const onPaneClick = useCallback(
     (event: React.MouseEvent) => {
       setFilterEdge([]);
       setFilterComponent("");
+      // Hide right-click dropdown when clicking on the pane
+      setRightClickedNodeId(null);
       if (isAddingNote) {
         const shadowBox = document.getElementById("shadow-box");
         if (shadowBox) {
@@ -769,6 +804,7 @@ export default function Page({
               onPaneClick={onPaneClick}
               onEdgeClick={handleEdgeClick}
               onKeyDown={handleKeyDown}
+              onNodeContextMenu={onNodeContextMenu}
             >
               <FlowBuildingComponent />
               <UpdateAllComponents />

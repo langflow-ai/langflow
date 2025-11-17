@@ -1,4 +1,5 @@
 import json
+import re
 import sys
 import tempfile
 from functools import partial
@@ -243,9 +244,12 @@ async def run(
             if "ModuleNotFoundError" in str(e) or "No module named" in str(e):
                 logger.info("This appears to be a missing dependency issue")
                 if "langchain" in str(e).lower():
-                    logger.info(
-                        "Missing LangChain dependency detected. Try: pip install langchain-<provider>",
-                    )
+                    match = re.search(r"langchain_(.*)", str(e).lower())
+                    if match:
+                        module_name = match.group(1)
+                        logger.info(
+                            f"Missing LangChain dependency detected. Try: pip install langchain-{module_name}",
+                        )
             elif "ImportError" in str(e):
                 logger.info("This appears to be an import issue - check component dependencies")
             elif "AttributeError" in str(e):

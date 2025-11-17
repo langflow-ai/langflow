@@ -8,12 +8,18 @@ export const updateMessage = (updatedMessage: Message) => {
       { id: updatedMessage.flow_id, session_id: updatedMessage.session_id },
     ],
     (old: Message[]) => {
+      const newMessage = { ...updatedMessage };
+      if (newMessage.properties?.state === "partial") {
+        newMessage.text = (old.find((message) => message.id === updatedMessage.id)?.text || "") + (newMessage.text || "");
+      } else {
+        newMessage.text = updatedMessage.text;
+      }
       return (
-        old.find((message) => message.id === updatedMessage.id)
+        old.find((message) => message.id === newMessage.id)
           ? old.map((message) =>
-              message.id === updatedMessage.id ? updatedMessage : message,
+              message.id === newMessage.id ? newMessage : message,
             )
-          : [...old, updatedMessage]
+          : [...old, newMessage]
       ).filter((message) => message.id !== null);
     },
   );
