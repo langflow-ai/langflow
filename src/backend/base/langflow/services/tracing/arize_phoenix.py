@@ -14,6 +14,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from openinference.semconv.trace import OpenInferenceMimeTypeValues, SpanAttributes
+from opentelemetry.sdk.trace.export import SpanProcessor
 from opentelemetry.semconv.trace import SpanAttributes as OTELSpanAttributes
 from opentelemetry.trace import Span, Status, StatusCode, use_span
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
@@ -34,6 +35,30 @@ if TYPE_CHECKING:
     from langflow.services.tracing.schema import Log
 
 
+class CollectingSpanProcessor(SpanProcessor):
+    def __init__(self):
+        self.spans = []
+        self.correlation_id = None
+
+    def on_start(self, span, parent_context=None):
+        # Generate the correlation ID once
+        if self.correlation_id is None:
+            self.correlation_id = str(uuid.uuid4())
+
+        # Inject into the CHAIN & LLM spans
+        if span.name in ("Langflow", "Language Model"):
+            span.set_attribute("langflow.correlation_id", self.correlation_id)
+
+    def on_end(self, span):
+        self.spans.append(span)
+
+    def shutdown(self):
+        pass
+
+    def force_flush(self):
+        pass
+
+
 class ArizePhoenixTracer(BaseTracer):
     flow_name: str
     flow_id: str
@@ -48,11 +73,11 @@ class ArizePhoenixTracer(BaseTracer):
         self.trace_type = trace_type
         self.project_name = project_name
         self.trace_id = trace_id
+        self.session_id = session_id
         self.flow_name = trace_name.split(" - ")[0]
         self.flow_id = trace_name.split(" - ")[-1]
         self.chat_input_value = ""
         self.chat_output_value = ""
-        self.session_id = session_id
 
         try:
             self._ready = self.setup_arize_phoenix()
@@ -64,14 +89,18 @@ class ArizePhoenixTracer(BaseTracer):
             self.carrier: dict[Any, CarrierT] = {}
 
             self.root_span = self.tracer.start_span(
-                name=self.flow_id,
+                name="Langflow",
                 start_time=self._get_current_timestamp(),
             )
             self.root_span.set_attribute(SpanAttributes.SESSION_ID, self.session_id or self.flow_id)
             self.root_span.set_attribute(SpanAttributes.OPENINFERENCE_SPAN_KIND, self.trace_type)
-            self.root_span.set_attribute("langflow.project.name", self.project_name)
-            self.root_span.set_attribute("langflow.flow.name", self.flow_name)
-            self.root_span.set_attribute("langflow.flow.id", self.flow_id)
+            self.root_span.set_attribute("langflow.trace_name", self.trace_name)
+            self.root_span.set_attribute("langflow.trace_type", self.trace_type)
+            self.root_span.set_attribute("langflow.project_name", self.project_name)
+            self.root_span.set_attribute("langflow.trace_id", str(self.trace_id))
+            self.root_span.set_attribute("langflow.session_id", str(self.session_id))
+            self.root_span.set_attribute("langflow.flow_name", self.flow_name)
+            self.root_span.set_attribute("langflow.flow_id", self.flow_id)
 
             with use_span(self.root_span, end_on_exit=False):
                 self.propagator.inject(carrier=self.carrier)
@@ -162,6 +191,10 @@ class ArizePhoenixTracer(BaseTracer):
                     )
                 )
 
+            collecting_processor = CollectingSpanProcessor()
+            tracer_provider.add_span_processor(collecting_processor)
+
+            self.collecting_processor = collecting_processor
             self.tracer_provider = tracer_provider
         except ImportError:
             logger.exception(
@@ -284,32 +317,44 @@ class ArizePhoenixTracer(BaseTracer):
                 for key, value in processed_metadata.items():
                     self.root_span.set_attribute(f"{SpanAttributes.METADATA}.{key}", value)
 
-            langflow_unique_id = str(uuid.uuid4())
-            self.root_span.set_attribute("langflow_unique_id", langflow_unique_id)
+            correlation_id = str(uuid.uuid4())
+            # self.root_span.set_attribute("langflow.correlation_id", correlation_id)
 
-            try:
-                from openinference.instrumentation.langchain import get_current_span
+            # try:
+            #     from openinference.instrumentation.langchain import get_current_span
 
-                langchain_span = get_current_span()
-                logger.info("[Arize/Phoenix] LangChain Current Span: %s", str(langchain_span))
-                if langchain_span is not None:
-                    langchain_span.set_attribute("langflow_unique_id", langflow_unique_id)
-            except Exception as e:  # noqa: BLE001
-                logger.error("[Arize/Phoenix] Error Getting LangChain Current Span: %s", str(e), exc_info=True)
+            #     langchain_span = get_current_span()
+            #     logger.info("[Arize/Phoenix] LangChain Current Span: %s", str(langchain_span))
+            #     if langchain_span is not None:
+            #         langchain_span.set_attribute("langflow.correlation_id", correlation_id)
+            # except Exception as e:  # noqa: BLE001
+            #     logger.error("[Arize/Phoenix] Error Getting LangChain Current Span: %s", str(e), exc_info=True)
 
-            try:
-                from openinference.instrumentation.langchain import get_ancestor_spans
+            # try:
+            #     from openinference.instrumentation.langchain import get_ancestor_spans
 
-                langchain_spans = get_ancestor_spans()
-                logger.info("[Arize/Phoenix] LangChain Ancestor Spans: %s", str(langchain_spans))
-                for langchain_span in langchain_spans:
-                    if langchain_span is not None:
-                        langchain_span.set_attribute("langflow_unique_id", langflow_unique_id)
-            except Exception as e:  # noqa: BLE001
-                logger.error("[Arize/Phoenix] Error Getting LangChain Ancestor Spans: %s", str(e), exc_info=True)
+            #     langchain_spans = get_ancestor_spans()
+            #     logger.info("[Arize/Phoenix] LangChain Ancestor Spans: %s", str(langchain_spans))
+            #     for langchain_span in langchain_spans:
+            #         if langchain_span is not None:
+            #             langchain_span.set_attribute("langflow.correlation_id", correlation_id)
+            # except Exception as e:  # noqa: BLE001
+            #     logger.error("[Arize/Phoenix] Error Getting LangChain Ancestor Spans: %s", str(e), exc_info=True)
 
             self._set_span_status(self.root_span, error)
             self.root_span.end(end_time=self._get_current_timestamp())
+
+            all_collected_spans = self.collecting_processor.spans
+            logger.info(f"[Arize/Phoenix] Total Collected Spans: {len(all_collected_spans)}")
+            for span in all_collected_spans:
+                logger.info(f"[Arize/Phoenix] Span Name: {span.name}, Span ID: {span.context.span_id}")
+                if span.name in ("Langflow TODO", "Language Model TODO"):
+                    try:
+                        logger.info("[Arize/Phoenix] Setting Langflow Unique ID")
+                        span.set_attribute("langflow.correlation_id", correlation_id)
+                        span.end(end_time=self._get_current_timestamp())
+                    except Exception as e:  # noqa: BLE001
+                        logger.error("[Arize/Phoenix] Error Setting Langflow Unique ID: %s", str(e), exc_info=True)
         try:
             from openinference.instrumentation.langchain import LangChainInstrumentor
 
