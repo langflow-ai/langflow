@@ -312,8 +312,11 @@ class MigrationValidator:
 
     def _find_function(self, tree: ast.Module, name: str) -> ast.FunctionDef | None:
         """Find a function by name in the AST."""
-        for node in ast.walk(tree):
+        for node in tree.body:
             if isinstance(node, ast.FunctionDef) and node.name == name:
+                return node
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name == name and node not in tree.body:
                 return node
         return None
 
