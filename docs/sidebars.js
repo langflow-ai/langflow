@@ -267,13 +267,24 @@ module.exports = {
           label: "Core components",
           items: [
             "Components/components-io",
-            "Components/components-agents",
+
             {
               type: "category",
-              label: "Models",
+              label: "Models and Agents",
               items: [
+                "Components/components-agents",
                 "Components/components-models",
                 "Components/components-embedding-models",
+                {
+                  type: "link",
+                  label: "MCP tools",
+                  href: "/components-agents#mcp-connection",
+                },
+                {
+                  type: "link",
+                  label: "Message history",
+                  href: "/components-helpers#messagehistory",
+                },
               ]
             },
             "Components/components-data",
