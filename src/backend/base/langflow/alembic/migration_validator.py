@@ -163,14 +163,29 @@ class MigrationValidator:
         """Check alter_column operations."""
         violations = []
 
+        # Combine keyword scanning for higher efficiency
+        has_type_change = False
+        changes_nullable_to_false = False
+        # Single pass over call.keywords, O(n)
+        for keyword in call.keywords:
+            arg = keyword.arg
+            if not has_type_change and arg in ("type_", "type"):
+                has_type_change = True
+            elif not changes_nullable_to_false and arg == "nullable" and isinstance(keyword.value, ast.Constant):
+                if keyword.value.value is False:
+                    changes_nullable_to_false = True
+            # Early exit if both found
+            if has_type_change and changes_nullable_to_false:
+                break
+
         # Check for type changes
-        if self._has_type_change(call) and phase != MigrationPhase.CONTRACT:
+        if has_type_change and phase != MigrationPhase.CONTRACT:
             violations.append(
                 Violation("DIRECT_TYPE_CHANGE", "Type changes should use expand-contract pattern", call.lineno)
             )
 
         # Check for nullable changes
-        if self._changes_nullable_to_false(call) and phase != MigrationPhase.CONTRACT:
+        if changes_nullable_to_false and phase != MigrationPhase.CONTRACT:
             violations.append(
                 Violation(
                     "BREAKING_ADD_COLUMN", "Making column non-nullable only allowed in CONTRACT phase", call.lineno
