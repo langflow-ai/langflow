@@ -280,7 +280,7 @@ class MigrationValidator:
 
     ### Helper method to check for existence checks around operations.
     # It looks for if statements that might be checking column existence
-    # I'm wondering if this is sufficient or if more sophisticated analysis is needed ###
+    # TODO: Evaluate if more sophisticated analysis is needed for existence checks
     def _has_existence_check_nearby(self, func_node: ast.FunctionDef, target_call: ast.Call) -> bool:
         """Check if operation is wrapped in existence check."""
         # Look for if statements that might be checking column existence
