@@ -46,8 +46,8 @@ export const useGetSessionsFromFlowQuery: useQueryFunctionType<
       sessionIds = Array.from(sessionIdsSet) as string[];
     }
 
-    sessionIds = sessionIds.filter((id) => id !== flowId);
-    if (flowId) {
+    if (flowId && (sessionIds.includes(flowId) || sessionIds.length === 0)) {
+      sessionIds = sessionIds.filter((id) => id !== flowId);
       sessionIds.unshift(flowId);
     }
 
