@@ -20,6 +20,7 @@ from langflow.api.v1 import (
     models_router,
     monitor_router,
     openai_responses_router,
+    agent_observability_router,
     projects_router,
     published_flows_router,
     spec_router,
@@ -62,6 +63,7 @@ router_v1.include_router(mcp_router)
 router_v1.include_router(models_router)
 router_v1.include_router(monitor_router)
 router_v1.include_router(openai_responses_router)
+router_v1.include_router(agent_observability_router)
 router_v1.include_router(projects_router)
 router_v1.include_router(published_flows_router)
 router_v1.include_router(spec_router)

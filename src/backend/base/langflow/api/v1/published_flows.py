@@ -894,3 +894,163 @@ async def delete_published_flow(
     await session.commit()
 
     return {"message": "Published flow deleted successfully"}
+
+
+# ---------------------------
+# Input Sample Management
+# ---------------------------
+
+@router.patch("/input-samples/{sample_id}", response_model=PublishedFlowInputSampleRead, status_code=status.HTTP_200_OK)
+async def patch_input_sample(
+    sample_id: UUID,
+    payload: dict,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+):
+    """
+    Update editable fields of a PublishedFlowInputSample.
+
+    Allowed updates:
+    - sample_text (list[str])
+    - sample_output (dict)
+
+    file_names are immutable via PATCH and must be removed via DELETE endpoints.
+    """
+    # Fetch sample
+    sample = await session.get(PublishedFlowInputSample, sample_id)
+    if not sample:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Input sample not found")
+
+    # Permission: only owner of published flow can edit
+    published_flow = await session.get(PublishedFlow, sample.published_flow_id)
+    if not published_flow or published_flow.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to edit this input sample")
+
+    # Apply updates (only allowed keys)
+    updated = False
+    if "sample_text" in payload:
+        val = payload.get("sample_text")
+        if val is not None and not isinstance(val, list):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="sample_text must be a list of strings or null")
+        sample.sample_text = val
+        updated = True
+    if "sample_output" in payload:
+        val = payload.get("sample_output")
+        if val is not None and not isinstance(val, dict):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="sample_output must be an object or null")
+        sample.sample_output = val
+        updated = True
+
+    if not updated:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No valid fields to update")
+
+    sample.updated_at = datetime.now(timezone.utc)
+    session.add(sample)
+    await session.commit()
+    await session.refresh(sample)
+
+    return PublishedFlowInputSampleRead.model_validate(sample, from_attributes=True)
+
+
+@router.delete("/input-samples/{sample_id}", status_code=status.HTTP_200_OK)
+async def delete_input_sample(
+    sample_id: UUID,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+):
+    """
+    Delete an entire PublishedFlowInputSample record. Only the owner of the published flow can delete.
+    """
+    sample = await session.get(PublishedFlowInputSample, sample_id)
+    if not sample:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Input sample not found")
+
+    published_flow = await session.get(PublishedFlow, sample.published_flow_id)
+    if not published_flow or published_flow.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to delete this input sample")
+
+    await session.delete(sample)
+    await session.commit()
+
+    return {"message": "Input sample deleted successfully"}
+
+
+@router.delete("/input-samples/{sample_id}/file", status_code=status.HTTP_200_OK)
+async def delete_input_sample_file(
+    sample_id: UUID,
+    name: Annotated[str, Query(min_length=1, description="Exact file path or name to remove")],
+    session: DbSession,
+    current_user: CurrentActiveUser,
+):
+    """
+    Remove a single file entry from the input sample's file_names list.
+    Matches exact string equality on the stored value.
+    """
+    sample = await session.get(PublishedFlowInputSample, sample_id)
+    if not sample:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Input sample not found")
+
+    published_flow = await session.get(PublishedFlow, sample.published_flow_id)
+    if not published_flow or published_flow.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to modify this input sample")
+
+    file_names = sample.file_names or []
+    new_files = [f for f in file_names if f != name]
+    if len(new_files) == len(file_names):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File entry not found in sample")
+
+    sample.file_names = new_files if new_files else None
+    sample.updated_at = datetime.now(timezone.utc)
+    session.add(sample)
+    await session.commit()
+    await session.refresh(sample)
+
+    return PublishedFlowInputSampleRead.model_validate(sample, from_attributes=True)
+
+
+@router.delete("/input-samples/{sample_id}/text", status_code=status.HTTP_200_OK)
+async def delete_input_sample_text(
+    sample_id: UUID,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    index: int | None = Query(default=None, ge=0, description="Index of the text entry to remove"),
+    value: str | None = Query(default=None, description="Exact text value to remove (first occurrence)"),    
+):
+    """
+    Remove a text entry from the input sample's sample_text list.
+    You can specify either an index or a value; if both are provided, index takes precedence.
+    """
+    sample = await session.get(PublishedFlowInputSample, sample_id)
+    if not sample:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Input sample not found")
+
+    published_flow = await session.get(PublishedFlow, sample.published_flow_id)
+    if not published_flow or published_flow.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to modify this input sample")
+
+    texts = sample.sample_text or []
+    if not texts:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No sample_text entries to remove")
+
+    removed = False
+    if index is not None:
+        if index < 0 or index >= len(texts):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Index out of range")
+        texts.pop(index)
+        removed = True
+    elif value is not None:
+        try:
+            texts.remove(value)
+            removed = True
+        except ValueError:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Text value not found")
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Provide index or value to remove")
+
+    sample.sample_text = texts if texts else None
+    sample.updated_at = datetime.now(timezone.utc)
+    session.add(sample)
+    await session.commit()
+    await session.refresh(sample)
+
+    return PublishedFlowInputSampleRead.model_validate(sample, from_attributes=True)

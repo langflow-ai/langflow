@@ -13,6 +13,10 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import {
   usePublishFlow,
   useValidateMarketplaceName,
+  useGetPublishedFlow,
+  usePatchInputSample,
+  useDeleteInputSampleFile,
+  useDeleteInputSampleText,
   type PublishCheckResponse,
 } from "@/controllers/API/queries/published-flows";
 import {
@@ -75,12 +79,38 @@ export default function PublishFlowModal({
   const [sampleTexts, setSampleTexts] = useState<string[]>([""]); // show one placeholder by default
 
   const { mutate: publishFlow, isPending } = usePublishFlow();
+  // Ensure `publishedFlowId` is `string | undefined` (coerce possible `null` to `undefined`)
+  const publishedFlowId: string | undefined = existingPublishedData?.published_flow_id ?? undefined;
+  const { mutate: patchInputSample } = usePatchInputSample(publishedFlowId);
+  const { mutate: deleteInputSampleFile } = useDeleteInputSampleFile(publishedFlowId);
+  const { mutate: deleteInputSampleText } = useDeleteInputSampleText(publishedFlowId);
   const { mutateAsync: getUploadUrl } = usePostUploadPresignedUrl();
   const { mutateAsync: uploadToBlob } = useUploadToBlob();
   const { validateFileSize } = useFileSizeValidator();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
+
+  // Fetch existing published flow details (including input samples) if available
+  const { data: publishedFlowData } = useGetPublishedFlow(publishedFlowId);
+
+  // Derived lists for existing sample files and texts grouped by sample record
+  const existingSampleRecords = (publishedFlowData?.input_samples ?? []) as Array<{
+    id: string;
+    file_names?: string[] | null;
+    sample_text?: string[] | null;
+  }>;
+  const existingFiles = useMemo(
+    () =>
+      existingSampleRecords.flatMap((rec) =>
+        (rec.file_names ?? []).map((fname) => ({
+          displayName: fname.split("/").pop() || fname,
+          rawName: fname,
+          sampleId: rec.id,
+        }))
+      ),
+    [existingSampleRecords]
+  );
 
   // Detect presence of inputs in the current flow to conditionally render sections
   const hasTextOrChatInput = useMemo(() => {
@@ -638,6 +668,40 @@ export default function PublishFlowModal({
                       ))}
                     </div>
                   )}
+
+                  {/* Existing Sample Files (from published data) */}
+                  {existingFiles.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      <p className="text-xs text-muted-foreground">Existing files</p>
+                      <div className="flex flex-wrap gap-2">
+                        {existingFiles.map((f) => (
+                          <div key={`${f.sampleId}-${f.rawName}`} className="flex items-center gap-2 bg-muted px-2 py-1 rounded">
+                            <span className="text-xs">{f.displayName}</span>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                            onClick={() =>
+                              deleteInputSampleFile(
+                                { sample_id: f.sampleId, name: f.rawName },
+                                {
+                                  onError: (error: any) =>
+                                    setErrorData({
+                                      title: "Failed to remove file",
+                                      list: [error?.response?.data?.detail || error?.message || "Unknown error"],
+                                    }),
+                                }
+                              )
+                            }
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -662,6 +726,57 @@ export default function PublishFlowModal({
                           <Button type="button" size="sm" variant="ghost" onClick={() => removeSampleText(idx)}>
                             <X className="h-4 w-4" />
                           </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Existing Sample Texts (grouped by sample record) */}
+                  {existingSampleRecords.length > 0 && (
+                    <div className="mt-2 space-y-2">
+                      <p className="text-xs text-muted-foreground">Existing sample texts</p>
+                      {existingSampleRecords.map((rec) => (
+                        <div key={`existing-sample-texts-${rec.id}`} className="space-y-2">
+                          {(rec.sample_text ?? []).map((txt, index) => (
+                            <div key={`${rec.id}-${index}`} className="flex items-center gap-2">
+                              <Input
+                                defaultValue={txt}
+                                onBlur={(e) => {
+                                  const next = [...(rec.sample_text ?? [])];
+                                  next[index] = e.target.value;
+                                  patchInputSample(
+                                    { sample_id: rec.id, data: { sample_text: next } },
+                                    {
+                                      onError: (error: any) =>
+                                        setErrorData({
+                                          title: "Failed to update sample text",
+                                          list: [error?.response?.data?.detail || error?.message || "Unknown error"],
+                                        }),
+                                    }
+                                  );
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() =>
+                                  deleteInputSampleText(
+                                    { sample_id: rec.id, index },
+                                    {
+                                      onError: (error: any) =>
+                                        setErrorData({
+                                          title: "Failed to remove sample text",
+                                          list: [error?.response?.data?.detail || error?.message || "Unknown error"],
+                                        }),
+                                    }
+                                  )
+                                }
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
                         </div>
                       ))}
                     </div>
