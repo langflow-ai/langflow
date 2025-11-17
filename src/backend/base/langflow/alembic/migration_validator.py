@@ -196,20 +196,16 @@ class MigrationValidator:
 
     def _check_contract_phase_requirements(self, content: str) -> list[Violation]:
         """Check CONTRACT phase specific requirements."""
-        violations = []
-
-        # Check for data verification before dropping
-        if "SELECT" not in content or "COUNT" not in content:
-            violations.append(
+        if not ("SELECT" in content and "COUNT" in content):
+            return [
                 Violation(
                     "MISSING_DATA_CHECK",
                     "CONTRACT phase should verify data migration before dropping columns",
                     1,
                     severity="warning",
                 )
-            )
-
-        return violations
+            ]
+        return []
 
     def _check_downgrade_safety(self, node: ast.FunctionDef, phase: MigrationPhase) -> list[Violation]:
         """Check downgrade function for safety issues."""
