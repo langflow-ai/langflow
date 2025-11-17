@@ -10,7 +10,9 @@ export const updateMessage = (updatedMessage: Message) => {
     (old: Message[]) => {
       const newMessage = { ...updatedMessage };
       if (newMessage.properties?.state === "partial") {
-        newMessage.text = (old.find((message) => message.id === updatedMessage.id)?.text || "") + (newMessage.text || "");
+        newMessage.text =
+          (old.find((message) => message.id === updatedMessage.id)?.text ||
+            "") + (newMessage.text || "");
       } else {
         newMessage.text = updatedMessage.text;
       }
