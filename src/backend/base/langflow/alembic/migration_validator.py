@@ -216,23 +216,45 @@ class MigrationValidator:
         warnings = []
 
         # Check if downgrade might lose data
+
+        # Avoid repetitive ast.unparse by caching once
+        func_content = None
+        func_content_lower = None
+        alter_call_lines = set()
+
+        # Gather all ast.Call nodes representing op.alter_column via a fast single walk
+        # This avoids redundant ast.unparse(node) calls for repeated violations
         for child in ast.walk(node):
             if isinstance(child, ast.Call) and self._is_op_call(child, "alter_column"):
-                # Check if there's a backup mechanism
-                func_content = ast.unparse(node)
-                if "backup" not in func_content.lower() and "SELECT" not in func_content:
+                alter_call_lines.add(child.lineno)
+
+        # If any alter_column calls were found, perform ast.unparse just once
+        if alter_call_lines:
+            func_content = ast.unparse(node)
+            func_content_lower = func_content.lower()
+
+            # "backup" not in func_content.lower() and "SELECT" not in func_content
+            backup_missing = "backup" not in func_content_lower
+            select_missing = "SELECT" not in func_content
+            if backup_missing and select_missing:
+                # All relevant lines receive a warning (preserving same logic)
+                for lineno in alter_call_lines:
                     warnings.append(
                         Violation(
                             "UNSAFE_ROLLBACK",
                             "Downgrade drops column without checking/backing up data",
-                            child.lineno,
+                            lineno,
                             severity="warning",
                         )
                     )
 
         # CONTRACT phase special handling
         if phase == MigrationPhase.CONTRACT:
-            func_content = ast.unparse(node)
+            # func_content hasn't been assigned if no alter_column found
+            # Only now parse if not already done
+            if func_content is None:
+                func_content = ast.unparse(node)
+
             if "NotImplementedError" not in func_content and "raise" not in func_content:
                 warnings.append(
                     Violation(
