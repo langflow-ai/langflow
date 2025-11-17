@@ -1,0 +1,3 @@
+FAILED: langchain-pinecone
+FAILED: langchain-unstructured
+FAILED: langchain-nvidia-ai-endpoints

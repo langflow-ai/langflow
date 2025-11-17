@@ -20,11 +20,11 @@ dependencies = [
     "langflow-base~=0.5.0",
     "beautifulsoup4==4.12.3",
     "google-search-results>=2.4.1,<3.0.0",
-    "google-api-python-client==2.154.0",
+    "google-api-python-client>=2.154.0",
     "huggingface-hub[inference]>=0.23.2,<1.0.0",
     "networkx==3.4.2",
     "fake-useragent==1.5.1",
-    "pyarrow==19.0.0",
+    "pyarrow>=19.0.0,<22",
     "wikipedia==1.4.0",
     "qdrant-client==1.9.2",
     "weaviate-client==4.10.2",
@@ -47,7 +47,6 @@ dependencies = [
     "qianfan==0.3.5",
     "pgvector==0.3.6",
     "langchain~=1.0.0",
-    "elasticsearch==8.16.0",
     "pytube==15.0.0",
     "dspy-ai==2.5.41",
     "datasets>2.14.7",
@@ -75,28 +74,6 @@ dependencies = [
     "pydantic-settings>=2.2.0,<3.0.0",
     "duckduckgo_search==7.2.1",
     "opensearch-py==2.8.0",
-
-    "langchain-google-genai",
-    "langchain-cohere",
-    "langchain-huggingface",
-    "langchain-anthropic",
-    "langchain-astradb",
-    "langchain-openai",
-    "langchain-google-vertexai",
-    "langchain-groq",
-    "langchain-pinecone",
-    "langchain-mistralai",
-    "langchain-chroma",
-    "langchain-aws",
-    "langchain-unstructured",
-    "langchain-milvus",
-    "langchain-mongodb",
-    "langchain-nvidia-ai-endpoints",
-    "langchain-google-calendar-tools",
-    "langchain-google-community",
-    "langchain-elasticsearch",
-    "langchain-ollama",
-    "langchain-sambanova",
     "langchain-community",
     "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
     "atlassian-python-api==3.41.16",
@@ -130,6 +107,22 @@ dependencies = [
     "aiosqlite==0.21.0",
     "fastparquet>=2024.11.0",
     "traceloop-sdk>=0.43.1",
+    "langchain-astradb>=1.0.0",
+    "langchain-google-genai>=3.0.3",
+    "langchain-cohere>=0.5.0",
+    "langchain-huggingface>=1.0.1",
+    "langchain-anthropic>=1.1.0",
+    "langchain-openai>=1.0.3",
+    "langchain-google-vertexai>=3.0.3",
+    "langchain-groq>=1.0.1",
+    "langchain-mistralai>=1.0.1",
+    "langchain-aws>=1.0.0",
+    "langchain-milvus>=0.3.0",
+    "langchain-mongodb>=0.7.1",
+    "langchain-google-calendar-tools>=0.0.1",
+    "langchain-google-community>=3.0.1",
+    "langchain-ollama>=1.0.0",
+    "langchain-sambanova>=1.0.0",
 ]
 
 [dependency-groups]
@@ -213,6 +206,13 @@ docling = [
 audio = [
     "webrtcvad>=2.0.10",
 ]
+
+# elasticsearch and langchain-elasticsearch are currently incompatible with langchain-core>=1.0.0
+# Uncomment when compatible versions are available
+# elasticsearch = [
+#     "elasticsearch==8.16.0",
+#     "langchain-elasticsearch",
+# ]
 
 couchbase = [
     "couchbase>=4.2.1"
