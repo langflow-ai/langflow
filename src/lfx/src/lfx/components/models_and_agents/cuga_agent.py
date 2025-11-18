@@ -188,14 +188,14 @@ class CugaComponent(ToolCallingAgentComponent):
             "name": "CUGA_initializing",
             "data": {"input": {"input": current_input, "chat_history": []}},
         }
-        logger.debug(f"LLM MODEL TYPE: {type(llm)}")
+        logger.debug(f"[CUGA] LLM MODEL TYPE: {type(llm)}")
         if current_input:
             # Import settings first
             from cuga.config import settings
 
             # Use Dynaconf's set() method to update settings dynamically
             # This properly updates the settings object without corruption
-            logger.debug("Updating CUGA settings via Dynaconf set() method")
+            logger.debug("[CUGA] Updating CUGA settings via Dynaconf set() method")
 
             settings.advanced_features.registry = False
             settings.advanced_features.lite_mode = self.lite_mode
@@ -203,11 +203,11 @@ class CugaComponent(ToolCallingAgentComponent):
             settings.advanced_features.decomposition_strategy = self.decomposition_strategy
 
             if self.browser_enabled:
-                logger.debug("browser_enabled is true, setting mode to hybrid")
+                logger.debug("[CUGA] browser_enabled is true, setting mode to hybrid")
                 settings.advanced_features.mode = "hybrid"
                 settings.advanced_features.use_vision = False
             else:
-                logger.debug("browser_enabled is false, setting mode to api")
+                logger.debug("[CUGA] browser_enabled is false, setting mode to api")
                 settings.advanced_features.mode = "api"
 
             from cuga.backend.activity_tracker.tracker import ActivityTracker
@@ -237,7 +237,7 @@ class CugaComponent(ToolCallingAgentComponent):
             instructions_manager = InstructionsManager()
 
             policies_to_use = self.policies or ""
-            logger.debug(f"policies are: {policies_to_use}")
+            logger.debug(f"[CUGA] policies are: {policies_to_use}")
             instructions_manager.set_instructions_from_one_file(policies_to_use)
             tracker = ActivityTracker()
             tracker.set_tools(tools)
@@ -275,9 +275,9 @@ class CugaComponent(ToolCallingAgentComponent):
                 tool_run_id: str | None = None
                 # 3. Chain end event with AgentFinish
                 async for event in cuga_agent.run_task_generic_yield(eval_mode=False, goal=current_input):
-                    logger.debug(f"recieved event {event}")
+                    logger.debug(f"[CUGA] recieved event {event}")
                     if last_event is not None and tool_run_id is not None:
-                        logger.debug(f"last event {last_event}")
+                        logger.debug(f"[CUGA] last event {last_event}")
                         try:
                             # TODO: Extract data
                             data_dict = json.loads(last_event.data)
@@ -316,8 +316,8 @@ class CugaComponent(ToolCallingAgentComponent):
                         yield end_event
 
             except (ValueError, TypeError, RuntimeError, ConnectionError) as e:
-                logger.error(f"An error occurred: {e!s}")
-                logger.error(f"Traceback: {traceback.format_exc()}")
+                logger.error(f"[CUGA] An error occurred: {e!s}")
+                logger.error(f"[CUGA] Traceback: {traceback.format_exc()}")
                 error_msg = f"CUGA Agent error: {e!s}"
                 logger.error(f"[CUGA] Error occurred: {error_msg}")
 
@@ -378,8 +378,6 @@ class CugaComponent(ToolCallingAgentComponent):
             # Create a wrapper that forces DB updates for event handlers
             # This ensures the UI can see loading steps in real-time via polling
             async def force_db_update_send_message(message, id_=None, *, skip_db_update=False):  # noqa: ARG001
-                from uuid import uuid4
-
                 # Always persist to DB so polling-based UI shows loading steps in real-time
                 content_blocks_len = len(message.content_blocks[0].contents) if message.content_blocks else 0
                 logger.debug(
@@ -395,7 +393,7 @@ class CugaComponent(ToolCallingAgentComponent):
                     result_id = result.id
                 except AttributeError:
                     # Message doesn't have id - add it to the data dict
-                    result_id = str(uuid4())
+                    result_id = str(uuid.uuid4())
                     result.data["id"] = result_id
 
                 logger.debug(f"[CUGA] Message processed with ID: {result_id}")
@@ -410,8 +408,8 @@ class CugaComponent(ToolCallingAgentComponent):
 
         except Exception as e:
             logger.error(f"[CUGA] Error in message_response: {e}")
-            logger.error(f"An error occurred: {e!s}")
-            logger.error(f"Traceback: {traceback.format_exc()}")
+            logger.error(f"[CUGA] An error occurred: {e!s}")
+            logger.error(f"[CUGA] Traceback: {traceback.format_exc()}")
 
             # Check if error is related to Playwright installation
             error_str = str(e).lower()
