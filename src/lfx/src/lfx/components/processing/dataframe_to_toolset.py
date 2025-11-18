@@ -31,6 +31,7 @@ class DataFrameToToolsetComponent(LCToolComponent):
     description = "Convert each row of a DataFrame into a callable tool/action in a toolset."
     icon = "wrench"
     name = "DataFrameToToolset"
+    legacy = True
 
     inputs = [
         HandleInput(

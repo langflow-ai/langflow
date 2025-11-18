@@ -21,6 +21,7 @@ class DynamicCreateDataComponent(Component):
     name: str = "DynamicCreateData"
     MAX_FIELDS = 15  # Define a constant for maximum number of fields
     icon = "ListFilter"
+    legacy = True
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
