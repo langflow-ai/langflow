@@ -266,12 +266,75 @@ module.exports = {
           type: "category",
           label: "Core components",
           items: [
-            "Components/components-io",
-            "Components/components-processing",
-            "Components/components-data",
-            "Components/components-files",
-            "Components/components-logic",
-            "Components/components-llm-operations",
+            {
+              type: "category",
+              label: "Input / Output",
+              items: [
+                "Components/components-io",
+                "Components/chat-input-and-output",
+                "Components/text-input-and-output",
+                "Components/webhook",
+              ]
+            },
+            {
+              type: "category",
+              label: "Processing",
+              items: [
+                "Components/components-processing",
+                "Components/data-operations",
+                "Components/dataframe-operations",
+                "Components/dynamic-create-data",
+                "Components/parser",
+                "Components/split-text",
+                "Components/type-convert",
+              ]
+            },
+            {
+              type: "category",
+              label: "Data source",
+              items: [
+                "Components/components-data",
+                "Components/api-request",
+                "Components/mock-data",
+                "Components/url",
+                "Components/web-search",
+                "Components/news-search",
+                "Components/rss-reader",
+              ]
+            },
+            {
+              type: "category",
+              label: "Files and knowledge",
+              items: [
+                "Components/components-files",
+                "Components/directory",
+                "Components/read-file",
+                "Components/write-file",
+              ]
+            },
+            {
+              type: "category",
+              label: "Flow controls",
+              items: [
+                "Components/components-logic",
+                "Components/if-else",
+                "Components/loop",
+                "Components/notify-and-listen",
+                "Components/run-flow",
+              ]
+            },
+            {
+              type: "category",
+              label: "LLM Operations",
+              items: [
+                "Components/components-llm-operations",
+                "Components/batch-run",
+                "Components/llm-router",
+                "Components/smart-router",
+                "Components/smart-transform",
+                "Components/structured-output",
+              ]
+            },
             {
               type: "category",
               label: "Models and Agents",
@@ -288,11 +351,22 @@ module.exports = {
                 {
                   type: "link",
                   label: "Message history",
-                  href: "/components-helpers#message-history",
+                  href: "/message-history",
                 },
               ]
             },
-            "Components/components-helpers",
+            {
+              type: "category",
+              label: "Utilities",
+              items: [
+                "Components/components-helpers",
+                "Components/calculator",
+                "Components/current-date",
+                "Components/message-history",
+                "Components/python-interpreter",
+                "Components/sql-database",
+              ]
+            },
             "Components/components-tools",
           ],
         },
