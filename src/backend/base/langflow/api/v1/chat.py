@@ -355,6 +355,14 @@ async def build_vertex(
             )
 
         timedelta = time.perf_counter() - start_time
+
+        # Use client_request_time if available for accurate end-to-end duration
+        if inputs and inputs.client_request_time:
+            # Convert client timestamp (ms) to seconds and calculate elapsed time
+            client_start_seconds = inputs.client_request_time / 1000
+            current_time_seconds = time.time()
+            timedelta = current_time_seconds - client_start_seconds
+
         duration = format_elapsed_time(timedelta)
         result_data_response.duration = duration
         result_data_response.timedelta = timedelta
@@ -388,6 +396,7 @@ async def build_vertex(
             telemetry_service.log_package_component,
             ComponentPayload(
                 component_name=vertex_id.split("-")[0],
+                component_id=vertex_id,
                 component_seconds=int(time.perf_counter() - start_time),
                 component_success=valid,
                 component_error_message=error_message,
@@ -399,6 +408,7 @@ async def build_vertex(
             telemetry_service.log_package_component,
             ComponentPayload(
                 component_name=vertex_id.split("-")[0],
+                component_id=vertex_id,
                 component_seconds=int(time.perf_counter() - start_time),
                 component_success=False,
                 component_error_message=str(exc),
