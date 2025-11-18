@@ -2,13 +2,12 @@ import csv
 import io
 from pathlib import Path
 
+from lfx.base.data.storage_utils import read_file_bytes
 from lfx.custom.custom_component.component import Component
 from lfx.io import FileInput, MessageTextInput, MultilineInput, Output
 from lfx.schema.data import Data
-from lfx.base.data.storage_utils import read_file_bytes
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
-
 
 
 class CSVToDataComponent(Component):

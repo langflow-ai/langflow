@@ -67,7 +67,9 @@ class TestJsonAgentComponent:
         # Mock S3 storage and read - real temp file creation
         with (
             patch("lfx.components.langchain_utilities.json_agent.get_settings_service") as mock_get_settings,
-            patch("lfx.components.langchain_utilities.json_agent.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
+            patch(
+                "lfx.components.langchain_utilities.json_agent.read_file_bytes", new_callable=AsyncMock
+            ) as mock_read_bytes,
         ):
             mock_settings = MagicMock()
             mock_settings.settings.storage_type = "s3"
@@ -102,7 +104,9 @@ class TestJsonAgentComponent:
 
         with (
             patch("lfx.components.langchain_utilities.json_agent.get_settings_service") as mock_get_settings,
-            patch("lfx.components.langchain_utilities.json_agent.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
+            patch(
+                "lfx.components.langchain_utilities.json_agent.read_file_bytes", new_callable=AsyncMock
+            ) as mock_read_bytes,
         ):
             mock_settings = MagicMock()
             mock_settings.settings.storage_type = "s3"
@@ -228,7 +232,9 @@ class TestJsonAgentComponent:
 
         with (
             patch("lfx.components.langchain_utilities.json_agent.get_settings_service") as mock_get_settings,
-            patch("lfx.components.langchain_utilities.json_agent.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
+            patch(
+                "lfx.components.langchain_utilities.json_agent.read_file_bytes", new_callable=AsyncMock
+            ) as mock_read_bytes,
             patch("lfx.components.langchain_utilities.json_agent.JsonSpec") as mock_json_spec,
             patch("lfx.components.langchain_utilities.json_agent.JsonToolkit") as mock_json_toolkit,
             patch("lfx.components.langchain_utilities.json_agent.create_json_agent") as mock_create_agent,
@@ -268,7 +274,9 @@ class TestJsonAgentComponent:
 
         with (
             patch("lfx.components.langchain_utilities.json_agent.get_settings_service") as mock_get_settings,
-            patch("lfx.components.langchain_utilities.json_agent.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
+            patch(
+                "lfx.components.langchain_utilities.json_agent.read_file_bytes", new_callable=AsyncMock
+            ) as mock_read_bytes,
             patch(
                 "lfx.components.langchain_utilities.json_agent.JsonSpec",
                 side_effect=Exception("Invalid JSON"),

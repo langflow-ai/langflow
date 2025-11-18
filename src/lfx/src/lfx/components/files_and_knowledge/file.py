@@ -11,12 +11,12 @@ Notes:
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import subprocess
 import sys
-from tempfile import NamedTemporaryFile
 import textwrap
 from copy import deepcopy
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any
 
 from lfx.base.data.base_file import BaseFileComponent

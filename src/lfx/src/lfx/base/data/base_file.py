@@ -1,8 +1,8 @@
 import ast
-from io import BytesIO
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
+from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, Any
@@ -11,16 +11,15 @@ from zipfile import ZipFile, is_zipfile
 import orjson
 import pandas as pd
 
+from lfx.base.data.storage_utils import get_file_size, read_file_bytes
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service
-from lfx.utils.helpers import build_content_type_from_extension
-from lfx.base.data.storage_utils import get_file_size, read_file_bytes
 from lfx.utils.async_helpers import run_until_complete
-
+from lfx.utils.helpers import build_content_type_from_extension
 
 if TYPE_CHECKING:
     from collections.abc import Callable

@@ -147,7 +147,6 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
                 # Non-HTTP exceptions - log at error level
                 await logger.aexception("An error occurred during the session scope.", exception=e)
 
-
             # Only rollback if session is still in a valid state
             if session.is_active:
                 try:
@@ -157,7 +156,7 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
                     pass
             raise
         # No explicit close needed - _with_session() handles it
-    
+
 
 async def injectable_session_scope_readonly():
     async with session_scope_readonly() as session:

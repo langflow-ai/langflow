@@ -1,11 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from http import HTTPStatus
 from typing import TYPE_CHECKING
-
-from fastapi import HTTPException
-from lfx.log.logger import logger
 
 from langflow.services.schema import ServiceType
 
@@ -173,6 +169,7 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
 
     async with lfx_session_scope() as session:
         yield session
+
 
 def get_cache_service() -> CacheService | AsyncBaseCacheService:
     """Retrieves the cache service from the service manager.

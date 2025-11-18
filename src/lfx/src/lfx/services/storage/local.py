@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import anyio
 from aiofile import async_open
 
 from lfx.log.logger import logger
@@ -123,11 +122,7 @@ class LocalStorageService(StorageService):
             return []
 
         try:
-            files = [
-                p.name
-                async for p in folder_path.iterdir()
-                if await p.is_file()
-            ]
+            files = [p.name async for p in folder_path.iterdir() if await p.is_file()]
         except Exception:  # noqa: BLE001
             logger.exception(f"Error listing files in flow {flow_id}")
             return []

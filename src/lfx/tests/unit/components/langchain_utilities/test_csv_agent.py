@@ -103,7 +103,9 @@ class TestCSVAgentComponent:
         # Mock S3 storage and read operations - real temp file creation and cleanup
         with (
             patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings,
-            patch("lfx.components.langchain_utilities.csv_agent.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
+            patch(
+                "lfx.components.langchain_utilities.csv_agent.read_file_bytes", new_callable=AsyncMock
+            ) as mock_read_bytes,
         ):
             mock_settings = MagicMock()
             mock_settings.settings.storage_type = "s3"
@@ -255,7 +257,9 @@ class TestCSVAgentComponent:
         # Mock S3 settings, storage read, and LangChain agent creation
         with (
             patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings,
-            patch("lfx.components.langchain_utilities.csv_agent.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
+            patch(
+                "lfx.components.langchain_utilities.csv_agent.read_file_bytes", new_callable=AsyncMock
+            ) as mock_read_bytes,
             patch("lfx.components.langchain_utilities.csv_agent.create_csv_agent") as mock_create_agent,
         ):
             mock_settings = MagicMock()
@@ -304,7 +308,9 @@ class TestCSVAgentComponent:
 
         with (
             patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings,
-            patch("lfx.components.langchain_utilities.csv_agent.read_file_bytes", new_callable=AsyncMock) as mock_read_bytes,
+            patch(
+                "lfx.components.langchain_utilities.csv_agent.read_file_bytes", new_callable=AsyncMock
+            ) as mock_read_bytes,
             patch(
                 "lfx.components.langchain_utilities.csv_agent.create_csv_agent",
                 side_effect=Exception("Agent creation failed"),

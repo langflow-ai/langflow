@@ -7,10 +7,10 @@ from contextlib import contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from lfx.components.data.file import FileComponent
-from lfx.components.data.save_file import SaveToFileComponent
 from lfx.components.data.csv_to_data import CSVToDataComponent
+from lfx.components.data.file import FileComponent
 from lfx.components.data.json_to_data import JSONToDataComponent
+from lfx.components.data.save_file import SaveToFileComponent
 from lfx.components.langchain_utilities.csv_agent import CSVAgentComponent
 from lfx.components.langchain_utilities.json_agent import JsonAgentComponent
 
@@ -101,7 +101,9 @@ class TestS3CompatibleComponents:
 
         with (
             mock_s3_environment(s3_settings, mock_storage_service),
-            patch("lfx.components.data.file.parse_storage_path", return_value=("user_123", "document.pdf")) as mock_parse,
+            patch(
+                "lfx.components.data.file.parse_storage_path", return_value=("user_123", "document.pdf")
+            ) as mock_parse,
             patch("lfx.components.data.file.NamedTemporaryFile") as mock_temp,
         ):
             mock_temp.return_value.__enter__.return_value = mock_temp_file
@@ -181,7 +183,9 @@ class TestS3CompatibleComponents:
             component.set_attributes({"llm": MagicMock(), "path": "user_123/data.csv", "verbose": False})
 
             # Mock storage utils
-            with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b"name,age\nJohn,30"):
+            with patch(
+                "lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b"name,age\nJohn,30"
+            ):
                 local_path = component._get_local_path()
 
                 # Should handle S3 path correctly
@@ -195,7 +199,9 @@ class TestS3CompatibleComponents:
             component.set_attributes({"llm": MagicMock(), "path": "user_123/data.json", "verbose": False})
 
             # Mock storage utils
-            with patch("lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b'{"key": "value"}'):
+            with patch(
+                "lfx.base.data.storage_utils.read_file_bytes", new_callable=AsyncMock, return_value=b'{"key": "value"}'
+            ):
                 local_path = component._get_local_path()
 
                 # Should handle S3 path correctly
@@ -380,6 +386,7 @@ class TestS3CompatibleComponents:
 
                     # Should read from local filesystem, not S3
                     from lfx.schema.data import Data
+
                     assert isinstance(result, Data)
                     assert result.data == {"key": "value"}
 
@@ -393,6 +400,7 @@ class TestS3CompatibleComponents:
                     result = component.convert_json_to_data()
 
                     from lfx.schema.data import Data
+
                     assert isinstance(result, Data)
                     assert result.data == {"name": "test"}
 
@@ -409,6 +417,7 @@ class TestS3CompatibleComponents:
 
             # Should read from S3
             from lfx.schema.data import Data
+
             assert isinstance(result, Data)
             assert result.data == {"key": "s3_value"}
             mock_storage_service.get_file.assert_called_once_with("user_123", "data.json")
@@ -427,5 +436,6 @@ class TestS3CompatibleComponents:
 
                     # Should read from local filesystem
                     from lfx.schema.data import Data
+
                     assert isinstance(result, Data)
                     assert result.data == {"local": "data"}
