@@ -20,9 +20,9 @@ export const OutputParameter = ({
 }) => {
   const id = useMemo(() => {
     const selectedType = output.selected ?? output.types[0];
-    // For loop inputs (allows_loop), include both the original type and Message
-    const outputTypes = output.allows_loop
-      ? [selectedType, "Message"]
+    // For loop inputs (allows_loop), include the original type and any loop_types
+    const outputTypes = output.allows_loop && output.loop_types
+      ? [selectedType, ...output.loop_types]
       : [selectedType];
 
     return {
@@ -35,6 +35,7 @@ export const OutputParameter = ({
     output.selected,
     output.types,
     output.allows_loop,
+    output.loop_types,
     data.id,
     data.type,
     output.name,
@@ -62,8 +63,8 @@ export const OutputParameter = ({
       outputProxy={output.proxy}
       title={output.display_name ?? output.name}
       tooltipTitle={
-        output.allows_loop
-          ? `${output.selected ?? output.types[0]}\nMessage`
+        output.allows_loop && output.loop_types
+          ? `${output.selected ?? output.types[0]}\n${output.loop_types.join("\n")}`
           : (output.selected ?? output.types[0])
       }
       id={id}
