@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from langflow.services.deps import get_flexstore_service
 from langflow.services.flexstore.settings import FlexStoreSettings
+import base64
 
 # Global PyMuPDF availability check
 try:
@@ -168,6 +169,7 @@ class SplitToImagesComponent(LCToolComponent):
 
                     # Convert back to bytes
                     img_byte_arr = io.BytesIO()
+                    
                     img.save(img_byte_arr, format="PNG")
                     img_data = img_byte_arr.getvalue()
 
@@ -315,7 +317,8 @@ class SplitToImagesComponent(LCToolComponent):
     async def _process_files_to_urls(self, file_paths: list[str]) -> list[str]:
         """Process files and return flat list of image URLs."""
         all_image_urls = []
-
+        all_image_base64 = []
+        
         for file_path in file_paths:
             try:
                 # Download if URL
@@ -344,9 +347,18 @@ class SplitToImagesComponent(LCToolComponent):
                 # Upload each image and collect URLs
                 for i, image_bytes in enumerate(images):
                     filename = f"{Path(local_path).stem}_page_{i + 1}.png"
+    
+                    # Generate base64
+                    base64_str = await self._generate_base64_from_bytes(image_bytes)
+                    all_image_base64.append(base64_str)
+                    
+                    # Upload and get URL
                     url = await self._upload_image_to_blob(image_bytes, filename)
                     if url:
                         all_image_urls.append(url)
+                    else:
+                        # If upload fails, still keep empty string to maintain order
+                        all_image_urls.append("")
 
             except Exception as e:
                 logger.error(f"Error processing file {file_path}: {e!s}")
@@ -354,7 +366,7 @@ class SplitToImagesComponent(LCToolComponent):
                     raise
                 continue
 
-        return all_image_urls
+        return all_image_urls,all_image_base64
 
     def run_model(self) -> Data:
         """Run the model and return list of image URLs as Data."""
@@ -375,7 +387,7 @@ class SplitToImagesComponent(LCToolComponent):
 
         # Process files asynchronously using langflow's async helper
         try:
-            image_urls = run_until_complete(self._process_files_to_urls(file_paths))
+            image_urls,base_64_imgs = run_until_complete(self._process_files_to_urls(file_paths))
 
             # Clean up temp files
             self._cleanup_temp_files()
@@ -391,7 +403,8 @@ class SplitToImagesComponent(LCToolComponent):
                         "image_urls": image_urls,  # Original format for other components
                         "images": image_data_objects,  # Data objects for AutonomizeDocumentModel
                         "file_path": image_urls[0] if image_urls else None,  # First image for single-input components
-                        "count": len(image_urls)
+                        "count": len(image_urls),
+                        "base_64_imgs": base_64_imgs
                     }
                 )
                 self.status = f"Generated {len(image_urls)} images from {len(file_paths)} files"
@@ -450,9 +463,9 @@ class SplitToImagesComponent(LCToolComponent):
 
             # Process files
             try:
-                image_urls = await self._process_files_to_urls(file_urls)
+                image_urls,base_64_imgs = await self._process_files_to_urls(file_urls)
                 self._cleanup_temp_files()
-                return image_urls
+                return {"image_urls":image_urls,"base_64_imgs":base_64_imgs}
             except Exception as e:
                 logger.error(f"Tool execution error: {e}")
                 self._cleanup_temp_files()
@@ -488,6 +501,19 @@ class SplitToImagesComponent(LCToolComponent):
         except Exception as e:
             logger.error(f"Error cleaning up temporary files: {e!s}")
 
+
+    # Add this method after _split_tiff_to_images:
+    async def _generate_base64_from_bytes(self, image_bytes: bytes) -> str:
+        """Convert image bytes to base64 string."""
+        try:
+            return base64.b64encode(image_bytes).decode('utf-8')
+            
+        except Exception as e:
+            logger.error(f"Error generating base64: {e!s}")
+            if not self.silent_errors:
+                raise
+            return ""
+    
     def __del__(self):
         """Clean up temporary files on destruction."""
         try:
