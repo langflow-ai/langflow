@@ -29,7 +29,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             display_name="Model",
             info="The name of the model to use.",
             options=GOOGLE_GENERATIVE_AI_MODELS,
-            value="gemini-1.5-pro",
+            value=GOOGLE_GENERATIVE_AI_MODELS[0],
             refresh_button=True,
             combobox=True,
         ),
@@ -137,7 +137,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
                         ids = GOOGLE_GENERATIVE_AI_MODELS
                 build_config.setdefault("model_name", {})
                 build_config["model_name"]["options"] = ids
-                build_config["model_name"].setdefault("value", ids[0])
+                build_config["model_name"]["value"] = ids[0]
             except Exception as e:
                 msg = f"Error getting model names: {e}"
                 raise ValueError(msg) from e
