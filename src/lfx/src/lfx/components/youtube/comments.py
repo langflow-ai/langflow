@@ -193,14 +193,7 @@ class YouTubeCommentsComponent(Component):
                     else:
                         request = None
 
-                # Convert to DataFrame
-                comments_df = pd.DataFrame(comments_data)
-
-                # Add video metadata
-                comments_df["video_id"] = video_id
-                comments_df["video_url"] = self.video_url
-
-                # Sort columns for better organization
+                # Define column order
                 column_order = [
                     "video_id",
                     "video_url",
@@ -217,7 +210,20 @@ class YouTubeCommentsComponent(Component):
                 if self.include_metrics:
                     column_order.extend(["like_count", "reply_count"])
 
-                comments_df = comments_df[column_order]
+                # Handle empty comments case
+                if not comments_data:
+                    # Create empty DataFrame with proper columns
+                    comments_df = pd.DataFrame(columns=column_order)
+                else:
+                    # Convert to DataFrame
+                    comments_df = pd.DataFrame(comments_data)
+
+                    # Add video metadata
+                    comments_df["video_id"] = video_id
+                    comments_df["video_url"] = self.video_url
+
+                    # Reorder columns
+                    comments_df = comments_df[column_order]
 
                 return DataFrame(comments_df)
 
