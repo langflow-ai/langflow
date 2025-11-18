@@ -105,14 +105,46 @@ class MCPComposerService(Service):
 
         Returns:
             True if port is available (not in use), False if in use
+
+        Raises:
+            ValueError: If port is not in valid range (0-65535)
         """
+        import errno
+
+        # Validate port range before attempting bind
+        max_port = 65535
+        if not isinstance(port, int) or port < 0 or port > max_port:
+            msg = f"Invalid port number: {port}. Port must be between 0 and {max_port}."
+            raise ValueError(msg)
+
+        # Check both IPv4 and IPv6 to ensure port is truly available
+        # MCP Composer tries to bind on both, so we need to check both
+
+        # Check IPv4
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 # Don't use SO_REUSEADDR here as it can give false positives
                 sock.bind((host, port))
-                return True  # Port is available
         except OSError:
-            return False  # Port is in use/bound
+            return False  # Port is in use on IPv4
+
+        # Check IPv6 (if supported on this system)
+        try:
+            with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as sock:
+                # Don't use SO_REUSEADDR here as it can give false positives
+                # Use ::1 for localhost on IPv6
+                ipv6_host = "::1" if host in ("localhost", "127.0.0.1") else host
+                sock.bind((ipv6_host, port))
+        except OSError as e:
+            # Check if it's "address already in use" error
+            # errno.EADDRINUSE is 48 on macOS, 98 on Linux, 10048 on Windows (WSAEADDRINUSE)
+            # We check both the standard errno and Windows-specific error code
+            if e.errno in (errno.EADDRINUSE, 10048):
+                return False  # Port is in use on IPv6
+            # For other errors (e.g., IPv6 not supported, EADDRNOTAVAIL), continue
+            # IPv6 might not be supported on this system, which is okay
+
+        return True  # Port is available on both IPv4 and IPv6 (or IPv6 not supported)
 
     async def _kill_process_on_port(self, port: int) -> bool:
         """Kill the process using the specified port.
@@ -628,9 +660,19 @@ class MCPComposerService(Service):
 
         Raises:
             MCPComposerPortError: If port cannot be made available
+            MCPComposerConfigError: If port is invalid
         """
-        is_port_available = self._is_port_available(port)
-        await logger.adebug(f"Port {port} availability check: {is_port_available}")
+        try:
+            is_port_available = self._is_port_available(port)
+            await logger.adebug(f"Port {port} availability check: {is_port_available}")
+        except (ValueError, OverflowError, TypeError) as e:
+            # Port validation failed - invalid port number or type
+            # ValueError: from our validation
+            # OverflowError: from socket.bind() when port > 65535
+            # TypeError: when port is not an integer
+            error_msg = f"Invalid port number: {port}. Port must be an integer between 0 and 65535."
+            await logger.aerror(f"Invalid port for project {current_project_id}: {e}")
+            raise MCPComposerConfigError(error_msg, current_project_id) from e
 
         if not is_port_available:
             # Check if the port is being used by a tracked project
@@ -1065,8 +1107,8 @@ class MCPComposerService(Service):
                 # Ensure port is available (only kill untracked processes)
                 try:
                     await self._ensure_port_available(project_port, project_id)
-                except MCPComposerPortError as e:
-                    # Port error before starting - store and raise immediately
+                except (MCPComposerPortError, MCPComposerConfigError) as e:
+                    # Port/config error before starting - store and raise immediately (no retries)
                     self._last_errors[project_id] = e.message
                     raise
                 for retry_attempt in range(1, max_retries + 1):
@@ -1096,6 +1138,13 @@ class MCPComposerService(Service):
                             f"MCP Composer startup attempt {retry_attempt}/{max_retries} failed "
                             f"for project {project_id}: {e.message}"
                         )
+
+                        # For config/port errors, don't retry - fail immediately
+                        if isinstance(e, (MCPComposerConfigError, MCPComposerPortError)):
+                            await logger.aerror(
+                                f"Configuration or port error for project {project_id}, not retrying: {e.message}"
+                            )
+                            raise  # Re-raise to exit retry loop immediately
 
                         # Clean up any partially started process before retrying
                         if project_id in self.project_composers:
