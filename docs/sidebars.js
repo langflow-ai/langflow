@@ -270,7 +270,6 @@ module.exports = {
               type: "category",
               label: "Input / Output",
               items: [
-                "Components/components-io",
                 "Components/chat-input-and-output",
                 "Components/text-input-and-output",
                 "Components/webhook",
@@ -280,7 +279,6 @@ module.exports = {
               type: "category",
               label: "Processing",
               items: [
-                "Components/components-processing",
                 "Components/data-operations",
                 "Components/dataframe-operations",
                 "Components/dynamic-create-data",
@@ -293,7 +291,6 @@ module.exports = {
               type: "category",
               label: "Data source",
               items: [
-                "Components/components-data",
                 "Components/api-request",
                 "Components/mock-data",
                 "Components/url",
@@ -306,7 +303,6 @@ module.exports = {
               type: "category",
               label: "Files and knowledge",
               items: [
-                "Components/components-files",
                 "Components/directory",
                 "Components/read-file",
                 "Components/write-file",
@@ -316,7 +312,6 @@ module.exports = {
               type: "category",
               label: "Flow controls",
               items: [
-                "Components/components-logic",
                 "Components/if-else",
                 "Components/loop",
                 "Components/notify-and-listen",
@@ -327,7 +322,6 @@ module.exports = {
               type: "category",
               label: "LLM Operations",
               items: [
-                "Components/components-llm-operations",
                 "Components/batch-run",
                 "Components/llm-router",
                 "Components/smart-router",
@@ -359,15 +353,12 @@ module.exports = {
               type: "category",
               label: "Utilities",
               items: [
-                "Components/components-helpers",
                 "Components/calculator",
                 "Components/current-date",
-                "Components/message-history",
                 "Components/python-interpreter",
                 "Components/sql-database",
               ]
             },
-            "Components/components-tools",
             "Components/legacy-core-components",
           ],
         },
