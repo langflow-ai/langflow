@@ -176,4 +176,5 @@ async def session_scope_readonly() -> AsyncGenerator[AsyncSession, None]:
     async with db_service._with_session() as session:
         yield session
         # No commit - read-only
+        # No clean up - client is responsible (plus, read only sessions are not committed)
         # No explicit close needed - _with_session() handles it
