@@ -128,6 +128,15 @@ class CugaComponent(ToolCallingAgentComponent):
             value=25,
             advanced=False,
         ),
+        DropdownInput(
+            name="decomposition_strategy",
+            display_name="Decomposition Strategy",
+            info="Strategy for task decomposition: 'flexible' allows multiple subtasks per app,\n"
+            " 'exact' enforces one subtask per app.",
+            options=["flexible", "exact"],
+            value="flexible",
+            advanced=True,
+        ),
         BoolInput(
             name="browser_enabled",
             display_name="Enable Browser",
@@ -191,6 +200,7 @@ class CugaComponent(ToolCallingAgentComponent):
             settings.advanced_features.registry = False
             settings.advanced_features.lite_mode = self.lite_mode
             settings.advanced_features.lite_mode_tool_threshold = self.lite_mode_tool_threshold
+            settings.advanced_features.decomposition_strategy = self.decomposition_strategy
 
             if self.browser_enabled:
                 logger.debug("browser_enabled is true, setting mode to hybrid")
