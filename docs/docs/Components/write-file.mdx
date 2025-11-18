@@ -1,0 +1,73 @@
+---
+title: Write File
+slug: /write-file
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
+
+In Langflow version 1.7.0, this component was renamed from **Save File** to **Write File**.
+
+The **Write File** component creates a file containing data produced by another component.
+Several file formats are supported, and you can store files in [Langflow storage](/memory), AWS S3, Google Drive, or the local file system.
+
+To configure the **Write File** component and use it in a flow, do the following:
+
+1. Connect [`DataFrame`](/data-types#dataframe), [`Data`](/data-types#data), or [`Message`](/data-types#message) output from another component to the **Write File** component's **Input** port.
+
+    You can connect the same output to multiple **Write File** components if you want to create multiple files, save the data in different file formats, or save files to multiple locations.
+
+2. In **File Name**, enter a file name and an optional path.
+
+    The **File Name** parameter controls where the file is saved.
+    It can contain a file name or an entire file path:
+
+    * **Default location**: If you only provide a file name, then the file is stored in the Langflow data directory. For example,`~/Library/Caches/langflow/data` on macOS.
+
+    * **Subdirectory**: To store files in subdirectories, add the path to the **File Name** parameter.
+    If a given subdirectory doesn't already exist, Langflow automatically creates it.
+    For example, `files/my_file` creates `my_file` in `/data/files`, and it creates the `files` subdirectory if it doesn't already exist.
+
+    * **Absolute or relative path**: To store files elsewhere in your environment or local file storage, provide the absolute or relative path to the desired location.
+    For example, `~/Desktop/my_file` saves `my_file` to the desktop.
+
+    Don't include an extension in the file name.
+    If you do, the extension is treated as part of the file name; it has no impact on the **File Format** parameter.
+
+3. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, select the desired file format, and then click **Close**.
+
+    The available **File Format** options depend on the input data type:
+
+    * `DataFrame` can be saved to CSV (default), Excel (requires `openpyxl` [custom dependency](/install-custom-dependencies)), JSON (fallback default), or Markdown.
+
+    * `Data` can be saved to CSV, Excel (requires `openpyxl` [custom dependency](/install-custom-dependencies)), JSON (default), or Markdown.
+
+    * `Message` can be saved to TXT, JSON (default), or Markdown.
+
+    :::warning Overwrites allowed
+    If you have multiple **Write File** components, in one or more flows, with the same file name, path, and extension, the file contains the data from the most recent run only.
+    Langflow doesn't block overwrites if a matching file already exists.
+    To avoid unintended overwrites, use unique file names and paths.
+    :::
+
+4. To test the **Write File** component, click <Icon name="Play" aria-hidden="true" /> **Run component**, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to get the filepath where the file was saved.
+
+    The component's literal output is a `Message` containing the original data type, the file name and extension, and the absolute filepath to the file based on the **File Name** parameter.
+    For example:
+
+    ```text
+    DataFrame saved successfully as 'my_file.csv' at /Users/user.name/Library/Caches/langflow/data/my_file.csv
+    ```
+
+    If the **File Name** contains a subdirectory or other non-default path, this is reflected in the `Message` output.
+    For example, a CSV file with the file name `~/Desktop/my_file` could produce the following output:
+
+    ```text
+    DataFrame saved successfully as '/Users/user.name/Desktop/my_file.csv' at /Users/user.name/Desktop/my_file.csv
+    ```
+
+5. Optional: If you want to use the saved file in a flow, you must use an API call or another component to retrieve the file from the given filepath.
+
