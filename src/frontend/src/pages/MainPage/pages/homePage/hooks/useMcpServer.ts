@@ -34,6 +34,8 @@ type State = {
   showSlowWarning: boolean;
 };
 
+const AUTH_TYPE = "oauth";
+
 export const useMcpServer = ({
   projectId,
   folderName,
@@ -51,15 +53,18 @@ export const useMcpServer = ({
     useGetFlowsMCP({ projectId });
   const { mutate: patchFlowsMCP, isPending: isPatchingFlowsMCP } =
     usePatchFlowsMCP({ project_id: projectId });
+
+  const enableProjectComposerUrl =
+    !!projectId &&
+    mcpProjectData?.auth_settings?.auth_type === AUTH_TYPE &&
+    ENABLE_MCP_COMPOSER &&
+    !isPatchingFlowsMCP;
+
   const { data: composerUrlData, isLoading: isLoadingComposerUrl } =
     useGetProjectComposerUrl(
       { projectId },
       {
-        enabled:
-          !!projectId &&
-          mcpProjectData?.auth_settings?.auth_type === "oauth" &&
-          ENABLE_MCP_COMPOSER &&
-          !isPatchingFlowsMCP,
+        enabled: enableProjectComposerUrl,
       },
     );
   const { data: installedMCPData } = useGetInstalledMCP({ projectId });
@@ -151,7 +156,9 @@ export const useMcpServer = ({
         {
           onSuccess: () => {
             setSuccessData({
-              title: `MCP Server installed successfully on ${clientTitle ?? clientName}. You may need to restart your client to see the changes.`,
+              title: `MCP Server installed successfully on ${
+                clientTitle ?? clientName
+              }. You may need to restart your client to see the changes.`,
             });
             setS((p) => ({
               ...p,
@@ -161,7 +168,9 @@ export const useMcpServer = ({
           onError: (e) => {
             const message = (e as { message?: string })?.message ?? String(e);
             setErrorData({
-              title: `Failed to install MCP Server on ${clientTitle ?? clientName}`,
+              title: `Failed to install MCP Server on ${
+                clientTitle ?? clientName
+              }`,
               list: [message],
             });
             setS((p) => ({
