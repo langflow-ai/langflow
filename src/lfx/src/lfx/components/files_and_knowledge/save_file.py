@@ -300,6 +300,9 @@ class SaveToFileComponent(Component):
             msg = f"File not found: {file_path}"
             raise FileNotFoundError(msg)
 
+        # Get append mode setting
+        append_mode = getattr(self, "append_mode", True)
+
         # Upload the file
         with file_path.open("rb") as f:
             async with session_scope() as db:
@@ -314,6 +317,7 @@ class SaveToFileComponent(Component):
                     current_user=current_user,
                     storage_service=get_storage_service(),
                     settings_service=get_settings_service(),
+                    append=append_mode,
                 )
 
     def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> str:
