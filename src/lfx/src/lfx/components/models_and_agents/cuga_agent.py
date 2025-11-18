@@ -403,8 +403,8 @@ class CugaComponent(ToolCallingAgentComponent):
                 event_iterator, agent_message, cast("SendMessageFunctionType", force_db_update_send_message)
             )
 
-            logger.info("[CUGA] Agent run finished successfully.")
-            logger.info(f"[CUGA] Agent output: {result}")
+            logger.debug("[CUGA] Agent run finished successfully.")
+            logger.debug(f"[CUGA] Agent output: {result}")
 
         except Exception as e:
             logger.error(f"[CUGA] Error in message_response: {e}")
