@@ -7,7 +7,7 @@ from lfx.components.input_output.chat_output import ChatOutput
 from lfx.components.langchain_utilities import ToolCallingAgentComponent
 from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.tools.calculator import CalculatorToolComponent
-from lfx.components.utilities.sql_executor import SQLComponent
+from lfx.components.data_source.sql_executor import SQLComponent
 from lfx.graph.graph.base import Graph
 from pydantic import BaseModel
 
