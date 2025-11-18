@@ -45,8 +45,14 @@ class ArXivComponent(Component):
         """Build the arXiv API query URL."""
         base_url = "http://export.arxiv.org/api/query?"
 
-        # Build the search query
-        search_query = f"{self.search_type}:{self.search_query}"
+        # Build the search query based on search type
+        if self.search_type == "all":
+            search_query = self.search_query  # No prefix for all fields
+        else:
+            # Map dropdown values to ArXiv API prefixes
+            prefix_map = {"title": "ti", "abstract": "abs", "author": "au", "cat": "cat"}
+            prefix = prefix_map.get(self.search_type, "")
+            search_query = f"{prefix}:{self.search_query}"
 
         # URL parameters
         params = {

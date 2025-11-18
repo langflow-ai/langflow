@@ -61,6 +61,10 @@ import type {
   generateFlowType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
+import {
+  cleanMcpConfig,
+  type MCPServerValue,
+} from "./helpers/clean-mcp-config";
 import { getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
 
@@ -497,8 +501,21 @@ export function removeApiKeys(flow: FlowType): FlowType {
   cleanFLow.data!.nodes.forEach((node) => {
     if (node.type !== "genericNode") return;
     for (const key in node.data.node!.template) {
-      if (node.data.node!.template[key].password) {
-        node.data.node!.template[key].value = "";
+      const field = node.data.node!.template[key];
+
+      // Remove password fields
+      if (field.password) {
+        field.value = "";
+      }
+
+      // Handle MCP server configurations
+      if (
+        key === "mcp_server" &&
+        field.value &&
+        typeof field.value === "object"
+      ) {
+        // Type assertion is safe here as we've verified it's an object with runtime checks
+        cleanMcpConfig(field.value as MCPServerValue);
       }
     }
   });
