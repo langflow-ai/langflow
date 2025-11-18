@@ -131,7 +131,7 @@ async def validate_mcp_server_for_project(
 
         if existing_args:
             # SSE URL is typically the last argument
-            # TODO: Better way Required to check the postion of the SSE URL in the args
+            # TODO: Better way Required to check the position of the SSE URL in the args
             existing_sse_urls = await extract_urls_from_strings(existing_args)
             for existing_sse_url in existing_sse_urls:
                 if str(project_id) in existing_sse_url:
