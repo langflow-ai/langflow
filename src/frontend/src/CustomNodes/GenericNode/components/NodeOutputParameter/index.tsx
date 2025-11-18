@@ -21,9 +21,10 @@ export const OutputParameter = ({
   const id = useMemo(() => {
     const selectedType = output.selected ?? output.types[0];
     // For loop inputs (allows_loop), include the original type and any loop_types
-    const outputTypes = output.allows_loop && output.loop_types
-      ? [selectedType, ...output.loop_types]
-      : [selectedType];
+    const outputTypes =
+      output.allows_loop && output.loop_types
+        ? [selectedType, ...output.loop_types]
+        : [selectedType];
 
     return {
       output_types: outputTypes,
