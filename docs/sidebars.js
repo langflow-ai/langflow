@@ -368,6 +368,7 @@ module.exports = {
               ]
             },
             "Components/components-tools",
+            "Components/legacy-core-components",
           ],
         },
         {
