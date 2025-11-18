@@ -416,39 +416,52 @@ class APIRequestComponent(Component):
 
     async def make_api_request(self) -> Data:
         """Make HTTP request with optimized parameter handling."""
-        method = self.method
-        url = self.url_input.strip() if isinstance(self.url_input, str) else ""
-        headers = self.headers or {}
-        body = self.body or {}
         timeout = self.timeout
         follow_redirects = self.follow_redirects
         save_to_file = self.save_to_file
         include_httpx_metadata = self.include_httpx_metadata
-
-        # if self.mode == "cURL" and self.curl_input:
-        #     self._build_config = self.parse_curl(self.curl_input, dotdict())
-        #     # After parsing curl, get the normalized URL
-        #     url = self._build_config["url_input"]["value"]
-
-        # Normalize URL before validation
-        url = self._normalize_url(url)
-
-        # Validate URL
+    
+        # PARSE CURL FIRST if in cURL mode
+        if self.mode == "cURL" and self.curl_input:
+            build_config = dotdict({
+                "url_input": {"value": ""},
+                "method": {"value": "GET"},
+                "headers": {"value": []},
+                "body": {"value": []}
+            })
+            parsed_config = self.parse_curl(self.curl_input, build_config)
+            
+            # Extract parsed values
+            url = parsed_config["url_input"]["value"]
+            method = parsed_config["method"]["value"]
+            headers = parsed_config["headers"]["value"]
+            body = parsed_config["body"]["value"]
+            self.log(method, "method")
+        else:
+            # Use form inputs for URL mode
+            method = self.method
+            url = self.url_input.strip() if isinstance(self.url_input, str) else ""
+            headers = self.headers or {}
+            body = self.body or {}
+            # Normalize URL before validation (only for URL mode)
+            url = self._normalize_url(url)
+    
+        # Validate URL (now applies to both modes)
         if not validators.url(url):
             msg = f"Invalid URL provided: {url}"
             raise ValueError(msg)
-
+    
         # Process query parameters
         if isinstance(self.query_params, str):
             query_params = dict(parse_qsl(self.query_params))
         else:
             query_params = self.query_params.data if self.query_params else {}
-
+    
         # Process headers and body
         headers = self._process_headers(headers)
         body = self._process_body(body)
         url = self.add_query_params(url, query_params)
-
+    
         async with httpx.AsyncClient() as client:
             result = await self.make_request(
                 client,
