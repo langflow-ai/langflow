@@ -267,15 +267,18 @@ module.exports = {
           label: "Core components",
           items: [
             "Components/components-io",
+            "Components/components-processing",
+            "Components/components-data",
             "Components/components-files",
+            "Components/components-logic",
             "Components/components-llm-operations",
-
             {
               type: "category",
               label: "Models and Agents",
               items: [
-                "Components/components-agents",
                 "Components/components-models",
+                "Components/components-prompts",
+                "Components/components-agents",
                 "Components/components-embedding-models",
                 {
                   type: "link",
@@ -289,16 +292,6 @@ module.exports = {
                 },
               ]
             },
-            "Components/components-data",
-            {
-              type: "category",
-              label: "Processing",
-              items: [
-                "Components/components-processing",
-                "Components/components-prompts",
-              ]
-            },
-            "Components/components-logic",
             "Components/components-helpers",
             "Components/components-tools",
           ],
