@@ -289,7 +289,7 @@ module.exports = {
             },
             {
               type: "category",
-              label: "Data source",
+              label: "Data Source",
               items: [
                 "Components/api-request",
                 "Components/mock-data",
@@ -301,7 +301,7 @@ module.exports = {
             },
             {
               type: "category",
-              label: "Files and knowledge",
+              label: "Files and Knowledge",
               items: [
                 "Components/directory",
                 "Components/read-file",
@@ -310,7 +310,7 @@ module.exports = {
             },
             {
               type: "category",
-              label: "Flow controls",
+              label: "Flow Controls",
               items: [
                 "Components/if-else",
                 "Components/loop",
