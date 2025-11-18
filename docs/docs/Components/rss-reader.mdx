@@ -1,0 +1,27 @@
+---
+title: RSS Reader
+slug: /rss-reader
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
+
+The **RSS Reader** component fetches and parses RSS feeds from any valid RSS feed URL, and then returns the feed content as a [`DataFrame`](/data-types#dataframe) containing article titles, links, publication dates, and summaries.
+
+When used as a standard component in a flow, the **RSS Reader** component must be connected to a component that accepts `DataFrame` input.
+You can connect the **RSS Reader** component directly to a compatible component, or you can use a [Processing component](/components-processing) to convert or extract data of a different type between components.
+
+When used in **Tool Mode** with an **Agent** component, the **RSS Reader** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
+The agent decides whether to use the **RSS Reader** component based on the user's query, and it can process the `DataFrame` output directly.
+
+### RSS Reader parameters
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| rss_url | RSS Feed URL | Input parameter. URL of the RSS feed to parse, such as `https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml`. |
+| timeout | Timeout | Input parameter. Timeout for the RSS feed request in seconds. Default: `5`. |
+| articles | Articles | Output parameter. A `DataFrame` containing the key columns `title`, `link`, `published` and `summary`. |
+

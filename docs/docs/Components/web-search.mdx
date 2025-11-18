@@ -1,0 +1,80 @@
+---
+title: Web Search
+slug: /web-search
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
+
+The **Web Search** component performs a basic web search using DuckDuckGo's HTML scraping interface.
+For other search APIs, see <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
+
+:::info
+The **Web Search** component uses web scraping that can be subject to rate limits.
+
+For production use, consider using another search component with more robust API support, such as provider-specific bundles.
+:::
+
+### Use the Web Search component in a flow
+
+The following steps demonstrate one way that you can use a **Web Search** component in a flow:
+
+1. Create a flow based on the **Basic Prompting** template.
+
+2. Add a **Web Search** component, and then enter a search query, such as `environmental news`.
+
+3. Add a [**Type Convert** component](/components-processing#type-convert), set the **Output Type** to **Message**, and then connect the **Web Search** component's output to the **Type Convert** component's input.
+
+    By default, the **Web Search** component outputs a `DataFrame`.
+    Because the **Prompt Template** component only accepts `Message` data, this conversion is required so that the flow can pass the search results to the **Prompt Template** component.
+    For more information, see [Web Search output](#web-search-output).
+
+5. In the **Prompt Template** component's **Template** field, add a variable like `{searchresults}` or `{context}`.
+
+    This adds a field to the **Prompt Template** component that you can use to pass the converted search results to the prompt.
+    For more information, see [Define variables in prompts](/components-prompts#define-variables-in-prompts).
+
+6. Connect the **Type Convert** component's output to the new variable field on the **Prompt Template** component.
+
+    ![Type convert web search output to chat](/img/component-type-convert-and-web-search.png)
+
+7. In the **Language Model** component, add your OpenAI API key, or select a different provider and model.
+
+8. Click **Playground**, and then enter `latest news`.
+
+    The LLM processes the request, including the context passed through the **Prompt Template** component, and then prints the response in the **Playground** chat interface.
+
+    <details>
+    <summary>Result</summary>
+
+    The following is an example of a possible response.
+    Your response may vary based on the current state of the web, your specific query, the model, and other factors.
+
+    ```text
+    Here are some of the latest news articles related to the environment:
+    Ozone Pollution and Global Warming: A recent study highlights that ozone pollution is a significant global environmental concern, threatening human health and crop production while exacerbating global warming. Read more
+    ...
+    ```
+
+    </details>
+
+### Web Search parameters
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| query | Search Query | Input parameter. Keywords to search for. |
+| timeout | Timeout | Input parameter. Timeout for the web search request in seconds. Default: `5`. |
+| results | Search Results | Output parameter. Returns a `DataFrame` containing `title`, `links`, and `snippets`. For more information, see [Web Search output](#web-search-output). |
+
+### Web Search output
+
+The **Web Search** component outputs a [`DataFrame`](/data-types#dataframe) containing the key columns `title`, `links`, and `snippets`.
+
+When used as a standard component in a flow, the **Web Search** component must be connected to a component that accepts `DataFrame` input, or you must use a [**Type Convert** component](/components-processing#type-convert) to convert the output to `Data` or `Message` type before passing the data to other components.
+
+When used in **Tool Mode** with an **Agent** component, the **Web Search** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
+The agent decides whether to use the **Web Search** component based on the user's query, and it can process the `DataFrame` output directly.
+
