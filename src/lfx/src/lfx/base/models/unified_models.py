@@ -957,32 +957,40 @@ def update_model_options_in_build_config(
         if options:
             # Determine model type based on cache_key_prefix
             model_type = "embeddings" if cache_key_prefix == "embedding_model_options" else "language"
-            
+
             # Try to get user's default model from the variable service
             default_model_name = None
             default_model_provider = None
             try:
+
                 async def _get_default_model():
                     async with session_scope() as session:
                         variable_service = get_variable_service()
                         if variable_service is None:
                             return None, None
                         from langflow.services.variable.service import DatabaseVariableService
-                        
+
                         if not isinstance(variable_service, DatabaseVariableService):
                             return None, None
-                        
+
                         # Variable names match those in the API
-                        var_name = "__default_embedding_model__" if model_type == "embeddings" else "__default_language_model__"
-                        
+                        var_name = (
+                            "__default_embedding_model__"
+                            if model_type == "embeddings"
+                            else "__default_language_model__"
+                        )
+
                         try:
                             var = await variable_service.get_variable_object(
-                                user_id=UUID(component.user_id) if isinstance(component.user_id, str) else component.user_id,
+                                user_id=UUID(component.user_id)
+                                if isinstance(component.user_id, str)
+                                else component.user_id,
                                 name=var_name,
                                 session=session,
                             )
                             if var and var.value:
                                 import json
+
                                 parsed_value = json.loads(var.value)
                                 if isinstance(parsed_value, dict):
                                     return parsed_value.get("model_name"), parsed_value.get("provider")
@@ -990,12 +998,12 @@ def update_model_options_in_build_config(
                             # Variable not found or invalid format
                             pass
                         return None, None
-                
+
                 default_model_name, default_model_provider = run_until_complete(_get_default_model())
             except Exception:  # noqa: BLE001
                 # If we can't get default model, continue without it
                 pass
-            
+
             # Find the default model in options
             default_model = None
             if default_model_name and default_model_provider:
@@ -1004,11 +1012,11 @@ def update_model_options_in_build_config(
                     if opt.get("name") == default_model_name and opt.get("provider") == default_model_provider:
                         default_model = opt
                         break
-            
+
             # If user's default not found, fallback to first option
             if not default_model and options:
                 default_model = options[0]
-            
+
             # Set the value
             if default_model:
                 build_config["model"]["value"] = [default_model]
