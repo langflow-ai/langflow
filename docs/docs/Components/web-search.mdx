@@ -26,7 +26,7 @@ The following steps demonstrate one way that you can use a **Web Search** compon
 
 2. Add a **Web Search** component, and then enter a search query, such as `environmental news`.
 
-3. Add a [**Type Convert** component](/components-processing#type-convert), set the **Output Type** to **Message**, and then connect the **Web Search** component's output to the **Type Convert** component's input.
+3. Add a [**Type Convert** component](/type-convert), set the **Output Type** to **Message**, and then connect the **Web Search** component's output to the **Type Convert** component's input.
 
     By default, the **Web Search** component outputs a `DataFrame`.
     Because the **Prompt Template** component only accepts `Message` data, this conversion is required so that the flow can pass the search results to the **Prompt Template** component.
@@ -73,7 +73,7 @@ The following steps demonstrate one way that you can use a **Web Search** compon
 
 The **Web Search** component outputs a [`DataFrame`](/data-types#dataframe) containing the key columns `title`, `links`, and `snippets`.
 
-When used as a standard component in a flow, the **Web Search** component must be connected to a component that accepts `DataFrame` input, or you must use a [**Type Convert** component](/components-processing#type-convert) to convert the output to `Data` or `Message` type before passing the data to other components.
+When used as a standard component in a flow, the **Web Search** component must be connected to a component that accepts `DataFrame` input, or you must use a [**Type Convert** component](/type-convert) to convert the output to `Data` or `Message` type before passing the data to other components.
 
 When used in **Tool Mode** with an **Agent** component, the **Web Search** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
 The agent decides whether to use the **Web Search** component based on the user's query, and it can process the `DataFrame` output directly.

@@ -207,9 +207,9 @@ The only requirement is that the preceding component must create `DataFrame` out
         * **Smart Transform**
         * **Type Convert**
 
-    2. Configure the [**Smart Transform** component](/components-llm-operations#smart-transform) and its dependencies:
+    2. Configure the [**Smart Transform** component](/smart-transform) and its dependencies:
 
-        * **API Request**: Configure the [**API Request** component](/components-data#api-request) to get JSON data from an endpoint of your choice, and then connect the **API Response** output to the **Smart Transform** component's **Data** input.
+        * **API Request**: Configure the [**API Request** component](/api-request) to get JSON data from an endpoint of your choice, and then connect the **API Response** output to the **Smart Transform** component's **Data** input.
         * **Language Model**: Select your preferred provider and model, and then enter a valid API key.
         Change the output to **Language Model**, and then connect the `LanguageModel` output to the **Smart Transform** component's **Language Model** input.
         * **Smart Transform**: In the **Instructions** field, enter natural language instructions to extract data from the API response.
@@ -256,7 +256,7 @@ For more information, see [DataFrame Operations parameters](#dataframe-operation
 
    If you want to view the output in the **Playground**, connect the **DataFrame Operations** component's output to a **Chat Output** component, rerun the **DataFrame Operations** component, and then click **Playground**.
 
-For another example, see [Conditional looping](/components-logic#conditional-looping).
+For another example, see [Conditional looping](/loop#conditional-looping).
 
 ### DataFrame Operations parameters
 
@@ -408,8 +408,8 @@ The output is a `Message` containing the parsed text.
 This is a versatile component for data extraction and manipulation in your flows.
 For examples of **Parser** components in flows, see the following:
 
-* [**Batch Run** component example](/components-llm-operations#batch-run)
-* [**Structured Output** component example](/components-llm-operations#structured-output)
+* [**Batch Run** component example](/batch-run)
+* [**Structured Output** component example](/structured-output)
 * **Financial Report Parser** template
 * [Trigger flows with webhooks](/webhook)
 * [Create a vector RAG chatbot](/chat-with-rag)

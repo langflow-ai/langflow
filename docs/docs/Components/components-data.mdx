@@ -14,13 +14,13 @@ In Langflow version 1.7.0, the **Data** category was renamed **Data source**.
 Data source components bring data into your flows from various sources like files, API endpoints, and URLs.
 For example:
 
-* **Load files**: Import data from a file or directory with the [**Read File** component](/components-files#read-file) and [**Directory** component](components-files#directory).
+* **Load files**: Import data from a file or directory with the [**Read File** component](/read-file) and [**Directory** component](/directory).
 
-* **Search the web**: Fetch data from the web with components like the [**News Search** component](/components-data#news-search), [**RSS Reader** component](/components-data#rss-reader), [**Web Search** component](/components-data#web-search), and [**URL** component](/components-data#url).
+* **Search the web**: Fetch data from the web with components like the [**News Search** component](/news-search), [**RSS Reader** component](/rss-reader), [**Web Search** component](/web-search), and [**URL** component](/url).
 
-* **Make API calls**: Use APIs to trigger flows or perform actions with the [**API Request** component](#api-request) and [**Webhook** component](/components-io#webhook).
+* **Make API calls**: Use APIs to trigger flows or perform actions with the [**API Request** component](#api-request) and [**Webhook** component](/webhook).
 
-* **Run SQL queries**: Query an SQL database with the [**SQL Database** component](/components-helpers#sql-database).
+* **Run SQL queries**: Query an SQL database with the [**SQL Database** component](/sql-database).
 
 Each component runs different commands for retrieval, processing, and type checking.
 Some components are a minimal wrapper for a command that you provide, and others include built-in scripts to fetch and process data based on variable inputs.
@@ -132,10 +132,10 @@ There are two settings that control the output of the **URL** component at diffe
     * **Raw Content**: Outputs a [`Message`](/data-types#message) containing the entire text or HTML from the crawled pages, including metadata, in a single block of text.
 
 When used as a standard component in a flow, the **URL** component must be connected to a component that accepts the selected output data type (`DataFrame` or `Message`).
-You can connect the **URL** component directly to a compatible component, or you can use a [**Type Convert** component](/components-processing#type-convert) to convert the output to another type before passing the data to other components if the data types aren't directly compatible.
+You can connect the **URL** component directly to a compatible component, or you can use a [**Type Convert** component](/type-convert) to convert the output to another type before passing the data to other components if the data types aren't directly compatible.
 
 Processing components like the **Type Convert** component are useful with the **URL** component because it can extract a large amount of data from the crawled pages.
-For example, if you only want to pass specific fields to other components, you can use a [**Parser** component](/components-processing#parser) to extract only that data from the crawled pages before passing the data to other components.
+For example, if you only want to pass specific fields to other components, you can use a [**Parser** component](/parser) to extract only that data from the crawled pages before passing the data to other components.
 
 When used in **Tool Mode** with an **Agent** component, the **URL** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
 The agent decides whether to use the **URL** component based on the user's query, and it can process the `DataFrame` or `Message` output directly.
@@ -159,7 +159,7 @@ The following steps demonstrate one way that you can use a **Web Search** compon
 
 2. Add a **Web Search** component, and then enter a search query, such as `environmental news`.
 
-3. Add a [**Type Convert** component](/components-processing#type-convert), set the **Output Type** to **Message**, and then connect the **Web Search** component's output to the **Type Convert** component's input.
+3. Add a [**Type Convert** component](/type-convert), set the **Output Type** to **Message**, and then connect the **Web Search** component's output to the **Type Convert** component's input.
 
     By default, the **Web Search** component outputs a `DataFrame`.
     Because the **Prompt Template** component only accepts `Message` data, this conversion is required so that the flow can pass the search results to the **Prompt Template** component.
@@ -206,7 +206,7 @@ The following steps demonstrate one way that you can use a **Web Search** compon
 
 The **Web Search** component outputs a [`DataFrame`](/data-types#dataframe) containing the key columns `title`, `links`, and `snippets`.
 
-When used as a standard component in a flow, the **Web Search** component must be connected to a component that accepts `DataFrame` input, or you must use a [**Type Convert** component](/components-processing#type-convert) to convert the output to `Data` or `Message` type before passing the data to other components.
+When used as a standard component in a flow, the **Web Search** component must be connected to a component that accepts `DataFrame` input, or you must use a [**Type Convert** component](/type-convert) to convert the output to `Data` or `Message` type before passing the data to other components.
 
 When used in **Tool Mode** with an **Agent** component, the **Web Search** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
 The agent decides whether to use the **Web Search** component based on the user's query, and it can process the `DataFrame` output directly.

@@ -32,7 +32,7 @@ The output contains the following columns:
 
 ### Use the Batch Run component in a flow
 
-If you pass the **Batch Run** output to a [**Parser** component](/components-processing#parser), you can use variables in the parsing template to reference these keys, such as `{text_input}` and `{model_response}`.
+If you pass the **Batch Run** output to a [**Parser** component](/parser), you can use variables in the parsing template to reference these keys, such as `{text_input}` and `{model_response}`.
 This is demonstrated in the following example.
 
 ![A batch run component connected to OpenAI and a Parser](/img/component-batch-run.png)
@@ -133,11 +133,11 @@ For example:
 
 ## Smart Router {#smart-router}
 
-The **Smart Router** component is an LLM-powered variation of the [**If-Else** component](/components-logic#if-else).
+The **Smart Router** component is an LLM-powered variation of the [**If-Else** component](/if-else).
 Instead of string matching, the **Smart Router** uses a connected [**Language Model** component](/components-models) to categorize and route incoming messages.
 
 You can use the **Smart Router** component anywhere you would use the **If-Else** component.
-For an example, create [If-Else component example flow](/components-logic#use-the-if-else-component-in-a-flow), then replace the **If-Else** component with a **Smart Router** component.
+For an example, create [If-Else component example flow](/if-else#use-the-if-else-component-in-a-flow), then replace the **If-Else** component with a **Smart Router** component.
 Instead of a regex, use the **Routes** table to define the outputs for your messages.
 Finally, connect a **Language Model** component to provide the sorting intelligence.
 
