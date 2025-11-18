@@ -336,17 +336,9 @@ module.exports = {
                 "Components/components-models",
                 "Components/components-prompts",
                 "Components/components-agents",
+                "Components/mcp-tools",
                 "Components/components-embedding-models",
-                {
-                  type: "link",
-                  label: "MCP tools",
-                  href: "/components-agents#mcp-connection",
-                },
-                {
-                  type: "link",
-                  label: "Message history",
-                  href: "/message-history",
-                },
+                "Components/message-history",
               ]
             },
             {
