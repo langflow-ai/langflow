@@ -143,7 +143,6 @@ class DatabaseService(Service):
 
         poolclass_key = kwargs.get("poolclass")
         if poolclass_key is not None:
-            pool_class = getattr(sa, poolclass_key, None)
             pool_class = getattr(sa.pool, poolclass_key, None)
             if pool_class and issubclass(pool_class, sa.pool.Pool):
                 logger.debug(f"Using poolclass: {poolclass_key}.")

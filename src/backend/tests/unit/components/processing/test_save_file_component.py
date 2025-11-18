@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pandas as pd
 import pytest
-from langflow.components.processing.save_file import SaveToFileComponent
-from langflow.schema import Data, DataFrame, Message
+from lfx.components.files_and_knowledge.save_file import SaveToFileComponent
+from lfx.schema import Data, Message
 
 from tests.base import ComponentTestBaseWithoutClient
 

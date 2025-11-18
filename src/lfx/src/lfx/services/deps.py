@@ -135,7 +135,19 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
             yield session
             await session.commit()
         except Exception as e:
-            await logger.aexception(f"An error occurred during the session scope. {e!s}")
+            # Log at appropriate level based on error type
+            if isinstance(e, HTTPException):
+                if HTTPStatus.BAD_REQUEST.value <= e.status_code < HTTPStatus.INTERNAL_SERVER_ERROR.value:
+                    # Client errors (4xx) - log at info level
+                    await logger.ainfo(f"Client error during session scope: {e.status_code}: {e.detail}")
+                else:
+                    # Server errors (5xx) or other - log at error level
+                    await logger.aexception("An error occurred during the session scope.", exception=e)
+            else:
+                # Non-HTTP exceptions - log at error level
+                await logger.aexception("An error occurred during the session scope.", exception=e)
+
+
             # Only rollback if session is still in a valid state
             if session.is_active:
                 try:
@@ -145,7 +157,7 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
                     pass
             raise
         # No explicit close needed - _with_session() handles it
-
+    
 
 async def injectable_session_scope_readonly():
     async with session_scope_readonly() as session:

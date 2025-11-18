@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
+import anyio
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.services.settings.service import SettingsService
@@ -129,40 +130,50 @@ async def download_image(file_name: str, flow_id: UUID):
 async def download_profile_picture(
     folder_name: str,
     file_name: str,
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
-    """Download a profile picture.
-    Profile pictures are system files bundled with the package, served from the installation directory.
+    """Download profile picture from local filesystem.
+
+    Profile pictures are always stored locally in config_dir/profile_pictures/,
+    regardless of the storage_type setting (local, s3, etc.).
     """
     try:
-        # Profile pictures are in the package installation directory
-        package_dir = Path(__file__).parent.parent.parent / "initial_setup" / "profile_pictures"
-        file_path = package_dir / folder_name / file_name
+        extension = file_name.split(".")[-1]
+        config_dir = settings_service.settings.config_dir
+        config_path = Path(config_dir)  # type: ignore[arg-type]
+        file_path = config_path / "profile_pictures" / folder_name / file_name
 
         if not file_path.exists():
-            raise HTTPException(status_code=404, detail="Profile picture not found")
+            raise HTTPException(status_code=404, detail=f"Profile picture {folder_name}/{file_name} not found")
 
-        extension = file_name.split(".")[-1]
         content_type = build_content_type_from_extension(extension)
-        file_content = file_path.read_bytes()
+        # Read file directly from local filesystem using async file operations
+        file_content = await anyio.Path(file_path).read_bytes()
         return StreamingResponse(BytesIO(file_content), media_type=content_type)
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/profile_pictures/list")
-async def list_profile_pictures():
-    """List available profile pictures.
-    Profile pictures are system files bundled with the package, served from the installation directory.
+async def list_profile_pictures(
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
+):
+    """List profile pictures from local filesystem.
+
+    Profile pictures are always stored locally in config_dir/profile_pictures/,
+    regardless of the storage_type setting (local, s3, etc.).
     """
     try:
-        # Profile pictures are in the package installation directory
-        package_dir = Path(__file__).parent.parent.parent / "initial_setup" / "profile_pictures"
+        config_dir = settings_service.settings.config_dir
+        config_path = Path(config_dir)  # type: ignore[arg-type]
 
-        people_path = package_dir / "People"
-        space_path = package_dir / "Space"
+        people_path = config_path / "profile_pictures" / "People"
+        space_path = config_path / "profile_pictures" / "Space"
 
-        # List files from package directory - these are bundled with the container
+        # List files directly from local filesystem - bundled with the container
         people = [f.name for f in people_path.iterdir() if f.is_file()] if people_path.exists() else []
         space = [f.name for f in space_path.iterdir() if f.is_file()] if space_path.exists() else []
     except Exception as e:
