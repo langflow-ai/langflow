@@ -8,10 +8,6 @@ from typing import TYPE_CHECKING, Any, cast
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import StructuredTool
-from lfx.field_typing import Tool
-from lfx.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output
-from lfx.schema.dotdict import dotdict
-from lfx.schema.message import Message
 
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.models.model_input_constants import (
@@ -27,7 +23,11 @@ from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComp
 from lfx.components.models_and_agents.memory import MemoryComponent
 from lfx.custom.custom_component.component import _get_component_toolkit
 from lfx.custom.utils import update_component_build_config
+from lfx.field_typing import Tool
+from lfx.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output
 from lfx.log.logger import logger
+from lfx.schema.dotdict import dotdict
+from lfx.schema.message import Message
 
 if TYPE_CHECKING:
     from lfx.schema.log import SendMessageFunctionType
