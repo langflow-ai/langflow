@@ -36,6 +36,8 @@ export const URLs = {
   PUBLISHED_FLOWS: `published-flows`,
   RUN: `run`,
   SPEC_BUILDER: `spec-builder`
+  ,
+  OBSERVABILITY: `observability`
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility

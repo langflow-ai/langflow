@@ -14,9 +14,10 @@ import { usePostReadPresignedUrl } from "@/controllers/API/queries/flexstore";
 import { AgentDetailsPanel } from "./AgentDetailsPanel";
 import { ChatArea } from "./ChatArea";
 import { useThreadManager } from "./ThreadManager";
-import { ThreadLogsModal } from "./ThreadLogsModal";
+import ThreadLogsDrawer from "./ThreadLogsDrawer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+// Removed ThreadLogsModal in favor of the new ThreadLogsDrawer
 
 export default function PlaygroundTab({
   publishedFlowData,
@@ -77,7 +78,7 @@ export default function PlaygroundTab({
   } = usePlaygroundChat(publishedFlowData);
 
   // Thread management
-  const { currentThreadId, threadLogs, newThread, clearLogs } = useThreadManager();
+  const { currentThreadId, newThread } = useThreadManager();
   const [isThreadLogsOpen, setIsThreadLogsOpen] = useState(false);
   const [isConfirmNewThreadOpen, setIsConfirmNewThreadOpen] = useState(false);
 
@@ -428,7 +429,7 @@ export default function PlaygroundTab({
 
   return (
     <div className="flex h-full w-full flex-col ">
-      <div className="flex flex-1 overflow-hidden h-full items-center">
+      <div className={`flex flex-1 overflow-hidden h-full items-center ${isThreadLogsOpen ? "mr-80" : ""}`}>
         {/* Agent Details Panel */}
         <div
           className="flex flex-col rounded-lg border border-border dark:border-white/20 h-full"
@@ -469,7 +470,7 @@ export default function PlaygroundTab({
             threadId={sessionId}
             onNewThread={handleNewThread}
             onOpenThreadLogs={() => setIsThreadLogsOpen(true)}
-            disableThreadLogs={true}
+            disableThreadLogs={false}
             chatContainerRef={chatContainerRef}
             onScroll={handleScroll}
             error={error}
@@ -495,6 +496,15 @@ export default function PlaygroundTab({
           />
         </div>
       </div>
+
+      {isThreadLogsOpen && (
+        <div className="fixed right-0 top-12 z-50 h-[calc(100vh-48px)]">
+          <ThreadLogsDrawer
+            isOpen={isThreadLogsOpen}
+            onClose={() => setIsThreadLogsOpen(false)}
+          />
+        </div>
+      )}
 
       <FileUploadManager
         isOpen={isFileModalOpen}
@@ -523,12 +533,7 @@ export default function PlaygroundTab({
         index={sampleTextModal.index}
       />
 
-      <ThreadLogsModal
-        open={isThreadLogsOpen}
-        onClose={() => setIsThreadLogsOpen(false)}
-        logs={threadLogs}
-        onClearAll={clearLogs}
-      />
+      {/* ThreadLogsModal removed; using ThreadLogsDrawer above */}
 
       {/* Confirm New Thread Modal */}
       <Dialog open={isConfirmNewThreadOpen} onOpenChange={setIsConfirmNewThreadOpen}>
