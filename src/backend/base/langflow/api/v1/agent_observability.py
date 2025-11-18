@@ -4,7 +4,8 @@ import os
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, HTTPException, Query
+from urllib.parse import urlencode
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from langflow.logging.logger import logger
 
@@ -40,7 +41,8 @@ async def _proxy_get(path: str, params: dict[str, Any]) -> Any:
     base_url = _get_base_url()
     url = f"{base_url}{path}"
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            await logger.ainfo(f"Observability GET -> {url} | params={params}")
             resp = await client.get(url, params=params)
             resp.raise_for_status()
             return resp.json()
@@ -51,7 +53,14 @@ async def _proxy_get(path: str, params: dict[str, Any]) -> Any:
             detail = e.response.json()
         except Exception:  # noqa: BLE001
             detail = e.response.text
-        await logger.aerror(f"Observability proxy GET failed: {e.response.status_code} {detail}")
+        # Log what was actually sent to the upstream, to diagnose missing params
+        try:
+            sent_url = str(e.response.request.url)
+        except Exception:  # noqa: BLE001
+            sent_url = url
+        await logger.aerror(
+            f"Observability proxy GET failed: {e.response.status_code} {detail} | sent_url={sent_url}"
+        )
         raise HTTPException(status_code=e.response.status_code, detail=detail)
     except Exception as e:  # noqa: BLE001
         await logger.aexception(f"Observability proxy GET error: {e!s}")
@@ -182,6 +191,16 @@ async def get_usage_trends(days: int = Query(..., ge=0), entity_type: str = Quer
         {"days": days, "entity_type": entity_type, "entity_name": entity_name},
     )
 
+@router.get("/get-traces/by-session-grouped")
+async def get_traces_by_name_grouped(
+    name: str = Query(..., description="Partial name to match against trace name"),
+    timeframe: str = Query(default="24h", description="Time period: 24h, 7d, 30d"),
+):
+    """Proxy to fetch traces grouped by session_id for traces matching a name query."""
+    params = {"name": name, "timeframe": timeframe}
+    await logger.ainfo(f"🔍 Forwarding with params: {params}")
+    return await _proxy_get("/traces/by-name-grouped", params)
+
 
 @router.get("/dashboard/projects/usage-trends")
 async def get_projects_usage_trends(days: int = Query(..., ge=0), entity_name: str = Query(...)):
@@ -207,3 +226,18 @@ async def get_dashboard_traces(
         if v is not None
     }
     return await _proxy_get("/dashboard/traces", params)
+
+
+# Sessions: Summary
+@router.get("/sessions/{session_id}/summary")
+async def get_session_summary(session_id: str):
+    """Proxy to fetch aggregated totals and traces listing for a given session_id."""
+    return await _proxy_get(f"/sessions/{session_id}/summary", {})
+
+@router.get("/sessions/{session_id}/latest-summary")
+async def get_trace(session_id: str):
+    """Proxy to fetch a single trace by its ID."""
+    return await _proxy_get(f"/sessions/{session_id}/latest-summary", {})
+
+
+
