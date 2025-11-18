@@ -193,9 +193,17 @@ class S3StorageService(StorageService):
         try:
             async with self._get_client() as s3_client:
                 response = await s3_client.get_object(Bucket=self.bucket_name, Key=key)
+                body = response["Body"]
 
-                async for chunk in response["Body"].iter_chunks(chunk_size):
-                    yield chunk
+                try:
+                    async for chunk in body.iter_chunks(chunk_size):
+                        yield chunk
+                finally:
+                    if hasattr(body, "close"):
+                        try:
+                            await body.close()
+                        except Exception:
+                            pass
 
             logger.debug(f"File {file_name} streamed successfully from S3: s3://{self.bucket_name}/{key}")
 
