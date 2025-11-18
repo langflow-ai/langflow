@@ -256,7 +256,7 @@ export default function MarketplaceDetailPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="playground" className="mt-3 w-full">
+            <TabsContent value="playground" className="mt-3 w-full" forceMount>
               <div className="h-[calc(100vh-164px)] w-full overflow-hidden">
                 <PlaygroundTab publishedFlowData={publishedFlowData} />
               </div>
