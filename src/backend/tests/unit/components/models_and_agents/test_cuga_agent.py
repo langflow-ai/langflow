@@ -67,12 +67,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
             "policies": "You are a helpful assistant.",
             "input_value": "",
             "n_messages": 100,
-            "format_instructions": "You are an AI that extracts structured JSON objects from unstructured text.",
-            "output_schema": [],
             "browser_enabled": False,
             "web_apps": "",
             "lite_mode": True,
             "lite_mode_tool_threshold": 25,
+            "decomposition_strategy": "flexible",
         }
 
     async def test_build_config_update(self, component_class, default_kwargs):
@@ -224,27 +223,54 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
 
         # Test for new fields specific to Cuga
         assert "policies" in input_names
-        assert "format_instructions" in input_names
-        assert "output_schema" in input_names
         assert "n_messages" in input_names
         assert "browser_enabled" in input_names
         assert "web_apps" in input_names
         assert "lite_mode" in input_names
         assert "lite_mode_tool_threshold" in input_names
+        assert "decomposition_strategy" in input_names
 
         # Verify default values
         assert hasattr(component, "policies")
-        assert hasattr(component, "format_instructions")
-        assert hasattr(component, "output_schema")
         assert hasattr(component, "n_messages")
         assert hasattr(component, "browser_enabled")
         assert hasattr(component, "web_apps")
         assert hasattr(component, "lite_mode")
         assert hasattr(component, "lite_mode_tool_threshold")
+        assert hasattr(component, "decomposition_strategy")
         assert component.n_messages == 100
         assert component.browser_enabled is False
         assert component.lite_mode is True
         assert component.lite_mode_tool_threshold == 25
+        assert component.decomposition_strategy == "flexible"
+
+    async def test_decomposition_strategy_field(self, component_class, default_kwargs):
+        """Test that decomposition_strategy field is properly configured.
+
+        This test verifies that the decomposition_strategy field has the correct
+        options, default value, and advanced configuration.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Find the decomposition_strategy input
+        decomposition_input = None
+        for inp in component.inputs:
+            if hasattr(inp, "name") and inp.name == "decomposition_strategy":
+                decomposition_input = inp
+                break
+
+        assert decomposition_input is not None, "decomposition_strategy input not found"
+        assert decomposition_input.display_name == "Decomposition Strategy"
+        assert decomposition_input.value == "flexible"
+        assert decomposition_input.options == ["flexible", "exact"]
+        assert decomposition_input.advanced is True
+
+        # Test setting different values
+        component.decomposition_strategy = "exact"
+        assert component.decomposition_strategy == "exact"
+
+        component.decomposition_strategy = "flexible"
+        assert component.decomposition_strategy == "flexible"
 
     async def test_memory_inputs_advanced_setting(self, component_class, default_kwargs):
         """Test that memory inputs are properly set to advanced.

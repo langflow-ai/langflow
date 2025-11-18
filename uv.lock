@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -1800,8 +1800,8 @@ wheels = [
 
 [[package]]
 name = "cuga"
-version = "0.1.7"
-source = { editable = "../cuga-agent" }
+version = "0.1.8"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "browsergym-core" },
@@ -1825,57 +1825,9 @@ dependencies = [
     { name = "typer" },
     { name = "uvicorn" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiohttp" },
-    { name = "browsergym-core", specifier = "==0.13.0" },
-    { name = "docker" },
-    { name = "dynaconf" },
-    { name = "fastapi", extras = ["standard"] },
-    { name = "fastmcp" },
-    { name = "html2text" },
-    { name = "langchain" },
-    { name = "langchain-core" },
-    { name = "langchain-ibm", specifier = ">=0.3.9,<1.0.0" },
-    { name = "langchain-mcp-adapters", specifier = ">=0.1.9" },
-    { name = "langchain-openai" },
-    { name = "langfuse" },
-    { name = "langgraph" },
-    { name = "loguru" },
-    { name = "mcp", extras = ["cli"], specifier = ">=1.2.1" },
-    { name = "playwright", specifier = "==1.49.0" },
-    { name = "psutil", specifier = ">=7.0.0" },
-    { name = "python-dotenv" },
-    { name = "rapidfuzz", marker = "extra == 'evaluation'" },
-    { name = "typer", specifier = ">=0.15.3" },
-    { name = "uvicorn" },
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a9/88/a59c69b2fbe18ff4e3641f3c64e7ab6765d6fa5563929839ac7428c4d8f4/cuga-0.1.8-py3-none-any.whl", hash = "sha256:6d87b551a338ef7873dd55ade4fefc83a105485b2839ecf3fb57a5a7ed5766a6", size = 628524, upload-time = "2025-11-18T16:37:39.942Z" },
 ]
-provides-extras = ["evaluation"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "beartype" },
-    { name = "cugaviz" },
-    { name = "nltk" },
-    { name = "pre-commit", specifier = ">=4.3.0" },
-    { name = "pytest", specifier = ">=8.3.5" },
-    { name = "pytest-asyncio", specifier = ">=1.1.0" },
-    { name = "pytz", specifier = ">=2025.1" },
-    { name = "questionary", specifier = ">=2.1.1" },
-    { name = "rapidfuzz" },
-    { name = "rich", specifier = ">=14.2.0" },
-    { name = "ruff", specifier = ">=0.9.4" },
-    { name = "tabulate" },
-    { name = "termcolor" },
-]
-google-genai = [{ name = "langchain-google-genai", specifier = ">=2.0.11" }]
-groq = [{ name = "langchain-groq", specifier = ">=0.3.8" }]
-memory = [
-    { name = "mem0ai", extras = ["extras"], specifier = ">=0.1.108" },
-    { name = "pymilvus", extras = ["milvus-lite"], specifier = ">=2.5.11" },
-]
-sandbox = [{ name = "llm-sandbox", specifier = ">=0.1.3" }]
 
 [[package]]
 name = "cuid"
@@ -5649,7 +5601,7 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "cryptography", specifier = ">=43.0.1,<44.0.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "cuga", editable = "../cuga-agent" },
+    { name = "cuga", specifier = "==0.1.8" },
     { name = "datasets", specifier = ">2.14.7,<4.0.0" },
     { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'", specifier = ">=2.36.1,<3.0.0" },
     { name = "docling-core", specifier = ">=2.36.1,<3.0.0" },
