@@ -292,9 +292,8 @@ class Settings(BaseSettings):
     # MCP Composer
     mcp_composer_enabled: bool = True
     """If set to False, Langflow will not start the MCP Composer service."""
-    mcp_composer_version: str = "~=0.1.0.7"
-    """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax.
-    ~=0.1.0.7 allows patch updates (0.1.0.x) but prevents minor/major version changes."""
+    mcp_composer_version: str = "==0.1.0.21"
+    """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax."""
 
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
