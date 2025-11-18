@@ -9,6 +9,17 @@ import TabItem from '@theme/TabItem';
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
 
+LLM operations components use attached [**Language model** components](/language-models) to make decisions.
+For example:
+
+* **Process data in batches**: Run a language model over multiple rows of data with the [**Batch Run** component](#batch-run).
+
+* **Route language model requests**: Select the most appropriate language model for each request with the [**LLM Router** component](#llm-router) and [**Smart Router** component](#smart-router).
+
+* **Transform data with AI**: Generate functions to filter or transform structured data using natural language instructions with the [**Smart Transform** component](#smart-transform).
+
+* **Extract structured data**: Convert unstructured input into structured formats like `Data` or `DataFrame` with the [**Structured Output** component](#structured-output).
+
 ## Batch Run
 
 The **Batch Run** component runs a language model over _each row of one text column_ in a [`DataFrame`](/data-types#dataframe), and then returns a new `DataFrame` with the original text and an LLM response.

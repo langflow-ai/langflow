@@ -10,21 +10,15 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 import PartialCurlyBraces from '@site/docs/_partial-escape-curly-braces.mdx';
 
 Processing components process and transform data within a flow.
-They have many uses, including:
+For example:
 
-* Feed instructions and context to your LLMs and agents with the [**Prompt Template** component](#prompt-template).
-* Extract content from larger chunks of data with a [**Parser** component](#parser).
-* Filter data with natural language with the [**Smart Transform** component](/components-llm-operations#smart-transform).
-* Create structured data dynamically with the [**Dynamic Create Data** component](#dynamic-create-data).
-* Perform advanced JSON queries with the [**Data Operations** component](#data-operations) using `jq` expressions.
-* Save data to your local machine with the [**Write File** component](/components-files#save-file).
-* Transform data into a different data type with the [**Type Convert** component](#type-convert) to pass it between incompatible components.
+* **Extract and format data**: Extract content from structured data using templates with the [**Parser** component](#parser), or split text into chunks with the [**Split Text** component](#split-text).
+
+* **Transform data structures**: Convert data between different types with the [**Type Convert** component](#type-convert), or perform operations on structured data with the [**Data Operations** component](#data-operations) and [**DataFrame Operations** component](#dataframe-operations).
 
 ## Prompt Template
 
 See [**Prompt Template** component](/components-prompts).
-
-
 
 ## Data Operations
 
