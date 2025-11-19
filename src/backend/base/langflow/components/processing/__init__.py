@@ -28,8 +28,8 @@ if TYPE_CHECKING:
     from langflow.components.processing.parse_dataframe import ParseDataFrameComponent
     from langflow.components.processing.parse_json_data import ParseJSONDataComponent
     from langflow.components.processing.parser import ParserComponent
-    from langflow.components.processing.prompt import PromptComponent
-    from langflow.components.processing.genesis_prompt import GenesisPromptComponent
+    from langflow.components.prompt.prompt import PromptComponent
+    from langflow.components.prompt.genesis_prompt import GenesisPromptComponent
     from langflow.components.processing.python_repl_core import PythonREPLComponent
     from langflow.components.processing.regex import RegexExtractorComponent
     from langflow.components.processing.save_file import SaveToFileComponent

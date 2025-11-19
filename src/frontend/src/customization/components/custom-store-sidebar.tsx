@@ -8,7 +8,7 @@ export const CustomStoreSidebar = (
 
   if (hasApiKey) {
     items.push({
-      title: "Ai Studio API Keys",
+      title: "AI Studio API Keys",
       href: "/settings/api-keys",
       icon: (
         <ForwardedIconComponent

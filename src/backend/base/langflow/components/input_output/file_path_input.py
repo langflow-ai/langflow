@@ -4,7 +4,7 @@ from langflow.schema.message import Message
 
 
 class FileInputComponent(TextComponent):
-    display_name = "File Path Input"
+    display_name = "File Input"
     description = "Get user file path inputs."
     documentation: str = "https://docs.langflow.org/components-io#file-path-input"
     icon = "type"

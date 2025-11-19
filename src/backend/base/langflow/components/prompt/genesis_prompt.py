@@ -2,7 +2,7 @@ import re
 from textwrap import dedent
 
 # from langflow.custom import Component
-from langflow.components.processing.prompt import PromptComponent
+from langflow.components.prompt.prompt import PromptComponent
 from langflow.io import DropdownInput, Output
 from langflow.schema.message import Message
 from loguru import logger

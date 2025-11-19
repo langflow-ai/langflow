@@ -75,9 +75,6 @@ export default function MarketplacePage() {
   const [tagFilter, setTagFilter] = useState<string | "all">(() => 
     getStoredValue(STORAGE_KEYS.TAG_FILTER, "all")
   );
-  const [pendingTag, setPendingTag] = useState<string | "all">(() => 
-    getStoredValue(STORAGE_KEYS.TAG_FILTER, "all")
-  );
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [sortBy, setSortBy] = useState<"name" | "date" | "tags">(() => 
     getStoredValue(STORAGE_KEYS.SORT_BY, "name")
@@ -155,12 +152,6 @@ export default function MarketplacePage() {
     };
   }, [debouncedSearch, searchQuery, debouncedSetSearchQuery]);
 
-  useEffect(() => {
-    if (isFilterOpen) {
-      setPendingTag(tagFilter);
-    }
-  }, [isFilterOpen, tagFilter]);
-
   const { data, isLoading } = useGetAllPublishedFlows({
     page: pageIndex,
     limit: pageSize,
@@ -186,6 +177,13 @@ export default function MarketplacePage() {
   const handlePageSizeChange = useCallback((newPageSize: number) => {
     setPageSize(newPageSize);
     setPageIndex(1);
+  }, []);
+
+  // Handle filter change immediately
+  const handleTagFilterChange = useCallback((value: string) => {
+    setTagFilter(value);
+    setPageIndex(1);
+    setIsFilterOpen(false);
   }, []);
 
   return (
@@ -262,8 +260,8 @@ export default function MarketplacePage() {
                     <div className="space-y-2">
                       <div className="text-base font-semibold">Domain</div>
                       <Select
-                        value={pendingTag}
-                        onValueChange={(v) => setPendingTag(v as string)}
+                        value={tagFilter}
+                        onValueChange={handleTagFilterChange}
                       >
                         <SelectTrigger className="h-10 w-full rounded-md border border-[#EBE8FF] dark:border-white/20 text-sm dark:text-white">
                           <SelectValue placeholder="All Domain" />
@@ -285,28 +283,16 @@ export default function MarketplacePage() {
                       </Select>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2">
+                    <div className="flex items-center justify-end pt-2">
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-9 rounded-md border border-[#EBE8FF] dark:border-white/20"
                         onClick={() => {
-                          setPendingTag(tagFilter);
                           setIsFilterOpen(false);
                         }}
                       >
-                        Cancel
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="h-9 rounded-md bg-[#350E84] text-white hover:bg-[#2D0B6E]"
-                        onClick={() => {
-                          setTagFilter(pendingTag);
-                          setPageIndex(1);
-                          setIsFilterOpen(false);
-                        }}
-                      >
-                        Apply
+                        Close
                       </Button>
                     </div>
                   </div>
