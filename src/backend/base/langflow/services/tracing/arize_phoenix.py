@@ -75,7 +75,7 @@ class ArizePhoenixTracer(BaseTracer):
             )
             self.root_span.set_attribute(SpanAttributes.SESSION_ID, self.session_id or self.flow_id)
             if self.user_id:
-                self.root_span.set_attribute("user.id", self.user_id)
+                self.root_span.set_attribute(SpanAttributes.USER_ID, self.user_id)
             self.root_span.set_attribute(SpanAttributes.OPENINFERENCE_SPAN_KIND, self.trace_type)
             self.root_span.set_attribute("langflow.project.name", self.project_name)
             self.root_span.set_attribute("langflow.flow.name", self.flow_name)
