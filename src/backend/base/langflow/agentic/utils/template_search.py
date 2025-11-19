@@ -164,12 +164,11 @@ def get_all_tags(starter_projects_path: str | Path | None = None) -> list[str]:
 
     for template_file in starter_projects_dir.glob("*.json"):
         try:
-            template_data = orjson.loads(Path(template_file).read_text(encoding="utf-8"))
+            template_data = orjson.loads(template_file.read_bytes())
 
             tags = template_data.get("tags", [])
             all_tags.update(tags)
-
-        except (json.JSONDecodeError, orjson.JSONDecodeError) as e:
+        except orjson.JSONDecodeError as e:
             logger.aexception(f"Error loading template {template_file}: {e}")
             continue
 
