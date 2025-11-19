@@ -39,8 +39,6 @@ dependencies = [
     "loguru>=0.7.3,<1.0.0",
     "langchain~=0.3.23",
     "validators>=0.34.0,<1.0.0",
-    "langchain-experimental>=0.3.0,<1.0.0",
-    "langchain-community>=0.3.0,<1.0.0",
     "filelock>=3.20.0",
 ]
 
