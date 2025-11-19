@@ -28,7 +28,7 @@
 
 ## 🖥️  Langflow Desktop
 
-Langflow Desktop is the easiest way to get started. It includes dependency management and automatic updates.
+Langflow Desktop is the easiest way to get started with Langflow. All dependencies included, so you don't need to manage Python environments or install packages manually.
 Available for Windows and macOS.
 
 [📥 Download Langflow Desktop](https://www.langflow.org/desktop)
