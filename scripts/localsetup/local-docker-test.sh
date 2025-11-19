@@ -5,6 +5,17 @@
 
 set -e
 
+# Determine which container engine to use. Default to docker but respect
+# CONTAINER_ENGINE or DOCKER if the caller specifies podman.
+CONTAINER_ENGINE="${CONTAINER_ENGINE:-${DOCKER:-docker}}"
+export CONTAINER_ENGINE
+export DOCKER="${CONTAINER_ENGINE}"
+
+# Helper so every plain `docker` call honors the selected engine.
+docker() {
+    command "${CONTAINER_ENGINE}" "$@"
+}
+
 # Change to git root directory
 echo "📂 Changing to git root directory..."
 GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)

@@ -1,0 +1,11 @@
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+}
+
+body {
+  min-height: 100vh;
+}

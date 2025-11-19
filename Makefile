@@ -2,7 +2,7 @@
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
-DOCKER=podman
+DOCKER ?= docker
 DOCKERFILE=docker/build_and_push.Dockerfile
 DOCKERFILE_BACKEND=docker/build_and_push_backend.Dockerfile
 DOCKERFILE_FRONTEND=docker/frontend/build_and_push_frontend.Dockerfile
