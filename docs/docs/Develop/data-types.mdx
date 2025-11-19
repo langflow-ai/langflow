@@ -22,7 +22,7 @@ When building flows, connect output ports to input ports of the same type (color
 * In the [workspace](/concepts-overview#workspace), hover over a port to see connection details for that port.
 Click a port to <Icon name="Search" aria-hidden="true" /> **Search** for compatible components.
 
-* If two components have incompatible data types, you can use a processing component like the [**Type Convert** component](/components-processing#type-convert) to convert the data between components.
+* If two components have incompatible data types, you can use a processing component like the [**Type Convert** component](/type-convert) to convert the data between components.
 :::
 
 ## Data
@@ -159,7 +159,7 @@ You can inspect the [component code](/concepts-components#component-code) to see
 
 **Memory** ports <Icon name="Circle" size="16" aria-label="Orange memory port" style={{ color: '#f97316', fill: '#f97316' }} /> are used to integrate a **Message History** component with external chat memory storage.
 
-For more information, see the [**Message History** component](/components-helpers#message-history).
+For more information, see the [**Message History** component](/message-history).
 
 ## Message
 
@@ -217,14 +217,14 @@ The strictness depends on the component.
 
 ### Message data in Input and Output components
 
-In flows with [**Chat Input and Output** components](/components-io#chat-io), `Message` data provides a consistent structure for chat interactions, and it is ideal for chatbots, conversational analysis, and other use cases based on a dialogue with an LLM or agent.
+In flows with [**Chat Input and Output** components](/chat-input-and-output), `Message` data provides a consistent structure for chat interactions, and it is ideal for chatbots, conversational analysis, and other use cases based on a dialogue with an LLM or agent.
 In these flows, the **Playground** chat interface prints only the `Message` attributes that are relevant to the conversation, such as `text`, `files`, and error messages from `content_blocks`.
 To see all `Message` attributes, inspect the message logs in the **Playground**.
 
-In flows with [**Text Input and Output** components](/components-io#text-io), `Message` data is used to pass simple text strings without the chat-related metadata.
+In flows with [**Text Input and Output** components](/text-input-and-output), `Message` data is used to pass simple text strings without the chat-related metadata.
 These components handle `Message` data as independent text strings, not as part of an ongoing conversation.
 For this reason, a flow with only **Text Input and Output** components isn't compatible with the **Playground**.
-For more information, see [Input and output components](/components-io).
+For more information, see [Text input and output components](/text-input-and-output).
 
 When using the Langflow API, the response includes the `Message` object along with other response data from the flow run.
 Langflow API responses can be extremely verbose, so your applications must include code to extract relevant data from the response to return to the user.
@@ -255,7 +255,7 @@ Hover over the port to see the accepted or produced data types.
 In Langflow, you can use <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to view the output of individual components.
 This can help you learn about the different data type and debug problems with invalid or malformed inputs and output.
 
-The following example shows how to inspect the output of a [**Type Convert** component](/components-processing#type-convert), which can convert data from one type to another:
+The following example shows how to inspect the output of a [**Type Convert** component](/type-convert), which can convert data from one type to another:
 
 1. Create a flow, and then connect a **Chat Input** component to a **Type Convert** component.
 
@@ -336,7 +336,6 @@ The following example shows how to inspect the output of a [**Type Convert** com
 
 ## See also
 
-- [Processing components](/components-processing)
 - [Custom components](/components-custom-components)
 - [Pydantic Models](https://docs.pydantic.dev/latest/api/base_model/)
 - [pandas.DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html)

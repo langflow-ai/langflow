@@ -202,7 +202,18 @@ const config = {
           },
           {
             to: "/concepts-components",
-            from: ["/components", "/components-overview"],
+            from: [
+              "/components",
+              "/components-overview",
+              "/components-processing",
+              "/components-data",
+              "/components-files",
+              "/components-logic",
+              "/components-tools",
+              "/components-io",
+              "/components-helpers",
+              "/components-memories",
+            ],
           },
           {
             to: "/configuration-global-variables",
@@ -326,10 +337,6 @@ const config = {
           {
             to: "/data-types",
             from: "/concepts-objects",
-          },
-          {
-            to: "/components-helpers",
-            from: "/components-memories",
           },
           {
             to: "/bundles-apify",
