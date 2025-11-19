@@ -42,7 +42,11 @@ const TabsContent = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.Content
     ref={ref}
-    className={cn("mt-2 ring-offset-background", className)}
+    className={cn(
+      // Hide inactive tab panels to prevent extra scroll and content bleed
+      "mt-2 ring-offset-background data-[state=inactive]:hidden",
+      className,
+    )}
     {...props}
   />
 ));

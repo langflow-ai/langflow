@@ -16,7 +16,6 @@ interface SelectedFileItem {
 }
 
 interface ChatAreaProps {
-  // Chat messages
   messages: Message[];
   displayedTexts: Map<string, string>;
   targetTexts: Map<string, string>;
@@ -24,25 +23,20 @@ interface ChatAreaProps {
   onPreviewAttachment: (f: { url: string; name: string; type: string }) => void;
   onPreviewSampleFile: (filePathOrName: string) => void;
 
-  // Thread info
   threadId?: string;
   onNewThread?: () => void;
   onOpenThreadLogs?: () => void;
   disableThreadLogs?: boolean;
 
-  // Scrolling
   chatContainerRef: RefObject<HTMLDivElement>;
   onScroll: () => void;
 
-  // Error
   error: string | null;
 
-  // Files
   selectedFiles: SelectedFileItem[];
   onPreviewFile: (file: SelectedFileItem) => void;
   onRemoveSelectedFile: (componentId: string) => void;
 
-  // Input/config
   hasChatInput: boolean;
   input: string;
   setInput: (v: string) => void;
@@ -254,7 +248,15 @@ export function ChatArea({
 
                 <button
                   onClick={streamingMessageId ? onStop : onSend}
-                  disabled={!streamingMessageId && (!input.trim() || isLoading)}
+                  disabled={
+                    !streamingMessageId && (
+                      (
+                        hasChatInput
+                          ? (!input.trim() && selectedFiles.length === 0)
+                          : false
+                      ) || isLoading
+                    )
+                  }
                   className={`p-2 rounded-md transition-colors ${
                     streamingMessageId
                       ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"

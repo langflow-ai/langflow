@@ -92,7 +92,8 @@ export default function PlaygroundTab({
     description: publishedFlowData?.description || "No description available",
     version: publishedFlowData?.version || "1.0",
     tags: publishedFlowData?.tags || [],
-    name: publishedFlowData?.name || "Agent",
+    // Prefer flow_name from published flow API; fallback to name
+    name: publishedFlowData?.flow_name || publishedFlowData?.name || "Agent",
   };
 
   const sampleFilePaths: string[] = Array.isArray(publishedFlowData?.input_samples)
@@ -275,12 +276,12 @@ export default function PlaygroundTab({
   };
 
   const sendMessage = async () => {
-    if (hasChatInput && !input.trim()) return;
+    if (hasChatInput && !input.trim() && selectedFiles.length === 0) return;
     if (!hasChatInput && selectedFiles.length === 0) return;
     if (isLoading) return;
 
     const currentFileUrls = { ...fileUrls };
-    const messageText = hasChatInput ? input.trim() : "Processing uploaded file...";
+    const messageText = input.trim() || "";
 
     const attachments = selectedFiles.map((file) => ({
       url: file.url,
@@ -292,7 +293,6 @@ export default function PlaygroundTab({
     setFileUrls({});
     setInput("");
     
-    // Reset user scrolling flag when sending a new message
     isUserScrollingRef.current = false;
     
     await sendMessageHook(
@@ -302,7 +302,6 @@ export default function PlaygroundTab({
       attachments
     );
 
-    // Focus input after sending
     focusInput();
   };
 
@@ -390,7 +389,6 @@ export default function PlaygroundTab({
       const type = getFileTypeFromName(name);
       setPreviewFile({ url: signedUrl, name, type });
     } catch (e) {
-      // Optional: add error toast
     }
   };
 
@@ -408,7 +406,7 @@ export default function PlaygroundTab({
       setShowSampleSection(false);
       setFileUrls({ [targetComponentId]: signedUrl });
     } catch (e) {
-      // Optional: add error toast
+
     }
   };
 
@@ -418,7 +416,7 @@ export default function PlaygroundTab({
     }
   }, [isLoading, streamingMessageId, selectedFiles.length]);
 
-  // Cleanup timeout on unmount
+
   useEffect(() => {
     return () => {
       if (scrollTimeoutRef.current) {
@@ -502,6 +500,8 @@ export default function PlaygroundTab({
           <ThreadLogsDrawer
             isOpen={isThreadLogsOpen}
             onClose={() => setIsThreadLogsOpen(false)}
+            // Pass the agent name used in title: flow_name preferred
+            nameParam={publishedFlowData?.flow_name || publishedFlowData?.name || agentDetails.name}
           />
         </div>
       )}
@@ -533,9 +533,7 @@ export default function PlaygroundTab({
         index={sampleTextModal.index}
       />
 
-      {/* ThreadLogsModal removed; using ThreadLogsDrawer above */}
 
-      {/* Confirm New Thread Modal */}
       <Dialog open={isConfirmNewThreadOpen} onOpenChange={setIsConfirmNewThreadOpen}>
         <DialogContent>
           <DialogHeader>

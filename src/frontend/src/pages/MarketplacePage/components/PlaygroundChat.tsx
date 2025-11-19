@@ -9,6 +9,7 @@ export function usePlaygroundChat(publishedFlowData: any) {
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState(() => uuid());
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const streamingIdRef = useRef<string | null>(null);
   const [loadingDots, setLoadingDots] = useState(1);
   const [targetTexts, setTargetTexts] = useState<Map<string, string>>(new Map());
   const [displayedTexts, setDisplayedTexts] = useState<Map<string, string>>(new Map());
@@ -19,6 +20,11 @@ export function usePlaygroundChat(publishedFlowData: any) {
   useEffect(() => {
     targetTextsRef.current = targetTexts;
   }, [targetTexts]);
+
+  // Keep a ref of the current streaming message id for event handlers
+  useEffect(() => {
+    streamingIdRef.current = streamingMessageId;
+  }, [streamingMessageId]);
 
   // Loading dots animation for empty streaming messages
   useEffect(() => {
@@ -91,6 +97,11 @@ const handleStreamEvent = (eventData: any, localAgentMessageId: string) => {
       const text = data.text || "";
       const state = data.properties?.state || "partial";
       const isComplete = state === "complete";
+
+      // Switch the tracked streaming id to the backend-provided id as soon as we have it
+      if (backendId) {
+        setStreamingMessageId(backendId);
+      }
 
       setTargetTexts((prev) => {
         const next = new Map(prev);
@@ -195,16 +206,17 @@ const handleStreamEvent = (eventData: any, localAgentMessageId: string) => {
         }
 
         if (finalText) {
+          const finalId = streamingIdRef.current || localAgentMessageId;
 
           setMessages((prev) =>
             prev.map((msg) =>
-              msg.id === localAgentMessageId
+              msg.id === finalId
                 ? { ...msg, text: finalText, isStreaming: false }
                 : msg
             )
           );
-          
-          // Clear typewriter state
+
+          // Clear typewriter state now that we have the final text
           setTargetTexts(new Map());
           setDisplayedTexts(new Map());
         } else {
@@ -235,7 +247,8 @@ const handleStreamEvent = (eventData: any, localAgentMessageId: string) => {
     fileInputComponents: FileInputComponent[],
     attachments?: { url: string; name: string; type: string }[]
   ) => {
-    if (!userInputText.trim() || isLoading) return;
+    const hasFiles = Object.keys(fileUrls || {}).length > 0;
+    if ((!userInputText.trim() && !hasFiles) || isLoading) return;
 
     const userMessage: Message = {
       id: uuid(),
@@ -274,6 +287,7 @@ const handleStreamEvent = (eventData: any, localAgentMessageId: string) => {
       const requestBody = {
         output_type: "chat",
         input_type: "chat",
+        // Allow empty string for chat input when files are provided
         input_value: userInputText,
         session_id: sessionId,
         ...(Object.keys(fileTweaks).length > 0 && { tweaks: fileTweaks }),
@@ -376,9 +390,7 @@ const handleStreamEvent = (eventData: any, localAgentMessageId: string) => {
   };
 
   const clearConversation = () => {
-    // Stop any active stream
     stopStreaming();
-    // Clear all chat state
     setMessages([]);
     setError(null);
     setStreamingMessageId(null);

@@ -20,7 +20,8 @@ interface ThreadLogsDrawerProps {
 export default function ThreadLogsDrawer({
   isOpen,
   onClose,
-  nameParam = "Short Summary Agent.-Published-1.0.1",
+  // Use provided agent name; no hardcoded default
+  nameParam,
   timeframe = "24h",
 }: ThreadLogsDrawerProps) {
   const [loading, setLoading] = useState(false);
@@ -33,6 +34,11 @@ export default function ThreadLogsDrawer({
 
   useEffect(() => {
     if (!isOpen) return;
+    // Require an agent name to fetch grouped traces
+    if (!nameParam || !nameParam.trim()) {
+      setGroups([]);
+      return;
+    }
     const fetchGroups = async () => {
       setLoading(true);
       setError(null);
@@ -68,11 +74,6 @@ export default function ThreadLogsDrawer({
       </div>
 
       <div className="flex-1 overflow-y-auto pt-3">
-        <div className="px-4 text-xs text-muted-foreground">
-          <div>Timeframe: {timeframe}</div>
-          <div className="truncate" title={nameParam}>Search Name: {nameParam}</div>
-        </div>
-
         {loading && (
           <div className="px-4 py-3 text-sm text-muted-foreground">Loading…</div>
         )}
