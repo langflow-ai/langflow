@@ -362,8 +362,13 @@ class CugaComponent(ToolCallingAgentComponent):
                 properties={"icon": "Bot", "state": "partial"},
                 content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
                 session_id=self.graph.session_id,
-                id=str(uuid.uuid4()),
             )
+
+            # Pre-assign an ID for event processing, following the base agent pattern
+            # This ensures streaming works even when not connected to ChatOutput
+            if not self.is_connected_to_chat_output():
+                # When not connected to ChatOutput, assign ID upfront for streaming support
+                agent_message.data["id"] = str(uuid.uuid4())
 
             # Get input text
             input_text = self.input_value.text if hasattr(self.input_value, "text") else str(self.input_value)
@@ -388,9 +393,7 @@ class CugaComponent(ToolCallingAgentComponent):
 
                 result = await self.send_message(message, id_=id_, skip_db_update=False)
 
-                result_id = result.id
-
-                logger.debug(f"[CUGA] Message processed with ID: {result_id}")
+                logger.debug(f"[CUGA] Message processed with ID: {result.id}")
                 return result
 
             result = await process_agent_events(
