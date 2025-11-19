@@ -37,7 +37,7 @@ class SplitToImagesInput(BaseModel):
     """Input schema for SplitToImages tool."""
 
     file_urls: list[str] = Field(
-        description="List of URLs or file paths to PDF/TIFF files to split into images"
+        description="List of URLs or file paths to PDF/TIFF/PNG files to split into images"
     )
     keep_original_size: bool = Field(
         default=True,
@@ -46,6 +46,10 @@ class SplitToImagesInput(BaseModel):
     base64_only: bool = Field(
         default=False,
         description="If True, only return base64 encoded images without uploading to storage"
+    )
+    split_to_pdf: bool = Field(
+        default=False,
+        description="If True, split multi-page PDFs into individual single-page PDFs instead of images"
     )
     storage_account: str | None = Field(
         default=None,
@@ -61,12 +65,12 @@ class SplitToImagesComponent(LCToolComponent):
     """Tool for splitting PDFs/TIFFs into individual images and uploading to blob storage."""
 
     display_name = "Split To Images"
-    description = "Split PDFs and TIFFs into individual images and return list of image URLs or base64 strings"
+    description = "Split PDFs and TIFFs into individual images and return list of image URLs or base64 strings. Also handles PNG images."
     documentation = "https://docs.langflow.org/components-tools"
     icon = "scissors-line-dashed"
     name = "SplitToImages"
 
-    VALID_EXTENSIONS = ["pdf", "tiff", "tif"]
+    VALID_EXTENSIONS = ["pdf", "tiff", "tif", "png"]
 
     inputs = [
         HandleInput(
@@ -78,7 +82,7 @@ class SplitToImagesComponent(LCToolComponent):
                 "2. Local server file paths\n"
                 "3. Data objects with file path property\n"
                 "4. Message objects containing file paths\n"
-                "\nSupported formats: PDF, TIFF"
+                "\nSupported formats: PDF, TIFF, PNG"
             ),
             required=True,
             input_types=["Data", "Message"],
@@ -89,6 +93,12 @@ class SplitToImagesComponent(LCToolComponent):
             display_name="Base64 Only",
             value=False,
             info="If enabled, only return base64 encoded images without uploading to blob or local storage",
+        ),
+        BoolInput(
+            name="split_to_pdf",
+            display_name="Split to PDF",
+            value=False,
+            info="If enabled, split multi-page PDFs into individual single-page PDFs instead of images",
         ),
         StrInput(
             name="storage_account",
@@ -152,6 +162,66 @@ class SplitToImagesComponent(LCToolComponent):
             if not self.silent_errors:
                 raise
             return None
+
+    async def _process_png_image(self, file_path: str) -> list[bytes]:
+        """Process PNG image and return as a list with single image bytes."""
+        try:
+            with Image.open(file_path) as img:
+                # Convert to RGB if necessary (in case of RGBA)
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                    if img.mode == 'P':
+                        img = img.convert('RGBA')
+                    rgb_img.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
+                    img = rgb_img
+                elif img.mode != 'RGB':
+                    img = img.convert('RGB')
+
+                if not self.keep_original_size:
+                    # Resize if needed
+                    max_size = (800, 800)
+                    img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+                img_byte_arr = io.BytesIO()
+                img.save(img_byte_arr, format="PNG")
+                return [img_byte_arr.getvalue()]
+
+        except Exception as e:
+            logger.error(f"Error processing PNG image: {e!s}")
+            if not self.silent_errors:
+                raise
+            return []
+
+    async def _split_pdf_to_pdfs(self, file_path: str) -> list[bytes]:
+        """Split multi-page PDF into individual single-page PDFs."""
+        if not HAS_PYMUPDF:
+            raise ImportError("PyMuPDF (fitz) is required for PDF processing. Please install PyMuPDF>=1.24.0")
+
+        try:
+            pdf_bytes_list = []
+
+            # Open PDF
+            pdf_document = fitz.open(file_path)
+
+            for page_num in range(pdf_document.page_count):
+                # Create a new PDF with just this page
+                new_pdf = fitz.open()
+                new_pdf.insert_pdf(pdf_document, from_page=page_num, to_page=page_num)
+                
+                # Convert to bytes
+                pdf_bytes = new_pdf.tobytes()
+                pdf_bytes_list.append(pdf_bytes)
+                
+                new_pdf.close()
+
+            pdf_document.close()
+            return pdf_bytes_list
+
+        except Exception as e:
+            logger.error(f"Error splitting PDF to PDFs: {e!s}")
+            if not self.silent_errors:
+                raise
+            return []
 
     async def _split_pdf_to_images(self, file_path: str) -> list[bytes]:
         """Split PDF into individual page images."""
@@ -222,9 +292,9 @@ class SplitToImagesComponent(LCToolComponent):
             return []
 
     async def _upload_image_to_blob(
-        self, image_bytes: bytes, filename: str
+        self, image_bytes: bytes, filename: str, content_type: str = "image/png"
     ) -> str | None:
-        """Upload an image to blob storage and get its signed URL."""
+        """Upload an image or PDF to blob storage and get its signed URL."""
         try:
             service = get_flexstore_service()
 
@@ -242,10 +312,10 @@ class SplitToImagesComponent(LCToolComponent):
 
             headers = {
                 "x-ms-blob-type": "BlockBlob",  # Required header for Azure Blob Storage
-                "Content-Type": "image/png",  # Since we're saving as PNG
+                "Content-Type": content_type,
             }
 
-            # Upload the image
+            # Upload the file
             async with aiohttp.ClientSession() as session:
                 async with session.put(
                     upload_url,
@@ -336,7 +406,7 @@ class SplitToImagesComponent(LCToolComponent):
         return file_paths
 
     async def _process_files_to_urls(self, file_paths: list[str]) -> tuple[list[str], list[str]]:
-        """Process files and return flat list of image URLs and base64 strings."""
+        """Process files and return flat list of image/PDF URLs and base64 strings."""
         all_image_urls = []
         all_image_base64 = []
         
@@ -355,32 +425,90 @@ class SplitToImagesComponent(LCToolComponent):
                     logger.warning(f"File not found: {local_path}")
                     continue
 
-                # Split file into images based on type
+                # Determine file extension
                 ext = Path(local_path).suffix.lower()
-                if ext == ".pdf":
+                
+                # Process based on file type and split_to_pdf flag
+                if ext == ".pdf" and self.split_to_pdf:
+                    # Split PDF into multiple single-page PDFs
+                    pdf_bytes_list = await self._split_pdf_to_pdfs(local_path)
+                    
+                    # Process each PDF
+                    for i, pdf_bytes in enumerate(pdf_bytes_list):
+                        filename = f"{Path(local_path).stem}_page_{i + 1}.pdf"
+        
+                        # Always generate base64
+                        base64_str = await self._generate_base64_from_bytes(pdf_bytes)
+                        all_image_base64.append(base64_str)
+                        
+                        # Only upload to storage if base64_only is False
+                        if not self.base64_only:
+                            url = await self._upload_image_to_blob(pdf_bytes, filename, "application/pdf")
+                            if url:
+                                all_image_urls.append(url)
+                            else:
+                                all_image_urls.append("")
+                                
+                elif ext == ".pdf":
+                    # Split PDF into images
                     images = await self._split_pdf_to_images(local_path)
+                    
+                    # Process each image
+                    for i, image_bytes in enumerate(images):
+                        filename = f"{Path(local_path).stem}_page_{i + 1}.png"
+        
+                        # Always generate base64
+                        base64_str = await self._generate_base64_from_bytes(image_bytes)
+                        all_image_base64.append(base64_str)
+                        
+                        # Only upload to storage if base64_only is False
+                        if not self.base64_only:
+                            url = await self._upload_image_to_blob(image_bytes, filename, "image/png")
+                            if url:
+                                all_image_urls.append(url)
+                            else:
+                                all_image_urls.append("")
+                                
                 elif ext in [".tiff", ".tif"]:
                     images = await self._split_tiff_to_images(local_path)
+                    
+                    # Process each image
+                    for i, image_bytes in enumerate(images):
+                        filename = f"{Path(local_path).stem}_page_{i + 1}.png"
+        
+                        # Always generate base64
+                        base64_str = await self._generate_base64_from_bytes(image_bytes)
+                        all_image_base64.append(base64_str)
+                        
+                        # Only upload to storage if base64_only is False
+                        if not self.base64_only:
+                            url = await self._upload_image_to_blob(image_bytes, filename, "image/png")
+                            if url:
+                                all_image_urls.append(url)
+                            else:
+                                all_image_urls.append("")
+                                
+                elif ext == ".png":
+                    images = await self._process_png_image(local_path)
+                    
+                    # Process the image
+                    for image_bytes in images:
+                        filename = Path(local_path).name
+        
+                        # Always generate base64
+                        base64_str = await self._generate_base64_from_bytes(image_bytes)
+                        all_image_base64.append(base64_str)
+                        
+                        # Only upload to storage if base64_only is False
+                        if not self.base64_only:
+                            url = await self._upload_image_to_blob(image_bytes, filename, "image/png")
+                            if url:
+                                all_image_urls.append(url)
+                            else:
+                                all_image_urls.append("")
                 else:
                     logger.warning(f"Unsupported file type: {ext}")
                     continue
-
-                # Process each image
-                for i, image_bytes in enumerate(images):
-                    filename = f"{Path(local_path).stem}_page_{i + 1}.png"
-    
-                    # Always generate base64
-                    base64_str = await self._generate_base64_from_bytes(image_bytes)
-                    all_image_base64.append(base64_str)
-                    
-                    # Only upload to storage if base64_only is False
-                    if not self.base64_only:
-                        url = await self._upload_image_to_blob(image_bytes, filename)
-                        if url:
-                            all_image_urls.append(url)
-                        else:
-                            # If upload fails, still keep empty string to maintain order
-                            all_image_urls.append("")
 
             except Exception as e:
                 logger.error(f"Error processing file {file_path}: {e!s}")
@@ -419,7 +547,8 @@ class SplitToImagesComponent(LCToolComponent):
             if image_urls or base_64_imgs:
                 # Determine the status message and what to return based on mode
                 if self.base64_only:
-                    status_msg = f"Generated {len(base_64_imgs)} base64 images from {len(file_paths)} files"
+                    output_type = "PDFs" if self.split_to_pdf else "images"
+                    status_msg = f"Generated {len(base_64_imgs)} base64 {output_type} from {len(file_paths)} files"
                     # Return only base64 data when base64_only is True
                     result_data = Data(
                         data={
@@ -428,11 +557,13 @@ class SplitToImagesComponent(LCToolComponent):
                             "file_path": None,  # Empty when base64_only
                             "count": len(base_64_imgs),
                             "base64_imgs": base_64_imgs,
-                            "base64_only": True
+                            "base64_only": True,
+                            "split_to_pdf": self.split_to_pdf
                         }
                     )
                 else:
-                    status_msg = f"Generated {len(image_urls)} images from {len(file_paths)} files"
+                    output_type = "PDFs" if self.split_to_pdf else "images"
+                    status_msg = f"Generated {len(image_urls)} {output_type} from {len(file_paths)} files"
                     # Create Data objects for each image with file_path property (for AutonomizeDocumentModel)
                     image_data_objects = [Data(data={"file_path": url}) for url in image_urls]
                     # Return comprehensive data with URLs
@@ -443,7 +574,8 @@ class SplitToImagesComponent(LCToolComponent):
                             "file_path": image_urls[0] if image_urls else None,  # First image for single-input components
                             "count": len(base_64_imgs),
                             "base64_imgs": base_64_imgs,
-                            "base64_only": False
+                            "base64_only": False,
+                            "split_to_pdf": self.split_to_pdf
                         }
                     )
                 
@@ -483,15 +615,17 @@ class SplitToImagesComponent(LCToolComponent):
             file_urls: list[str],
             keep_original_size: bool = True,
             base64_only: bool = False,
+            split_to_pdf: bool = False,
             storage_account: str | None = None,
             temp_container: str | None = None,
         ) -> dict[str, list[str]]:
-            """Split PDF/TIFF files into individual images and return URLs or base64 strings.
+            """Split PDF/TIFF files into individual images or PDFs, or process PNG images and return URLs or base64 strings.
 
             Args:
                 file_urls: List of file URLs or paths to process
                 keep_original_size: Whether to keep original size or create thumbnails
                 base64_only: If True, only return base64 encoded images without uploading to storage
+                split_to_pdf: If True, split multi-page PDFs into individual single-page PDFs instead of images
                 storage_account: Azure storage account (optional, ignored if base64_only=True)
                 temp_container: Container for temporary storage (optional, ignored if base64_only=True)
 
@@ -501,6 +635,7 @@ class SplitToImagesComponent(LCToolComponent):
             # Set instance variables
             self.keep_original_size = keep_original_size
             self.base64_only = base64_only
+            self.split_to_pdf = split_to_pdf
             if storage_account and not base64_only:
                 self.storage_account = storage_account
             if temp_container and not base64_only:
@@ -519,7 +654,7 @@ class SplitToImagesComponent(LCToolComponent):
         return cast("Tool", StructuredTool.from_function(
             func=split_files_to_images,
             name="split_to_images",
-            description="Split PDF and TIFF files into individual images and return list of image URLs or base64 strings. Useful for processing multi-page documents into separate image files.",
+            description="Split PDF and TIFF files into individual images or PDFs, or process PNG images and return list of URLs or base64 strings. Useful for processing multi-page documents into separate image or PDF files.",
             args_schema=SplitToImagesInput,
             coroutine=split_files_to_images,
         ))
