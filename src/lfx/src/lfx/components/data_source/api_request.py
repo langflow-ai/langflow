@@ -496,7 +496,7 @@ class APIRequestComponent(Component):
         if field_value == "cURL":
             set_field_display(build_config, "curl_input", value=True)
             if build_config["curl_input"]["value"]:
-                try: 
+                try:
                     build_config = self.parse_curl(build_config["curl_input"]["value"], build_config)
                 except ValueError as e:
                     self.log(f"Failed to parse cURL input: {e}")
