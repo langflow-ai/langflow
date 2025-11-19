@@ -1,11 +1,21 @@
 import asyncio
+import json
 import os
 import tempfile
 from contextlib import suppress
 from pathlib import Path
+import uuid
+from unittest.mock import AsyncMock, MagicMock, patch
 
 # we need to import tmpdir
 import anyio
+from langflow.api.v2.files import (
+    delete_file,
+    delete_files_batch,
+    delete_all_files,
+    is_permanent_storage_failure,
+)
+from lfx.services.storage.service import StorageService
 import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
@@ -863,3 +873,374 @@ class TestS3FileOperations:
             # Check if it's a 404-related error (different boto3 versions)
             if "404" not in str(e) and "NoSuchKey" not in str(e):
                 raise
+
+
+class TestStorageFailureHandling:
+    """Test permanent vs transient storage failure handling in delete operations."""
+
+    def test_is_permanent_storage_failure_file_not_found_error(self):
+        """Test that FileNotFoundError is recognized as permanent failure."""
+        error = FileNotFoundError("File not found")
+        assert is_permanent_storage_failure(error) is True
+
+    def test_is_permanent_storage_failure_s3_no_such_bucket(self):
+        """Test that S3 NoSuchBucket error is recognized as permanent failure."""
+        # Mock S3 error with NoSuchBucket code
+        class MockS3Error(Exception):
+            def __init__(self):
+                self.response = {"Error": {"Code": "NoSuchBucket", "Message": "Bucket does not exist"}}
+
+        error = MockS3Error()
+        assert is_permanent_storage_failure(error) is True
+
+    def test_is_permanent_storage_failure_s3_no_such_key(self):
+        """Test that S3 NoSuchKey error is recognized as permanent failure."""
+        # Mock S3 error with NoSuchKey code
+        class MockS3Error(Exception):
+            def __init__(self):
+                self.response = {"Error": {"Code": "NoSuchKey", "Message": "Key does not exist"}}
+
+        error = MockS3Error()
+        assert is_permanent_storage_failure(error) is True
+
+    def test_is_permanent_storage_failure_transient_error(self):
+        """Test that transient errors (network, timeout) are not permanent failures."""
+        # Mock transient errors
+        class NetworkError(Exception):
+            pass
+
+        class TimeoutError(Exception):
+            pass
+
+        class PermissionError(Exception):
+            pass
+
+        assert is_permanent_storage_failure(NetworkError("Connection failed")) is False
+        assert is_permanent_storage_failure(TimeoutError("Request timed out")) is False
+        assert is_permanent_storage_failure(PermissionError("Access denied")) is False
+
+    def test_is_permanent_storage_failure_fallback_string_matching(self):
+        """Test fallback string matching for edge cases."""
+        # Test with error messages that match permanent patterns
+        class CustomError(Exception):
+            pass
+
+        assert is_permanent_storage_failure(CustomError("NoSuchBucket error")) is True
+        assert is_permanent_storage_failure(CustomError("NoSuchKey error")) is True
+        assert is_permanent_storage_failure(CustomError("File not found")) is True
+        assert is_permanent_storage_failure(CustomError("FileNotFoundError occurred")) is True
+
+    async def test_delete_file_with_permanent_failure_deletes_from_db(self):
+        """Test that permanent storage failures still delete from database."""
+        from langflow.services.database.models.file.model import File as UserFile
+
+        file_id = uuid.uuid4()
+        user_id = uuid.uuid4()
+        file_name = "test_file.txt"
+        file_path = f"{file_id}.txt"
+        
+        mock_file = UserFile(
+            id=file_id,
+            user_id=user_id,
+            name=file_name,
+            path=file_path,
+            size=100,
+        )
+        
+        mock_current_user = MagicMock()
+        mock_current_user.id = user_id
+        
+        mock_exec_result = MagicMock()
+        mock_exec_result.first = MagicMock(return_value=mock_file)
+        mock_session = AsyncMock()
+        mock_session.exec = AsyncMock(return_value=mock_exec_result)
+        mock_session.delete = AsyncMock()
+
+        mock_storage_service = AsyncMock()
+        mock_storage_service.delete_file = AsyncMock(side_effect=FileNotFoundError(f"File {file_path} not found"))
+        
+        result = await delete_file(
+            file_id=file_id,
+            current_user=mock_current_user,
+            session=mock_session,
+            storage_service=mock_storage_service,
+        )
+        
+        expected_file_name = file_path.split("/")[-1]
+        mock_storage_service.delete_file.assert_called_once_with(
+            flow_id=str(user_id),
+            file_name=expected_file_name,
+        )
+        mock_session.delete.assert_called_once_with(mock_file)
+        assert result["detail"] == f"File {file_name} deleted successfully"
+
+    async def test_delete_file_with_transient_failure_keeps_in_db(self):
+        """Test that transient storage failures keep file in database for retry."""
+        from langflow.services.database.models.file.model import File as UserFile
+        from fastapi import HTTPException
+
+        file_id = uuid.uuid4()
+        user_id = uuid.uuid4()
+        file_name = "test_file.txt"
+        file_path = f"{file_id}.txt"
+        
+        mock_file = UserFile(
+            id=file_id,
+            user_id=user_id,
+            name=file_name,
+            path=file_path,
+            size=100,
+        )
+        
+        mock_current_user = MagicMock()
+        mock_current_user.id = user_id
+        
+        mock_exec_result = MagicMock()
+        mock_exec_result.first = MagicMock(return_value=mock_file)
+        mock_session = AsyncMock()
+        mock_session.exec = AsyncMock(return_value=mock_exec_result)
+        mock_session.delete = AsyncMock()
+        
+        mock_storage_service = AsyncMock()
+        mock_storage_service.delete_file = AsyncMock(side_effect=ConnectionError("Network connection failed"))
+        
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_file(
+                file_id=file_id,
+                current_user=mock_current_user,
+                session=mock_session,
+                storage_service=mock_storage_service,
+            )
+        
+        assert exc_info.value.status_code == 500
+        assert "Failed to delete file from storage" in exc_info.value.detail
+        
+        expected_file_name = file_path.split("/")[-1]
+        mock_storage_service.delete_file.assert_called_once_with(
+            flow_id=str(user_id),
+            file_name=expected_file_name,
+        )
+        mock_session.delete.assert_not_called()
+
+    async def test_batch_delete_with_mixed_failures(self):
+        """Test batch delete with mix of permanent and transient failures."""
+        from langflow.services.database.models.file.model import File as UserFile
+        from sqlmodel import col, select
+
+        user_id = uuid.uuid4()
+        file_ids = [uuid.uuid4() for _ in range(3)]
+        file_names = [f"batch_test_{i}.txt" for i in range(3)]
+        
+        mock_files = [
+            UserFile(
+                id=file_ids[i],
+                user_id=user_id,
+                name=file_names[i],
+                path=f"{file_ids[i]}.txt",
+                size=100,
+            )
+            for i in range(3)
+        ]
+        
+        mock_current_user = MagicMock()
+        mock_current_user.id = user_id
+        
+        mock_exec_result = MagicMock()
+        mock_exec_result.all = MagicMock(return_value=mock_files)
+        mock_session = AsyncMock()
+        mock_session.exec = AsyncMock(return_value=mock_exec_result)
+        mock_session.delete = AsyncMock()
+        
+        deleted_file_ids = set()
+        
+        async def mock_delete_file(flow_id: str, file_name: str) -> None:
+            if file_name == f"{file_ids[0]}.txt":
+                raise FileNotFoundError(f"File {file_name} not found")
+            elif file_name == f"{file_ids[1]}.txt":
+                raise ConnectionError("Network error")
+            else:
+                deleted_file_ids.add(file_name)
+        
+        mock_storage_service = AsyncMock()
+        mock_storage_service.delete_file = AsyncMock(side_effect=mock_delete_file)
+        
+        result = await delete_files_batch(
+            file_ids=file_ids,
+            current_user=mock_current_user,
+            session=mock_session,
+            storage_service=mock_storage_service,
+        )
+        
+        assert result["message"] == "2 files deleted successfully, 1 files kept in database due to transient storage errors (can retry)"
+        
+        assert mock_storage_service.delete_file.call_count == 3
+        
+        delete_calls = [call[0][0] for call in mock_session.delete.call_args_list]
+        assert len(delete_calls) == 2
+        assert mock_files[0] in delete_calls
+        assert mock_files[2] in delete_calls
+        assert mock_files[1] not in delete_calls
+
+    async def test_delete_all_files_message_all_successful(self):
+        """Test delete_all_files returns correct message when all files deleted successfully."""
+        from langflow.services.database.models.file.model import File as UserFile
+
+        user_id = uuid.uuid4()
+        mock_files = [
+            UserFile(
+                id=uuid.uuid4(),
+                user_id=user_id,
+                name=f"msg_test_{i}.txt",
+                path=f"{uuid.uuid4()}.txt",
+                size=100,
+            )
+            for i in range(3)
+        ]
+
+        mock_current_user = MagicMock()
+        mock_current_user.id = user_id
+
+        mock_exec_result = MagicMock()
+        mock_exec_result.all = MagicMock(return_value=mock_files)
+        mock_session = AsyncMock()
+        mock_session.exec = AsyncMock(return_value=mock_exec_result)
+        mock_session.delete = AsyncMock()
+
+        mock_storage_service = AsyncMock()
+        mock_storage_service.delete_file = AsyncMock()
+
+        result = await delete_all_files(
+            current_user=mock_current_user,
+            session=mock_session,
+            storage_service=mock_storage_service,
+        )
+
+        assert result["message"] == "All 3 files deleted successfully"
+
+    async def test_delete_all_files_message_with_transient_failures(self):
+        """Test delete_all_files returns correct message when some files have transient storage failures."""
+        from langflow.services.database.models.file.model import File as UserFile
+
+        user_id = uuid.uuid4()
+        mock_files = [
+            UserFile(
+                id=uuid.uuid4(),
+                user_id=user_id,
+                name=f"transient_msg_test_{i}.txt",
+                path=f"{uuid.uuid4()}.txt",
+                size=100,
+            )
+            for i in range(3)
+        ]
+
+        mock_current_user = MagicMock()
+        mock_current_user.id = user_id
+
+        mock_exec_result = MagicMock()
+        mock_exec_result.all = MagicMock(return_value=mock_files)
+        mock_session = AsyncMock()
+        mock_session.exec = AsyncMock(return_value=mock_exec_result)
+        mock_session.delete = AsyncMock()
+
+        call_count = 0
+
+        async def mock_delete_file(flow_id: str, file_name: str) -> None:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise ConnectionError("Network error")
+
+        mock_storage_service = AsyncMock()
+        mock_storage_service.delete_file = AsyncMock(side_effect=mock_delete_file)
+
+        result = await delete_all_files(
+            current_user=mock_current_user,
+            session=mock_session,
+            storage_service=mock_storage_service,
+        )
+
+        assert result["message"] == "2 files deleted successfully, 1 files failed to delete. See logs for details."
+
+    async def test_batch_delete_message_all_successful(self):
+        """Test batch delete returns correct message when all files deleted successfully."""
+        from langflow.services.database.models.file.model import File as UserFile
+
+        user_id = uuid.uuid4()
+        file_ids = [uuid.uuid4() for _ in range(2)]
+        mock_files = [
+            UserFile(
+                id=file_ids[i],
+                user_id=user_id,
+                name=f"batch_msg_test_{i}.txt",
+                path=f"{file_ids[i]}.txt",
+                size=100,
+            )
+            for i in range(2)
+        ]
+
+        mock_current_user = MagicMock()
+        mock_current_user.id = user_id
+
+        mock_exec_result = MagicMock()
+        mock_exec_result.all = MagicMock(return_value=mock_files)
+        mock_session = AsyncMock()
+        mock_session.exec = AsyncMock(return_value=mock_exec_result)
+        mock_session.delete = AsyncMock()
+
+        mock_storage_service = AsyncMock()
+        mock_storage_service.delete_file = AsyncMock()
+
+        result = await delete_files_batch(
+            file_ids=file_ids,
+            current_user=mock_current_user,
+            session=mock_session,
+            storage_service=mock_storage_service,
+        )
+
+        assert result["message"] == "2 files deleted successfully"
+
+    async def test_batch_delete_message_with_transient_failures(self):
+        """Test batch delete returns correct message when some files have transient storage failures."""
+        from langflow.services.database.models.file.model import File as UserFile
+
+        user_id = uuid.uuid4()
+        file_ids = [uuid.uuid4() for _ in range(3)]
+        mock_files = [
+            UserFile(
+                id=file_ids[i],
+                user_id=user_id,
+                name=f"batch_transient_msg_{i}.txt",
+                path=f"{file_ids[i]}.txt",
+                size=100,
+            )
+            for i in range(3)
+        ]
+
+        mock_current_user = MagicMock()
+        mock_current_user.id = user_id
+
+        mock_exec_result = MagicMock()
+        mock_exec_result.all = MagicMock(return_value=mock_files)
+        mock_session = AsyncMock()
+        mock_session.exec = AsyncMock(return_value=mock_exec_result)
+        mock_session.delete = AsyncMock()
+
+        call_count = 0
+
+        async def mock_delete_file(flow_id: str, file_name: str) -> None:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise ConnectionError("Network error")
+
+        mock_storage_service = AsyncMock()
+        mock_storage_service.delete_file = AsyncMock(side_effect=mock_delete_file)
+
+        result = await delete_files_batch(
+            file_ids=file_ids,
+            current_user=mock_current_user,
+            session=mock_session,
+            storage_service=mock_storage_service,
+        )
+
+        assert result["message"] == "2 files deleted successfully, 1 files kept in database due to transient storage errors (can retry)"

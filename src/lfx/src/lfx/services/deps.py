@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from http import HTTPStatus
+from fastapi import HTTPException
 from typing import TYPE_CHECKING
 
 from sqlalchemy.exc import InvalidRequestError
