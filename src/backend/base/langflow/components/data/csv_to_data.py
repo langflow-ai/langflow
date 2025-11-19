@@ -1,96 +1,45 @@
-import csv
-import io
-from pathlib import Path
+"""Simple component to load a DataFrame from a CSV URL."""
 
-from langflow.custom.custom_component.component import Component
-from langflow.io import FileInput, MessageTextInput, MultilineInput, Output
-from langflow.schema.data import Data
+from langflow.custom import Component
+from langflow.io import Output, StrInput
+from langflow.schema import DataFrame
+from loguru import logger
+import pandas as pd
 
 
-class CSVToDataComponent(Component):
-    display_name = "Load CSV"
-    description = "Load a CSV file, CSV from a file path, or a valid CSV string and convert it to a list of Data"
-    icon = "file-spreadsheet"
-    name = "CSVtoData"
-    legacy = True
-    replacement = ["data.File"]
+class CSVURLLoaderComponent(Component):
+    display_name = "CSV URL Loader"
+    description = "Load a DataFrame from a CSV URL"
+    icon = "table"
+    name = "CSVURLLoader"
 
     inputs = [
-        FileInput(
-            name="csv_file",
-            display_name="CSV File",
-            file_types=["csv"],
-            info="Upload a CSV file to convert to a list of Data objects",
-        ),
-        MessageTextInput(
-            name="csv_path",
-            display_name="CSV File Path",
-            info="Provide the path to the CSV file as pure text",
-        ),
-        MultilineInput(
-            name="csv_string",
-            display_name="CSV String",
-            info="Paste a CSV string directly to convert to a list of Data objects",
-        ),
-        MessageTextInput(
-            name="text_key",
-            display_name="Text Key",
-            info="The key to use for the text column. Defaults to 'text'.",
-            value="text",
+        StrInput(
+            name="url",
+            display_name="CSV URL",
+            info="URL to the CSV file (HTTP/HTTPS)",
+            required=True,
         ),
     ]
 
     outputs = [
-        Output(name="data_list", display_name="Data List", method="load_csv_to_data"),
+        Output(display_name="DataFrame", name="dataframe", method="load_csv"),
     ]
 
-    def load_csv_to_data(self) -> list[Data]:
-        if sum(bool(field) for field in [self.csv_file, self.csv_path, self.csv_string]) != 1:
-            msg = "Please provide exactly one of: CSV file, file path, or CSV string."
-            raise ValueError(msg)
-
-        csv_data = None
+    def load_csv(self) -> DataFrame:
+        """Load CSV from URL and return as DataFrame."""
         try:
-            if self.csv_file:
-                resolved_path = self.resolve_path(self.csv_file)
-                file_path = Path(resolved_path)
-                if file_path.suffix.lower() != ".csv":
-                    self.status = "The provided file must be a CSV file."
-                else:
-                    with file_path.open(newline="", encoding="utf-8") as csvfile:
-                        csv_data = csvfile.read()
-
-            elif self.csv_path:
-                file_path = Path(self.csv_path)
-                if file_path.suffix.lower() != ".csv":
-                    self.status = "The provided file must be a CSV file."
-                else:
-                    with file_path.open(newline="", encoding="utf-8") as csvfile:
-                        csv_data = csvfile.read()
-
-            else:
-                csv_data = self.csv_string
-
-            if csv_data:
-                csv_reader = csv.DictReader(io.StringIO(csv_data))
-                result = [Data(data=row, text_key=self.text_key) for row in csv_reader]
-
-                if not result:
-                    self.status = "The CSV data is empty."
-                    return []
-
-                self.status = result
-                return result
-
-        except csv.Error as e:
-            error_message = f"CSV parsing error: {e}"
-            self.status = error_message
-            raise ValueError(error_message) from e
-
+            logger.info(f"Loading CSV from URL: {self.url}")
+            
+            # Read CSV directly from URL using pandas
+            df = pd.read_csv(self.url)
+            
+            logger.info(f"Successfully loaded CSV with {len(df)} rows and {len(df.columns)} columns")
+            
+            # Convert pandas DataFrame to Langflow DataFrame
+            return DataFrame(df)
+            
         except Exception as e:
-            error_message = f"An error occurred: {e}"
-            self.status = error_message
-            raise ValueError(error_message) from e
-
-        # An error occurred
-        raise ValueError(self.status)
+            error_msg = f"Error loading CSV from URL: {e}"
+            logger.error(error_msg)
+            raise ValueError(error_msg) from e
