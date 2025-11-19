@@ -281,7 +281,6 @@ module.exports = {
               items: [
                 "Components/data-operations",
                 "Components/dataframe-operations",
-                "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",
                 "Components/type-convert",
