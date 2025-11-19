@@ -249,10 +249,10 @@ export function MessageRenderer({
         }`}
       >
         <div
-          className={`max-w-[85%] rounded-lg  ${
+          className={`max-w-[85%] rounded-lg ${
             message.type === "user"
               ? "bg-[#F5F2FF] text-[#64616A] p-2"
-              : " text-[#444]"
+              : "bg-[#F5F2FF] text-[#444] p-2"
           }`}
         >
           <div className="break-words">

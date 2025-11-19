@@ -362,16 +362,15 @@ export function ChatArea({
                   <div
                     key={`${name}-${idx}`}
                     className="flex items-center gap-2 bg-[#F5F2FF] rounded-md p-2 px-3 text-xs text-[#350E84] cursor-pointer"
-                    // onClick={() => onSelectSampleFile(sampleFilePaths[idx])}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onPreviewSampleFile(sampleFilePaths[idx]);
+                      onSelectSampleFile(sampleFilePaths[idx]);
                     }}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
-                        onPreviewSampleFile(sampleFilePaths[idx]);
+                        onSelectSampleFile(sampleFilePaths[idx]);
                       }
                     }}
                   >
