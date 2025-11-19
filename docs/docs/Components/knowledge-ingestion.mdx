@@ -30,9 +30,52 @@ The output is a `Data` object containing metadata about the ingestion, including
 | api_key | Embedding Provider API Key | Input parameter. API key for the knowledge base's embedding provider. The embedding provider and model are chosen when you create a knowledge base. |
 | allow_duplicates | Allow Duplicates | Input parameter. Whether to allow duplicate rows in the knowledge base. Default: Disabled (false). |
 
-## Use the Knowledge Ingestion component in a flow
+### Knowledge base storage locations
 
-## Use knowledge bases in flows
+Each knowledge base is a [ChromaDB](https://docs.trychroma.com/docs/overview/introduction) vector database.
+Each database is stored in a separate directory that contains the following:
+
+- **Vector embeddings**: Embeddings are stored using the Chroma vector database.
+- **Metadata files**: Configuration and embedding model information.
+- **Source data**: The original data used to create the knowledge base.
+
+Knowledge bases are stored local to your Langflow instance.
+The default storage location depends on your operating system and installation method:
+
+- **Langflow Desktop**:
+    - **macOS**: `/Users/<username>/.langflow/knowledge_bases`
+    - **Windows**: `C:\Users\<name>\AppData\Roaming\com.LangflowDesktop\knowledge_bases`
+- **Langflow OSS**:
+    - **macOS/Windows/Linux/WSL with `uv pip install`**: `<path_to_venv>/lib/python3.12/site-packages/langflow/knowledge_bases` (Python version can vary. Knowledge bases aren't shared between virtual environments.)
+    - **macOS/Windows/Linux/WSL with `git clone`**: `<path_to_clone>/src/backend/base/langflow/knowledge_bases`
+
+If you set the `LANGFLOW_CONFIG_DIR` environment variable, the `knowledge_bases` subdirectory is created relative to that path.
+
+To change the default `knowledge_bases` directory path, set the `LANGFLOW_KNOWLEDGE_BASES_DIR` environment variable:
+
+```bash
+export LANGFLOW_KNOWLEDGE_BASES_DIR="/path/to/parent/directory"
+```
+
+### Manage knowledge bases
+
+On the [**Projects** page](/concepts-flows#projects) page, click **Knowledge** below the list of projects to view and manage your knowledge bases.
+
+For each knowledge base, you can see the following information:
+
+* Name
+* Embedding model
+* Size on disk
+* Number of words, characters, and chunks
+* The average length of chunks
+
+Chunking behavior is determined by the embedding model, and the embedding model is set when you create the knowledge base.
+If you need to change the embedding model, you must delete and recreate the knowledge base.
+
+To delete a knowledge base, select the checkbox next to the knowledge base, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
+If any flows use the deleted knowledge base, you must update them to use a different knowledge base.
+
+## Use the Knowledge Ingestion component in a flow {#usage-example}
 
 To use knowledge bases in flows, you use the **Knowledge Ingestion** component to create and write to knowledge bases, and then you use the **Knowledge Retrieval** component to read from your knowledge bases.
 You can use these components in the same flow or different flows, depending on where you want to read or write data.
@@ -40,7 +83,7 @@ You can use these components in the same flow or different flows, depending on w
 The following example uses two flows to demonstrate how to create, populate, and search a Langflow knowledge base.
 The first flow creates a knowledge base and loads it with customer sales data.
 Then, the second flow retrieves data stored in the knowledge base.
-To follow along with this example, download [`customer-orders.csv`](/files/customer_orders/customer_orders.csv) to your local machine, or adapt the steps for your own structured data.
+To follow along with this example, download [`customer-orders.csv`](/files/customer_orders.csv) to your local machine, or adapt the steps for your own structured data.
 
 1. Add the **Knowledge Ingestion** component to a flow.
 2. In the **Knowledge** field, select <Icon name="Plus" aria-hidden="true"/> **New knowledge** to create a new knowledge base, or select one of your existing knowledge bases.
