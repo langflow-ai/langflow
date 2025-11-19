@@ -1,0 +1,55 @@
+---
+title: Knowledge Retrieval
+slug: /knowledge-retrieval
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialKbSummary from '@site/docs/_partial-kb-summary.mdx';
+
+<PartialKbSummary />
+
+The **Knowledge Retrieval** component reads from an existing knowledge base using semantic search.
+
+The output is a [`DataFrame`](/data-types#dataframe) containing the top matching results from the queried knowledge base.
+
+## Knowledge Retrieval parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| knowledge_base | Knowledge | Input parameter. Select the knowledge base to retrieve data from. |
+| api_key | Embedding Provider API Key | Input parameter. Optional API key for the embedding provider to override a previously-provided key. The embedding provider and model are chosen when you create a knowledge base. |
+| search_query | Search Query | Input parameter. Optional search query to filter knowledge base data using semantic similarity. If omitted, the top results are returned from an arbitrary sort. |
+| top_k | Top K Results | Input parameter. Number of search results to return. Default: `5`. |
+| include_metadata | Include Metadata | Input parameter. Whether to include all metadata and embeddings in the output. If enabled, each output row includes all metadata, embeddings, and content. If disabled, only the content is returned. Default: Enabled (true). |
+
+## Usage Example
+
+### Search a Knowledge Base
+
+After you create and load data to a knowledge base, you can use the **Knowledge Retrieval** component in any flow to retrieve data from your knowledge base using semantic search:
+
+1. Add a **Knowledge Retrieval** component to your flow.
+
+2. In the **Knowledge** field, select the knowledge base you want to search, such as the customer sales data knowledge base created in the previous steps.
+
+3. To view the search results as chat messages, connect the **Results** output to a **Chat Output** component.
+
+4. In **Search query**, enter a query that relates to your embedded data.
+
+   For the customer sales data example, enter a product name like `laptop` or `wireless devices`.
+
+5. Click <Icon name="Play" aria-hidden="true"/> **Run component** on the **Knowledge Retrieval** component, and then open the **Playground** to view the output.
+
+:::tip
+
+The preceding example was simplified for demonstration purposes.
+
+In a real-world scenario, you would integrate these components into complete flows with more components.
+
+For more examples of knowledge bases in flows, see the **Knowledge Ingestion** and **Knowledge Retrieval** [templates](/concepts-flows#create-a-flow) in Langflow.
+
+:::
+

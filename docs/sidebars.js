@@ -123,6 +123,7 @@ module.exports = {
               id: "Develop/enterprise-database-guide",
               label: "Database guide for enterprise administrators"
             },
+            "Develop/knowledge",
           ],
         },
         {
@@ -306,6 +307,8 @@ module.exports = {
                 "Components/directory",
                 "Components/read-file",
                 "Components/write-file",
+                "Components/knowledge-ingestion",
+                "Components/knowledge-retrieval",
               ]
             },
             {
