@@ -3,12 +3,11 @@ from pathlib import Path
 
 from json_repair import repair_json
 
-from lfx.base.data.storage_utils import read_file_bytes
+from lfx.base.data.storage_utils import read_file_text
+from lfx.utils.async_helpers import run_until_complete
 from lfx.custom.custom_component.component import Component
 from lfx.io import FileInput, MessageTextInput, MultilineInput, Output
 from lfx.schema.data import Data
-from lfx.services.deps import get_settings_service
-from lfx.utils.async_helpers import run_until_complete
 
 
 class JSONToDataComponent(Component):
@@ -44,6 +43,7 @@ class JSONToDataComponent(Component):
         Output(name="data", display_name="Data", method="convert_json_to_data"),
     ]
 
+
     def convert_json_to_data(self) -> Data | list[Data]:
         if sum(bool(field) for field in [self.json_file, self.json_path, self.json_string]) != 1:
             msg = "Please provide exactly one of: JSON file, file path, or JSON string."
@@ -69,15 +69,7 @@ class JSONToDataComponent(Component):
                 if not file_path.lower().endswith(".json"):
                     self.status = "The provided path must be to a JSON file."
                 else:
-                    settings = get_settings_service().settings
-                    if settings.storage_type == "s3":
-                        # For S3 storage, treat as S3 key format "flow_id/filename"
-                        json_bytes = run_until_complete(read_file_bytes(file_path))
-                        json_data = json_bytes.decode("utf-8")
-                    else:
-                        # Local storage, read from filesystem
-                        resolved_path = self.resolve_path(file_path)
-                        json_data = Path(resolved_path).read_text(encoding="utf-8")
+                    json_data = run_until_complete(read_file_text(file_path, encoding="utf-8", resolve_path=self.resolve_path))
 
             else:
                 json_data = self.json_string

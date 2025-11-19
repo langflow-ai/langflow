@@ -2,12 +2,15 @@
 
 This module provides utilities that work with both local files and remote files
 stored in the storage service.
+
+TODO: Can abstract these into the storage service interface and update
+implementations.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.utils.async_helpers import run_until_complete
@@ -38,12 +41,18 @@ def parse_storage_path(path: str) -> tuple[str, str] | None:
     return parts[0], parts[1]
 
 
-async def read_file_bytes(file_path: str, storage_service: StorageService | None = None) -> bytes:
+async def read_file_bytes(
+    file_path: str,
+    storage_service: StorageService | None = None,
+    resolve_path: Callable[[str], str] | None = None,
+) -> bytes:
     """Read file bytes from either storage service or local filesystem.
 
     Args:
-        file_path: Path to the file (S3 key format "flow_id/filename" or absolute local path)
+        file_path: Path to the file (S3 key format "flow_id/filename" or local path)
         storage_service: Optional storage service instance (will get from deps if not provided)
+        resolve_path: Optional function to resolve relative paths to absolute paths
+                     (typically Component.resolve_path). Only used for local storage.
 
     Returns:
         bytes: The file content
@@ -65,6 +74,10 @@ async def read_file_bytes(file_path: str, storage_service: StorageService | None
         flow_id, filename = parsed
         return await storage_service.get_file(flow_id, filename)
 
+    # For local storage, resolve path if resolver provided
+    if resolve_path:
+        file_path = resolve_path(file_path)
+
     path_obj = Path(file_path)
     if not path_obj.exists():
         msg = f"File not found: {file_path}"
@@ -72,14 +85,23 @@ async def read_file_bytes(file_path: str, storage_service: StorageService | None
 
     return path_obj.read_bytes()
 
-
-async def read_file_text(file_path: str, encoding: str = "utf-8", storage_service: StorageService | None = None) -> str:
+async def read_file_text(
+    file_path: str,
+    encoding: str = "utf-8",
+    storage_service: StorageService | None = None,
+    resolve_path: Callable[[str], str] | None = None,
+    newline: str | None = None,
+) -> str:
     """Read file text from either storage service or local filesystem.
 
     Args:
-        file_path: Path to the file (storage service path or absolute local path)
+        file_path: Path to the file (storage service path or local path)
         encoding: Text encoding to use
         storage_service: Optional storage service instance
+        resolve_path: Optional function to resolve relative paths to absolute paths
+                     (typically Component.resolve_path). Only used for local storage.
+        newline: Newline mode (None for default, "" for universal newlines like CSV).
+                 When set to "", normalizes all line endings to \\n for consistency.
 
     Returns:
         str: The file content as text
@@ -87,8 +109,26 @@ async def read_file_text(file_path: str, encoding: str = "utf-8", storage_servic
     Raises:
         FileNotFoundError: If the file doesn't exist
     """
-    content = await read_file_bytes(file_path, storage_service)
-    return content.decode(encoding)
+    settings = get_settings_service().settings
+
+    if settings.storage_type == "s3":
+        content = await read_file_bytes(file_path, storage_service, resolve_path)
+        text = content.decode(encoding)
+        # Normalize newlines for S3 when newline="" is specified (universal newline mode)
+        if newline == "":
+            # Convert all line endings to \n (matches Python's universal newline mode)
+            text = text.replace("\r\n", "\n").replace("\r", "\n")
+        return text
+    else:
+        # For local storage, resolve path if resolver provided
+        if resolve_path:
+            file_path = resolve_path(file_path)
+
+        path_obj = Path(file_path)
+        if newline is not None:
+            with path_obj.open(newline=newline, encoding=encoding) as f:
+                return f.read()
+        return path_obj.read_text(encoding=encoding)
 
 
 def get_file_size(file_path: str, storage_service: StorageService | None = None) -> int:
@@ -144,3 +184,5 @@ def file_exists(file_path: str, storage_service: StorageService | None = None) -
         return True
     except (FileNotFoundError, ValueError):
         return False
+
+
