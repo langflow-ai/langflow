@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
 from sqlmodel import col, select
@@ -30,20 +30,20 @@ SAMPLE_DATA_DIR = Path(__file__).parent / "sample_data"
 
 def is_permanent_storage_failure(error: Exception) -> bool:
     """Check if a storage deletion error is a permanent failure (file/storage gone).
-    
+
     Permanent failures are safe to delete from DB because the file/storage is already gone.
     Transient failures (network, permissions) should keep DB record for retry.
-    
+
     Args:
         error: The exception raised during storage deletion
-        
+
     Returns:
         True if this is a permanent failure (safe to delete from DB), False otherwise
     """
     # Check for standard Python file not found errors (local storage)
     if isinstance(error, FileNotFoundError):
         return True
-    
+
     # Check for S3 error codes (boto3/aioboto3)
     # S3 errors have a 'response' attribute with Error.Code
     if hasattr(error, "response"):
@@ -53,12 +53,12 @@ def is_permanent_storage_failure(error: Exception) -> bool:
             # Permanent failures: file/bucket doesn't exist
             if error_code in ("NoSuchBucket", "NoSuchKey", "404"):
                 return True
-    
+
     # Fallback: Check error message for known permanent failure patterns
     # This is less ideal but provides a safety net for edge cases
     error_str = str(error)
     permanent_patterns = ("NoSuchBucket", "NoSuchKey", "not found", "FileNotFoundError")
-    
+
     return any(pattern in error_str for pattern in permanent_patterns)
 
 
@@ -351,7 +351,7 @@ async def delete_files_batch(
             # Extract just the filename from the path (strip user_id prefix)
             file_name = file.path.split("/")[-1]
             storage_deleted = False
-            
+
             try:
                 await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
                 storage_deleted = True
@@ -374,7 +374,7 @@ async def delete_files_batch(
                         file_name,
                         err,
                     )
-            
+
             # Only delete from database if storage deletion succeeded OR it was a permanent failure
             if storage_deleted:
                 try:
@@ -395,14 +395,10 @@ async def delete_files_batch(
             )
         # If there were database failures, log them
         if db_failures:
-            await logger.aerror(
-                "Batch delete completed with %d database failures: %s", len(db_failures), db_failures
-            )
+            await logger.aerror("Batch delete completed with %d database failures: %s", len(db_failures), db_failures)
             # If all database deletions failed, raise an error
             if len(db_failures) == len(files):
-                raise HTTPException(
-                    status_code=500, detail=f"Failed to delete any files from database: {db_failures}"
-                )
+                raise HTTPException(status_code=500, detail=f"Failed to delete any files from database: {db_failures}")
 
         # Calculate how many files were actually deleted from database
         # Files successfully deleted = total - (kept due to transient storage failures) - (DB deletion failures)
@@ -661,7 +657,9 @@ async def delete_file(
                     file_to_delete.name,
                     db_error,
                 )
-                raise HTTPException(status_code=500, detail=f"Error deleting file from database: {db_error}") from db_error
+                raise HTTPException(
+                    status_code=500, detail=f"Error deleting file from database: {db_error}"
+                ) from db_error
 
         return {"detail": f"File {file_to_delete.name} deleted successfully"}
     except HTTPException:
@@ -695,7 +693,7 @@ async def delete_all_files(
             # Extract just the filename from the path (strip user_id prefix)
             file_name = file.path.split("/")[-1]
             storage_deleted = False
-            
+
             try:
                 await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
                 storage_deleted = True
@@ -718,7 +716,7 @@ async def delete_all_files(
                         file_name,
                         err,
                     )
-            
+
             # Only delete from database if storage deletion succeeded OR it was a permanent failure
             if storage_deleted:
                 try:
@@ -738,14 +736,10 @@ async def delete_all_files(
             )
 
         if db_failures:
-            await logger.aerror(
-                "Batch delete completed with %d database failures: %s", len(db_failures), db_failures
-            )
+            await logger.aerror("Batch delete completed with %d database failures: %s", len(db_failures), db_failures)
             # If all database deletions failed, raise an error
             if len(db_failures) == len(files):
-                raise HTTPException(
-                    status_code=500, detail=f"Failed to delete any files from database: {db_failures}"
-                )
+                raise HTTPException(status_code=500, detail=f"Failed to delete any files from database: {db_failures}")
 
         # Calculate how many files were actually deleted from database
         # Files successfully deleted = total - (kept due to transient storage failures) - (DB deletion failures)

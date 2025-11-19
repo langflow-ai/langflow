@@ -2,23 +2,22 @@ import asyncio
 import json
 import os
 import tempfile
+import uuid
 from contextlib import suppress
 from pathlib import Path
-import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 # we need to import tmpdir
 import anyio
-from langflow.api.v2.files import (
-    delete_file,
-    delete_files_batch,
-    delete_all_files,
-    is_permanent_storage_failure,
-)
-from lfx.services.storage.service import StorageService
 import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
+from langflow.api.v2.files import (
+    delete_all_files,
+    delete_file,
+    delete_files_batch,
+    is_permanent_storage_failure,
+)
 from langflow.api.v2.mcp import get_mcp_file
 from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
@@ -885,6 +884,7 @@ class TestStorageFailureHandling:
 
     def test_is_permanent_storage_failure_s3_no_such_bucket(self):
         """Test that S3 NoSuchBucket error is recognized as permanent failure."""
+
         # Mock S3 error with NoSuchBucket code
         class MockS3Error(Exception):
             def __init__(self):
@@ -895,6 +895,7 @@ class TestStorageFailureHandling:
 
     def test_is_permanent_storage_failure_s3_no_such_key(self):
         """Test that S3 NoSuchKey error is recognized as permanent failure."""
+
         # Mock S3 error with NoSuchKey code
         class MockS3Error(Exception):
             def __init__(self):
@@ -905,6 +906,7 @@ class TestStorageFailureHandling:
 
     def test_is_permanent_storage_failure_transient_error(self):
         """Test that transient errors (network, timeout) are not permanent failures."""
+
         # Mock transient errors
         class NetworkError(Exception):
             pass
@@ -921,6 +923,7 @@ class TestStorageFailureHandling:
 
     def test_is_permanent_storage_failure_fallback_string_matching(self):
         """Test fallback string matching for edge cases."""
+
         # Test with error messages that match permanent patterns
         class CustomError(Exception):
             pass
@@ -938,7 +941,7 @@ class TestStorageFailureHandling:
         user_id = uuid.uuid4()
         file_name = "test_file.txt"
         file_path = f"{file_id}.txt"
-        
+
         mock_file = UserFile(
             id=file_id,
             user_id=user_id,
@@ -946,10 +949,10 @@ class TestStorageFailureHandling:
             path=file_path,
             size=100,
         )
-        
+
         mock_current_user = MagicMock()
         mock_current_user.id = user_id
-        
+
         mock_exec_result = MagicMock()
         mock_exec_result.first = MagicMock(return_value=mock_file)
         mock_session = AsyncMock()
@@ -958,14 +961,14 @@ class TestStorageFailureHandling:
 
         mock_storage_service = AsyncMock()
         mock_storage_service.delete_file = AsyncMock(side_effect=FileNotFoundError(f"File {file_path} not found"))
-        
+
         result = await delete_file(
             file_id=file_id,
             current_user=mock_current_user,
             session=mock_session,
             storage_service=mock_storage_service,
         )
-        
+
         expected_file_name = file_path.split("/")[-1]
         mock_storage_service.delete_file.assert_called_once_with(
             flow_id=str(user_id),
@@ -976,14 +979,14 @@ class TestStorageFailureHandling:
 
     async def test_delete_file_with_transient_failure_keeps_in_db(self):
         """Test that transient storage failures keep file in database for retry."""
-        from langflow.services.database.models.file.model import File as UserFile
         from fastapi import HTTPException
+        from langflow.services.database.models.file.model import File as UserFile
 
         file_id = uuid.uuid4()
         user_id = uuid.uuid4()
         file_name = "test_file.txt"
         file_path = f"{file_id}.txt"
-        
+
         mock_file = UserFile(
             id=file_id,
             user_id=user_id,
@@ -991,19 +994,19 @@ class TestStorageFailureHandling:
             path=file_path,
             size=100,
         )
-        
+
         mock_current_user = MagicMock()
         mock_current_user.id = user_id
-        
+
         mock_exec_result = MagicMock()
         mock_exec_result.first = MagicMock(return_value=mock_file)
         mock_session = AsyncMock()
         mock_session.exec = AsyncMock(return_value=mock_exec_result)
         mock_session.delete = AsyncMock()
-        
+
         mock_storage_service = AsyncMock()
         mock_storage_service.delete_file = AsyncMock(side_effect=ConnectionError("Network connection failed"))
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await delete_file(
                 file_id=file_id,
@@ -1011,10 +1014,10 @@ class TestStorageFailureHandling:
                 session=mock_session,
                 storage_service=mock_storage_service,
             )
-        
+
         assert exc_info.value.status_code == 500
         assert "Failed to delete file from storage" in exc_info.value.detail
-        
+
         expected_file_name = file_path.split("/")[-1]
         mock_storage_service.delete_file.assert_called_once_with(
             flow_id=str(user_id),
@@ -1025,12 +1028,11 @@ class TestStorageFailureHandling:
     async def test_batch_delete_with_mixed_failures(self):
         """Test batch delete with mix of permanent and transient failures."""
         from langflow.services.database.models.file.model import File as UserFile
-        from sqlmodel import col, select
 
         user_id = uuid.uuid4()
         file_ids = [uuid.uuid4() for _ in range(3)]
         file_names = [f"batch_test_{i}.txt" for i in range(3)]
-        
+
         mock_files = [
             UserFile(
                 id=file_ids[i],
@@ -1041,40 +1043,42 @@ class TestStorageFailureHandling:
             )
             for i in range(3)
         ]
-        
+
         mock_current_user = MagicMock()
         mock_current_user.id = user_id
-        
+
         mock_exec_result = MagicMock()
         mock_exec_result.all = MagicMock(return_value=mock_files)
         mock_session = AsyncMock()
         mock_session.exec = AsyncMock(return_value=mock_exec_result)
         mock_session.delete = AsyncMock()
-        
+
         deleted_file_ids = set()
-        
+
         async def mock_delete_file(flow_id: str, file_name: str) -> None:
             if file_name == f"{file_ids[0]}.txt":
                 raise FileNotFoundError(f"File {file_name} not found")
-            elif file_name == f"{file_ids[1]}.txt":
+            if file_name == f"{file_ids[1]}.txt":
                 raise ConnectionError("Network error")
-            else:
-                deleted_file_ids.add(file_name)
-        
+            deleted_file_ids.add(file_name)
+
         mock_storage_service = AsyncMock()
         mock_storage_service.delete_file = AsyncMock(side_effect=mock_delete_file)
-        
+
         result = await delete_files_batch(
             file_ids=file_ids,
             current_user=mock_current_user,
             session=mock_session,
             storage_service=mock_storage_service,
         )
-        
-        assert result["message"] == "2 files deleted successfully, 1 files kept in database due to transient storage errors (can retry)"
-        
+
+        assert (
+            result["message"]
+            == "2 files deleted successfully, 1 files kept in database due to transient storage errors (can retry)"
+        )
+
         assert mock_storage_service.delete_file.call_count == 3
-        
+
         delete_calls = [call[0][0] for call in mock_session.delete.call_args_list]
         assert len(delete_calls) == 2
         assert mock_files[0] in delete_calls
@@ -1243,4 +1247,7 @@ class TestStorageFailureHandling:
             storage_service=mock_storage_service,
         )
 
-        assert result["message"] == "2 files deleted successfully, 1 files kept in database due to transient storage errors (can retry)"
+        assert (
+            result["message"]
+            == "2 files deleted successfully, 1 files kept in database due to transient storage errors (can retry)"
+        )

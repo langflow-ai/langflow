@@ -9,8 +9,9 @@ implementations.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.utils.async_helpers import run_until_complete
@@ -85,6 +86,7 @@ async def read_file_bytes(
 
     return path_obj.read_bytes()
 
+
 async def read_file_text(
     file_path: str,
     encoding: str = "utf-8",
@@ -119,16 +121,15 @@ async def read_file_text(
             # Convert all line endings to \n (matches Python's universal newline mode)
             text = text.replace("\r\n", "\n").replace("\r", "\n")
         return text
-    else:
-        # For local storage, resolve path if resolver provided
-        if resolve_path:
-            file_path = resolve_path(file_path)
+    # For local storage, resolve path if resolver provided
+    if resolve_path:
+        file_path = resolve_path(file_path)
 
-        path_obj = Path(file_path)
-        if newline is not None:
-            with path_obj.open(newline=newline, encoding=encoding) as f:
-                return f.read()
-        return path_obj.read_text(encoding=encoding)
+    path_obj = Path(file_path)
+    if newline is not None:
+        with path_obj.open(newline=newline, encoding=encoding) as f:
+            return f.read()
+    return path_obj.read_text(encoding=encoding)
 
 
 def get_file_size(file_path: str, storage_service: StorageService | None = None) -> int:
@@ -184,5 +185,3 @@ def file_exists(file_path: str, storage_service: StorageService | None = None) -
         return True
     except (FileNotFoundError, ValueError):
         return False
-
-
