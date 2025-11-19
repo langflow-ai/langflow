@@ -220,8 +220,7 @@ async def read_projects(
         sorted_projects = sorted(projects, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
 
         # Convert to FolderRead while session is still active to avoid detached instance errors
-        folder_reads = [FolderRead.model_validate(project, from_attributes=True) for project in sorted_projects]
-        return folder_reads
+        return [FolderRead.model_validate(project, from_attributes=True) for project in sorted_projects]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

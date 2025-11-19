@@ -137,6 +137,7 @@ class ParameterHandler:
 
     def process_file_field(self, field_name: str, field: dict, params: dict[str, Any]) -> dict[str, Any]:
         """Process file type fields.
+
         Converts logical paths (flow_id/filename) to component-ready paths.
         """
         if file_path := field.get("file_path"):

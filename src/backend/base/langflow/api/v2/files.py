@@ -222,7 +222,7 @@ async def upload_user_file(
             # Database insert failed - clean up the uploaded file to avoid orphaned files
             try:
                 await storage_service.delete_file(flow_id=str(current_user.id), file_name=stored_file_name)
-            except Exception as e:
+            except OSError as e:
                 #  If delete fails, just log the error
                 await logger.aerror(f"Failed to clean up uploaded file {stored_file_name}: {e}")
 
@@ -355,7 +355,7 @@ async def delete_files_batch(
             try:
                 await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
                 storage_deleted = True
-            except Exception as err:
+            except OSError as err:
                 # Check if this is a "permanent" failure where file/storage is gone
                 # These are safe to delete from DB even if storage deletion failed
                 if is_permanent_storage_failure(err):
@@ -379,7 +379,7 @@ async def delete_files_batch(
             if storage_deleted:
                 try:
                     await session.delete(file)
-                except Exception as db_error:
+                except OSError as db_error:
                     # Log database deletion failure but continue processing remaining files
                     db_failures.append(f"{file_name}: {db_error}")
                     await logger.aerror(
@@ -661,7 +661,7 @@ async def delete_file(
                     status_code=500, detail=f"Error deleting file from database: {db_error}"
                 ) from db_error
 
-        return {"detail": f"File {file_to_delete.name} deleted successfully"}
+            return {"detail": f"File {file_to_delete.name} deleted successfully"}
     except HTTPException:
         # Re-raise HTTPException to avoid being caught by the generic exception handler
         raise
@@ -697,7 +697,7 @@ async def delete_all_files(
             try:
                 await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
                 storage_deleted = True
-            except Exception as err:
+            except OSError as err:
                 # Check if this is a "permanent" failure where file/storage is gone
                 # These are safe to delete from DB even if storage deletion failed
                 if is_permanent_storage_failure(err):
@@ -721,7 +721,7 @@ async def delete_all_files(
             if storage_deleted:
                 try:
                     await session.delete(file)
-                except Exception as db_error:
+                except OSError as db_error:
                     # Log database deletion failure but continue processing remaining files
                     db_failures.append(f"{file_name}: {db_error}")
                     await logger.aerror(

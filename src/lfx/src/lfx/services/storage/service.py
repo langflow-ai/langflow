@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
 import anyio
@@ -9,6 +8,8 @@ import anyio
 from lfx.services.base import Service
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from lfx.services.settings.service import SettingsService
 
 

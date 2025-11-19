@@ -1,3 +1,4 @@
+import contextlib
 import tempfile
 from pathlib import Path
 
@@ -66,10 +67,8 @@ class JsonAgentComponent(LCAgentComponent):
     def _cleanup_temp_file(self) -> None:
         """Clean up temporary file if one was created."""
         if hasattr(self, "_temp_file_path"):
-            try:
-                Path(self._temp_file_path).unlink()
-            except Exception:  # noqa: S110
-                pass  # Ignore cleanup errors
+            with contextlib.suppress(Exception):
+                Path(self._temp_file_path).unlink()  # Ignore cleanup errors
 
     def build_agent(self) -> AgentExecutor:
         """Build the JSON agent executor."""
@@ -86,13 +85,11 @@ class JsonAgentComponent(LCAgentComponent):
             toolkit = JsonToolkit(spec=spec)
 
             agent = create_json_agent(llm=self.llm, toolkit=toolkit, **self.get_agent_kwargs())
-
-            # Clean up temp file after agent is created
-            self._cleanup_temp_file()
-
-            return agent
-
-        except Exception as e:
+        except Exception:
             # Make sure to clean up temp file on error
             self._cleanup_temp_file()
-            raise e
+            raise
+        else:
+            # Clean up temp file after agent is created
+            self._cleanup_temp_file()
+            return agent

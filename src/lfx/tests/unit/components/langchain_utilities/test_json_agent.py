@@ -287,7 +287,7 @@ class TestJsonAgentComponent:
             mock_get_settings.return_value = mock_settings
             mock_read_bytes.return_value = json_content
 
-            with pytest.raises(Exception):
+            with pytest.raises(Exception):  # noqa: B017, PT011
                 component.build_agent()
 
             # Temp file should be cleaned up even after error

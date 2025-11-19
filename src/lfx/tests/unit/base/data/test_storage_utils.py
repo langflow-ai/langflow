@@ -81,7 +81,7 @@ class TestReadFileBytes:
         mock_settings = Mock()
         mock_settings.settings.storage_type = "local"
 
-        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):
+        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):  # noqa: SIM117
             with pytest.raises(FileNotFoundError):
                 await read_file_bytes("/nonexistent/file.txt")
 
@@ -108,7 +108,7 @@ class TestReadFileBytes:
         mock_settings = Mock()
         mock_settings.settings.storage_type = "s3"
 
-        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):
+        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):  # noqa: SIM117
             with pytest.raises(ValueError, match="Invalid S3 path format"):
                 await read_file_bytes("invalid_path_no_slash")
 
@@ -139,7 +139,7 @@ class TestReadFileBytes:
             patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings),
             patch("lfx.base.data.storage_utils.get_storage_service", return_value=mock_storage),
         ):
-            content = await read_file_bytes("flow_456/subdir1/subdir2/file.txt")
+            await read_file_bytes("flow_456/subdir1/subdir2/file.txt")
 
         mock_storage.get_file.assert_called_once_with("flow_456", "subdir1/subdir2/file.txt")
 
@@ -216,7 +216,7 @@ class TestGetFileSize:
         mock_settings = Mock()
         mock_settings.settings.storage_type = "local"
 
-        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):
+        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):  # noqa: SIM117
             with pytest.raises(FileNotFoundError):
                 get_file_size("/nonexistent/file.txt")
 
@@ -228,7 +228,7 @@ class TestGetFileSize:
         mock_storage = Mock()
 
         # Mock async get_file_size to return via asyncio.run
-        async def mock_get_size(flow_id, filename):
+        async def mock_get_size(_flow_id, _filename):
             return 5678
 
         mock_storage.get_file_size = mock_get_size
@@ -246,7 +246,7 @@ class TestGetFileSize:
         mock_settings = Mock()
         mock_settings.settings.storage_type = "s3"
 
-        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):
+        with patch("lfx.base.data.storage_utils.get_settings_service", return_value=mock_settings):  # noqa: SIM117
             with pytest.raises(ValueError, match="Invalid S3 path format"):
                 get_file_size("invalid_no_slash")
 
@@ -280,7 +280,7 @@ class TestFileExists:
 
         mock_storage = Mock()
 
-        async def mock_get_size(flow_id, filename):
+        async def mock_get_size(_flow_id, _filename):
             return 100
 
         mock_storage.get_file_size = mock_get_size
@@ -298,7 +298,7 @@ class TestFileExists:
 
         mock_storage = Mock()
 
-        async def mock_get_size(flow_id, filename):
+        async def mock_get_size(_flow_id, _filename):
             raise FileNotFoundError
 
         mock_storage.get_file_size = mock_get_size

@@ -1,3 +1,4 @@
+import contextlib
 import tempfile
 import unicodedata
 from collections.abc import Callable
@@ -189,6 +190,7 @@ async def read_text_file_async(file_path: str) -> str:
 
 def read_docx_file(file_path: str) -> str:
     """Read a DOCX file and extract text.
+
     ote: python-docx requires a file path, so this only works with local files.
     For storage service files, use read_docx_file_async which downloads to temp.
 
@@ -206,6 +208,7 @@ def read_docx_file(file_path: str) -> str:
 
 async def read_docx_file_async(file_path: str) -> str:
     """Read a DOCX file and extract text (async, storage-aware).
+
     For S3 storage, downloads to temp file (python-docx requires file path).
     For local storage, reads directly.
 
@@ -240,10 +243,8 @@ async def read_docx_file_async(file_path: str) -> str:
         doc = Document(temp_path)
         return "\n\n".join([p.text for p in doc.paragraphs])
     finally:
-        try:
+        with contextlib.suppress(Exception):
             Path(temp_path).unlink()
-        except Exception:  # noqa: S110
-            pass
 
 
 def parse_pdf_to_text(file_path: str) -> str:
@@ -255,6 +256,7 @@ def parse_pdf_to_text(file_path: str) -> str:
 
 async def parse_pdf_to_text_async(file_path: str) -> str:
     """Parse a PDF file to extract text (async, storage-aware).
+
     Uses storage-aware file reading to support both local and S3 storage.
 
     Args:

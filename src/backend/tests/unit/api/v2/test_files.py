@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import json
 import os
 import tempfile
@@ -556,7 +557,7 @@ async def s3_files_created_api_key(s3_files_client, s3_files_active_user):  # no
     api_key = ApiKey(
         name="s3_files_created_api_key",
         user_id=s3_files_active_user.id,
-        api_key="s3_random_key",
+        api_key="s3_random_key",  # pragma: allowlist secret
         hashed_api_key=hashed,
     )
     async with session_scope() as session:
@@ -650,15 +651,13 @@ async def s3_files_client_fixture(
             bucket_name = os.environ.get("LANGFLOW_OBJECT_STORAGE_BUCKET_NAME", "langflow-ci")
 
             # List and delete all objects with our test prefix
-            try:
+            with contextlib.suppress(Exception):
                 response = s3.list_objects_v2(Bucket=bucket_name, Prefix=test_prefix)
                 if "Contents" in response:
                     for obj in response["Contents"]:
                         s3.delete_object(Bucket=bucket_name, Key=obj["Key"])
-            except Exception:
-                pass  # Ignore cleanup errors
-        except Exception:
-            pass  # Ignore cleanup errors
+        except Exception:  # noqa: S110
+            pass  # Ignore cleanup errors - outer exception handler
 
         monkeypatch.undo()
         # clear the temp db
@@ -673,6 +672,7 @@ pytestmark_s3 = pytest.mark.api_key_required
 @pytest.mark.api_key_required
 class TestS3FileOperations:
     """Test file operations with S3 storage backend.
+
     These tests use actual AWS S3 and verify that file operations work correctly
     with S3 storage, including the delete bug fix.
     """
@@ -911,15 +911,15 @@ class TestStorageFailureHandling:
         class NetworkError(Exception):
             pass
 
-        class TimeoutError(Exception):
+        class CustomTimeoutError(Exception):
             pass
 
-        class PermissionError(Exception):
+        class CustomPermissionError(Exception):
             pass
 
         assert is_permanent_storage_failure(NetworkError("Connection failed")) is False
-        assert is_permanent_storage_failure(TimeoutError("Request timed out")) is False
-        assert is_permanent_storage_failure(PermissionError("Access denied")) is False
+        assert is_permanent_storage_failure(CustomTimeoutError("Request timed out")) is False
+        assert is_permanent_storage_failure(CustomPermissionError("Access denied")) is False
 
     def test_is_permanent_storage_failure_fallback_string_matching(self):
         """Test fallback string matching for edge cases."""
@@ -1055,11 +1055,13 @@ class TestStorageFailureHandling:
 
         deleted_file_ids = set()
 
-        async def mock_delete_file(flow_id: str, file_name: str) -> None:
+        async def mock_delete_file(_flow_id: str, file_name: str) -> None:
             if file_name == f"{file_ids[0]}.txt":
-                raise FileNotFoundError(f"File {file_name} not found")
+                msg = f"File {file_name} not found"
+                raise FileNotFoundError(msg)
             if file_name == f"{file_ids[1]}.txt":
-                raise ConnectionError("Network error")
+                msg = "Network error"
+                raise ConnectionError(msg)
             deleted_file_ids.add(file_name)
 
         mock_storage_service = AsyncMock()
@@ -1148,11 +1150,12 @@ class TestStorageFailureHandling:
 
         call_count = 0
 
-        async def mock_delete_file(flow_id: str, file_name: str) -> None:
+        async def mock_delete_file(_flow_id: str, _file_name: str) -> None:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise ConnectionError("Network error")
+                msg = "Network error"
+                raise ConnectionError(msg)
 
         mock_storage_service = AsyncMock()
         mock_storage_service.delete_file = AsyncMock(side_effect=mock_delete_file)
@@ -1231,11 +1234,12 @@ class TestStorageFailureHandling:
 
         call_count = 0
 
-        async def mock_delete_file(flow_id: str, file_name: str) -> None:
+        async def mock_delete_file(_flow_id: str, _file_name: str) -> None:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise ConnectionError("Network error")
+                msg = "Network error"
+                raise ConnectionError(msg)
 
         mock_storage_service = AsyncMock()
         mock_storage_service.delete_file = AsyncMock(side_effect=mock_delete_file)

@@ -14,6 +14,9 @@ if TYPE_CHECKING:
 
     from lfx.services.settings.service import SettingsService
 
+# Constants for path parsing
+EXPECTED_PATH_PARTS = 2  # Path format: "flow_id/filename"
+
 
 class LocalStorageService(StorageService):
     """A service class for handling local file storage operations."""
@@ -43,7 +46,7 @@ class LocalStorageService(StorageService):
         """
         # Split the logical path into flow_id and filename
         parts = logical_path.split("/", 1)
-        if len(parts) != 2:
+        if len(parts) != EXPECTED_PATH_PARTS:
             # Handle edge case - return as-is if format is unexpected
             return logical_path
 
@@ -168,10 +171,11 @@ class LocalStorageService(StorageService):
 
         try:
             file_size_stat = await file_path.stat()
-            return file_size_stat.st_size
         except Exception:
             logger.exception(f"Error getting size of file {file_name} in flow {flow_id}")
             raise
+        else:
+            return file_size_stat.st_size
 
     async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down."""

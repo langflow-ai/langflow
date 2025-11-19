@@ -783,10 +783,9 @@ class BaseFileComponent(Component, ABC):
         for file in files:
             # For S3 storage, paths are virtual keys that don't exist locally
             # Skip filesystem checks and only validate extensions
-            if get_settings_service().settings.storage_type != "s3":
-                if not file.path.is_file():
-                    self.log(f"Not a file: {file.path.name}")
-                    continue
+            if get_settings_service().settings.storage_type != "s3" and not file.path.is_file():
+                self.log(f"Not a file: {file.path.name}")
+                continue
 
             # Validate file extension
             extension = file.path.suffix[1:].lower()

@@ -10,6 +10,7 @@ Notes:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import subprocess
 import sys
@@ -351,10 +352,8 @@ class FileComponent(BaseFileComponent):
         finally:
             # Clean up temp file if we created one
             if should_delete:
-                try:
-                    Path(local_path).unlink()
-                except Exception:  # noqa: S110
-                    pass  # Ignore cleanup errors
+                with contextlib.suppress(Exception):
+                    Path(local_path).unlink()  # Ignore cleanup errors
 
     def _process_docling_subprocess_impl(self, local_file_path: str, original_file_path: str) -> Data | None:
         """Implementation of Docling subprocess processing.
@@ -570,7 +569,7 @@ class FileComponent(BaseFileComponent):
 
         if not proc.stdout:
             err_msg = proc.stderr.decode("utf-8", errors="replace") or "no output from child process"
-            return Data(data={"error": f"Docling subprocess error: {err_msg}", "file_path": file_path})
+            return Data(data={"error": f"Docling subprocess error: {err_msg}", "file_path": original_file_path})
 
         try:
             result = json.loads(proc.stdout.decode("utf-8"))

@@ -202,7 +202,7 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
                     f"Max retries ({max_retries}) reached for aadd_messagetables due to CancelledError"
                 )
                 error_msg = "Add Message operation cancelled after multiple retries"
-                raise ValueError(error_msg)
+                raise ValueError(error_msg) from None
             return await aadd_messagetables(messages, session, retry_count + 1)
         for message in messages:
             await session.refresh(message)

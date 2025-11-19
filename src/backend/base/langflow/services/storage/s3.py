@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
-from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
 from langflow.logging.logger import logger
@@ -11,6 +11,8 @@ from langflow.logging.logger import logger
 from .service import StorageService
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
 
@@ -163,8 +165,6 @@ class S3StorageService(StorageService):
                 content = await response["Body"].read()
 
             logger.debug(f"File {file_name} retrieved successfully from S3: s3://{self.bucket_name}/{key}")
-            return content
-
         except Exception as e:
             if hasattr(e, "response") and e.response.get("Error", {}).get("Code") == "NoSuchKey":
                 await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
@@ -173,6 +173,8 @@ class S3StorageService(StorageService):
 
             logger.exception(f"Error retrieving file {file_name} from S3 in flow {flow_id}")
             raise
+        else:
+            return content
 
     async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
         """Retrieve a file from S3 as a stream.
@@ -200,10 +202,8 @@ class S3StorageService(StorageService):
                         yield chunk
                 finally:
                     if hasattr(body, "close"):
-                        try:
+                        with contextlib.suppress(Exception):
                             await body.close()
-                        except Exception:
-                            pass
 
             logger.debug(f"File {file_name} streamed successfully from S3: s3://{self.bucket_name}/{key}")
 
@@ -249,11 +249,11 @@ class S3StorageService(StorageService):
                                 files.append(file_name)
 
             await logger.ainfo(f"Listed {len(files)} files in S3 flow {flow_id}")
-            return files
-
         except Exception:
             logger.exception(f"Error listing files in S3 flow {flow_id}")
             raise
+        else:
+            return files
 
     async def delete_file(self, flow_id: str, file_name: str) -> None:
         """Delete a file from S3.
@@ -298,8 +298,6 @@ class S3StorageService(StorageService):
                 file_size = response["ContentLength"]
 
             logger.debug(f"File {file_name} size: {file_size} bytes")
-            return file_size
-
         except Exception as e:
             # Check if it's a 404 error
             if hasattr(e, "response") and e.response.get("Error", {}).get("Code") in ["NoSuchKey", "404"]:
@@ -309,6 +307,8 @@ class S3StorageService(StorageService):
 
             logger.exception(f"Error getting file size for {file_name} in S3 flow {flow_id}")
             raise
+        else:
+            return file_size
 
     async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down.

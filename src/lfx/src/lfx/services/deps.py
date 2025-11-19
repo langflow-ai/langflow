@@ -2,19 +2,21 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
 from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from lfx.log.logger import logger
 from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
     from lfx.services.interfaces import (
         CacheServiceProtocol,
         ChatServiceProtocol,
@@ -120,6 +122,7 @@ async def injectable_session_scope():
 @asynccontextmanager
 async def session_scope() -> AsyncGenerator[AsyncSession, None]:
     """Context manager for managing an async session scope with auto-commit for write operations.
+
     This is used with `async with session_scope() as session:` for direct session management.
     It ensures that the session is properly committed if no exceptions occur,
     and rolled back if an exception is raised.
@@ -132,7 +135,7 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         Exception: If an error occurs during the session scope.
     """
     db_service = get_db_service()
-    async with db_service._with_session() as session:
+    async with db_service._with_session() as session:  # noqa: SLF001
         try:
             yield session
             await session.commit()
@@ -151,11 +154,9 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
 
             # Only rollback if session is still in a valid state
             if session.is_active:
-                try:
-                    await session.rollback()
-                except InvalidRequestError:
+                with suppress(InvalidRequestError):
                     # Session was already rolled back by SQLAlchemy
-                    pass
+                    await session.rollback()
             raise
         # No explicit close needed - _with_session() handles it
 
@@ -168,6 +169,7 @@ async def injectable_session_scope_readonly():
 @asynccontextmanager
 async def session_scope_readonly() -> AsyncGenerator[AsyncSession, None]:
     """Context manager for managing a read-only async session scope.
+
     This is used with `async with session_scope_readonly() as session:` for direct session management
     when only reading data. No auto-commit or rollback - the session is simply closed after use.
 
@@ -175,7 +177,7 @@ async def session_scope_readonly() -> AsyncGenerator[AsyncSession, None]:
         AsyncSession: The async session object.
     """
     db_service = get_db_service()
-    async with db_service._with_session() as session:
+    async with db_service._with_session() as session:  # noqa: SLF001
         yield session
         # No commit - read-only
         # No clean up - client is responsible (plus, read only sessions are not committed)

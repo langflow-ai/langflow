@@ -9,7 +9,6 @@ implementations.
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -17,7 +16,12 @@ from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from lfx.services.storage.service import StorageService
+
+# Constants for path parsing
+EXPECTED_PATH_PARTS = 2  # Path format: "flow_id/filename"
 
 
 def parse_storage_path(path: str) -> tuple[str, str] | None:
@@ -36,7 +40,7 @@ def parse_storage_path(path: str) -> tuple[str, str] | None:
         return None
 
     parts = path.split("/", 1)
-    if len(parts) != 2 or not parts[0] or not parts[1]:
+    if len(parts) != EXPECTED_PATH_PARTS or not parts[0] or not parts[1]:
         return None
 
     return parts[0], parts[1]
@@ -94,7 +98,7 @@ async def read_file_text(
     resolve_path: Callable[[str], str] | None = None,
     newline: str | None = None,
 ) -> str:
-    """Read file text from either storage service or local filesystem.
+    r"""Read file text from either storage service or local filesystem.
 
     Args:
         file_path: Path to the file (storage service path or local path)
@@ -127,7 +131,7 @@ async def read_file_text(
 
     path_obj = Path(file_path)
     if newline is not None:
-        with path_obj.open(newline=newline, encoding=encoding) as f:
+        with path_obj.open(newline=newline, encoding=encoding) as f:  # noqa: ASYNC230
             return f.read()
     return path_obj.read_text(encoding=encoding)
 
@@ -182,6 +186,7 @@ def file_exists(file_path: str, storage_service: StorageService | None = None) -
     """
     try:
         get_file_size(file_path, storage_service)
-        return True
     except (FileNotFoundError, ValueError):
         return False
+    else:
+        return True

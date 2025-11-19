@@ -37,7 +37,7 @@ def mock_s3_environment(settings, storage_service):
     ]
 
     # Start all patches
-    mocks = [p.start() for p in patches]
+    [p.start() for p in patches]
     try:
         yield
     finally:
@@ -66,8 +66,7 @@ class TestS3CompatibleComponents:
     @pytest.fixture
     def mock_storage_service(self):
         """Mock storage service for S3 operations."""
-        storage = AsyncMock()
-        return storage
+        return AsyncMock()
 
     def test_file_component_s3_path_handling(self, s3_settings, mock_storage_service):
         """Test FileComponent with S3 paths."""
@@ -96,7 +95,7 @@ class TestS3CompatibleComponents:
 
         # Mock tempfile
         mock_temp_file = MagicMock()
-        mock_temp_file.name = "/tmp/temp_file.pdf"
+        mock_temp_file.name = "/tmp/temp_file.pdf"  # noqa: S108
         mock_temp_file.write = MagicMock()
 
         with (
@@ -116,7 +115,7 @@ class TestS3CompatibleComponents:
             mock_storage_service.get_file.assert_called_once_with("user_123", "document.pdf")
             # Verify temp file was created
             assert should_delete is True
-            assert local_path == "/tmp/temp_file.pdf"
+            assert local_path == "/tmp/temp_file.pdf"  # noqa: S108
 
     @pytest.mark.asyncio
     async def test_file_component_get_local_file_for_docling_local(self, local_settings):
@@ -146,7 +145,7 @@ class TestS3CompatibleComponents:
 
             # Mock database and storage services
             with (
-                patch("lfx.services.deps.session_scope") as mock_session,
+                patch("lfx.services.deps.session_scope"),
                 patch(
                     "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
                 ) as mock_get_user,
@@ -164,7 +163,7 @@ class TestS3CompatibleComponents:
                 component.storage_location = [{"name": "AWS"}]  # Set S3 storage location
                 # Set required AWS credentials (will be mocked out anyway)
                 component.aws_access_key_id = "test_key"
-                component.aws_secret_access_key = "test_secret"
+                component.aws_secret_access_key = "test_secret"  # noqa: S105  # pragma: allowlist secret
                 component.aws_region = "us-east-1"
                 component.bucket_name = "test-bucket"
 
@@ -315,25 +314,29 @@ class TestS3CompatibleComponents:
             component.csv_file = "/local/path/data.csv"
 
             # Mock local file read
-            with patch("pathlib.Path.read_bytes", return_value=b"name,age\nJohn,30"):
-                with patch("pathlib.Path.exists", return_value=True):
-                    result = component.load_csv_to_data()
+            with (
+                patch("pathlib.Path.read_bytes", return_value=b"name,age\nJohn,30"),
+                patch("pathlib.Path.exists", return_value=True),
+            ):
+                result = component.load_csv_to_data()
 
-                    # Should read from local filesystem, not S3
-                    assert len(result) == 1
-                    assert result[0].data == {"name": "John", "age": "30"}
+                # Should read from local filesystem, not S3
+                assert len(result) == 1
+                assert result[0].data == {"name": "John", "age": "30"}
 
         # Test with local storage
         with patch("lfx.services.deps.get_settings_service", return_value=local_settings):
             component = CSVToDataComponent()
             component.csv_file = "/local/path/data.csv"
 
-            with patch("pathlib.Path.read_bytes", return_value=b"name,age\nJane,25"):
-                with patch("pathlib.Path.exists", return_value=True):
-                    result = component.load_csv_to_data()
+            with (
+                patch("pathlib.Path.read_bytes", return_value=b"name,age\nJane,25"),
+                patch("pathlib.Path.exists", return_value=True),
+            ):
+                result = component.load_csv_to_data()
 
-                    assert len(result) == 1
-                    assert result[0].data == {"name": "Jane", "age": "25"}
+                assert len(result) == 1
+                assert result[0].data == {"name": "Jane", "age": "25"}
 
     @pytest.mark.asyncio
     async def test_csv_to_data_path_s3_key(self, s3_settings, mock_storage_service):
@@ -380,29 +383,33 @@ class TestS3CompatibleComponents:
             component.json_file = "/local/path/data.json"
 
             # Mock local file read
-            with patch("pathlib.Path.read_text", return_value='{"key": "value"}'):
-                with patch("pathlib.Path.exists", return_value=True):
-                    result = component.convert_json_to_data()
+            with (
+                patch("pathlib.Path.read_text", return_value='{"key": "value"}'),
+                patch("pathlib.Path.exists", return_value=True),
+            ):
+                result = component.convert_json_to_data()
 
-                    # Should read from local filesystem, not S3
-                    from lfx.schema.data import Data
+                # Should read from local filesystem, not S3
+                from lfx.schema.data import Data
 
-                    assert isinstance(result, Data)
-                    assert result.data == {"key": "value"}
+                assert isinstance(result, Data)
+                assert result.data == {"key": "value"}
 
         # Test with local storage
         with patch("lfx.services.deps.get_settings_service", return_value=local_settings):
             component = JSONToDataComponent()
             component.json_file = "/local/path/data.json"
 
-            with patch("pathlib.Path.read_text", return_value='{"name": "test"}'):
-                with patch("pathlib.Path.exists", return_value=True):
-                    result = component.convert_json_to_data()
+            with (
+                patch("pathlib.Path.read_text", return_value='{"name": "test"}'),
+                patch("pathlib.Path.exists", return_value=True),
+            ):
+                result = component.convert_json_to_data()
 
-                    from lfx.schema.data import Data
+                from lfx.schema.data import Data
 
-                    assert isinstance(result, Data)
-                    assert result.data == {"name": "test"}
+                assert isinstance(result, Data)
+                assert result.data == {"name": "test"}
 
     @pytest.mark.asyncio
     async def test_json_to_data_path_s3_key(self, s3_settings, mock_storage_service):
@@ -430,12 +437,14 @@ class TestS3CompatibleComponents:
             component.json_path = "/local/path/data.json"
 
             # Mock local file read
-            with patch("pathlib.Path.read_text", return_value='{"local": "data"}'):
-                with patch("pathlib.Path.exists", return_value=True):
-                    result = component.convert_json_to_data()
+            with (
+                patch("pathlib.Path.read_text", return_value='{"local": "data"}'),
+                patch("pathlib.Path.exists", return_value=True),
+            ):
+                result = component.convert_json_to_data()
 
-                    # Should read from local filesystem
-                    from lfx.schema.data import Data
+                # Should read from local filesystem
+                from lfx.schema.data import Data
 
-                    assert isinstance(result, Data)
-                    assert result.data == {"local": "data"}
+                assert isinstance(result, Data)
+                assert result.data == {"local": "data"}
