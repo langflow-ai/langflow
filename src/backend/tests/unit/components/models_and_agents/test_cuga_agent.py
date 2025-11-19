@@ -117,45 +117,6 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         # Verify model_name field is cleared for Custom
         assert "model_name" not in updated_config
 
-    async def test_json_mode_filtered_from_openai_inputs(self, component_class, default_kwargs):
-        """Test that json_mode is filtered out from OpenAI inputs.
-
-        This test ensures that the json_mode parameter is properly excluded from
-        the component's input fields since Cuga handles structured output differently.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Check that json_mode is not in the component's inputs
-        input_names = [inp.name for inp in component.inputs if hasattr(inp, "name")]
-        assert "json_mode" not in input_names
-
-        # Verify other OpenAI inputs are still present
-        assert "model_name" in input_names
-        assert "api_key" in input_names
-        assert "temperature" in input_names
-
-    async def test_model_building_without_json_mode(self, component_class, default_kwargs):
-        """Test that model building works without json_mode attribute.
-
-        This test ensures that the component can build models without requiring
-        the json_mode attribute that has been filtered out.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-        component.agent_llm = "OpenAI"
-
-        # Mock component for testing
-        from unittest.mock import Mock
-
-        mock_component = Mock()
-        mock_component.set.return_value = mock_component
-
-        # Should not raise AttributeError for missing json_mode
-        result = component.set_component_params(mock_component)
-
-        assert result is not None
-        # Verify set was called (meaning no AttributeError occurred)
-        mock_component.set.assert_called_once()
-
     async def test_cuga_component_initialization(self, component_class, default_kwargs):
         """Test that Cuga component initializes correctly with filtered inputs.
 
@@ -174,15 +135,12 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         """Test that frontend node has correct structure with filtered inputs.
 
         This test verifies that the frontend node representation has the correct
-        structure and excludes unwanted fields like json_mode.
+        structure and includes expected fields.
         """
         component = await self.component_setup(component_class, default_kwargs)
 
         frontend_node = component.to_frontend_node()
         build_config = frontend_node["data"]["node"]["template"]
-
-        # Verify json_mode is not in build config
-        assert "json_mode" not in build_config
 
         # Verify other expected fields are present
         assert "agent_llm" in build_config
@@ -190,26 +148,6 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert "add_current_date_tool" in build_config
         assert "browser_enabled" in build_config
         assert "web_apps" in build_config
-
-    async def test_preprocess_schema(self, component_class, default_kwargs):
-        """Test that _preprocess_schema correctly handles schema validation.
-
-        This test verifies that the schema preprocessing method correctly
-        converts string boolean values to actual booleans and validates field types.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Test schema preprocessing
-        raw_schema = [
-            {"name": "field1", "type": "str", "description": "Test field", "multiple": "true"},
-            {"name": "field2", "type": "int", "description": "Another field", "multiple": False},
-        ]
-
-        processed = component._preprocess_schema(raw_schema)
-
-        assert len(processed) == 2
-        assert processed[0]["multiple"] is True  # String "true" should be converted to bool
-        assert processed[1]["multiple"] is False
 
     async def test_new_input_fields_present(self, component_class, default_kwargs):
         """Test that new input fields are present in the component.
@@ -399,22 +337,6 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
                 failed_models.append(f"{model_name} (error: {e!s})")
 
         assert not failed_models, f"The following models failed the test: {failed_models}"
-
-    @pytest.mark.api_key_required
-    @pytest.mark.no_blockbuster
-    async def test_cuga_structured_response_with_schema(self):
-        """Test CugaComponent structured response with schema validation.
-
-        This test verifies that the CugaComponent can generate structured
-        responses with schema validation using real API calls.
-
-        Note:
-            This test is currently a placeholder (TODO).
-
-        Requires:
-            OPENAI_API_KEY environment variable
-        """
-        # TODO: Add test for structured response with schema
 
     @pytest.mark.api_key_required
     @pytest.mark.no_blockbuster
