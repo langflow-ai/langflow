@@ -43,13 +43,17 @@ class SplitToImagesInput(BaseModel):
         default=True,
         description="Whether to keep original image size or create thumbnails"
     )
+    base64_only: bool = Field(
+        default=False,
+        description="If True, only return base64 encoded images without uploading to storage"
+    )
     storage_account: str | None = Field(
         default=None,
-        description="Azure storage account name (optional)"
+        description="Azure storage account name (optional, ignored if base64_only=True)"
     )
     temp_container: str | None = Field(
         default=None,
-        description="Temporary container name for storing images (optional)"
+        description="Temporary container name for storing images (optional, ignored if base64_only=True)"
     )
 
 
@@ -57,7 +61,7 @@ class SplitToImagesComponent(LCToolComponent):
     """Tool for splitting PDFs/TIFFs into individual images and uploading to blob storage."""
 
     display_name = "Split To Images"
-    description = "Split PDFs and TIFFs into individual images and return list of image URLs"
+    description = "Split PDFs and TIFFs into individual images and return list of image URLs or base64 strings"
     documentation = "https://docs.langflow.org/components-tools"
     icon = "scissors-line-dashed"
     name = "SplitToImages"
@@ -80,18 +84,24 @@ class SplitToImagesComponent(LCToolComponent):
             input_types=["Data", "Message"],
             is_list=True,
         ),
+        BoolInput(
+            name="base64_only",
+            display_name="Base64 Only",
+            value=False,
+            info="If enabled, only return base64 encoded images without uploading to blob or local storage",
+        ),
         StrInput(
             name="storage_account",
             display_name="Storage Account",
             required=False,
-            info="Storage Account name",
+            info="Storage Account name (ignored if Base64 Only is enabled)",
             advanced=True,
         ),
         StrInput(
             name="temp_container",
             display_name="Temporary Container",
             required=False,
-            info="Temporary container name for storing split images",
+            info="Temporary container name for storing split images (ignored if Base64 Only is enabled)",
             advanced=True,
         ),
         BoolInput(
@@ -283,6 +293,17 @@ class SplitToImagesComponent(LCToolComponent):
             logger.error(f"Error saving image locally: {e!s}")
             raise
 
+    async def _generate_base64_from_bytes(self, image_bytes: bytes) -> str:
+        """Convert image bytes to base64 string."""
+        try:
+            return base64.b64encode(image_bytes).decode('utf-8')
+            
+        except Exception as e:
+            logger.error(f"Error generating base64: {e!s}")
+            if not self.silent_errors:
+                raise
+            return ""
+
     def _extract_file_paths(self, file_urls_input: Any) -> list[str]:
         """Extract file paths from various input formats."""
         file_paths = []
@@ -314,8 +335,8 @@ class SplitToImagesComponent(LCToolComponent):
 
         return file_paths
 
-    async def _process_files_to_urls(self, file_paths: list[str]) -> list[str]:
-        """Process files and return flat list of image URLs."""
+    async def _process_files_to_urls(self, file_paths: list[str]) -> tuple[list[str], list[str]]:
+        """Process files and return flat list of image URLs and base64 strings."""
         all_image_urls = []
         all_image_base64 = []
         
@@ -344,21 +365,22 @@ class SplitToImagesComponent(LCToolComponent):
                     logger.warning(f"Unsupported file type: {ext}")
                     continue
 
-                # Upload each image and collect URLs
+                # Process each image
                 for i, image_bytes in enumerate(images):
                     filename = f"{Path(local_path).stem}_page_{i + 1}.png"
     
-                    # Generate base64
+                    # Always generate base64
                     base64_str = await self._generate_base64_from_bytes(image_bytes)
                     all_image_base64.append(base64_str)
                     
-                    # Upload and get URL
-                    url = await self._upload_image_to_blob(image_bytes, filename)
-                    if url:
-                        all_image_urls.append(url)
-                    else:
-                        # If upload fails, still keep empty string to maintain order
-                        all_image_urls.append("")
+                    # Only upload to storage if base64_only is False
+                    if not self.base64_only:
+                        url = await self._upload_image_to_blob(image_bytes, filename)
+                        if url:
+                            all_image_urls.append(url)
+                        else:
+                            # If upload fails, still keep empty string to maintain order
+                            all_image_urls.append("")
 
             except Exception as e:
                 logger.error(f"Error processing file {file_path}: {e!s}")
@@ -366,7 +388,7 @@ class SplitToImagesComponent(LCToolComponent):
                     raise
                 continue
 
-        return all_image_urls,all_image_base64
+        return all_image_urls, all_image_base64
 
     def run_model(self) -> Data:
         """Run the model and return list of image URLs as Data."""
@@ -382,32 +404,50 @@ class SplitToImagesComponent(LCToolComponent):
                 "images": [],
                 "file_path": None,
                 "count": 0,
+                "base64_imgs": [],
                 "error": "No valid file paths provided"
             })
 
         # Process files asynchronously using langflow's async helper
         try:
-            image_urls,base_64_imgs = run_until_complete(self._process_files_to_urls(file_paths))
+            image_urls, base_64_imgs = run_until_complete(self._process_files_to_urls(file_paths))
 
             # Clean up temp files
             self._cleanup_temp_files()
 
             # Return Data with both formats for maximum compatibility
-            if image_urls:
-                # Create Data objects for each image with file_path property (for AutonomizeDocumentModel)
-                image_data_objects = [Data(data={"file_path": url}) for url in image_urls]
-
-                # Return comprehensive data with multiple formats
-                result_data = Data(
-                    data={
-                        "image_urls": image_urls,  # Original format for other components
-                        "images": image_data_objects,  # Data objects for AutonomizeDocumentModel
-                        "file_path": image_urls[0] if image_urls else None,  # First image for single-input components
-                        "count": len(image_urls),
-                        "base_64_imgs": base_64_imgs
-                    }
-                )
-                self.status = f"Generated {len(image_urls)} images from {len(file_paths)} files"
+            if image_urls or base_64_imgs:
+                # Determine the status message and what to return based on mode
+                if self.base64_only:
+                    status_msg = f"Generated {len(base_64_imgs)} base64 images from {len(file_paths)} files"
+                    # Return only base64 data when base64_only is True
+                    result_data = Data(
+                        data={
+                            "image_urls": [],  # Empty when base64_only
+                            "images": [],  # Empty when base64_only
+                            "file_path": None,  # Empty when base64_only
+                            "count": len(base_64_imgs),
+                            "base64_imgs": base_64_imgs,
+                            "base64_only": True
+                        }
+                    )
+                else:
+                    status_msg = f"Generated {len(image_urls)} images from {len(file_paths)} files"
+                    # Create Data objects for each image with file_path property (for AutonomizeDocumentModel)
+                    image_data_objects = [Data(data={"file_path": url}) for url in image_urls]
+                    # Return comprehensive data with URLs
+                    result_data = Data(
+                        data={
+                            "image_urls": image_urls,  # URLs when storage is used
+                            "images": image_data_objects,  # Data objects for AutonomizeDocumentModel
+                            "file_path": image_urls[0] if image_urls else None,  # First image for single-input components
+                            "count": len(base_64_imgs),
+                            "base64_imgs": base_64_imgs,
+                            "base64_only": False
+                        }
+                    )
+                
+                self.status = status_msg
                 return result_data
             else:
                 # Return empty data if no images generated
@@ -416,6 +456,7 @@ class SplitToImagesComponent(LCToolComponent):
                     "images": [],
                     "file_path": None,
                     "count": 0,
+                    "base64_imgs": [],
                     "error": "No images generated"
                 })
                 self.status = "No images generated"
@@ -431,6 +472,7 @@ class SplitToImagesComponent(LCToolComponent):
                 "images": [],
                 "file_path": None,
                 "count": 0,
+                "base64_imgs": [],
                 "error": str(e)
             })
 
@@ -440,32 +482,35 @@ class SplitToImagesComponent(LCToolComponent):
         async def split_files_to_images(
             file_urls: list[str],
             keep_original_size: bool = True,
+            base64_only: bool = False,
             storage_account: str | None = None,
             temp_container: str | None = None,
-        ) -> list[str]:
-            """Split PDF/TIFF files into individual images and return URLs.
+        ) -> dict[str, list[str]]:
+            """Split PDF/TIFF files into individual images and return URLs or base64 strings.
 
             Args:
                 file_urls: List of file URLs or paths to process
                 keep_original_size: Whether to keep original size or create thumbnails
-                storage_account: Azure storage account (optional)
-                temp_container: Container for temporary storage (optional)
+                base64_only: If True, only return base64 encoded images without uploading to storage
+                storage_account: Azure storage account (optional, ignored if base64_only=True)
+                temp_container: Container for temporary storage (optional, ignored if base64_only=True)
 
             Returns:
-                List of image URLs
+                Dict with 'image_urls' and 'base64_imgs' keys containing lists of strings
             """
             # Set instance variables
             self.keep_original_size = keep_original_size
-            if storage_account:
+            self.base64_only = base64_only
+            if storage_account and not base64_only:
                 self.storage_account = storage_account
-            if temp_container:
+            if temp_container and not base64_only:
                 self.temp_container = temp_container
 
             # Process files
             try:
-                image_urls,base_64_imgs = await self._process_files_to_urls(file_urls)
+                image_urls, base_64_imgs = await self._process_files_to_urls(file_urls)
                 self._cleanup_temp_files()
-                return {"image_urls":image_urls,"base_64_imgs":base_64_imgs}
+                return {"image_urls": image_urls, "base64_imgs": base_64_imgs}
             except Exception as e:
                 logger.error(f"Tool execution error: {e}")
                 self._cleanup_temp_files()
@@ -474,7 +519,7 @@ class SplitToImagesComponent(LCToolComponent):
         return cast("Tool", StructuredTool.from_function(
             func=split_files_to_images,
             name="split_to_images",
-            description="Split PDF and TIFF files into individual images and return list of image URLs. Useful for processing multi-page documents into separate image files.",
+            description="Split PDF and TIFF files into individual images and return list of image URLs or base64 strings. Useful for processing multi-page documents into separate image files.",
             args_schema=SplitToImagesInput,
             coroutine=split_files_to_images,
         ))
@@ -489,6 +534,7 @@ class SplitToImagesComponent(LCToolComponent):
             self._downloaded_files.clear()
 
             # Clean up any files in temp directory (locally saved images)
+            # Only clean if not in base64_only mode (no files saved in that mode)
             if hasattr(self, "temp_dir") and os.path.exists(self.temp_dir):
                 import shutil
                 for filename in os.listdir(self.temp_dir):
@@ -501,19 +547,6 @@ class SplitToImagesComponent(LCToolComponent):
         except Exception as e:
             logger.error(f"Error cleaning up temporary files: {e!s}")
 
-
-    # Add this method after _split_tiff_to_images:
-    async def _generate_base64_from_bytes(self, image_bytes: bytes) -> str:
-        """Convert image bytes to base64 string."""
-        try:
-            return base64.b64encode(image_bytes).decode('utf-8')
-            
-        except Exception as e:
-            logger.error(f"Error generating base64: {e!s}")
-            if not self.silent_errors:
-                raise
-            return ""
-    
     def __del__(self):
         """Clean up temporary files on destruction."""
         try:

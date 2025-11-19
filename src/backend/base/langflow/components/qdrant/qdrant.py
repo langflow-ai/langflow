@@ -198,6 +198,8 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
     def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
         cleaned_filters = [] if not self.filters else self.filters 
+        if self.document_hash:
+            cleaned_filters["file_hash"] = self.document_hash
         cleaned_filters = {k: v for k, v in self.filters.items() if k != "" and v != ""}
         logger.warning(f'base filter {cleaned_filters}')
         
