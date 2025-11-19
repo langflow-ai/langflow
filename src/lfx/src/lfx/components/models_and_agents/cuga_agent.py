@@ -362,6 +362,7 @@ class CugaComponent(ToolCallingAgentComponent):
                 properties={"icon": "Bot", "state": "partial"},
                 content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
                 session_id=self.graph.session_id,
+                id=str(uuid.uuid4()),
             )
 
             # Get input text
@@ -387,14 +388,7 @@ class CugaComponent(ToolCallingAgentComponent):
 
                 result = await self.send_message(message, id_=id_, skip_db_update=False)
 
-                # When not connected to ChatOutput, send_message returns message without storing to DB
-                # The message won't have an 'id' in its data dict. Add one manually to satisfy event processing
-                try:
-                    result_id = result.id
-                except AttributeError:
-                    # Message doesn't have id - add it to the data dict
-                    result_id = str(uuid.uuid4())
-                    result.data["id"] = result_id
+                result_id = result.id
 
                 logger.debug(f"[CUGA] Message processed with ID: {result_id}")
                 return result
