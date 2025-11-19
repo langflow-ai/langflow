@@ -255,6 +255,11 @@ module.exports = {
             },
           ]
         },
+        {
+          type: "doc",
+          id: "Deployment/security",
+          label: "Security",
+        },
       ],
     },
     {
