@@ -4,9 +4,6 @@ from pathlib import Path
 
 import yaml
 from langchain.agents import AgentExecutor
-from langchain_community.agent_toolkits import create_json_agent
-from langchain_community.agent_toolkits.json.toolkit import JsonToolkit
-from langchain_community.tools.json.tool import JsonSpec
 
 from lfx.base.agents.agent import LCAgentComponent
 from lfx.base.data.storage_utils import read_file_bytes
@@ -72,6 +69,14 @@ class JsonAgentComponent(LCAgentComponent):
 
     def build_agent(self) -> AgentExecutor:
         """Build the JSON agent executor."""
+        try:
+            from langchain_community.agent_toolkits import create_json_agent
+            from langchain_community.agent_toolkits.json.toolkit import JsonToolkit
+            from langchain_community.tools.json.tool import JsonSpec
+        except ImportError as e:
+            msg = "langchain-community is not installed. Please install it with `pip install langchain-community`."
+            raise ImportError(msg) from e
+
         try:
             # Get local path (downloads from S3 if needed)
             path = self._get_local_path()

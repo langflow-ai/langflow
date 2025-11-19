@@ -2,8 +2,6 @@ import contextlib
 import tempfile
 from pathlib import Path
 
-from langchain_experimental.agents.agent_toolkits.csv.base import create_csv_agent
-
 from lfx.base.agents.agent import LCAgentComponent
 from lfx.base.data.storage_utils import read_file_bytes
 from lfx.field_typing import AgentExecutor
@@ -79,6 +77,14 @@ class CSVAgentComponent(LCAgentComponent):
     def build_agent_response(self) -> Message:
         """Build and execute the CSV agent, returning the response."""
         try:
+            from langchain_experimental.agents.agent_toolkits.csv.base import create_csv_agent
+        except ImportError as e:
+            msg = (
+                "langchain-experimental is not installed. Please install it with `pip install langchain-experimental`."
+            )
+            raise ImportError(msg) from e
+
+        try:
             agent_kwargs = {
                 "verbose": self.verbose,
                 "allow_dangerous_code": True,
@@ -104,6 +110,14 @@ class CSVAgentComponent(LCAgentComponent):
             self._cleanup_temp_file()
 
     def build_agent(self) -> AgentExecutor:
+        try:
+            from langchain_experimental.agents.agent_toolkits.csv.base import create_csv_agent
+        except ImportError as e:
+            msg = (
+                "langchain-experimental is not installed. Please install it with `pip install langchain-experimental`."
+            )
+            raise ImportError(msg) from e
+
         agent_kwargs = {
             "verbose": self.verbose,
             "allow_dangerous_code": True,
