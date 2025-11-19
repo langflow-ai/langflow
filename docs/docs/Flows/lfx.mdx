@@ -5,11 +5,10 @@ slug: /lfx-stateless-flows
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import PartialLfxDependencies from '@site/docs/_partial-lfx-dependencies.mdx';
 
 The Langflow Executor (LFX) is a command-line tool that serves and runs flows statelessly from [flow JSON files](/concepts-flows-import) with minimal dependencies.
 
-Flows are run without the flow builder UI or database, and any flow dependencies are automatically added to complete the run.
-The flow graph is stored in memory at all times, so there is less overhead for loading the graph from a database.
 Running a flow with LFX is similar to running flows with the [`--backend-only` environment variable](/environment-variables#server) enabled, but even more lightweight because the Langflow package and all of its dependencies don't need to be installed.
 
 Use LFX to share flows with other developers, test flows in different environments, and run flows in production applications without requiring the full Langflow UI or database setup.
@@ -17,6 +16,7 @@ Use LFX to share flows with other developers, test flows in different environmen
 LFX includes two commands for executing flows:
 
 * [`lfx serve`](#serve): This command starts a FastAPI server hosting a Langflow API endpoint with your flow available at `/flows/{flow_id}/run`.
+The flow graph is stored in memory at all times, so there is less overhead for loading the graph from a database.
 * [`lfx run`](#run): This command executes a flow locally and returns the results to `stdout`.
 
 ## Prerequisites
@@ -76,11 +76,11 @@ LFX can be installed in multiple ways.
 
 Run LFX without installing it using `uvx`:
 
-```bash
-uvx lfx serve simple-agent-flow.json
-```
+   ```bash
+   uvx lfx serve simple-agent-flow.json
+   ```
 
-This command downloads and runs LFX in a temporary environment without permanent installation.
+   This command downloads and runs LFX in a temporary environment without permanent installation.
 
 </TabItem>
 </Tabs>
@@ -88,6 +88,9 @@ This command downloads and runs LFX in a temporary environment without permanent
 ## Serve the simple agent starter flow with `lfx serve` {#serve}
 
 To serve a flow as a REST API endpoint, set a `LANGFLOW_API_KEY` and run the flow JSON.
+
+<PartialLfxDependencies />
+
 The API key is required for security because `lfx serve` can create a publicly accessible FastAPI server.
 To create a Langflow API key, see [API keys and authentication](/api-keys-and-authentication).
 
@@ -225,6 +228,8 @@ To make your server publicly accessible, use a [tunneling service like ngrok](/d
 The `lfx run` command runs a flow from a JSON file without serving it, and the output is sent to `stdout`.
 Input to `lfx run` can be a path to the JSON file, inline JSON passed with `--input-value`, or read from `stdin`.
 No Langflow API key is required.
+
+<PartialLfxDependencies />
 
 This example uses the **Agent** component's built-in OpenAI model, which requires an OpenAI API key.
 If you want to use a different provider, edit the model provider, model name, and credentials accordingly.
