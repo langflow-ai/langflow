@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 from langflow.logging.logger import logger
+from langflow.services.deps import get_settings_service
 
 
 def add_type_ignores() -> None:
@@ -487,3 +488,17 @@ def extract_class_name(code: str) -> str:
     except SyntaxError as e:
         msg = f"Invalid Python code: {e!s}"
         raise ValueError(msg) from e
+
+
+def check_s3_storage_mode(msg: str):
+    """Check if we're in S3 storage mode and raise an error if we are.
+
+    This method is used to certain disable components in the cloud.
+    We identify cloud use with: storage_type == "s3" in the settings service.
+
+    Args:
+        msg: The message to raise if we're in S3 storage mode
+    """
+    settings = get_settings_service().settings
+    if settings.storage_type == "s3":
+        raise ValueError(msg)

@@ -17,10 +17,15 @@ from langflow.inputs.inputs import (
     SortableListInput,
 )
 from langflow.io import Output
+from langflow.utils.validate import check_s3_storage_mode
+
+disabled_in_cloud_msg = (
+    "Composio is not supported in S3/cloud mode. "
+    "Please use local storage mode."
+)
 
 # TODO: We get the list from the API but we need to filter it
 enabled_tools = ["confluence", "discord", "dropbox", "github", "gmail", "linkedin", "notion", "slack", "youtube"]
-
 
 class ComposioAPIComponent(LCToolComponent):
     display_name: str = "Composio Tools"
@@ -71,6 +76,7 @@ class ComposioAPIComponent(LCToolComponent):
 
     def validate_tool(self, build_config: dict, field_value: Any, tool_name: str | None = None) -> dict:
         # Get the index of the selected tool in the list of options
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         selected_tool_index = next(
             (
                 ind
@@ -120,6 +126,7 @@ class ComposioAPIComponent(LCToolComponent):
         return build_config
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+        check_s3_storage_mode(disabled_in_cloud_msg) # check if we're in S3 storage mode, otherwise raise an error
         if field_name == "api_key" or (self.api_key and not build_config["tool_name"]["options"]):
             if field_name == "api_key" and not field_value:
                 build_config["tool_name"]["options"] = []
@@ -229,6 +236,7 @@ class ComposioAPIComponent(LCToolComponent):
         Returns:
             Sequence[Tool]: List of configured Composio tools.
         """
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         composio = self._build_wrapper()
         action_names = [action["name"] for action in self.actions]
 
@@ -257,6 +265,7 @@ class ComposioAPIComponent(LCToolComponent):
         Raises:
             ValueError: If the API key is not found or invalid.
         """
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         try:
             if not self.api_key:
                 msg = "Composio API Key is required"
