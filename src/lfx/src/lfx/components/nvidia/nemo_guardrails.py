@@ -241,7 +241,6 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
     )
     icon = "NVIDIA"
     name = "NVIDIANemoGuardrails"
-    beta = True
 
     inputs = [
         *LCModelComponent.get_base_inputs(),
