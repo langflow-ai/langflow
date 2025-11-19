@@ -1,5 +1,8 @@
 import React from "react";
 import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
+import { VersionIcon } from "@/assets/icons/VersionIcon";
+import { Button } from "@/components/ui/button";
+import { FileIcon } from "@radix-ui/react-icons";
 
 type AgentDetails = {
   createdOn: string;
@@ -43,23 +46,28 @@ export function AgentDetailsPanel({
 }: AgentDetailsPanelProps) {
   return (
     <div className="bg-white rounded-lg p-4 flex-1 overflow-y-auto">
-      <h3 className="text-sm font-medium mb-4 text-[#444]">Agent Details</h3>
+      <h3 className="text-md font-medium mb-3 text-primary">Agent Details</h3>
       <div className="text-sm space-y-4">
-        <p className="">
-          <span className="text-[#64616A] text-xs">
-            Created On: {agentDetails.createdOn} {"  "}
-          </span>
-          {"  "}
-          <span className="text-[#64616A] text-xs">
-            Last Updated On: {agentDetails.lastUpdatedOn}
-          </span>
-        </p>
+        <div className="flex items-center gap-6">
+          <p className="text-xs">
+            <span className="text-[#64616A] block">Created On: </span>
+            <span className="text-[#444444] font-medium">
+              {agentDetails.createdOn}
+            </span>
+          </p>
+          <p className="text-xs">
+            <span className="text-[#64616A] block">Last Updated On: </span>
+            <span className="text-[#444444] font-medium">
+              {agentDetails.lastUpdatedOn}
+            </span>
+          </p>
+        </div>
 
         <div className="space-y-2">
           <p className="text-[#444] text-xs font-medium">Description:</p>
           <p className="text-[#64616A] text-xs">{agentDetails.description}</p>
-          <p className="text-[#64616A] text-xs font-medium">
-            Version: {agentDetails.version}
+          <p className="text-[#64616A] text-xs font-medium border border-[#EFEFEF] rounded-full px-2 py-1 w-fit flex items-center gap-1">
+            <VersionIcon /> Version: {agentDetails.version}
           </p>
         </div>
 
@@ -77,43 +85,59 @@ export function AgentDetailsPanel({
           </div>
         </div>
 
-        {/* Sample Input files Section (shown only when provided) */}
-        {sampleFileNames.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-[#444] text-xs font-medium">Sample Input files:</p>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {sampleFileNames.map((name, idx) => (
-                <button
-                  key={`${name}-${idx}`}
-                  type="button"
-                  className="bg-[#F5F2FF] text-[#64616A] text-xs px-2 py-1 rounded-[4px] hover:bg-[#EAE6FF] transition-colors"
-                  onClick={() => onPreviewSampleFile(sampleFilePaths[idx])}
-                  title="Preview sample file"
-                >
-                  {name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        {(sampleFileNames.length > 0 || sampleTexts.length > 0) && (
+          <div className="p-3 border border-[#EFEFEF] rounded-md space-y-4">
+            {/* Sample Input files Section (shown only when provided) */}
+            {sampleFileNames.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-[#444] text-xs font-medium">
+                  Sample Input files
+                </p>
+                <div className="flex flex-col gap-1 mt-1">
+                  {sampleFileNames.map((name, idx) => (
+                    <button
+                      key={`${name}-${idx}`}
+                      type="button"
+                      className="text-[#64616A] text-xs py-2 borde border-b border-[#EFEFEF] transition-colors flex items-center gap-2 justify-between w-full"
+                      onClick={() => onPreviewSampleFile(sampleFilePaths[idx])}
+                      title="Preview sample file"
+                    >
+                      <p className="flex items-center gap-2">
+                        <FileIcon />{" "}
+                        <span className="truncate max-w-[150px]">{name} </span>
+                      </p>
+                      <span className="text-[#731FE3] font-medium text-nowrap">
+                        View File
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-        {/* Sample Input Text Section (shown only when provided) */}
-        {sampleTexts.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-[#444] text-xs font-medium">Sample Input Text:</p>
-            <div className="flex flex-col gap-2 mt-1">
-              {sampleTexts.map((text, idx) => (
-                <button
-                  key={`sample-text-${idx}`}
-                  type="button"
-                  className="bg-[#F5F2FF] text-[#64616A] text-xs px-3 py-2 rounded-[4px] hover:bg-[#EAE6FF] transition-colors text-left break-words"
-                  onClick={() => onOpenSampleText(text, idx)}
-                  title="Click to view full text"
-                >
-                  {truncateText(text, 80)}
-                </button>
-              ))}
-            </div>
+            {/* Sample Input Text Section (shown only when provided) */}
+            {sampleTexts.length > 0 && (
+              <div>
+                <p className="text-[#444] text-xs font-medium">
+                  Sample Input Text
+                </p>
+                <div className="flex flex-col mt-[12px] space-y-2">
+                  {sampleTexts.map((text, idx) => (
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      key={`sample-text-${idx}`}
+                      type="button"
+                      className="text-[#64616A] text-xs font-normal hover:text-[#350E84] px-3 py-1 rounded-[4px] transition-colors !justify-start truncate w-full"
+                      onClick={() => onOpenSampleText(text, idx)}
+                      title="Click to view full text"
+                    >
+                      {truncateText(text, 80)}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

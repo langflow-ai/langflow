@@ -47,7 +47,9 @@ export default function ThreadLogsDrawer({
           name: nameParam,
           timeframe,
         });
-        const items: GroupItem[] = Array.isArray(json?.groups) ? json.groups : [];
+        const items: GroupItem[] = Array.isArray(json?.groups)
+          ? json.groups
+          : [];
         setGroups(items);
       } catch (e: any) {
         setError(e?.message || "Failed to load thread logs");
@@ -65,9 +67,18 @@ export default function ThreadLogsDrawer({
   };
 
   return (
-    <div className="flex h-full w-80 flex-col border-l bg-background">
+    <div
+      className={`
+          fixed right-4 top-[148px] bottom-[16px]
+          w-[300px]
+          bg-background border rounded-md
+          flex flex-col
+          transition-all duration-300 ease-out
+          ${isOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"}
+        `}
+    >
       <div className="flex items-center justify-between pt-4 px-4">
-        <h3 className="font-semibold">Thread Logs</h3>
+        <h3 className="font-medium text-primary text-sm">Thread Logs</h3>
         <Button variant="ghost" size="iconSm" onClick={onClose} title="Close">
           <ForwardedIconComponent name="X" className="h-4 w-4" />
         </Button>
@@ -75,7 +86,9 @@ export default function ThreadLogsDrawer({
 
       <div className="flex-1 overflow-y-auto pt-3">
         {loading && (
-          <div className="px-4 py-3 text-sm text-muted-foreground">Loading…</div>
+          <div className="px-4 py-3 text-sm text-muted-foreground">
+            Loading…
+          </div>
         )}
         {error && (
           <div className="px-4 py-3 text-sm text-destructive">{error}</div>
@@ -84,7 +97,9 @@ export default function ThreadLogsDrawer({
         {!loading && !error && (
           <div className="mt-2 space-y-2 px-2">
             {groups.length === 0 ? (
-              <div className="px-2 py-3 text-sm text-muted-foreground">No sessions found.</div>
+              <div className="px-2 py-3 text-sm text-muted-foreground">
+                No sessions found.
+              </div>
             ) : (
               groups.map((g) => (
                 <div key={g.session_id} className="border rounded-md">
@@ -93,12 +108,22 @@ export default function ThreadLogsDrawer({
                     onClick={() => toggle(g.session_id)}
                   >
                     <div className="min-w-0">
-                      <div className="text-sm font-medium truncate" title={g.session_id}>
+                      <div
+                        className="text-sm font-medium truncate"
+                        title={g.session_id}
+                      >
                         {g.session_id}
                       </div>
-                      <div className="text-xs text-muted-foreground">{g.count} traces</div>
+                      <div className="text-xs text-muted-foreground">
+                        {g.count} traces
+                      </div>
                     </div>
-                    <ForwardedIconComponent name={expanded[g.session_id] ? "ChevronUp" : "ChevronDown"} className="h-4 w-4" />
+                    <ForwardedIconComponent
+                      name={
+                        expanded[g.session_id] ? "ChevronUp" : "ChevronDown"
+                      }
+                      className="h-4 w-4"
+                    />
                   </button>
                   {expanded[g.session_id] && (
                     <div className="px-3 pb-3">

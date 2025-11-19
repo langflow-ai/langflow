@@ -15,7 +15,13 @@ import { AgentDetailsPanel } from "./AgentDetailsPanel";
 import { ChatArea } from "./ChatArea";
 import { useThreadManager } from "./ThreadManager";
 import ThreadLogsDrawer from "./ThreadLogsDrawer";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 // Removed ThreadLogsModal in favor of the new ThreadLogsDrawer
 
@@ -56,10 +62,12 @@ export default function PlaygroundTab({
     el.style.height = "auto";
     const newHeight = Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT);
     el.style.height = `${newHeight}px`;
-    el.style.overflowY = el.scrollHeight > MAX_TEXTAREA_HEIGHT ? "auto" : "hidden";
+    el.style.overflowY =
+      el.scrollHeight > MAX_TEXTAREA_HEIGHT ? "auto" : "hidden";
   };
 
-  const { leftPanelWidth, isDragging, handleDragStart } = useResizablePanel(33.33);
+  const { leftPanelWidth, isDragging, handleDragStart } =
+    useResizablePanel(33.33);
 
   const {
     messages,
@@ -96,7 +104,9 @@ export default function PlaygroundTab({
     name: publishedFlowData?.flow_name || publishedFlowData?.name || "Agent",
   };
 
-  const sampleFilePaths: string[] = Array.isArray(publishedFlowData?.input_samples)
+  const sampleFilePaths: string[] = Array.isArray(
+    publishedFlowData?.input_samples
+  )
     ? publishedFlowData!.input_samples.flatMap((s: any) =>
         Array.isArray(s?.file_names) ? s.file_names : []
       )
@@ -119,10 +129,13 @@ export default function PlaygroundTab({
     : [];
 
   // First available sample output across input_samples
-  const sampleOutputs: string[] = Array.isArray(publishedFlowData?.input_samples)
+  const sampleOutputs: string[] = Array.isArray(
+    publishedFlowData?.input_samples
+  )
     ? publishedFlowData!.input_samples.flatMap((s: any) => {
         const out = s?.sample_output;
-        if (Array.isArray(out)) return out.filter((t: any) => typeof t === "string");
+        if (Array.isArray(out))
+          return out.filter((t: any) => typeof t === "string");
         if (typeof out === "string") return [out];
         return [];
       })
@@ -150,7 +163,7 @@ export default function PlaygroundTab({
 
   const hasChatInput = useMemo(() => {
     if (!publishedFlowData?.flow_data?.nodes) return true;
-    
+
     return publishedFlowData.flow_data.nodes.some((node: any) => {
       const nodeType = node.data?.type;
       return nodeType === "ChatInput" || nodeType === "TextInput";
@@ -202,12 +215,12 @@ export default function PlaygroundTab({
         };
 
         const filename = getFilenameFromUrl(url);
-        const extension = filename.split('.').pop()?.toLowerCase() || '';
-        let fileType = 'application/octet-stream';
-        
-        if (extension === 'json') fileType = 'application/json';
-        else if (extension === 'png') fileType = 'image/png';
-        else if (extension === 'pdf') fileType = 'application/pdf';
+        const extension = filename.split(".").pop()?.toLowerCase() || "";
+        let fileType = "application/octet-stream";
+
+        if (extension === "json") fileType = "application/json";
+        else if (extension === "png") fileType = "image/png";
+        else if (extension === "pdf") fileType = "application/pdf";
 
         return {
           componentId,
@@ -225,7 +238,7 @@ export default function PlaygroundTab({
     if (chatContainerRef.current && !isUserScrollingRef.current) {
       chatContainerRef.current.scrollTo({
         top: chatContainerRef.current.scrollHeight,
-        behavior: smooth ? 'smooth' : 'auto',
+        behavior: smooth ? "smooth" : "auto",
       });
     }
   };
@@ -233,19 +246,19 @@ export default function PlaygroundTab({
   // Detect user manual scrolling
   const handleScroll = () => {
     if (!chatContainerRef.current) return;
-    
+
     const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
     const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-    
+
     // If user scrolls up, mark as user scrolling
     if (!isNearBottom) {
       isUserScrollingRef.current = true;
-      
+
       // Clear existing timeout
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
-      
+
       // Reset user scrolling flag after 2 seconds of no scrolling
       scrollTimeoutRef.current = setTimeout(() => {
         isUserScrollingRef.current = false;
@@ -292,9 +305,9 @@ export default function PlaygroundTab({
     setShowSampleSection(false);
     setFileUrls({});
     setInput("");
-    
+
     isUserScrollingRef.current = false;
-    
+
     await sendMessageHook(
       messageText,
       currentFileUrls,
@@ -345,7 +358,7 @@ export default function PlaygroundTab({
     clearFileUrl(componentId);
   };
 
-  const handlePreviewFile = (file: typeof selectedFiles[0]) => {
+  const handlePreviewFile = (file: (typeof selectedFiles)[0]) => {
     setPreviewFile({
       url: file.url,
       name: file.filename,
@@ -369,7 +382,10 @@ export default function PlaygroundTab({
       ? publishedFlowData!.input_samples[0]
       : undefined;
     const containerName = sample0?.container_name || "ai-studio-v2";
-    const storageAccount = sample0?.storage_account || (process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT || "autonomizestorageaccount");
+    const storageAccount =
+      sample0?.storage_account ||
+      process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT ||
+      "autonomizestorageaccount";
     return { containerName, storageAccount };
   };
 
@@ -388,8 +404,7 @@ export default function PlaygroundTab({
         : filePathOrName;
       const type = getFileTypeFromName(name);
       setPreviewFile({ url: signedUrl, name, type });
-    } catch (e) {
-    }
+    } catch (e) {}
   };
 
   const selectSampleFile = async (filePathOrName: string) => {
@@ -405,9 +420,7 @@ export default function PlaygroundTab({
       const targetComponentId = fileInputComponents[0].id;
       setShowSampleSection(false);
       setFileUrls({ [targetComponentId]: signedUrl });
-    } catch (e) {
-
-    }
+    } catch (e) {}
   };
 
   useEffect(() => {
@@ -415,7 +428,6 @@ export default function PlaygroundTab({
       setShowSampleSection(true);
     }
   }, [isLoading, streamingMessageId, selectedFiles.length]);
-
 
   useEffect(() => {
     return () => {
@@ -427,7 +439,11 @@ export default function PlaygroundTab({
 
   return (
     <div className="flex h-full w-full flex-col ">
-      <div className={`flex flex-1 overflow-hidden h-full items-center ${isThreadLogsOpen ? "mr-80" : ""}`}>
+      <div
+        className={`flex flex-1 overflow-hidden h-full items-center ${
+          isThreadLogsOpen ? "mr-[312px]" : ""
+        }`}
+      >
         {/* Agent Details Panel */}
         <div
           className="flex flex-col rounded-lg border border-border dark:border-white/20 h-full"
@@ -441,7 +457,9 @@ export default function PlaygroundTab({
             sampleOutput={sampleOutput}
             onPreviewSampleFile={previewSampleFile}
             onOpenSampleText={(text, idx) => openSampleTextModal(text, idx)}
-            onOpenSampleOutput={(text) => openSampleTextModal(text, 0, "Sample Output")}
+            onOpenSampleOutput={(text) =>
+              openSampleTextModal(text, 0, "Sample Output")
+            }
           />
         </div>
 
@@ -455,8 +473,11 @@ export default function PlaygroundTab({
 
         {/* Chat Panel */}
         <div
-          className="h-full flex flex-col" 
-          style={{ width: `${100 - leftPanelWidth}%`, pointerEvents: isDragging ? "none" : "auto" }}
+          className="h-full flex flex-col"
+          style={{
+            width: `${100 - leftPanelWidth}%`,
+            pointerEvents: isDragging ? "none" : "auto",
+          }}
         >
           <ChatArea
             messages={messages}
@@ -496,12 +517,18 @@ export default function PlaygroundTab({
       </div>
 
       {isThreadLogsOpen && (
-        <div className="fixed right-0 top-12 z-50 h-[calc(100vh-48px)]">
+        <div
+        // className="fixed right-4 top-[148px] bottom-[16px] z-50"
+        >
           <ThreadLogsDrawer
             isOpen={isThreadLogsOpen}
             onClose={() => setIsThreadLogsOpen(false)}
             // Pass the agent name used in title: flow_name preferred
-            nameParam={publishedFlowData?.flow_name || publishedFlowData?.name || agentDetails.name}
+            nameParam={
+              publishedFlowData?.flow_name ||
+              publishedFlowData?.name ||
+              agentDetails.name
+            }
           />
         </div>
       )}
@@ -533,11 +560,15 @@ export default function PlaygroundTab({
         index={sampleTextModal.index}
       />
 
-
-      <Dialog open={isConfirmNewThreadOpen} onOpenChange={setIsConfirmNewThreadOpen}>
+      <Dialog
+        open={isConfirmNewThreadOpen}
+        onOpenChange={setIsConfirmNewThreadOpen}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Are you sure you want to create a new thread?</DialogTitle>
+            <DialogTitle>
+              Are you sure you want to create a new thread?
+            </DialogTitle>
           </DialogHeader>
           <DialogFooter>
             <Button

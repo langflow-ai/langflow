@@ -14,32 +14,36 @@ interface MessageRendererProps {
   displayedTexts: Map<string, string>;
   targetTexts: Map<string, string>;
   loadingDots: number;
-  onPreviewAttachment?: (file: { url: string; name: string; type: string }) => void;
+  onPreviewAttachment?: (file: {
+    url: string;
+    name: string;
+    type: string;
+  }) => void;
 }
 
 // Helper function to strip markdown code fences
 const stripCodeFence = (text: string): string => {
   const trimmed = text.trim();
-  
+
   // Match ```json ... ``` or ``` ... ```
   const codeFenceMatch = trimmed.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/);
   if (codeFenceMatch) {
     return codeFenceMatch[1].trim();
   }
-  
+
   return text;
 };
 
 // Helper function to check if text is JSON
 const isJsonString = (str: string): boolean => {
-  if (!str || typeof str !== 'string') return false;
-  
+  if (!str || typeof str !== "string") return false;
+
   const trimmed = str.trim();
   if (!trimmed) return false;
-  
+
   if (
-    (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-    (trimmed.startsWith('[') && trimmed.endsWith(']'))
+    (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+    (trimmed.startsWith("[") && trimmed.endsWith("]"))
   ) {
     try {
       JSON.parse(trimmed);
@@ -71,7 +75,7 @@ export function MessageRenderer({
   const renderMessageContent = () => {
     if (message.type === "agent") {
       const displayedText = displayedTexts.get(message.id);
-      
+
       // Use displayed text if available, otherwise use message.text
       let textToRender: string;
       if (displayedText !== undefined) {
@@ -87,7 +91,7 @@ export function MessageRenderer({
 
       // Strip markdown code fence and check if it's JSON
       const strippedText = stripCodeFence(textToRender);
-      
+
       if (isJsonString(strippedText)) {
         const formattedJson = formatJson(strippedText);
         return (
@@ -135,10 +139,14 @@ export function MessageRenderer({
               return <>{props.children}</>;
             },
             hr({ node, ...props }) {
-              return <hr className="w-full mt-3 mb-5 border-border" {...props} />;
+              return (
+                <hr className="w-full mt-3 mb-5 border-border" {...props} />
+              );
             },
             h3({ node, ...props }) {
-              return <h3 className={"mt-4 " + (props.className || "")} {...props} />;
+              return (
+                <h3 className={"mt-4 " + (props.className || "")} {...props} />
+              );
             },
             table: ({ node, ...props }) => {
               return (
@@ -192,8 +200,10 @@ export function MessageRenderer({
         </Markdown>
       );
     }
-    
-    return <div className="whitespace-pre-wrap break-words">{message.text}</div>;
+
+    return (
+      <div className="whitespace-pre-wrap break-words">{message.text}</div>
+    );
   };
 
   const showCursor = () => {
@@ -239,10 +249,10 @@ export function MessageRenderer({
         }`}
       >
         <div
-          className={`max-w-[85%] rounded-lg px-4 py-3 ${
+          className={`max-w-[85%] rounded-lg  ${
             message.type === "user"
-              ? "bg-[#350E84] text-white"
-              : "bg-[#F8F9FA] text-[#444] border border-gray-200"
+              ? "bg-[#F5F2FF] text-[#64616A] p-2"
+              : " text-[#444]"
           }`}
         >
           <div className="break-words">
@@ -254,20 +264,42 @@ export function MessageRenderer({
 
           {/* Attachments preview chips */}
           {message.files && message.files.length > 0 && (
-            <div className={`mt-3 flex flex-wrap gap-2 ${message.type === "user" ? "text-white" : "text-[#444]"}`}>
+            <div
+              className={`mt-3 flex flex-wrap gap-2 ${
+                message.type === "user" ? "text-white" : "text-[#444]"
+              }`}
+            >
               {message.files.map((f, idx) => (
                 <div
                   key={`${f.url}-${idx}`}
-                  className={`flex items-center gap-2 ${message.type === "user" ? "bg-[#4C23A6]" : "bg-white"} border rounded-lg px-3 py-2 text-sm group ${message.type === "user" ? "border-white/20" : "border-gray-200"}`}
+                  className={`flex items-center gap-2 ${
+                    message.type === "user" ? "bg-[#4C23A6]" : "bg-white"
+                  } border rounded-lg px-3 py-2 text-sm group ${
+                    message.type === "user"
+                      ? "border-white/20"
+                      : "border-gray-200"
+                  }`}
                 >
                   <File className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate max-w-[200px]" title={f.name}>{f.name}</span>
+                  <span className="truncate max-w-[200px]" title={f.name}>
+                    {f.name}
+                  </span>
                   {onPreviewAttachment && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => onPreviewAttachment({ url: f.url, name: f.name, type: f.type })}
-                      className={`h-6 w-6 p-0 ml-1 ${message.type === "user" ? "text-white hover:text-white/90" : "text-muted-foreground hover:text-primary"}`}
+                      onClick={() =>
+                        onPreviewAttachment({
+                          url: f.url,
+                          name: f.name,
+                          type: f.type,
+                        })
+                      }
+                      className={`h-6 w-6 p-0 ml-1 ${
+                        message.type === "user"
+                          ? "text-white hover:text-white/90"
+                          : "text-muted-foreground hover:text-primary"
+                      }`}
                       title="Preview file"
                     >
                       <Eye className="h-3 w-3" />
@@ -286,9 +318,7 @@ export function MessageRenderer({
             message.type === "user" ? "justify-end" : "justify-start"
           }`}
         >
-          <span className="px-4">
-            {message.timestamp.toLocaleTimeString()}
-          </span>
+          <span className="px-4">{message.timestamp.toLocaleTimeString()}</span>
         </div>
       )}
     </div>
