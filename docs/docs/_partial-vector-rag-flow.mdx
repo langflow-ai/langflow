@@ -38,7 +38,7 @@ Make sure the components connect to the same vector store, and that the componen
     Mixing embedding models in the same vector store can produce inaccurate search results.
     :::
 
-4. Recommended: In the [**Split Text** component](/components-processing#split-text), optimize the chunking settings for your embedding model.
+4. Recommended: In the [**Split Text** component](/split-text), optimize the chunking settings for your embedding model.
 For example, if your embedding model has a token limit of 512, then the **Chunk Size** parameter must not exceed that limit.
 
     Additionally, because the **Retriever** subflow passes the chat input directly to the vector store component for vector search, make sure that your chat input string doesn't exceed your embedding model's limits.
