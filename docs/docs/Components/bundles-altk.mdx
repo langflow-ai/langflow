@@ -8,7 +8,11 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
-The **ALTK Agent** implements the **JSON Processor** component from the [Agent Lifecycle Toolkit](https://github.com/AgentToolkit/agent-lifecycle-toolkit). This component processes large JSON tool responses by generating Python code on the fly to extract relevant data. This helps reduce context size and improves the agent's ability to work with large tool responses, especially when dealing with APIs that return extensive JSON data. The component outputs a [Message](/data-types#message) containing the agent's response, which is passed to the next component in the flow instead of the full JSON data that isn't needed.
+The **ALTK Agent** implements components from the [Agent Lifecycle Toolkit](https://github.com/AgentToolkit/agent-lifecycle-toolkit). ALTK toolkit components can be enabled or disabled independently.
+
+* **Pre-tool validation**: Validates tool calls before execution to check for appropriateness and correctness using the [SPARC](https://agenttoolkit.github.io/agent-lifecycle-toolkit/concepts/components/sparc/) reflection component. This validation prevents agents from executing invalid tool calls.
+
+* **Post-tool JSON processing**: Processes large JSON tool responses by generating Python code on the fly to extract relevant data. This helps reduce context size and improves the agent's ability to work with large tool responses, especially when dealing with APIs that return extensive JSON data. The component outputs a [Message](/data-types#message) containing the agent's response, which is passed to the next component in the flow instead of the full JSON data that isn't needed.
 
 For more information, see the [Agent Lifecycle Toolkit documentation](https://agenttoolkit.github.io/agent-lifecycle-toolkit/).
 
@@ -21,6 +25,7 @@ For an example of the ALTK component in Langflow, see the video tutorial [ALTK i
 | Name | Type | Description |
 |------|------|-------------|
 | agent_llm | Dropdown | Input parameter. The model provider the agent uses to generate responses. |
+| enable_tool_validation | Boolean | Input parameter. If enabled, tool calls are validated using SPARC before execution to check for appropriateness and correctness. Default: `true`. |
 | enable_post_tool_reflection | Boolean | Input parameter. If enabled, tool outputs are automatically processed through JSON processing when the output is JSON and exceeds the size threshold. Default: `true`. |
 | response_processing_size_threshold | Integer | Input parameter. Tool output is post-processed only if the response length exceeds this character threshold. Default: `100`. Advanced parameter. |
 | tools | List[Tool] | Input parameter. The list of tools available to the agent. |
