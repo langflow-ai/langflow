@@ -28,7 +28,12 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
+disable_component_in_astra_cloud_msg = (
+    "Composio tools are not supported in Astra cloud environment. "
+    "Please use local storage mode or cloud-based versions of the tools."
+)
 
 class ComposioBaseComponent(Component):
     """Base class for Composio components with common functionality."""
@@ -328,6 +333,8 @@ class ComposioBaseComponent(Component):
         return Message(text=str(result))
 
     def as_dataframe(self) -> DataFrame:
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
         result = self.execute_action()
 
         if isinstance(result, dict):
@@ -371,6 +378,8 @@ class ComposioBaseComponent(Component):
 
     def _build_wrapper(self) -> Composio:
         """Build the Composio wrapper."""
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
         try:
             if not self.api_key:
                 msg = "Composio API Key is required"
@@ -2350,6 +2359,8 @@ class ComposioBaseComponent(Component):
 
     def execute_action(self):
         """Execute the selected Composio tool."""
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
         composio = self._build_wrapper()
         self._populate_actions_data()
         self._build_action_maps()
