@@ -22,7 +22,12 @@ from langflow.logging import logger
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
+from langflow.utils.validate import check_s3_storage_mode
 
+disabled_in_cloud_msg = (
+    "Composio is not supported in S3/cloud mode. "
+    "Please use local storage mode."
+)
 
 def _patch_graph_clean_null_input_types() -> None:
     """Monkey-patch Graph._create_vertex to clean legacy templates."""
@@ -57,6 +62,7 @@ def _patch_graph_clean_null_input_types() -> None:
 
 # Apply the patch at import time
 _patch_graph_clean_null_input_types()
+
 
 
 class ComposioBaseComponent(Component):
@@ -114,6 +120,7 @@ class ComposioBaseComponent(Component):
 
     def __init__(self, **kwargs):
         """Initialize instance variables to prevent shared state between components."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         super().__init__(**kwargs)
         self._all_fields: set[str] = set()
         self._bool_variables: set[str] = set()
@@ -125,12 +132,14 @@ class ComposioBaseComponent(Component):
         self._action_schemas: dict[str, Any] = {}
 
     def as_message(self) -> Message:
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         result = self.execute_action()
         if result is None:
             return Message(text="Action execution returned no result")
         return Message(text=str(result))
 
     def as_dataframe(self) -> DataFrame:
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         result = self.execute_action()
 
         if isinstance(result, dict):
@@ -146,11 +155,13 @@ class ComposioBaseComponent(Component):
         return result_dataframe
 
     def as_data(self) -> Data:
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         result = self.execute_action()
         return Data(results=result)
 
     def _build_action_maps(self):
         """Build lookup maps for action names."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         if not self._display_to_key_map or not self._key_to_display_map:
             self._display_to_key_map = {data["display_name"]: key for key, data in self._actions_data.items()}
             self._key_to_display_map = {key: data["display_name"] for key, data in self._actions_data.items()}
@@ -161,22 +172,26 @@ class ComposioBaseComponent(Component):
 
     def sanitize_action_name(self, action_name: str) -> str:
         """Convert action name to display name using lookup."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         self._build_action_maps()
         return self._key_to_display_map.get(action_name, action_name)
 
     def desanitize_action_name(self, action_name: str) -> str:
         """Convert display name to action key using lookup."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         self._build_action_maps()
         return self._display_to_key_map.get(action_name, action_name)
 
     def _get_action_fields(self, action_key: str | None) -> set[str]:
         """Get fields for an action."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         if action_key is None:
             return set()
         return set(self._actions_data[action_key]["action_fields"]) if action_key in self._actions_data else set()
 
     def _build_wrapper(self) -> Composio:
         """Build the Composio wrapper."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         try:
             if not self.api_key:
                 msg = "Composio API Key is required"
@@ -219,6 +234,7 @@ class ComposioBaseComponent(Component):
 
     def _populate_actions_data(self):
         """Fetch the list of actions for the toolkit and build helper maps."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         if self._actions_data:
             return
 
@@ -440,6 +456,7 @@ class ComposioBaseComponent(Component):
 
     def _validate_schema_inputs(self, action_key: str) -> list[InputTypes]:
         """Convert the JSON schema for *action_key* into Langflow input objects."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         # Skip validation for default/placeholder values
         if action_key in ("disabled", "placeholder", ""):
             logger.debug(f"Skipping schema validation for placeholder value: {action_key}")
@@ -669,6 +686,7 @@ class ComposioBaseComponent(Component):
 
     def _get_inputs_for_all_actions(self) -> dict[str, list[InputTypes]]:
         """Return a mapping action_key → list[InputTypes] for every action."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         result: dict[str, list[InputTypes]] = {}
         for key in self._actions_data:
             result[key] = self._validate_schema_inputs(key)
@@ -687,6 +705,7 @@ class ComposioBaseComponent(Component):
 
     def _update_action_config(self, build_config: dict, selected_value: Any) -> None:
         """Add or update parameter input fields for the chosen action."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         if not selected_value:
             return
 
@@ -733,6 +752,7 @@ class ComposioBaseComponent(Component):
 
     def _set_action_visibility(self, build_config: dict, *, force_show: bool | None = None) -> None:
         """Set action field visibility based on tool_mode state or forced value."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         if force_show is not None:
             build_config["action_button"]["show"] = force_show
         else:
@@ -741,12 +761,14 @@ class ComposioBaseComponent(Component):
 
     def create_new_auth_config(self, app_name: str) -> str:
         """Create a new auth config for the given app name."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         composio = self._build_wrapper()
         auth_config = composio.auth_configs.create(toolkit=app_name, options={"type": "use_composio_managed_auth"})
         return auth_config.id
 
     def _initiate_connection(self, app_name: str) -> tuple[str, str]:
         """Initiate OAuth connection and return (redirect_url, connection_id)."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         try:
             composio = self._build_wrapper()
 
@@ -786,6 +808,7 @@ class ComposioBaseComponent(Component):
 
     def _check_connection_status_by_id(self, connection_id: str) -> str | None:
         """Check status of a specific connection by ID. Returns status or None if not found."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         try:
             composio = self._build_wrapper()
             connection = composio.connected_accounts.get(nanoid=connection_id)
@@ -799,6 +822,7 @@ class ComposioBaseComponent(Component):
 
     def _find_active_connection_for_app(self, app_name: str) -> tuple[str, str] | None:
         """Find any ACTIVE connection for this app/user. Returns (connection_id, status) or None."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         try:
             composio = self._build_wrapper()
             connection_list = composio.connected_accounts.list(
@@ -821,6 +845,7 @@ class ComposioBaseComponent(Component):
 
     def _disconnect_specific_connection(self, connection_id: str) -> None:
         """Disconnect a specific Composio connection by ID."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         try:
             composio = self._build_wrapper()
             composio.connected_accounts.delete(nanoid=connection_id)
@@ -833,6 +858,7 @@ class ComposioBaseComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         """Update build config for auth and action selection."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         # Clean any legacy None values that may still be present
         for _fconfig in build_config.values():
             if isinstance(_fconfig, dict) and _fconfig.get("input_types") is None:
@@ -1187,6 +1213,7 @@ class ComposioBaseComponent(Component):
         to prevent overwhelming the agent. Subclasses can override this behavior.
 
         """
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         if not self._actions_data:
             self._populate_actions_data()
 
@@ -1199,6 +1226,7 @@ class ComposioBaseComponent(Component):
 
     def execute_action(self):
         """Execute the selected Composio tool."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         composio = self._build_wrapper()
         self._populate_actions_data()
         self._build_action_maps()
@@ -1282,6 +1310,7 @@ class ComposioBaseComponent(Component):
 
     def _apply_post_processor(self, action_key: str, raw_data: Any) -> Any:
         """Apply post-processor for the given action if defined."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         if hasattr(self, "post_processors") and isinstance(self.post_processors, dict):
             processor_func = self.post_processors.get(action_key)
             if processor_func and callable(processor_func):
@@ -1295,3 +1324,4 @@ class ComposioBaseComponent(Component):
 
     def set_default_tools(self):
         """Set the default tools."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error

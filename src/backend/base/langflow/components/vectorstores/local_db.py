@@ -12,7 +12,13 @@ from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.template.field.base import Output
+from langflow.utils.validate import check_s3_storage_mode
 
+disabled_in_cloud_msg = (
+    "Local DB is not supported in S3/cloud mode. "
+    "Local DB requires local file system access for persistence. "
+    "Please use local storage mode."
+)
 
 class LocalDBComponent(LCVectorStoreComponent):
     """Chroma Vector Store with search capabilities."""
@@ -194,17 +200,8 @@ class LocalDBComponent(LCVectorStoreComponent):
     @check_cached_vector_store
     def build_vector_store(self) -> Chroma:
         """Builds the Chroma object."""
-        # Check if we're in S3 mode - local vector stores not supported in cloud
-        from langflow.services.deps import get_settings_service
-
-        settings = get_settings_service().settings
-        if settings.storage_type == "s3":
-            msg = (
-                "Local vector stores are not supported in S3/cloud mode. "
-                "Local vector stores require local file system access for persistence. "
-                "Please use cloud-based vector stores (Pinecone, Weaviate, etc.) or local storage mode."
-            )
-            raise ValueError(msg)
+        # ensure we're not in S3 storage mode, otherwise raise an error
+        check_s3_storage_mode(disabled_in_cloud_msg)
 
         try:
             from langchain_chroma import Chroma
