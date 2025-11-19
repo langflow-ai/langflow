@@ -12,6 +12,7 @@ import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
 import useFlowStore from "../../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import sortSenderMessages from "../../helpers/sort-sender-messages";
+import { useGetAddSessions } from "../../hooks/use-get-add-sessions";
 import { useGetFlowId } from "../../hooks/use-get-flow-id";
 import { BotMessage } from "./botMessage/bot-message";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
@@ -22,8 +23,10 @@ export default function ChatView(): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs);
   const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const playgroundPage = usePlaygroundStore((state) => state.isPlayground);
-  const visibleSession = usePlaygroundStore((state) => state.selectedSession);
   const currentFlowId = useGetFlowId();
+  const { selectedSession: visibleSession } = useGetAddSessions({
+    flowId: currentFlowId,
+  });
 
   const nodes = useFlowStore((state) => state.nodes);
   const chatInput = inputs.find((input) => input.type === "ChatInput");

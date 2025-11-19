@@ -11,17 +11,18 @@ import { SessionRename } from "./session-rename";
 
 export const SessionItem = ({
   sessionId,
+  selectedSession: computedSelectedSession,
   onRename,
   onDelete,
 }: {
   sessionId: string;
+  selectedSession?: string | undefined;
   onRename: (sessionId: string, newSessionId: string) => Promise<void>;
   onDelete: (sessionId: string) => void;
 }) => {
   const [openLogsModal, setOpenLogsModal] = useState(false);
 
   const flowId = useFlowStore((state) => state.currentFlow?.id);
-  const selectedSession = usePlaygroundStore((state) => state.selectedSession);
   const setSelectedSession = usePlaygroundStore(
     (state) => state.setSelectedSession,
   );
@@ -62,7 +63,7 @@ export const SessionItem = ({
     <div
       className={cn(
         "flex items-center justify-between transition-colors duration-75 gap-2 w-full px-2 h-8 hover:bg-muted rounded-md",
-        selectedSession === sessionId && "bg-muted",
+        computedSelectedSession === sessionId && "bg-muted",
       )}
       role="button"
       onClick={handleClick}

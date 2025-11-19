@@ -6,6 +6,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useEditSessionInfo } from "../../hooks/use-edit-session-info";
+import { useGetAddSessions } from "../../hooks/use-get-add-sessions";
 import { useRenameSession } from "../../hooks/use-rename-session";
 import { SessionLogsModal } from "../../modals/session-logs-modal";
 import { SessionManagerDropdown } from "../sessionManagerDropdown/session-manager-dropdown";
@@ -17,7 +18,7 @@ export function PlaygroundHeader() {
   const [openLogsModal, setOpenLogsModal] = useState(false);
 
   const flowId = useFlowStore(useShallow((state) => state.currentFlow?.id));
-  const selectedSession = usePlaygroundStore((state) => state.selectedSession);
+  const { selectedSession } = useGetAddSessions({ flowId });
   const isFullscreen = usePlaygroundStore((state) => state.isFullscreen);
   const toggleFullscreen = usePlaygroundStore(
     (state) => state.toggleFullscreen,

@@ -15,6 +15,7 @@ interface UseGetAddSessionsProps {
 type UseGetAddSessionsReturnType = (props: UseGetAddSessionsProps) => {
   addNewSession: (() => void) | undefined;
   sessions: SessionInfo[];
+  selectedSession: string | undefined;
 };
 
 export const useGetAddSessions: UseGetAddSessionsReturnType = ({ flowId }) => {
@@ -24,12 +25,22 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({ flowId }) => {
     (state) => state.setSelectedSession,
   );
 
-  const selectedSession = usePlaygroundStore((state) => state.selectedSession);
+  const explicitSelectedSession = usePlaygroundStore(
+    (state) => state.selectedSession,
+  );
 
   const { data: dbSessions } = useGetSessionsFromFlowQuery({
     flowId,
     useLocalStorage: isPlayground,
   });
+  const hasExplicitSelection =
+    explicitSelectedSession && explicitSelectedSession !== flowId;
+
+  const selectedSession = hasExplicitSelection
+    ? explicitSelectedSession
+    : dbSessions && dbSessions.length > 0
+      ? dbSessions[dbSessions.length - 1]
+      : flowId;
 
   const addNewSession =
     selectedSession && !dbSessions?.includes(selectedSession)
@@ -40,16 +51,23 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({ flowId }) => {
         };
 
   const sessions = useMemo(() => {
-    return (
-      dbSessions?.map((sessionId, index) => ({
-        id: `session-${index}`, // provide id based on index to not re-render on rename
-        sessionId: sessionId,
-      })) ?? []
-    );
-  }, [dbSessions]);
+    if (!dbSessions) return [];
+
+    // Filter out flowId (default session) if there are multiple sessions
+    const filteredSessions =
+      dbSessions.length > 1
+        ? dbSessions.filter((sessionId) => sessionId !== flowId)
+        : dbSessions;
+
+    return filteredSessions.map((sessionId, index) => ({
+      id: `session-${index}`, // provide id based on index to not re-render on rename
+      sessionId: sessionId,
+    }));
+  }, [dbSessions, flowId]);
 
   return {
     addNewSession,
     sessions,
+    selectedSession,
   };
 };

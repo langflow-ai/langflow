@@ -11,7 +11,9 @@ import { SessionSkeleton } from "./components/session-skeleton";
 export default function SessionSidebar() {
   const flowId = useFlowStore(useShallow((state) => state.currentFlow?.id));
 
-  const { sessions, addNewSession } = useGetAddSessions({ flowId });
+  const { sessions, addNewSession, selectedSession } = useGetAddSessions({
+    flowId,
+  });
   const { handleRename, handleDelete } = useEditSessionInfo({
     flowId,
   });
@@ -40,6 +42,7 @@ export default function SessionSidebar() {
             <SessionItem
               key={session.id}
               sessionId={session.sessionId}
+              selectedSession={selectedSession}
               onRename={handleRename}
               onDelete={handleDelete}
             />
