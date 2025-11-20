@@ -76,11 +76,10 @@ class SaveToFileComponent(Component):
         ),
         BoolInput(
             name="append_mode",
-            display_name="Append Mode",
+            display_name="Append",
             info="Append to file if it exists (only for plain text formats). Disabled for binary formats like Excel.",
-            value=True,
+            value=False,
             show=False,
-            advanced=True,
         ),
         # Format inputs (dynamic based on storage location)
         DropdownInput(
@@ -300,10 +299,8 @@ class SaveToFileComponent(Component):
             msg = f"File not found: {file_path}"
             raise FileNotFoundError(msg)
 
-        # Get append mode setting
-        append_mode = getattr(self, "append_mode", True)
-
-        # Upload the file
+        # Upload the file - always use append=False because the local file already contains
+        # the correct content (either new or appended locally)
         with file_path.open("rb") as f:
             async with session_scope() as db:
                 if not self.user_id:
@@ -317,12 +314,12 @@ class SaveToFileComponent(Component):
                     current_user=current_user,
                     storage_service=get_storage_service(),
                     settings_service=get_settings_service(),
-                    append=append_mode,
+                    append=False,
                 )
 
     def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> str:
         """Save a DataFrame to the specified file format."""
-        append_mode = getattr(self, "append_mode", True)
+        append_mode = getattr(self, "append_mode", False)
         should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
 
         if fmt == "csv":
@@ -368,7 +365,7 @@ class SaveToFileComponent(Component):
 
     def _save_data(self, data: Data, path: Path, fmt: str) -> str:
         """Save a Data object to the specified file format."""
-        append_mode = getattr(self, "append_mode", True)
+        append_mode = getattr(self, "append_mode", False)
         should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
 
         if fmt == "csv":
@@ -435,7 +432,7 @@ class SaveToFileComponent(Component):
         else:
             content = str(message.text)
 
-        append_mode = getattr(self, "append_mode", True)
+        append_mode = getattr(self, "append_mode", False)
         should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
 
         if fmt == "txt":
