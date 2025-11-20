@@ -11,7 +11,7 @@ const useSaveFlow = () => {
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
-  const setCurrentFlowInManager = useFlowsManagerStore((state) => state.setCurrentFlow);
+  const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
 
   const { mutate: getFlow } = useGetFlow();
   const { mutate } = usePatchUpdateFlow();
@@ -102,7 +102,7 @@ const useSaveFlow = () => {
                         return flow;
                       }),
                     );
-                    setCurrentFlowInManager(updatedFlow);
+                    setCurrentFlow(updatedFlow);
                     resolve();
                   } else {
                     setErrorData({
