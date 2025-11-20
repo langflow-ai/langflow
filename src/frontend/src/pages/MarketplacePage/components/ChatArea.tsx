@@ -196,18 +196,18 @@ export function ChatArea({
             {selectedFiles.map((file) => (
               <div
                 key={file.componentId}
-                className="flex items-center gap-2 bg-muted/50 border rounded-lg px-3 py-2 text-sm group hover:border-primary/50 transition-colors"
+                className="flex items-center gap-2 bg-[#FBFAFF] border border-[#EFEFEF] rounded-lg px-2 py-3 text-sm group hover:border-primary/50 transition-colors"
               >
-                <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <File className="h-4 w-4 text-[#64616A] flex-shrink-0" />
                 <div className="flex flex-col min-w-0">
                   <span
-                    className="font-medium truncate max-w-[200px]"
+                    className="font-medium truncate max-w-[200px] text-[#444444]"
                     title={file.filename}
                   >
                     {file.filename}
                   </span>
                   <span
-                    className="text-xs text-muted-foreground truncate"
+                    className="text-xs text-[#64616A] truncate"
                     title={file.componentName}
                   >
                     for {file.componentName}
@@ -271,13 +271,11 @@ export function ChatArea({
                 <button
                   onClick={streamingMessageId ? onStop : onSend}
                   disabled={
-                    !streamingMessageId && (
-                      (
-                        hasChatInput
-                          ? (!input.trim() && selectedFiles.length === 0)
-                          : false
-                      ) || isLoading
-                    )
+                    !streamingMessageId &&
+                    ((hasChatInput
+                      ? !input.trim() && selectedFiles.length === 0
+                      : false) ||
+                      isLoading)
                   }
                   className={`p-2 rounded-md transition-colors ${
                     streamingMessageId
@@ -354,7 +352,7 @@ export function ChatArea({
           selectedFiles.length === 0 &&
           showSampleSection && (
             <div className="mt-4">
-              <p className="text-sm text-[#444] font-medium mb-2">
+              <p className="text-sm text-[#444] font-medium mb-2 pl-1">
                 Or Choose from Sample Input files below
               </p>
               <div className="flex flex-wrap gap-2">

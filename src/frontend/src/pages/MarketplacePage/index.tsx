@@ -21,19 +21,19 @@ import ListSkeleton from "../MainPage/components/listSkeleton";
 import { debounce } from "lodash";
 import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
 
-const sortedTags = [...MARKETPLACE_TAGS].sort((a, b) => 
+const sortedTags = [...MARKETPLACE_TAGS].sort((a, b) =>
   a.title.localeCompare(b.title)
 );
 
 // Storage keys for persisting filter state
 const STORAGE_KEYS = {
-  SEARCH: 'marketplace_search_query',
-  VIEW_MODE: 'marketplace_view_mode',
-  PAGE_INDEX: 'marketplace_page_index',
-  PAGE_SIZE: 'marketplace_page_size',
-  TAG_FILTER: 'marketplace_tag_filter',
-  SORT_BY: 'marketplace_sort_by',
-  ORDER: 'marketplace_order',
+  SEARCH: "marketplace_search_query",
+  VIEW_MODE: "marketplace_view_mode",
+  PAGE_INDEX: "marketplace_page_index",
+  PAGE_SIZE: "marketplace_page_size",
+  TAG_FILTER: "marketplace_tag_filter",
+  SORT_BY: "marketplace_sort_by",
+  ORDER: "marketplace_order",
 };
 
 // Helper to safely get from sessionStorage
@@ -51,35 +51,35 @@ const setStoredValue = <T,>(key: string, value: T): void => {
   try {
     sessionStorage.setItem(key, JSON.stringify(value));
   } catch (error) {
-    console.error('Failed to save to sessionStorage:', key, error);
+    console.error("Failed to save to sessionStorage:", key, error);
   }
 };
 
 export default function MarketplacePage() {
   // Initialize state from sessionStorage with fallback to defaults
-  const [searchQuery, setSearchQuery] = useState(() => 
+  const [searchQuery, setSearchQuery] = useState(() =>
     getStoredValue(STORAGE_KEYS.SEARCH, "")
   );
-  const [debouncedSearch, setDebouncedSearch] = useState(() => 
+  const [debouncedSearch, setDebouncedSearch] = useState(() =>
     getStoredValue(STORAGE_KEYS.SEARCH, "")
   );
-  const [viewMode, setViewMode] = useState<"grid" | "list">(() => 
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() =>
     getStoredValue(STORAGE_KEYS.VIEW_MODE, "grid")
   );
-  const [pageIndex, setPageIndex] = useState(() => 
+  const [pageIndex, setPageIndex] = useState(() =>
     getStoredValue(STORAGE_KEYS.PAGE_INDEX, 1)
   );
-  const [pageSize, setPageSize] = useState(() => 
+  const [pageSize, setPageSize] = useState(() =>
     getStoredValue(STORAGE_KEYS.PAGE_SIZE, 12)
   );
-  const [tagFilter, setTagFilter] = useState<string | "all">(() => 
+  const [tagFilter, setTagFilter] = useState<string | "all">(() =>
     getStoredValue(STORAGE_KEYS.TAG_FILTER, "all")
   );
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<"name" | "date" | "tags">(() => 
+  const [sortBy, setSortBy] = useState<"name" | "date" | "tags">(() =>
     getStoredValue(STORAGE_KEYS.SORT_BY, "name")
   );
-  const [order, setOrder] = useState<"asc" | "desc">(() => 
+  const [order, setOrder] = useState<"asc" | "desc">(() =>
     getStoredValue(STORAGE_KEYS.ORDER, "asc")
   );
 
@@ -334,7 +334,7 @@ export default function MarketplacePage() {
             </div>
           ) : (
             <>
-              {items.length > 0 && (
+              {/* {items.length > 0 && (
                 <div
                   className={
                     viewMode === "grid"
@@ -343,6 +343,25 @@ export default function MarketplacePage() {
                         } grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-h-[calc(100vh-212px)] overflow-y-auto place-items-start`
                       : "flex flex-col gap-4 flex-1 min-h-[calc(100vh-280px)]"
                   }
+                >
+                  {visibleItems.map((item: any) => (
+                    <MarketplaceFlowCard
+                      key={item.id}
+                      item={item}
+                      viewMode={viewMode}
+                      expand={viewMode === "grid" && expandCards}
+                    />
+                  ))}
+                </div>
+              )} */}
+              {items.length > 0 && (
+                <div
+                  className={`max-h-[calc(100vh-212px)] overflow-auto
+                    ${
+                      viewMode === "grid"
+                        ? "grid grid-cols-2 lg:grid-cols-3 gap-4 "
+                        : "flex flex-col gap-2 flex-1"
+                    }`}
                 >
                   {visibleItems.map((item: any) => (
                     <MarketplaceFlowCard
