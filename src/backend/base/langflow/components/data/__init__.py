@@ -1,5 +1,5 @@
 from .api_request import APIRequestComponent
-from .csv_to_data import CSVToDataComponent
+from .csv_to_data import CSVURLLoaderComponent
 from .directory import DirectoryComponent
 from .file import FileComponent
 from .json_to_data import JSONToDataComponent
@@ -12,7 +12,7 @@ from .webhook import WebhookComponent
 
 __all__ = [
     "APIRequestComponent",
-    "CSVToDataComponent",
+    "CSVURLLoaderComponent",
     "DirectoryComponent",
     "FileComponent",
     "JSONToDataComponent",
@@ -24,6 +24,5 @@ __all__ = [
     "WebhookComponent",
     "EncoderProTool",
     "PALookupTool",
-    "ClaimHistorySchema"
-
+    "ClaimHistorySchema",
 ]

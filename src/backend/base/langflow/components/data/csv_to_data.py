@@ -8,7 +8,7 @@ import pandas as pd
 
 
 class CSVURLLoaderComponent(Component):
-    display_name = "CSV URL Loader"
+    display_name = "CSV Loader"
     description = "Load a DataFrame from a CSV URL"
     icon = "table"
     name = "CSVURLLoader"

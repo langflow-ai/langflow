@@ -150,7 +150,8 @@ class LCAgentComponent(Component):
             # ! Because the input has to be a string, we must pass the images in the chat_history
 
             image_dicts = [item for item in input_dict["input"].content if item.get("type") == "image"]
-            input_dict["input"].content = [item for item in input_dict["input"].content if item.get("type") != "image"]
+            image_dicts = [item for item in input_dict["input"].content if item.get("type") == "image_url"]
+            input_dict["input"].content = [item for item in input_dict["input"].content if (item.get("type") != "image" or item.get("type") != "image_url")]
 
             if "chat_history" not in input_dict:
                 input_dict["chat_history"] = []

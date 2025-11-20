@@ -1,7 +1,14 @@
 import json
+import os
+from pathlib import Path
 import re
+from urllib.parse import urlparse
 
+import aiohttp
 from langchain_core.tools import StructuredTool
+from langflow.base.data.base_file import BaseFileComponent
+from langflow.custom.custom_component.split_to_page import BasePageSplitterComponent
+from langflow.inputs.inputs import HandleInput
 from pydantic import ValidationError
 
 from langflow.base.agents.agent import LCToolsAgentComponent
@@ -36,6 +43,7 @@ from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 from langflow.schema.table import EditMode
 from langflow.custom.default_providers import apply_provider_defaults
+from typing import Any
 
 
 def set_advanced_true(component_input):
@@ -46,15 +54,20 @@ def set_advanced_true(component_input):
 MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "OpenAI", "Azure OpenAI"]
 
 
-class AgentComponent(ToolCallingAgentComponent):
+class AgentComponent(ToolCallingAgentComponent, BaseFileComponent):
     display_name: str = "Agent"
-    description: str = "Define the agent's instructions, then enter a task to complete using tools."
+    description: str = (
+        "Define the agent's instructions, then enter a task to complete using tools."
+    )
     documentation: str = "https://docs.langflow.org/agents"
     icon = "bot"
     beta = False
     name = "Agent"
 
-    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
+    memory_inputs = [
+        set_advanced_true(component_input)
+        for component_input in MemoryComponent().inputs
+    ]
 
     # Filter out json_mode from OpenAI inputs since we handle structured output differently
     if "OpenAI" in MODEL_PROVIDERS_DICT:
@@ -76,7 +89,11 @@ class AgentComponent(ToolCallingAgentComponent):
             real_time_refresh=True,
             refresh_button=False,
             input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA]
+            options_metadata=[
+                MODELS_METADATA[key]
+                for key in MODEL_PROVIDERS_LIST
+                if key in MODELS_METADATA
+            ]
             + [{"icon": "brain"}],
             external_options={
                 "fields": {
@@ -121,6 +138,45 @@ class AgentComponent(ToolCallingAgentComponent):
             ),
             advanced=True,
         ),
+        next(
+            input
+            for input in BaseFileComponent._base_inputs
+            if input.name == "file_path"
+        ),
+        next(
+            input
+            for input in BaseFileComponent._base_inputs
+            if input.name == "silent_errors"
+        ),
+        next(
+            input
+            for input in BaseFileComponent._base_inputs
+            if input.name == "delete_server_file_after_processing"
+        ),
+        next(
+            input
+            for input in BaseFileComponent._base_inputs
+            if input.name == "ignore_unsupported_extensions"
+        ),
+        next(
+            input
+            for input in BaseFileComponent._base_inputs
+            if input.name == "ignore_unspecified_files"
+        ),
+        BoolInput(
+            name="split_pdf_to_images",
+            display_name="Split PDF to Images",
+            value=True,
+            info="If enabled, automatically split PDF files into individual page images before sending to the agent",
+            advanced=True,
+        ),
+        BoolInput(
+            name="keep_original_size",
+            display_name="Keep Original Image Size",
+            value=True,
+            info="Keep the original image size when splitting PDFs",
+            advanced=True,
+        ),
         TableInput(
             name="output_schema",
             display_name="Output Schema",
@@ -153,7 +209,9 @@ class AgentComponent(ToolCallingAgentComponent):
                     "display_name": "Type",
                     "type": "str",
                     "edit_mode": EditMode.INLINE,
-                    "description": ("Indicate the data type of the output field (e.g., str, int, float, bool, dict)."),
+                    "description": (
+                        "Indicate the data type of the output field (e.g., str, int, float, bool, dict)."
+                    ),
                     "options": ["str", "int", "float", "bool", "dict"],
                     "default": "str",
                 },
@@ -168,8 +226,6 @@ class AgentComponent(ToolCallingAgentComponent):
             ],
         ),
         *LCToolsAgentComponent._base_inputs,
-        # removed memory inputs from agent component
-        # *memory_inputs,
         BoolInput(
             name="add_current_date_tool",
             display_name="Current Date",
@@ -181,6 +237,182 @@ class AgentComponent(ToolCallingAgentComponent):
     outputs = [
         Output(name="response", display_name="Response", method="message_response"),
     ]
+
+    def __init__(self, **kwargs):
+        super(BaseFileComponent, self).__init__(**kwargs)
+
+        import tempfile
+
+        self.temp_dir = tempfile.mkdtemp()
+        self._downloaded_files = {}
+        self._text_content = ""
+
+        # Create an instance of the image splitter as a helper (composition)
+        self._image_splitter = None
+
+    def _get_image_splitter(self):
+        """Lazy initialization of image splitter helper."""
+        if self._image_splitter is None:
+            from langflow.custom.custom_component.split_to_page import (
+                BasePageSplitterComponent,
+            )
+
+            # Use the factory method with cleanup_on_exit=False
+            # We'll handle cleanup manually in the agent
+            self._image_splitter = BasePageSplitterComponent.create_helper(
+                temp_dir=self.temp_dir,
+                silent_errors=self.silent_errors,
+                keep_original_size=self.keep_original_size,
+                cleanup_on_exit=False,  # Manual cleanup control
+            )
+        return self._image_splitter
+
+    async def _download_file_from_url(self, url: str) -> str | None:
+        """Download a file from a URL."""
+        try:
+            filename = os.path.basename(urlparse(url).path)
+            if not filename:
+                filename = "downloaded_file"
+
+            local_path = os.path.join(self.temp_dir, filename)
+
+            async with aiohttp.ClientSession() as session, session.get(url) as response:
+                response.raise_for_status()
+                with open(local_path, "wb") as f:
+                    while True:
+                        chunk = await response.content.read(8192)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+
+            self._downloaded_files[url] = local_path
+            logger.info(f"Successfully downloaded file to {local_path}")
+            return local_path
+
+        except Exception as e:
+            logger.error(f"Error downloading file from URL: {e!s}")
+            if not self.silent_errors:
+                raise
+            return None
+
+    async def _validate_and_resolve_paths_async(
+        self,
+    ) -> list[BaseFileComponent.BaseFile]:
+        """Handle URLs and local paths asynchronously."""
+        resolved_files = []
+        file_paths = self._file_path_as_list()
+
+        for obj in file_paths:
+            server_file_path = obj.data.get(self.SERVER_FILE_PATH_FIELDNAME)
+
+            if not server_file_path:
+                if not self.ignore_unspecified_files:
+                    msg = f"Data object missing '{self.SERVER_FILE_PATH_FIELDNAME}' property."
+                    if not self.silent_errors:
+                        raise ValueError(msg)
+                continue
+
+            try:
+                paths_to_process = (
+                    server_file_path
+                    if isinstance(server_file_path, list)
+                    else [server_file_path]
+                )
+
+                for path in paths_to_process:
+                    try:
+                        if isinstance(path, str) and path.startswith(
+                            ("http://", "https://")
+                        ):
+                            local_path = await self._download_file_from_url(path)
+                            if local_path:
+                                file_obj = BaseFileComponent.BaseFile(
+                                    data=obj,
+                                    path=Path(local_path),
+                                    delete_after_processing=True,
+                                    silent_errors=self.silent_errors,
+                                )
+                                resolved_files.append(file_obj)
+                        else:
+                            path_obj = Path(path) if isinstance(path, str) else path
+                            if path_obj.exists():
+                                file_obj = BaseFileComponent.BaseFile(
+                                    data=obj,
+                                    path=path_obj,
+                                    delete_after_processing=self.delete_server_file_after_processing,
+                                    silent_errors=self.silent_errors,
+                                )
+                                resolved_files.append(file_obj)
+                            elif not self.silent_errors:
+                                raise FileNotFoundError(f"File not found: {path}")
+
+                    except Exception as e:
+                        if not self.silent_errors:
+                            raise
+                        logger.error(f"Error processing path {path}: {e}")
+
+            except Exception as e:
+                if not self.silent_errors:
+                    raise
+                logger.error(f"Error processing file object: {e}")
+
+        return resolved_files
+
+    async def _process_pdf_files(
+        self, files: list[BaseFileComponent.BaseFile]
+    ) -> list[str]:
+        """Process PDF files by splitting them into images if needed.
+
+        Args:
+            files: List of BaseFile objects
+
+        Returns:
+            List of file paths (either original or split image paths)
+        """
+        processed_paths = []
+
+        # Get the image splitter helper
+        splitter = self._get_image_splitter()
+
+        for file_obj in files:
+            file_path = file_obj.path
+            ext = file_path.suffix.lower()
+
+            # Check if it's a PDF and split_pdf_to_images is enabled
+            if ext == ".pdf" and self.split_pdf_to_images:
+                try:
+                    logger.info(f"Splitting PDF to images: {file_path}")
+
+                    # Use the helper's method to split PDF
+                    image_bytes_list = await splitter._split_pdf_to_images(
+                        str(file_path)
+                    )
+
+                    # Save images locally and collect paths
+                    for i, image_bytes in enumerate(image_bytes_list):
+                        filename = f"{file_path.stem}_page_{i + 1}.png"
+                        local_path = await splitter._save_image_locally(
+                            image_bytes, filename
+                        )
+
+                        # Extract actual path from file:// URL if present
+                        if local_path.startswith("file://"):
+                            local_path = local_path[7:]
+
+                        processed_paths.append(local_path)
+                        logger.info(f"Saved PDF page {i + 1} as image: {local_path}")
+
+                except Exception as e:
+                    logger.error(f"Error splitting PDF {file_path}: {e}")
+                    if not self.silent_errors:
+                        raise
+                    # If splitting fails, use original PDF
+                    processed_paths.append(str(file_path))
+            else:
+                # Not a PDF or splitting disabled, use original file
+                processed_paths.append(str(file_path))
+
+        return processed_paths
 
     async def get_agent_requirements(self):
         """Get the agent requirements for the agent."""
@@ -197,9 +429,11 @@ class AgentComponent(ToolCallingAgentComponent):
 
         # Add current date tool if enabled
         if self.add_current_date_tool:
-            if not isinstance(self.tools, list):  # type: ignore[has-type]
+            if not isinstance(self.tools, list):
                 self.tools = []
-            current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
+            current_date_tool = (
+                await CurrentDateComponent(**self.get_base_args()).to_toolkit()
+            ).pop(0)
             if not isinstance(current_date_tool, StructuredTool):
                 msg = "CurrentDateComponent must be converted to a StructuredTool"
                 raise TypeError(msg)
@@ -208,7 +442,37 @@ class AgentComponent(ToolCallingAgentComponent):
 
     async def message_response(self) -> Message:
         try:
-            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+            llm_model, self.chat_history, self.tools = (
+                await self.get_agent_requirements()
+            )
+            files = await self._validate_and_resolve_paths_async()
+
+            # Initialize input_dict
+            input_dict = self.input_value.model_dump()
+            if "files" not in input_dict or input_dict["files"] is None:
+                input_dict["files"] = []
+
+            self.log(f'Initial files: {input_dict["files"]}', "")
+
+            # Process files (split PDFs if needed)
+            if files:
+                processed_file_paths = await self._process_pdf_files(files)
+
+                # Debug logging
+                logger.info(f"File paths to add: {processed_file_paths}")
+
+                input_dict["files"].extend(processed_file_paths)
+                logger.info(
+                    f"Processed {len(files)} input files into {len(processed_file_paths)} file(s)"
+                )
+
+            # Debug logging
+            logger.info(f"Final files list: {input_dict['files']}")
+
+            # Recreate Message with updated files
+            self.input_value = Message(**input_dict)
+            self.log(f"Sending {len(input_dict['files'])} file(s) to agent", "")
+
             # Set up and run agent
             self.set(
                 llm=llm_model,
@@ -219,8 +483,6 @@ class AgentComponent(ToolCallingAgentComponent):
             )
             agent = self.create_agent_runnable()
             result = await self.run_agent(agent)
-
-            # Store result for potential JSON output
             self._agent_result = result
 
         except (ValueError, TypeError, KeyError) as e:
@@ -229,12 +491,16 @@ class AgentComponent(ToolCallingAgentComponent):
         except ExceptionWithMessageError as e:
             await logger.aerror(f"ExceptionWithMessageError occurred: {e}")
             raise
-        # Avoid catching blind Exception; let truly unexpected exceptions propagate
         except Exception as e:
             await logger.aerror(f"Unexpected error: {e!s}")
             raise
         else:
             return result
+        finally:
+            # Clean up split image files after agent finishes
+            # This uses the base class method
+            if self._image_splitter:
+                self._image_splitter.cleanup_local_files()
 
     def _preprocess_schema(self, schema):
         """Preprocess schema to ensure correct data types for build_model_from_schema."""
@@ -278,7 +544,11 @@ class AgentComponent(ToolCallingAgentComponent):
                 return {"content": content, "error": schema_error_msg}
 
         # If no output schema provided, return parsed JSON without validation
-        if not hasattr(self, "output_schema") or not self.output_schema or len(self.output_schema) == 0:
+        if (
+            not hasattr(self, "output_schema")
+            or not self.output_schema
+            or len(self.output_schema) == 0
+        ):
             return json_data
 
         # Use BaseModel validation with schema
@@ -297,7 +567,9 @@ class AgentComponent(ToolCallingAgentComponent):
                     except ValidationError as e:
                         await logger.aerror(f"Validation error for item: {e}")
                         # Include invalid items with error info
-                        validated_objects.append({"data": item, "validation_error": str(e)})
+                        validated_objects.append(
+                            {"data": item, "validation_error": str(e)}
+                        )
                 return validated_objects
 
             # Single object
@@ -330,7 +602,11 @@ class AgentComponent(ToolCallingAgentComponent):
                 system_components.append(f"Format instructions: {format_instructions}")
 
             # 3. Schema Information from BaseModel
-            if hasattr(self, "output_schema") and self.output_schema and len(self.output_schema) > 0:
+            if (
+                hasattr(self, "output_schema")
+                and self.output_schema
+                and len(self.output_schema) > 0
+            ):
                 try:
                     processed_schema = self._preprocess_schema(self.output_schema)
                     output_model = build_model_from_schema(processed_schema)
@@ -348,11 +624,17 @@ class AgentComponent(ToolCallingAgentComponent):
                     )
                     system_components.append(schema_info)
                 except (ValidationError, ValueError, TypeError, KeyError) as e:
-                    await logger.aerror(f"Could not build schema for prompt: {e}", exc_info=True)
+                    await logger.aerror(
+                        f"Could not build schema for prompt: {e}", exc_info=True
+                    )
 
             # Combine all components
-            combined_instructions = "\n\n".join(system_components) if system_components else ""
-            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+            combined_instructions = (
+                "\n\n".join(system_components) if system_components else ""
+            )
+            llm_model, self.chat_history, self.tools = (
+                await self.get_agent_requirements()
+            )
             self.set(
                 llm=llm_model,
                 tools=self.tools or [],
@@ -426,7 +708,9 @@ class AgentComponent(ToolCallingAgentComponent):
             .retrieve_messages()
         )
         return [
-            message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
+            message
+            for message in messages
+            if getattr(message, "id", None) != getattr(self.input_value, "id", None)
         ]
 
     async def get_llm(self):
@@ -447,7 +731,9 @@ class AgentComponent(ToolCallingAgentComponent):
             return self._build_llm_model(component_class, inputs, prefix), display_name
 
         except (AttributeError, ValueError, TypeError, RuntimeError) as e:
-            await logger.aerror(f"Error building {self.agent_llm} language model: {e!s}")
+            await logger.aerror(
+                f"Error building {self.agent_llm} language model: {e!s}"
+            )
             msg = f"Failed to initialize language model: {e!s}"
             raise ValueError(msg) from e
 
@@ -487,7 +773,6 @@ class AgentComponent(ToolCallingAgentComponent):
                 value.input_types = []
         return build_config
 
-
     async def update_build_config(
         self, build_config: dotdict, field_value: str, field_name: str | None = None
     ) -> dotdict:
@@ -514,7 +799,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 )
                 for provider in MODEL_PROVIDERS_DICT
             }
-            
+
             if field_value in provider_configs:
                 fields_to_add, fields_to_delete = provider_configs[field_value]
 
@@ -524,15 +809,15 @@ class AgentComponent(ToolCallingAgentComponent):
 
                 # Add provider-specific fields
                 build_config.update(fields_to_add)
-                
+
                 # Apply provider-specific defaults (only for Azure OpenAI currently)
                 if field_value == "Azure OpenAI":
                     build_config = apply_provider_defaults(field_value, build_config)
-                
+
                 # Reset input types for agent_llm
                 build_config["agent_llm"]["input_types"] = []
                 build_config["agent_llm"]["display_name"] = "Model Provider"
-                
+
             elif field_value == "connect_other_models":
                 # Delete all provider fields
                 self.delete_fields(build_config, ALL_PROVIDER_FIELDS)
@@ -546,7 +831,11 @@ class AgentComponent(ToolCallingAgentComponent):
                     refresh_button=False,
                     input_types=["LanguageModel"],
                     placeholder="Awaiting model input.",
-                    options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA],
+                    options_metadata=[
+                        MODELS_METADATA[key]
+                        for key in MODEL_PROVIDERS_LIST
+                        if key in MODELS_METADATA
+                    ],
                     external_options={
                         "fields": {
                             "data": {
@@ -560,7 +849,7 @@ class AgentComponent(ToolCallingAgentComponent):
                     },
                 )
                 build_config.update({"agent_llm": custom_component.to_dict()})
-                
+
             # Update input types for all fields
             build_config = self.update_input_types(build_config)
 
@@ -582,7 +871,7 @@ class AgentComponent(ToolCallingAgentComponent):
             if missing_keys:
                 msg = f"Missing required keys in build_config: {missing_keys}"
                 raise ValueError(msg)
-                
+
         # Rest of your existing method remains unchanged...
         if (
             isinstance(self.agent_llm, str)
@@ -602,7 +891,12 @@ class AgentComponent(ToolCallingAgentComponent):
                     build_config = await update_component_build_config(
                         component_class, build_config, field_value, "model_name"
                     )
-        return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
+        return dotdict(
+            {
+                k: v.to_dict() if hasattr(v, "to_dict") else v
+                for k, v in build_config.items()
+            }
+        )
 
     async def _get_tools(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
@@ -616,5 +910,10 @@ class AgentComponent(ToolCallingAgentComponent):
             callbacks=self.get_langchain_callbacks(),
         )
         if hasattr(self, "tools_metadata"):
-            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+            tools = component_toolkit(
+                component=self, metadata=self.tools_metadata
+            ).update_tools_metadata(tools=tools)
         return tools
+
+    def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[Any]:
+        return []
