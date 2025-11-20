@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -1800,7 +1800,7 @@ wheels = [
 
 [[package]]
 name = "cuga"
-version = "0.1.8"
+version = "0.1.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1825,8 +1825,9 @@ dependencies = [
     { name = "typer" },
     { name = "uvicorn" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/5f/4f/a6afb4ae1968cf0b39c59d38b26530d9bd5bec6521d04686e79a4a519fcf/cuga-0.1.9.tar.gz", hash = "sha256:8cbab82258f5df92f683e16a5b163e40fa3738a3b1f787bfdc6cac1d76b393a8", size = 461526, upload-time = "2025-11-20T14:12:52.361Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a9/88/a59c69b2fbe18ff4e3641f3c64e7ab6765d6fa5563929839ac7428c4d8f4/cuga-0.1.8-py3-none-any.whl", hash = "sha256:6d87b551a338ef7873dd55ade4fefc83a105485b2839ecf3fb57a5a7ed5766a6", size = 628524, upload-time = "2025-11-18T16:37:39.942Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/4f/06b744ced358b079d51e589261a843a9bab871785ca2b8e257c7329e7415/cuga-0.1.9-py3-none-any.whl", hash = "sha256:38f37a0fad8355e0c517b9416dd3b437107bb0842461d01f8b37566751485f4b", size = 630014, upload-time = "2025-11-20T14:12:50.897Z" },
 ]
 
 [[package]]
@@ -5601,7 +5602,7 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "cryptography", specifier = ">=43.0.1,<44.0.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "cuga", specifier = "==0.1.8" },
+    { name = "cuga", specifier = "==0.1.9" },
     { name = "datasets", specifier = ">2.14.7,<4.0.0" },
     { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'", specifier = ">=2.36.1,<3.0.0" },
     { name = "docling-core", specifier = ">=2.36.1,<3.0.0" },
