@@ -35,6 +35,7 @@ disable_component_in_astra_cloud_msg = (
     "Please use local storage mode or cloud-based versions of the tools."
 )
 
+
 class ComposioBaseComponent(Component):
     """Base class for Composio components with common functionality."""
 

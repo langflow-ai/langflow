@@ -5,11 +5,11 @@ from lfx.io import FileInput
 from lfx.schema import Data, DataFrame
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
-disable_component_in_astra_cloud_msg  = (
+disable_component_in_astra_cloud_msg = (
     "Video processing is not supported in Astra cloud environment. "
     "Video components require local file system access for processing. "
     "Please use local storage mode or process videos locally before uploading."
-    )
+)
 
 
 class VideoFileComponent(BaseFileComponent):

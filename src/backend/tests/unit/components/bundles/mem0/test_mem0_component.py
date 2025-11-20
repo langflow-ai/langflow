@@ -29,4 +29,3 @@ class TestMem0CloudValidation:
             component = Mem0MemoryComponent(openai_api_key="test-key")
             component.build_mem0()
             mock_memory.assert_called_once()
-

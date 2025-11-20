@@ -10,9 +10,9 @@ from lfx.schema.data import Data
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
 disable_component_in_astra_cloud_msg = (
-    "Mem0 chat memory is not supported in Astra cloud environment. "
-    "Please use local storage mode or mem0 cloud."
+    "Mem0 chat memory is not supported in Astra cloud environment. Please use local storage mode or mem0 cloud."
 )
+
 
 class Mem0MemoryComponent(LCChatMemoryComponent):
     display_name = "Mem0 Chat Memory"

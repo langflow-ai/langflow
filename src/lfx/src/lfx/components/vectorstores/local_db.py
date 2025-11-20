@@ -18,7 +18,8 @@ disable_component_in_astra_cloud_msg = (
     "Local vector stores are not supported in S3/cloud mode. "
     "Local vector stores require local file system access for persistence. "
     "Please use cloud-based vector stores (Pinecone, Weaviate, etc.) or local storage mode."
-    )
+)
+
 
 class LocalDBComponent(LCVectorStoreComponent):
     """Chroma Vector Store with search capabilities."""

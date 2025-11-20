@@ -17,6 +17,7 @@ disable_component_in_astra_cloud_msg = (
     "Please use local storage mode or process videos locally before uploading."
 )
 
+
 class SplitVideoComponent(Component):
     """A component that splits a video into multiple clips of specified duration using FFmpeg."""
 

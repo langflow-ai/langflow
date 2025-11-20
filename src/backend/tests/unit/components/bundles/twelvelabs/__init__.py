@@ -1,2 +1,1 @@
 """Tests for TwelveLabs components."""
-

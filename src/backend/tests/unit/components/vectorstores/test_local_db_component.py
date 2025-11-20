@@ -390,7 +390,7 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
         with patch.dict(os.environ, {"ASTRA_CLOUD_DISABLE_COMPONENT": "true"}):
             component: LocalDBComponent = component_class().set(**default_kwargs)
 
-            with pytest.raises(ValueError) as exc_info: # noqa: PT011
+            with pytest.raises(ValueError) as exc_info:  # noqa: PT011
                 component.build_vector_store()
 
             # Verify the error message mentions cloud/astra
