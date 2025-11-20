@@ -87,7 +87,7 @@ def import_all_services_into_a_dict():
                 {
                     name: obj
                     for name, obj in inspect.getmembers(module, inspect.isclass)
-                    if issubclass(obj, Service) and obj is not Service
+                    if isinstance(obj, type) and issubclass(obj, Service) and obj is not Service
                 }
             )
         except Exception as exc:
