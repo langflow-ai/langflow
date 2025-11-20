@@ -114,6 +114,7 @@ import { XAIIcon } from "@/icons/xAI";
 import { YouTubeSvgIcon as YouTubeIcon } from "@/icons/Youtube";
 import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { JigsawStackIcon } from "./JigsawStack";
+import { PolarisOfficeIcon } from "./PolarisOffice";
 import { WindsurfIcon } from "./Windsurf";
 
 // Export the eagerly loaded icons map
@@ -199,6 +200,7 @@ export const eagerIconsMapping = {
   Perplexity: PerplexityIcon,
   Pinecone: PineconeIcon,
   Postgres: PostgresIcon,
+  PolarisOffice: PolarisOfficeIcon,
   Python: PythonIcon,
   QDrant: QDrantIcon,
   QianFanChat: QianFanChatIcon,
