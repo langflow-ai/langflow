@@ -128,19 +128,28 @@ export default function PlaygroundTab({
       )
     : [];
 
-  // First available sample output across input_samples
-  const sampleOutputs: string[] = Array.isArray(
+  // Helper to safely stringify JSON-like values
+  const stringifyIfObject = (val: any): string | undefined => {
+    if (val === undefined || val === null) return undefined;
+    if (typeof val === "string") return val;
+    try {
+      return JSON.stringify(val, null, 2);
+    } catch {
+      return String(val);
+    }
+  };
+
+  // First available sample output across input_samples (supports object or string)
+  const sampleOutput: string | undefined = Array.isArray(
     publishedFlowData?.input_samples
   )
-    ? publishedFlowData!.input_samples.flatMap((s: any) => {
-        const out = s?.sample_output;
-        if (Array.isArray(out))
-          return out.filter((t: any) => typeof t === "string");
-        if (typeof out === "string") return [out];
-        return [];
-      })
-    : [];
-  const sampleOutput: string | undefined = sampleOutputs[0];
+    ? (() => {
+        const found = publishedFlowData!.input_samples.find(
+          (s: any) => s && s.sample_output
+        );
+        return stringifyIfObject(found?.sample_output);
+      })()
+    : undefined;
 
   // Helper to open sample text modal
   const openSampleTextModal = (text: string, index: number, title?: string) => {
