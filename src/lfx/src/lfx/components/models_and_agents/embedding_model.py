@@ -19,6 +19,8 @@ from lfx.io import (
 from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
 from lfx.utils.util import transform_localhost_url
+from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
+
 
 # Ollama API constants
 HTTP_STATUS_OK = 200
@@ -188,15 +190,26 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 msg = "Project ID is required for IBM watsonx.ai provider"
                 raise ValueError(msg)
 
+            from ibm_watsonx_ai import APIClient, Credentials
+            from pydantic.v1 import SecretStr
+
+            credentials = Credentials(
+                api_key=self.api_key,
+                url=base_url_ibm_watsonx or "https://us-south.ml.cloud.ibm.com",
+            )
+
+            api_client = APIClient(credentials)
+
             params = {
-                "model_id": model,
-                "url": base_url_ibm_watsonx or "https://us-south.ml.cloud.ibm.com",
-                "apikey": api_key,
+                # Add other parameters if needed (e.g. truncation, return_options)
             }
 
-            params["project_id"] = project_id
-
-            return WatsonxEmbeddings(**params)
+            return WatsonxEmbeddings(
+                model_id=model,
+                params=params,
+                watsonx_client=api_client,
+                project_id=project_id,
+            )
 
         msg = f"Unknown provider: {provider}"
         raise ValueError(msg)
