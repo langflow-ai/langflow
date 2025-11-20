@@ -457,7 +457,7 @@ class TestHelperFunctions:
 
     def test_set_advanced_true(self):
         """Test set_advanced_true function."""
-        from lfx.components.models_and_agents.altk_agent import set_advanced_true
+        from lfx.components.altk.altk_agent import set_advanced_true
 
         # Create a mock input object
         mock_input = MagicMock()
@@ -470,7 +470,7 @@ class TestHelperFunctions:
 
     def test_get_parent_agent_inputs(self):
         """Test get_parent_agent_inputs function."""
-        from lfx.components.models_and_agents.altk_agent import get_parent_agent_inputs
+        from lfx.components.altk.altk_agent import get_parent_agent_inputs
 
         # This function filters out inputs with specific names
         result = get_parent_agent_inputs()
