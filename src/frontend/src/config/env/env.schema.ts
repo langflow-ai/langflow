@@ -49,6 +49,9 @@ export const envSchema = z.object({
   VITE_KEYCLOAK_REALM: validator.optionalString(),
   VITE_KEYCLOAK_CLIENT_ID: validator.optionalString(),
   VITE_KEYCLOAK_ENABLED: validator.boolean().default(false),
+
+  // External urls
+  VITE_PROMPTS_URL: validator.optionalUrl(),
 });
 
 /**
@@ -92,4 +95,7 @@ export interface EnvConfig {
   keycloakRealm?: string;
   keycloakClientId?: string;
   keycloakEnabled: boolean;
+
+  // External urls
+  promptsUrl?: string | null;
 }

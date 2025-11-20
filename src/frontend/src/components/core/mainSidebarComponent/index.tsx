@@ -6,18 +6,20 @@ import {
   Package,
   Store,
   Play,
-  ShoppingCart,
+  FolderCode,
   PanelLeftOpen,
   PanelLeftClose,
 } from "lucide-react";
 import { useSidebar } from "@/contexts/sidebarContext";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { envConfig } from "@/config/env";
 
 interface SidebarItem {
   id: string;
   icon: React.ComponentType<{ className?: string }>;
   path: string;
   label: string;
+  external?: boolean;
 }
 
 const sidebarItems: SidebarItem[] = [
@@ -36,6 +38,7 @@ const sidebarItems: SidebarItem[] = [
     label: "Integration",
   },
   { id: "monitor", icon: Store, path: "/store", label: "Monitor" },
+  { id: "prompt-management", icon: FolderCode, path: envConfig.promptsUrl ?? "", label: "Prompts", external: true },
 ];
 
 export default function MainSidebar(): JSX.Element {
@@ -48,6 +51,15 @@ export default function MainSidebar(): JSX.Element {
       return location.pathname === "/";
     }
     return location.pathname.startsWith(path);
+  };
+
+  const handleNavigate = (path: string, external?: boolean) => {
+    if (external) {
+      if (!path) return;
+      window.open(path, "_blank");
+    } else {
+      navigate(path);
+    }
   };
 
   return (
@@ -70,7 +82,7 @@ export default function MainSidebar(): JSX.Element {
           const buttonElement = (
             <button
               key={item.id}
-              onClick={disabled ? undefined : () => navigate(item.path)}
+              onClick={disabled ? undefined : () => handleNavigate(item.path, item?.external)}
               disabled={disabled}
               className={`
                 flex items-center rounded-md transition-all duration-200
