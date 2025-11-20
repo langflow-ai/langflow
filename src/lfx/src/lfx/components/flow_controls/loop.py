@@ -1,14 +1,18 @@
+from lfx.components.processing.converter import convert_to_data
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import HandleInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
+from lfx.schema.message import Message
 from lfx.template.field.base import Output
 
 
 class LoopComponent(Component):
     display_name = "Loop"
     description = (
-        "Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs."
+        "Iterates over a list of Data or Message objects, outputting one item at a time and "
+        "aggregating results from loop inputs. Message objects are automatically converted to "
+        "Data objects for consistent processing."
     )
     documentation: str = "https://docs.langflow.org/components-logic#loop"
     icon = "infinity"
@@ -17,13 +21,20 @@ class LoopComponent(Component):
         HandleInput(
             name="data",
             display_name="Inputs",
-            info="The initial list of Data objects or DataFrame to iterate over.",
+            info="The initial DataFrame to iterate over.",
             input_types=["DataFrame"],
         ),
     ]
 
     outputs = [
-        Output(display_name="Item", name="item", method="item_output", allows_loop=True, group_outputs=True),
+        Output(
+            display_name="Item",
+            name="item",
+            method="item_output",
+            allows_loop=True,
+            loop_types=["Message"],
+            group_outputs=True,
+        ),
         Output(display_name="Done", name="done", method="done_output", group_outputs=True),
     ]
 
@@ -45,15 +56,30 @@ class LoopComponent(Component):
             }
         )
 
+    def _convert_message_to_data(self, message: Message) -> Data:
+        """Convert a Message object to a Data object using Type Convert logic."""
+        return convert_to_data(message, auto_parse=False)
+
     def _validate_data(self, data):
-        """Validate and return a list of Data objects."""
+        """Validate and return a list of Data objects. Message objects are auto-converted to Data."""
         if isinstance(data, DataFrame):
             return data.to_data_list()
         if isinstance(data, Data):
             return [data]
-        if isinstance(data, list) and all(isinstance(item, Data) for item in data):
-            return data
-        msg = "The 'data' input must be a DataFrame, a list of Data objects, or a single Data object."
+        if isinstance(data, Message):
+            # Auto-convert Message to Data
+            converted_data = self._convert_message_to_data(data)
+            return [converted_data]
+        if isinstance(data, list) and all(isinstance(item, (Data, Message)) for item in data):
+            # Convert any Message objects in the list to Data objects
+            converted_list = []
+            for item in data:
+                if isinstance(item, Message):
+                    converted_list.append(self._convert_message_to_data(item))
+                else:
+                    converted_list.append(item)
+            return converted_list
+        msg = "The 'data' input must be a DataFrame, a list of Data/Message objects, or a single Data/Message object."
         raise TypeError(msg)
 
     def evaluate_stop_loop(self) -> bool:
@@ -116,14 +142,22 @@ class LoopComponent(Component):
         )
 
     def aggregated_output(self) -> list[Data]:
-        """Return the aggregated list once all items are processed."""
+        """Return the aggregated list once all items are processed.
+
+        Returns Data or Message objects depending on loop input types.
+        """
         self.initialize_data()
 
         # Get data list and aggregated list
         data_list = self.ctx.get(f"{self._id}_data", [])
         aggregated = self.ctx.get(f"{self._id}_aggregated", [])
         loop_input = self.item
+
+        # Append the current loop input to aggregated if it's not already included
         if loop_input is not None and not isinstance(loop_input, str) and len(aggregated) <= len(data_list):
+            # If the loop input is a Message, convert it to Data for consistency
+            if isinstance(loop_input, Message):
+                loop_input = self._convert_message_to_data(loop_input)
             aggregated.append(loop_input)
             self.update_ctx({f"{self._id}_aggregated": aggregated})
         return aggregated
