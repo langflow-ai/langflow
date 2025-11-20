@@ -8,7 +8,11 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
-The **ALTK Agent** implements components from the [Agent Lifecycle Toolkit](https://github.com/AgentToolkit/agent-lifecycle-toolkit). ALTK toolkit components can be enabled or disabled independently.
+:::tip
+The ALTK contains features called _components_. These are different from Langflow components. All components within ALTK are available through Langflow's **ALTK Agent** component.
+:::
+
+The **ALTK Agent** implements components from the [Agent Lifecycle Toolkit](https://github.com/AgentToolkit/agent-lifecycle-toolkit). ALTK features can be enabled or disabled independently.
 
 * **Pre-tool validation**: Validates tool calls before execution to check for appropriateness and correctness using the [SPARC](https://agenttoolkit.github.io/agent-lifecycle-toolkit/concepts/components/sparc/) reflection component. This validation prevents agents from executing invalid tool calls.
 
