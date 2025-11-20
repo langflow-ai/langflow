@@ -33,6 +33,7 @@ export const usePublishFlow = () => {
       queryClient.invalidateQueries({ queryKey: ["all-published-flows"] });
       queryClient.invalidateQueries({ queryKey: ["published-flow-check"] });
       queryClient.invalidateQueries({ queryKey: ["flow-versions", variables.flowId] });
+      queryClient.invalidateQueries({ queryKey: ["published-flow"] });
     },
   });
 };
