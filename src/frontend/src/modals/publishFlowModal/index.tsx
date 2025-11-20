@@ -149,7 +149,7 @@ export default function PublishFlowModal({
       // Check if flow has been published before (includes both published and unpublished)
       if (existingPublishedData?.marketplace_flow_name) {
         // Previously published: Always use current flow name
-        setMarketplaceName(flowName);
+        setMarketplaceName(currentFlow?.name || flowName);
 
         // Auto-increment version only if currently published, otherwise keep same version
         if (existingPublishedData.is_published) {
@@ -164,7 +164,7 @@ export default function PublishFlowModal({
         setTags(existingPublishedData.tags || []);
       } else {
         // Never published: Default to original flow data
-        setMarketplaceName(flowName);
+        setMarketplaceName(currentFlow?.name || flowName);
         setVersion("1.0.0");
         setDescription(currentFlow?.description || "");
         setTags([]);
@@ -172,7 +172,7 @@ export default function PublishFlowModal({
       // Reset logo removal flag when modal opens
       setLogoRemoved(false);
     }
-  }, [open, existingPublishedData, flowName, currentFlow?.description]);
+  }, [open, existingPublishedData, flowName, currentFlow?.name, currentFlow?.description]);
 
   // Run validation when modal opens
   useEffect(() => {

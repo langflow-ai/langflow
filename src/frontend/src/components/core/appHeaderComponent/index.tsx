@@ -23,8 +23,8 @@ import { useDarkStore } from "@/stores/darkStore";
 import { useGetAppConfig } from "@/controllers/API/queries/application-config";
 import { useGetPublishedFlow, useCheckFlowPublished } from "@/controllers/API/queries/published-flows";
 import { useGetAgentByFlowId } from "@/controllers/API/queries/agent-marketplace/use-get-agent-by-flow-id";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { AppLogoDisplay } from "@/components/AppLogoDisplay";
+import useFlowStore from "@/stores/flowStore";
 // import AutonomizeIcon from "@/icons/Autonomize";
 
 export default function AppHeader(): JSX.Element {
@@ -39,7 +39,7 @@ export default function AppHeader(): JSX.Element {
   const setLogoUrl = useLogoStore((state) => state.setLogoUrl);
   useTheme();
   const location = useLocation();
-  const currentFlowName = useFlowsManagerStore((state) => state.currentFlow?.name);
+  const currentFlowName = useFlowStore((state) => state.currentFlow?.name);
 
   // Path parsing for route-aware data fetching
   const pathname = location.pathname || "";
