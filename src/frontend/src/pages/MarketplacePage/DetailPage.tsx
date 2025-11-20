@@ -17,6 +17,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useDarkStore } from "@/stores/darkStore";
 import FlowPage from "../FlowPage";
 import PlaygroundTab from "./components/PlaygroundTab";
+import { FilesIcon } from "lucide-react";
 
 export default function MarketplaceDetailPage() {
   const { publishedFlowId } = useParams<{ publishedFlowId: string }>();
@@ -131,7 +132,11 @@ export default function MarketplaceDetailPage() {
     >
       <div className="flex w-full flex-col gap-4 dark:text-white">
         <div className="flex flex-col h-full">
-          <Tabs value={activeTab} className="w-full h-full" onValueChange={(val) => setActiveTab(val)}>
+          <Tabs
+            value={activeTab}
+            className="w-full h-full"
+            onValueChange={(val) => setActiveTab(val)}
+          >
             <div className="flex items-center justify-between mt-1 relative">
               <TabsList className="justify-start gap-2 border-b border-border dark:border-white/20 p-0">
                 <TabsTrigger
@@ -169,9 +174,10 @@ export default function MarketplaceDetailPage() {
               {/* Edit Button - only show if flow_cloned_from exists AND on Flow Visualization tab */}
               {publishedFlowData?.flow_cloned_from && activeTab === "flow" && (
                 <Button
+                  variant="outline"
                   onClick={handleEditClick}
                   size="sm"
-                  className="shrink-0 absolute right-0 -top-1"
+                  className="shrink-0 absolute right-3 top-[64px] bg-white !text-[#731FE3] !gap-1 z-[9]"
                 >
                   <ForwardedIconComponent
                     name="Pencil"
@@ -226,8 +232,9 @@ export default function MarketplaceDetailPage() {
                         }
                       }}
                       disabled={isLoadingSpec}
-                      className="dark:border-white/20 dark:text-white text-xs !px-2 !py-1"
+                      className="text-xs !px-2 !py-1 !text-[#731FE3]"
                     >
+                      <FilesIcon />
                       Copy YAML
                     </Button>
                   </div>

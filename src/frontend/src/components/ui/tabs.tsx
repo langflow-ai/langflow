@@ -14,7 +14,7 @@ const TabsList = React.forwardRef<
     ref={ref}
     className={cn(
       "inline-flex h-10 w-full items-center rounded-none text-muted-foreground focus-visible:border-none",
-      className,
+      className
     )}
     {...props}
   />
@@ -28,8 +28,8 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex h-full items-center justify-center whitespace-nowrap px-3 py-1.5 text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-b-2 data-[state=active]:border-current data-[state=active]:text-primary data-[state=inactive]:hover:text-primary",
-      className,
+      "inline-flex h-full items-center justify-center whitespace-nowrap pt-1.5 pb-0 text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-b-2 data-[state=active]:border-current data-[state=active]:text-primary data-[state=inactive]:hover:text-primary",
+      className
     )}
     {...props}
   />
@@ -45,7 +45,7 @@ const TabsContent = React.forwardRef<
     className={cn(
       // Hide inactive tab panels to prevent extra scroll and content bleed
       "mt-2 ring-offset-background data-[state=inactive]:hidden",
-      className,
+      className
     )}
     {...props}
   />

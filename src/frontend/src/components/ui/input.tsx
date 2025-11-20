@@ -12,13 +12,13 @@ export interface InputProps
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   (
     { className, inputClassName, icon = "", type, placeholder, ...props },
-    ref,
+    ref
   ) => {
     return (
       <label
         className={cn(
           "relative block h-fit w-full text-sm",
-          icon ? className : "",
+          icon ? className : ""
         )}
       >
         {icon && (
@@ -32,9 +32,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           type={type}
           placeholder={placeholder}
           className={cn(
-            "nopan nodelete nodrag noflow primary-input !placeholder-transparent focus:outline-none hover:outline-none hover:border-[#e4e4e7]",
+            "nopan nodelete nodrag noflow text-[#444] primary-input !placeholder-transparent focus:outline-none hover:outline-none hover:border-[#e4e4e7] focus:border-[#731FE3]",
             icon && "pl-9",
-            icon ? inputClassName : className,
+            icon ? inputClassName : className
           )}
           ref={ref}
           {...props}
@@ -43,14 +43,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           className={cn(
             "pointer-events-none absolute top-1/2 -translate-y-1/2 pl-px text-placeholder-foreground",
             icon ? "left-9" : "left-3",
-            props.value && "hidden",
+            props.value && "hidden"
           )}
         >
           {placeholder}
         </span>
       </label>
     );
-  },
+  }
 );
 Input.displayName = "Input";
 

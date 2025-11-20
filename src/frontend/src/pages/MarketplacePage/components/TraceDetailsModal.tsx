@@ -8,6 +8,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getTraces } from "@/controllers/API/queries/observability";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface TraceDetailsModalProps {
   open: boolean;
@@ -254,24 +260,57 @@ function TraceDetailsView({
     <div className="space-y-3">
       {/* Tabs align with Inputs/Outputs and Attributes like in test.tx */}
       <Tabs defaultValue="io" className="w-full">
-        <TabsList className="mb-2 border-b">
+        <TabsList className="mb-2 border-b gap-8">
           <TabsTrigger value="io">Inputs / Outputs</TabsTrigger>
           <TabsTrigger value="attr">Attributes</TabsTrigger>
         </TabsList>
         {/* Tab content uses the parent right-pane scroll; no inner scroll here */}
-        <TabsContent value="io" className="space-y-3">
-          <div>
-            <div className="text-xs font-semibold mb-1">Inputs</div>
-            {renderSection(inputs)}
-          </div>
-          <div>
-            <div className="text-xs font-semibold mb-1">Outputs</div>
-            {renderSection(outputs)}
-          </div>
+        <TabsContent
+          value="io"
+          className="space-y-3 overflow-y-auto max-h-[calc(100vh-390px)]"
+        >
+          <Accordion
+            type="multiple"
+            className="w-full space-y-3"
+            defaultValue={["inputs"]}
+          >
+            {/* Inputs */}
+            <AccordionItem
+              value="inputs"
+              className="border border-[#efefef] rounded bg-white"
+            >
+              <AccordionTrigger className="px-3 py-2 text-sm font-semibold text-[#64616A] hover:no-underline">
+                Inputs
+              </AccordionTrigger>
+              <AccordionContent className="px-3 pb-3 pt-0">
+                {renderSection(inputs)}
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Outputs */}
+            <AccordionItem
+              value="outputs"
+              className="border border-[#efefef] rounded bg-white"
+            >
+              <AccordionTrigger className="px-3 py-2 text-sm font-semibold text-[#64616A] hover:no-underline">
+                Outputs
+              </AccordionTrigger>
+              <AccordionContent className="px-3 pb-3 pt-0">
+                {renderSection(outputs)}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </TabsContent>
-        <TabsContent value="attr">
-          <div className="text-xs font-semibold mb-1">Attributes</div>
-          {renderSection(attributes)}
+        <TabsContent
+          value="attr"
+          className="space-y-3 overflow-y-auto max-h-[calc(100vh-390px)]"
+        >
+          <div className="border border-[#efefef] rounded bg-white px-3 py-2">
+            <div className=" text-sm font-semibold text-[#64616A] mb-2">
+              Attributes
+            </div>
+            {renderSection(attributes)}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
@@ -407,7 +446,11 @@ function recursiveJsonParse(data: any): any {
 }
 function renderSection(obj: any) {
   if (!obj || typeof obj !== "object" || Object.keys(obj).length === 0) {
-    return <div className="text-xs text-muted-foreground">No data</div>;
+    return (
+      <div className="p-2">
+        <p className="text-xs text-[#64616A] opacity-60">No data</p>
+      </div>
+    );
   }
   return (
     <div className="space-y-2">
@@ -418,9 +461,12 @@ function renderSection(obj: any) {
             ? formatted
             : JSON.stringify(formatted, null, 2);
         return (
-          <div key={k} className="border rounded p-2">
-            <div className="text-xs font-medium mb-1">{k}</div>
-            <pre className="text-[11px] whitespace-pre-wrap overflow-x-auto">
+          <div
+            key={k}
+            className="border border-[#E7ECF4] bg-[#FBFAFF] rounded p-2"
+          >
+            <div className="text-sm font-medium mb-2 text-[#444444]">{k}</div>
+            <pre className="text-sm whitespace-pre-wrap font-sans overflow-x-auto !font-regular !text-[#64616A] !bg-transparent">
               {String(display)}
             </pre>
           </div>
