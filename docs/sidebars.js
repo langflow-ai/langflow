@@ -295,8 +295,6 @@ module.exports = {
                 "Components/mock-data",
                 "Components/url",
                 "Components/web-search",
-                "Components/news-search",
-                "Components/rss-reader",
               ]
             },
             {
