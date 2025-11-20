@@ -142,19 +142,14 @@ export function AgentDetailsPanel({
         )}
 
         {/* Sample Output Section (only one, shown only when provided) */}
-        {sampleOutput && (
-          <div className="space-y-2">
-            <p className="text-[#444] text-xs font-medium">Sample Output:</p>
-            <button
-              type="button"
-              className="bg-[#F5F2FF] text-[#64616A] text-xs px-3 py-2 rounded-[4px] hover:bg-[#EAE6FF] transition-colors text-left break-words"
-              onClick={() => onOpenSampleOutput?.(sampleOutput)}
-              title="Click to view full output"
-            >
-              {truncateText(sampleOutput, 80)}
-            </button>
+        {/* {sampleOutput && (
+          <div className="p-3 border border-[#EFEFEF] rounded-md space-y-2">
+            <p className="text-[#444] text-xs font-medium">Response (Sample Output)</p>
+            <div className="bg-[#F5F2FF] text-[#64616A] text-xs p-3 rounded-[4px] border border-[#EFEFEF] max-h-[220px] overflow-auto font-mono whitespace-pre-wrap">
+              {sampleOutput}
+            </div>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );

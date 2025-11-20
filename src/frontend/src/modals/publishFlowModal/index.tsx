@@ -35,7 +35,6 @@ import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { ALLOWED_IMAGE_INPUT_EXTENSIONS } from "@/constants/constants";
 import { AgentLogo } from "@/components/AgentLogo";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { cn } from "@/utils/utils";
 
 interface PublishFlowModalProps {
   open: boolean;
@@ -77,6 +76,7 @@ export default function PublishFlowModal({
   const [uploadedSampleFiles, setUploadedSampleFiles] = useState<{ name: string; path: string }[]>([]);
   const sampleFilesInputRef = useRef<HTMLInputElement>(null);
   const [sampleTexts, setSampleTexts] = useState<string[]>([""]); // show one placeholder by default
+  // Removed Sample Output state: modal no longer manages sample output here
 
   const { mutate: publishFlow, isPending } = usePublishFlow();
   // Ensure `publishedFlowId` is `string | undefined` (coerce possible `null` to `undefined`)
@@ -111,6 +111,8 @@ export default function PublishFlowModal({
       ),
     [existingSampleRecords]
   );
+
+  // Sample Output removed: no prefill or tracking here
 
   // Detect presence of inputs in the current flow to conditionally render sections
   const hasTextOrChatInput = useMemo(() => {
@@ -393,6 +395,8 @@ export default function PublishFlowModal({
     // Validation passed - clear any previous errors and proceed with publish
     setValidationErrors([]);
 
+    // Sample Output removed: no parsing or patching on publish
+
     // Upload logo if a new one was selected
     let finalLogoUrl = logoRemoved ? null : (logoUrl || existingPublishedData?.flow_icon || null);
     if (logoFile && !logoUrl && !logoRemoved) {
@@ -420,6 +424,7 @@ export default function PublishFlowModal({
           container_name: DEFAULT_CONTAINER_NAME,
           file_names: uploadedSampleFiles.length ? uploadedSampleFiles.map((f) => f.path) : undefined,
           sample_text: sampleTexts.filter((t) => t.trim().length > 0),
+          // sample_output removed from publish payload
         },
       },
       {
@@ -783,6 +788,7 @@ export default function PublishFlowModal({
                   )}
                 </div>
               )}
+
             </div>
           )}
 
