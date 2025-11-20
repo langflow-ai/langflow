@@ -16,6 +16,7 @@ from lfx.base.models.google_generative_ai_constants import (
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODELS_DETAILED, OPENAI_MODELS_DETAILED
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
+from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 
@@ -996,13 +997,13 @@ def update_model_options_in_build_config(
                                     return parsed_value.get("model_name"), parsed_value.get("provider")
                         except (ValueError, json.JSONDecodeError, TypeError):
                             # Variable not found or invalid format
-                            pass
+                            logger.info("Variable not found or invalid format", exc_info=True)
                         return None, None
 
                 default_model_name, default_model_provider = run_until_complete(_get_default_model())
             except Exception:  # noqa: BLE001
                 # If we can't get default model, continue without it
-                pass
+                logger.info("Failed to get default model, continue without it", exc_info=True)
 
             # Find the default model in options
             default_model = None
