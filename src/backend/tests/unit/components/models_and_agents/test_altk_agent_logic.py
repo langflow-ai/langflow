@@ -18,7 +18,7 @@ from lfx.base.agents.altk_tool_wrappers import (
     PostToolProcessingWrapper,
     PreToolValidationWrapper,
 )
-from lfx.components.models_and_agents.altk_agent import ALTKAgentComponent
+from lfx.components.altk.altk_agent import ALTKAgentComponent
 from lfx.log.logger import logger
 from lfx.schema.message import Message
 
