@@ -91,7 +91,7 @@ def _read_component_index(custom_path: str | None = None) -> dict | None:
             if custom_path.startswith(("http://", "https://")):
                 # Block remote component indices unless explicitly allowed
                 if os.getenv("LANGFLOW_ALLOW_REMOTE_COMPONENT_INDEX", "false").lower() != "true":
-                    logger.error(
+                    logger.warning(
                         "Remote component indices are disabled for security. "
                         "Set LANGFLOW_ALLOW_REMOTE_COMPONENT_INDEX=true to allow."
                     )
