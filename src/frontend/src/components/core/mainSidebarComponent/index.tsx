@@ -38,7 +38,7 @@ const sidebarItems: SidebarItem[] = [
     label: "Integration",
   },
   { id: "monitor", icon: Store, path: "/store", label: "Monitor" },
-  { id: "prompt-management", icon: FolderCode, path: envConfig.promptsUrl ?? "", label: "Prompts", external: true },
+  { id: "prompt-management", icon: FolderCode, path: envConfig.promptsUrl ?? "prompt-management", label: "Prompts", external: true },
 ];
 
 export default function MainSidebar(): JSX.Element {
