@@ -10,32 +10,6 @@ agentOwner: insurance-verification@autonomize.ai
 agentOwnerDisplayName: Insurance Verification Team
 email: insurance-verification@autonomize.ai
 status: ACTIVE
-variables:
-- name: llm_provider
-  type: string
-  required: false
-  default: Azure OpenAI
-  description: LLM provider (AzureOpenAI, OpenAI, Anthropic, etc.)
-- name: model_name
-  type: string
-  required: false
-  default: gpt-4
-  description: Model name to use for verification
-- name: temperature
-  type: number
-  required: false
-  default: 0.1
-  description: Temperature for model generation
-- name: verification_timeout
-  type: number
-  required: false
-  default: 30
-  description: Timeout for eligibility verification in seconds
-- name: include_cost_details
-  type: boolean
-  required: false
-  default: true
-  description: Include detailed cost share calculations
 tags:
 - UM
 - eligibility
