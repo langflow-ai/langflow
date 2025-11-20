@@ -23,6 +23,7 @@ import {
   usePostUploadPresignedUrl,
   useUploadToBlob,
 } from "@/controllers/API/queries/flexstore";
+import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -86,10 +87,13 @@ export default function PublishFlowModal({
   const { mutate: deleteInputSampleText } = useDeleteInputSampleText(publishedFlowId);
   const { mutateAsync: getUploadUrl } = usePostUploadPresignedUrl();
   const { mutateAsync: uploadToBlob } = useUploadToBlob();
+  const { mutateAsync: getFlow } = useGetFlow();
   const { validateFileSize } = useFileSizeValidator();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
+  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
+  const setCurrentFlowInFlowStore = useFlowStore((state) => state.setCurrentFlow);
 
   // Fetch existing published flow details (including input samples) if available
   const { data: publishedFlowData } = useGetPublishedFlow(publishedFlowId);
@@ -135,6 +139,7 @@ export default function PublishFlowModal({
   } = useValidateMarketplaceName({
     marketplaceName: debouncedMarketplaceName,
     excludeFlowId: flowId, // Exclude current flow when re-publishing
+    folderId: currentFlow?.folder_id, // Include folder_id for folder-scoped validation
     enabled: open && debouncedMarketplaceName.trim().length > 0,
   });
 
@@ -155,19 +160,19 @@ export default function PublishFlowModal({
           setVersion(existingPublishedData.version || "1.0.0");
         }
 
-        setDescription(existingPublishedData.description || "");
+        setDescription(currentFlow?.description || "");
         setTags(existingPublishedData.tags || []);
       } else {
         // Never published: Default to original flow data
         setMarketplaceName(flowName);
         setVersion("1.0.0");
-        setDescription("");
+        setDescription(currentFlow?.description || "");
         setTags([]);
       }
       // Reset logo removal flag when modal opens
       setLogoRemoved(false);
     }
-  }, [open, existingPublishedData, flowName]);
+  }, [open, existingPublishedData, flowName, currentFlow?.description]);
 
   // Run validation when modal opens
   useEffect(() => {
@@ -428,10 +433,23 @@ export default function PublishFlowModal({
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
           setSuccessData({
             title: "Flow published successfully!",
           });
+
+          // Refetch the updated flow to get the new marketplace name
+          try {
+            const updatedFlow = await getFlow({ id: flowId });
+            if (updatedFlow) {
+              setCurrentFlow(updatedFlow);  // Update flowsManagerStore
+              setCurrentFlowInFlowStore(updatedFlow);  // Update flowStore
+            }
+          } catch (error) {
+            console.error("Failed to refetch flow after publish:", error);
+            // Don't show error to user - publish succeeded, this is just a UI update
+          }
+
           setOpen(false);
           // Reset form
           setMarketplaceName("");

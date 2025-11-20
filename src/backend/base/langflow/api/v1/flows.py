@@ -261,15 +261,23 @@ async def _new_flow(
         if flow.user_id is None:
             flow.user_id = user_id
 
-        # First check if the flow.name is unique
+        # First check if the flow.name is unique within the folder
         # there might be flows with name like: "MyFlow", "MyFlow (1)", "MyFlow (2)"
         # so we need to check if the name is unique with `like` operator
-        # if we find a flow with the same name, we add a number to the end of the name
+        # if we find a flow with the same name in the same folder, we add a number to the end of the name
         # based on the highest number found
-        if (await session.exec(select(Flow).where(Flow.name == flow.name).where(Flow.user_id == user_id))).first():
+        if (await session.exec(
+            select(Flow)
+            .where(Flow.name == flow.name)
+            .where(Flow.user_id == user_id)
+            .where(Flow.folder_id == flow.folder_id)
+        )).first():
             flows = (
                 await session.exec(
-                    select(Flow).where(Flow.name.like(f"{flow.name} (%")).where(Flow.user_id == user_id)  # type: ignore[attr-defined]
+                    select(Flow)
+                    .where(Flow.name.like(f"{flow.name} (%)"))  # type: ignore[attr-defined]
+                    .where(Flow.user_id == user_id)
+                    .where(Flow.folder_id == flow.folder_id)
                 )
             ).all()
             if flows:
@@ -293,12 +301,15 @@ async def _new_flow(
                     flow.name = f"{flow.name} (1)"
             else:
                 flow.name = f"{flow.name} (1)"
-        # Now check if the endpoint is unique
+        # Now check if the endpoint is unique within the folder
         if (
             flow.endpoint_name
             and (
                 await session.exec(
-                    select(Flow).where(Flow.endpoint_name == flow.endpoint_name).where(Flow.user_id == user_id)
+                    select(Flow)
+                    .where(Flow.endpoint_name == flow.endpoint_name)
+                    .where(Flow.user_id == user_id)
+                    .where(Flow.folder_id == flow.folder_id)
                 )
             ).first()
         ):
@@ -307,6 +318,7 @@ async def _new_flow(
                     select(Flow)
                     .where(Flow.endpoint_name.like(f"{flow.endpoint_name}-%"))  # type: ignore[union-attr]
                     .where(Flow.user_id == user_id)
+                    .where(Flow.folder_id == flow.folder_id)
                 )
             ).all()
             if flows:
@@ -372,13 +384,13 @@ async def create_flow(
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
             columns = str(e).split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
-            # UNIQUE constraint failed: flow.user_id, flow.name
+            # UNIQUE constraint failed: flow.user_id, flow.folder_id, flow.name
             # or UNIQUE constraint failed: flow.name
-            # if the column has id in it, we want the other column
-            column = columns.split(",")[1] if "id" in columns.split(",")[0] else columns.split(",")[0]
+            # Extract the last column (the actual field that needs to be unique)
+            column = columns.split(",")[-1].strip()
 
             raise HTTPException(
-                status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
+                status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique within this folder"
             ) from e
         if isinstance(e, HTTPException):
             raise
@@ -570,6 +582,54 @@ async def update_flow(
         if settings_service.settings.remove_api_keys:
             update_data = remove_api_keys(update_data)
 
+        # Check if folder is being changed and validate name uniqueness in the target folder
+        if "folder_id" in update_data and update_data["folder_id"] != db_flow.folder_id:
+            target_folder_id = update_data["folder_id"]
+            flow_name = update_data.get("name", db_flow.name)
+
+            # Check if a flow with the same name exists in the target folder
+            existing_flow = (await session.exec(
+                select(Flow)
+                .where(Flow.name == flow_name)
+                .where(Flow.user_id == current_user.id)
+                .where(Flow.folder_id == target_folder_id)
+                .where(Flow.id != flow_id)  # Exclude current flow
+            )).first()
+
+            if existing_flow:
+                # Auto-rename the flow being moved
+                new_name = await _get_unique_flow_name(
+                    session, flow_name, current_user.id, target_folder_id
+                )
+                update_data["name"] = new_name
+
+            # Check endpoint_name uniqueness in target folder if endpoint_name exists
+            if db_flow.endpoint_name:
+                endpoint_name = update_data.get("endpoint_name", db_flow.endpoint_name)
+                existing_endpoint = (await session.exec(
+                    select(Flow)
+                    .where(Flow.endpoint_name == endpoint_name)
+                    .where(Flow.user_id == current_user.id)
+                    .where(Flow.folder_id == target_folder_id)
+                    .where(Flow.id != flow_id)  # Exclude current flow
+                )).first()
+
+                if existing_endpoint:
+                    # Auto-rename the endpoint
+                    flows = (
+                        await session.exec(
+                            select(Flow)
+                            .where(Flow.endpoint_name.like(f"{endpoint_name}-%"))  # type: ignore[union-attr]
+                            .where(Flow.user_id == current_user.id)
+                            .where(Flow.folder_id == target_folder_id)
+                        )
+                    ).all()
+                    if flows:
+                        numbers = [int(f.endpoint_name.split("-")[-1]) for f in flows if f.endpoint_name]
+                        update_data["endpoint_name"] = f"{endpoint_name}-{max(numbers) + 1}"
+                    else:
+                        update_data["endpoint_name"] = f"{endpoint_name}-1"
+
         for key, value in update_data.items():
             setattr(db_flow, key, value)
 
@@ -594,12 +654,12 @@ async def update_flow(
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
             columns = str(e).split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
-            # UNIQUE constraint failed: flow.user_id, flow.name
+            # UNIQUE constraint failed: flow.user_id, flow.folder_id, flow.name
             # or UNIQUE constraint failed: flow.name
-            # if the column has id in it, we want the other column
-            column = columns.split(",")[1] if "id" in columns.split(",")[0] else columns.split(",")[0]
+            # Extract the last column (the actual field that needs to be unique)
+            column = columns.split(",")[-1].strip()
             raise HTTPException(
-                status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
+                status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique within this folder"
             ) from e
 
         if hasattr(e, "status_code"):

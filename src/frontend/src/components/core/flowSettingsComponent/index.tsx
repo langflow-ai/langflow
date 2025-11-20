@@ -31,9 +31,14 @@ const updateFlowWithFormValues = (
 const buildInvalidNameList = (
   allFlows: FlowType[] | undefined,
   currentFlowName: string | undefined,
+  currentFolderId: string | undefined,
 ): string[] => {
   if (!allFlows) return [];
-  const names = allFlows.map((f) => f?.name ?? "");
+  // Filter flows to only those in the same folder
+  const flowsInSameFolder = allFlows.filter(
+    (f) => f?.folder_id === currentFolderId,
+  );
+  const names = flowsInSameFolder.map((f) => f?.name ?? "");
   return names.filter((n) => n !== (currentFlowName ?? ""));
 };
 
@@ -109,8 +114,8 @@ const FlowSettingsComponent = ({
   const [nameLists, setNameList] = useState<string[]>([]);
 
   useEffect(() => {
-    setNameList(buildInvalidNameList(flows, flow?.name));
-  }, [flows]);
+    setNameList(buildInvalidNameList(flows, flow?.name, flow?.folder_id));
+  }, [flows, flow?.folder_id]);
 
   useEffect(() => {
     setDisableSave(isSaveDisabled(flow, nameLists, name, description, locked));

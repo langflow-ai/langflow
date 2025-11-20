@@ -125,7 +125,7 @@ async def publish_flow(
 
     Naming convention:
     - Original flow: "{marketplace_name}"
-    - Cloned flow: "{marketplace_name}-Published-{version}"
+    - Cloned flow: "{marketplace_name}-Published-{version}-folder-{folder_id}"
     - Published table: "{marketplace_name}" (base name only)
     """
     try:
@@ -189,12 +189,13 @@ async def publish_flow(
                 )
 
             # Step 2: Clone flow with new version (create new cloned flow for this version)
+            folder_id_str = str(original_flow.folder_id)
             new_cloned_flow = await clone_flow_for_marketplace(
                 session=session,
                 original_flow=original_flow,
                 target_folder_id=target_folder_id,
                 user_id=current_user.id,
-                marketplace_flow_name=f"{marketplace_name}-Published-{payload.version}",  # Include version in name
+                marketplace_flow_name=f"{marketplace_name}-Published-{payload.version}-folder-{folder_id_str}",  # Include version and folder_id in name
                 tags=payload.tags,
                 description=payload.description,
             )
@@ -202,6 +203,7 @@ async def publish_flow(
             # Step 3: Update original flow name (keep consistent naming)
             original_flow.name = marketplace_name
             original_flow.tags = payload.tags
+            original_flow.description = payload.description or original_flow.description
 
             # Step 4: Deactivate all previous versions for this published_flow
             await session.exec(
@@ -293,12 +295,13 @@ async def publish_flow(
             return result_data
 
         # NEW PUBLISH: Clone flow and create published_flow record with first version
+        folder_id_str = str(original_flow.folder_id)
         cloned_flow = await clone_flow_for_marketplace(
             session=session,
             original_flow=original_flow,
             target_folder_id=target_folder_id,
             user_id=current_user.id,
-            marketplace_flow_name=f"{marketplace_name}-Published-{payload.version}",  # Include version in name
+            marketplace_flow_name=f"{marketplace_name}-Published-{payload.version}-folder-{folder_id_str}",  # Include version and folder_id in name
             tags=payload.tags,
             description=payload.description,
         )
@@ -306,6 +309,7 @@ async def publish_flow(
         # Update original flow name to marketplace name
         original_flow.name = marketplace_name
         original_flow.tags = payload.tags
+        original_flow.description = payload.description or original_flow.description
 
         # Create published_flow record
         published_flow = PublishedFlow(
@@ -681,11 +685,15 @@ async def validate_marketplace_name(
 ):
     """
     Validate if a marketplace flow name already exists.
-    Checks both published_flow table (marketplace) and flow table (all flows).
+    Checks both published_flow table (marketplace globally) and flow table (within folder).
     Returns whether the name is available for use.
+
+    Check 1: Global marketplace name uniqueness in published_flow table
+    Check 2: Folder-scoped flow name uniqueness in flow table
     """
     marketplace_name = payload.get("marketplace_flow_name", "").strip()
     exclude_flow_id = payload.get("exclude_flow_id")  # Flow ID to exclude (for re-publishing)
+    folder_id = payload.get("folder_id")  # Folder ID for folder-scoped validation
 
     if not marketplace_name:
         return {"exists": False, "available": True}
@@ -714,26 +722,34 @@ async def validate_marketplace_name(
             "message": f"A flow with the name '{marketplace_name}' already exists in the marketplace",
         }
 
-    # Step 2: Check if name exists in flow table (all flows)
-    flow_query = select(Flow).where(Flow.name == marketplace_name)
-
-    # Exclude the current flow
-    if exclude_flow_id:
+    # Step 2: Check if name exists in flow table within the same folder
+    if folder_id:
         try:
-            exclude_uuid = UUID(exclude_flow_id)
-            flow_query = flow_query.where(Flow.id != exclude_uuid)
+            folder_uuid = UUID(folder_id)
+            flow_query = select(Flow).where(
+                Flow.name == marketplace_name,
+                Flow.folder_id == folder_uuid,  # Folder-scoped check
+            )
+
+            # Exclude the current flow
+            if exclude_flow_id:
+                try:
+                    exclude_uuid = UUID(exclude_flow_id)
+                    flow_query = flow_query.where(Flow.id != exclude_uuid)
+                except (ValueError, TypeError):
+                    pass  # Invalid UUID, ignore
+
+            flow_result = await session.exec(flow_query)
+            flow_exists = flow_result.first()
+
+            if flow_exists:
+                return {
+                    "exists": True,
+                    "available": False,
+                    "message": f"A flow with the name '{marketplace_name}' already exists in the folder",
+                }
         except (ValueError, TypeError):
-            pass  # Invalid UUID, ignore
-
-    flow_result = await session.exec(flow_query)
-    flow_exists = flow_result.first()
-
-    if flow_exists:
-        return {
-            "exists": True,
-            "available": False,
-            "message": f"A flow with the name '{marketplace_name}' already exists. Please choose a different name.",
-        }
+            pass  # Invalid folder_id UUID, skip folder check
 
     return {"exists": False, "available": True}
 

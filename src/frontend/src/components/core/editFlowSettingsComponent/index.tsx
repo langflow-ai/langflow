@@ -103,7 +103,9 @@ export const EditFlowSettings: React.FC<
             </span>
           )}
           {isInvalidName && (
-            <span className="edit-flow-span">Flow name already exists</span>
+            <span className="edit-flow-span">
+              Flow name already exists in this folder
+            </span>
           )}
         </div>
         {setName ? (
@@ -137,7 +139,7 @@ export const EditFlowSettings: React.FC<
           match={(value) => !!(value && invalidNameList.includes(value))}
           className="field-invalid"
         >
-          Flow name already exists
+          Flow name already exists in this folder
         </Form.Message>
       </Form.Field>
       <Form.Field name="description">

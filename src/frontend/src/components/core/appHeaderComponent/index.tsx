@@ -191,7 +191,7 @@ export default function AppHeader(): JSX.Element {
         // Show AI Studio and the current flow name (if available)
         items.push({ label: "AI Studio", href: "/agent-builder" });
         // If flow is published, show marketplace name. Otherwise, show actual flow name.
-        const displayName = currentFlowPublishedData?.marketplace_flow_name || currentFlowName || detailLabel;
+        const displayName = currentFlowName || detailLabel;
         items.push({ label: displayName });
         break;
       }
