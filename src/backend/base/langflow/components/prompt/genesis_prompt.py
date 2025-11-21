@@ -20,19 +20,20 @@ class GenesisPromptComponent(Component):
 
     inputs = [
         DropdownInput(
+            name="saved_prompt",
+            display_name="Choose from Templates",
+            info="Select a Template by prompt_id",
+            refresh_button=True,
+            real_time_refresh=True,
+        ),
+        DropdownInput(
             name="message_type",
             display_name="Message Type",
             info="Select the message type",
             options=["system", "user"],
             value="system",
             real_time_refresh=True,
-        ),
-        DropdownInput(
-            name="saved_prompt",
-            display_name="Choose from Templates",
-            info="Select a Template by prompt_id",
-            refresh_button=True,
-            real_time_refresh=True,
+            advanced=True,  # Hidden initially
         ),
         MultilineInput(
             name="template",
@@ -160,6 +161,9 @@ class GenesisPromptComponent(Component):
                     selected = next((v for v in versions if v.get("prompt_id") == field_value), None)
                     self._selected_version_data = selected
 
+                    # Reveal message_type
+                    build_config["message_type"]["advanced"] = False
+
                     msg_type = getattr(self, "message_type", "system")
                     content = self._get_message_by_role(msg_type)
 
@@ -170,6 +174,9 @@ class GenesisPromptComponent(Component):
                 else:
                     self._selected_prompt_id = None
                     self._selected_version_data = None
+                    
+                    # Hide message_type
+                    build_config["message_type"]["advanced"] = True
                     build_config["template"]["value"] = ""
                     self._current_variables = []
 
