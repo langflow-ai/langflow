@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import difflib
+import sys
 from functools import partial
 from typing import Any
 
@@ -12,14 +13,25 @@ import typer
 from aiofile import async_open
 from asyncer import syncify
 from rich.console import Console
-from rich.prompt import Prompt
 
 from lfx.interface.components import get_and_cache_all_types_dict
 from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
 
-# Initialize console
+# Initialize console (default to stdout)
 console = Console()
+
+
+def get_interactive_console(output: str | None = None) -> Console:
+    """Get console for interactive prompts.
+
+    When output is stdout ("-"), use stderr for prompts to avoid mixing with JSON output.
+    Otherwise, use the default stdout console.
+    """
+    if output == "-":
+        return Console(file=sys.stderr)
+    return console
+
 
 # ORJSON options for pretty formatting
 ORJSON_OPTIONS = orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS
@@ -530,9 +542,10 @@ async def handle_updates(
     breaking_updates = [comp for comp in outdated_components if comp["breaking_change"]]
 
     # Check if output/in_place is required before starting interactive prompts
-    if not auto_update and (safe_updates or breaking_updates) and output is None and not in_place:
+    # Note: output can be "-" for stdout, which is valid
+    if not auto_update and (safe_updates or breaking_updates) and output != "-" and output is None and not in_place:
         return {
-            "error": "When applying updates, you must specify either --output <file> or --in-place",
+            "error": "When applying updates, you must specify either --output <file>, --output -, or --in-place",
             "flow_path": flow_path,
             "applied_updates": 0,
         }
@@ -552,13 +565,14 @@ async def handle_updates(
                 applied_updates += 1
     else:
         # Interactive mode - prompt for each component individually
+        # Pass output parameter so prompts can use stderr when output is stdout
         for component in safe_updates:
-            if prompt_for_component_update(component, "safe"):
+            if prompt_for_component_update(component, "safe", output=output):
                 await apply_component_update(flow_data, component, all_types_dict)
                 applied_updates += 1
 
         for component in breaking_updates:
-            if prompt_for_component_update(component, "breaking"):
+            if prompt_for_component_update(component, "breaking", output=output):
                 await apply_component_update(flow_data, component, all_types_dict)
                 applied_updates += 1
 
@@ -567,22 +581,45 @@ async def handle_updates(
     if applied_updates > 0:
         # Determine output path: --output takes precedence, then --in-place, otherwise error
         if output is not None:
-            output_path = output
+            if output == "-":
+                # Write to stdout
+                output_path = "-"
+                try:
+                    # Write JSON to stdout
+                    sys.stdout.write(orjson.dumps(flow_data, option=ORJSON_OPTIONS).decode())
+                    sys.stdout.write("\n")
+                    sys.stdout.flush()
+                except OSError as e:
+                    return {
+                        "error": f"Failed to write to stdout: {e}",
+                        "flow_path": flow_path,
+                        "applied_updates": applied_updates,
+                    }
+            else:
+                output_path = output
+                try:
+                    async with async_open(output_path, "w") as f:
+                        await f.write(orjson.dumps(flow_data, option=ORJSON_OPTIONS).decode())
+                except OSError as e:
+                    return {
+                        "error": f"Failed to save updated flow: {e}",
+                        "flow_path": flow_path,
+                        "applied_updates": applied_updates,
+                    }
         elif in_place:
             output_path = flow_path
+            try:
+                async with async_open(output_path, "w") as f:
+                    await f.write(orjson.dumps(flow_data, option=ORJSON_OPTIONS).decode())
+            except OSError as e:
+                return {
+                    "error": f"Failed to save updated flow: {e}",
+                    "flow_path": flow_path,
+                    "applied_updates": applied_updates,
+                }
         else:
             return {
-                "error": "When applying updates, you must specify either --output <file> or --in-place",
-                "flow_path": flow_path,
-                "applied_updates": applied_updates,
-            }
-
-        try:
-            async with async_open(output_path, "w") as f:
-                await f.write(orjson.dumps(flow_data, option=ORJSON_OPTIONS).decode())
-        except OSError as e:
-            return {
-                "error": f"Failed to save updated flow: {e}",
+                "error": "When applying updates, you must specify either --output <file>, --output -, or --in-place",
                 "flow_path": flow_path,
                 "applied_updates": applied_updates,
             }
@@ -603,69 +640,88 @@ async def handle_updates(
     return result
 
 
-def prompt_for_component_update(component: dict, update_type: str) -> bool:
-    """Prompt user for individual component update."""
+def prompt_for_component_update(component: dict, update_type: str, output: str | None = None) -> bool:
+    """Prompt user for individual component update.
+
+    Args:
+        component: Component data to update
+        update_type: Type of update ("safe" or "breaking")
+        output: Output destination (None, file path, or "-" for stdout)
+    """
     display_name = component.get("display_name", component.get("component_type"))
     node_id = component.get("node_id")
     changes = component.get("changes", {})
 
-    console.print(f"\n📦 {display_name} ({node_id})")
+    # Use stderr console when output is stdout to avoid mixing with JSON
+    interactive_console = get_interactive_console(output)
+
+    interactive_console.print(f"\n📦 {display_name} ({node_id})")
 
     # Show changes
     if changes.get("added_inputs"):
-        console.print("  New inputs:")
+        interactive_console.print("  New inputs:")
         for inp in changes["added_inputs"]:
             required = "required" if inp["required"] else "optional"
             default = f", default: {inp['default']}" if inp.get("default") else ""
-            console.print(f"    • {inp['display_name']} ({inp['type']}, {required}{default})")
+            interactive_console.print(f"    • {inp['display_name']} ({inp['type']}, {required}{default})")
 
     if changes.get("removed_inputs"):
-        console.print("  Removed inputs:")
+        interactive_console.print("  Removed inputs:")
         for inp in changes["removed_inputs"]:
-            console.print(f"    • {inp['display_name']} ({inp['type']})")
+            interactive_console.print(f"    • {inp['display_name']} ({inp['type']})")
 
     if changes.get("added_outputs"):
-        console.print("  New outputs:")
+        interactive_console.print("  New outputs:")
         for out in changes["added_outputs"]:
             types_str = ", ".join(out["types"])
-            console.print(f"    • {out['display_name']} ({types_str})")
+            interactive_console.print(f"    • {out['display_name']} ({types_str})")
 
     if changes.get("removed_outputs"):
-        console.print("  Removed outputs:")
+        interactive_console.print("  Removed outputs:")
         for out in changes["removed_outputs"]:
             types_str = ", ".join(out["types"])
-            console.print(f"    • {out['display_name']} ({types_str})")
+            interactive_console.print(f"    • {out['display_name']} ({types_str})")
 
     # Show code diff for non-breaking changes
     if changes.get("code_diff") and update_type == "safe":
-        console.print("  Code changes:")
+        interactive_console.print("  Code changes:")
         diff_data = changes["code_diff"]
 
         # Show a summary of changes
         if diff_data["added_lines"] or diff_data["removed_lines"]:
-            console.print(
+            interactive_console.print(
                 f"    📝 {len(diff_data['added_lines'])} additions, {len(diff_data['removed_lines'])} deletions"
             )
 
         # Show all diff blocks in interactive mode
         for i, block in enumerate(diff_data["context_blocks"]):
-            console.print(f"    ┌─ Change {i + 1}:")
+            interactive_console.print(f"    ┌─ Change {i + 1}:")
             for line in block:
                 if line.startswith("+"):
-                    console.print(f"    │ [green]{line}[/green]")
+                    interactive_console.print(f"    │ [green]{line}[/green]")
                 elif line.startswith("-"):
-                    console.print(f"    │ [red]{line}[/red]")
+                    interactive_console.print(f"    │ [red]{line}[/red]")
                 elif line.startswith("@@"):
-                    console.print(f"    │ [cyan]{line}[/cyan]")
+                    interactive_console.print(f"    │ [cyan]{line}[/cyan]")
                 else:
-                    console.print(f"    │ {line}")
-            console.print("    └─")
+                    interactive_console.print(f"    │ {line}")
+            interactive_console.print("    └─")
 
     if update_type == "breaking":
-        console.print("  ⚠️  This is a breaking change that may affect connected components")
+        interactive_console.print("  ⚠️  This is a breaking change that may affect connected components")
 
-    response = Prompt.ask("? Update this component?", choices=["y", "n"], default="n")
-    return response.lower() in ["y", "yes"]
+    # Use the interactive console for prompt text (stderr when output is stdout)
+    # Then use Python's built-in input() which reads from stdin (correct for user input)
+    while True:
+        interactive_console.print("? Update this component? [y/n] (n): ", end="")
+        response = input().strip().lower()
+        if not response:  # Empty input means default
+            response = "n"
+        if response in ["y", "yes", "n", "no"]:
+            break
+        interactive_console.print("[yellow]Please enter 'y' or 'n'[/yellow]")
+
+    return response in ["y", "yes"]
 
 
 async def apply_component_update(flow_data: dict, component: dict, all_types_dict: dict) -> None:
@@ -719,7 +775,10 @@ async def check_command(
         help="Prompt for each component update individually",
     ),
     output: str | None = typer.Option(
-        None, "--output", "-o", help="Output file path (requires --update or --interactive)"
+        None,
+        "--output",
+        "-o",
+        help="Output file path, or '-' for stdout (requires --update or --interactive)",
     ),
     in_place: bool = typer.Option(
         False,  # noqa: FBT003
@@ -799,7 +858,10 @@ async def check_command(
 
         output_path = result.get("output_path")
         if output_path:
-            console.print(f"Updated flow saved to: [bold]{output_path}[/bold]")
+            if output_path == "-":
+                console.print("Updated flow written to stdout")
+            else:
+                console.print(f"Updated flow saved to: [bold]{output_path}[/bold]")
 
     elif update and outdated_count > 0:
         # Updates were requested but none applied
