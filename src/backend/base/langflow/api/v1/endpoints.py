@@ -73,6 +73,38 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
         SimplifiedAPIRequest: Parsed request or default instance if parsing fails
     """
     try:
+        content_type = (http_request.headers.get("content-type") or "").lower()
+
+        # If multipart/form-data, use request.form() so uploaded files are not consumed
+        if "multipart/form-data" in content_type:
+            form = await http_request.form()
+            data: dict = {}
+
+            # Map expected form fields to the SimplifiedAPIRequest schema
+            if "input_value" in form:
+                data["input_value"] = form.get("input_value")
+            if "input_type" in form:
+                data["input_type"] = form.get("input_type")
+            if "output_type" in form:
+                data["output_type"] = form.get("output_type")
+            if "output_component" in form:
+                data["output_component"] = form.get("output_component")
+            if "session_id" in form:
+                data["session_id"] = form.get("session_id")
+
+            # Tweaks may be JSON encoded in a form field
+            if "tweaks" in form:
+                raw_tweaks = form.get("tweaks")
+                if raw_tweaks:
+                    try:
+                        data["tweaks"] = orjson.loads(raw_tweaks) if isinstance(raw_tweaks, (str, bytes)) else raw_tweaks
+                    except Exception:
+                        # Leave as raw value if parsing fails
+                        data["tweaks"] = raw_tweaks
+
+            return SimplifiedAPIRequest(**data)
+
+        # Fallback: parse as JSON (application/json or others)
         body = await http_request.body()
         if body:
             body_data = orjson.loads(body)
