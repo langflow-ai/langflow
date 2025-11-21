@@ -10,6 +10,13 @@ from lfx.inputs import BoolInput, DropdownInput, HandleInput, IntInput
 from lfx.schema import Data
 from lfx.services.deps import get_settings_service
 from lfx.template import Output
+from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
+
+disable_component_in_astra_cloud_msg = (
+    "Video processing is not supported in Astra cloud environment. "
+    "Video components require local file system access for processing. "
+    "Please use local storage mode or process videos locally before uploading."
+)
 
 
 class SplitVideoComponent(Component):
@@ -268,16 +275,9 @@ class SplitVideoComponent(Component):
 
     def process(self) -> list[Data]:
         """Process the input video and return a list of Data objects containing the clips."""
-        # Video processing not yet supported in S3 mode.
-        settings = get_settings_service().settings
-        if settings.storage_type == "s3":
-            msg = (
-                "Video processing is not supported in S3 mode. "
-                "Video components require local file system access for processing. "
-                "Use local storage mode to enable this component."
-            )
-            raise ValueError(msg)
-
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
+        
         try:
             # Get the input video path from the previous component
             if not hasattr(self, "videodata") or not isinstance(self.videodata, list) or len(self.videodata) != 1:
