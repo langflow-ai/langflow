@@ -1034,6 +1034,7 @@ class TestBufferWriterBytesSerializationFix:
             "event": "Test",
             "serialized": orjson.dumps({"key": "value"}),
             "another_bytes": b"some bytes",  # Another bytes field
+            "bytearray_field": bytearray(b"bytearray data"),  # bytearray
             "normal_field": "normal string",
         }
 
@@ -1042,14 +1043,53 @@ class TestBufferWriterBytesSerializationFix:
             patch.object(log_buffer, "write") as mock_write,
         ):
             # Should not crash even with multiple problematic fields
-            try:
-                result = buffer_writer(None, "info", event_dict)
-                mock_write.assert_called_once()
-                # Verify result is returned unchanged
-                assert result == event_dict
-            except TypeError as e:
-                if "not JSON serializable" in str(e):
-                    pytest.fail(f"buffer_writer failed to handle bytes: {e}")
+            result = buffer_writer(None, "info", event_dict)
+            mock_write.assert_called_once()
+
+            # Verify result is returned unchanged
+            assert result == event_dict
+
+            # Verify all bytes-like fields were filtered out from the buffer
+            call_args = mock_write.call_args[0]
+            written_json = call_args[0]
+            parsed_data = json.loads(written_json)
+
+            # Only normal fields should be in the buffer
+            assert "event" in parsed_data
+            assert "normal_field" in parsed_data
+            # All bytes-like fields should be removed
+            assert "serialized" not in parsed_data
+            assert "another_bytes" not in parsed_data
+            assert "bytearray_field" not in parsed_data
+            assert parsed_data["event"] == "Test"
+            assert parsed_data["normal_field"] == "normal string"
+
+    def test_buffer_writer_with_memoryview(self):
+        """Test buffer_writer handles memoryview correctly."""
+        event_dict = {
+            "event": "Test with memoryview",
+            "memoryview_field": memoryview(b"memoryview data"),
+            "normal_field": "normal string",
+        }
+
+        with (
+            patch.object(log_buffer, "enabled", return_value=True),
+            patch.object(log_buffer, "write") as mock_write,
+        ):
+            result = buffer_writer(None, "info", event_dict)
+            mock_write.assert_called_once()
+
+            # Verify result unchanged
+            assert result == event_dict
+
+            # Verify memoryview was filtered out
+            call_args = mock_write.call_args[0]
+            written_json = call_args[0]
+            parsed_data = json.loads(written_json)
+
+            assert "event" in parsed_data
+            assert "normal_field" in parsed_data
+            assert "memoryview_field" not in parsed_data
 
     def test_add_serialized_and_buffer_writer_integration(self):
         """Integration test: add_serialized followed by buffer_writer.
