@@ -26,6 +26,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from lfx.base.tools.component_tool import ComponentToolkit
+
+
 class RunFlowBaseComponent(Component):
     def __init__(self, *args, **kwargs):
         self._flow_output_methods: set[str] = set()
@@ -70,7 +72,7 @@ class RunFlowBaseComponent(Component):
             info="The ID of the flow to run.",
             value=None,
             show=False,
-            override_skip=True, # persist to runtime
+            override_skip=True,  # persist to runtime
         ),
         MessageInput(
             name="session_id",
@@ -93,7 +95,7 @@ class RunFlowBaseComponent(Component):
     default_keys = ["code", "_type", "flow_name_selected", "flow_id_selected", "session_id", "cache_flow"]
     FLOW_INPUTS: list[dotdict] = []
     flow_tweak_data: dict = {}
-    IOPUT_SEP = "~" # separator for joining a vertex id and input/output name to form a unique input/output name
+    IOPUT_SEP = "~"  # separator for joining a vertex id and input/output name to form a unique input/output name
 
     ################################################################
     # Session-id
@@ -107,19 +109,14 @@ class RunFlowBaseComponent(Component):
     ################################################################
     # set and register the selected flow's output methods
     ################################################################
-    def map_outputs(self) -> None: # Note: overrides the base map_outputs method
+    def map_outputs(self) -> None:  # Note: overrides the base map_outputs method
         super().map_outputs()
         self._ensure_flow_output_methods()
 
     def _ensure_flow_output_methods(self) -> None:
         self._clear_dynamic_flow_output_methods()
         for output in self._outputs_map.values():
-            if (
-                not output
-                or not output.name
-                or output.name == TOOL_OUTPUT_NAME
-                or self.IOPUT_SEP not in output.name
-            ):
+            if not output or not output.name or output.name == TOOL_OUTPUT_NAME or self.IOPUT_SEP not in output.name:
                 continue
             vertex_id, output_name = output.name.split(self.IOPUT_SEP, 1)
             output.method = self._register_flow_output_method(
@@ -130,11 +127,7 @@ class RunFlowBaseComponent(Component):
     ################################################################
     # Flow retrieval
     ################################################################
-    async def get_flow(
-        self,
-        flow_name_selected: str | None = None,
-        flow_id_selected: str | None = None
-        ) -> Data:
+    async def get_flow(self, flow_name_selected: str | None = None, flow_id_selected: str | None = None) -> Data:
         """Get a flow's data by name or id."""
         flow = await get_flow_by_id_or_name(
             user_id=self.user_id,
@@ -148,7 +141,7 @@ class RunFlowBaseComponent(Component):
         flow_name_selected: str | None = None,
         flow_id_selected: str | None = None,
         updated_at: str | None = None,
-        ) -> Graph | None:
+    ) -> Graph | None:
         """Get a flow's graph by name or id."""
         if not (flow_name_selected or flow_id_selected):
             msg = "Flow name or id is required"
@@ -156,7 +149,7 @@ class RunFlowBaseComponent(Component):
         if flow_id_selected and (flow := self._flow_cache_call("get", flow_id=flow_id_selected)):
             if self._is_cached_flow_up_to_date(flow, updated_at):
                 return flow
-            self._flow_cache_call("delete", flow_id=flow_id_selected) # stale, delete it
+            self._flow_cache_call("delete", flow_id=flow_id_selected)  # stale, delete it
 
         # TODO: use flow id only
         flow = await self.get_flow(flow_name_selected=flow_name_selected, flow_id_selected=flow_id_selected)
@@ -203,22 +196,24 @@ class RunFlowBaseComponent(Component):
             if not (field_order and field_template):
                 continue
             new_vertex_inputs = [
-                dotdict({
-                    **field_template[input_name],
-                    "name": self._get_ioput_name(vertex.id, input_name),
-                    "display_name": (
-                        f"{field_template[input_name]['display_name']} ({vertex.display_name})"
-                        if vdisp_cts[vertex.display_name] == 1
-                        else (
-                            f"{field_template[input_name]['display_name']}"
-                            f"({vertex.display_name}-{vertex.id.split('-')[-1]})"
+                dotdict(
+                    {
+                        **field_template[input_name],
+                        "name": self._get_ioput_name(vertex.id, input_name),
+                        "display_name": (
+                            f"{field_template[input_name]['display_name']} ({vertex.display_name})"
+                            if vdisp_cts[vertex.display_name] == 1
+                            else (
+                                f"{field_template[input_name]['display_name']}"
+                                f"({vertex.display_name}-{vertex.id.split('-')[-1]})"
                             )
                         ),
-                    # TODO: make this more robust?
-                    "tool_mode": not (field_template[input_name].get("advanced", False)),
-                    })
-                    for input_name in field_order
-                    if input_name in field_template
+                        # TODO: make this more robust?
+                        "tool_mode": not (field_template[input_name].get("advanced", False)),
+                    }
+                )
+                for input_name in field_order
+                if input_name in field_template
             ]
             new_fields += new_vertex_inputs
         return new_fields
@@ -263,10 +258,7 @@ class RunFlowBaseComponent(Component):
         new_fields = self.get_new_fields_from_graph(graph)
         new_fields = self.update_input_types(new_fields)
 
-        return (
-            graph.description,
-            [field for field in new_fields if field.get("tool_mode") is True]
-        )
+        return (graph.description, [field for field in new_fields if field.get("tool_mode") is True])
 
     def update_input_types(self, fields: list[dotdict]) -> list[dotdict]:
         """Update the input_types of the fields.
@@ -315,15 +307,10 @@ class RunFlowBaseComponent(Component):
         inputs: dict | list[dict] | None,
         output_type: str,
     ):
-
         if self._last_run_outputs is not None:
             return self._last_run_outputs
         resolved_tweaks = tweaks or self.flow_tweak_data or {}
-        resolved_inputs = (
-            inputs
-            or self._flow_run_inputs
-            or self._build_inputs_from_tweaks(resolved_tweaks)
-        ) or None
+        resolved_inputs = (inputs or self._flow_run_inputs or self._build_inputs_from_tweaks(resolved_tweaks)) or None
         self._last_run_outputs = await self._run_flow_with_cached_graph(
             user_id=user_id,
             tweaks=resolved_tweaks,
@@ -377,7 +364,8 @@ class RunFlowBaseComponent(Component):
                     # The TOOL_OUTPUT_NAME does not contain IOPUT_SEP and
                     # does not resolve to a specific vertex output.
                     # We iterate to find outputs that do (via IOPUT_SEP).
-                    output.name for output in self.outputs
+                    output.name
+                    for output in self.outputs
                     if output and self.IOPUT_SEP in output.name
                 ),
                 "",
@@ -400,7 +388,7 @@ class RunFlowBaseComponent(Component):
         method_name = f"_resolve_flow_output__{safe_vertex}__{safe_output}"
 
         async def _dynamic_resolver(_self):
-            return await _self._resolve_flow_output( # noqa: SLF001
+            return await _self._resolve_flow_output(  # noqa: SLF001
                 vertex_id=vertex_id,
                 output_name=output_name,
             )
@@ -426,10 +414,7 @@ class RunFlowBaseComponent(Component):
             tool_output = self._outputs_map[TOOL_OUTPUT_NAME]
         else:
             tool_output = next(
-                (
-                    out for out in outputs
-                    if out and out.name == TOOL_OUTPUT_NAME
-                ),
+                (out for out in outputs if out and out.name == TOOL_OUTPUT_NAME),
                 None,
             )
 
@@ -455,17 +440,14 @@ class RunFlowBaseComponent(Component):
             return frontend_node
 
         flow_selected_metadata = (
-            frontend_node
-            .get("template",{})
-            .get("flow_name_selected", {})
-            .get("selected_metadata", {})
-            )
+            frontend_node.get("template", {}).get("flow_name_selected", {}).get("selected_metadata", {})
+        )
         graph = await self.get_graph(
             flow_name_selected=field_value,
             flow_id_selected=flow_selected_metadata.get("id"),
             updated_at=flow_selected_metadata.get("updated_at"),
-            )
-        outputs = self._format_flow_outputs(graph) # generate Output objects from the flow's output nodes
+        )
+        outputs = self._format_flow_outputs(graph)  # generate Output objects from the flow's output nodes
         self._sync_flow_outputs(outputs)
         frontend_node["outputs"] = [output.model_dump() for output in outputs]
         return frontend_node
@@ -494,7 +476,7 @@ class RunFlowBaseComponent(Component):
         for vertex in output_vertices:
             one_out = len(vertex.outputs) == 1
             for vertex_output in vertex.outputs:
-                new_name = self._get_ioput_name(vertex.id , vertex_output.get("name"))
+                new_name = self._get_ioput_name(vertex.id, vertex_output.get("name"))
                 output = Output(**vertex_output)
                 output.name = new_name
                 output.method = self._register_flow_output_method(
@@ -503,13 +485,18 @@ class RunFlowBaseComponent(Component):
                 )
                 vdn = vertex.display_name
                 odn = output.display_name
-                output.display_name = vdn if one_out and vdisp_cts[vdn] == 1 \
-                    else odn + (
+                output.display_name = (
+                    vdn
+                    if one_out and vdisp_cts[vdn] == 1
+                    else odn
+                    + (
                         # output.display_name potentially collides w/ those of other vertices
-                        f" ({vdn})" if vdisp_cts[vdn] == 1
+                        f" ({vdn})"
+                        if vdisp_cts[vdn] == 1
                         # output.display_name collides w/ those of duplicate vertices
                         else f"-{vertex.id}"
-                        )
+                    )
+                )
                 outputs.append(output)
 
         return outputs
@@ -518,7 +505,7 @@ class RunFlowBaseComponent(Component):
         self,
         vertex_id: str,
         ioput_name: str,
-        ) -> str:
+    ) -> str:
         """Helper for joining a vertex id and input/output name to form a unique input/output name.
 
         Args:
@@ -542,9 +529,8 @@ class RunFlowBaseComponent(Component):
         user_id: str | None = None,
         tweaks: dict | None = None,
         inputs: dict | list[dict] | None = None,
-        output_type: str = "any", # "any" is used to return all outputs
+        output_type: str = "any",  # "any" is used to return all outputs
     ):
-
         graph = await self.get_graph(
             flow_name_selected=self.flow_name_selected,
             flow_id_selected=self.flow_id_selected,
@@ -583,15 +569,10 @@ class RunFlowBaseComponent(Component):
         try:
             return handler(*args, **kwargs)
         except Exception as exc:  # noqa: BLE001
-            key = kwargs.get("cache_key") \
-                or kwargs.get("flow_name") \
-                or kwargs.get("flow_name_selected")
+            key = kwargs.get("cache_key") or kwargs.get("flow_name") or kwargs.get("flow_name_selected")
             if not key and args:
                 key = args[0]
-            logger.warning(
-                "Cache %s failed for key %s: %s",
-                action, key or "[missing key]", exc
-                )
+            logger.warning("Cache %s failed for key %s: %s", action, key or "[missing key]", exc)
             return None
 
     def _get_cached_flow(self, *, flow_id: str | None = None) -> Graph | None:
@@ -638,12 +619,13 @@ class RunFlowBaseComponent(Component):
 
     def _is_cached_flow_up_to_date(self, cached_flow: Graph, updated_at: str | None) -> bool:
         if not updated_at or not (cached_ts := getattr(cached_flow, "updated_at", None)):
-            return False # both timetamps must be present
+            return False  # both timetamps must be present
         return self._parse_timestamp(cached_ts) >= self._parse_timestamp(updated_at)
 
     @staticmethod
     def _parse_timestamp(value: str | None) -> datetime | None:
         from datetime import timezone
+
         if not value:
             return None
         try:
@@ -674,9 +656,7 @@ class RunFlowBaseComponent(Component):
             msg = f"{err_msg_prefix}: Please provide a valid flow ID"
             raise ValueError(msg)
 
-        self._shared_component_cache.delete(
-            self._build_flow_cache_key(flow_id=flow_id)
-            )
+        self._shared_component_cache.delete(self._build_flow_cache_key(flow_id=flow_id))
 
     ################################################################
     # Build inputs and flow tweak data
@@ -725,7 +705,7 @@ class RunFlowBaseComponent(Component):
             return updated_at
         return self._attributes.get("flow_name_selected_updated_at")
 
-    def _pre_run_setup(self) -> None: # Note: overrides the base pre_run_setup method
+    def _pre_run_setup(self) -> None:  # Note: overrides the base pre_run_setup method
         """Reset the last run's outputs upon new flow execution."""
         self._last_run_outputs = None
         self._cached_flow_updated_at = self._get_selected_flow_updated_at()
