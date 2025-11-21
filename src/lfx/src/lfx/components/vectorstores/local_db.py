@@ -11,7 +11,6 @@ from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextI
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
-from lfx.services.deps import get_settings_service
 from lfx.template.field.base import Output
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
@@ -202,7 +201,7 @@ class LocalDBComponent(LCVectorStoreComponent):
     def build_vector_store(self) -> Chroma:
         """Builds the Chroma object."""
         raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
-        
+
         try:
             from langchain_chroma import Chroma
         except ImportError as e:
