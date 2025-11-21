@@ -7,8 +7,9 @@ import Icon from "@site/src/components/icon";
 
 Each Langflow server has a file management system where you can store files that you want to use in your flows.
 
-Files uploaded to Langflow file management are stored locally in your [Langflow configuration directory](/memory), and they are available to all of your flows.
-Local storage is set by `LANGFLOW_STORAGE_TYPE`, which has only one allowed value (`local`).
+Files uploaded to Langflow file management are stored in your configured storage backend and are available to all of your flows.
+Langflow supports two storage backends: local filesystem storage and AWS S3 storage.
+Langflow uses local file storage as default. To configure Langflow to use S3 for file storage, see [configure file storage](/concepts-file-management#configure-file-storage).
 
 Uploading files to Langflow file management keeps your files in a central location, and allows you to reuse files across flows without repeated manual uploads.
 
@@ -125,6 +126,81 @@ For more specialized image processing, browse <Icon name="Blocks" aria-hidden="t
 ## Work with video files
 
 For videos, see the **Twelve Labs** and **YouTube** <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
+
+## Configure file storage
+
+Langflow supports two storage backends for file management:
+
+* **Local storage**: Langflow's default storage backend. Files are stored locally in your [Langflow configuration directory](/memory). Set `LANGFLOW_STORAGE_TYPE=local` or leave it unset to use local storage.
+
+* **S3 storage**: Files are stored in an AWS S3 bucket.
+To use S3 as your file storage backend, add the following configuration to your `.env` file:
+
+```text
+# S3 Storage Configuration
+LANGFLOW_STORAGE_TYPE=s3
+LANGFLOW_OBJECT_STORAGE_BUCKET_NAME=S3_BUCKET_NAME
+LANGFLOW_OBJECT_STORAGE_PREFIX=S3_BUCKET_DIRECTORY
+
+# AWS Credentials (required for S3)
+AWS_ACCESS_KEY_ID=S3_ACCESS_KEY
+AWS_SECRET_ACCESS_KEY=S3_ACCESS_SECRET_KEY
+AWS_DEFAULT_REGION=S3_REGION
+```
+
+Replace the following values:
+* `S3_BUCKET_NAME`: The name of your S3 bucket.
+* `S3_BUCKET_DIRECTORY`: An optional folder path within the bucket where files are stored, such as `s3://S3_BUCKET_NAME/S3_BUCKET_DIRECTORY`.
+* `S3_ACCESS_KEY`: Your AWS Access Key ID.
+* `S3_ACCESS_SECRET_KEY`: Your AWS Secret Access Key.
+* `S3_REGION`: The AWS region where your bucket is located, such as `us-east-2`.
+
+Your AWS credentials must have the necessary S3 permissions.
+Your requirements will vary depending on your use case.
+This example policy allows basic CRUD operations on S3 objects.
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "LangflowS3StorageAccess",
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:DeleteObject",
+                "s3:ListBucket",
+                "s3:PutObjectTagging",
+            ],
+            "Resource": [
+                "arn:aws:s3:::S3_BUCKET_NAME",
+                "arn:aws:s3:::S3_BUCKET_NAME/S3_BUCKET_DIRECTORY/*"
+            ]
+        }
+    ]
+}
+```
+Replace the following values:
+* `S3_BUCKET_NAME`: The name of your S3 bucket.
+* `S3_BUCKET_DIRECTORY`: An optional folder path within the bucket where files are stored, such as `s3://S3_BUCKET_NAME/S3_BUCKET_DIRECTORY`.
+
+For more information, see [Change permission for an IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_change-permissions.html).
+
+## File storage environment variables {#file-storage-environment-variables}
+
+The following environment variables configure file storage backends for Langflow's file management system:
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_STORAGE_TYPE` | String | `local` | Set the file storage backend. Supported values: `local` (files stored in the Langflow configuration directory) or `s3` (files stored in AWS S3). For S3 storage, you must also configure AWS credentials and bucket settings. |
+| `LANGFLOW_OBJECT_STORAGE_BUCKET_NAME` | String | Not set | The name of the S3 bucket to use for file storage. Required when `LANGFLOW_STORAGE_TYPE=s3`. |
+| `LANGFLOW_OBJECT_STORAGE_PREFIX` | String | Not set | Optional prefix/folder path within the S3 bucket where files will be stored. If not set, files are stored at the bucket root. |
+
+When using S3 storage (`LANGFLOW_STORAGE_TYPE=s3`), you must also configure AWS credentials using one of the following methods:
+- **Environment variables**: Set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_DEFAULT_REGION`
+- **AWS credentials file**: Configure in `~/.aws/credentials` or `~/.aws/config`
+- **IAM roles**: Use IAM roles when running on AWS infrastructure (EC2, ECS, Lambda)
 
 ## See also
 
