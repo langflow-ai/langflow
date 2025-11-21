@@ -239,6 +239,7 @@ async def check_flow_components(
 
     # Check each node
     outdated_components: list[dict[str, Any]] = []
+    check_errors: list[dict[str, Any]] = []
     nodes = flow_data.get("data", {}).get("nodes", []) if "data" in flow_data else flow_data.get("nodes", [])
 
     for node in nodes:
@@ -251,7 +252,11 @@ async def check_flow_components(
             if found_component:
                 await logger.adebug(f"Checking component type '{node_type}' for updates")
                 result = check_component_outdated(node, all_types_dict, found_component, show_diff=show_diff)
-                if result["outdated"]:
+                if "error" in result:
+                    # Component check failed (e.g., missing code) - treat as error
+                    check_errors.append(result)
+                    await logger.awarning(f"Failed to check component '{node_type}': {result['error']}")
+                elif result["outdated"]:
                     outdated_components.append(result)
                     await logger.adebug(
                         f"Found outdated component: {node_type} "
@@ -278,12 +283,19 @@ async def check_flow_components(
             backup=backup,
         )
 
-    return {
+    result = {
         "flow_path": flow_path,
         "outdated_components": outdated_components,
         "total_nodes": len(nodes),
         "outdated_count": len(outdated_components),
     }
+
+    # Include check errors if any occurred
+    if check_errors:
+        result["check_errors"] = check_errors
+        result["error_count"] = len(check_errors)
+
+    return result
 
 
 def check_component_outdated(
@@ -315,11 +327,19 @@ def check_component_outdated(
         current_code = current_template.get("code", {}).get("value", "")
         latest_code = latest_template.get("code", {}).get("value", "")
 
-        # If neither has code, consider them the same
+        # If neither has code, this is likely a bug - components should have code
+        # Return an error rather than silently treating them as the same
         if not current_code and not latest_code:
-            outdated = False
-        else:
-            outdated = current_code != latest_code and node_type not in SKIPPED_COMPONENTS
+            return {
+                "outdated": False,
+                "error": (
+                    f"Component '{node_type}' has no code in both current and latest versions. "
+                    "This may indicate a bug in component structure or code extraction."
+                ),
+                "node_id": node.get("id"),
+                "component_type": node_type,
+            }
+        outdated = current_code != latest_code and node_type not in SKIPPED_COMPONENTS
 
     if not outdated:
         return {"outdated": False}
@@ -856,6 +876,17 @@ async def check_command(
     console.print(f"\nChecking flow: [bold]{flow_path_str}[/bold]")
     console.print(f"Total nodes: {total_nodes}")
     console.print(f"Outdated components: {outdated_count}")
+
+    # Display check errors if any occurred
+    check_errors = result.get("check_errors", [])
+    if check_errors:
+        error_count = result.get("error_count", len(check_errors))
+        console.print(f"[red]⚠️  {error_count} component check error(s) occurred:[/red]")
+        for error_info in check_errors:
+            component_type = error_info.get("component_type", "unknown")
+            node_id = error_info.get("node_id", "unknown")
+            error_msg = error_info.get("error", "Unknown error")
+            console.print(f"  • {component_type} ({node_id}): [red]{error_msg}[/red]")
 
     if outdated_count == 0:
         console.print("[green]✅ All components are up to date![/green]")
