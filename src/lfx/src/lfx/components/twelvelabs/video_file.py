@@ -11,6 +11,7 @@ disable_component_in_astra_cloud_msg = (
     "Please use local storage mode or process videos locally before uploading."
 )
 
+
 class VideoFileComponent(BaseFileComponent):
     """Handles loading and processing of video files.
 
