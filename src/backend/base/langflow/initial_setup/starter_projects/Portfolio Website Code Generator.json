@@ -200,8 +200,13 @@
             "metadata": {
               "code_hash": "3dd28ea591b9",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
               },
               "module": "lfx.components.input_output.text.TextInputComponent"
             },
@@ -928,8 +933,13 @@
             "metadata": {
               "code_hash": "85abc1094130",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
               },
               "module": "lfx.components.files_and_knowledge.file.FileComponent"
             },

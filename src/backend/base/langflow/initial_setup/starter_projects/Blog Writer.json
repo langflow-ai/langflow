@@ -354,8 +354,13 @@
             "metadata": {
               "code_hash": "3dd28ea591b9",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
               },
               "module": "lfx.components.input_output.text.TextInputComponent"
             },
@@ -774,8 +779,13 @@
             "metadata": {
               "code_hash": "17514953c7e8",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
               },
               "module": "lfx.components.processing.parser.ParserComponent"
             },
@@ -965,8 +975,25 @@
             "metadata": {
               "code_hash": "cdb7d379306e",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "requests",
+                    "version": "2.32.5"
+                  },
+                  {
+                    "name": "bs4",
+                    "version": "4.12.3"
+                  },
+                  {
+                    "name": "langchain_community",
+                    "version": "0.3.21"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 4
               },
               "module": "lfx.components.data_source.url.URLComponent"
             },

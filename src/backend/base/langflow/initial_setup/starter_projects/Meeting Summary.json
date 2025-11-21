@@ -316,8 +316,17 @@
             "metadata": {
               "code_hash": "935c9296b149",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "assemblyai",
+                    "version": "0.35.1"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 2
               },
               "module": "lfx.components.assemblyai.assemblyai_poll_transcript.AssemblyAITranscriptionJobPoller"
             },
@@ -1646,8 +1655,13 @@
             "metadata": {
               "code_hash": "227e053b4704",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
               },
               "module": "lfx.components.models_and_agents.memory.MemoryComponent"
             },
@@ -2003,8 +2017,13 @@
             "metadata": {
               "code_hash": "0014a5b41817",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
               },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
@@ -2382,8 +2401,17 @@
             "metadata": {
               "code_hash": "7ff7b3f90298",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "assemblyai",
+                    "version": "0.35.1"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 2
               },
               "module": "lfx.components.assemblyai.assemblyai_start_transcript.AssemblyAITranscriptionJobCreator"
             },

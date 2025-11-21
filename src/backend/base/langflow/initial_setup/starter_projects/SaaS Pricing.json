@@ -688,8 +688,13 @@
             "metadata": {
               "code_hash": "5fcfa26be77d",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
               },
               "module": "lfx.components.utilities.calculator_core.CalculatorComponent"
             },

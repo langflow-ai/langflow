@@ -522,8 +522,21 @@
             "metadata": {
               "code_hash": "20398e0d18df",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "pandas",
+                    "version": "2.2.3"
+                  },
+                  {
+                    "name": "googleapiclient",
+                    "version": "2.154.0"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 3
               },
               "module": "lfx.components.youtube.comments.YouTubeCommentsComponent"
             },
@@ -2725,8 +2738,13 @@
             "metadata": {
               "code_hash": "0014a5b41817",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
               },
               "module": "lfx.components.input_output.chat.ChatInput"
             },

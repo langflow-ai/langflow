@@ -320,8 +320,13 @@
             "metadata": {
               "code_hash": "0014a5b41817",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
               },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
@@ -1351,8 +1356,17 @@
             "metadata": {
               "code_hash": "8a658ed6d4c9",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "langchain_openai",
+                    "version": "0.3.23"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 2
               },
               "module": "lfx.components.openai.openai.OpenAIEmbeddingsComponent"
             },
@@ -1891,8 +1905,17 @@
             "metadata": {
               "code_hash": "8a658ed6d4c9",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "langchain_openai",
+                    "version": "0.3.23"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 2
               },
               "module": "lfx.components.openai.openai.OpenAIEmbeddingsComponent"
             },
@@ -2654,8 +2677,13 @@
             "metadata": {
               "code_hash": "85abc1094130",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
               },
               "module": "lfx.components.files_and_knowledge.file.FileComponent"
             },

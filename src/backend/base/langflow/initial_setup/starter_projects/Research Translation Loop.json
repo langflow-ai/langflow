@@ -230,8 +230,17 @@
             "metadata": {
               "code_hash": "219239ee2b48",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "defusedxml",
+                    "version": "0.7.1"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 2
               },
               "module": "lfx.components.arxiv.arxiv.ArXivComponent"
             },
@@ -677,8 +686,13 @@
             "metadata": {
               "code_hash": "0014a5b41817",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
               },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
@@ -972,8 +986,13 @@
             "metadata": {
               "code_hash": "17514953c7e8",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
               },
               "module": "lfx.components.processing.parser.ParserComponent"
             },
@@ -1151,8 +1170,13 @@
             "metadata": {
               "code_hash": "394284181e18",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
               },
               "module": "lfx.components.flow_controls.loop.LoopComponent"
             },
@@ -1596,8 +1620,17 @@
             "metadata": {
               "code_hash": "aac23b807182",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  },
+                  {
+                    "name": "pandas",
+                    "version": "2.2.3"
+                  }
+                ],
+                "total_dependencies": 2
               },
               "module": "lfx.components.processing.converter.TypeConverterComponent"
             },

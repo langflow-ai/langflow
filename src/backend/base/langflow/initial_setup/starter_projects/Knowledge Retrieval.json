@@ -108,8 +108,13 @@
             "metadata": {
               "code_hash": "3dd28ea591b9",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
               },
               "module": "lfx.components.input_output.text.TextInputComponent"
             },
@@ -508,8 +513,41 @@
             "metadata": {
               "code_hash": "653abe6876b8",
               "dependencies": {
-                "dependencies": [],
-                "total_dependencies": 0
+                "dependencies": [
+                  {
+                    "name": "cryptography",
+                    "version": "43.0.3"
+                  },
+                  {
+                    "name": "langchain_chroma",
+                    "version": "0.2.6"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": null
+                  },
+                  {
+                    "name": "pydantic",
+                    "version": "2.10.6"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  },
+                  {
+                    "name": "langchain_openai",
+                    "version": "0.3.23"
+                  },
+                  {
+                    "name": "langchain_huggingface",
+                    "version": "0.3.1"
+                  },
+                  {
+                    "name": "langchain_cohere",
+                    "version": "0.3.3"
+                  }
+                ],
+                "total_dependencies": 8
               },
               "module": "lfx.components.files_and_knowledge.retrieval.KnowledgeRetrievalComponent"
             },
