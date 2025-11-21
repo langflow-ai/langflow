@@ -11,6 +11,7 @@ from fastapi import Depends, HTTPException, Request, Security, WebSocketExceptio
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from lfx.log.logger import logger
+from lfx.services.deps import injectable_session_scope, session_scope
 from lfx.services.settings.service import SettingsService
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -20,7 +21,7 @@ from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_db_service, get_session, get_settings_service, session_scope
+from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
@@ -145,7 +146,7 @@ async def get_current_user(
     token: Annotated[str, Security(oauth2_login)],
     query_param: Annotated[str, Security(api_key_query)],
     header_param: Annotated[str, Security(api_key_header)],
-    db: Annotated[AsyncSession, Depends(get_session)],
+    db: Annotated[AsyncSession, Depends(injectable_session_scope)],
 ) -> User:
     if token:
         return await get_current_user_by_jwt(token, db)
@@ -303,7 +304,7 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
 
     try:
         # Validate API key directly without AUTO_LOGIN fallback
-        async with get_db_service().with_session() as db:
+        async with session_scope() as db:
             result = await check_key(db, api_key)
             if not result:
                 logger.warning("Invalid API key provided for webhook")
@@ -586,7 +587,7 @@ async def get_current_user_mcp(
     token: Annotated[str, Security(oauth2_login)],
     query_param: Annotated[str, Security(api_key_query)],
     header_param: Annotated[str, Security(api_key_header)],
-    db: Annotated[AsyncSession, Depends(get_session)],
+    db: Annotated[AsyncSession, Depends(injectable_session_scope)],
 ) -> User:
     """MCP-specific user authentication that always allows fallback to username lookup.
 

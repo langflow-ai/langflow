@@ -889,7 +889,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.120.0"
+                    "version": "0.121.2"
                   },
                   {
                     "name": "lfx",
@@ -1909,7 +1909,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.120.0"
+                    "version": "0.121.2"
                   },
                   {
                     "name": "lfx",
@@ -1921,7 +1921,7 @@
                   },
                   {
                     "name": "boto3",
-                    "version": "1.40.59"
+                    "version": "1.40.61"
                   },
                   {
                     "name": "google",

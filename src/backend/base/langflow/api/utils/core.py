@@ -10,6 +10,7 @@ from fastapi import Depends, HTTPException, Query
 from fastapi_pagination import Params
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
+from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly, session_scope
 from sqlalchemy import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -19,7 +20,6 @@ from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.deps import get_session, session_scope
 from langflow.services.store.utils import get_lf_version_from_pypi
 from langflow.utils.constants import LANGFLOW_GLOBAL_VAR_HEADER_PREFIX
 
@@ -35,7 +35,10 @@ MIN_PAGE_SIZE = 1
 
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
 CurrentActiveMCPUser = Annotated[User, Depends(get_current_active_user_mcp)]
-DbSession = Annotated[AsyncSession, Depends(get_session)]
+# DbSession with auto-commit for write operations
+DbSession = Annotated[AsyncSession, Depends(injectable_session_scope)]
+# DbSessionReadOnly for read-only operations (no auto-commit, reduces lock contention)
+DbSessionReadOnly = Annotated[AsyncSession, Depends(injectable_session_scope_readonly)]
 
 
 class EventDeliveryType(str, Enum):

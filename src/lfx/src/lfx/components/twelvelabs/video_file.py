@@ -148,6 +148,7 @@ class VideoFileComponent(BaseFileComponent):
         """Load video files and return a list of Data objects."""
         # Check if we're in Astra cloud environment and raise an error if we are.
         raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
+
         try:
             self.log("DEBUG: Starting video file load")
             if not hasattr(self, "file_path") or not self.file_path:

@@ -201,6 +201,7 @@ class LocalDBComponent(LCVectorStoreComponent):
     def build_vector_store(self) -> Chroma:
         """Builds the Chroma object."""
         raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
+
         try:
             from langchain_chroma import Chroma
         except ImportError as e:

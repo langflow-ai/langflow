@@ -16,7 +16,6 @@ from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_db_service
 from lfx.services.deps import session_scope
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
@@ -36,21 +35,24 @@ async def files_created_api_key(files_client, files_active_user):  # noqa: ARG00
     async with session_scope() as session:
         stmt = select(ApiKey).where(ApiKey.api_key == api_key.api_key)
         if existing_api_key := (await session.exec(stmt)).first():
-            yield existing_api_key
-            return
-        session.add(api_key)
-        await session.commit()
-        await session.refresh(api_key)
-        yield api_key
-        # Clean up
-        await session.delete(api_key)
-        await session.commit()
+            api_key = existing_api_key
+        else:
+            session.add(api_key)
+            await session.flush()
+            await session.refresh(api_key)
+    # Yield outside session scope to avoid database locks
+    yield api_key
+    # Clean up
+    async with session_scope() as session:
+        # Re-attach api_key to new session
+        key_to_delete = await session.get(ApiKey, api_key.id)
+        if key_to_delete:
+            await session.delete(key_to_delete)
 
 
 @pytest.fixture(name="files_active_user")
 async def files_active_user(files_client):  # noqa: ARG001
-    db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         user = User(
             username="files_active_user",
             password=get_password_hash("testpassword"),
@@ -62,18 +64,16 @@ async def files_active_user(files_client):  # noqa: ARG001
             user = active_user
         else:
             session.add(user)
-            await session.commit()
+            await session.flush()
             await session.refresh(user)
         user = UserRead.model_validate(user, from_attributes=True)
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         user = await session.get(User, user.id, options=[selectinload(User.flows)])
         await _delete_transactions_and_vertex_builds(session, user.flows)
         await session.delete(user)
-
-        await session.commit()
 
 
 @pytest.fixture(name="files_flow")
@@ -84,16 +84,19 @@ async def files_flow(
 ):
     loaded_json = json.loads(json_flow)
     flow_data = FlowCreate(name="test_flow", data=loaded_json.get("data"), user_id=files_active_user.id)
-    db_manager = get_db_service()
     flow = Flow.model_validate(flow_data)
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         session.add(flow)
-        await session.commit()
+        await session.flush()
         await session.refresh(flow)
-        yield flow
-        # Clean up
-        await session.delete(flow)
-        await session.commit()
+    # Yield outside session scope to avoid database locks
+    yield flow
+    # Clean up
+    async with session_scope() as session:
+        # Re-attach flow to new session
+        flow_to_delete = await session.get(Flow, flow.id)
+        if flow_to_delete:
+            await session.delete(flow_to_delete)
 
 
 @pytest.fixture

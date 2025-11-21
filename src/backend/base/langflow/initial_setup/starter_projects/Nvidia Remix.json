@@ -520,7 +520,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.120.0"
+                    "version": "0.121.2"
                   },
                   {
                     "name": "lfx",
@@ -1862,7 +1862,7 @@
                   },
                   {
                     "name": "ibm_watsonx_ai",
-                    "version": "1.4.2"
+                    "version": "1.4.6"
                   },
                   {
                     "name": "langchain_openai",
@@ -1882,7 +1882,7 @@
                   },
                   {
                     "name": "langchain_ibm",
-                    "version": "0.3.19"
+                    "version": "0.3.20"
                   }
                 ],
                 "total_dependencies": 7

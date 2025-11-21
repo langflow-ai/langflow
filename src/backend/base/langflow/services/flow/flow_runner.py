@@ -169,7 +169,7 @@ class LangflowRunnerExperimental:
             user_id = str(uuid4())
             user = User(id=user_id, username=user_id, password=get_password_hash(str(uuid4())), is_active=True)
             session.add(user)
-            await session.commit()
+            await session.flush()
             await session.refresh(user)
             return user
 
@@ -180,7 +180,6 @@ class LangflowRunnerExperimental:
                 name=flow_dict.get("name"), id=UUID(flow_dict["id"]), data=flow_dict.get("data", {}), user_id=user_id
             )
             session.add(flow_db)
-            await session.commit()
 
     @staticmethod
     async def run_graph(
