@@ -1,3 +1,4 @@
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -27,6 +28,32 @@ class TestCSVAgentComponent:
     def file_names_mapping(self):
         """Return the file names mapping for different versions."""
         return []
+
+    @pytest.fixture
+    def mock_langchain_experimental(self):
+        """Mock langchain_experimental module to avoid requiring it as a dependency."""
+        mock_create_csv_agent = MagicMock()
+        mock_csv_base = MagicMock()
+        mock_csv_base.create_csv_agent = mock_create_csv_agent
+        mock_agent_toolkits = MagicMock()
+        mock_agent_toolkits.csv = MagicMock()
+        mock_agent_toolkits.csv.base = mock_csv_base
+        mock_agents = MagicMock()
+        mock_agents.agent_toolkits = mock_agent_toolkits
+        mock_langchain_experimental = MagicMock()
+        mock_langchain_experimental.agents = mock_agents
+
+        with patch.dict(
+            sys.modules,
+            {
+                "langchain_experimental": mock_langchain_experimental,
+                "langchain_experimental.agents": mock_agents,
+                "langchain_experimental.agents.agent_toolkits": mock_agent_toolkits,
+                "langchain_experimental.agents.agent_toolkits.csv": mock_agent_toolkits.csv,
+                "langchain_experimental.agents.agent_toolkits.csv.base": mock_csv_base,
+            },
+        ):
+            yield mock_create_csv_agent
 
     def test_basic_setup(self, component_class, default_kwargs):
         """Test basic component initialization."""
@@ -191,7 +218,7 @@ class TestCSVAgentComponent:
         # Should not raise an error
         component._cleanup_temp_file()
 
-    def test_build_agent_response_with_local_file(self, component_class):
+    def test_build_agent_response_with_local_file(self, component_class, mock_langchain_experimental):
         """Test build_agent_response with local CSV file."""
         component = component_class()
 
@@ -214,10 +241,8 @@ class TestCSVAgentComponent:
             )
 
             # Mock settings and LangChain agent
-            with (
-                patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings,
-                patch("lfx.components.langchain_utilities.csv_agent.create_csv_agent") as mock_create_agent,
-            ):
+            with patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings:
+                mock_create_agent = mock_langchain_experimental
                 mock_settings = MagicMock()
                 mock_settings.settings.storage_type = "local"
                 mock_get_settings.return_value = mock_settings
@@ -237,7 +262,7 @@ class TestCSVAgentComponent:
         finally:
             Path(csv_file).unlink()
 
-    def test_build_agent_response_with_s3_file(self, component_class):
+    def test_build_agent_response_with_s3_file(self, component_class, mock_langchain_experimental):
         """Test build_agent_response with S3 CSV file (downloads to temp)."""
         component = component_class()
         component.set_attributes(
@@ -260,8 +285,8 @@ class TestCSVAgentComponent:
             patch(
                 "lfx.components.langchain_utilities.csv_agent.read_file_bytes", new_callable=AsyncMock
             ) as mock_read_bytes,
-            patch("lfx.components.langchain_utilities.csv_agent.create_csv_agent") as mock_create_agent,
         ):
+            mock_create_agent = mock_langchain_experimental
             mock_settings = MagicMock()
             mock_settings.settings.storage_type = "s3"
             mock_get_settings.return_value = mock_settings
@@ -288,7 +313,7 @@ class TestCSVAgentComponent:
             # Temp file should be cleaned up after execution
             assert not Path(created_path).exists()
 
-    def test_build_agent_response_cleans_up_on_error(self, component_class):
+    def test_build_agent_response_cleans_up_on_error(self, component_class, mock_langchain_experimental):
         """Test that temp file is cleaned up even when agent execution fails."""
         component = component_class()
         component.set_attributes(
@@ -311,11 +336,9 @@ class TestCSVAgentComponent:
             patch(
                 "lfx.components.langchain_utilities.csv_agent.read_file_bytes", new_callable=AsyncMock
             ) as mock_read_bytes,
-            patch(
-                "lfx.components.langchain_utilities.csv_agent.create_csv_agent",
-                side_effect=Exception("Agent creation failed"),
-            ),
         ):
+            mock_create_agent = mock_langchain_experimental
+            mock_create_agent.side_effect = Exception("Agent creation failed")
             mock_settings = MagicMock()
             mock_settings.settings.storage_type = "s3"
             mock_get_settings.return_value = mock_settings
@@ -329,7 +352,7 @@ class TestCSVAgentComponent:
                 temp_file_path = component._temp_file_path
                 assert not Path(temp_file_path).exists()
 
-    def test_build_agent(self, component_class):
+    def test_build_agent(self, component_class, mock_langchain_experimental):
         """Test build_agent method."""
         component = component_class()
 
@@ -351,10 +374,8 @@ class TestCSVAgentComponent:
                 }
             )
 
-            with (
-                patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings,
-                patch("lfx.components.langchain_utilities.csv_agent.create_csv_agent") as mock_create_agent,
-            ):
+            with patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings:
+                mock_create_agent = mock_langchain_experimental
                 mock_settings = MagicMock()
                 mock_settings.settings.storage_type = "local"
                 mock_get_settings.return_value = mock_settings

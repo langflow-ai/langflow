@@ -1,3 +1,4 @@
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -24,6 +25,43 @@ class TestJsonAgentComponent:
     def file_names_mapping(self):
         """Return the file names mapping for different versions."""
         return []
+
+    @pytest.fixture
+    def mock_langchain_community(self):
+        """Mock langchain_community module to avoid requiring it as a dependency."""
+        mock_json_spec = MagicMock()
+        mock_json_spec.from_file = MagicMock()
+        mock_json_tool = MagicMock()
+        mock_json_tool.JsonSpec = mock_json_spec
+        mock_json_toolkit = MagicMock()
+        mock_json_toolkit.JsonToolkit = MagicMock()
+        mock_agent_toolkits = MagicMock()
+        mock_agent_toolkits.json = MagicMock()
+        mock_agent_toolkits.json.toolkit = mock_json_toolkit
+        mock_agent_toolkits.create_json_agent = MagicMock()
+        mock_langchain_community = MagicMock()
+        mock_langchain_community.agent_toolkits = mock_agent_toolkits
+        mock_langchain_community.tools = MagicMock()
+        mock_langchain_community.tools.json = MagicMock()
+        mock_langchain_community.tools.json.tool = mock_json_tool
+
+        with patch.dict(
+            sys.modules,
+            {
+                "langchain_community": mock_langchain_community,
+                "langchain_community.agent_toolkits": mock_agent_toolkits,
+                "langchain_community.agent_toolkits.json": mock_agent_toolkits.json,
+                "langchain_community.agent_toolkits.json.toolkit": mock_json_toolkit,
+                "langchain_community.tools": mock_langchain_community.tools,
+                "langchain_community.tools.json": mock_langchain_community.tools.json,
+                "langchain_community.tools.json.tool": mock_json_tool,
+            },
+        ):
+            yield {
+                "JsonSpec": mock_json_spec,
+                "JsonToolkit": mock_json_toolkit.JsonToolkit,
+                "create_json_agent": mock_agent_toolkits.create_json_agent,
+            }
 
     def test_basic_setup(self, component_class, default_kwargs):
         """Test basic component initialization."""
@@ -143,7 +181,7 @@ class TestJsonAgentComponent:
         # Should not raise an error
         component._cleanup_temp_file()
 
-    def test_build_agent_with_local_json_file(self, component_class):
+    def test_build_agent_with_local_json_file(self, component_class, mock_langchain_community):
         """Test build_agent with local JSON file."""
         component = component_class()
 
@@ -156,20 +194,19 @@ class TestJsonAgentComponent:
             component.set_attributes({"llm": MagicMock(), "path": json_file, "verbose": False})
 
             # Mock settings and LangChain agent components
-            with (
-                patch("lfx.components.langchain_utilities.json_agent.get_settings_service") as mock_get_settings,
-                patch("lfx.components.langchain_utilities.json_agent.JsonSpec") as mock_json_spec,
-                patch("lfx.components.langchain_utilities.json_agent.JsonToolkit") as mock_json_toolkit,
-                patch("lfx.components.langchain_utilities.json_agent.create_json_agent") as mock_create_agent,
-            ):
+            with patch("lfx.components.langchain_utilities.json_agent.get_settings_service") as mock_get_settings:
                 mock_settings = MagicMock()
                 mock_settings.settings.storage_type = "local"
                 mock_get_settings.return_value = mock_settings
 
+                mock_json_spec = mock_langchain_community["JsonSpec"]
+                mock_json_toolkit = mock_langchain_community["JsonToolkit"]
+                mock_create_agent = mock_langchain_community["create_json_agent"]
+
                 mock_spec = MagicMock()
                 mock_json_spec.from_file.return_value = mock_spec
-                mock_toolkit = MagicMock()
-                mock_json_toolkit.return_value = mock_toolkit
+                mock_toolkit_instance = MagicMock()
+                mock_json_toolkit.return_value = mock_toolkit_instance
                 mock_agent = MagicMock()
                 mock_create_agent.return_value = mock_agent
 
@@ -181,7 +218,7 @@ class TestJsonAgentComponent:
         finally:
             Path(json_file).unlink()
 
-    def test_build_agent_with_local_yaml_file(self, component_class):
+    def test_build_agent_with_local_yaml_file(self, component_class, mock_langchain_community):
         """Test build_agent with local YAML file."""
         component = component_class()
 
@@ -195,9 +232,6 @@ class TestJsonAgentComponent:
 
             with (
                 patch("lfx.components.langchain_utilities.json_agent.get_settings_service") as mock_get_settings,
-                patch("lfx.components.langchain_utilities.json_agent.JsonSpec") as mock_json_spec,
-                patch("lfx.components.langchain_utilities.json_agent.JsonToolkit") as mock_json_toolkit,
-                patch("lfx.components.langchain_utilities.json_agent.create_json_agent") as mock_create_agent,
                 patch("builtins.open", create=True),
                 patch("lfx.components.langchain_utilities.json_agent.yaml.safe_load") as mock_yaml_load,
             ):
@@ -208,10 +242,14 @@ class TestJsonAgentComponent:
                 yaml_data = {"key": "value", "number": 42}
                 mock_yaml_load.return_value = yaml_data
 
+                mock_json_spec = mock_langchain_community["JsonSpec"]
+                mock_json_toolkit = mock_langchain_community["JsonToolkit"]
+                mock_create_agent = mock_langchain_community["create_json_agent"]
+
                 mock_spec = MagicMock()
                 mock_json_spec.return_value = mock_spec
-                mock_toolkit = MagicMock()
-                mock_json_toolkit.return_value = mock_toolkit
+                mock_toolkit_instance = MagicMock()
+                mock_json_toolkit.return_value = mock_toolkit_instance
                 mock_agent = MagicMock()
                 mock_create_agent.return_value = mock_agent
 
@@ -223,7 +261,7 @@ class TestJsonAgentComponent:
         finally:
             Path(yaml_file).unlink()
 
-    def test_build_agent_with_s3_json_file(self, component_class):
+    def test_build_agent_with_s3_json_file(self, component_class, mock_langchain_community):
         """Test build_agent with S3 JSON file (downloads to temp)."""
         component = component_class()
         component.set_attributes({"llm": MagicMock(), "path": "flow_456/data.json", "verbose": False})
@@ -235,19 +273,20 @@ class TestJsonAgentComponent:
             patch(
                 "lfx.components.langchain_utilities.json_agent.read_file_bytes", new_callable=AsyncMock
             ) as mock_read_bytes,
-            patch("lfx.components.langchain_utilities.json_agent.JsonSpec") as mock_json_spec,
-            patch("lfx.components.langchain_utilities.json_agent.JsonToolkit") as mock_json_toolkit,
-            patch("lfx.components.langchain_utilities.json_agent.create_json_agent") as mock_create_agent,
         ):
             mock_settings = MagicMock()
             mock_settings.settings.storage_type = "s3"
             mock_get_settings.return_value = mock_settings
             mock_read_bytes.return_value = json_content
 
+            mock_json_spec = mock_langchain_community["JsonSpec"]
+            mock_json_toolkit = mock_langchain_community["JsonToolkit"]
+            mock_create_agent = mock_langchain_community["create_json_agent"]
+
             mock_spec = MagicMock()
             mock_json_spec.from_file.return_value = mock_spec
-            mock_toolkit = MagicMock()
-            mock_json_toolkit.return_value = mock_toolkit
+            mock_toolkit_instance = MagicMock()
+            mock_json_toolkit.return_value = mock_toolkit_instance
             mock_agent = MagicMock()
             mock_create_agent.return_value = mock_agent
 
@@ -265,22 +304,21 @@ class TestJsonAgentComponent:
             # Cleanup should have been called
             assert not Path(call_path).exists()
 
-    def test_build_agent_cleans_up_on_error(self, component_class):
+    def test_build_agent_cleans_up_on_error(self, component_class, mock_langchain_community):
         """Test that temp file is cleaned up even when agent creation fails."""
         component = component_class()
         component.set_attributes({"llm": MagicMock(), "path": "flow_456/data.json", "verbose": False})
 
         json_content = b'{"invalid'
 
+        mock_create_agent = mock_langchain_community["create_json_agent"]
+        mock_create_agent.side_effect = Exception("Invalid JSON")
+
         with (
             patch("lfx.components.langchain_utilities.json_agent.get_settings_service") as mock_get_settings,
             patch(
                 "lfx.components.langchain_utilities.json_agent.read_file_bytes", new_callable=AsyncMock
             ) as mock_read_bytes,
-            patch(
-                "lfx.components.langchain_utilities.json_agent.JsonSpec",
-                side_effect=Exception("Invalid JSON"),
-            ),
         ):
             mock_settings = MagicMock()
             mock_settings.settings.storage_type = "s3"
