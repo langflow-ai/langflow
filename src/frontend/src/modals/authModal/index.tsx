@@ -94,9 +94,16 @@ const AuthModal = ({
         if (port) {
           newFields.oauthServerUrl = `http://${host}:${port}`;
 
-          // Only auto-populate callback path if it's empty (convenience for initial setup)
-          // Preserve user's custom callback path if they've already set one
-          if (!prev.oauthCallbackPath) {
+          // Auto-sync callback path if:
+          // 1. It's empty (initial setup), OR
+          // 2. It matches the standard format pattern (auto-update when host/port changes)
+          const isStandardFormat =
+            !prev.oauthCallbackPath ||
+            /^https?:\/\/[^:/]+:\d+\/auth\/idaas\/callback$/.test(
+              prev.oauthCallbackPath,
+            );
+
+          if (isStandardFormat) {
             newFields.oauthCallbackPath = `http://${host}:${port}/auth/idaas/callback`;
           }
         }

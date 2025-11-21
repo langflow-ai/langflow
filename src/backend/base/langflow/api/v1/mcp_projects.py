@@ -773,11 +773,12 @@ async def get_project_composer_url(
     """
     try:
         project = await verify_project_access(project_id, current_user)
+        mcp_composer_service: MCPComposerService = cast(
+            MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+        )
+
         if not should_use_mcp_composer(project):
             # Check if there's a recent error from a failed OAuth attempt
-            mcp_composer_service: MCPComposerService = cast(
-                MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
-            )
             last_error = mcp_composer_service.get_last_error(str(project_id))
 
             # If there's a recent error, return it even though OAuth is not currently active
@@ -802,9 +803,6 @@ async def get_project_composer_url(
             await get_or_start_mcp_composer(auth_config, project.name, project_id)
             composer_sse_url = await get_composer_sse_url(project)
             # Clear any previous error on success
-            mcp_composer_service: MCPComposerService = cast(
-                MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
-            )
             mcp_composer_service.clear_last_error(str(project_id))
             return {"project_id": str(project_id), "sse_url": composer_sse_url, "uses_composer": True}
         except MCPComposerError as e:
