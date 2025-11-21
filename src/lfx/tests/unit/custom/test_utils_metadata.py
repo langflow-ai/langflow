@@ -398,6 +398,7 @@ class TestComponent:
         assert dep_info["total_dependencies"] == 0
         assert dep_info["dependencies"] == []
 
+    @pytest.mark.xfail(reason="Dependency analyzer is commented out - always returns minimal stub")
     def test_build_component_metadata_with_external_dependencies(self):
         """Test dependency analysis with external packages."""
         from lfx.custom.custom_component.component import Component
@@ -429,6 +430,7 @@ class TestComponent(CustomComponent):
         assert "langflow" in package_names  # langflow should be detected as external
         assert "os" not in package_names  # os is stdlib, should be filtered out
 
+    @pytest.mark.xfail(reason="Dependency analyzer is commented out - always returns minimal stub")
     def test_build_component_metadata_with_optional_dependencies(self):
         """Test dependency analysis with optional dependencies."""
         from lfx.custom.custom_component.component import Component
@@ -464,6 +466,7 @@ class TestComponent:
         assert "some_optional_package" in package_names
         assert "os" not in package_names  # os is stdlib, should be filtered out
 
+    @pytest.mark.xfail(reason="Dependency analyzer is commented out - always returns minimal stub")
     def test_build_component_metadata_with_real_component(self):
         """Test dependency analysis with a real component."""
         from lfx.custom.custom_component.component import Component

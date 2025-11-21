@@ -146,29 +146,8 @@
             "metadata": {
               "code_hash": "9fcfdb0fb080",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "apify_client",
-                    "version": "1.12.2"
-                  },
-                  {
-                    "name": "langchain_community",
-                    "version": "0.3.21"
-                  },
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.79"
-                  },
-                  {
-                    "name": "pydantic",
-                    "version": "2.10.6"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 5
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.apify.apify_actor.ApifyActorsComponent"
             },
@@ -377,29 +356,8 @@
             "metadata": {
               "code_hash": "9fcfdb0fb080",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "apify_client",
-                    "version": "1.12.2"
-                  },
-                  {
-                    "name": "langchain_community",
-                    "version": "0.3.21"
-                  },
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.79"
-                  },
-                  {
-                    "name": "pydantic",
-                    "version": "2.10.6"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 5
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.apify.apify_actor.ApifyActorsComponent"
             },
@@ -695,13 +653,8 @@
             "metadata": {
               "code_hash": "0014a5b41817",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
@@ -973,21 +926,8 @@
             "metadata": {
               "code_hash": "4848ad3e35d5",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.120.0"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
@@ -1290,21 +1230,8 @@
             "metadata": {
               "code_hash": "d64b11c24a1c",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.79"
-                  },
-                  {
-                    "name": "pydantic",
-                    "version": "2.10.6"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.models_and_agents.agent.AgentComponent"
             },
