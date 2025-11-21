@@ -111,7 +111,7 @@ class TestAllModulesImportable:
             ("langflow.components.openai", "OpenAIModelComponent"),
             ("langflow.components.anthropic", "AnthropicModelComponent"),
             ("langflow.components.data", "APIRequestComponent"),
-            ("langflow.components.agents", "AgentComponent"),
+            ("langflow.components.models_and_agents", "AgentComponent"),
             ("langflow.components.helpers", "CalculatorComponent"),
         ]
 
@@ -164,9 +164,9 @@ class TestAllModulesImportable:
         """Test that there are no circular import issues."""
         # Test importing in different orders to catch circular imports
         import_orders = [
-            ["agents", "data", "openai"],
-            ["openai", "agents", "data"],
-            ["data", "openai", "agents"],
+            ["models_and_agents", "data", "openai"],
+            ["openai", "models_and_agents", "data"],
+            ["data", "openai", "models_and_agents"],
         ]
 
         for order in import_orders:
@@ -222,7 +222,7 @@ class TestAllModulesImportable:
         main_dir = dir(components)
         assert "openai" in main_dir
         assert "data" in main_dir
-        assert "agents" in main_dir
+        assert "models_and_agents" in main_dir
 
         # Test category modules
         for category_name in ["openai", "data", "helpers"]:
