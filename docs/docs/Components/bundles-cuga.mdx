@@ -86,6 +86,6 @@ This example asked about the sales data provided by the MCP Server, such as `Whi
 | add_current_date_tool | Boolean | If true, adds a tool that returns the current date. Default: `true`. |
 | lite_mode | Boolean | Set to `true` to enable CugaLite mode for faster execution when using a smaller number of tools. Default: `true`. |
 | lite_mode_tool_threshold | Integer | The threshold to automatically enable CugaLite. If the CUGA component has fewer tools connected than this threshold, CugaLite is activated. Default: `25`. |
-| decomposition_strategy | Dropdown | Strategy for task decomposition: `flexible` allows multiple subtasks per app, `exact` enforces one subtask per app. Default: `flexible`. |
+| decomposition_strategy | Dropdown | Strategy for task decomposition. `flexible` allows multiple subtasks per app. `exact` enforces one subtask per app. Default: `flexible`. |
 | browser_enabled | Boolean | Enable a built-in browser for web scraping and search. Allows the agent to use general web search in its responses. Disable (`false`) to restrict the agent to the context provided in the flow. Default: `false`. |
 | web_apps | Multiline String | When `browser_enabled` is true, specify a single URL such as `https://example.com` that the agent can open with the built-in browser. The CUGA component can access both public and private internet resources. There is no built-in mechanism in the CUGA component to restrict access to only public internet resources. |
