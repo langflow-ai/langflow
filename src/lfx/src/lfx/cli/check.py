@@ -194,11 +194,18 @@ async def check_flow_components(
                 component_modules.add(module_info)
 
     # Load components efficiently
+    all_types_dict = {}
     if component_modules:
         await logger.adebug(f"Found {len(component_modules)} component modules in flow metadata, loading selectively")
         all_types_dict = await load_specific_components(component_modules)
-    else:
-        await logger.adebug("No module metadata found, loading all component types")
+        if not all_types_dict:
+            await logger.adebug(
+                "Selective component loading returned empty dict, falling back to full component catalog"
+            )
+
+    # Load full catalog if no selective loading was attempted or if it returned empty
+    if not all_types_dict:
+        await logger.adebug("Loading all component types")
         settings_service = get_settings_service()
         if settings_service is None:
             return {
