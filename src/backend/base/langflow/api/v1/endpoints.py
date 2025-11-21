@@ -101,9 +101,7 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
                 if raw_tweaks and isinstance(raw_tweaks, (str, bytes)):
                     try:
                         data["tweaks"] = (
-                            orjson.loads(raw_tweaks)
-                            if isinstance(raw_tweaks, (str, bytes))
-                            else raw_tweaks
+                            orjson.loads(raw_tweaks) if isinstance(raw_tweaks, (str, bytes)) else raw_tweaks
                         )
                     except (ValueError, orjson.JSONDecodeError):
                         # Leave as raw value if parsing fails
