@@ -336,9 +336,8 @@ class DatabaseService(Service):
         # I don't want to output anything
         # subprocess.DEVNULL is an int
         buffer_context = (
-            nullcontext(sys.stdout) if self.alembic_log_to_stdout
-            else self.alembic_log_path.open("w", encoding="utf-8")  # type: ignore[union-attr]
-            )
+            nullcontext(sys.stdout) if self.alembic_log_to_stdout else self.alembic_log_path.open("w", encoding="utf-8")  # type: ignore[union-attr]
+        )
         with buffer_context as buffer:
             alembic_cfg = Config(stdout=buffer)
             # alembic_cfg.attributes["connection"] = session
