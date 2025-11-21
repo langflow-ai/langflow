@@ -287,21 +287,8 @@
             "metadata": {
               "code_hash": "299b4469032e",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "toml",
-                    "version": "0.10.2"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  },
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.79"
-                  }
-                ],
-                "total_dependencies": 3
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.llm_operations.batch_run.BatchRunComponent"
             },
@@ -522,21 +509,8 @@
             "metadata": {
               "code_hash": "20398e0d18df",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "pandas",
-                    "version": "2.2.3"
-                  },
-                  {
-                    "name": "googleapiclient",
-                    "version": "2.154.0"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.youtube.comments.YouTubeCommentsComponent"
             },
@@ -761,21 +735,8 @@
             "metadata": {
               "code_hash": "d64b11c24a1c",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.79"
-                  },
-                  {
-                    "name": "pydantic",
-                    "version": "2.10.6"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.models_and_agents.agent.AgentComponent"
             },
@@ -1657,21 +1618,8 @@
             "metadata": {
               "code_hash": "4848ad3e35d5",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.120.0"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
@@ -1939,21 +1887,8 @@
             "metadata": {
               "code_hash": "0ed75539d58d",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "pandas",
-                    "version": "2.2.3"
-                  },
-                  {
-                    "name": "youtube_transcript_api",
-                    "version": "1.2.3"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.youtube.youtube_transcripts.YouTubeTranscriptsComponent"
             },
@@ -2738,13 +2673,8 @@
             "metadata": {
               "code_hash": "0014a5b41817",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.input_output.chat.ChatInput"
             },

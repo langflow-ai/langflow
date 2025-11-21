@@ -193,13 +193,8 @@
             "metadata": {
               "code_hash": "5fcfa26be77d",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.utilities.calculator_core.CalculatorComponent"
             },
@@ -360,13 +355,8 @@
             "metadata": {
               "code_hash": "0014a5b41817",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
@@ -641,21 +631,8 @@
             "metadata": {
               "code_hash": "4848ad3e35d5",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.120.0"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
@@ -932,21 +909,8 @@
             "metadata": {
               "code_hash": "d64b11c24a1c",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.79"
-                  },
-                  {
-                    "name": "pydantic",
-                    "version": "2.10.6"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.models_and_agents.agent.AgentComponent"
             },
@@ -1652,25 +1616,8 @@
             "metadata": {
               "code_hash": "cdb7d379306e",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "requests",
-                    "version": "2.32.5"
-                  },
-                  {
-                    "name": "bs4",
-                    "version": "4.12.3"
-                  },
-                  {
-                    "name": "langchain_community",
-                    "version": "0.3.21"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 4
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.data_source.url.URLComponent"
             },
