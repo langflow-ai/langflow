@@ -535,6 +535,24 @@ class TestInPlaceOption:
             assert "--in-place" in result["error"]
 
     @pytest.mark.asyncio
+    async def test_interactive_error_before_prompts(self, sample_flow_file, mock_component_dict):
+        """Test that interactive mode fails early if --output or --in-place is not specified."""
+        from lfx.cli.check import check_flow_components
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = mock_component_dict
+
+            # Try interactive mode without output or in_place
+            result = await check_flow_components(str(sample_flow_file), interactive=True, output=None, in_place=False)
+
+            # Should return error immediately, before any prompts
+            assert "error" in result
+            assert "must specify either --output" in result["error"] or "must specify either" in result["error"]
+            assert "--in-place" in result["error"]
+            # Should have 0 applied updates since we failed before prompting
+            assert result.get("applied_updates", 0) == 0
+
+    @pytest.mark.asyncio
     async def test_output_takes_precedence_over_in_place(self, sample_flow_file, mock_component_dict):
         """Test that --output takes precedence over --in-place when both are specified."""
         from lfx.cli.check import check_flow_components
@@ -615,3 +633,122 @@ class TestInPlaceOption:
             updated_content = Path(sample_flow_file).read_text()
             updated_data = json.loads(updated_content)
             assert "data" in updated_data
+
+
+class TestShowDiffOption:
+    """Test cases for the --show-diff option."""
+
+    @pytest.fixture
+    def sample_flow_file(self, sample_flow_data):
+        """Create a temporary flow file for testing."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp_file:
+            json.dump(sample_flow_data, tmp_file, indent=2)
+            tmp_path = tmp_file.name
+
+        yield Path(tmp_path)
+
+        # Cleanup
+        if Path(tmp_path).exists():
+            Path(tmp_path).unlink()
+
+    @pytest.fixture
+    def mock_component_dict_with_code_change(self):
+        """Mock component dictionary with different code."""
+        return {
+            "ChatInput": {
+                "metadata": {"code_hash": "new_hash_456", "module": "lfx.components.input_output.chat.ChatInput"},
+                "template": {
+                    "input_value": {"value": "", "required": False},
+                    "code": {"value": "def new_code():\n    return 'updated'"},
+                },
+                "outputs": [{"name": "message", "types": ["Message"]}],
+            }
+        }
+
+    @pytest.mark.asyncio
+    async def test_show_diff_false_does_not_calculate_diff(
+        self, sample_flow_file, mock_component_dict_with_code_change
+    ):
+        """Test that code diff is not calculated when show_diff is False."""
+        from lfx.cli.check import check_flow_components
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = mock_component_dict_with_code_change
+
+            result = await check_flow_components(str(sample_flow_file), show_diff=False)
+
+            assert "error" not in result
+            outdated_components = result.get("outdated_components", [])
+            if outdated_components:
+                # Check that code_diff is None when show_diff is False
+                for comp in outdated_components:
+                    changes = comp.get("changes", {})
+                    assert changes.get("code_diff") is None
+
+    @pytest.mark.asyncio
+    async def test_show_diff_true_calculates_diff(self, sample_flow_file, mock_component_dict_with_code_change):
+        """Test that code diff is calculated when show_diff is True."""
+        from lfx.cli.check import check_flow_components
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = mock_component_dict_with_code_change
+
+            result = await check_flow_components(str(sample_flow_file), show_diff=True)
+
+            assert "error" not in result
+            outdated_components = result.get("outdated_components", [])
+            if outdated_components:
+                # Check that code_diff is calculated when show_diff is True
+                for comp in outdated_components:
+                    changes = comp.get("changes", {})
+                    # If code changed, diff should be present
+                    if changes.get("code_diff") is not None:
+                        diff_data = changes["code_diff"]
+                        assert isinstance(diff_data, dict)
+                        assert "full_diff" in diff_data or "added_lines" in diff_data or "removed_lines" in diff_data
+
+    @pytest.mark.asyncio
+    async def test_show_diff_default_is_false(self, sample_flow_file, mock_component_dict_with_code_change):
+        """Test that show_diff defaults to False (no diff calculation)."""
+        from lfx.cli.check import check_flow_components
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = mock_component_dict_with_code_change
+
+            # Don't pass show_diff, should default to False
+            result = await check_flow_components(str(sample_flow_file))
+
+            assert "error" not in result
+            outdated_components = result.get("outdated_components", [])
+            if outdated_components:
+                # Check that code_diff is None by default
+                for comp in outdated_components:
+                    changes = comp.get("changes", {})
+                    assert changes.get("code_diff") is None
+
+    @pytest.fixture
+    def mock_component_dict_same_code(self):
+        """Mock component dictionary with same code (no changes)."""
+        return {
+            "ChatInput": {
+                "metadata": {"code_hash": "old_hash_123", "module": "lfx.components.input_output.chat.ChatInput"},
+                "template": {
+                    "input_value": {"value": "", "required": False},
+                    "code": {"value": "old code"},
+                },
+                "outputs": [{"name": "message", "types": ["Message"]}],
+            }
+        }
+
+    @pytest.mark.asyncio
+    async def test_show_diff_with_no_code_changes(self, sample_flow_file, mock_component_dict_same_code):
+        """Test that show_diff doesn't break when there are no code changes."""
+        from lfx.cli.check import check_flow_components
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = mock_component_dict_same_code
+
+            result = await check_flow_components(str(sample_flow_file), show_diff=True)
+
+            assert "error" not in result
+            # Should not raise any errors even with show_diff=True when no code changes
