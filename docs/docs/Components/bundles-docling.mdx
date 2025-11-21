@@ -13,7 +13,8 @@ Langflow integrates with [Docling](https://docling-project.github.io/docling/) t
 ## Prerequisites
 
 * **Enable Developer Mode for Windows**:
-<PartialDevModeWindows />
+
+    <PartialDevModeWindows />
 
 * **Install Docling dependency**:
 The Docling dependency is required to use the Docling components in Langflow.
@@ -35,7 +36,7 @@ To learn more about content extraction with Docling, see the video tutorial [Doc
 
 This example demonstrates how to use Docling components to split a PDF in a flow:
 
-1. Connect a **Docling** and an **Export DoclingDocument** component to a [**Split Text** component](/components-processing#split-text).
+1. Connect a **Docling** and an **Export DoclingDocument** component to a [**Split Text** component](/split-text).
 
     The **Docling** component loads the document, and the **Export DoclingDocument** component converts the `DoclingDocument` into the format you select. This example converts the document to Markdown, with images represented as placeholders.
     The **Split Text** component will split the Markdown into chunks for the vector database to store in the next part of the flow.
@@ -129,42 +130,6 @@ For more information, see the [Docling core project repository](https://github.c
 | md_page_break_placeholder | String | Add this placeholder between pages in the markdown output. |
 | doc_key | String | The key to use for the `DoclingDocument` column. |
 
-### Docling VLM pipeline with remote model {#docling-remote-vlm}
-
-The **Docling Remote VLM** component uses Docling to process input documents through a Vision Language Model (VLM) pipeline that runs a remote model.
-It supports both **IBM Cloud Watsonx** and **OpenAI-compatible** providers.
-
-This component enables document conversion, such as PDF to text or Markdown, using multimodal models hosted on remote APIs.
-
-It outputs `files`, which are processed files containing `DoclingDocument` data.
-
-For more information, see the [Docling VLM pipeline with API model example](https://docling-project.github.io/docling/examples/vlm_pipeline_api_model/).
-
-#### Docling VLM pipeline parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| files | File | The files to process. |
-| provider | String | Select which remote VLM provider to use (`IBM Cloud` or `OpenAI-Compatible`). |
-| vlm_prompt | String | Prompt text to send to the Vision-Language Model during processing. |
-
-#### IBM Cloud parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| watsonx_api_key | Secret String | IBM Cloud API key used for authentication (leave blank to load from `.env`). |
-| watsonx_project_id | String | The Watsonx project ID or deployment space ID associated with the model. |
-| url | String | The base URL of the Watsonx API, such as `https://us-south.ml.cloud.ibm.com`). |
-| model_name | String | Model name from the available Watsonx foundation models list. |
-
-#### OpenAI-Compatible parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| openai_base_url | String | Base URL for the OpenAI-compatible API, such as `https://openrouter.ai/api/`). |
-| openai_api_key | Secret String | API key for OpenAI-compatible endpoints. Leave this field blank if the key is not required. |
-| openai_model | String | Model ID for OpenAI-compatible provider, such as `gpt-4o-mini`). |
-
 ## See also
 
-* [**File** component](/components-data#file)
+* [**Read File** component](/read-file)
