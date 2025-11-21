@@ -949,3 +949,290 @@ def test_max_size(sized_log_buffer):
     assert sized_log_buffer.max_size() == 0
     sized_log_buffer.max = 100
     assert sized_log_buffer.max_size() == 100
+
+
+class TestBufferWriterBytesSerializationFix:
+    """Test suite for the buffer_writer bytes serialization bug fix.
+
+    These tests validate the fix for the bug where buffer_writer would fail
+    when trying to serialize event_dict containing bytes (from orjson.dumps).
+    The fix removes the 'serialized' field before JSON serialization.
+    """
+
+    def test_buffer_writer_with_bytes_in_serialized_field(self):
+        """Test buffer_writer handles bytes in 'serialized' field correctly.
+
+        This is the main bug fix test: when add_serialized adds a 'serialized'
+        field with bytes (from orjson.dumps), buffer_writer should not crash.
+        """
+        import orjson
+
+        # Simulate what add_serialized does - adds bytes to event_dict
+        event_dict = {
+            "timestamp": "2025-11-21T12:00:00Z",
+            "event": "Test message with bytes",
+            "level": "info",
+            "module": "test_module",
+            "serialized": orjson.dumps({"test": "data"}),  # This is bytes!
+        }
+
+        with (
+            patch.object(log_buffer, "enabled", return_value=True),
+            patch.object(log_buffer, "write") as mock_write,
+        ):
+            # This should NOT raise TypeError: Object of type bytes is not JSON serializable
+            result = buffer_writer(None, "info", event_dict)
+
+        # Verify buffer_writer was called
+        mock_write.assert_called_once()
+
+        # Verify the written data is valid JSON (doesn't contain bytes)
+        call_args = mock_write.call_args[0]
+        written_json = call_args[0]
+
+        # Should be able to parse it without error
+        parsed_data = json.loads(written_json)
+
+        # Should have all fields except 'serialized'
+        assert parsed_data["timestamp"] == "2025-11-21T12:00:00Z"
+        assert parsed_data["event"] == "Test message with bytes"
+        assert parsed_data["level"] == "info"
+        assert parsed_data["module"] == "test_module"
+        assert "serialized" not in parsed_data  # Should be removed!
+
+        # Original event_dict should be returned unchanged
+        assert result == event_dict
+        assert "serialized" in result  # Original still has it
+
+    def test_buffer_writer_without_serialized_field(self):
+        """Test buffer_writer works normally when no 'serialized' field exists."""
+        event_dict = {
+            "timestamp": "2025-11-21T12:00:00Z",
+            "event": "Normal message",
+            "level": "info",
+        }
+
+        with (
+            patch.object(log_buffer, "enabled", return_value=True),
+            patch.object(log_buffer, "write") as mock_write,
+        ):
+            result = buffer_writer(None, "info", event_dict)
+
+        mock_write.assert_called_once()
+        call_args = mock_write.call_args[0]
+        written_json = call_args[0]
+
+        parsed_data = json.loads(written_json)
+        assert parsed_data == event_dict
+        assert result == event_dict
+
+    def test_buffer_writer_with_multiple_bytes_fields(self):
+        """Test buffer_writer handles multiple bytes fields correctly."""
+        import orjson
+
+        event_dict = {
+            "event": "Test",
+            "serialized": orjson.dumps({"key": "value"}),
+            "another_bytes": b"some bytes",  # Another bytes field
+            "normal_field": "normal string",
+        }
+
+        with (
+            patch.object(log_buffer, "enabled", return_value=True),
+            patch.object(log_buffer, "write") as mock_write,
+        ):
+            # Should not crash even with multiple problematic fields
+            try:
+                result = buffer_writer(None, "info", event_dict)
+                mock_write.assert_called_once()
+                # Verify result is returned unchanged
+                assert result == event_dict
+            except TypeError as e:
+                if "not JSON serializable" in str(e):
+                    pytest.fail(f"buffer_writer failed to handle bytes: {e}")
+
+    def test_add_serialized_and_buffer_writer_integration(self):
+        """Integration test: add_serialized followed by buffer_writer.
+
+        This simulates the real processor chain where add_serialized adds
+        bytes and buffer_writer needs to handle it.
+        """
+        event_dict = {
+            "timestamp": "2025-11-21T12:00:00Z",
+            "event": "Integration test message",
+            "module": "test_module",
+        }
+
+        with patch.object(log_buffer, "enabled", return_value=True):
+            # Step 1: add_serialized adds the bytes field
+            after_add = add_serialized(None, "debug", event_dict)
+
+            # Verify serialized field was added and is bytes
+            assert "serialized" in after_add
+            assert isinstance(after_add["serialized"], bytes)
+
+            # Step 2: buffer_writer should handle it without error
+            with patch.object(log_buffer, "write") as mock_write:
+                result = buffer_writer(None, "debug", after_add)
+
+            # Should have called write
+            mock_write.assert_called_once()
+            # Verify result is returned
+            assert result == after_add
+
+            # Should have serialized successfully (without the bytes field)
+            call_args = mock_write.call_args[0]
+            written_json = call_args[0]
+            parsed_data = json.loads(written_json)
+
+            assert "serialized" not in parsed_data
+            assert parsed_data["event"] == "Integration test message"
+
+    def test_buffer_writer_preserves_original_event_dict(self):
+        """Test that buffer_writer doesn't modify the original event_dict."""
+        import orjson
+
+        event_dict = {
+            "event": "Test",
+            "serialized": orjson.dumps({"data": "test"}),
+            "other_field": "value",
+        }
+
+        # Make a copy to compare later
+        original_keys = set(event_dict.keys())
+
+        with (
+            patch.object(log_buffer, "enabled", return_value=True),
+            patch.object(log_buffer, "write"),
+        ):
+            result = buffer_writer(None, "info", event_dict)
+
+        # Original event_dict should be unchanged
+        assert set(result.keys()) == original_keys
+        assert "serialized" in result
+        assert result is event_dict  # Should return the same object
+
+    def test_buffer_writer_with_empty_event_dict(self):
+        """Test buffer_writer handles empty event_dict gracefully."""
+        event_dict = {}
+
+        with (
+            patch.object(log_buffer, "enabled", return_value=True),
+            patch.object(log_buffer, "write") as mock_write,
+        ):
+            result = buffer_writer(None, "info", event_dict)
+
+        mock_write.assert_called_once()
+        call_args = mock_write.call_args[0]
+        written_json = call_args[0]
+
+        parsed_data = json.loads(written_json)
+        assert parsed_data == {}
+        assert result == {}
+
+    def test_buffer_writer_error_before_fix(self):
+        """Document the error that occurred before the fix.
+
+        This test demonstrates what would happen with the old implementation
+        that tried to serialize bytes directly.
+        """
+        import orjson
+
+        event_dict = {
+            "event": "Test",
+            "serialized": orjson.dumps({"data": "test"}),
+        }
+
+        # Simulate old buggy behavior (direct json.dumps on event_dict with bytes)
+        with pytest.raises(TypeError, match="not JSON serializable"):
+            json.dumps(event_dict)  # This is what the old code did
+
+        # The fix (removing serialized field) should work
+        filtered_dict = {k: v for k, v in event_dict.items() if k != "serialized"}
+        serialized = json.dumps(filtered_dict)  # This should work
+        assert json.loads(serialized) == {"event": "Test"}
+
+    def test_buffer_writer_with_complex_nested_data(self):
+        """Test buffer_writer with complex nested data structures."""
+        import orjson
+
+        event_dict = {
+            "timestamp": "2025-11-21T12:00:00Z",
+            "event": "Complex nested message",
+            "metadata": {
+                "user": "test_user",
+                "nested": {"deeply": {"nested": "value"}},
+                "list": [1, 2, 3],
+            },
+            "serialized": orjson.dumps({"complex": "data"}),
+        }
+
+        with (
+            patch.object(log_buffer, "enabled", return_value=True),
+            patch.object(log_buffer, "write") as mock_write,
+        ):
+            result = buffer_writer(None, "info", event_dict)
+
+        mock_write.assert_called_once()
+        # Verify result is returned
+        assert result == event_dict
+
+        call_args = mock_write.call_args[0]
+        written_json = call_args[0]
+
+        # Should successfully serialize complex nested structure
+        parsed_data = json.loads(written_json)
+        assert parsed_data["metadata"]["nested"]["deeply"]["nested"] == "value"
+        assert parsed_data["metadata"]["list"] == [1, 2, 3]
+        assert "serialized" not in parsed_data
+
+    def test_full_logging_pipeline_with_retrieval_enabled(self):
+        """End-to-end test of the full logging pipeline with log retrieval enabled.
+
+        This simulates the complete flow: configure -> add_serialized -> buffer_writer
+        """
+        # Save original buffer state
+        original_max = log_buffer.max
+
+        try:
+            # Enable log retrieval
+            log_buffer.max = 10
+
+            # Configure logger with DEBUG level
+            configure(log_level="DEBUG", cache=False)
+
+            # Create an event that will go through the processor chain
+            event_dict = {
+                "timestamp": "2025-11-21T12:00:00Z",
+                "event": "End-to-end test message",
+                "level": "debug",
+                "module": "test",
+            }
+
+            # Run through add_serialized processor
+            event_after_serialized = add_serialized(None, "debug", event_dict.copy())
+
+            # Verify bytes were added
+            assert "serialized" in event_after_serialized
+            assert isinstance(event_after_serialized["serialized"], bytes)
+
+            # Run through buffer_writer processor - should not crash
+            with patch.object(log_buffer, "write") as mock_write:
+                final_event = buffer_writer(None, "debug", event_after_serialized)
+
+            # Verify it was written successfully
+            mock_write.assert_called_once()
+            # Verify final_event is returned
+            assert final_event == event_after_serialized
+
+            # Verify the written data is valid JSON without bytes
+            call_args = mock_write.call_args[0]
+            written_json = call_args[0]
+            parsed = json.loads(written_json)
+
+            assert "serialized" not in parsed
+            assert parsed["event"] == "End-to-end test message"
+
+        finally:
+            # Restore buffer state
+            log_buffer.max = original_max
