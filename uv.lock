@@ -223,6 +223,18 @@ wheels = [
 ]
 
 [[package]]
+name = "aiomysql"
+version = "0.3.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pymysql" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/29/e0/302aeffe8d90853556f47f3106b89c16cc2ec2a4d269bdfd82e3f4ae12cc/aiomysql-0.3.2.tar.gz", hash = "sha256:72d15ef5cfc34c03468eb41e1b90adb9fd9347b0b589114bd23ead569a02ac1a", size = 108311, upload-time = "2025-10-22T00:15:21.278Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4c/af/aae0153c3e28712adaf462328f6c7a3c196a1c1c27b491de4377dd3e6b52/aiomysql-0.3.2-py3-none-any.whl", hash = "sha256:c82c5ba04137d7afd5c693a258bea8ead2aad77101668044143a991e04632eb2", size = 71834, upload-time = "2025-10-22T00:15:15.905Z" },
+]
+
+[[package]]
 name = "aiosignal"
 version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -5272,6 +5284,19 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-oceanbase"
+version = "0.2.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "pyobvector" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/45/7f/eaaf75fc13fef372195e8b9b39419c89cd6d4174cd8f2b2821fc9c691a1f/langchain_oceanbase-0.2.3.tar.gz", hash = "sha256:adb5162f8b99b1ce53a2e39e22d14e9e18569c1a30410df19c08fd7c7e6c36a1", size = 12129, upload-time = "2025-09-09T06:55:05.937Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/51/e3/eda870d389de47f106fedfbbef5213cfdbe4e9f01715198f9bf2cb888d29/langchain_oceanbase-0.2.3-py3-none-any.whl", hash = "sha256:e5333e0845107d3108741ca9d1292ba6c65d1d5c468fa7357b3b7a0b7bb5dba1", size = 14022, upload-time = "2025-09-09T06:55:04.592Z" },
+]
+
+[[package]]
 name = "langchain-ollama"
 version = "0.3.10"
 source = { registry = "https://pypi.org/simple" }
@@ -5437,6 +5462,7 @@ dependencies = [
     { name = "langchain-mistralai" },
     { name = "langchain-mongodb" },
     { name = "langchain-nvidia-ai-endpoints" },
+    { name = "langchain-oceanbase" },
     { name = "langchain-ollama" },
     { name = "langchain-openai" },
     { name = "langchain-pinecone" },
@@ -5469,6 +5495,7 @@ dependencies = [
     { name = "pydantic-ai" },
     { name = "pydantic-settings" },
     { name = "pymongo" },
+    { name = "pymysql" },
     { name = "pytube" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "qdrant-client" },
@@ -5648,6 +5675,8 @@ requires-dist = [
     { name = "langchain-mistralai", specifier = "==0.2.3" },
     { name = "langchain-mongodb", specifier = "==0.7.0" },
     { name = "langchain-nvidia-ai-endpoints", specifier = "==0.3.8" },
+    { name = "langchain-oceanbase", specifier = ">=0.2.0" },
+    { name = "langchain-oceanbase", specifier = ">=0.2.3" },
     { name = "langchain-ollama", specifier = "==0.3.10" },
     { name = "langchain-openai", specifier = ">=0.2.12,<1.0.0" },
     { name = "langchain-pinecone", specifier = ">=0.2.8,<1.0.0" },
@@ -5684,6 +5713,7 @@ requires-dist = [
     { name = "pydantic-ai", specifier = ">=0.0.19,<1.0.0" },
     { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
     { name = "pymongo", specifier = "==4.10.1" },
+    { name = "pymysql", specifier = ">=1.1.1" },
     { name = "pytube", specifier = "==15.0.0" },
     { name = "pywin32", marker = "sys_platform == 'win32'", specifier = "==307" },
     { name = "qdrant-client", specifier = "==1.9.2" },
@@ -10328,6 +10358,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pymysql"
+version = "1.1.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f5/ae/1fe3fcd9f959efa0ebe200b8de88b5a5ce3e767e38c7ac32fb179f16a388/pymysql-1.1.2.tar.gz", hash = "sha256:4961d3e165614ae65014e361811a724e2044ad3ea3739de9903ae7c21f539f03", size = 48258, upload-time = "2025-08-24T12:55:55.146Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7c/4c/ad33b92b9864cbde84f259d5df035a6447f91891f5be77788e2a3892bce3/pymysql-1.1.2-py3-none-any.whl", hash = "sha256:e6b1d89711dd51f8f74b1631fe08f039e7d76cf67a42a323d3178f0f25762ed9", size = 45300, upload-time = "2025-08-24T12:55:53.394Z" },
+]
+
+[[package]]
 name = "pyobjc-core"
 version = "12.0"
 source = { registry = "https://pypi.org/simple" }
@@ -10407,6 +10446,24 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/d4/1b/2043e99b8989b110ddb1eabf6355bd0b412527abda375bafa438f8a255e1/pyobjc_framework_vision-12.0-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:2d1238127088ef50613a8c022d7b7a8487064d09a83c188e000b90528c8eaf2e", size = 16631, upload-time = "2025-10-21T08:24:20.217Z" },
     { url = "https://files.pythonhosted.org/packages/28/ed/eb94a75b58a9868a32b10cdb59faf0cd877341df80637d1e94beda3fe4e2/pyobjc_framework_vision-12.0-cp313-cp313-macosx_10_13_universal2.whl", hash = "sha256:10c580fcb19a82e19bcc02e782aaaf0cf8ea0d148b95282740e102223127de5a", size = 16646, upload-time = "2025-10-21T08:24:23.039Z" },
     { url = "https://files.pythonhosted.org/packages/62/69/fffcf849bec521d2d8440814c18f6a9865300136489a8c52c1902d10d117/pyobjc_framework_vision-12.0-cp313-cp313t-macosx_10_13_universal2.whl", hash = "sha256:12be79c5282a2cf53ac5b69f5edbd15f242d70a21629b728efcf68fc06fbe58b", size = 16790, upload-time = "2025-10-21T08:24:25.134Z" },
+]
+
+[[package]]
+name = "pyobvector"
+version = "0.2.19"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiomysql" },
+    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "pydantic" },
+    { name = "pymysql" },
+    { name = "sqlalchemy" },
+    { name = "sqlglot" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/19/9a/03da0d77f6033694ab7e7214abdd48c372102a185142db880ba00d6a6172/pyobvector-0.2.19.tar.gz", hash = "sha256:5e6847f08679cf6ded800b5b8ae89353173c33f5d90fd1392f55e5fafa4fb886", size = 46314, upload-time = "2025-11-10T08:30:10.186Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/72/48/d6b60ae86a2a2c0c607a33e0c8fc9e469500e06e5bb07ea7e9417910f458/pyobvector-0.2.19-py3-none-any.whl", hash = "sha256:0a6b93c950722ecbab72571e0ab81d0f8f4d1f52df9c25c00693392477e45e4b", size = 59886, upload-time = "2025-11-10T08:30:08.627Z" },
 ]
 
 [[package]]
@@ -12400,6 +12457,15 @@ postgresql-psycopg = [
 ]
 postgresql-psycopg2binary = [
     { name = "psycopg2-binary" },
+]
+
+[[package]]
+name = "sqlglot"
+version = "28.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/52/8d/9ce5904aca760b81adf821c77a1dcf07c98f9caaa7e3b5c991c541ff89d2/sqlglot-28.0.0.tar.gz", hash = "sha256:cc9a651ef4182e61dac58aa955e5fb21845a5865c6a4d7d7b5a7857450285ad4", size = 5520798, upload-time = "2025-11-17T10:34:57.016Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/56/6d/86de134f40199105d2fee1b066741aa870b3ce75ee74018d9c8508bbb182/sqlglot-28.0.0-py3-none-any.whl", hash = "sha256:ac1778e7fa4812f4f7e5881b260632fc167b00ca4c1226868891fb15467122e4", size = 536127, upload-time = "2025-11-17T10:34:55.192Z" },
 ]
 
 [[package]]
