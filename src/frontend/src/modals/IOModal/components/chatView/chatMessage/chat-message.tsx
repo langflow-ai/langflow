@@ -49,6 +49,15 @@ export default function ChatMessage({
 
   const isAudioMessage = chat.category === "audio";
 
+  // Helper function to ensure "Autonomize agent" is always used for non-user messages
+  const getSenderName = () => {
+    if (chat.isSend) {
+      return chat.sender_name || "User";
+    }
+    // Always return "Autonomize agent" for bot/AI messages
+    return "Autonomize agent";
+  };
+
   useEffect(() => {
     const chatMessageString = chat.message ? chat.message.toString() : "";
     setChatMessage(chatMessageString);
@@ -134,7 +143,7 @@ export default function ChatMessage({
         message: {
           id: chat.id,
           files: convertFiles(chat.files),
-          sender_name: chat.sender_name ?? "AI",
+          sender_name: getSenderName(), // Use helper function
           text: message,
           sender: chat.isSend ? "User" : "Machine",
           flow_id,
@@ -162,7 +171,7 @@ export default function ChatMessage({
         message: {
           ...chat,
           files: convertFiles(chat.files),
-          sender_name: chat.sender_name ?? "AI",
+          sender_name: getSenderName(), // Use helper function
           text: chat.message.toString(),
           sender: chat.isSend ? "User" : "Machine",
           flow_id,
@@ -202,6 +211,9 @@ export default function ChatMessage({
       />
     );
   }
+
+  // Get the display name using the helper function
+  const displaySenderName = getSenderName();
 
   return (
     <>
@@ -275,11 +287,11 @@ export default function ChatMessage({
                     : {}
                 }
                 data-testid={
-                  "sender_name_" + chat.sender_name?.toLocaleLowerCase()
+                  "sender_name_" + displaySenderName?.toLocaleLowerCase()
                 }
               >
                 <span className="flex items-center gap-2">
-                  {chat.sender_name}
+                  {displaySenderName}
                   {isAudioMessage && (
                     <div className="flex h-5 w-5 items-center justify-center rounded-sm bg-muted">
                       <ForwardedIconComponent
@@ -289,11 +301,7 @@ export default function ChatMessage({
                     </div>
                   )}
                 </span>
-                {chat.properties?.source && !playgroundPage && (
-                  <div className="text-mmd font-normal text-muted-foreground">
-                    {chat.properties?.source.source}
-                  </div>
-                )}
+                {/* Source information hidden - no longer displaying Azure OpenAI or other sources */}
               </div>
             </div>
             {chat.content_blocks && chat.content_blocks.length > 0 && (
@@ -338,7 +346,7 @@ export default function ChatMessage({
                     >
                       <div
                         data-testid={
-                          "chat-message-" + chat.sender_name + "-" + chatMessage
+                          "chat-message-" + displaySenderName + "-" + chatMessage
                         }
                         className="flex w-full flex-col"
                       >
@@ -393,7 +401,7 @@ export default function ChatMessage({
                           "w-full items-baseline whitespace-pre-wrap break-words text-sm font-normal",
                           isEmpty ? "text-muted-foreground" : "text-primary",
                         )}
-                        data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
+                        data-testid={`chat-message-${displaySenderName}-${chatMessage}`}
                       >
                         {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
                         {editedFlag}

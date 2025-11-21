@@ -15,7 +15,7 @@ from langflow.services.knowledge.service import KnowledgeService
 
 
 class KnowledgeHubSearchComponent(Component):
-    display_name = "Knowledge Hub Search"
+    display_name = "Knowledge Hub"
     description = (
         "This component is used to search for information in the knowledge hub."
     )

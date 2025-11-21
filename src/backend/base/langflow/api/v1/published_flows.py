@@ -982,8 +982,8 @@ async def delete_input_sample(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Input sample not found")
 
     published_flow = await session.get(PublishedFlow, sample.published_flow_id)
-    if not published_flow or published_flow.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to delete this input sample")
+    if not published_flow:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Published flow not found")
 
     await session.delete(sample)
     await session.commit()
@@ -1006,9 +1006,10 @@ async def delete_input_sample_file(
     if not sample:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Input sample not found")
 
+    # Permission: allow any authenticated user to modify input samples
     published_flow = await session.get(PublishedFlow, sample.published_flow_id)
-    if not published_flow or published_flow.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to modify this input sample")
+    if not published_flow:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Published flow not found")
 
     file_names = sample.file_names or []
     new_files = [f for f in file_names if f != name]
@@ -1040,9 +1041,10 @@ async def delete_input_sample_text(
     if not sample:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Input sample not found")
 
+    # Permission: allow any authenticated user to modify input samples
     published_flow = await session.get(PublishedFlow, sample.published_flow_id)
-    if not published_flow or published_flow.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to modify this input sample")
+    if not published_flow:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Published flow not found")
 
     texts = sample.sample_text or []
     if not texts:

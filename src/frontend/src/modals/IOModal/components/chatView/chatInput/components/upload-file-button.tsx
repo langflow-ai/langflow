@@ -17,7 +17,7 @@ const UploadFileButton = ({
     <ShadTooltip
       styleClasses="z-50"
       side="right"
-      content="Attach image (png, jpg, jpeg)"
+      content="Attach file (png, jpg, jpeg, gif, pdf)"
     >
       <div>
         <input
@@ -25,6 +25,7 @@ const UploadFileButton = ({
           type="file"
           ref={fileInputRef}
           style={{ display: "none" }}
+          accept="image/png,image/jpeg,image/jpg,image/gif,application/pdf"
           onChange={handleFileChange}
         />
         <Button
@@ -37,7 +38,7 @@ const UploadFileButton = ({
           onClick={handleClick}
           unstyled
         >
-          <ForwardedIconComponent className="h-[18px] w-[18px]" name="Image" />
+          <ForwardedIconComponent className="h-[18px] w-[18px]" name="Paperclip" />
         </Button>
       </div>
     </ShadTooltip>
