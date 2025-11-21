@@ -895,3 +895,188 @@ class TestStdoutOutput:
                     assert output_content.strip()
             finally:
                 sys.stdout = old_stdout
+
+
+class TestBackupOption:
+    """Test cases for the --backup option."""
+
+    @pytest.fixture
+    def sample_flow_file(self, sample_flow_data):
+        """Create a temporary flow file for testing."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp_file:
+            json.dump(sample_flow_data, tmp_file, indent=2)
+            tmp_path = tmp_file.name
+
+        yield Path(tmp_path)
+
+        # Cleanup
+        if Path(tmp_path).exists():
+            Path(tmp_path).unlink()
+        # Also cleanup backup file if it exists
+        backup_path = Path(f"{tmp_path}.bak")
+        if backup_path.exists():
+            backup_path.unlink()
+
+    @pytest.fixture
+    def mock_component_dict(self):
+        """Mock component dictionary with updated hash."""
+        return {
+            "ChatInput": {
+                "metadata": {"code_hash": "new_hash_456", "module": "lfx.components.input_output.chat.ChatInput"},
+                "template": {
+                    "input_value": {"value": "", "required": False},
+                    "code": {"value": "new code"},
+                },
+                "outputs": [{"name": "message", "types": ["Message"]}],
+            }
+        }
+
+    @pytest.mark.asyncio
+    async def test_backup_created_by_default_with_in_place(self, sample_flow_file, mock_component_dict):
+        """Test that backup is created by default when using --in-place."""
+        from lfx.cli.check import check_flow_components
+
+        # Read original content
+        original_content = Path(sample_flow_file).read_text()
+        backup_path = Path(f"{sample_flow_file}.bak")
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = mock_component_dict
+
+            # Use in_place with update (backup defaults to True)
+            result = await check_flow_components(
+                str(sample_flow_file), update=True, in_place=True, force=True, backup=True
+            )
+
+            # Should have applied updates
+            assert "error" not in result
+            assert result.get("applied_updates", 0) > 0
+            assert result.get("output_path") == str(sample_flow_file)
+            assert result.get("backup_path") == str(backup_path)
+
+            # Backup file should exist
+            assert backup_path.exists()
+
+            # Backup should contain original content
+            backup_content = backup_path.read_text()
+            assert backup_content == original_content
+
+            # Original file should be modified
+            updated_content = Path(sample_flow_file).read_text()
+            assert updated_content != original_content
+
+    @pytest.mark.asyncio
+    async def test_backup_not_created_with_no_backup(self, sample_flow_file, mock_component_dict):
+        """Test that backup is not created when --no-backup is used."""
+        from lfx.cli.check import check_flow_components
+
+        backup_path = Path(f"{sample_flow_file}.bak")
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = mock_component_dict
+
+            # Use in_place with update and no_backup
+            result = await check_flow_components(
+                str(sample_flow_file), update=True, in_place=True, force=True, backup=False
+            )
+
+            # Should have applied updates
+            assert "error" not in result
+            assert result.get("applied_updates", 0) > 0
+
+            # Backup file should NOT exist
+            assert not backup_path.exists()
+
+            # Result should not have backup_path
+            assert "backup_path" not in result
+
+    @pytest.mark.asyncio
+    async def test_backup_only_with_in_place(self, sample_flow_file, mock_component_dict):
+        """Test that backup option only works with --in-place."""
+        from lfx.cli.check import check_flow_components
+
+        backup_path = Path(f"{sample_flow_file}.bak")
+        output_file = Path(str(sample_flow_file) + ".new")
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = mock_component_dict
+
+            # Use backup with output (not in_place) - should not create backup
+            result = await check_flow_components(
+                str(sample_flow_file), update=True, output=str(output_file), backup=True
+            )
+
+            # Should have applied updates
+            assert "error" not in result
+            assert result.get("applied_updates", 0) > 0
+
+            # Backup file should NOT exist (backup only works with in_place)
+            assert not backup_path.exists()
+
+            # Cleanup output file
+            if output_file.exists():
+                output_file.unlink()
+
+    @pytest.mark.asyncio
+    async def test_backup_contains_exact_original_content(self, sample_flow_file, mock_component_dict):
+        """Test that backup file contains the exact original file content."""
+        from lfx.cli.check import check_flow_components
+
+        # Read original content
+        original_content = Path(sample_flow_file).read_text()
+        backup_path = Path(f"{sample_flow_file}.bak")
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = mock_component_dict
+
+            # Use in_place with update and backup
+            result = await check_flow_components(
+                str(sample_flow_file), update=True, in_place=True, force=True, backup=True
+            )
+
+            # Should have applied updates
+            assert "error" not in result
+            assert result.get("applied_updates", 0) > 0
+            assert result.get("backup_path") == str(backup_path)
+
+            # Backup should exist
+            assert backup_path.exists()
+
+            # Backup content should match original exactly
+            backup_content = backup_path.read_text()
+            assert backup_content == original_content
+
+            # Verify backup is valid JSON
+            backup_data = json.loads(backup_content)
+            assert "data" in backup_data
+
+    @pytest.mark.asyncio
+    async def test_backup_works_with_interactive(self, sample_flow_file, mock_component_dict):
+        """Test that backup works with interactive mode."""
+        from lfx.cli.check import check_flow_components
+
+        original_content = Path(sample_flow_file).read_text()
+        backup_path = Path(f"{sample_flow_file}.bak")
+
+        with (
+            patch("lfx.cli.check.load_specific_components") as mock_load,
+            patch("lfx.cli.check.prompt_for_component_update") as mock_prompt,
+        ):
+            mock_load.return_value = mock_component_dict
+            mock_prompt.return_value = True  # User accepts updates
+
+            # Use interactive with in_place and backup
+            result = await check_flow_components(
+                str(sample_flow_file), interactive=True, in_place=True, backup=True, force=True
+            )
+
+            # Should have applied updates
+            assert "error" not in result
+            assert result.get("applied_updates", 0) > 0
+
+            # Backup should exist
+            assert backup_path.exists()
+
+            # Backup should contain original content
+            backup_content = backup_path.read_text()
+            assert backup_content == original_content
