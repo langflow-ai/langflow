@@ -70,6 +70,7 @@ import { NeedleIcon } from "@/icons/Needle";
 import { NotDiamondIcon } from "@/icons/NotDiamond";
 import { NotionIcon } from "@/icons/Notion";
 import { NovitaIcon } from "@/icons/Novita";
+import { OceanBaseIcon } from "@/icons/OceanBase";
 import { NvidiaIcon } from "@/icons/Nvidia";
 import { OlivyaIcon } from "@/icons/Olivya";
 import { OllamaIcon } from "@/icons/Ollama";
@@ -189,6 +190,7 @@ export const eagerIconsMapping = {
   NotDiamond: NotDiamondIcon,
   Notion: NotionIcon,
   Novita: NovitaIcon,
+  OceanBase: OceanBaseIcon,
   NVIDIA: NvidiaIcon,
   Olivya: OlivyaIcon,
   Ollama: OllamaIcon,
