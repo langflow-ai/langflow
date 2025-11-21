@@ -200,6 +200,11 @@ async def check_flow_components(
     else:
         await logger.adebug("No module metadata found, loading all component types")
         settings_service = get_settings_service()
+        if settings_service is None:
+            return {
+                "error": "Settings service is not available. Cannot load component types.",
+                "flow_path": flow_path,
+            }
         try:
             all_types_dict = await get_and_cache_all_types_dict(settings_service)
             # Log available component types for debugging
