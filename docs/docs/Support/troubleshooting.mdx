@@ -25,7 +25,7 @@ If you still cannot locate the component, see [Langflow GitHub Issues and Discus
 
 ## No input in the Playground
 
-If there is no message input field in the **Playground**, make sure your flow has a [**Chat Input** component](/components-io#chat-io) that is connected, directly or indirectly, to the **Input** port of a **Language Model** or **Agent** component.
+If there is no message input field in the **Playground**, make sure your flow has a [**Chat Input** component](/chat-input-and-output) that is connected, directly or indirectly, to the **Input** port of a **Language Model** or **Agent** component.
 
 Because the **Playground** is designed for flows that use an LLM in a query-and-response format, such as chatbots and agents, a flow must have **Chat Input**, **Language Model**/**Agent**, and **Chat Output** components to be fully supported by the **Playground** chat interface.
 
@@ -283,7 +283,7 @@ Alternatively, configure Langflow Desktop to accept connections from WSL at the 
 ## Token length limit errors in Embedding Model components
 
 Token length errors can happen if your chunking strategy doesn't align with your embedding model's tokenization limits.
-For more information, see [Tokenization errors due to chunk size](/components-processing#chunk-size).
+For more information, see [Tokenization errors due to chunk size](/split-text#chunk-size).
 
 ## Custom components and integrations issues
 
