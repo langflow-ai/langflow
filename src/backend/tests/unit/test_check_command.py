@@ -429,9 +429,8 @@ class TestCheckCommandCLI:
 
     def test_check_command_functions_exist(self):
         """Test that check command functions are available."""
-        from lfx.cli.check import check_command, check_command_sync
+        from lfx.cli.check import check_command
 
-        assert callable(check_command_sync)
         assert callable(check_command)
 
     def test_run_command_check_function_exists(self):

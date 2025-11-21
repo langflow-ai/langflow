@@ -45,14 +45,13 @@ app = typer.Typer(no_args_is_help=True)
 
 # Add LFX commands as a sub-app
 try:
-    from lfx.cli.check import check_command_sync
-    from lfx.cli.commands import serve_command
+    from lfx.cli import check_command, serve_command
     from lfx.cli.run import run as lfx_run
 
     lfx_app = typer.Typer(name="lfx", help="Langflow Executor commands", no_args_is_help=True)
     lfx_app.command(name="serve", help="Serve a flow as an API", no_args_is_help=True)(serve_command)
     lfx_app.command(name="run", help="Run a flow directly", no_args_is_help=True)(lfx_run)
-    lfx_app.command(name="check", help="Check flow for outdated components", no_args_is_help=True)(check_command_sync)
+    lfx_app.command(name="check", help="Check flow for outdated components", no_args_is_help=True)(check_command)
 
     app.add_typer(lfx_app, name="lfx")
 except ImportError:

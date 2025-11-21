@@ -4,18 +4,19 @@ from __future__ import annotations
 
 import copy
 import difflib
+from functools import partial
 from typing import Any
 
 import orjson
 import typer
 from aiofile import async_open
+from asyncer import syncify
 from rich.console import Console
 from rich.prompt import Prompt
 
 from lfx.interface.components import get_and_cache_all_types_dict
 from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
-from lfx.utils.async_helpers import run_until_complete
 
 # Initialize console
 console = Console()
@@ -682,6 +683,7 @@ async def apply_component_update(flow_data: dict, component: dict, all_types_dic
             break
 
 
+@partial(syncify, raise_sync_error=False)
 async def check_command(
     flow_path: str = typer.Argument(..., help="Path to the JSON flow file"),
     *,
@@ -782,39 +784,3 @@ async def check_command(
 
         if skipped > 0 and not breaking_updates:
             console.print(f"[yellow]⚠️  {skipped} component(s) skipped[/yellow]")
-
-
-# Sync wrapper for the CLI
-def check_command_sync(
-    flow_path: str = typer.Argument(..., help="Path to the JSON flow file"),
-    *,
-    update: bool = typer.Option(False, "--update", help="Apply safe updates automatically"),  # noqa: FBT003
-    force: bool = typer.Option(False, "--force", help="Apply all updates including breaking changes"),  # noqa: FBT003
-    interactive: bool = typer.Option(
-        False,  # noqa: FBT003
-        "--interactive",
-        "-i",
-        help="Prompt for each component update individually",
-    ),
-    output: str | None = typer.Option(
-        None, "--output", "-o", help="Output file path (requires --update or --interactive)"
-    ),
-    in_place: bool = typer.Option(
-        False,  # noqa: FBT003
-        "--in-place",
-        help="Update the input file in place (requires --update or --interactive)",
-    ),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show verbose output"),  # noqa: FBT003
-) -> None:
-    """Check a flow for outdated components and optionally update them."""
-    run_until_complete(
-        check_command(
-            flow_path,
-            update=update,
-            force=force,
-            interactive=interactive,
-            output=output,
-            in_place=in_place,
-            verbose=verbose,
-        )
-    )

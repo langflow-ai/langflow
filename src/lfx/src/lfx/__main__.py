@@ -2,8 +2,7 @@
 
 import typer
 
-from lfx.cli.check import check_command_sync
-from lfx.cli.commands import serve_command
+from lfx.cli import check_command, serve_command
 from lfx.cli.run import run
 
 app = typer.Typer(
@@ -15,7 +14,7 @@ app = typer.Typer(
 # Add commands
 app.command(name="serve", help="Serve a flow as an API", no_args_is_help=True)(serve_command)
 app.command(name="run", help="Run a flow directly", no_args_is_help=True)(run)
-app.command(name="check", help="Check flow for outdated components", no_args_is_help=True)(check_command_sync)
+app.command(name="check", help="Check flow for outdated components", no_args_is_help=True)(check_command)
 
 
 def main():
