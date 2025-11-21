@@ -346,15 +346,19 @@ def check_breaking_changes(current_node: dict, latest_component: dict) -> bool:
     if current_output_names - latest_output_names:
         return True
 
+    # Pre-index latest outputs by name for O(1) lookup
+    latest_outputs_by_name = {out.get("name"): out for out in latest_outputs}
+
     # Check for output type changes
     for current_out in current_outputs:
-        for latest_out in latest_outputs:
-            if current_out.get("name") == latest_out.get("name"):
-                current_types = set(current_out.get("types", []))
-                latest_types = set(latest_out.get("types", []))
-                # If latest types don't include all current types, it's breaking
-                if not current_types.issubset(latest_types):
-                    return True
+        output_name = current_out.get("name")
+        latest_out = latest_outputs_by_name.get(output_name)
+        if latest_out is not None:
+            current_types = set(current_out.get("types", []))
+            latest_types = set(latest_out.get("types", []))
+            # If latest types don't include all current types, it's breaking
+            if not current_types.issubset(latest_types):
+                return True
 
     # Check template changes
     current_template = current_node.get("template", {})
