@@ -752,3 +752,146 @@ class TestShowDiffOption:
 
             assert "error" not in result
             # Should not raise any errors even with show_diff=True when no code changes
+
+
+class TestStdoutOutput:
+    """Test cases for the --output - (STDOUT) option."""
+
+    @pytest.fixture
+    def sample_flow_file(self, sample_flow_data):
+        """Create a temporary flow file for testing."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp_file:
+            json.dump(sample_flow_data, tmp_file, indent=2)
+            tmp_path = tmp_file.name
+
+        yield Path(tmp_path)
+
+        # Cleanup
+        if Path(tmp_path).exists():
+            Path(tmp_path).unlink()
+
+    @pytest.fixture
+    def mock_component_dict(self):
+        """Mock component dictionary with updated hash."""
+        return {
+            "ChatInput": {
+                "metadata": {"code_hash": "new_hash_456", "module": "lfx.components.input_output.chat.ChatInput"},
+                "template": {
+                    "input_value": {"value": "", "required": False},
+                    "code": {"value": "new code"},
+                },
+                "outputs": [{"name": "message", "types": ["Message"]}],
+            }
+        }
+
+    @pytest.mark.asyncio
+    async def test_output_to_stdout(self, sample_flow_file, mock_component_dict):
+        """Test that --output - writes to stdout."""
+        import sys
+        from io import StringIO
+
+        from lfx.cli.check import check_flow_components
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = mock_component_dict
+
+            # Capture stdout
+            old_stdout = sys.stdout
+            captured_output = StringIO()
+            sys.stdout = captured_output
+
+            try:
+                result = await check_flow_components(str(sample_flow_file), update=True, output="-", force=True)
+
+                sys.stdout = old_stdout
+                output_content = captured_output.getvalue()
+
+                # Should have applied updates
+                assert "error" not in result
+                assert result.get("applied_updates", 0) > 0
+                assert result.get("output_path") == "-"
+
+                # Should have written JSON to stdout
+                assert output_content.strip()
+                parsed_output = json.loads(output_content.strip())
+                assert "data" in parsed_output
+                assert "nodes" in parsed_output["data"]
+            finally:
+                sys.stdout = old_stdout
+
+    @pytest.mark.asyncio
+    async def test_stdout_takes_precedence_over_in_place(self, sample_flow_file, mock_component_dict):
+        """Test that --output - takes precedence over --in-place."""
+        import sys
+        from io import StringIO
+
+        from lfx.cli.check import check_flow_components
+
+        original_content = Path(sample_flow_file).read_text()
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = mock_component_dict
+
+            # Capture stdout
+            old_stdout = sys.stdout
+            captured_output = StringIO()
+            sys.stdout = captured_output
+
+            try:
+                result = await check_flow_components(
+                    str(sample_flow_file), update=True, output="-", in_place=True, force=True
+                )
+
+                sys.stdout = old_stdout
+                output_content = captured_output.getvalue()
+
+                # Should have applied updates
+                assert "error" not in result
+                assert result.get("applied_updates", 0) > 0
+                assert result.get("output_path") == "-"
+
+                # Original file should NOT be modified (stdout took precedence)
+                current_content = Path(sample_flow_file).read_text()
+                assert current_content == original_content
+
+                # Should have written JSON to stdout
+                assert output_content.strip()
+                parsed_output = json.loads(output_content.strip())
+                assert "data" in parsed_output
+            finally:
+                sys.stdout = old_stdout
+
+    @pytest.mark.asyncio
+    async def test_stdout_with_interactive_requires_output(self, sample_flow_file, mock_component_dict):
+        """Test that interactive mode accepts --output - as valid."""
+        import sys
+        from io import StringIO
+
+        from lfx.cli.check import check_flow_components
+
+        with (
+            patch("lfx.cli.check.load_specific_components") as mock_load,
+            patch("lfx.cli.check.prompt_for_component_update") as mock_prompt,
+        ):
+            mock_load.return_value = mock_component_dict
+            mock_prompt.return_value = True  # User accepts updates
+
+            # Capture stdout
+            old_stdout = sys.stdout
+            captured_output = StringIO()
+            sys.stdout = captured_output
+
+            try:
+                # Should not error when using --output - with interactive
+                result = await check_flow_components(str(sample_flow_file), interactive=True, output="-", force=True)
+
+                sys.stdout = old_stdout
+                output_content = captured_output.getvalue()
+
+                # Should not have error about missing output
+                assert "error" not in result or "must specify either" not in result.get("error", "")
+                # If updates were applied, should have written to stdout
+                if result.get("applied_updates", 0) > 0:
+                    assert output_content.strip()
+            finally:
+                sys.stdout = old_stdout
