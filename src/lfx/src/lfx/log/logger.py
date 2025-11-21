@@ -185,8 +185,10 @@ def remove_exception_in_production(_logger: Any, _method_name: str, event_dict: 
 def buffer_writer(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
     """Write to log buffer if enabled."""
     if log_buffer.enabled():
-        # Create a JSON representation for the buffer
-        log_buffer.write(json.dumps(event_dict))
+        # Create a copy of event_dict without the 'serialized' field (which contains bytes)
+        # to avoid JSON serialization errors
+        buffer_dict = {k: v for k, v in event_dict.items() if k != "serialized"}
+        log_buffer.write(json.dumps(buffer_dict))
     return event_dict
 
 
