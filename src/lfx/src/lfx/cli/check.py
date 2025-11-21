@@ -27,9 +27,6 @@ ORJSON_OPTIONS = orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS
 # Components to skip during updates
 SKIPPED_COMPONENTS = {"LanguageModelComponent"}
 
-# Maximum context blocks to show in diff
-MAX_CONTEXT_BLOCKS = 2
-
 
 async def load_specific_components(component_modules: set[str]) -> dict:
     """Load only the specific components mentioned in the flow metadata.
@@ -169,6 +166,7 @@ async def check_flow_components(
     interactive: bool = False,
     output: str | None = None,
     in_place: bool = False,
+    show_diff: bool = False,
 ) -> dict:
     """Check a JSON flow for outdated components using code_hash."""
     # Load flow
@@ -239,7 +237,7 @@ async def check_flow_components(
             found_component = find_component_in_types(node_type, all_types_dict)
             if found_component:
                 await logger.adebug(f"Checking component type '{node_type}' for updates")
-                result = check_component_outdated(node, all_types_dict, found_component)
+                result = check_component_outdated(node, all_types_dict, found_component, show_diff=show_diff)
                 if result["outdated"]:
                     outdated_components.append(result)
                     await logger.adebug(
@@ -274,7 +272,9 @@ async def check_flow_components(
     }
 
 
-def check_component_outdated(node: dict, all_types_dict: dict, latest_component: dict | None = None) -> dict:
+def check_component_outdated(
+    node: dict, all_types_dict: dict, latest_component: dict | None = None, *, show_diff: bool = False
+) -> dict:
     """Check if a component is outdated using code_hash comparison."""
     node_data = node.get("data", {})
     node_type = node_data.get("type")
@@ -314,7 +314,7 @@ def check_component_outdated(node: dict, all_types_dict: dict, latest_component:
     breaking_change = check_breaking_changes(node_template, latest_component)
 
     # Analyze specific changes
-    changes = analyze_component_changes(node_template, latest_component)
+    changes = analyze_component_changes(node_template, latest_component, show_diff=show_diff)
 
     # Determine comparison method used
     comparison_method = "hash" if (node_hash and latest_hash) else "code"
@@ -380,7 +380,7 @@ def check_breaking_changes(current_node: dict, latest_component: dict) -> bool:
     return False
 
 
-def analyze_component_changes(current_node: dict, latest_component: dict) -> dict[str, Any]:
+def analyze_component_changes(current_node: dict, latest_component: dict, *, show_diff: bool = False) -> dict[str, Any]:
     """Analyze specific changes between current and latest component versions."""
     changes: dict[str, Any] = {
         "added_inputs": [],
@@ -449,13 +449,14 @@ def analyze_component_changes(current_node: dict, latest_component: dict) -> dic
                 }
             )
 
-    # Analyze code changes
-    current_code = current_template.get("code", {}).get("value", "")
-    latest_code = latest_template.get("code", {}).get("value", "")
+    # Analyze code changes (only if show_diff is enabled, as it can be expensive)
+    if show_diff:
+        current_code = current_template.get("code", {}).get("value", "")
+        latest_code = latest_template.get("code", {}).get("value", "")
 
-    if current_code != latest_code:
-        diff_result = generate_code_diff(current_code, latest_code)
-        changes["code_diff"] = diff_result
+        if current_code != latest_code:
+            diff_result = generate_code_diff(current_code, latest_code)
+            changes["code_diff"] = diff_result
 
     return changes
 
@@ -527,6 +528,14 @@ async def handle_updates(
     """Handle component updates with user interaction."""
     safe_updates = [comp for comp in outdated_components if not comp["breaking_change"]]
     breaking_updates = [comp for comp in outdated_components if comp["breaking_change"]]
+
+    # Check if output/in_place is required before starting interactive prompts
+    if not auto_update and (safe_updates or breaking_updates) and output is None and not in_place:
+        return {
+            "error": "When applying updates, you must specify either --output <file> or --in-place",
+            "flow_path": flow_path,
+            "applied_updates": 0,
+        }
 
     applied_updates = 0
 
@@ -638,10 +647,10 @@ def prompt_for_component_update(component: dict, update_type: str) -> bool:
                 f"    📝 {len(diff_data['added_lines'])} additions, {len(diff_data['removed_lines'])} deletions"
             )
 
-        # Show key diff blocks (limit to avoid overwhelming output)
-        for i, block in enumerate(diff_data["context_blocks"][:MAX_CONTEXT_BLOCKS]):  # Show max blocks
+        # Show all diff blocks in interactive mode
+        for i, block in enumerate(diff_data["context_blocks"]):
             console.print(f"    ┌─ Change {i + 1}:")
-            for line in block[:10]:  # Show max 10 lines per block
+            for line in block:
                 if line.startswith("+"):
                     console.print(f"    │ [green]{line}[/green]")
                 elif line.startswith("-"):
@@ -650,9 +659,7 @@ def prompt_for_component_update(component: dict, update_type: str) -> bool:
                     console.print(f"    │ [cyan]{line}[/cyan]")
                 else:
                     console.print(f"    │ {line}")
-
-        if len(diff_data["context_blocks"]) > MAX_CONTEXT_BLOCKS:
-            console.print(f"    └─ ... and {len(diff_data['context_blocks']) - MAX_CONTEXT_BLOCKS} more changes")
+            console.print("    └─")
 
     if update_type == "breaking":
         console.print("  ⚠️  This is a breaking change that may affect connected components")
@@ -719,6 +726,11 @@ async def check_command(
         "--in-place",
         help="Update the input file in place (requires --update or --interactive)",
     ),
+    show_diff: bool = typer.Option(
+        False,  # noqa: FBT003
+        "--show-diff",
+        help="Calculate and show code differences (can be expensive for large components)",
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show verbose output"),  # noqa: FBT003
 ) -> None:
     """Check a flow for outdated components and optionally update them."""
@@ -731,7 +743,13 @@ async def check_command(
 
     try:
         result = await check_flow_components(
-            flow_path, update=update, force=force, interactive=interactive, output=output, in_place=in_place
+            flow_path,
+            update=update,
+            force=force,
+            interactive=interactive,
+            output=output,
+            in_place=in_place,
+            show_diff=show_diff,
         )
     except (OSError, RuntimeError, ImportError) as e:
         console.print(f"[red]Error checking flow: {e}[/red]")
