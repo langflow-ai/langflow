@@ -8,14 +8,14 @@ if TYPE_CHECKING:
     from lfx.components.llm_operations.batch_run import BatchRunComponent
     from lfx.components.llm_operations.lambda_filter import SmartTransformComponent
     from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent
-    from lfx.components.llm_operations.llm_router import LLMSelectorComponent
+    from lfx.components.llm_operations.llm_selector import LLMSelectorComponent
     from lfx.components.llm_operations.structured_output import StructuredOutputComponent
 
 _dynamic_imports = {
     "BatchRunComponent": "batch_run",
     "SmartTransformComponent": "lambda_filter",
     "SmartRouterComponent": "llm_conditional_router",
-    "LLMSelectorComponent": "llm_router",
+    "LLMSelectorComponent": "llm_selector",
     "StructuredOutputComponent": "structured_output",
 }
 
