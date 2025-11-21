@@ -291,6 +291,9 @@ async def _load_from_index_or_cache(
     await logger.adebug("Prebuilt index not available, checking cache")
     try:
         cache_path = _get_cache_path()
+    except Exception as e:  # noqa: BLE001
+        await logger.adebug(f"Cache load failed: {e}")
+    else:
         if cache_path.exists():
             await logger.adebug(f"Attempting to load from cache: {cache_path}")
             index = _read_component_index(str(cache_path))
@@ -302,8 +305,6 @@ async def _load_from_index_or_cache(
                     modules_dict[top_level].update(components)
                 await logger.adebug(f"Loaded {len(modules_dict)} component categories from cache")
                 return modules_dict, "cache"
-    except Exception as e:  # noqa: BLE001
-        await logger.adebug(f"Cache load failed: {e}")
 
     return modules_dict, None
 
