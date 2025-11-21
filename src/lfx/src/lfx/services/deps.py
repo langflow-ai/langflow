@@ -59,11 +59,21 @@ def get_service(service_type: ServiceType, default=None):
         return None
 
 
-def get_db_service() -> DatabaseServiceProtocol | None:
-    """Retrieves the database service instance."""
+def get_db_service() -> DatabaseServiceProtocol:
+    """Retrieves the database service instance.
+
+    Returns a NoopDatabaseService if no real database service is available,
+    ensuring that session_scope() always has a valid database service to work with.
+    """
+    from lfx.services.database.service import NoopDatabaseService
     from lfx.services.schema import ServiceType
 
-    return get_service(ServiceType.DATABASE_SERVICE)
+    db_service = get_service(ServiceType.DATABASE_SERVICE)
+    if db_service is None:
+        # Return noop database service when no real database service is available
+        # This allows lfx to work in standalone mode without requiring database setup
+        return NoopDatabaseService()
+    return db_service
 
 
 def get_storage_service() -> StorageServiceProtocol | None:
