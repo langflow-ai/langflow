@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import inspect
+import json
 import os
 import platform
 import re
@@ -27,16 +28,40 @@ HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client 
 
 # HTTP status codes used in validation
 HTTP_NOT_FOUND = 404
+HTTP_METHOD_NOT_ALLOWED = 405
+HTTP_NOT_ACCEPTABLE = 406
 HTTP_BAD_REQUEST = 400
 HTTP_INTERNAL_SERVER_ERROR = 500
+HTTP_UNAUTHORIZED = 401
+HTTP_FORBIDDEN = 403
 
-# MCP Session Manager constants
-settings = get_settings_service().settings
-MAX_SESSIONS_PER_SERVER = (
-    settings.mcp_max_sessions_per_server
-)  # Maximum number of sessions per server to prevent resource exhaustion
-SESSION_IDLE_TIMEOUT = settings.mcp_session_idle_timeout  # 5 minutes idle timeout for sessions
-SESSION_CLEANUP_INTERVAL = settings.mcp_session_cleanup_interval  # Cleanup interval in seconds
+# MCP Session Manager constants - lazy loaded
+_mcp_settings_cache: dict[str, Any] = {}
+
+
+def _get_mcp_setting(key: str, default: Any = None) -> Any:
+    """Lazy load MCP settings from settings service."""
+    if key not in _mcp_settings_cache:
+        settings = get_settings_service().settings
+        _mcp_settings_cache[key] = getattr(settings, key, default)
+    return _mcp_settings_cache[key]
+
+
+def get_max_sessions_per_server() -> int:
+    """Get maximum number of sessions per server to prevent resource exhaustion."""
+    return _get_mcp_setting("mcp_max_sessions_per_server")
+
+
+def get_session_idle_timeout() -> int:
+    """Get 5 minutes idle timeout for sessions."""
+    return _get_mcp_setting("mcp_session_idle_timeout")
+
+
+def get_session_cleanup_interval() -> int:
+    """Get cleanup interval in seconds."""
+    return _get_mcp_setting("mcp_session_cleanup_interval")
+
+
 # RFC 7230 compliant header name pattern: token = 1*tchar
 # tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /
 #         "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
@@ -58,6 +83,46 @@ ALLOWED_HEADERS = {
     "x-mcp-client",
     "x-requested-with",
 }
+
+
+def create_mcp_http_client_with_ssl_option(
+    headers: dict[str, str] | None = None,
+    timeout: httpx.Timeout | None = None,
+    auth: httpx.Auth | None = None,
+    *,
+    verify_ssl: bool = True,
+) -> httpx.AsyncClient:
+    """Create an httpx AsyncClient with configurable SSL verification.
+
+    This is a custom factory that extends the standard MCP client factory
+    to support disabling SSL verification for self-signed certificates.
+
+    Args:
+        headers: Optional headers to include with all requests.
+        timeout: Request timeout as httpx.Timeout object.
+        auth: Optional authentication handler.
+        verify_ssl: Whether to verify SSL certificates (default: True).
+
+    Returns:
+        Configured httpx.AsyncClient instance.
+    """
+    kwargs: dict[str, Any] = {
+        "follow_redirects": True,
+        "verify": verify_ssl,
+    }
+
+    if timeout is None:
+        kwargs["timeout"] = httpx.Timeout(30.0)
+    else:
+        kwargs["timeout"] = timeout
+
+    if headers is not None:
+        kwargs["headers"] = headers
+
+    if auth is not None:
+        kwargs["auth"] = auth
+
+    return httpx.AsyncClient(**kwargs)
 
 
 def validate_headers(headers: dict[str, str]) -> dict[str, str]:
@@ -189,6 +254,55 @@ def sanitize_mcp_name(name: str, max_length: int = 46) -> str:
     return name
 
 
+def _camel_to_snake(name: str) -> str:
+    """Convert camelCase to snake_case."""
+    import re
+
+    # Insert an underscore before any uppercase letter that follows a lowercase letter
+    s1 = re.sub("([a-z0-9])([A-Z])", r"\1_\2", name)
+    return s1.lower()
+
+
+def _convert_camel_case_to_snake_case(provided_args: dict[str, Any], arg_schema: type[BaseModel]) -> dict[str, Any]:
+    """Convert camelCase field names to snake_case if the schema expects snake_case fields."""
+    schema_fields = set(arg_schema.model_fields.keys())
+    converted_args = {}
+
+    for key, value in provided_args.items():
+        # If the key already exists in schema, use it as-is
+        if key in schema_fields:
+            converted_args[key] = value
+        else:
+            # Try converting camelCase to snake_case
+            snake_key = _camel_to_snake(key)
+            if snake_key in schema_fields:
+                converted_args[snake_key] = value
+            else:
+                # If neither the original nor converted key exists, keep original
+                # The validation will catch this error
+                converted_args[key] = value
+
+    return converted_args
+
+
+def _handle_tool_validation_error(
+    e: Exception, tool_name: str, provided_args: dict[str, Any], arg_schema: type[BaseModel]
+) -> None:
+    """Handle validation errors for tool arguments with detailed error messages."""
+    # Check if this is a case where the tool was called with no arguments
+    if not provided_args and hasattr(arg_schema, "model_fields"):
+        required_fields = [name for name, field in arg_schema.model_fields.items() if field.is_required()]
+        if required_fields:
+            msg = (
+                f"Tool '{tool_name}' requires arguments but none were provided. "
+                f"Required fields: {', '.join(required_fields)}. "
+                f"Please check that the LLM is properly calling the tool with arguments."
+            )
+            raise ValueError(msg) from e
+    msg = f"Invalid input: {e}"
+    raise ValueError(msg) from e
+
+
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
     async def tool_coroutine(*args, **kwargs):
         # Get field names from the model (preserving order)
@@ -202,12 +316,12 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
             provided_args[field_names[i]] = arg
         # Merge in keyword arguments
         provided_args.update(kwargs)
+        provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
         # Validate input and fill defaults for missing optional fields
         try:
             validated = arg_schema.model_validate(provided_args)
-        except Exception as e:
-            msg = f"Invalid input: {e}"
-            raise ValueError(msg) from e
+        except Exception as e:  # noqa: BLE001
+            _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
 
         try:
             return await client.run_tool(tool_name, arguments=validated.model_dump())
@@ -230,11 +344,11 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
                 raise ValueError(msg)
             provided_args[field_names[i]] = arg
         provided_args.update(kwargs)
+        provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
         try:
             validated = arg_schema.model_validate(provided_args)
-        except Exception as e:
-            msg = f"Invalid input: {e}"
-            raise ValueError(msg) from e
+        except Exception as e:  # noqa: BLE001
+            _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
 
         try:
             loop = asyncio.get_event_loop()
@@ -328,8 +442,8 @@ def _validate_node_installation(command: str) -> str:
 
 async def _validate_connection_params(mode: str, command: str | None = None, url: str | None = None) -> None:
     """Validate connection parameters based on mode."""
-    if mode not in ["Stdio", "SSE"]:
-        msg = f"Invalid mode: {mode}. Must be either 'Stdio' or 'SSE'"
+    if mode not in ["Stdio", "Streamable_HTTP", "SSE"]:
+        msg = f"Invalid mode: {mode}. Must be either 'Stdio', 'Streamable_HTTP', or 'SSE'"
         raise ValueError(msg)
 
     if mode == "Stdio" and not command:
@@ -337,8 +451,8 @@ async def _validate_connection_params(mode: str, command: str | None = None, url
         raise ValueError(msg)
     if mode == "Stdio" and command:
         _validate_node_installation(command)
-    if mode == "SSE" and not url:
-        msg = "URL is required for SSE mode"
+    if mode in ["Streamable_HTTP", "SSE"] and not url:
+        msg = f"URL is required for {mode} mode"
         raise ValueError(msg)
 
 
@@ -350,6 +464,7 @@ class MCPSessionManager:
     2. Maximum session limits per server to prevent resource exhaustion
     3. Idle timeout for automatic session cleanup
     4. Periodic cleanup of stale sessions
+    5. Transport preference caching to avoid retrying failed transports
     """
 
     def __init__(self):
@@ -360,6 +475,9 @@ class MCPSessionManager:
         self._context_to_session: dict[str, tuple[str, str]] = {}
         # Reference count for each active (server_key, session_id)
         self._session_refcount: dict[tuple[str, str], int] = {}
+        # Cache which transport works for each server to avoid retrying failed transports
+        # server_key -> "streamable_http" | "sse"
+        self._transport_preference: dict[str, str] = {}
         self._cleanup_task = None
         self._start_cleanup_task()
 
@@ -374,7 +492,7 @@ class MCPSessionManager:
         """Periodically clean up idle sessions."""
         while True:
             try:
-                await asyncio.sleep(SESSION_CLEANUP_INTERVAL)
+                await asyncio.sleep(get_session_cleanup_interval())
                 await self._cleanup_idle_sessions()
             except asyncio.CancelledError:
                 break
@@ -391,8 +509,8 @@ class MCPSessionManager:
             sessions = server_data.get("sessions", {})
             sessions_to_remove = []
 
-            for session_id, session_info in sessions.items():
-                if current_time - session_info["last_used"] > SESSION_IDLE_TIMEOUT:
+            for session_id, session_info in list(sessions.items()):
+                if current_time - session_info["last_used"] > get_session_idle_timeout():
                     sessions_to_remove.append(session_id)
 
             # Clean up idle sessions
@@ -417,15 +535,16 @@ class MCPSessionManager:
                 env_str = str(sorted((connection_params.env or {}).items()))
                 key_input = f"{command_str}|{env_str}"
                 return f"stdio_{hash(key_input)}"
-        elif transport_type == "sse" and (isinstance(connection_params, dict) and "url" in connection_params):
+        elif transport_type == "streamable_http" and (
+            isinstance(connection_params, dict) and "url" in connection_params
+        ):
             # Include URL and headers for uniqueness
             url = connection_params["url"]
             headers = str(sorted((connection_params.get("headers", {})).items()))
             key_input = f"{url}|{headers}"
-            return f"sse_{hash(key_input)}"
+            return f"streamable_http_{hash(key_input)}"
 
         # Fallback to a generic key
-        # TODO: add option for streamable HTTP in future.
         return f"{transport_type}_{hash(str(connection_params))}"
 
     async def _validate_session_connectivity(self, session) -> bool:
@@ -475,7 +594,7 @@ class MCPSessionManager:
         """Get or create a session with improved reuse strategy.
 
         The key insight is that we should reuse sessions based on the server
-        identity (command + args for stdio, URL for SSE) rather than the context_id.
+        identity (command + args for stdio, URL for Streamable HTTP) rather than the context_id.
         This prevents creating a new subprocess for each unique context.
         """
         server_key = self._get_server_key(connection_params, transport_type)
@@ -488,7 +607,7 @@ class MCPSessionManager:
         sessions = server_data["sessions"]
 
         # Try to find a healthy existing session
-        for session_id, session_info in sessions.items():
+        for session_id, session_info in list(sessions.items()):
             session = session_info["session"]
             task = session_info["task"]
 
@@ -514,7 +633,7 @@ class MCPSessionManager:
                 await self._cleanup_session_by_id(server_key, session_id)
 
         # Check if we've reached the maximum number of sessions for this server
-        if len(sessions) >= MAX_SESSIONS_PER_SERVER:
+        if len(sessions) >= get_max_sessions_per_server():
             # Remove the oldest session
             oldest_session_id = min(sessions.keys(), key=lambda x: sessions[x]["last_used"])
             await logger.ainfo(
@@ -528,17 +647,24 @@ class MCPSessionManager:
 
         if transport_type == "stdio":
             session, task = await self._create_stdio_session(session_id, connection_params)
-        elif transport_type == "sse":
-            session, task = await self._create_sse_session(session_id, connection_params)
+            actual_transport = "stdio"
+        elif transport_type == "streamable_http":
+            # Pass the cached transport preference if available
+            preferred_transport = self._transport_preference.get(server_key)
+            session, task, actual_transport = await self._create_streamable_http_session(
+                session_id, connection_params, preferred_transport
+            )
+            # Cache the transport that worked for future connections
+            self._transport_preference[server_key] = actual_transport
         else:
             msg = f"Unknown transport type: {transport_type}"
             raise ValueError(msg)
 
-        # Store session info
+        # Store session info with the actual transport used
         sessions[session_id] = {
             "session": session,
             "task": task,
-            "type": transport_type,
+            "type": actual_transport,
             "last_used": asyncio.get_event_loop().time(),
         }
 
@@ -584,9 +710,9 @@ class MCPSessionManager:
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.discard)
 
-        # Wait for session to be ready
+        # Wait for session to be ready (use longer timeout for remote connections)
         try:
-            session = await asyncio.wait_for(session_future, timeout=10.0)
+            session = await asyncio.wait_for(session_future, timeout=30.0)
         except asyncio.TimeoutError as timeout_err:
             # Clean up the failed task
             if not task.done():
@@ -602,50 +728,151 @@ class MCPSessionManager:
 
         return session, task
 
-    async def _create_sse_session(self, session_id: str, connection_params):
-        """Create a new SSE session as a background task to avoid context issues."""
+    async def _create_streamable_http_session(
+        self, session_id: str, connection_params, preferred_transport: str | None = None
+    ):
+        """Create a new Streamable HTTP session with SSE fallback as a background task to avoid context issues.
+
+        Args:
+            session_id: Unique identifier for this session
+            connection_params: Connection parameters including URL, headers, timeouts, verify_ssl
+            preferred_transport: If set to "sse", skip Streamable HTTP and go directly to SSE
+
+        Returns:
+            tuple: (session, task, transport_used) where transport_used is "streamable_http" or "sse"
+        """
         import asyncio
 
         from mcp.client.sse import sse_client
+        from mcp.client.streamable_http import streamablehttp_client
 
         # Create a future to get the session
         session_future: asyncio.Future[ClientSession] = asyncio.Future()
+        # Track which transport succeeded
+        used_transport: list[str] = []
+
+        # Get verify_ssl option from connection params, default to True
+        verify_ssl = connection_params.get("verify_ssl", True)
+
+        # Create custom httpx client factory with SSL verification option
+        def custom_httpx_factory(
+            headers: dict[str, str] | None = None,
+            timeout: httpx.Timeout | None = None,
+            auth: httpx.Auth | None = None,
+        ) -> httpx.AsyncClient:
+            return create_mcp_http_client_with_ssl_option(
+                headers=headers, timeout=timeout, auth=auth, verify_ssl=verify_ssl
+            )
 
         async def session_task():
             """Background task that keeps the session alive."""
-            try:
-                async with sse_client(
-                    connection_params["url"],
-                    connection_params["headers"],
-                    connection_params["timeout_seconds"],
-                    connection_params["sse_read_timeout_seconds"],
-                ) as (read, write):
-                    session = ClientSession(read, write)
-                    async with session:
-                        await session.initialize()
-                        # Signal that session is ready
-                        session_future.set_result(session)
+            streamable_error = None
 
-                        # Keep the session alive until cancelled
-                        import anyio
+            # Skip Streamable HTTP if we know SSE works for this server
+            if preferred_transport != "sse":
+                # Try Streamable HTTP first with a quick timeout
+                try:
+                    await logger.adebug(f"Attempting Streamable HTTP connection for session {session_id}")
+                    # Use a shorter timeout for the initial connection attempt (2 seconds)
+                    async with streamablehttp_client(
+                        url=connection_params["url"],
+                        headers=connection_params["headers"],
+                        timeout=connection_params["timeout_seconds"],
+                        httpx_client_factory=custom_httpx_factory,
+                    ) as (read, write, _):
+                        session = ClientSession(read, write)
+                        async with session:
+                            # Initialize with a timeout to fail fast
+                            await asyncio.wait_for(session.initialize(), timeout=2.0)
+                            used_transport.append("streamable_http")
+                            await logger.ainfo(f"Session {session_id} connected via Streamable HTTP")
+                            # Signal that session is ready
+                            session_future.set_result(session)
 
-                        event = anyio.Event()
-                        try:
-                            await event.wait()
-                        except asyncio.CancelledError:
-                            await logger.ainfo(f"Session {session_id} is shutting down")
-            except Exception as e:  # noqa: BLE001
-                if not session_future.done():
-                    session_future.set_exception(e)
+                            # Keep the session alive until cancelled
+                            import anyio
+
+                            event = anyio.Event()
+                            try:
+                                await event.wait()
+                            except asyncio.CancelledError:
+                                await logger.ainfo(f"Session {session_id} (Streamable HTTP) is shutting down")
+                except (asyncio.TimeoutError, Exception) as e:  # noqa: BLE001
+                    # If Streamable HTTP fails or times out, try SSE as fallback immediately
+                    streamable_error = e
+                    error_type = "timed out" if isinstance(e, asyncio.TimeoutError) else "failed"
+                    await logger.awarning(
+                        f"Streamable HTTP {error_type} for session {session_id}: {e}. Falling back to SSE..."
+                    )
+            else:
+                await logger.adebug(f"Skipping Streamable HTTP for session {session_id}, using cached SSE preference")
+
+            # Try SSE if Streamable HTTP failed or if SSE is preferred
+            if streamable_error is not None or preferred_transport == "sse":
+                try:
+                    await logger.adebug(f"Attempting SSE connection for session {session_id}")
+                    # Extract SSE read timeout from connection params, default to 30s if not present
+                    sse_read_timeout = connection_params.get("sse_read_timeout_seconds", 30)
+
+                    async with sse_client(
+                        connection_params["url"],
+                        connection_params["headers"],
+                        connection_params["timeout_seconds"],
+                        sse_read_timeout,
+                        httpx_client_factory=custom_httpx_factory,
+                    ) as (read, write):
+                        session = ClientSession(read, write)
+                        async with session:
+                            await session.initialize()
+                            used_transport.append("sse")
+                            fallback_msg = " (fallback)" if streamable_error else " (preferred)"
+                            await logger.ainfo(f"Session {session_id} connected via SSE{fallback_msg}")
+                            # Signal that session is ready
+                            if not session_future.done():
+                                session_future.set_result(session)
+
+                            # Keep the session alive until cancelled
+                            import anyio
+
+                            event = anyio.Event()
+                            try:
+                                await event.wait()
+                            except asyncio.CancelledError:
+                                await logger.ainfo(f"Session {session_id} (SSE) is shutting down")
+                except Exception as sse_error:  # noqa: BLE001
+                    # Both transports failed (or just SSE if it was preferred)
+                    if streamable_error:
+                        await logger.aerror(
+                            f"Both Streamable HTTP and SSE failed for session {session_id}. "
+                            f"Streamable HTTP error: {streamable_error}. SSE error: {sse_error}"
+                        )
+                        if not session_future.done():
+                            session_future.set_exception(
+                                ValueError(
+                                    f"Failed to connect via Streamable HTTP ({streamable_error}) or SSE ({sse_error})"
+                                )
+                            )
+                    else:
+                        await logger.aerror(f"SSE connection failed for session {session_id}: {sse_error}")
+                        if not session_future.done():
+                            session_future.set_exception(ValueError(f"Failed to connect via SSE: {sse_error}"))
 
         # Start the background task
         task = asyncio.create_task(session_task())
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.discard)
 
-        # Wait for session to be ready
+        # Wait for session to be ready (use longer timeout for remote connections)
         try:
-            session = await asyncio.wait_for(session_future, timeout=10.0)
+            session = await asyncio.wait_for(session_future, timeout=30.0)
+            # Log which transport was used
+            if used_transport:
+                transport_used = used_transport[0]
+                await logger.ainfo(f"Session {session_id} successfully established using {transport_used}")
+                return session, task, transport_used
+            # This shouldn't happen, but handle it just in case
+            msg = f"Session {session_id} established but transport not recorded"
+            raise ValueError(msg)
         except asyncio.TimeoutError as timeout_err:
             # Clean up the failed task
             if not task.done():
@@ -655,11 +882,9 @@ class MCPSessionManager:
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
             self._background_tasks.discard(task)
-            msg = f"Timeout waiting for SSE session {session_id} to initialize"
+            msg = f"Timeout waiting for Streamable HTTP/SSE session {session_id} to initialize"
             await logger.aerror(msg)
             raise ValueError(msg) from timeout_err
-
-        return session, task
 
     async def _cleanup_session_by_id(self, server_key: str, session_id: str):
         """Clean up a specific session by server key and session ID."""
@@ -1006,7 +1231,7 @@ class MCPStdioClient:
         await self.disconnect()
 
 
-class MCPSseClient:
+class MCPStreamableHttpClient:
     def __init__(self, component_cache=None):
         self.session: ClientSession | None = None
         self._connection_params = None
@@ -1030,67 +1255,15 @@ class MCPSseClient:
             self._component_cache.set("mcp_session_manager", session_manager)
         return session_manager
 
-    async def validate_url(self, url: str | None, headers: dict[str, str] | None = None) -> tuple[bool, str]:
-        """Validate the SSE URL before attempting connection."""
+    async def validate_url(self, url: str | None) -> tuple[bool, str]:
+        """Validate the Streamable HTTP URL before attempting connection."""
         try:
             parsed = urlparse(url)
             if not parsed.scheme or not parsed.netloc:
                 return False, "Invalid URL format. Must include scheme (http/https) and host."
-
-            async with httpx.AsyncClient() as client:
-                try:
-                    # For SSE endpoints, try a GET request with short timeout
-                    # Many SSE servers don't support HEAD requests and return 404
-                    response = await client.get(
-                        url, timeout=2.0, headers={"Accept": "text/event-stream", **(headers or {})}
-                    )
-
-                    # For SSE, we expect the server to either:
-                    # 1. Start streaming (200)
-                    # 2. Return 404 if HEAD/GET without proper SSE handshake is not supported
-                    # 3. Return other status codes that we should handle gracefully
-
-                    # Don't fail on 404 since many SSE endpoints return this for non-SSE requests
-                    if response.status_code == HTTP_NOT_FOUND:
-                        # This is likely an SSE endpoint that doesn't support regular GET
-                        # Let the actual SSE connection attempt handle this
-                        return True, ""
-
-                    # Fail on client errors except 404, but allow server errors and redirects
-                    if (
-                        HTTP_BAD_REQUEST <= response.status_code < HTTP_INTERNAL_SERVER_ERROR
-                        and response.status_code != HTTP_NOT_FOUND
-                    ):
-                        return False, f"Server returned client error status: {response.status_code}"
-
-                except httpx.TimeoutException:
-                    # Timeout on a short request might indicate the server is trying to stream
-                    # This is actually expected behavior for SSE endpoints
-                    return True, ""
-                except httpx.NetworkError:
-                    return False, "Network error. Could not reach the server."
-                else:
-                    return True, ""
-
-        except (httpx.HTTPError, ValueError, OSError) as e:
+        except (ValueError, OSError) as e:
             return False, f"URL validation error: {e!s}"
-
-    async def pre_check_redirect(self, url: str | None, headers: dict[str, str] | None = None) -> str | None:
-        """Check for redirects and return the final URL."""
-        if url is None:
-            return url
-        try:
-            async with httpx.AsyncClient(follow_redirects=False) as client:
-                # Use GET with SSE headers instead of HEAD since many SSE servers don't support HEAD
-                response = await client.get(
-                    url, timeout=2.0, headers={"Accept": "text/event-stream", **(headers or {})}
-                )
-                if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
-                    return response.headers.get("Location", url)
-                # Don't treat 404 as an error here - let the main connection handle it
-        except (httpx.RequestError, httpx.HTTPError) as e:
-            await logger.awarning(f"Error checking redirects: {e}")
-        return url
+        return True, ""
 
     async def _connect_to_server(
         self,
@@ -1098,28 +1271,35 @@ class MCPSseClient:
         headers: dict[str, str] | None = None,
         timeout_seconds: int = 30,
         sse_read_timeout_seconds: int = 30,
+        *,
+        verify_ssl: bool = True,
     ) -> list[StructuredTool]:
-        """Connect to MCP server using SSE transport (SDK style)."""
+        """Connect to MCP server using Streamable HTTP transport with SSE fallback (SDK style)."""
         # Validate and sanitize headers early
         validated_headers = _process_headers(headers)
 
         if url is None:
-            msg = "URL is required for SSE mode"
-            raise ValueError(msg)
-        is_valid, error_msg = await self.validate_url(url, validated_headers)
-        if not is_valid:
-            msg = f"Invalid SSE URL ({url}): {error_msg}"
+            msg = "URL is required for StreamableHTTP or SSE mode"
             raise ValueError(msg)
 
-        url = await self.pre_check_redirect(url, validated_headers)
-
-        # Store connection parameters for later use in run_tool
-        self._connection_params = {
-            "url": url,
-            "headers": validated_headers,
-            "timeout_seconds": timeout_seconds,
-            "sse_read_timeout_seconds": sse_read_timeout_seconds,
-        }
+        # Only validate URL if we don't have a cached session
+        # This avoids expensive HTTP validation calls when reusing sessions
+        if not self._connected or not self._connection_params:
+            is_valid, error_msg = await self.validate_url(url)
+            if not is_valid:
+                msg = f"Invalid Streamable HTTP or SSE URL ({url}): {error_msg}"
+                raise ValueError(msg)
+            # Store connection parameters for later use in run_tool
+            # Include SSE read timeout for fallback and SSL verification option
+            self._connection_params = {
+                "url": url,
+                "headers": validated_headers,
+                "timeout_seconds": timeout_seconds,
+                "sse_read_timeout_seconds": sse_read_timeout_seconds,
+                "verify_ssl": verify_ssl,
+            }
+        elif headers:
+            self._connection_params["headers"] = validated_headers
 
         # If no session context is set, create a default one
         if not self._session_context:
@@ -1127,18 +1307,28 @@ class MCPSseClient:
             import uuid
 
             param_hash = uuid.uuid4().hex[:8]
-            self._session_context = f"default_sse_{param_hash}"
+            self._session_context = f"default_http_{param_hash}"
 
-        # Get or create a persistent session
+        # Get or create a persistent session (will try Streamable HTTP, then SSE fallback)
         session = await self._get_or_create_session()
         response = await session.list_tools()
         self._connected = True
         return response.tools
 
-    async def connect_to_server(self, url: str, headers: dict[str, str] | None = None) -> list[StructuredTool]:
-        """Connect to MCP server using SSE transport (SDK style)."""
+    async def connect_to_server(
+        self,
+        url: str,
+        headers: dict[str, str] | None = None,
+        sse_read_timeout_seconds: int = 30,
+        *,
+        verify_ssl: bool = True,
+    ) -> list[StructuredTool]:
+        """Connect to MCP server using Streamable HTTP with SSE fallback transport (SDK style)."""
         return await asyncio.wait_for(
-            self._connect_to_server(url, headers), timeout=get_settings_service().settings.mcp_server_timeout
+            self._connect_to_server(
+                url, headers, sse_read_timeout_seconds=sse_read_timeout_seconds, verify_ssl=verify_ssl
+            ),
+            timeout=get_settings_service().settings.mcp_server_timeout,
         )
 
     def set_session_context(self, context_id: str):
@@ -1154,12 +1344,14 @@ class MCPSseClient:
         # Use cached session manager to get/create persistent session
         session_manager = self._get_session_manager()
         # Cache session so we can access server-assigned session_id later for DELETE
-        self.session = await session_manager.get_session(self._session_context, self._connection_params, "sse")
+        self.session = await session_manager.get_session(
+            self._session_context, self._connection_params, "streamable_http"
+        )
         return self.session
 
     async def _terminate_remote_session(self) -> None:
         """Attempt to explicitly terminate the remote MCP session via HTTP DELETE (best-effort)."""
-        # Only relevant for SSE transport
+        # Only relevant for Streamable HTTP or SSE transport
         if not self._connection_params or "url" not in self._connection_params:
             return
 
@@ -1205,7 +1397,7 @@ class MCPSseClient:
             import uuid
 
             param_hash = uuid.uuid4().hex[:8]
-            self._session_context = f"default_sse_{param_hash}"
+            self._session_context = f"default_http_{param_hash}"
 
         max_retries = 2
         last_error_type = None
@@ -1215,9 +1407,6 @@ class MCPSseClient:
                 await logger.adebug(f"Attempting to run tool '{tool_name}' (attempt {attempt + 1}/{max_retries})")
                 # Get or create persistent session
                 session = await self._get_or_create_session()
-
-                # Add timeout to prevent hanging
-                import asyncio
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
@@ -1279,7 +1468,7 @@ class MCPSseClient:
                     await logger.aerror(msg)
                     # Clean up failed session from cache
                     if self._session_context and self._component_cache:
-                        cache_key = f"mcp_session_sse_{self._session_context}"
+                        cache_key = f"mcp_session_http_{self._session_context}"
                         self._component_cache.delete(cache_key)
                     self._connected = False
                     raise ValueError(msg) from e
@@ -1317,11 +1506,17 @@ class MCPSseClient:
         await self.disconnect()
 
 
+# Backward compatibility: MCPSseClient is now an alias for MCPStreamableHttpClient
+# The new client supports both Streamable HTTP and SSE with automatic fallback
+MCPSseClient = MCPStreamableHttpClient
+
+
 async def update_tools(
     server_name: str,
     server_config: dict,
     mcp_stdio_client: MCPStdioClient | None = None,
-    mcp_sse_client: MCPSseClient | None = None,
+    mcp_streamable_http_client: MCPStreamableHttpClient | None = None,
+    mcp_sse_client: MCPStreamableHttpClient | None = None,  # Backward compatibility
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
     """Fetch server config and update available tools."""
     if server_config is None:
@@ -1330,11 +1525,17 @@ async def update_tools(
         return "", [], {}
     if mcp_stdio_client is None:
         mcp_stdio_client = MCPStdioClient()
-    if mcp_sse_client is None:
-        mcp_sse_client = MCPSseClient()
+
+    # Backward compatibility: accept mcp_sse_client parameter
+    if mcp_streamable_http_client is None:
+        mcp_streamable_http_client = mcp_sse_client if mcp_sse_client is not None else MCPStreamableHttpClient()
 
     # Fetch server config from backend
-    mode = "Stdio" if "command" in server_config else "SSE" if "url" in server_config else ""
+    # Determine mode from config, defaulting to Streamable_HTTP if URL present
+    mode = server_config.get("mode", "")
+    if not mode:
+        mode = "Stdio" if "command" in server_config else "Streamable_HTTP" if "url" in server_config else ""
+
     command = server_config.get("command", "")
     url = server_config.get("url", "")
     tools = []
@@ -1347,7 +1548,7 @@ async def update_tools(
         raise
 
     # Determine connection type and parameters
-    client: MCPStdioClient | MCPSseClient | None = None
+    client: MCPStdioClient | MCPStreamableHttpClient | None = None
     if mode == "Stdio":
         # Stdio connection
         args = server_config.get("args", [])
@@ -1355,10 +1556,11 @@ async def update_tools(
         full_command = " ".join([command, *args])
         tools = await mcp_stdio_client.connect_to_server(full_command, env)
         client = mcp_stdio_client
-    elif mode == "SSE":
-        # SSE connection
-        tools = await mcp_sse_client.connect_to_server(url, headers=headers)
-        client = mcp_sse_client
+    elif mode in ["Streamable_HTTP", "SSE"]:
+        # Streamable HTTP connection with SSE fallback
+        verify_ssl = server_config.get("verify_ssl", True)
+        tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
+        client = mcp_streamable_http_client
     else:
         logger.error(f"Invalid MCP server mode for '{server_name}': {mode}")
         return "", [], {}
@@ -1378,7 +1580,65 @@ async def update_tools(
                 logger.warning(f"Could not create schema for tool '{tool.name}' from server '{server_name}'")
                 continue
 
-            tool_obj = StructuredTool(
+            # Create a custom StructuredTool that bypasses schema validation
+            class MCPStructuredTool(StructuredTool):
+                def run(self, tool_input: str | dict, config=None, **kwargs):
+                    """Override the main run method to handle parameter conversion before validation."""
+                    # Parse tool_input if it's a string
+                    if isinstance(tool_input, str):
+                        try:
+                            parsed_input = json.loads(tool_input)
+                        except json.JSONDecodeError:
+                            parsed_input = {"input": tool_input}
+                    else:
+                        parsed_input = tool_input or {}
+
+                    # Convert camelCase parameters to snake_case
+                    converted_input = self._convert_parameters(parsed_input)
+
+                    # Call the parent run method with converted parameters
+                    return super().run(converted_input, config=config, **kwargs)
+
+                async def arun(self, tool_input: str | dict, config=None, **kwargs):
+                    """Override the main arun method to handle parameter conversion before validation."""
+                    # Parse tool_input if it's a string
+                    if isinstance(tool_input, str):
+                        try:
+                            parsed_input = json.loads(tool_input)
+                        except json.JSONDecodeError:
+                            parsed_input = {"input": tool_input}
+                    else:
+                        parsed_input = tool_input or {}
+
+                    # Convert camelCase parameters to snake_case
+                    converted_input = self._convert_parameters(parsed_input)
+
+                    # Call the parent arun method with converted parameters
+                    return await super().arun(converted_input, config=config, **kwargs)
+
+                def _convert_parameters(self, input_dict):
+                    if not input_dict or not isinstance(input_dict, dict):
+                        return input_dict
+
+                    converted_dict = {}
+                    original_fields = set(self.args_schema.model_fields.keys())
+
+                    for key, value in input_dict.items():
+                        if key in original_fields:
+                            # Field exists as-is
+                            converted_dict[key] = value
+                        else:
+                            # Try to convert camelCase to snake_case
+                            snake_key = _camel_to_snake(key)
+                            if snake_key in original_fields:
+                                converted_dict[snake_key] = value
+                            else:
+                                # Keep original key
+                                converted_dict[key] = value
+
+                    return converted_dict
+
+            tool_obj = MCPStructuredTool(
                 name=tool.name,
                 description=tool.description or "",
                 args_schema=args_schema,
@@ -1387,6 +1647,7 @@ async def update_tools(
                 tags=[tool.name],
                 metadata={"server_name": server_name},
             )
+
             tool_list.append(tool_obj)
             tool_cache[tool.name] = tool_obj
         except (ConnectionError, TimeoutError, OSError, ValueError) as e:

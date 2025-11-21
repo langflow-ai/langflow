@@ -24,6 +24,7 @@ export interface ColumnField {
   filterable: boolean;
   formatter?: FormatterType;
   description?: string;
+  load_from_db?: boolean;
   disable_edit?: boolean;
   default?: any;
   edit_mode?: "modal" | "inline" | "popover";

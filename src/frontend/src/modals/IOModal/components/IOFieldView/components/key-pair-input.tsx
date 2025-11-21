@@ -1,16 +1,24 @@
 import _ from "lodash";
-import { useCallback, useEffect, useState } from "react";
+import { nanoid } from "nanoid";
+import { useState } from "react";
 import IconComponent from "../../../../../components/common/genericIconComponent";
 import { Input } from "../../../../../components/ui/input";
 import { classNames } from "../../../../../utils/utils";
 
 export type IOKeyPairInputProps = {
-  value: any;
-  onChange: (value: any) => void;
+  value: KeyPairRow[];
+  onChange: (value: KeyPairRow[]) => void;
   duplicateKey: boolean;
   isList: boolean;
   isInputField?: boolean;
   testId?: string;
+};
+
+export type KeyPairRow = {
+  id: string;
+  key: string;
+  value: string;
+  error: boolean;
 };
 
 const IOKeyPairInput = ({
@@ -21,60 +29,62 @@ const IOKeyPairInput = ({
   isInputField,
   testId,
 }: IOKeyPairInputProps) => {
-  const checkValueType = useCallback((value) => {
-    return Array.isArray(value) ? value : [value];
-  }, []);
-
-  const [currentData, setCurrentData] = useState<any[]>(() => {
-    return !value || value?.length === 0 ? [{ "": "" }] : checkValueType(value);
-  });
-
-  // Update internal state when external value changes
-  useEffect(() => {
-    const newData =
-      !value || value?.length === 0 ? [{ "": "" }] : checkValueType(value);
-    setCurrentData(newData);
-  }, [value, checkValueType]);
-
-  const handleChangeKey = (event, objIndex) => {
-    const oldKey = Object.keys(currentData[objIndex])[0];
-    const updatedObj = { [event.target.value]: currentData[objIndex][oldKey] };
-    const newData = [...currentData];
-    newData[objIndex] = updatedObj;
-    setCurrentData(newData);
-    onChange(newData);
+  const handleKeyChange = (id: string, newKey: string) => {
+    const item = value.find((item) => item.id === id);
+    if (item) {
+      const isDuplicate =
+        value.filter((kv) => kv.id !== id && kv.key === newKey).length > 0;
+      const newValue = value.map((row) =>
+        row.id === id ? { ...row, key: newKey, error: isDuplicate } : row,
+      );
+      onChange(newValue);
+    }
   };
 
-  const handleChangeValue = (newValue, objIndex) => {
-    const key = Object.keys(currentData[objIndex])[0];
-    const newData = [...currentData];
-    newData[objIndex] = { ...newData[objIndex], [key]: newValue };
-    setCurrentData(newData);
-    onChange(newData);
+  const handleValueChange = (id: string, newValue: string) => {
+    const item = value.find((item) => item.id === id);
+    if (item) {
+      // Keep error state for value changes
+      const newValues = value.map((row) =>
+        row.id === id ? { ...row, value: newValue } : row,
+      );
+      onChange(newValues);
+    }
   };
 
-  // Create flat array with additional metadata for rendering
-  const flattenedData =
-    currentData?.flatMap((obj, objIndex) => {
-      return Object.keys(obj).map((key) => ({
-        key,
-        value: obj[key],
-        objIndex,
-        uniqueId: `${objIndex}-${key}`, // Create unique identifier for React key
-      }));
-    }) || [];
+  const handleAddRow = () => {
+    const newValue = [
+      ...value,
+      { key: "", value: "", id: nanoid(), error: false },
+    ];
+    onChange(newValue);
+  };
+
+  const handleDeleteRow = (item: KeyPairRow) => {
+    const seen = new Set<string>();
+    const newValue = value
+      .filter((value) => value.id !== item.id)
+      .map((row) => {
+        const isDuplicate = row.key !== "" && seen.has(row.key);
+        seen.add(row.key);
+        return { ...row, error: isDuplicate };
+      });
+    onChange(newValue);
+  };
 
   return (
     <div className={classNames("flex h-full flex-col gap-3")}>
-      {flattenedData.map((item, idx) => {
+      {value.map((item, idx) => {
         return (
-          <div key={item.uniqueId} className="flex w-full gap-2">
+          <div key={item.id} className="flex w-full gap-2">
             <Input
               type="text"
               value={item.key.trim()}
-              className={classNames(duplicateKey ? "input-invalid" : "")}
-              placeholder="Type key..."
-              onChange={(event) => handleChangeKey(event, item.objIndex)}
+              className={classNames(item.error ? "input-invalid" : "")}
+              placeholder={
+                item.error ? "Duplicate or empty key" : "Type key..."
+              }
+              onChange={(event) => handleKeyChange(item.id, event.target.value)}
               disabled={!isInputField}
               data-testid={testId ? `${testId}-key-${idx}` : undefined}
             />
@@ -84,23 +94,16 @@ const IOKeyPairInput = ({
               value={item.value}
               placeholder="Type a value..."
               onChange={(event) =>
-                handleChangeValue(event.target.value, item.objIndex)
+                handleValueChange(item.id, event.target.value)
               }
               disabled={!isInputField}
               data-testid={testId ? `${testId}-value-${idx}` : undefined}
             />
 
-            {isList &&
-            isInputField &&
-            item.objIndex === currentData.length - 1 ? (
+            {isList && isInputField && idx === value.length - 1 ? (
               <button
                 type="button"
-                onClick={() => {
-                  const newInputList = _.cloneDeep(currentData);
-                  newInputList.push({ "": "" });
-                  setCurrentData(newInputList);
-                  onChange(newInputList);
-                }}
+                onClick={handleAddRow}
                 data-testid={testId ? `${testId}-plus-btn-0` : undefined}
               >
                 <IconComponent
@@ -111,15 +114,8 @@ const IOKeyPairInput = ({
             ) : isList && isInputField ? (
               <button
                 type="button"
-                onClick={() => {
-                  const newInputList = _.cloneDeep(currentData);
-                  newInputList.splice(item.objIndex, 1);
-                  setCurrentData(newInputList);
-                  onChange(newInputList);
-                }}
-                data-testid={
-                  testId ? `${testId}-minus-btn-${item.objIndex}` : undefined
-                }
+                onClick={() => handleDeleteRow(item)}
+                data-testid={testId ? `${testId}-minus-btn-${idx}` : undefined}
               >
                 <IconComponent
                   name="X"

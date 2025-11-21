@@ -122,7 +122,12 @@ class ParserComponent(Component):
                 formatted_text = self.pattern.format(**row.to_dict())
                 lines.append(formatted_text)
         elif data is not None:
-            formatted_text = self.pattern.format(**data.data)
+            # Use format_map with a dict that returns default_value for missing keys
+            class DefaultDict(dict):
+                def __missing__(self, key):
+                    return data.default_value or ""
+
+            formatted_text = self.pattern.format_map(DefaultDict(data.data))
             lines.append(formatted_text)
 
         combined_text = self.sep.join(lines)

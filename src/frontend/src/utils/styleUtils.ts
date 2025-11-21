@@ -209,34 +209,27 @@ export const FILE_ICONS = {
 
 export const SIDEBAR_CATEGORIES = [
   { display_name: "Saved", name: "saved_components", icon: "GradientSave" },
-  { display_name: "Input / Output", name: "input_output", icon: "Cable" },
-  { display_name: "Agents", name: "agents", icon: "Bot" },
-  { display_name: "Models", name: "models", icon: "BrainCog" },
-  { display_name: "Data", name: "data", icon: "Database" },
-  ...(ENABLE_KNOWLEDGE_BASES
-    ? [
-        {
-          display_name: "Knowledge Bases",
-          name: "knowledge_bases",
-          icon: "Library",
-        },
-      ]
-    : []),
-  { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
+  { display_name: "Input & Output", name: "input_output", icon: "Cable" },
+  { display_name: "Data Sources", name: "data_source", icon: "Database" },
+  { display_name: "Models & Agents", name: "models_and_agents", icon: "Bot" },
+  {
+    display_name: "LLM Operations",
+    name: "llm_operations",
+    icon: "BrainCircuit",
+  },
+  {
+    display_name: ENABLE_KNOWLEDGE_BASES ? "Files & Knowledge" : "Files",
+    name: "files_and_knowledge",
+    icon: "Layers",
+  },
   { display_name: "Processing", name: "processing", icon: "ListFilter" },
-  { display_name: "Logic", name: "logic", icon: "ArrowRightLeft" },
-  { display_name: "Helpers", name: "helpers", icon: "Wand2" },
-  { display_name: "Inputs", name: "inputs", icon: "Download" },
-  { display_name: "Outputs", name: "outputs", icon: "Upload" },
-  { display_name: "Prompts", name: "prompts", icon: "braces" },
-  { display_name: "Chains", name: "chains", icon: "Link" },
-  { display_name: "Loaders", name: "documentloaders", icon: "Paperclip" },
-  { display_name: "Link Extractors", name: "link_extractors", icon: "Link2" },
-  { display_name: "Output Parsers", name: "output_parsers", icon: "Compass" },
+  {
+    display_name: "Flow Controls",
+    name: "flow_controls",
+    icon: "ArrowRightLeft",
+  },
+  { display_name: "Utilities", name: "utilities", icon: "Wand2" },
   { display_name: "Prototypes", name: "prototypes", icon: "FlaskConical" },
-  { display_name: "Retrievers", name: "retrievers", icon: "FileSearch" },
-  { display_name: "Text Splitters", name: "textsplitters", icon: "Scissors" },
-  { display_name: "Toolkits", name: "toolkits", icon: "Package2" },
   { display_name: "Tools", name: "tools", icon: "Hammer" },
 ];
 
@@ -264,6 +257,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Cleanlab", name: "cleanlab", icon: "Cleanlab" },
   { display_name: "Cloudflare", name: "cloudflare", icon: "Cloudflare" },
   { display_name: "Cohere", name: "cohere", icon: "Cohere" },
+  { display_name: "CometAPI", name: "cometapi", icon: "CometAPI" },
   { display_name: "Composio", name: "composio", icon: "Composio" },
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
   { display_name: "Couchbase", name: "couchbase", icon: "Couchbase" },
@@ -323,6 +317,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "TwelveLabs", name: "twelvelabs", icon: "TwelveLabs" },
   { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
   { display_name: "Upstash", name: "upstash", icon: "Upstash" },
+  { display_name: "VLM Run", name: "vlmrun", icon: "VLMRun" },
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
   { display_name: "Weaviate", name: "weaviate", icon: "Weaviate" },

@@ -74,6 +74,8 @@ export const usePatchMCPServer: useMutationFunctionType<
     MCPServerType
   > = mutate(["usePatchMCPServer"], patchMCPServer, {
     ...options,
+    retry: 0,
+
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({
         queryKey: ["useGetMCPServers"],

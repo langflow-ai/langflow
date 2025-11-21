@@ -9,11 +9,13 @@ class AmazonBedrockComponent(LCModelComponent):
     display_name: str = "Amazon Bedrock"
     description: str = (
         "Generate text using Amazon Bedrock LLMs with the legacy ChatBedrock API. "
-        "For better compatibility, newer features, and improved conversation handling, "
-        "we recommend using Amazon Bedrock Converse instead."
+        "This component is deprecated. Please use Amazon Bedrock Converse instead "
+        "for better compatibility, newer features, and improved conversation handling."
     )
     icon = "Amazon"
     name = "AmazonBedrockModel"
+    legacy = True
+    replacement = "amazon.AmazonBedrockConverseModel"
 
     inputs = [
         *LCModelComponent.get_base_inputs(),

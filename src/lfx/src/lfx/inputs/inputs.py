@@ -190,24 +190,15 @@ class MessageInput(StrInput, InputTraceMixin):
         # If v is a instance of Message, then its fine
         if isinstance(v, dict):
             return Message(**v)
+        # Duck-typed Message check - works across module boundaries
         if isinstance(v, Message):
+            # If it's from a different module (e.g., langflow.schema.Message),
+            # convert it to ensure we have the right type
+            if type(v).__module__ != Message.__module__:
+                return Message(**v.model_dump())
             return v
-        # Check for Message-like objects by examining their fields
-        # This handles both langflow and lfx Message instances
-        if hasattr(v, "text") and hasattr(v, "model_dump") and callable(v.model_dump):
-            # Check if it has other Message-specific attributes
-            message_fields = {"text", "data", "sender", "session_id", "properties"}
-            obj_attrs = set(dir(v))
-            min_message_fields = 3
-            if len(message_fields.intersection(obj_attrs)) >= min_message_fields:
-                try:
-                    return Message(**v.model_dump())
-                except (TypeError, ValueError):
-                    # Fallback to text only if model_dump fails
-                    return Message(text=v.text)
         if isinstance(v, str | AsyncIterator | Iterator):
             return Message(text=v)
-        # For simplified implementation, we'll skip MessageBase handling
         msg = f"Invalid value type {type(v)}"
         raise ValueError(msg)
 
@@ -290,6 +281,7 @@ class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.PASSWORD
     multiline: CoalesceBool = True
     password: CoalesceBool = Field(default=True)
+    track_in_telemetry: CoalesceBool = False  # Never track secret inputs
 
 
 class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
@@ -307,6 +299,7 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
     password: CoalesceBool = Field(default=True)
     input_types: list[str] = []
     load_from_db: CoalesceBool = True
+    track_in_telemetry: CoalesceBool = False  # Never track passwords
 
     @field_validator("value")
     @classmethod
@@ -361,6 +354,7 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
     """
 
     field_type: SerializableFieldTypes = FieldTypes.INTEGER
+    track_in_telemetry: CoalesceBool = True  # Safe numeric parameter
 
     @field_validator("value")
     @classmethod
@@ -396,6 +390,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
     """
 
     field_type: SerializableFieldTypes = FieldTypes.FLOAT
+    track_in_telemetry: CoalesceBool = True  # Safe numeric parameter
 
     @field_validator("value")
     @classmethod
@@ -433,6 +428,7 @@ class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolMode
 
     field_type: SerializableFieldTypes = FieldTypes.BOOLEAN
     value: CoalesceBool = False
+    track_in_telemetry: CoalesceBool = True  # Safe boolean flag
 
 
 class NestedDictInput(
@@ -497,6 +493,7 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     toggle: bool = False
     toggle_disable: bool | None = None
     toggle_value: bool | None = None
+    track_in_telemetry: CoalesceBool = True  # Safe predefined choices
 
 
 class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolModeMixin):
@@ -508,6 +505,7 @@ class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolM
     """
 
     field_type: SerializableFieldTypes = FieldTypes.CONNECTION
+    track_in_telemetry: CoalesceBool = False  # Never track connection strings (may contain credentials)
 
 
 class AuthInput(BaseInputMixin, AuthMixin, MetadataTraceMixin):
@@ -522,6 +520,7 @@ class AuthInput(BaseInputMixin, AuthMixin, MetadataTraceMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.AUTH
     show: bool = False
+    track_in_telemetry: CoalesceBool = False  # Never track auth credentials
 
 
 class QueryInput(MessageTextInput, QueryMixin):
@@ -567,6 +566,7 @@ class TabInput(BaseInputMixin, TabMixin, MetadataTraceMixin, ToolModeMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.TAB
     options: list[str] = Field(default_factory=list)
+    track_in_telemetry: CoalesceBool = True  # Safe UI tab selection
 
     @model_validator(mode="after")
     @classmethod
@@ -617,7 +617,7 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
         return v
 
 
-class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin):
+class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a file field.
 
     This class represents a file input and provides functionality for handling file values.
@@ -628,6 +628,7 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixi
     """
 
     field_type: SerializableFieldTypes = FieldTypes.FILE
+    track_in_telemetry: CoalesceBool = False  # Never track file paths (may contain PII)
 
 
 class McpInput(BaseInputMixin, MetadataTraceMixin):
@@ -642,6 +643,7 @@ class McpInput(BaseInputMixin, MetadataTraceMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.MCP
     value: dict[str, Any] = Field(default_factory=dict)
+    track_in_telemetry: CoalesceBool = False  # Never track MCP config (may contain sensitive data)
 
 
 class LinkInput(BaseInputMixin, LinkMixin):

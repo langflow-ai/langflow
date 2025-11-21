@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useContext, useState } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { useLoginUser } from "@/controllers/API/queries/auth";
@@ -17,7 +18,7 @@ export default function LoginAdminPage() {
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
   const { login } = useContext(AuthContext);
-
+  const queryClient = useQueryClient();
   const { password, username } = inputState;
   const setErrorData = useAlertStore((state) => state.setErrorData);
   function handleInput({
@@ -37,6 +38,7 @@ export default function LoginAdminPage() {
     mutate(user, {
       onSuccess: (res) => {
         login(res.access_token, "login", res.refresh_token);
+        queryClient.clear();
       },
       onError: (error) => {
         setErrorData({

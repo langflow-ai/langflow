@@ -1,0 +1,54 @@
+---
+title: MongoDB
+slug: /bundles-mongodb
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **MongoDB** bundle.
+
+## MongoDB Atlas
+
+The **MongoDB Atlas** component reads and writes to MongoDB Atlas vector stores using an instance of [`MongoDBAtlasVectorSearch`](https://docs.langchain.com/oss/python/integrations/vectorstores/mongodb_atlas).
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+<PartialVectorSearchResults />
+
+### MongoDB Atlas parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [MongoDB Atlas documentation](https://www.mongodb.com/docs/atlas/atlas-vector-search/tutorials/vector-search-quick-start/) or inspect [component code](/concepts-components#component-code).
+
+| Name                      | Type         | Description                               |
+| ------------------------- | ------------ | ----------------------------------------- |
+| mongodb_atlas_cluster_uri | SecretString | Input parameter. The connection URI for your MongoDB Atlas cluster. Required. |
+| enable_mtls               | Boolean      | Input parameter. Enable mutual TLS authentication. Default: `false`. |
+| mongodb_atlas_client_cert | SecretString | Input parameter. Client certificate combined with private key for mTLS authentication. Required if mTLS is enabled. |
+| db_name                   | String       | Input parameter. The name of the database to use. Required. |
+| collection_name           | String       | Input parameter. The name of the collection to use. Required. |
+| index_name                | String       | Input parameter. The name of the Atlas Search index, it should be a Vector Search. Required. |
+| insert_mode               | String       | Input parameter. How to insert new documents into the collection. The options are "append" or "overwrite". Default: "append". |
+| embedding                 | Embeddings   | Input parameter. The embedding model to use. |
+| number_of_results         | Integer      | Input parameter. Number of results to return in similarity search. Default: 4. |
+| index_field               | String       | Input parameter. The field to index. Default: "embedding". |
+| filter_field              | String       | Input parameter. The field to filter the index. |
+| number_dimensions         | Integer      | Input parameter. Embedding vector dimension count. Default: 1536. |
+| similarity                | String       | Input parameter. The method used to measure similarity between vectors. The options are "cosine", "euclidean", or "dotProduct". Default: "cosine". |
+| quantization              | String       | Input parameter. Quantization reduces memory costs by converting 32-bit floats to smaller data types. The options are "scalar" or "binary". |

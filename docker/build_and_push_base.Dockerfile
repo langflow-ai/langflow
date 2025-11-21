@@ -21,6 +21,9 @@ ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
 
+# Set RUSTFLAGS for reqwest unstable features needed by apify-client v2.0.0
+ENV RUSTFLAGS='--cfg reqwest_unstable'
+
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \
@@ -56,8 +59,9 @@ COPY ./src /app/src
 COPY src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
 # Increase memory and disable concurrent builds to avoid esbuild crashes on emulated architectures
+# Force esbuild to use JS implementation on emulated architectures to avoid native binary crashes
 RUN npm install \
-    && NODE_OPTIONS="--max-old-space-size=8192" JOBS=1 npm run build \
+    && ESBUILD_BINARY_PATH="" NODE_OPTIONS="--max-old-space-size=12288" JOBS=1 npm run build \
     && cp -r build /app/src/backend/base/langflow/frontend \
     && rm -rf /tmp/src/frontend
 

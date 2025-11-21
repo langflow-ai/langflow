@@ -22,7 +22,10 @@ import {
 } from "@/components/ui/sidebar";
 import SkeletonGroup from "@/components/ui/skeletonGroup";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
-import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
+import {
+  ENABLE_KNOWLEDGE_BASES,
+  ENABLE_NEW_SIDEBAR,
+} from "@/customization/feature-flags";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { setLocalStorage } from "@/utils/local-storage-util";
@@ -55,6 +58,7 @@ import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
+const MCP_COMPONENT_CATEGORY = "models_and_agents";
 
 // Search context for the sidebar
 export type SearchContextType = {
@@ -146,7 +150,35 @@ interface FlowSidebarComponentProps {
 }
 
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
-  const data = useTypesStore((state) => state.data);
+  const rawData = useTypesStore((state) => state.data);
+
+  // Filter out knowledge components from files_and_knowledge category when ENABLE_KNOWLEDGE_BASES is OFF
+  const data = useMemo(() => {
+    if (ENABLE_KNOWLEDGE_BASES) {
+      return rawData;
+    }
+
+    const knowledgeComponentNames = [
+      "KnowledgeIngestion",
+      "KnowledgeRetrieval",
+    ];
+
+    // Create a deep copy to avoid mutating the original
+    const filteredData = cloneDeep(rawData);
+
+    if (filteredData.files_and_knowledge) {
+      // Filter out knowledge components by creating a new object without them
+      const filteredCategory = Object.fromEntries(
+        Object.entries(filteredData.files_and_knowledge).filter(
+          ([componentName]) => !knowledgeComponentNames.includes(componentName),
+        ),
+      );
+
+      filteredData.files_and_knowledge = filteredCategory;
+    }
+
+    return filteredData;
+  }, [rawData]);
 
   const {
     getFilterEdge,
@@ -223,8 +255,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   // Create base data that includes MCP category when available
   const baseData = useMemo(() => {
-    if (mcpSuccess && mcpServers && data["agents"]?.["MCPTools"]) {
-      const mcpComponent = data["agents"]["MCPTools"];
+    if (
+      mcpSuccess &&
+      mcpServers &&
+      data[MCP_COMPONENT_CATEGORY]?.["MCPTools"]
+    ) {
+      const mcpComponent = data[MCP_COMPONENT_CATEGORY]["MCPTools"];
       const newMcpSearchData = mcpServers.map((mcpServer) => ({
         ...mcpComponent,
         display_name: mcpServer.name,
@@ -244,6 +280,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       newMcpSearchData.forEach((mcp) => {
         mcpCategoryData[mcp.display_name] = mcp;
       });
+
+      console.log("mcpCategoryData", mcpCategoryData);
 
       return {
         ...data,
@@ -413,8 +451,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     );
 
     // MCP data is already included in baseData, but we still need mcpSearchData for non-search display
-    if (mcpSuccess && mcpServers && data["agents"]?.["MCPTools"]) {
-      const mcpComponent = data["agents"]["MCPTools"];
+    if (
+      mcpSuccess &&
+      mcpServers &&
+      data[MCP_COMPONENT_CATEGORY]?.["MCPTools"]
+    ) {
+      const mcpComponent = data[MCP_COMPONENT_CATEGORY]["MCPTools"];
       const newMcpSearchData = mcpServers.map((mcpServer) => ({
         ...mcpComponent,
         mcpServerName: mcpServer.name, // adds this field and makes it searchable
@@ -597,7 +639,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
           <SidebarContent
             segmentedSidebar={ENABLE_NEW_SIDEBAR}
-            className="flex-1 group-data-[collapsible=icon]:hidden"
+            className="flex-1 group-data-[collapsible=icon]:hidden gutter-stable"
           >
             {isLoading ? (
               <div className="flex flex-col gap-2">

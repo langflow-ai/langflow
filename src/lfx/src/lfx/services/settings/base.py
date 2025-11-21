@@ -158,6 +158,13 @@ class Settings(BaseSettings):
     disable_track_apikey_usage: bool = False
     remove_api_keys: bool = False
     components_path: list[str] = []
+    components_index_path: str | None = None
+    """Path or URL to a prebuilt component index JSON file.
+
+    If None, uses the built-in index at lfx/_assets/component_index.json.
+    Set to a file path (e.g., '/path/to/index.json') or URL (e.g., 'https://example.com/index.json')
+    to use a custom index.
+    """
     langchain_cache: str = "InMemoryCache"
     load_flows_path: str | None = None
     bundle_urls: list[str] = []
@@ -226,6 +233,10 @@ class Settings(BaseSettings):
     """The host on which Langflow will run."""
     port: int = 7860
     """The port on which Langflow will run."""
+    runtime_port: int | None = Field(default=None, exclude=True)
+    """TEMPORARY: The port detected at runtime after checking for conflicts.
+    This field is system-managed only and will be removed in future versions
+    when strict port enforcement is implemented (errors will be raised if port unavailable)."""
     workers: int = 1
     """The number of workers to run."""
     log_level: str = "critical"
@@ -275,9 +286,15 @@ class Settings(BaseSettings):
     mcp_server_enable_progress_notifications: bool = False
     """If set to False, Langflow will not send progress notifications in the MCP server."""
 
+    # Add projects to MCP servers automatically on creation
+    add_projects_to_mcp_servers: bool = True
+    """If set to True, newly created projects will be added to the user's MCP servers config automatically."""
     # MCP Composer
     mcp_composer_enabled: bool = True
     """If set to False, Langflow will not start the MCP Composer service."""
+    mcp_composer_version: str = "~=0.1.0.7"
+    """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax.
+    ~=0.1.0.7 allows patch updates (0.1.0.x) but prevents minor/major version changes."""
 
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
@@ -299,6 +316,23 @@ class Settings(BaseSettings):
     this is intended to be used to skip all startup project logic."""
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
+
+    # SSRF Protection
+    ssrf_protection_enabled: bool = False
+    """If set to True, Langflow will enable SSRF (Server-Side Request Forgery) protection.
+    When enabled, blocks requests to private IP ranges, localhost, and cloud metadata endpoints.
+    When False (default), no URL validation is performed, allowing requests to any destination
+    including internal services, private networks, and cloud metadata endpoints.
+    Default is False for backward compatibility. In v2.0, this will be changed to True.
+
+    Note: When ssrf_protection_enabled is disabled, the ssrf_allowed_hosts setting is ignored and has no effect."""
+    ssrf_allowed_hosts: list[str] = []
+    """Comma-separated list of hosts/IPs/CIDR ranges to allow despite SSRF protection.
+    Examples: 'internal-api.company.local,192.168.1.0/24,10.0.0.5,*.dev.internal'
+    Supports exact hostnames, wildcard domains (*.example.com), exact IPs, and CIDR ranges.
+
+    Note: This setting only takes effect when ssrf_protection_enabled is True.
+    When protection is disabled, all hosts are allowed regardless of this setting."""
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -341,6 +375,34 @@ class Settings(BaseSettings):
         logger.debug(f"Setting user agent to {value}")
         return value
 
+    @field_validator("mcp_composer_version", mode="before")
+    @classmethod
+    def validate_mcp_composer_version(cls, value):
+        """Ensure the version string has a version specifier prefix.
+
+        If a bare version like '0.1.0.7' is provided, prepend '~=' to allow patch updates.
+        Supports PEP 440 specifiers: ==, !=, <=, >=, <, >, ~=, ===
+        """
+        if not value:
+            return "~=0.1.0.7"  # Default
+
+        # Check if it already has a version specifier
+        # Order matters: check longer specifiers first to avoid false matches
+        specifiers = ["===", "==", "!=", "<=", ">=", "~=", "<", ">"]
+        if any(value.startswith(spec) for spec in specifiers):
+            return value
+
+        # If it's a bare version number, add ~= prefix
+        # This regex matches version numbers like 0.1.0.7, 1.2.3, etc.
+        import re
+
+        if re.match(r"^\d+(\.\d+)*", value):
+            logger.debug(f"Adding ~= prefix to bare version '{value}' -> '~={value}'")
+            return f"~={value}"
+
+        # If we can't determine, return as-is and let uvx handle it
+        return value
+
     @field_validator("variables_to_get_from_environment", mode="before")
     @classmethod
     def set_variables_to_get_from_environment(cls, value):
@@ -374,6 +436,8 @@ class Settings(BaseSettings):
 
         if isinstance(value, str):
             value = Path(value)
+        # Resolve to absolute path to handle relative paths correctly
+        value = value.resolve()
         if not value.exists():
             value.mkdir(parents=True, exist_ok=True)
 

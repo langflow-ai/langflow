@@ -23,6 +23,7 @@ export default function InputGlobalComponent({
   id,
   load_from_db,
   password,
+  allowCustomValue = true,
   editNode = false,
   placeholder,
   isToolMode = false,
@@ -135,6 +136,7 @@ export default function InputGlobalComponent({
       selectedOption={selectedOption}
       setSelectedOption={handlers.handleVariableSelect}
       onChange={handlers.handleInputChange}
+      allowCustomValue={allowCustomValue}
       isToolMode={isToolMode}
       hasRefreshButton={hasRefreshButton}
     />

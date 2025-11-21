@@ -6,8 +6,7 @@ from anyio import Path
 from fastapi import status
 from httpx import AsyncClient
 from langflow.api.v1.schemas import CustomComponentRequest, UpdateCustomComponentRequest
-
-from lfx.components.agents.agent import AgentComponent
+from lfx.components.models_and_agents.agent import AgentComponent
 from lfx.custom.utils import build_custom_component_template
 
 
@@ -65,7 +64,7 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
     template = component_node["template"]
     current_model_names = template["model_name"]["options"]
 
-    # load the code from the file at lfx.components.agents.agent.py asynchronously
+    # load the code from the file at lfx.components.models_and_agents.agent.py asynchronously
     # we are at str/backend/tests/unit/api/v1/test_endpoints.py
     # find the file by using the class AgentComponent
     agent_component_file = await asyncio.to_thread(inspect.getsourcefile, AgentComponent)

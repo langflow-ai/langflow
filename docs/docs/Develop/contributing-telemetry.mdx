@@ -1,0 +1,77 @@
+---
+title: Telemetry
+slug: /contributing-telemetry
+---
+
+Langflow uses anonymous telemetry to collect statistics about feature usage and performance.
+The Langflow team uses this data to identify popular features and areas that need improvement based on actual usage patterns.
+This helps prioritize development efforts on the most impactful changes and popular features.
+
+## Privacy
+
+The Langflow team respects your privacy, and the team is committed to protecting your data.
+
+Langflow telemetry doesn't collect any personal information or sensitive data.
+All telemetry data is anonymized and used solely for improving Langflow.
+
+## Opt out of telemetry
+
+To opt out of telemetry, set `DO_NOT_TRACK=True` in your [Langflow environment variables](/environment-variables) before starting Langflow. This disables telemetry data collection.
+
+## Data that Langflow collects
+
+Langflow telemetry collects data on flow runs, your environment, and component usage.
+
+### Run
+
+This telemetry event is sent every time a flow is executed.
+
+- **IsWebhook**: Indicates whether the operation was triggered with a webhook.
+- **Seconds**: Duration in seconds for how long the operation lasted, providing insights into performance.
+- **Success**: Boolean value indicating whether the operation was successful, helping identify potential errors or issues.
+- **ErrorMessage**: Provides error message details if the operation was unsuccessful, aiding in troubleshooting and enhancements.
+
+### Shutdown
+
+This telemetry event captures information about application lifecycle and runtime duration.
+
+- **TimeRunning**: Total runtime before shutdown, which is useful for understanding the application lifecycle and optimizing uptime.
+
+### Version
+
+This telemetry event is sent once when the telemetry service starts.
+
+- **Version**: The specific version of Langflow used, which helps in tracking feature adoption and compatibility.
+- **Platform**: Operating system of the host machine, which helps determine the most popular platforms for development and testing efforts.
+- **Python**: The version of Python used, assisting in maintaining compatibility and support for various Python versions.
+- **Arch**: Architecture of the system, such as x86 or ARM, which helps prioritize hardware optimization and testing in the Langflow codebase.
+- **AutoLogin**: Indicates whether the auto-login feature is enabled, reflecting user preference settings.
+- **CacheType**: Type of caching mechanism used, which impacts performance and efficiency.
+- **BackendOnly**: Boolean indicating whether Langflow is running in backend-only mode, useful for understanding deployment configurations.
+- **Desktop**: Indicates whether Langflow is running in desktop mode (Langflow Desktop), helping to understand usage patterns across different deployment types.
+
+### Playground
+
+This telemetry event monitors performance and usage patterns in the **Playground** environment.
+
+- **Seconds**: Duration in seconds for **Playground** execution, offering insights into performance during testing or experimental stages.
+- **ComponentCount**: Number of components used in the **Playground**, which helps understand complexity and usage patterns.
+- **Success**: Success status of the **Playground** operation, aiding in identifying the stability of experimental features.
+
+### Component
+
+This telemetry event is sent for each component execution.
+
+- **Name**: Identifies the component, providing data on which components are most utilized or prone to issues.
+- **Seconds**: Time taken by the component to execute, offering performance metrics.
+- **Success**: Whether the component operated successfully, which helps in quality control.
+- **ErrorMessage**: Details of any errors encountered, crucial for debugging and improvement.
+
+### Exception
+
+This telemetry event is sent when an unhandled exception is captured by Langflow's lifecycle or global exception handler.
+
+- **Type**: The exception class name, such as `ValueError`.
+- **Message**: The exception message that was raised.
+- **Context**: Additional contextual information related to where the exception occurred, such as route, component, or operation details, when available.
+- **StackTraceHash**: A hash of the stack trace used to group similar exceptions for easier analysis.

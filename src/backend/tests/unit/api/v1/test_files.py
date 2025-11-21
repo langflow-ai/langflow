@@ -17,10 +17,10 @@ from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_db_service
+from lfx.services.deps import session_scope
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from lfx.services.deps import session_scope
 from tests.conftest import _delete_transactions_and_vertex_builds
 
 
@@ -285,3 +285,191 @@ async def test_upload_file_size_limit(files_client, files_created_api_key, files
 
     assert response.status_code == 413, f"Expected 413, got {response.status_code}: {response.json()}"
     assert "Content size limit exceeded. Maximum allowed is 1MB and got 1.001MB." in response.json()["detail"]
+
+
+@pytest.fixture
+async def setup_profile_pictures(files_client, monkeypatch):  # noqa: ARG001
+    """Fixture to set up profile pictures in a temporary config directory.
+
+    Args:
+        files_client: Required for fixture dependency ordering (ensures app is initialized)
+        monkeypatch: For overriding environment variables
+    """
+    # Create a temporary directory for profile pictures
+    temp_dir = tempfile.mkdtemp()
+    config_path = Path(temp_dir)
+
+    # Create profile pictures directory structure
+    people_dir = config_path / "profile_pictures" / "People"
+    space_dir = config_path / "profile_pictures" / "Space"
+    people_dir.mkdir(parents=True, exist_ok=True)
+    space_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create test profile picture files
+    rocket_svg = b'<svg height="100" width="100"><circle cx="50" cy="50" r="40" fill="red" /></svg>'
+    person_svg = b'<svg height="100" width="100"><circle cx="50" cy="50" r="40" fill="blue" /></svg>'
+
+    (space_dir / "046-rocket.svg").write_bytes(rocket_svg)
+    (people_dir / "001-person.svg").write_bytes(person_svg)
+
+    # Override the config_dir setting
+    monkeypatch.setenv("LANGFLOW_CONFIG_DIR", str(config_path))
+
+    yield config_path
+
+    # Cleanup
+    import shutil
+
+    shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+async def test_list_profile_pictures(files_client, setup_profile_pictures):  # noqa: ARG001
+    """Test listing profile pictures from local filesystem.
+
+    Args:
+        files_client: HTTP client for making API requests
+        setup_profile_pictures: Fixture that sets up profile pictures directory
+    """
+    response = await files_client.get("api/v1/files/profile_pictures/list")
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.json()}"
+
+    data = response.json()
+    assert "files" in data
+    files = data["files"]
+
+    # The app copies all profile pictures during initialization,
+    # so we should have many files including our test ones
+    assert len(files) > 0, "Should have at least some profile pictures"
+
+    # Check that files are properly formatted as "Folder/filename"
+    assert any(file.startswith("Space/") for file in files), "Should have Space profile pictures"
+    assert any(file.startswith("People/") for file in files), "Should have People profile pictures"
+
+    # Check that the rocket file exists (either our test one or the real one)
+    assert "Space/046-rocket.svg" in files, "Should have the rocket profile picture"
+
+
+async def test_download_profile_picture_space_rocket(files_client, setup_profile_pictures):  # noqa: ARG001
+    """Test downloading the rocket profile picture from Space folder.
+
+    Args:
+        files_client: HTTP client for making API requests
+        setup_profile_pictures: Fixture that sets up profile pictures directory
+    """
+    response = await files_client.get("api/v1/files/profile_pictures/Space/046-rocket.svg")
+    assert response.status_code == 200
+
+    # Verify content type
+    assert "image/svg+xml" in response.headers["content-type"]
+
+    # Verify content - check for SVG structure (real rocket.svg has <path> elements)
+    content = response.content
+    assert b"<svg" in content
+    assert b"</svg>" in content
+    # Real rocket has path elements, not circles
+    assert len(content) > 100, "SVG content should be substantial"
+
+
+async def test_download_profile_picture_people(files_client, setup_profile_pictures):  # noqa: ARG001
+    """Test downloading a profile picture from People folder.
+
+    Note: The actual people profile pictures are copied during app init,
+    so we test with whatever profile picture exists.
+
+    Args:
+        files_client: HTTP client for making API requests
+        setup_profile_pictures: Fixture that sets up profile pictures directory
+    """
+    # List available people profile pictures first
+    list_response = await files_client.get("api/v1/files/profile_pictures/list")
+    assert list_response.status_code == 200
+    people_files = [f for f in list_response.json()["files"] if f.startswith("People/")]
+
+    # Skip test if no people profile pictures are available
+    if not people_files:
+        import pytest
+
+        pytest.skip("No people profile pictures available")
+
+    # Test downloading the first available people profile picture
+    first_people_file = people_files[0].replace("People/", "")
+    response = await files_client.get(f"api/v1/files/profile_pictures/People/{first_people_file}")
+    assert response.status_code == 200
+
+    # Verify content type
+    assert "image/svg+xml" in response.headers["content-type"]
+
+    # Verify content
+    content = response.content
+    assert b"<svg" in content
+    assert b"</svg>" in content
+    assert len(content) > 100, "SVG content should be substantial"
+
+
+async def test_download_profile_picture_not_found(files_client, setup_profile_pictures):  # noqa: ARG001
+    """Test downloading a non-existent profile picture returns 404.
+
+    Args:
+        files_client: HTTP client for making API requests
+        setup_profile_pictures: Fixture that sets up profile pictures directory
+    """
+    response = await files_client.get("api/v1/files/profile_pictures/Space/nonexistent.svg")
+    assert response.status_code == 404
+
+    data = response.json()
+    assert "not found" in data["detail"].lower()
+
+
+async def test_profile_pictures_with_s3_storage(files_client, setup_profile_pictures, monkeypatch):  # noqa: ARG001
+    """Test that profile pictures work with S3 storage type.
+
+    Profile pictures should always be served from local filesystem,
+    regardless of the storage_type setting.
+
+    Args:
+        files_client: HTTP client for making API requests
+        setup_profile_pictures: Fixture that sets up profile pictures directory
+        monkeypatch: For overriding environment variables
+    """
+    # Set storage type to S3 (simulating S3 configuration)
+    monkeypatch.setenv("LANGFLOW_STORAGE_TYPE", "s3")
+
+    # List should still work (from local filesystem)
+    response = await files_client.get("api/v1/files/profile_pictures/list")
+    assert response.status_code == 200
+    data = response.json()
+    # Should have profile pictures (app copies them during init)
+    assert len(data["files"]) > 0, "Should have profile pictures even with S3 storage"
+    assert "Space/046-rocket.svg" in data["files"], "Should have rocket profile picture"
+
+    # Download should still work (from local filesystem)
+    response = await files_client.get("api/v1/files/profile_pictures/Space/046-rocket.svg")
+    assert response.status_code == 200
+    assert b"<svg" in response.content
+
+
+async def test_profile_pictures_different_file_types(files_client, setup_profile_pictures):  # noqa: ARG001
+    """Test that content-type headers are correct for SVG files.
+
+    The real profile pictures are all SVG files. This test verifies
+    that the content-type detection works correctly.
+
+    Args:
+        files_client: HTTP client for making API requests
+        setup_profile_pictures: Fixture that sets up profile pictures directory
+    """
+    # Test SVG content type (all real profile pictures are SVGs)
+    response = await files_client.get("api/v1/files/profile_pictures/Space/046-rocket.svg")
+    assert response.status_code == 200
+    assert "image/svg+xml" in response.headers["content-type"]
+
+    # Test with a people profile picture
+    list_response = await files_client.get("api/v1/files/profile_pictures/list")
+    people_files = [f for f in list_response.json()["files"] if f.startswith("People/")]
+
+    if people_files:
+        first_people_file = people_files[0].replace("People/", "")
+        response = await files_client.get(f"api/v1/files/profile_pictures/People/{first_people_file}")
+        assert response.status_code == 200
+        # All profile pictures should be SVGs
+        assert "image/svg+xml" in response.headers["content-type"]

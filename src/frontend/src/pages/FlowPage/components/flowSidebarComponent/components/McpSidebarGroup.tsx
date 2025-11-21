@@ -108,7 +108,7 @@ const McpSidebarGroup = ({
   }
 
   return (
-    <SidebarGroup className={`p-3 ${!hasMcpServers ? " h-full" : ""}`}>
+    <SidebarGroup className={`p-3 pr-2${!hasMcpServers ? " h-full" : ""}`}>
       {hasMcpServers && (
         <SidebarGroupLabel className="cursor-default w-full flex items-center justify-between">
           <span>MCP Servers</span>

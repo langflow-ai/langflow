@@ -1,6 +1,6 @@
 import pytest
+from lfx.components.utilities.python_repl_core import PythonREPLComponent
 
-from lfx.components.processing import PythonREPLComponent
 from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
 
