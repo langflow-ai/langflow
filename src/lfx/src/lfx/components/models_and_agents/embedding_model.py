@@ -1,12 +1,16 @@
 from typing import Any
 
+import requests
 from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
 from langchain_openai import OpenAIEmbeddings
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.base.models.model_utils import get_ollama_models, is_valid_ollama_url
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
-from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS, WATSONX_DEFAULT_EMBEDDING_MODELS, WATSONX_EMBEDDING_MODEL_NAMES
+from lfx.base.models.watsonx_constants import (
+    IBM_WATSONX_URLS,
+    WATSONX_EMBEDDING_MODEL_NAMES,
+)
 from lfx.field_typing import Embeddings
 from lfx.io import (
     BoolInput,
@@ -20,7 +24,6 @@ from lfx.io import (
 from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
 from lfx.utils.util import transform_localhost_url
-import requests
 
 # Ollama API constants
 HTTP_STATUS_OK = 200
@@ -129,6 +132,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             show=False,
         ),
     ]
+
     @staticmethod
     def fetch_ibm_models(base_url: str) -> list[str]:
         """Fetch available models from the watsonx.ai API."""
