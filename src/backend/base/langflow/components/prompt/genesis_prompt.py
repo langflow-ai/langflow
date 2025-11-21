@@ -96,6 +96,9 @@ class GenesisPromptComponent(Component):
         if content:
             content = self._replace_variables(content)
         
+        # Set status so the component shows it's been built
+        self.status = content if content else "No template selected"
+        
         return Message(text=content)
 
     def _process_template_variables(self, template_content: str, frontend_node_template: dict, custom_fields: dict):
