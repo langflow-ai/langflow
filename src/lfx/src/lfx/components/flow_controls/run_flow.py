@@ -3,8 +3,9 @@ from typing import Any
 
 from lfx.base.tools.run_flow import RunFlowBaseComponent
 from lfx.log.logger import logger
-from lfx.schema.dotdict import dotdict
 from lfx.schema.data import Data
+from lfx.schema.dotdict import dotdict
+
 
 class RunFlowComponent(RunFlowBaseComponent):
     display_name = "Run Flow"
