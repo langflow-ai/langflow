@@ -6,7 +6,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 from lfx.cli.check import (
     analyze_component_changes,
     check_component_outdated,

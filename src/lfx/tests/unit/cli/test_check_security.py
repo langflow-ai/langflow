@@ -1,7 +1,6 @@
 """Tests for security features in the check CLI command."""
 
 import pytest
-
 from lfx.cli.check import load_specific_components
 
 
