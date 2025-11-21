@@ -7,6 +7,7 @@ from nemo_microservices import AsyncNeMoMicroservices
 
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import (
+    BoolInput,
     DropdownInput,
     MessageInput,
     MultilineInput,
@@ -284,6 +285,7 @@ class NVIDIANeMoGuardrailsComponent(Component):
             real_time_refresh=True,
         ),
         # Guardrails configuration selection
+        # dialog_inputs is conditionally set in update_build_config based on allow_config_creation
         DropdownInput(
             name="config",
             display_name="Guardrails Configuration",
@@ -292,7 +294,7 @@ class NVIDIANeMoGuardrailsComponent(Component):
             refresh_button=True,
             required=True,
             real_time_refresh=True,
-            dialog_inputs=asdict(GuardrailsConfigInput()),
+            dialog_inputs={},  # Default to empty - will be set by update_build_config if allow_config_creation is True
         ),
         # Validation mode
         DropdownInput(
@@ -302,6 +304,17 @@ class NVIDIANeMoGuardrailsComponent(Component):
             value="input",
             info="Validate input (before LLM) or output (after LLM)",
             required=True,
+        ),
+        # Advanced option to control configuration creation
+        BoolInput(
+            name="allow_config_creation",
+            display_name="Allow Configuration Creation",
+            value=False,
+            info="Enable the ability to create new guardrails configurations. "
+            "Disable this for cloud deployments where configuration creation is not supported.",
+            advanced=True,
+            required=False,
+            real_time_refresh=True,
         ),
     ]
 
@@ -558,10 +571,30 @@ class NVIDIANeMoGuardrailsComponent(Component):
             return config_id  # noqa: TRY300
 
         except Exception as e:
+            # Check for HTTP status codes indicating the operation is not supported
+            status_code = None
+            if hasattr(e, "response") and e.response:
+                status_code = getattr(e.response, "status_code", None)
+                logger.debug(f"Exception has response with status_code: {status_code}")
+
+            # Handle 501 Not Implemented or 405 Method Not Allowed
+            if status_code in (501, 405):
+                error_msg = (
+                    f"Configuration creation is not supported by this backend deployment. "
+                    f"The server returned HTTP {status_code} (Not Implemented). "
+                    f"Please disable 'Allow Configuration Creation' in advanced settings."
+                )
+                logger.error(error_msg)
+                logger.error(f"Backend does not support configuration creation: {e!s}")
+                raise ValueError(error_msg) from e
+
+            # Handle other errors
             error_msg = f"Failed to create guardrails config '{config_name}': {e!s}"
             logger.error(error_msg)
             logger.error(f"Exception type: {type(e)}")
             logger.error(f"Exception details: {e}")
+            if status_code:
+                logger.error(f"HTTP status code: {status_code}")
             raise
 
     def _build_guardrails_params(self, config_data: dict, rail_types: list[str]) -> dict:
@@ -679,8 +712,31 @@ class NVIDIANeMoGuardrailsComponent(Component):
         """Update build configuration for the guardrails component."""
         logger.info(f"Updating build config for field: {field_name}, value: {field_value}")
 
+        # Handle allow_config_creation toggle - conditionally enable/disable dialog_inputs
+        if field_name == "allow_config_creation":
+            allow_creation = bool(field_value) if field_value is not None else False
+            logger.info(f"Configuration creation {'enabled' if allow_creation else 'disabled'}")
+
+            # Update the config dropdown's dialog_inputs based on the toggle
+            if "config" in build_config:
+                if allow_creation:
+                    build_config["config"]["dialog_inputs"] = asdict(GuardrailsConfigInput())
+                else:
+                    # Disable dialog by setting empty dict
+                    build_config["config"]["dialog_inputs"] = {}
+            return build_config
+
         # Handle config creation dialog
         if field_name == "config" and isinstance(field_value, dict) and "01_config_name" in field_value:
+            # Check if configuration creation is allowed
+            allow_creation = getattr(self, "allow_config_creation", False)
+            if not allow_creation:
+                error_msg = (
+                    "Configuration creation is disabled. Enable 'Allow Configuration Creation' "
+                    "in advanced settings to create new configurations."
+                )
+                logger.warning(error_msg)
+                return {"error": error_msg}
             try:
                 config_id = await self.create_guardrails_config(field_value)
                 logger.info(f"Config creation completed with ID: {config_id}")
@@ -710,6 +766,14 @@ class NVIDIANeMoGuardrailsComponent(Component):
         if field_name == "config" and isinstance(field_value, str):
             logger.debug(f"Config selection: {field_value}")
 
+            # Ensure dialog_inputs is set correctly based on allow_config_creation
+            allow_creation = getattr(self, "allow_config_creation", False)
+            if "config" in build_config:
+                if allow_creation and not build_config["config"].get("dialog_inputs"):
+                    build_config["config"]["dialog_inputs"] = asdict(GuardrailsConfigInput())
+                elif not allow_creation:
+                    build_config["config"]["dialog_inputs"] = {}
+
             # Populate options if they're empty (similar to KBRetrievalComponent pattern)
             if not build_config.get("config", {}).get("options"):
                 try:
@@ -732,6 +796,14 @@ class NVIDIANeMoGuardrailsComponent(Component):
         logger.info("Handling config refresh request")
 
         try:
+            # Ensure dialog_inputs is set correctly based on allow_config_creation
+            allow_creation = getattr(self, "allow_config_creation", False)
+            if "config" in build_config:
+                if allow_creation:
+                    build_config["config"]["dialog_inputs"] = asdict(GuardrailsConfigInput())
+                else:
+                    build_config["config"]["dialog_inputs"] = {}
+
             # Preserve the current selection before refreshing
             current_value = build_config.get("config", {}).get("value")
             logger.debug(f"Preserving current config selection: {current_value}")
@@ -826,8 +898,13 @@ class NVIDIANeMoGuardrailsComponent(Component):
             role = "user" if validation_mode == "input" else "assistant"
 
             # Use the dedicated validation endpoint
+            # Note: model parameter is required by the API even when using guardrails config_id
+            # When guardrails config_id is provided, the model may be ignored or used as a fallback
+            # Using a placeholder model name - the actual model is defined in the guardrails config
             validation_response = await client.guardrail.check(
                 messages=[{"role": role, "content": input_text}],
+                # Required parameter - placeholder when using guardrails config_id
+                model="nvidia/llama-3.1-8b-instruct",
                 guardrails={"config_id": self.config},
                 extra_headers=self.get_auth_headers(),
             )
