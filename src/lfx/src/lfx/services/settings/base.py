@@ -256,6 +256,8 @@ class Settings(BaseSettings):
     """The path to log file for Langflow."""
     alembic_log_file: str = "alembic/alembic.log"
     """The path to log file for Alembic for SQLAlchemy."""
+    alembic_log_to_stdout: bool = False
+    """If set to True, the log file will be ignored and Alembic will log to stdout."""
     frontend_path: str | None = None
     """The path to the frontend directory containing build files. This is for development purposes only.."""
     open_browser: bool = False

@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 import re
 import sqlite3
+import sys
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -72,14 +73,20 @@ class DatabaseService(Service):
             expire_on_commit=False,
         )
 
+        # Check if Alembic should log to stdout or a file.
+        # If file, check if the provided path is absolute, cross-platform.
         alembic_log_file = self.settings_service.settings.alembic_log_file
-        # Check if the provided path is absolute, cross-platform.
-        if Path(alembic_log_file).is_absolute():
+        self.alembic_log_to_stdout = self.settings_service.settings.alembic_log_to_stdout
+        if self.alembic_log_to_stdout:
+            self.alembic_log_path = None
+        elif Path(alembic_log_file).is_absolute():
             self.alembic_log_path = Path(alembic_log_file)
         else:
             self.alembic_log_path = Path(langflow_dir) / alembic_log_file
 
     async def initialize_alembic_log_file(self):
+        if self.alembic_log_to_stdout:
+            return
         # Ensure the directory and file for the alembic log file exists
         await anyio.Path(self.alembic_log_path.parent).mkdir(parents=True, exist_ok=True)
         await anyio.Path(self.alembic_log_path).touch(exist_ok=True)
@@ -345,7 +352,10 @@ class DatabaseService(Service):
         # which is a buffer
         # I don't want to output anything
         # subprocess.DEVNULL is an int
-        with self.alembic_log_path.open("w", encoding="utf-8") as buffer:
+        buffer_context = (
+            nullcontext(sys.stdout) if self.alembic_log_to_stdout else self.alembic_log_path.open("w", encoding="utf-8")  # type: ignore[union-attr]
+        )
+        with buffer_context as buffer:
             alembic_cfg = Config(stdout=buffer)
             # alembic_cfg.attributes["connection"] = session
             alembic_cfg.set_main_option("script_location", str(self.script_location))
