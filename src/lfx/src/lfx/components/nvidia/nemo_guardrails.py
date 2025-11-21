@@ -2,19 +2,21 @@ import json
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from langflow.base.models.model import LCModelComponent
-from langflow.inputs import (
+from loguru import logger
+from nemo_microservices import AsyncNeMoMicroservices
+
+from lfx.custom.custom_component.component import Component
+from lfx.inputs.inputs import (
     DropdownInput,
+    MessageInput,
     MultilineInput,
     MultiselectInput,
     SecretStrInput,
     StrInput,
 )
-from langflow.io import MessageTextInput, Output
-from langflow.schema.dotdict import dotdict
-from langflow.schema.message import Message
-from loguru import logger
-from nemo_microservices import AsyncNeMoMicroservices
+from lfx.io import MessageTextInput, Output
+from lfx.schema.dotdict import dotdict
+from lfx.schema.message import Message
 
 # GUARDRAIL_MODEL_INTERNAL_URL = "http://ai-platform-proxy.ai-platform.svc.cluster.local:8080/v1"
 GUARDRAIL_MODEL_INTERNAL_URL = "http://nvidia-nim-proxy-nemo-nim-proxy.nvidia-nim-proxy.svc.cluster.local:8000/v1"
@@ -233,17 +235,29 @@ class GuardrailsConfigInput:
     )
 
 
-class NVIDIANeMoGuardrailsComponent(LCModelComponent):
+class NVIDIANeMoGuardrailsComponent(Component):
     display_name = "NeMo Guardrails"
     description = (
-        "Apply guardrails validation to LLM interactions using the NeMo Guardrails microservice. "
+        "Apply guardrails validation to safeguard LLM interactions using the NeMo Guardrails microservice. "
         "Select a guardrails configuration to validate input or output messages."
     )
     icon = "NVIDIA"
     name = "NVIDIANemoGuardrails"
+    trace_type = "guardrails"
 
     inputs = [
-        *LCModelComponent.get_base_inputs(),
+        MessageInput(
+            name="input_value",
+            display_name="Input",
+            info="The message to validate through guardrails",
+            required=True,
+        ),
+        MultilineInput(
+            name="system_message",
+            display_name="System Message",
+            info="Optional system message to prepend to the input",
+            advanced=False,
+        ),
         # Single authentication setup (like other NeMo components)
         MessageTextInput(
             name="base_url",
@@ -291,24 +305,21 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
         ),
     ]
 
-    # Outputs for check mode
+    # Separate outputs for pass/fail cases (like ConditionalRouterComponent)
     outputs = [
-        Output(display_name="Validated Output", name="validated_output", method="validated_output", dynamic=True),
+        Output(
+            display_name="Passed",
+            name="passed_output",
+            method="passed_output",
+            group_outputs=True,
+        ),
+        Output(
+            display_name="Blocked",
+            name="blocked_output",
+            method="blocked_output",
+            group_outputs=True,
+        ),
     ]
-
-    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:  # noqa: ARG002
-        """Update outputs for check mode."""
-        # Component only supports check mode, so outputs are always the same
-        if "outputs" not in frontend_node:
-            frontend_node["outputs"] = [
-                Output(
-                    display_name="Validated Output",
-                    name="validated_output",
-                    method="validated_output",
-                    dynamic=True,
-                ),
-            ]
-        return frontend_node
 
     def get_auth_headers(self):
         """Get authentication headers for API requests."""
@@ -765,15 +776,31 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
 
         return build_config
 
-    async def process(self) -> dict[str, Message]:
-        """Process the input through guardrails validation (for check mode)."""
+    def _pre_run_setup(self):
+        """Initialize validation result cache before processing outputs."""
+        self._validation_result = None
+
+    async def _validate_input(self) -> tuple[bool, str]:
+        """Validate the input through guardrails and return (is_blocked, input_text).
+
+        Results are cached to avoid duplicate API calls when both outputs are evaluated.
+
+        Returns:
+            tuple: (is_blocked: bool, input_text: str)
+                - is_blocked: True if validation failed, False if passed
+                - input_text: The prepared input text that was validated
+        """
+        # Return cached result if available
+        if hasattr(self, "_validation_result") and self._validation_result is not None:
+            return self._validation_result
+
         logger.info("Starting guardrails validation process")
 
         # Prepare input
         input_text = ""
-        if hasattr(self, "system_message") and self.system_message:
+        if self.system_message:
             input_text += f"{self.system_message}\n\n"
-        if hasattr(self, "input_value") and self.input_value:
+        if self.input_value:
             if isinstance(self.input_value, Message):
                 input_text += self.input_value.text
             else:
@@ -808,32 +835,25 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             logger.debug(f"Validation response: {validation_response}")
 
             # Check if the response indicates blocking
-            # The guardrail.check response should indicate whether validation passed or failed
+            is_blocked = False
             if hasattr(validation_response, "blocked") and validation_response.blocked:
-                logger.info(f"{validation_mode.capitalize()} blocked by guardrails")
-                self.status = f"{validation_mode.capitalize()} blocked by guardrails"
-                # Return error message with error=True and category="error"
-                return {
-                    "validated_output": Message(
-                        text=f"I cannot process that {validation_mode}.", error=True, category="error"
-                    )
-                }
-            if hasattr(validation_response, "choices") and validation_response.choices:
+                is_blocked = True
+            elif hasattr(validation_response, "choices") and validation_response.choices:
                 # Fallback to checking choices if blocked field not available
                 choice = validation_response.choices[0]
                 if hasattr(choice, "finish_reason") and choice.finish_reason == "guardrail_blocked":
-                    logger.info(f"{validation_mode.capitalize()} blocked by guardrails")
-                    self.status = f"{validation_mode.capitalize()} blocked by guardrails"
-                    return {
-                        "validated_output": Message(
-                            text=f"I cannot process that {validation_mode}.", error=True, category="error"
-                        )
-                    }
+                    is_blocked = True
 
-            # If validation passes, return the original input with error=False and category="message"
-            logger.info(f"{validation_mode.capitalize()} passed guardrails validation")
-            self.status = f"{validation_mode.capitalize()} validated successfully"
-            return {"validated_output": Message(text=input_text, error=False, category="message")}
+            if is_blocked:
+                logger.info(f"{validation_mode.capitalize()} blocked by guardrails")
+                self.status = f"{validation_mode.capitalize()} blocked by guardrails"
+            else:
+                logger.info(f"{validation_mode.capitalize()} passed guardrails validation")
+                self.status = f"{validation_mode.capitalize()} validated successfully"
+
+            # Cache the result
+            self._validation_result = (is_blocked, input_text)
+            return self._validation_result  # noqa: TRY300
 
         except Exception as e:
             logger.error(f"Error in validation: {e}")
@@ -846,26 +866,33 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                 raise ValueError(message) from e
             raise
 
-    async def validated_output(self) -> Message:
-        """Return the validated output as a Message (for check mode).
+    async def passed_output(self) -> Message:
+        """Return the validated message when guardrails pass.
 
-        Returns a single Message that contains either:
-        - The validated input (error=False, category="message") when validation passes
-        - An error message (error=True, category="error") when validation fails
-
-        Downstream components can check the Message's error field to determine validation status.
+        Returns an empty Message if validation failed (so this output won't be used).
+        This follows the pattern used by ConditionalRouterComponent.
         """
-        result = await self.process()
-        validated_output = result.get("validated_output")
-        if validated_output is None:
-            # This should never happen if process() is working correctly
-            logger.error("process() returned result without 'validated_output' key")
-            error_msg = "Unexpected result format from guardrails validation"
-            raise RuntimeError(error_msg)
-        return validated_output
+        is_blocked, input_text = await self._validate_input()
+        if is_blocked:
+            # Return empty message so this output is not used
+            return Message(text="")
+        # Validation passed - return the validated input
+        return Message(text=input_text, error=False, category="message")
 
-    async def text_response(self) -> Message:
-        """Handle text response in check mode."""
-        # Component only supports check mode, perform validation and return the validated output
-        result = await self.process()
-        return result.get("validated_output", Message(text="Validation completed", error=False, category="message"))
+    async def blocked_output(self) -> Message:
+        """Return the blocked message when guardrails fail.
+
+        Returns an empty Message if validation passed (so this output won't be used).
+        This follows the pattern used by ConditionalRouterComponent.
+        """
+        is_blocked, _input_text = await self._validate_input()
+        if not is_blocked:
+            # Return empty message so this output is not used
+            return Message(text="")
+        # Validation failed - return error message
+        validation_mode = getattr(self, "validation_mode", "input")
+        return Message(
+            text=f"I cannot process that {validation_mode}.",
+            error=True,
+            category="error",
+        )
