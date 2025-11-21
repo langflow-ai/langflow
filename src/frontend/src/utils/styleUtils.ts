@@ -214,6 +214,7 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Saved", name: "saved_components", icon: "GradientSave" },
   { display_name: "Input / Output", name: "input_output", icon: "Cable" },
   { display_name: "Agents", name: "agents", icon: "Bot" },
+  { display_name: "Prompt", name: "prompt", icon: "Braces" },
   { display_name: "Models", name: "models", icon: "BrainCog" },
   { display_name: "Data", name: "data", icon: "Database" },
   ...(ENABLE_KNOWLEDGE_BASES
@@ -227,7 +228,6 @@ export const SIDEBAR_CATEGORIES = [
     : []),
   { display_name: "Connectors", name: "healthcare", icon: "Cable" },
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
-  { display_name: "Prompt", name: "prompt", icon: "Braces" },
   { display_name: "Processing", name: "processing", icon: "ListFilter" },
   { display_name: "Logic", name: "logic", icon: "ArrowRightLeft" },
   { display_name: "Helpers", name: "helpers", icon: "Wand2" },

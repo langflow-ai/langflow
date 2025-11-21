@@ -441,7 +441,7 @@ def create_app():
 
     @app.middleware("http")
     async def check_boundary(request: Request, call_next):
-        if "/api/v1/files/upload" in request.url.path:
+        if request.method == "POST" and "/api/v1/files/upload" in request.url.path:
             content_type = request.headers.get("Content-Type")
 
             if not content_type or "multipart/form-data" not in content_type or "boundary=" not in content_type:
@@ -461,8 +461,6 @@ def create_app():
             body = await request.body()
 
             boundary_start = f"--{boundary}".encode()
-            # The multipart/form-data spec doesn't require a newline after the boundary, however many clients do
-            # implement it that way
             boundary_end = f"--{boundary}--\r\n".encode()
             boundary_end_no_newline = f"--{boundary}--".encode()
 
