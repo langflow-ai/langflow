@@ -178,6 +178,7 @@ async def check_flow_components(
     interactive: bool = False,
     output: str | None = None,
     in_place: bool = False,
+    backup: bool = False,
     show_diff: bool = False,
 ) -> dict:
     """Check a JSON flow for outdated components using code_hash."""
@@ -274,6 +275,7 @@ async def check_flow_components(
             force=force,
             output=output,
             in_place=in_place,
+            backup=backup,
         )
 
     return {
@@ -536,6 +538,7 @@ async def handle_updates(
     force: bool,
     output: str | None = None,
     in_place: bool = False,
+    backup: bool = False,
 ) -> dict:
     """Handle component updates with user interaction."""
     safe_updates = [comp for comp in outdated_components if not comp["breaking_change"]]
@@ -608,7 +611,20 @@ async def handle_updates(
                     }
         elif in_place:
             output_path = flow_path
+            backup_path = None
             try:
+                # Create backup if requested
+                if backup:
+                    backup_path = f"{flow_path}.bak"
+                    # Read original file content for backup
+                    async with async_open(flow_path, "r") as original_file:
+                        original_content = await original_file.read()
+                    # Write backup
+                    async with async_open(backup_path, "w") as backup_file:
+                        await backup_file.write(original_content)
+                    await logger.adebug(f"Created backup file: {backup_path}")
+
+                # Write updated flow
                 async with async_open(output_path, "w") as f:
                     await f.write(orjson.dumps(flow_data, option=ORJSON_OPTIONS).decode())
             except OSError as e:
@@ -637,6 +653,8 @@ async def handle_updates(
     }
     if output_path is not None:
         result["output_path"] = output_path
+    if backup and in_place and applied_updates > 0:
+        result["backup_path"] = f"{flow_path}.bak"
     return result
 
 
@@ -785,6 +803,11 @@ async def check_command(
         "--in-place",
         help="Update the input file in place (requires --update or --interactive)",
     ),
+    backup: bool = typer.Option(
+        True,  # noqa: FBT003
+        "--backup/--no-backup",
+        help="Create a backup file (.bak) before in-place modification (default: True, requires --in-place)",
+    ),
     show_diff: bool = typer.Option(
         False,  # noqa: FBT003
         "--show-diff",
@@ -793,6 +816,11 @@ async def check_command(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show verbose output"),  # noqa: FBT003
 ) -> None:
     """Check a flow for outdated components and optionally update them."""
+    # Validate backup option requires in-place
+    if backup and not in_place:
+        console.print("[red]Error: --backup requires --in-place[/red]")
+        raise typer.Exit(1)
+
     # Configure logging for debugging
     if verbose:
         from lfx.log.logger import configure
@@ -808,6 +836,7 @@ async def check_command(
             interactive=interactive,
             output=output,
             in_place=in_place,
+            backup=backup,
             show_diff=show_diff,
         )
     except (OSError, RuntimeError, ImportError) as e:
@@ -857,11 +886,14 @@ async def check_command(
             console.print("[yellow]⚠️  Please test your flow thoroughly due to breaking changes[/yellow]")
 
         output_path = result.get("output_path")
+        backup_path = result.get("backup_path")
         if output_path:
             if output_path == "-":
                 console.print("Updated flow written to stdout")
             else:
                 console.print(f"Updated flow saved to: [bold]{output_path}[/bold]")
+                if backup_path:
+                    console.print(f"Backup created: [bold]{backup_path}[/bold]")
 
     elif update and outdated_count > 0:
         # Updates were requested but none applied
