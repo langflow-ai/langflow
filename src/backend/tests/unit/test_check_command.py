@@ -141,6 +141,46 @@ class TestCheckCommand:
 
         assert result["outdated"] is False
 
+    def test_check_component_outdated_missing_code_error(self):
+        """Test that missing code in both versions returns an error."""
+        from lfx.cli.check import check_component_outdated
+
+        # Create a node without code_hash and without code in template
+        node = {
+            "id": "test-node-1",
+            "data": {
+                "type": "TestComponent",
+                "node": {
+                    "metadata": {},  # No code_hash
+                    "template": {
+                        "input_value": {"value": "test"},
+                        # No "code" field
+                    },
+                },
+            },
+        }
+
+        # Create a component without code_hash and without code in template
+        component_dict = {
+            "TestComponent": {
+                "metadata": {},  # No code_hash
+                "template": {
+                    "input_value": {"value": "", "required": False},
+                    # No "code" field
+                },
+                "outputs": [{"name": "message", "types": ["Message"]}],
+            }
+        }
+
+        result = check_component_outdated(node, component_dict, component_dict["TestComponent"])
+
+        # Should return an error, not silently treat as up-to-date
+        assert "error" in result
+        assert result["outdated"] is False
+        assert "no code" in result["error"].lower()
+        assert result["component_type"] == "TestComponent"
+        assert result["node_id"] == "test-node-1"
+
     def test_analyze_component_changes_added_inputs(self):
         """Test analyzing added inputs."""
         current_node = {"template": {"existing_field": {"type": "str"}}, "outputs": []}
