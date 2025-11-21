@@ -8,7 +8,7 @@ OLLAMA_EMBEDDING_MODELS = [
     "bge-large",
     "paraphrase-multilingual",
     "granite-embedding",
-    "jina-embeddings-v2-base-en",
+    "jina/jina-embeddings-v2",
 ]
 # https://ollama.com/search?c=tools
 OLLAMA_TOOL_MODELS_BASE = [
