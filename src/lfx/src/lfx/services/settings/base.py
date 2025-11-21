@@ -383,7 +383,7 @@ class Settings(BaseSettings):
         Supports PEP 440 specifiers: ==, !=, <=, >=, <, >, ~=, ===
         """
         if not value:
-            return "~=0.1.0.7"  # Default
+            return "==0.1.0.21"  # Default
 
         # Check if it already has a version specifier
         # Order matters: check longer specifiers first to avoid false matches
