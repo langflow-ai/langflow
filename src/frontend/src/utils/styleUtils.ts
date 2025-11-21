@@ -236,6 +236,7 @@ export const SIDEBAR_CATEGORIES = [
 export const SIDEBAR_BUNDLES = [
   { display_name: "AI/ML API", name: "aiml", icon: "AIML" },
   { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
+  { display_name: "ALTK", name: "altk", icon: "Zap" },
   {
     display_name: "Language Models",
     name: "languagemodels",
@@ -262,6 +263,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
   { display_name: "Couchbase", name: "couchbase", icon: "Couchbase" },
   { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
+  { display_name: "CUGA", name: "cuga", icon: "Bot" },
   { display_name: "DataStax", name: "datastax", icon: "AstraDB" },
   { display_name: "DeepSeek", name: "deepseek", icon: "DeepSeek" },
   { display_name: "Docling", name: "docling", icon: "Docling" },

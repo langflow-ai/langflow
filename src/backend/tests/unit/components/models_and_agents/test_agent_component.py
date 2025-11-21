@@ -12,7 +12,7 @@ from lfx.base.models.openai_constants import (
     OPENAI_CHAT_MODEL_NAMES,
     OPENAI_REASONING_MODEL_NAMES,
 )
-from lfx.components.agents import AgentComponent
+from lfx.components.models_and_agents import AgentComponent
 from lfx.components.tools.calculator import CalculatorToolComponent
 
 from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient

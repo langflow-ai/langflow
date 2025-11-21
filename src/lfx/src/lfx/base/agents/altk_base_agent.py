@@ -23,7 +23,7 @@ from pydantic import Field
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
 from lfx.base.agents.utils import data_to_messages, get_chat_output_sender_name
-from lfx.components.agents import AgentComponent
+from lfx.components.models_and_agents import AgentComponent
 from lfx.log.logger import logger
 from lfx.memory import delete_message
 from lfx.schema.content_block import ContentBlock
