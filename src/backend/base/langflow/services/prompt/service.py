@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import aiohttp
-from typing import Any, Dict, List, Optional
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from typing import Any
+
+import aiohttp
+from loguru import logger
 
 from langflow.services.base import Service
-from loguru import logger
 
 from .settings import PromptSettings
 
@@ -22,7 +23,7 @@ class PromptService(Service):
         """Initialize the prompt service."""
         super().__init__()
         self.settings = PromptSettings()
-        self._http_client: Optional[aiohttp.ClientSession] = None
+        self._http_client: aiohttp.ClientSession | None = None
         self._ready = False
 
     def set_ready(self) -> None:
@@ -61,31 +62,37 @@ class PromptService(Service):
         finally:
             pass
 
-    async def get_published_prompts(self, token: Optional[str] = None) -> Dict[str, Any]:
+    async def get_published_prompts(self, token: str | None = None) -> dict[str, Any]:
         """Get published prompt versions from the API."""
         if not self.ready:
             logger.error("Prompt service is not ready")
-            return {"data": {"versions": [], "total": 0}, "message": "Service not ready", "error": "Service not initialized"}
+            return {
+                "data": {"versions": [], "total": 0},
+                "message": "Service not ready",
+                "error": "Service not initialized",
+            }
 
         try:
-            url = f"{self.settings.ENDPOINT_URL}/api/v1/versions"
+            url = f"{self.settings.PROMPTS_ENDPOINT_URL}/api/v1/versions"
             params = {"status": "published"}
 
             logger.info(f"Fetching published prompts from: {url}")
 
-            async with self.get_client() as client:
-                async with client.get(
+            async with (
+                self.get_client() as client,
+                client.get(
                     url,
                     params=params,
                     headers={"accept": "application/json"},
-                ) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    logger.info(f"Prompt API response: {data}")
-                    return data
+                ) as response,
+            ):
+                response.raise_for_status()
+                data = await response.json()
+                logger.info(f"Prompt API response: {data}")
+                return data
 
         except aiohttp.ClientConnectorError as e:
-            logger.warning(f"Prompt management service unavailable at {self.settings.ENDPOINT_URL}: {e!s}")
+            logger.warning(f"Prompt management service unavailable at {self.settings.PROMPTS_ENDPOINT_URL}: {e!s}")
             return {"data": {"versions": [], "total": 0}, "message": "Service unavailable", "error": str(e)}
         except aiohttp.ClientResponseError as e:
             logger.error(f"HTTP error fetching published prompts: {e.status}, {e.message}")
