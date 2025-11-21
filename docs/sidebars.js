@@ -268,11 +268,53 @@ module.exports = {
           items: [
             {
               type: "category",
-              label: "Input / Output",
+              label: "Input & Output",
               items: [
                 "Components/chat-input-and-output",
                 "Components/text-input-and-output",
                 "Components/webhook",
+              ]
+            },
+            {
+              type: "category",
+              label: "Data Sources",
+              items: [
+                "Components/api-request",
+                "Components/mock-data",
+                "Components/url",
+                "Components/web-search",
+              ]
+            },
+            {
+              type: "category",
+              label: "Models & Agents",
+              items: [
+                "Components/components-models",
+                "Components/components-prompts",
+                "Components/components-agents",
+                "Components/mcp-tools",
+                "Components/components-embedding-models",
+                "Components/message-history",
+              ]
+            },
+            {
+              type: "category",
+              label: "LLM Operations",
+              items: [
+                "Components/batch-run",
+                "Components/llm-router",
+                "Components/smart-router",
+                "Components/smart-transform",
+                "Components/structured-output",
+              ]
+            },
+            {
+              type: "category",
+              label: "Files",
+              items: [
+                "Components/directory",
+                "Components/read-file",
+                "Components/write-file",
               ]
             },
             {
@@ -289,54 +331,12 @@ module.exports = {
             },
             {
               type: "category",
-              label: "Data Source",
-              items: [
-                "Components/api-request",
-                "Components/mock-data",
-                "Components/url",
-                "Components/web-search",
-              ]
-            },
-            {
-              type: "category",
-              label: "Files and Knowledge",
-              items: [
-                "Components/directory",
-                "Components/read-file",
-                "Components/write-file",
-              ]
-            },
-            {
-              type: "category",
               label: "Flow Controls",
               items: [
                 "Components/if-else",
                 "Components/loop",
                 "Components/notify-and-listen",
                 "Components/run-flow",
-              ]
-            },
-            {
-              type: "category",
-              label: "LLM Operations",
-              items: [
-                "Components/batch-run",
-                "Components/llm-router",
-                "Components/smart-router",
-                "Components/smart-transform",
-                "Components/structured-output",
-              ]
-            },
-            {
-              type: "category",
-              label: "Models and Agents",
-              items: [
-                "Components/components-models",
-                "Components/components-prompts",
-                "Components/components-agents",
-                "Components/mcp-tools",
-                "Components/components-embedding-models",
-                "Components/message-history",
               ]
             },
             {
