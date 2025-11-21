@@ -161,7 +161,13 @@ def _matches_component_type(flow_type: str, comp_name: str, comp_data: dict) -> 
 
 
 async def check_flow_components(
-    flow_path: str, *, update: bool = False, force: bool = False, interactive: bool = False, output: str | None = None
+    flow_path: str,
+    *,
+    update: bool = False,
+    force: bool = False,
+    interactive: bool = False,
+    output: str | None = None,
+    in_place: bool = False,
 ) -> dict:
     """Check a JSON flow for outdated components using code_hash."""
     # Load flow
@@ -244,6 +250,7 @@ async def check_flow_components(
             auto_update=is_auto_mode,
             force=force,
             output=output,
+            in_place=in_place,
         )
 
     return {
@@ -498,6 +505,7 @@ async def handle_updates(
     auto_update: bool,
     force: bool,
     output: str | None = None,
+    in_place: bool = False,
 ) -> dict:
     """Handle component updates with user interaction."""
     safe_updates = [comp for comp in outdated_components if not comp["breaking_change"]]
@@ -529,8 +537,20 @@ async def handle_updates(
                 applied_updates += 1
 
     # Save updated flow
+    output_path = None
     if applied_updates > 0:
-        output_path = output or flow_path
+        # Determine output path: --output takes precedence, then --in-place, otherwise error
+        if output is not None:
+            output_path = output
+        elif in_place:
+            output_path = flow_path
+        else:
+            return {
+                "error": "When applying updates, you must specify either --output <file> or --in-place",
+                "flow_path": flow_path,
+                "applied_updates": applied_updates,
+            }
+
         try:
             async with async_open(output_path, "w") as f:
                 await f.write(orjson.dumps(flow_data, option=ORJSON_OPTIONS).decode())
@@ -541,7 +561,7 @@ async def handle_updates(
                 "applied_updates": applied_updates,
             }
 
-    return {
+    result = {
         "flow_path": flow_path,
         "total_nodes": len(
             flow_data.get("data", {}).get("nodes", []) if "data" in flow_data else flow_data.get("nodes", [])
@@ -552,6 +572,9 @@ async def handle_updates(
         "breaking_updates": len(breaking_updates),
         "updated": applied_updates > 0,
     }
+    if output_path is not None:
+        result["output_path"] = output_path
+    return result
 
 
 def prompt_for_component_update(component: dict, update_type: str) -> bool:
@@ -670,7 +693,14 @@ async def check_command(
         "-i",
         help="Prompt for each component update individually",
     ),
-    output: str | None = typer.Option(None, "--output", "-o", help="Output file path (defaults to input file)"),
+    output: str | None = typer.Option(
+        None, "--output", "-o", help="Output file path (requires --update or --interactive)"
+    ),
+    in_place: bool = typer.Option(
+        False,  # noqa: FBT003
+        "--in-place",
+        help="Update the input file in place (requires --update or --interactive)",
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show verbose output"),  # noqa: FBT003
 ) -> None:
     """Check a flow for outdated components and optionally update them."""
@@ -683,7 +713,7 @@ async def check_command(
 
     try:
         result = await check_flow_components(
-            flow_path, update=update, force=force, interactive=interactive, output=output
+            flow_path, update=update, force=force, interactive=interactive, output=output, in_place=in_place
         )
     except (OSError, RuntimeError, ImportError) as e:
         console.print(f"[red]Error checking flow: {e}[/red]")
@@ -710,8 +740,8 @@ async def check_command(
     if not update and not applied_updates:
         # Just showing status
         console.print(f"\n[yellow]⚠️  Found {outdated_count} outdated component(s)[/yellow]")
-        console.print("Run with --update to apply safe updates automatically")
-        console.print("Run with --update --force to apply all updates including breaking changes")
+        console.print("Run with --update --output <file> or --update --in-place to apply safe updates")
+        console.print("Run with --update --force --output <file> or --update --force --in-place for all updates")
 
         # Show component details
         for comp in result.get("outdated_components", []):
@@ -731,8 +761,9 @@ async def check_command(
             console.print(f"  • {breaking_updates} breaking update(s)")
             console.print("[yellow]⚠️  Please test your flow thoroughly due to breaking changes[/yellow]")
 
-        output_path = output or flow_path
-        console.print(f"Updated flow saved to: [bold]{output_path}[/bold]")
+        output_path = result.get("output_path")
+        if output_path:
+            console.print(f"Updated flow saved to: [bold]{output_path}[/bold]")
 
     elif update and outdated_count > 0:
         # Updates were requested but none applied
@@ -765,10 +796,25 @@ def check_command_sync(
         "-i",
         help="Prompt for each component update individually",
     ),
-    output: str | None = typer.Option(None, "--output", "-o", help="Output file path (defaults to input file)"),
+    output: str | None = typer.Option(
+        None, "--output", "-o", help="Output file path (requires --update or --interactive)"
+    ),
+    in_place: bool = typer.Option(
+        False,  # noqa: FBT003
+        "--in-place",
+        help="Update the input file in place (requires --update or --interactive)",
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show verbose output"),  # noqa: FBT003
 ) -> None:
     """Check a flow for outdated components and optionally update them."""
     run_until_complete(
-        check_command(flow_path, update=update, force=force, interactive=interactive, output=output, verbose=verbose)
+        check_command(
+            flow_path,
+            update=update,
+            force=force,
+            interactive=interactive,
+            output=output,
+            in_place=in_place,
+            verbose=verbose,
+        )
     )
