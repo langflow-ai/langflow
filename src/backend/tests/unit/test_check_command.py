@@ -17,31 +17,32 @@ from lfx.cli.check import (
 )
 
 
+@pytest.fixture
+def sample_flow_data():
+    """Sample flow data for testing."""
+    return {
+        "data": {
+            "nodes": [
+                {
+                    "id": "test-node-1",
+                    "data": {
+                        "type": "ChatInput",
+                        "node": {
+                            "metadata": {
+                                "code_hash": "old_hash_123",
+                                "module": "lfx.components.input_output.chat.ChatInput",
+                            },
+                            "template": {"input_value": {"value": "test"}, "code": {"value": "old code"}},
+                        },
+                    },
+                }
+            ]
+        }
+    }
+
+
 class TestCheckCommand:
     """Test cases for the check command functionality."""
-
-    @pytest.fixture
-    def sample_flow_data(self):
-        """Sample flow data for testing."""
-        return {
-            "data": {
-                "nodes": [
-                    {
-                        "id": "test-node-1",
-                        "data": {
-                            "type": "ChatInput",
-                            "node": {
-                                "metadata": {
-                                    "code_hash": "old_hash_123",
-                                    "module": "lfx.components.input_output.chat.ChatInput",
-                                },
-                                "template": {"input_value": {"value": "test"}, "code": {"value": "old code"}},
-                            },
-                        },
-                    }
-                ]
-            }
-        }
 
     @pytest.fixture
     def sample_component_dict(self):
@@ -438,3 +439,180 @@ class TestCheckCommandCLI:
         from lfx.cli.run import check_components_before_run
 
         assert callable(check_components_before_run)
+
+
+class TestInPlaceOption:
+    """Test cases for the --in-place option."""
+
+    @pytest.fixture
+    def sample_flow_file(self, sample_flow_data):
+        """Create a temporary flow file for testing."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp_file:
+            json.dump(sample_flow_data, tmp_file, indent=2)
+            tmp_path = tmp_file.name
+
+        yield Path(tmp_path)
+
+        # Cleanup
+        if Path(tmp_path).exists():
+            Path(tmp_path).unlink()
+
+    @pytest.fixture
+    def mock_component_dict(self):
+        """Mock component dictionary with updated hash."""
+        return {
+            "ChatInput": {
+                "metadata": {"code_hash": "new_hash_456", "module": "lfx.components.input_output.chat.ChatInput"},
+                "template": {
+                    "input_value": {"value": "", "required": False},
+                    "code": {"value": "new code"},
+                },
+                "outputs": [{"name": "message", "types": ["Message"]}],
+            }
+        }
+
+    @pytest.mark.asyncio
+    async def test_in_place_requires_update_or_interactive(self, sample_flow_file):
+        """Test that --in-place requires --update or --interactive."""
+        from lfx.cli.check import check_flow_components
+
+        # Read original content
+        original_content = Path(sample_flow_file).read_text()
+
+        # Try to use in_place without update or interactive
+        result = await check_flow_components(str(sample_flow_file), update=False, interactive=False, in_place=True)
+
+        # Should not error, but also should not update (just check)
+        assert "error" not in result
+        assert result.get("applied_updates", 0) == 0
+
+        # File should not be modified
+        current_content = Path(sample_flow_file).read_text()
+        assert current_content == original_content
+
+    @pytest.mark.asyncio
+    async def test_in_place_with_update_modifies_file(self, sample_flow_file, mock_component_dict):
+        """Test that --in-place with --update modifies the original file."""
+        from lfx.cli.check import check_flow_components
+
+        # Read original content
+        original_content = Path(sample_flow_file).read_text()
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = mock_component_dict
+
+            # Use in_place with update
+            result = await check_flow_components(str(sample_flow_file), update=True, in_place=True, force=True)
+
+            # Should have applied updates
+            assert "error" not in result
+            assert result.get("applied_updates", 0) > 0
+            assert result.get("output_path") == str(sample_flow_file)
+
+            # File should be modified
+            updated_content = Path(sample_flow_file).read_text()
+            updated_data = json.loads(updated_content)
+
+            # The file should have been updated (hash should change)
+            assert updated_content != original_content
+            # Verify the structure is still valid
+            assert "data" in updated_data
+            assert "nodes" in updated_data["data"]
+
+    @pytest.mark.asyncio
+    async def test_in_place_error_when_no_output_specified(self, sample_flow_file, mock_component_dict):
+        """Test that update requires either --output or --in-place."""
+        from lfx.cli.check import check_flow_components
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = mock_component_dict
+
+            # Try to update without output or in_place
+            result = await check_flow_components(str(sample_flow_file), update=True, output=None, in_place=False)
+
+            # Should return error
+            assert "error" in result
+            assert "must specify either --output" in result["error"] or "must specify either" in result["error"]
+            assert "--in-place" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_output_takes_precedence_over_in_place(self, sample_flow_file, mock_component_dict):
+        """Test that --output takes precedence over --in-place when both are specified."""
+        from lfx.cli.check import check_flow_components
+
+        # Create a separate output file
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as output_file:
+            output_path = output_file.name
+
+        try:
+            original_content = Path(sample_flow_file).read_text()
+
+            with patch("lfx.cli.check.load_specific_components") as mock_load:
+                mock_load.return_value = mock_component_dict
+
+                # Use both output and in_place (output should take precedence)
+                result = await check_flow_components(
+                    str(sample_flow_file), update=True, output=output_path, in_place=True, force=True
+                )
+
+                # Should have applied updates
+                assert "error" not in result
+                assert result.get("applied_updates", 0) > 0
+                assert result.get("output_path") == output_path
+
+                # Original file should NOT be modified (output took precedence)
+                current_content = Path(sample_flow_file).read_text()
+                assert current_content == original_content
+
+                # Output file should be modified
+                assert Path(output_path).exists()
+                output_content = Path(output_path).read_text()
+                assert output_content != original_content
+        finally:
+            # Cleanup output file
+            if Path(output_path).exists():
+                Path(output_path).unlink()
+
+    @pytest.mark.asyncio
+    async def test_in_place_preserves_file_structure(self, sample_flow_file, mock_component_dict):
+        """Test that --in-place preserves the overall file structure."""
+        from lfx.cli.check import check_flow_components
+
+        original_data = json.loads(Path(sample_flow_file).read_text())
+        original_node_count = len(original_data["data"]["nodes"])
+
+        with patch("lfx.cli.check.load_specific_components") as mock_load:
+            mock_load.return_value = mock_component_dict
+
+            result = await check_flow_components(str(sample_flow_file), update=True, in_place=True, force=True)
+
+            assert "error" not in result
+
+            # Verify file structure is preserved
+            updated_data = json.loads(Path(sample_flow_file).read_text())
+            assert "data" in updated_data
+            assert "nodes" in updated_data["data"]
+            assert len(updated_data["data"]["nodes"]) == original_node_count
+
+    @pytest.mark.asyncio
+    async def test_in_place_with_interactive_mode(self, sample_flow_file, mock_component_dict):
+        """Test that --in-place works with --interactive mode."""
+        from lfx.cli.check import check_flow_components
+
+        with (
+            patch("lfx.cli.check.load_specific_components") as mock_load,
+            patch("lfx.cli.check.prompt_for_component_update") as mock_prompt,
+        ):
+            mock_load.return_value = mock_component_dict
+            # Simulate user accepting the update
+            mock_prompt.return_value = True
+
+            result = await check_flow_components(str(sample_flow_file), interactive=True, in_place=True, force=True)
+
+            # Should have applied updates if user accepted
+            assert "error" not in result
+            # File may or may not be modified depending on prompts
+            # But the structure should be valid
+            updated_content = Path(sample_flow_file).read_text()
+            updated_data = json.loads(updated_content)
+            assert "data" in updated_data
