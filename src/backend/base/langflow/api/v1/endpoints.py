@@ -97,7 +97,9 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
                 raw_tweaks = form.get("tweaks")
                 if raw_tweaks:
                     try:
-                        data["tweaks"] = orjson.loads(raw_tweaks) if isinstance(raw_tweaks, (str, bytes)) else raw_tweaks
+                        data["tweaks"] = (
+                            orjson.loads(raw_tweaks) if isinstance(raw_tweaks, (str, bytes)) else raw_tweaks
+                        )
                     except Exception:
                         # Leave as raw value if parsing fails
                         data["tweaks"] = raw_tweaks
