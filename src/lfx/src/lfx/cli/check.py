@@ -836,11 +836,6 @@ async def check_command(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show verbose output"),  # noqa: FBT003
 ) -> None:
     """Check a flow for outdated components and optionally update them."""
-    # Validate backup option requires in-place
-    if backup and not in_place:
-        console.print("[red]Error: --backup requires --in-place[/red]")
-        raise typer.Exit(1)
-
     # Configure logging for debugging
     if verbose:
         from lfx.log.logger import configure
