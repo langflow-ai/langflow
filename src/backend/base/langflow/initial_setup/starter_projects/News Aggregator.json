@@ -1942,7 +1942,7 @@
                   },
                   {
                     "name": "google",
-                    "version": "0.8.5"
+                    "version": "0.6.15"
                   },
                   {
                     "name": "googleapiclient",
