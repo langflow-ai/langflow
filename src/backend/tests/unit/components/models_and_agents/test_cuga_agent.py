@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 from langflow.custom import Component
-from lfx.components.agents import CugaComponent
+from lfx.components.cuga import CugaComponent
 from lfx.components.tools.calculator import CalculatorToolComponent
 
 from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
