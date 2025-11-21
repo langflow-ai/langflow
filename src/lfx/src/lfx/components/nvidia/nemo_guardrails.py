@@ -16,6 +16,8 @@ from lfx.inputs.inputs import (
     StrInput,
 )
 from lfx.io import MessageTextInput, Output
+from lfx.schema.content_block import ContentBlock
+from lfx.schema.content_types import ErrorContent
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 
@@ -1051,14 +1053,45 @@ class NVIDIANeMoGuardrailsComponent(Component):
             logger.debug(f"Validation response: {validation_response}")
 
             # Check if the response indicates blocking
+            # The GuardrailCheckResponse has a 'status' field that can be 'blocked' or 'allowed'
             is_blocked = False
-            if hasattr(validation_response, "blocked") and validation_response.blocked:
-                is_blocked = True
-            elif hasattr(validation_response, "choices") and validation_response.choices:
-                # Fallback to checking choices if blocked field not available
-                choice = validation_response.choices[0]
-                if hasattr(choice, "finish_reason") and choice.finish_reason == "guardrail_blocked":
+
+            # First, check the top-level status field (primary method for GuardrailCheckResponse)
+            if hasattr(validation_response, "status"):
+                status_value = validation_response.status
+                logger.debug(f"Response has status field: {status_value} (type: {type(status_value)})")
+                # Check for blocked status (case-insensitive comparison for robustness)
+                if str(status_value).lower() == "blocked":
                     is_blocked = True
+                    logger.info(f"Blocked status detected from response.status: {status_value}")
+
+            # Also check rails_status for blocking information (this is important as it may be more specific)
+            if hasattr(validation_response, "rails_status") and validation_response.rails_status:
+                logger.debug(f"Response has rails_status: {validation_response.rails_status}")
+                # Check if any rail has a blocked status
+                for rail_name, rail_status in validation_response.rails_status.items():
+                    if hasattr(rail_status, "status"):
+                        rail_status_value = rail_status.status
+                        logger.debug(f"Rail '{rail_name}' has status: {rail_status_value}")
+                        if str(rail_status_value).lower() == "blocked":
+                            is_blocked = True
+                            logger.info(f"Blocked status detected from rails_status[{rail_name}]: {rail_status_value}")
+                            break
+
+            # Fallback checks if status/rails_status didn't indicate blocking
+            if not is_blocked:
+                if hasattr(validation_response, "blocked") and validation_response.blocked:
+                    # Fallback to blocked boolean field if status not available
+                    is_blocked = True
+                    logger.info("Blocked status detected from response.blocked")
+                elif hasattr(validation_response, "choices") and validation_response.choices:
+                    # Fallback to checking choices if neither status nor blocked available
+                    choice = validation_response.choices[0]
+                    if hasattr(choice, "finish_reason") and choice.finish_reason == "guardrail_blocked":
+                        is_blocked = True
+                        logger.info("Blocked status detected from choice.finish_reason")
+
+            logger.debug(f"Final is_blocked determination: {is_blocked}")
 
             if is_blocked:
                 logger.info(f"{validation_mode.capitalize()} blocked by guardrails")
@@ -1102,13 +1135,61 @@ class NVIDIANeMoGuardrailsComponent(Component):
         This follows the pattern used by ConditionalRouterComponent.
         """
         is_blocked, _input_text = await self._validate_input()
+        logger.debug(
+            f"blocked_output: is_blocked={is_blocked}, input_text length={len(_input_text) if _input_text else 0}"
+        )
         if not is_blocked:
             # Return empty message so this output is not used
+            logger.debug("blocked_output: Validation passed, returning empty message")
             return Message(text="")
         # Validation failed - return error message
         validation_mode = getattr(self, "validation_mode", "input")
-        return Message(
-            text=f"I cannot process that {validation_mode}.",
+        error_message = f"I cannot process that {validation_mode}."
+        logger.info(f"blocked_output: Returning blocked error message: {error_message}")
+
+        # Create source properties for error display using component's own attributes
+        from lfx.schema.properties import Properties
+        from lfx.schema.properties import Source as SourceSchema
+
+        component_id = self.get_id() if hasattr(self, "get_id") else getattr(self, "_id", None)
+        error_source = SourceSchema(
+            id=component_id,
+            display_name=self.display_name,
+            source=self.name,
+        )
+
+        # Create error message with content_blocks for proper display in ErrorView
+        # Ensure text is set both as attribute and in data dict for get_text() to work
+        error_msg = Message(
+            text=error_message,
             error=True,
             category="error",
+            properties=Properties(
+                text_color="red",
+                background_color="red",
+                icon="error",
+                source=error_source,
+            ),
+            content_blocks=[
+                ContentBlock(
+                    title="Guardrails Blocked",
+                    contents=[
+                        ErrorContent(
+                            type="error",
+                            component=self.display_name,
+                            reason=error_message,
+                        )
+                    ],
+                )
+            ],
         )
+        # Ensure text is in data dict using set_text() so get_text() works correctly
+        # This is critical because ChatOutput calls convert_to_string() which uses get_text()
+        # set_text() ensures the text is stored in data[text_key]
+        error_msg.set_text(error_message)
+        logger.debug(
+            f"blocked_output: Set error message text='{error_message}', "
+            f"get_text() returns='{error_msg.get_text()}', "
+            f"text attribute='{error_msg.text}'"
+        )
+        return error_msg
