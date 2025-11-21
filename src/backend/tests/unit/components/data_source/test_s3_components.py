@@ -363,7 +363,9 @@ class TestS3CompatibleComponents:
             patch("lfx.services.deps.get_settings_service", return_value=local_settings),
             patch("lfx.base.data.storage_utils.get_settings_service", return_value=local_settings),
             patch("lfx.base.data.storage_utils.read_file_text", new_callable=AsyncMock) as mock_read_file,
-            patch("lfx.components.data_source.csv_to_data.read_file_text", new_callable=AsyncMock) as mock_read_file_component,
+            patch(
+                "lfx.components.data_source.csv_to_data.read_file_text", new_callable=AsyncMock
+            ) as mock_read_file_component,
         ):
             mock_read_file.return_value = "name,age\nAlice,28"
             mock_read_file_component.return_value = "name,age\nAlice,28"
@@ -444,7 +446,9 @@ class TestS3CompatibleComponents:
             patch("lfx.services.deps.get_settings_service", return_value=local_settings),
             patch("lfx.base.data.storage_utils.get_settings_service", return_value=local_settings),
             patch("lfx.base.data.storage_utils.read_file_text", new_callable=AsyncMock) as mock_read_file,
-            patch("lfx.components.data_source.json_to_data.read_file_text", new_callable=AsyncMock) as mock_read_file_component,
+            patch(
+                "lfx.components.data_source.json_to_data.read_file_text", new_callable=AsyncMock
+            ) as mock_read_file_component,
         ):
             mock_read_file.return_value = '{"local": "data"}'
             mock_read_file_component.return_value = '{"local": "data"}'
