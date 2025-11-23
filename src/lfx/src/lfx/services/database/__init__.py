@@ -3,4 +3,3 @@
 from lfx.services.database.service import NoopDatabaseService
 
 __all__ = ["NoopDatabaseService"]
-

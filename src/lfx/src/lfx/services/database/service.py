@@ -23,4 +23,3 @@ class NoopDatabaseService:
 
         async with NoopSession() as session:
             yield session
-
