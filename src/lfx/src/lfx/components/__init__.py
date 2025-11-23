@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     # These imports are only for type checking and match _dynamic_imports
     from lfx.components import (
         FAISS,
+        BurnCloud,
         Notion,
         agentql,
         aiml,
@@ -123,6 +124,7 @@ _dynamic_imports = {
     "azure": "__module__",
     "baidu": "__module__",
     "bing": "__module__",
+    "BurnCloud": "__module__",
     "cassandra": "__module__",
     "chains": "__module__",
     "chroma": "__module__",
@@ -244,6 +246,7 @@ def _discover_components_from_module(module_name):
 # Static base __all__ with module names
 __all__ = [
     "FAISS",
+    "BurnCloud",
     "Notion",
     "agentql",
     "aiml",

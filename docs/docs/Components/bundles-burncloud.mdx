@@ -1,0 +1,52 @@
+---
+title: BurnCloud
+slug: /bundles-burncloud
+description: Use BurnCloud's OpenAI-compatible models inside Langflow.
+---
+
+import Icon from "@site/src/components/icon";
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **BurnCloud** bundle.
+
+For more information about BurnCloud features and API limits, see the [BurnCloud documentation](https://burncloud.com/).
+
+## BurnCloud text generation
+
+The **BurnCloud** component generates text through BurnCloud's OpenAI-compatible API gateway. It works with the same chat-completions schema as OpenAI, while letting you point to BurnCloud-hosted models or a private BurnCloud deployment.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)). The **Language Model** output is an instance of [`ChatOpenAI`](https://python.langchain.com/docs/integrations/chat/openai) configured to target BurnCloud's `/v1` endpoints.
+
+Use the **Language Model** output when you want to pass a BurnCloud model into another LLM-driven component, such as **Agent**, **Smart Function**, or **Prompt Template** components.
+
+### BurnCloud parameters
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your BurnCloud API key. Required for authentication and for fetching the latest model list. |
+| base_url | String | Input parameter. Override the default `https://ai.burncloud.com` base URL if you host BurnCloud privately. The component appends `/v1` automatically when needed. (Advanced) |
+| model_name | String | Input parameter. BurnCloud model to use. Options update dynamically after you provide a valid API key and click <Icon name="RefreshCw" aria-hidden="true" /> **Refresh**. Defaults to `gpt-4o`. |
+| temperature | Float | Input parameter. Controls randomness. Range: `[0, 2]`. Defaults to `0.7`. (Advanced) |
+| top_p | Float | Input parameter. Alternative sampling control that limits the cumulative probability mass of candidate tokens. Range: `[0, 1]`. Defaults to `1.0`. (Advanced) |
+| max_tokens | Integer | Input parameter. Maximum number of tokens to generate. Leave empty to let BurnCloud decide. (Advanced) |
+| input_value | String | Input parameter. The prompt or chat content you want to send to the model. |
+| system_message | String | Input parameter. Sets the assistant's persona or high-level instructions. |
+| stream | Boolean | Input parameter. Streams partial results when enabled. |
+| output_parser | OutputParser | Input parameter. (Advanced) Parse the model response before passing it downstream. |
+| model_output | LanguageModel | Output parameter. A `ChatOpenAI` instance configured for BurnCloud. |
+| text_output | Message | Output parameter. The generated response from the selected BurnCloud model. |
+
+### Use BurnCloud in a flow
+
+1. Sign up for a [BurnCloud account](https://burncloud.com/) and generate an API key in the BurnCloud dashboard.
+2. In Langflow, open <Icon name="Blocks" aria-hidden="true" /> **Bundles** and drag the **BurnCloud** component into your flow.
+3. Paste your API key into **BurnCloud API Key**. Optionally set **Base URL** if your organization hosts BurnCloud privately.
+4. Click <Icon name="RefreshCw" aria-hidden="true" /> **Refresh** next to **Model** to load the latest BurnCloud-hosted model list, then pick the model you need.
+5. Configure sampling parameters such as **Temperature**, **Top P**, and **Max Output Tokens** (if required) along with your **System Message** and **Prompt**.
+6. Connect **Chat Input** → **BurnCloud** → **Chat Output** (or feed the **Language Model** output into downstream components like **Agent** or **Smart Function**).
+7. Click **Playground** to test requests and validate the connection before deploying the flow.
