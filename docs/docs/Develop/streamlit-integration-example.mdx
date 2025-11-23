@@ -1,0 +1,373 @@
+---
+title: Streamlit integration example with file uploads
+slug: /streamlit-integration-example
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+This guide demonstrates how to integrate Langflow with Streamlit for file uploads and flow execution. You'll learn how to upload files through your Streamlit interface and pass them to Langflow flows that process documents using vector stores.
+
+## Overview
+
+When integrating Langflow with Streamlit for file uploads, you need to:
+
+1. **Upload files to Langflow** via the API
+2. **Inject file paths into flow components** using tweaks
+3. **Execute the flow** with the uploaded files
+4. **Handle the response** in your Streamlit interface
+
+## Prerequisites
+
+- A Langflow deployment with API access
+- A flow that includes vector store components for document processing
+- Streamlit installed in your Python environment
+- Your Langflow API key
+
+## Complete Streamlit Integration Example
+
+Here's a complete example showing how to build a Streamlit interface that uploads files to Langflow and processes them through vector store flows:
+
+```python
+import streamlit as st
+import requests
+import json
+import time
+from typing import Optional, Dict, Any
+import os
+
+class LangflowClient:
+    def __init__(self, base_url: str, api_key: str):
+        self.base_url = base_url.rstrip('/')
+        self.api_key = api_key
+        self.headers = {
+            "Content-Type": "application/json",
+            "x-api-key": api_key
+        }
+    
+    def upload_file(self, file, user_id: Optional[str] = None) -> Dict[str, Any]:
+        """Upload a file to Langflow's file management system"""
+        files = {"file": (file.name, file.getvalue(), file.type)}
+        headers = {"x-api-key": self.api_key}
+        
+        response = requests.post(
+            f"{self.base_url}/api/v2/files",
+            files=files,
+            headers=headers
+        )
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"File upload failed: {response.text}")
+    
+    def get_user_id(self) -> str:
+        """Get current user ID"""
+        response = requests.get(
+            f"{self.base_url}/api/v1/users/whoami",
+            headers=self.headers
+        )
+        if response.status_code == 200:
+            return response.json()["id"]
+        else:
+            raise Exception(f"Failed to get user ID: {response.text}")
+    
+    def run_flow(
+        self, 
+        flow_id: str, 
+        input_value: str, 
+        tweaks: Optional[Dict[str, Any]] = None,
+        session_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Execute a Langflow with optional tweaks for file injection"""
+        data = {
+            "input_value": input_value,
+            "output_type": "chat",
+            "input_type": "chat",
+            "tweaks": tweaks or {}
+        }
+        
+        if session_id:
+            data["session_id"] = session_id
+        
+        response = requests.post(
+            f"{self.base_url}/api/v1/run/{flow_id}",
+            headers=self.headers,
+            json=data
+        )
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Flow execution failed: {response.text}")
+
+def main():
+    st.set_page_config(
+        page_title="Langflow Document Q&A",
+        page_icon="📄",
+        layout="wide"
+    )
+    
+    st.title("📄 Langflow Document Q&A")
+    st.markdown("Upload documents and ask questions about them using Langflow!")
+    
+    # Sidebar for configuration
+    with st.sidebar:
+        st.header("Configuration")
+        
+        # Langflow configuration
+        langflow_url = st.text_input(
+            "Langflow Server URL", 
+            value=os.getenv("LANGFLOW_URL", "http://localhost:7860"),
+            help="Your Langflow server URL"
+        )
+        
+        api_key = st.text_input(
+            "Langflow API Key", 
+            type="password",
+            help="Your Langflow API key for authentication"
+        )
+        
+        # Flow configuration
+        flow_id = st.text_input(
+            "Flow ID", 
+            help="ID of your Langflow flow (get from API access pane)"
+        )
+        
+        # File component configuration
+        file_component_id = st.text_input(
+            "File Component ID", 
+            help="ID of the File component in your flow (e.g., File-abc123)"
+        )
+        
+        # Vector store component configuration
+        vector_component_id = st.text_input(
+            "Vector Store Component ID", 
+            help="ID of the Vector Store component in your flow (e.g., Chromadb-xyz789)"
+        )
+        
+        if st.button("Initialize Client"):
+            if not all([langflow_url, api_key, flow_id]):
+                st.error("Please fill in all required fields")
+            else:
+                st.session_state.client = LangflowClient(langflow_url, api_key)
+                st.session_state.flow_id = flow_id
+                st.session_state.file_component_id = file_component_id
+                st.session_state.vector_component_id = vector_component_id
+                st.success("Client initialized successfully!")
+    
+    # Main interface
+    if 'client' not in st.session_state:
+        st.info("Please configure your Langflow connection in the sidebar")
+        return
+    
+    # File upload section
+    st.header("📤 Upload Documents")
+    uploaded_files = st.file_uploader(
+        "Choose files to upload", 
+        type=['pdf', 'txt', 'docx', 'csv'],
+        accept_multiple_files=True,
+        help="Upload documents to process with your Langflow flow"
+    )
+    
+    if uploaded_files and st.button("Upload to Langflow"):
+        st.session_state.uploaded_file_paths = []
+        st.session_state.uploaded_file_names = []
+        
+        with st.spinner("Uploading files..."):
+            for file in uploaded_files:
+                try:
+                    file_data = st.session_state.client.upload_file(file)
+                    file_path = file_data["path"]
+                    file_name = file_data["name"]
+                    
+                    st.session_state.uploaded_file_paths.append(file_path)
+                    st.session_state.uploaded_file_names.append(file_name)
+                    
+                    st.success(f"✅ {file_name} uploaded successfully")
+                    
+                except Exception as e:
+                    st.error(f"Failed to upload {file.name}: {str(e)}")
+    
+    # Display uploaded files
+    if hasattr(st.session_state, 'uploaded_file_paths') and st.session_state.uploaded_file_paths:
+        st.subheader("Uploaded Files")
+        for i, (name, path) in enumerate(zip(st.session_state.uploaded_file_names, st.session_state.uploaded_file_paths)):
+            st.write(f"{i+1}. {name} → `{path}`")
+    
+    # Chat interface
+    st.header("💬 Ask Questions")
+    
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    
+    # Display chat history
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+    
+    # User input
+    if prompt := st.chat_input("Ask a question about your documents"):
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.write(prompt)
+        
+        # Prepare flow execution
+        if not hasattr(st.session_state, 'uploaded_file_paths') or not st.session_state.uploaded_file_paths:
+            st.error("Please upload some files first!")
+            return
+        
+        # Prepare tweaks for file injection
+        tweaks = {}
+        
+        # Inject file paths into File component
+        if st.session_state.file_component_id:
+            tweaks[st.session_state.file_component_id] = {
+                "path": st.session_state.uploaded_file_paths
+            }
+        
+        # Execute flow
+        with st.chat_message("assistant"):
+            with st.spinner("Processing your question..."):
+                try:
+                    # Run the flow
+                    response = st.session_state.client.run_flow(
+                        flow_id=st.session_state.flow_id,
+                        input_value=prompt,
+                        tweaks=tweaks,
+                        session_id="streamlit_session"
+                    )
+                    
+                    # Extract the response text
+                    outputs = response.get("outputs", [])
+                    if outputs:
+                        output_data = outputs[0].get("outputs", [])
+                        if output_data:
+                            result = output_data[0].get("results", {})
+                            if "message" in result:
+                                message_text = result["message"].get("text", "No response generated")
+                            else:
+                                message_text = str(result)
+                        else:
+                            message_text = "No output generated"
+                    else:
+                        message_text = "No response from flow"
+                    
+                    st.write(message_text)
+                    
+                    # Add assistant response to chat history
+                    st.session_state.messages.append({"role": "assistant", "content": message_text})
+                    
+                except Exception as e:
+                    error_message = f"Error executing flow: {str(e)}"
+                    st.error(error_message)
+                    st.session_state.messages.append({"role": "assistant", "content": error_message})
+    
+    # Clear chat history
+    if st.button("Clear Chat History"):
+        st.session_state.messages = []
+        st.rerun()
+
+if __name__ == "__main__":
+    main()
+```
+
+## Flow Configuration Guide
+
+To use this Streamlit integration, you need to configure your Langflow flow with the correct component IDs:
+
+### 1. Identify Component IDs
+
+1. Open your Langflow flow in the visual editor
+2. Click on each component to see its ID in the properties panel
+3. Note the IDs for:
+   - **File component**: Usually labeled as `File-XXXXX`
+   - **Vector store component**: Usually labeled as `Chroma-XXXXX` or `AstraDB-XXXXX`
+
+### 2. Configure the Flow
+
+Ensure your flow includes:
+- A **File** component for loading documents
+- A **Vector Store** component (like ChromaDB, Pinecone, etc.)
+- Text processing components (Text Splitter, Embeddings, etc.)
+- An **Agent** or **Chat Output** component
+
+### 3. Connect Components
+
+Connect your components in this typical flow:
+```
+File → Text Splitter → Embeddings → Vector Store → Agent → Chat Output
+                      ↓
+                  Query Input
+```
+
+## Vector Store Integration Details
+
+The key to making this work is injecting the uploaded file paths into your flow's components using the `tweaks` parameter:
+
+### File Component Tweaks
+```python
+tweaks[file_component_id] = {
+    "path": ["/user_id/file_id.pdf", "/user_id/file_id2.pdf"]
+}
+```
+
+### Vector Store Component Tweaks (if needed)
+```python
+# Some vector stores might need explicit configuration
+tweaks[vector_component_id] = {
+    "collection_name": "my_documents",
+    "allow_reset": True
+}
+```
+
+## Complete Setup Instructions
+
+### 1. Install Dependencies
+
+```bash
+pip install streamlit requests python-multipart
+```
+
+### 2. Set Environment Variables
+
+```bash
+export LANGFLOW_URL="http://localhost:7860"
+export LANGFLOW_API_KEY="your_api_key_here"
+```
+
+### 3. Create a Langflow Flow
+
+1. Create a new flow with vector store capabilities
+2. Add a **File** component
+3. Add a **Vector Store** component (e.g., ChromaDB)
+4. Connect components: File → Vector Store → Chat Output
+5. Get component IDs from the API access pane
+
+### 4. Run Your Streamlit App
+
+```bash
+streamlit run your_streamlit_app.py
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **File upload fails**: Check your API key and Langflow server URL
+2. **Flow execution fails**: Verify component IDs and flow structure
+3. **No response from vector store**: Ensure files are properly uploaded and component connections are correct
+
+### Debug Tips
+
+- Check the Langflow logs for detailed error messages
+- Use the Langflow playground to test your flow before integrating
+- Verify all component IDs match exactly (case-sensitive)
+- Ensure your vector store has enough resources for document processing
+
+## Next Steps
+
+- [Explore more Langflow API examples](../API-Reference/api-reference-api-examples)
+- [Learn about file management in Langflow](../concepts-file-management)
+- [Build custom Streamlit interfaces with different Langflow flows](https://github.com/langflow-ai/langflow/discussions)

@@ -26,7 +26,10 @@ The quickstart demonstrates how to get automatically generated code snippets for
 
 While individual options vary by endpoint, all Langflow API requests share some commonalities, like a URL, method, parameters, and authentication.
 
-As an example of a Langflow API request, the following curl command calls the `/v1/run` endpoint, and it passes a runtime override (`tweaks`) to the flow's **Chat Output** component:
+As an example of a Langflow API request, the following examples show different ways to interact with the API, including cURL, Python requests, and complete file upload workflows:
+
+<Tabs>
+<TabItem value="curl" label="cURL" default>
 
 ```bash
 curl --request POST \
@@ -44,6 +47,93 @@ curl --request POST \
   }
 }'
 ```
+
+</TabItem>
+<TabItem value="python" label="Python requests">
+
+```python
+import requests
+import json
+
+# Set up API configuration
+LANGFLOW_API_KEY = "your_api_key_here"
+LANGFLOW_SERVER_URL = "http://localhost:7860"
+FLOW_ID = "your_flow_id_here"
+
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": LANGFLOW_API_KEY
+}
+
+data = {
+    "input_value": "hello world!",
+    "output_type": "chat", 
+    "input_type": "chat",
+    "tweaks": {
+        "ChatOutput-6zcZt": {
+            "should_store_message": True
+        }
+    }
+}
+
+response = requests.post(
+    f"{LANGFLOW_SERVER_URL}/api/v1/run/{FLOW_ID}",
+    headers=headers,
+    json=data
+)
+
+if response.status_code == 200:
+    result = response.json()
+    print("Flow executed successfully!")
+    print(json.dumps(result, indent=2))
+else:
+    print(f"Error: {response.status_code} - {response.text}")
+```
+
+</TabItem>
+<TabItem value="httpx" label="Python httpx">
+
+```python
+import httpx
+import asyncio
+
+async def run_langflow_flow():
+    async with httpx.AsyncClient() as client:
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": LANGFLOW_API_KEY
+        }
+        
+        data = {
+            "input_value": "hello world!",
+            "output_type": "chat",
+            "input_type": "chat", 
+            "tweaks": {
+                "ChatOutput-6zcZt": {
+                    "should_store_message": True
+                }
+            }
+        }
+        
+        response = await client.post(
+            f"{LANGFLOW_SERVER_URL}/api/v1/run/{FLOW_ID}",
+            headers=headers,
+            json=data
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            return result
+        else:
+            raise Exception(f"API request failed: {response.status_code} - {response.text}")
+
+# Run the async function
+result = asyncio.run(run_langflow_flow())
+print(result)
+```
+
+</TabItem>
+</Tabs>
 
 ### Base URL
 
@@ -117,6 +207,281 @@ curl --request POST \
 Commonly used values in Langflow API requests include your [Langflow server URL](#base-url), [Langflow API keys](#authentication), flow IDs, and [project IDs](/api-projects#read-projects).
 
 You can retrieve flow IDs from the [**API access** pane](/concepts-publish#api-access), in a flow's URL, and with [`GET /flows`](/api-flows#read-flows).
+
+## Complete File Upload Workflow
+
+When integrating Langflow with external frontends (like Streamlit, React, or mobile apps), you need to handle file uploads through a specific workflow. Here's how to implement the complete process:
+
+### Overview
+
+The file upload workflow consists of these steps:
+1. **Get your user ID** (for v2 files API)
+2. **Upload files** to Langflow's file management system  
+3. **Inject file paths** into flow components using tweaks
+4. **Execute the flow** with uploaded files
+5. **Handle the response** in your application
+
+### Complete Python Example
+
+Here's a comprehensive example showing the entire workflow:
+
+```python
+import requests
+import json
+import time
+from typing import List, Dict, Optional, Any
+
+class LangflowFileUploadClient:
+    """Complete Langflow client for file upload workflows"""
+    
+    def __init__(self, base_url: str, api_key: str):
+        self.base_url = base_url.rstrip('/')
+        self.api_key = api_key
+        self.headers = {
+            "Content-Type": "application/json",
+            "x-api-key": api_key
+        }
+        self.file_headers = {"x-api-key": api_key}
+        
+    def get_user_id(self) -> str:
+        """Get current user ID for v2 file operations"""
+        response = requests.get(
+            f"{self.base_url}/api/v1/users/whoami",
+            headers=self.headers
+        )
+        response.raise_for_status()
+        return response.json()["id"]
+    
+    def upload_file(self, file_path: str, file_name: Optional[str] = None) -> Dict[str, Any]:
+        """Upload a single file to Langflow"""
+        if file_name is None:
+            file_name = file_path.split('/')[-1]
+            
+        with open(file_path, 'rb') as f:
+            files = {"file": (file_name, f)}
+            response = requests.post(
+                f"{self.base_url}/api/v2/files",
+                files=files,
+                headers=self.file_headers
+            )
+        
+        response.raise_for_status()
+        return response.json()
+    
+    def upload_files(self, file_paths: List[str]) -> List[Dict[str, Any]]:
+        """Upload multiple files to Langflow"""
+        results = []
+        for file_path in file_paths:
+            try:
+                result = self.upload_file(file_path)
+                results.append(result)
+                print(f"✅ Uploaded: {result['name']} -> {result['path']}")
+            except Exception as e:
+                print(f"❌ Failed to upload {file_path}: {str(e)}")
+                continue
+        return results
+    
+    def run_flow_with_files(
+        self, 
+        flow_id: str,
+        file_paths: List[str],
+        input_text: str,
+        file_component_id: str,
+        session_id: Optional[str] = None,
+        **component_tweaks
+    ) -> Dict[str, Any]:
+        """Execute flow with injected file paths"""
+        
+        # Prepare tweaks for file injection
+        tweaks = {
+            file_component_id: {
+                "path": file_paths
+            }
+        }
+        
+        # Add any additional component tweaks
+        tweaks.update(component_tweaks)
+        
+        # Prepare request data
+        data = {
+            "input_value": input_text,
+            "input_type": "text",
+            "output_type": "chat",
+            "tweaks": tweaks
+        }
+        
+        if session_id:
+            data["session_id"] = session_id
+        
+        # Execute flow
+        response = requests.post(
+            f"{self.base_url}/api/v1/run/{flow_id}",
+            headers=self.headers,
+            json=data
+        )
+        
+        response.raise_for_status()
+        return response.json()
+    
+    def extract_chat_response(self, flow_response: Dict[str, Any]) -> str:
+        """Extract the main chat response from flow output"""
+        try:
+            outputs = flow_response.get("outputs", [])
+            if outputs:
+                output_data = outputs[0].get("outputs", [])
+                if output_data:
+                    result = output_data[0].get("results", {})
+                    if "message" in result:
+                        return result["message"].get("text", "No response generated")
+                    else:
+                        return str(result)
+            return "No response from flow"
+        except Exception as e:
+            return f"Error extracting response: {str(e)}"
+
+def complete_workflow_example():
+    """Complete example: upload files and run flow with vector store processing"""
+    
+    # Configuration
+    BASE_URL = "http://localhost:7860"
+    API_KEY = "your_api_key_here"
+    FLOW_ID = "your_vector_store_flow_id"
+    FILE_COMPONENT_ID = "File-abc123"  # From your flow's API access pane
+    
+    # Initialize client
+    client = LangflowFileUploadClient(BASE_URL, API_KEY)
+    
+    # Step 1: Upload documents
+    print("📁 Step 1: Uploading files...")
+    file_paths = [
+        "/path/to/document1.pdf",
+        "/path/to/document2.txt", 
+        "/path/to/document3.csv"
+    ]
+    
+    uploaded_files = client.upload_files(file_paths)
+    uploaded_paths = [f["path"] for f in uploaded_files]
+    
+    if not uploaded_paths:
+        print("❌ No files were uploaded successfully")
+        return
+    
+    print(f"✅ Uploaded {len(uploaded_paths)} files")
+    
+    # Step 2: Run flow with file injection
+    print("\n🤖 Step 2: Running flow with uploaded documents...")
+    query = "What are the main topics discussed in these documents?"
+    
+    try:
+        response = client.run_flow_with_files(
+            flow_id=FLOW_ID,
+            file_paths=uploaded_paths,
+            input_text=query,
+            file_component_id=FILE_COMPONENT_ID,
+            session_id="document_chat_session"
+        )
+        
+        # Step 3: Extract and display response
+        answer = client.extract_chat_response(response)
+        print(f"\n💬 Answer: {answer}")
+        
+        return response
+        
+    except Exception as e:
+        print(f"❌ Flow execution failed: {str(e)}")
+        return None
+
+# Run the complete example
+if __name__ == "__main__":
+    complete_workflow_example()
+```
+
+### Frontend Integration Examples
+
+#### React Example
+
+```javascript
+import React, { useState } from 'react';
+
+const LangflowFileUploader = () => {
+  const [files, setFiles] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [response, setResponse] = useState('');
+
+  const uploadFiles = async (filesToUpload) => {
+    setIsUploading(true);
+    const formData = new FormData();
+    
+    Array.from(filesToUpload).forEach(file => {
+      formData.append('file', file);
+    });
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_LANGFLOW_URL}/api/v2/files`, {
+        method: 'POST',
+        headers: {
+          'x-api-key': process.env.REACT_APP_LANGFLOW_API_KEY
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+      return Array.isArray(data) ? data : [data];
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleQuery = async () => {
+    if (files.length === 0) return;
+
+    const uploadedFiles = await uploadFiles(files);
+    const filePaths = uploadedFiles.map(f => f.path);
+
+    const response = await fetch(`${process.env.REACT_APP_LANGFLOW_URL}/api/v1/run/${FLOW_ID}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.REACT_APP_LANGFLOW_API_KEY
+      },
+      body: JSON.stringify({
+        input_value: query,
+        input_type: 'text',
+        output_type: 'chat',
+        tweaks: {
+          [FILE_COMPONENT_ID]: {
+            path: filePaths
+          }
+        }
+      })
+    });
+
+    const result = await response.json();
+    const answer = extractChatResponse(result);
+    setResponse(answer);
+  };
+
+  return (
+    <div>
+      <input 
+        type="file" 
+        multiple 
+        onChange={(e) => setFiles(e.target.files)} 
+      />
+      <input 
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Ask about your documents..."
+      />
+      <button onClick={handleQuery} disabled={isUploading}>
+        {isUploading ? 'Processing...' : 'Ask Question'}
+      </button>
+      {response && <div>{response}</div>}
+    </div>
+  );
+};
+```
 
 ## Try some Langflow API requests
 

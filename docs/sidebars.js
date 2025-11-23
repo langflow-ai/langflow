@@ -160,6 +160,16 @@ module.exports = {
           id: "Develop/configuration-cli",
           label: "Use the Langflow CLI"
         },
+        {
+          type: "doc",
+          id: "Develop/streamlit-integration-example",
+          label: "Streamlit integration example"
+        },
+        {
+          type: "doc",
+          id: "Develop/vector-store-api-integration",
+          label: "Vector store API integration"
+        },
       ],
     },
     {

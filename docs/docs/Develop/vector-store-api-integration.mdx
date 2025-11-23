@@ -1,0 +1,429 @@
+---
+title: Vector store file injection via API
+slug: /vector-store-api-integration
+---
+
+This guide shows you how to inject uploaded files into Langflow flows that use vector stores, specifically focusing on the critical `tweaks` parameter that bridges external file uploads with your flow's vector store components.
+
+## Understanding Component Tweaks
+
+The `tweaks` parameter in the Langflow API is the key mechanism for dynamically configuring flow components at runtime. When working with vector stores, you use tweaks to:
+
+1. **Inject file paths** into File components
+2. **Configure vector store settings** (collection names, indexes, etc.)
+3. **Override component parameters** based on your uploaded files
+4. **Control the data flow** through your vector store pipeline
+
+## Finding Component IDs
+
+Before you can use tweaks, you need to identify the exact component IDs in your flow:
+
+1. **Open your flow** in the Langflow visual editor
+2. **Click on each component** to view its properties
+3. **Note the component ID** (usually displayed as `ComponentType-xxxxx`)
+4. **Use the API access pane** to get all component IDs at once
+
+### Using the API Access Pane
+
+1. Click the **API access** button in your flow toolbar
+2. **Select the "Input Schema" tab**
+3. **Copy the tweaks structure** - this shows you the exact format for component IDs
+
+The Input Schema will show you something like:
+
+```json
+{
+  "File-abc123": {
+    "path": "string"
+  },
+  "Chroma-xyz789": {
+    "collection_name": "string",
+    "allow_reset": "boolean"
+  }
+}
+```
+
+## Complete File Injection Examples
+
+### Basic File Upload with Vector Store
+
+Here's the complete workflow for injecting files into a vector store flow:
+
+```python
+import requests
+import json
+
+def inject_files_into_vector_store(
+    langflow_url: str,
+    api_key: str,
+    flow_id: str,
+    file_paths: list,
+    query: str
+):
+    """Complete example: upload files and inject into vector store flow"""
+    
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": api_key
+    }
+    
+    # Step 1: Upload files to Langflow
+    print("📁 Uploading files...")
+    uploaded_files = []
+    
+    for file_path in file_paths:
+        with open(file_path, 'rb') as f:
+            files = {"file": (file_path.split('/')[-1], f)}
+            response = requests.post(
+                f"{langflow_url}/api/v2/files",
+                files=files,
+                headers={"x-api-key": api_key}
+            )
+            response.raise_for_status()
+            uploaded_files.append(response.json())
+            print(f"✅ Uploaded: {response.json()['name']}")
+    
+    # Step 2: Prepare file paths for injection
+    file_paths_for_flow = [f["path"] for f in uploaded_files]
+    
+    # Step 3: Configure tweaks for your specific flow
+    # Adjust these component IDs based on your flow
+    tweaks = {
+        # Inject files into File component
+        "File-abc123": {
+            "path": file_paths_for_flow
+        },
+        
+        # Configure vector store component  
+        "Chroma-xyz789": {
+            "collection_name": "uploaded_documents",
+            "allow_reset": True,
+            "persist_directory": "./chroma_db"
+        },
+        
+        # Override text splitter if needed
+        "TextSplitter-def456": {
+            "chunk_size": 1000,
+            "chunk_overlap": 200
+        },
+        
+        # Configure embeddings component
+        "OpenAIEmbeddings-ghi789": {
+            "model": "text-embedding-ada-002"
+        }
+    }
+    
+    # Step 4: Execute flow with injected files
+    data = {
+        "input_value": query,
+        "input_type": "text",
+        "output_type": "chat", 
+        "tweaks": tweaks,
+        "session_id": "vector_store_session"
+    }
+    
+    print(f"🤖 Running flow with {len(file_paths_for_flow)} files...")
+    response = requests.post(
+        f"{langflow_url}/api/v1/run/{flow_id}",
+        headers=headers,
+        json=data
+    )
+    
+    if response.status_code == 200:
+        result = response.json()
+        
+        # Extract the chat response
+        outputs = result.get("outputs", [])
+        if outputs and outputs[0].get("outputs"):
+            answer = outputs[0]["outputs"][0]["results"]["message"]["text"]
+            print(f"💬 Answer: {answer}")
+            return answer
+        else:
+            print("❌ No response generated")
+            return None
+    else:
+        print(f"❌ Error: {response.status_code} - {response.text}")
+        return None
+
+# Usage example
+if __name__ == "__main__":
+    response = inject_files_into_vector_store(
+        langflow_url="http://localhost:7860",
+        api_key="your_api_key",
+        flow_id="your_vector_flow_id",
+        file_paths=["document1.pdf", "document2.txt", "report3.csv"],
+        query="What are the key findings in these documents?"
+    )
+```
+
+## Advanced Vector Store Configuration
+
+### Different Vector Store Types
+
+Each vector store type has specific parameters you can configure via tweaks:
+
+#### ChromaDB Configuration
+
+```python
+chroma_tweaks = {
+    "Chroma-abc123": {
+        "persist_directory": "./my_chroma_db",
+        "collection_name": "custom_docs",
+        "allow_reset": True,
+        "distance_function": "cosine"  # cosine, l2, ip
+    }
+}
+```
+
+#### Pinecone Configuration
+
+```python
+pinecone_tweaks = {
+    "Pinecone-xyz789": {
+        "index_name": "my-index",
+        "namespace": "documents",
+        "environment": "us-east1-gcp",
+        "create_index_if_not_exists": True
+    }
+}
+```
+
+#### FAISS Configuration
+
+```python
+faiss_tweaks = {
+    "FAISS-def456": {
+        "index_file": "./index.faiss",
+        "save_index_file": True,
+        "normalize_L2": True
+    }
+}
+```
+
+#### AstraDB Configuration
+
+```python
+astra_tweaks = {
+    "AstraDB-ghi789": {
+        "collection_name": "my_collection", 
+        "namespace": "default_keyspace",
+        "keyspace": "my_keyspace",
+        "setup_mode": "sync"
+    }
+}
+```
+
+## Multi-Component Flow Example
+
+Here's a complete example for a complex RAG flow with multiple components:
+
+```python
+def run_advanced_rag_flow(
+    langflow_url: str,
+    api_key: str, 
+    flow_id: str,
+    uploaded_files: list,
+    query: str
+):
+    """Example for complex RAG flow with multiple vector store components"""
+    
+    # Component IDs for a typical RAG flow
+    component_ids = {
+        "file_loader": "File-abc123",
+        "text_splitter": "RecursiveTextSplitter-def456", 
+        "embeddings": "OpenAIEmbeddings-ghi789",
+        "vector_store": "Chroma-jkl012",
+        "retriever": "VectorStoreRetriever-mno345",
+        "llm": "OpenAI-pqr678",
+        "output": "ChatOutput-stu901"
+    }
+    
+    # Configure the complete flow via tweaks
+    tweaks = {
+        # File loading component
+        component_ids["file_loader"]: {
+            "path": [f["path"] for f in uploaded_files]
+        },
+        
+        # Text processing
+        component_ids["text_splitter"]: {
+            "chunk_size": 1500,
+            "chunk_overlap": 200,
+            "separators": ["\n\n", "\n", " "]
+        },
+        
+        # Embeddings configuration
+        component_ids["embeddings"]: {
+            "model": "text-embedding-3-small",
+            "dimensions": 1536,
+            "encoding_format": "float"
+        },
+        
+        # Vector store settings
+        component_ids["vector_store"]: {
+            "persist_directory": "./rag_db",
+            "collection_name": "qa_documents",
+            "allow_reset": True,
+            "embedding_function": "text-embedding-3-small",
+            "get_or_create": True
+        },
+        
+        # Retriever configuration
+        component_ids["retriever"]: {
+            "search_type": "similarity",  # similarity, mmr, similarity_score_threshold
+            "search_kwargs": {
+                "k": 4,  # Number of documents to retrieve
+                "score_threshold": 0.7  # Minimum similarity score
+            }
+        },
+        
+        # LLM configuration (if using a model that supports tweaks)
+        component_ids["llm"]: {
+            "temperature": 0.1,
+            "max_tokens": 1000,
+            "model": "gpt-4"
+        }
+    }
+    
+    # Execute the flow
+    data = {
+        "input_value": query,
+        "input_type": "text",
+        "output_type": "chat",
+        "tweaks": tweaks,
+        "session_id": "advanced_rag_session"
+    }
+    
+    response = requests.post(
+        f"{langflow_url}/api/v1/run/{flow_id}",
+        headers={"x-api-key": api_key, "Content-Type": "application/json"},
+        json=data
+    )
+    
+    return response.json()
+```
+
+## Dynamic Component Configuration
+
+### Runtime Component Detection
+
+```python
+def detect_flow_components(flow_id: str):
+    """Get component information from a flow"""
+    
+    # First, get the flow details
+    response = requests.get(
+        f"{langflow_url}/api/v1/flows/{flow_id}",
+        headers={"x-api-key": api_key}
+    )
+    
+    if response.status_code == 200:
+        flow_data = response.json()
+        
+        # Extract component information
+        vertices = flow_data.get("data", {}).get("vertices", {})
+        
+        component_map = {}
+        for vertex_id, vertex_data in vertices.items():
+            component_type = vertex_data.get("type", "")
+            display_name = vertex_data.get("template", {}).get("display_name", "")
+            
+            # Map common component types
+            if "File" in component_type:
+                component_map["file"] = vertex_id
+            elif any(store in component_type for store in ["Chroma", "Pinecone", "FAISS", "Astra"]):
+                component_map["vector_store"] = vertex_id  
+            elif "Embeddings" in component_type:
+                component_map["embeddings"] = vertex_id
+            elif "Splitter" in component_type or "Text" in component_type:
+                component_map["text_splitter"] = vertex_id
+            elif "Retriever" in component_type:
+                component_map["retriever"] = vertex_id
+            elif "LLM" in component_type or "OpenAI" in component_type or "Model" in component_type:
+                component_map["llm"] = vertex_id
+        
+        return component_map
+    
+    return {}
+
+# Usage
+component_map = detect_flow_components(flow_id)
+print("Detected components:", component_map)
+```
+
+## Error Handling and Debugging
+
+### Common Issues and Solutions
+
+```python
+def debug_flow_execution(response, tweaks):
+    """Debug flow execution issues"""
+    
+    print("=== Flow Execution Debug ===")
+    print(f"Status Code: {response.status_code}")
+    
+    if response.status_code != 200:
+        print(f"Error Response: {response.text}")
+        return False
+    
+    result = response.json()
+    
+    # Check for errors in the response
+    if "error" in result:
+        print(f"Flow Error: {result['error']}")
+        return False
+    
+    # Check if outputs exist
+    outputs = result.get("outputs", [])
+    if not outputs:
+        print("⚠️  No outputs generated - check if components are properly connected")
+        return False
+    
+    # Check individual component results
+    for i, output in enumerate(outputs):
+        print(f"Output {i}: {output.keys()}")
+        component_outputs = output.get("outputs", [])
+        for j, comp_output in enumerate(component_outputs):
+            if "errors" in comp_output:
+                print(f"Component {j} Error: {comp_output['errors']}")
+    
+    return True
+
+# Usage
+response = requests.post(url, json=data)
+if not debug_flow_execution(response, tweaks):
+    print("Flow execution failed. Check the debug output above.")
+```
+
+## Best Practices
+
+### 1. Component ID Management
+
+- **Always verify component IDs** before deploying to production
+- **Use environment variables** for sensitive component configurations
+- **Document your component mapping** for team members
+
+### 2. Error Handling
+
+- **Always check response status codes**
+- **Implement retry logic** for network issues
+- **Log component failures** for debugging
+
+### 3. Performance Optimization
+
+- **Batch file uploads** when possible
+- **Use appropriate chunk sizes** for text splitting
+- **Monitor vector store memory usage**
+
+### 4. Security Considerations
+
+- **Never hardcode API keys** in your application code
+- **Use HTTPS** for all Langflow communications
+- **Validate file types** before uploading
+
+## Next Steps
+
+- [Complete Streamlit integration example](./streamlit-integration-example)
+- [Langflow API reference](../API-Reference/api-reference-api-examples)
+- [Vector store documentation](../Components/components-vector-stores)
+- [Best practices for RAG flows](https://github.com/langflow-ai/langflow/discussions)
