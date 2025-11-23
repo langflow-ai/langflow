@@ -646,7 +646,9 @@ export default function Page({
             description: "",
             display_name: "",
             documentation: "",
-            template: {},
+            template: {
+              backgroundColor: "amber",
+            },
           },
           type: "note",
         };
