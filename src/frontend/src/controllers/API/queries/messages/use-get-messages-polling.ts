@@ -1,7 +1,7 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { ColDef, ColGroupDef } from "ag-grid-community";
 import { useEffect, useRef } from "react";
-import { useMessagesStore } from "@/stores/messagesStore";
+import { updateMessages } from "@/utils/messageUtils";
 import {
   extractColumnsFromRows,
   prepareSessionIdForAPI,
@@ -124,7 +124,7 @@ export const useGetMessagesPollingMutation = (
 
       const data = await api.get<any>(`${getURL("MESSAGES")}`, config);
       const columns = extractColumnsFromRows(data.data, mode, excludedFields);
-      useMessagesStore.getState().setMessages(data.data);
+      updateMessages(data.data);
 
       return { rows: data.data, columns };
     } finally {

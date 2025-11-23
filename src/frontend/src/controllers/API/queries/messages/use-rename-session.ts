@@ -1,6 +1,4 @@
 import type { UseMutationResult } from "@tanstack/react-query";
-import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
-import useFlowStore from "@/stores/flowStore";
 import type { useMutationFunctionType } from "@/types/api";
 import type { Message } from "@/types/messages";
 import { api } from "../../api";
@@ -8,26 +6,35 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface UpdateSessionParams {
-  old_session_id: string;
-  new_session_id: string;
+  oldSessionId: string;
+  newSessionId: string;
+}
+
+interface UpdateSessionContext {
+  previousSessions: string[];
+}
+
+interface useUpdateSessionNameParams {
+  flowId?: string;
+  useLocalStorage?: boolean;
 }
 
 export const useUpdateSessionName: useMutationFunctionType<
-  undefined,
+  useUpdateSessionNameParams,
   UpdateSessionParams
-> = (options?) => {
+> = ({ flowId, useLocalStorage }, options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
-  const flowId = useGetFlowId();
-
   const updateSessionApi = async (data: UpdateSessionParams) => {
-    const isPlayground = useFlowStore.getState().playgroundPage;
-    // if we are in playground we will edit the local storage instead of the API
-    if (isPlayground && flowId) {
+    if (!flowId) {
+      throw new Error("Flow ID is required");
+    }
+
+    if (useLocalStorage) {
       const messages = JSON.parse(sessionStorage.getItem(flowId) || "");
       const messagesWithNewSessionId = messages.map((message: Message) => {
-        if (message.session_id === data.old_session_id) {
-          message.session_id = data.new_session_id;
+        if (message.session_id === data.oldSessionId) {
+          message.session_id = data.newSessionId;
         }
         return message;
       });
@@ -37,25 +44,60 @@ export const useUpdateSessionName: useMutationFunctionType<
       };
     } else {
       const result = await api.patch(
-        `${getURL("MESSAGES")}/session/${data.old_session_id}`,
+        `${getURL("MESSAGES")}/session/${encodeURIComponent(
+          data.oldSessionId,
+        )}`,
         null,
         {
-          params: { new_session_id: data.new_session_id },
+          params: { new_session_id: data.newSessionId },
         },
       );
       return result.data;
     }
   };
 
-  const mutation: UseMutationResult<Message[], any, UpdateSessionParams> =
-    mutate(["useUpdateSessionName"], updateSessionApi, {
-      ...options,
-      onSettled: () => {
-        queryClient.invalidateQueries({
-          queryKey: ["useGetSessionsFromFlowQuery"],
-        });
-      },
+  const handleMutate = async (data: unknown) => {
+    const { oldSessionId, newSessionId } = data as UpdateSessionParams;
+    await queryClient.cancelQueries({
+      queryKey: ["useGetSessionsFromFlowQuery", { flowId }],
     });
+
+    const previousSessions = queryClient.getQueryData([
+      "useGetSessionsFromFlowQuery",
+      { flowId },
+    ]) as string[];
+
+    queryClient.setQueryData(
+      ["useGetSessionsFromFlowQuery", { flowId }],
+      (old: string[]) =>
+        old.map((session) =>
+          session === oldSessionId ? newSessionId : session,
+        ),
+    );
+    return { previousSessions };
+  };
+
+  const mutation: UseMutationResult<
+    Message[],
+    any,
+    UpdateSessionParams,
+    UpdateSessionContext
+  > = mutate(["useUpdateSessionName"], updateSessionApi, {
+    ...options,
+    onMutate: handleMutate,
+    onError: (err, newSessionId, context) => {
+      queryClient.setQueryData(
+        ["useGetSessionsFromFlowQuery", { flowId }],
+        (context as UpdateSessionContext).previousSessions,
+      );
+      options?.onError?.(err, newSessionId, context);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["useGetSessionsFromFlowQuery", { flowId }],
+      });
+    },
+  });
 
   return mutation;
 };

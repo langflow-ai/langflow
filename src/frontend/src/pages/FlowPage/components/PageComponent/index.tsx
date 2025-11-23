@@ -77,7 +77,6 @@ import {
   MemoizedBackground,
   MemoizedCanvasControls,
   MemoizedLogCanvasControls,
-  MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
@@ -757,7 +756,6 @@ export default function Page({
                 <FlowToolbar />
               </>
             )}
-            <MemoizedSidebarTrigger />
             <SelectionMenu
               lastSelection={lastSelection}
               isVisible={selectionMenuVisible}
