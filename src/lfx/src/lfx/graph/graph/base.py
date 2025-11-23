@@ -959,9 +959,9 @@ class Graph:
         new_predecessor_map, _ = self.build_adjacency_maps(self.edges)
         new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
         if vertex_id in self.cycle_vertices:
-            # Remove dependencies that are not in the cycle and have run at least once
+            # Remove dependencies that are not in the cycle
             new_predecessor_map = {
-                k: [dep for dep in v if dep in self.cycle_vertices and dep in self.run_manager.ran_at_least_once]
+                k: [dep for dep in v if dep in self.cycle_vertices]
                 for k, v in new_predecessor_map.items()
             }
         self.run_manager.update_run_state(
