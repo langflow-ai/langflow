@@ -961,8 +961,7 @@ class Graph:
         if vertex_id in self.cycle_vertices:
             # Remove dependencies that are not in the cycle
             new_predecessor_map = {
-                k: [dep for dep in v if dep in self.cycle_vertices]
-                for k, v in new_predecessor_map.items()
+                k: [dep for dep in v if dep in self.cycle_vertices] for k, v in new_predecessor_map.items()
             }
         self.run_manager.update_run_state(
             run_predecessors=new_predecessor_map,
