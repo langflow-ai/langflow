@@ -1,8 +1,15 @@
+"""Vertex build CRUD operations.
+
+Most operations should use langflow.services.database.crud.vertex_build_crud.
+This module contains specialized vertex build operations.
+"""
+
 from uuid import UUID
 
 from sqlmodel import col, delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.services.database.crud import vertex_build_crud
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
 from langflow.services.deps import get_settings_service
 
@@ -27,26 +34,7 @@ async def get_vertex_builds_by_flow_id(
     Note:
         If flow_id is provided as a string, it will be converted to UUID automatically.
     """
-    if isinstance(flow_id, str):
-        flow_id = UUID(flow_id)
-    subquery = (
-        select(VertexBuildTable.id, func.max(VertexBuildTable.timestamp).label("max_timestamp"))
-        .where(VertexBuildTable.flow_id == flow_id)
-        .group_by(VertexBuildTable.id)
-        .subquery()
-    )
-    stmt = (
-        select(VertexBuildTable)
-        .join(
-            subquery, (VertexBuildTable.id == subquery.c.id) & (VertexBuildTable.timestamp == subquery.c.max_timestamp)
-        )
-        .where(VertexBuildTable.flow_id == flow_id)
-        .order_by(col(VertexBuildTable.timestamp))
-        .limit(limit)
-    )
-
-    builds = await db.exec(stmt)
-    return list(builds)
+    return await vertex_build_crud.get_by_flow_id(db, flow_id, limit=limit)
 
 
 async def log_vertex_build(
@@ -139,7 +127,6 @@ async def delete_vertex_builds_by_flow_id(db: AsyncSession, flow_id: UUID) -> No
 
     Note:
         This operation is permanent and cannot be undone. Use with caution.
-        The function commits the transaction automatically.
+        The function does not commit automatically - caller must commit.
     """
-    stmt = delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id)
-    await db.exec(stmt)
+    await vertex_build_crud.delete_by_flow_id(db, flow_id)

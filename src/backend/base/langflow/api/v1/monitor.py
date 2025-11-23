@@ -4,13 +4,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
-from sqlalchemy import delete
-from sqlmodel import col, select
 
 from langflow.api.utils import DbSession, custom_params
 from langflow.schema.message import MessageResponse
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models.message.model import MessageRead, MessageTable, MessageUpdate
+from langflow.services.database.crud import message_crud, transaction_crud, vertex_build_crud
+from langflow.services.database.models.message.model import MessageRead, MessageUpdate
 from langflow.services.database.models.transactions.crud import transform_transaction_table
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.crud import (
@@ -46,14 +45,7 @@ async def get_message_sessions(
     flow_id: Annotated[UUID | None, Query()] = None,
 ) -> list[str]:
     try:
-        stmt = select(MessageTable.session_id).distinct()
-        stmt = stmt.where(col(MessageTable.session_id).isnot(None))
-
-        if flow_id:
-            stmt = stmt.where(MessageTable.flow_id == flow_id)
-
-        session_ids = await session.exec(stmt)
-        return list(session_ids)
+        return await message_crud.get_sessions(session, flow_id=flow_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -68,6 +60,11 @@ async def get_messages(
     order_by: Annotated[str | None, Query()] = "timestamp",
 ) -> list[MessageResponse]:
     try:
+        from sqlmodel import col, select
+
+        # Build query manually since we have multiple optional filters
+        from langflow.services.database.models.message.model import MessageTable
+
         stmt = select(MessageTable)
         if flow_id:
             stmt = stmt.where(MessageTable.flow_id == flow_id)
@@ -81,8 +78,8 @@ async def get_messages(
         if sender_name:
             stmt = stmt.where(MessageTable.sender_name == sender_name)
         if order_by:
-            col = getattr(MessageTable, order_by).asc()
-            stmt = stmt.order_by(col)
+            col_obj = getattr(MessageTable, order_by).asc()
+            stmt = stmt.order_by(col_obj)
         messages = await session.exec(stmt)
         return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
     except Exception as e:
@@ -92,8 +89,7 @@ async def get_messages(
 @router.delete("/messages", status_code=204, dependencies=[Depends(get_current_active_user)])
 async def delete_messages(message_ids: list[UUID], session: DbSession) -> None:
     try:
-        await session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore[attr-defined]
-        await session.commit()
+        await message_crud.delete_multi(session, ids=message_ids)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -105,7 +101,7 @@ async def update_message(
     session: DbSession,
 ):
     try:
-        db_message = await session.get(MessageTable, message_id)
+        db_message = await message_crud.get(session, message_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -116,13 +112,9 @@ async def update_message(
         message_dict = message.model_dump(exclude_unset=True, exclude_none=True)
         if "text" in message_dict and message_dict["text"] != db_message.text:
             message_dict["edit"] = True
-        db_message.sqlmodel_update(message_dict)
-        session.add(db_message)
-        await session.commit()
-        await session.refresh(db_message)
+        return await message_crud.update(session, db_obj=db_message, obj_in=message_dict)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
-    return db_message
 
 
 @router.patch(
@@ -136,8 +128,7 @@ async def update_session_id(
 ) -> list[MessageResponse]:
     try:
         # Get all messages with the old session ID
-        stmt = select(MessageTable).where(MessageTable.session_id == old_session_id)
-        messages = (await session.exec(stmt)).all()
+        messages = await message_crud.get_by_session_id(session, old_session_id, limit=10000)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -168,11 +159,7 @@ async def delete_messages_session(
     session: DbSession,
 ):
     try:
-        await session.exec(
-            delete(MessageTable)
-            .where(col(MessageTable.session_id) == session_id)
-            .execution_options(synchronize_session="fetch")
-        )
+        await message_crud.delete_by_session_id(session, session_id)
         await session.commit()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -187,6 +174,10 @@ async def get_transactions(
     params: Annotated[Params | None, Depends(custom_params)],
 ) -> Page[TransactionTable]:
     try:
+        from sqlmodel import col, select
+
+        from langflow.services.database.models.transactions.model import TransactionTable
+
         stmt = (
             select(TransactionTable)
             .where(TransactionTable.flow_id == flow_id)
