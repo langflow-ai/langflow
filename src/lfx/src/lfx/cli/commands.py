@@ -88,11 +88,6 @@ async def serve_command(
         cat my_flow.json | lfx serve --stdin
         echo '{"nodes": [...]}' | lfx serve --stdin
     """
-    # Configure logging with the specified level and import logger
-    from lfx.log.logger import configure, logger
-
-    configure(log_level=log_level)
-
     verbose_print = create_verbose_printer(verbose=verbose)
 
     # Validate input sources - exactly one must be provided
@@ -142,11 +137,11 @@ async def serve_command(
     temp_file_to_cleanup = None
 
     if flow_json is not None:
-        logger.info("Processing inline JSON content...")
+        verbose_print("Processing inline JSON content...")
         try:
             # Validate JSON syntax
             json_data = json.loads(flow_json)
-            logger.info("JSON content is valid")
+            verbose_print("✓ JSON content is valid")
 
             # Create a temporary file with the JSON content
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as temp_file:
@@ -154,7 +149,7 @@ async def serve_command(
                 temp_file_to_cleanup = temp_file.name
 
             script_path = temp_file_to_cleanup
-            logger.info(f"Created temporary file: {script_path}")
+            verbose_print(f"✓ Created temporary file: {script_path}")
 
         except json.JSONDecodeError as e:
             typer.echo(f"Error: Invalid JSON content: {e}", err=True)
@@ -164,17 +159,17 @@ async def serve_command(
             raise typer.Exit(1) from e
 
     elif stdin:
-        logger.info("Reading JSON content from stdin...")
+        verbose_print("Reading JSON content from stdin...")
         try:
             # Read all content from stdin
             stdin_content = sys.stdin.read().strip()
             if not stdin_content:
-                logger.error("No content received from stdin")
+                verbose_print("Error: No content received from stdin")
                 raise typer.Exit(1)
 
             # Validate JSON syntax
             json_data = json.loads(stdin_content)
-            logger.info("JSON content from stdin is valid")
+            verbose_print("✓ JSON content from stdin is valid")
 
             # Create a temporary file with the JSON content
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as temp_file:
@@ -182,7 +177,7 @@ async def serve_command(
                 temp_file_to_cleanup = temp_file.name
 
             script_path = temp_file_to_cleanup
-            logger.info(f"Created temporary file from stdin: {script_path}")
+            verbose_print(f"✓ Created temporary file from stdin: {script_path}")
 
         except json.JSONDecodeError as e:
             verbose_print(f"Error: Invalid JSON content from stdin: {e}")
@@ -218,10 +213,10 @@ async def serve_command(
             raise typer.Exit(1)
 
         # Prepare the graph
-        logger.info("Preparing graph for serving...")
+        verbose_print("Preparing graph for serving...")
         try:
             graph.prepare()
-            logger.info("Graph prepared successfully")
+            verbose_print("✓ Graph prepared successfully")
 
             # Validate global variables for environment compatibility
             if check_variables:
@@ -229,12 +224,12 @@ async def serve_command(
 
                 validation_errors = validate_global_variables_for_env(graph)
                 if validation_errors:
-                    logger.error("Global variable validation failed:")
+                    verbose_print("✗ Global variable validation failed:")
                     for error in validation_errors:
-                        logger.error(f"  - {error}")
+                        verbose_print(f"  - {error}")
                     raise typer.Exit(1)
             else:
-                logger.info("Global variable validation skipped")
+                verbose_print("✓ Global variable validation skipped")
         except Exception as e:
             verbose_print(f"✗ Failed to prepare graph: {e}")
             raise typer.Exit(1) from e
