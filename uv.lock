@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -28,6 +28,15 @@ members = [
     "lfx",
 ]
 overrides = [{ name = "python-pptx", specifier = ">=1.0.2" }]
+
+[[package]]
+name = "absl-py"
+version = "2.3.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/10/2a/c93173ffa1b39c1d0395b7e842bbdc62e556ca9d8d3b5572926f3e4ca752/absl_py-2.3.1.tar.gz", hash = "sha256:a97820526f7fbfd2ec1bce83f3f25e3a14840dac0d8e02a0b71cd75db3f77fc9", size = 116588, upload-time = "2025-07-03T09:31:44.05Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8f/aa/ba0014cc4659328dc818a28827be78e6d97312ab0cb98105a770924dc11e/absl_py-2.3.1-py3-none-any.whl", hash = "sha256:eeecf07f0c2a93ace0772c92e596ace6d3d3996c042b2128459aaae2a76de11d", size = 135811, upload-time = "2025-07-03T09:31:42.253Z" },
+]
 
 [[package]]
 name = "accelerate"
@@ -5370,6 +5379,34 @@ wheels = [
 ]
 
 [[package]]
+name = "langextract"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "absl-py" },
+    { name = "aiohttp" },
+    { name = "async-timeout" },
+    { name = "exceptiongroup" },
+    { name = "google-cloud-storage" },
+    { name = "google-genai" },
+    { name = "ml-collections" },
+    { name = "more-itertools" },
+    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "pandas" },
+    { name = "pydantic" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
+    { name = "requests" },
+    { name = "tqdm" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/75/e8/1a403e454301b92ccdb8a0c2f3a7b5c13e378c35acea00fdf78654539b9f/langextract-1.1.0.tar.gz", hash = "sha256:856672a8d8b0184d7154263e8d046045c822c777ebc23cb1922d580814e2b21f", size = 112029, upload-time = "2025-11-14T22:21:30.511Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/55/21/4b9eafeb9046514ea36901139137f53fe40e8c5dfc29e1183f4c6b85b890/langextract-1.1.0-py3-none-any.whl", hash = "sha256:e4fae2d9c9134cd0b50602f4714a5dce4c97da5b417fa62f5e602fc066fc1bff", size = 121592, upload-time = "2025-11-14T22:21:29.044Z" },
+]
+
+[[package]]
 name = "langflow"
 version = "1.7.0"
 source = { editable = "." }
@@ -6205,6 +6242,7 @@ dependencies = [
     { name = "json-repair" },
     { name = "langchain" },
     { name = "langchain-core" },
+    { name = "langextract" },
     { name = "loguru" },
     { name = "nanoid" },
     { name = "networkx" },
@@ -6253,6 +6291,7 @@ requires-dist = [
     { name = "json-repair", specifier = ">=0.30.3,<1.0.0" },
     { name = "langchain", specifier = "~=0.3.23" },
     { name = "langchain-core", specifier = ">=0.3.66,<1.0.0" },
+    { name = "langextract", specifier = ">=1.1.0,<2.0.0" },
     { name = "loguru", specifier = ">=0.7.3,<1.0.0" },
     { name = "nanoid", specifier = ">=2.0.0,<3.0.0" },
     { name = "networkx", specifier = ">=3.4.2,<4.0.0" },
@@ -6929,6 +6968,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5a/8d/d8b7af67a966b6f227024e1cb7287fc19901a434f87a5a391dcfe635d338/mistralai-1.9.11.tar.gz", hash = "sha256:3df9e403c31a756ec79e78df25ee73cea3eb15f86693773e16b16adaf59c9b8a", size = 208051, upload-time = "2025-10-02T15:53:40.473Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fe/76/4ce12563aea5a76016f8643eff30ab731e6656c845e9e4d090ef10c7b925/mistralai-1.9.11-py3-none-any.whl", hash = "sha256:7a3dc2b8ef3fceaa3582220234261b5c4e3e03a972563b07afa150e44a25a6d3", size = 442796, upload-time = "2025-10-02T15:53:39.134Z" },
+]
+
+[[package]]
+name = "ml-collections"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "absl-py" },
+    { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b8/f8/1a9ae6696dbb6bc9c44ddf5c5e84710d77fe9a35a57e8a06722e1836a4a6/ml_collections-1.1.0.tar.gz", hash = "sha256:0ac1ac6511b9f1566863e0bb0afad0c64e906ea278ad3f4d2144a55322671f6f", size = 61356, upload-time = "2025-04-17T08:25:02.247Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ab/8a/18d4ff2c7bd83f30d6924bd4ad97abf418488c3f908dea228d6f0961ad68/ml_collections-1.1.0-py3-none-any.whl", hash = "sha256:23b6fa4772aac1ae745a96044b925a5746145a70734f087eaca6626e92c05cbc", size = 76707, upload-time = "2025-04-17T08:24:59.038Z" },
 ]
 
 [[package]]

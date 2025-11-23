@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from lfx.components.processing.dataframe_operations import DataFrameOperationsComponent
     from lfx.components.processing.dataframe_to_toolset import DataFrameToToolsetComponent
     from lfx.components.processing.json_cleaner import JSONCleaner
+    from lfx.components.processing.langextract import LangExtractComponent
     from lfx.components.processing.output_parser import OutputParserComponent
     from lfx.components.processing.parse_data import ParseDataComponent
     from lfx.components.processing.parser import ParserComponent
@@ -28,6 +29,7 @@ _dynamic_imports = {
     "DataOperationsComponent": "data_operations",
     "DataFrameOperationsComponent": "dataframe_operations",
     "DataFrameToToolsetComponent": "dataframe_to_toolset",
+    "LangExtractComponent": "langextract",
     "JSONCleaner": "json_cleaner",
     "OutputParserComponent": "output_parser",
     "ParseDataComponent": "parse_data",
@@ -44,6 +46,7 @@ __all__ = [
     "DataFrameToToolsetComponent",
     "DataOperationsComponent",
     "JSONCleaner",
+    "LangExtractComponent",
     "MessageStoreComponent",
     "OutputParserComponent",
     "ParseDataComponent",
