@@ -72,6 +72,98 @@ def get_id_from_search_string(search_string: str) -> str | None:
     return possible_id
 
 
+class DisabledStoreService(Service):
+    """No-op implementation of StoreService for when store access is disabled."""
+
+    name = "store_service"
+
+    def __init__(self, settings_service: SettingsService):
+        self.settings_service = settings_service
+
+    async def check_api_key(self, _api_key: str) -> bool:
+        return False
+
+    async def get(
+        self, _url: str, _api_key: str | None = None, _params: dict[str, Any] | None = None
+    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        return [], {}
+
+    async def call_webhook(self, _api_key: str, _webhook_url: str, _component_id: UUID) -> None:
+        return None
+
+    async def count_components(
+        self,
+        _filter_conditions: list[dict[str, Any]],
+        *,
+        _api_key: str | None = None,
+        _use_api_key: bool | None = False,
+    ) -> int:
+        return 0
+
+    async def query_components(
+        self,
+        *,
+        _api_key: str | None = None,
+        _sort: list[str] | None = None,
+        _page: int = 1,
+        _limit: int = 15,
+        _fields: list[str] | None = None,
+        _filter_conditions: list[dict[str, Any]] | None = None,
+        _use_api_key: bool | None = False,
+    ) -> tuple[list[ListComponentResponse], dict[str, Any]]:
+        return [], {}
+
+    async def get_liked_by_user_components(self, _component_ids: list[str], _api_key: str) -> list[str]:
+        return []
+
+    async def get_components_in_users_collection(self, _component_ids: list[str], _api_key: str) -> list[str]:
+        return []
+
+    async def download(self, _api_key: str, _component_id: UUID) -> DownloadComponentResponse:
+        msg = "Store access is disabled"
+        raise ValueError(msg)
+
+    async def upload(self, _api_key: str, _component_data: StoreComponentCreate) -> CreateComponentResponse:
+        msg = "Store access is disabled"
+        raise ValueError(msg)
+
+    async def update(
+        self, _api_key: str, _component_id: UUID, _component_data: StoreComponentCreate
+    ) -> CreateComponentResponse:
+        msg = "Store access is disabled"
+        raise ValueError(msg)
+
+    async def get_tags(self) -> list[dict[str, Any]]:
+        return []
+
+    async def get_user_likes(self, _api_key: str) -> list[dict[str, Any]]:
+        return []
+
+    async def get_component_likes_count(self, _component_id: str, _api_key: str | None = None) -> int:
+        return 0
+
+    async def like_component(self, _api_key: str, _component_id: str) -> bool:
+        return False
+
+    async def get_list_component_response_model(
+        self,
+        *,
+        _component_id: str | None = None,
+        _search: str | None = None,
+        _private: bool | None = None,
+        _tags: list[str] | None = None,
+        _is_component: bool | None = None,
+        _fields: list[str] | None = None,
+        _filter_by_user: bool = False,
+        _liked: bool = False,
+        _store_api_key: str | None = None,
+        _sort: list[str] | None = None,
+        _page: int = 1,
+        _limit: int = 15,
+    ) -> ListComponentResponseModel:
+        return ListComponentResponseModel(results=[], authorized=False, count=0)
+
+
 class StoreService(Service):
     """This is a service that integrates langflow with the store which is a Directus instance.
 

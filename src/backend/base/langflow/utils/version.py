@@ -1,3 +1,4 @@
+import os
 from importlib import metadata
 
 import httpx
@@ -74,6 +75,10 @@ def is_nightly(v: str) -> bool:
 
 
 def fetch_latest_version(package_name: str, *, include_prerelease: bool) -> str | None:
+    # Skip version check if explicitly disabled via environment variable
+    if os.getenv("LANGFLOW_DISABLE_VERSION_CHECK", "false").lower() == "true":
+        return None
+
     package_name = package_name.replace(" ", "-").lower()
     try:
         response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")

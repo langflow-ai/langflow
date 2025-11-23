@@ -1,3 +1,4 @@
+import os
 from typing import Any
 
 from lfx.base.models.model import LCModelComponent
@@ -20,7 +21,12 @@ class NVIDIAModelComponent(LCModelComponent):
         warnings.filterwarnings("ignore", category=UserWarning, module="langchain_nvidia_ai_endpoints._common")
         from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
-        all_models = ChatNVIDIA().get_available_models()
+        # Skip NVIDIA model fetching if explicitly disabled
+        if os.getenv("LANGFLOW_SKIP_NVIDIA_FETCH", "false").lower() == "true":
+            logger.info("NVIDIA model fetching disabled via LANGFLOW_SKIP_NVIDIA_FETCH environment variable.")
+            all_models = []
+        else:
+            all_models = ChatNVIDIA().get_available_models()
     except ImportError as e:
         msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
         raise ImportError(msg) from e
