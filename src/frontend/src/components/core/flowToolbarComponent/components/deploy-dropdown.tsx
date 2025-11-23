@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { useDownloadYaml } from "@/controllers/API/queries/flows/use-download-yaml";
 import { useCheckFlowPublished } from "@/controllers/API/queries/published-flows";
+import { useGetFlowLatestStatus } from "@/controllers/API/queries/flow-versions";
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
 import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
@@ -50,6 +51,12 @@ export default function PublishDropdown() {
 
   // Check if flow is published to marketplace
   const { data: publishCheck } = useCheckFlowPublished(flowId);
+
+  // Check flow approval status for Publish to Marketplace button
+  const { data: flowStatusData } = useGetFlowLatestStatus(flowId);
+  const latestStatus = flowStatusData?.latest_status;
+  const isUnderReview = latestStatus === "Submitted";
+  const isApproved = latestStatus === "Approved";
 
   // Download YAML mutation
   const { mutate: downloadYaml, isPending: isDownloadingYaml } = useDownloadYaml({
@@ -131,14 +138,18 @@ export default function PublishDropdown() {
           align="end"
           className="w-full min-w-[275px]"
         >
+          {/* Publish to Marketplace */}
           <DropdownMenuItem
             className="deploy-dropdown-item group"
             onClick={() => setOpenPublishFlowModal(true)}
+            disabled={isUnderReview}
           >
             <IconComponent name="Upload" className={`icon-size mr-2`} />
             <span>
               {isPublishedToMarketplace
-                ? "Published to Marketplace ✓"
+                ? "Published to Marketplace"
+                : isApproved
+                ? "Publish to Marketplace (Approved)"
                 : "Publish to Marketplace"}
             </span>
           </DropdownMenuItem>

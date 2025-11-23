@@ -12,6 +12,7 @@ from langflow.api.v1 import (
     files_router,
     flexstore_router,
     flows_router,
+    flow_versions_router,
     folders_router,
     knowledge_bases_router,
     login_router,
@@ -55,6 +56,7 @@ router_v1.include_router(files_router)
 router_v1.include_router(spec_flow_builder_router)
 router_v1.include_router(flexstore_router)
 router_v1.include_router(flows_router)
+router_v1.include_router(flow_versions_router)
 router_v1.include_router(folders_router)
 router_v1.include_router(knowledge_bases_router)
 router_v1.include_router(login_router)

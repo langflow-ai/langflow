@@ -8,6 +8,7 @@ from langflow.api.v1.endpoints import router as endpoints_router
 from langflow.api.v1.files import router as files_router
 from langflow.api.v1.flexstore import router as flexstore_router
 from langflow.api.v1.flows import router as flows_router
+from langflow.api.v1.flow_versions import router as flow_versions_router
 from langflow.api.v1.folders import router as folders_router
 from langflow.api.v1.knowledge_bases import router as knowledge_bases_router
 from langflow.api.v1.login import router as login_router
@@ -40,6 +41,7 @@ __all__ = [
     "files_router",
     "flexstore_router",
     "flows_router",
+    "flow_versions_router",
     "folders_router",
     "knowledge_bases_router",
     "login_router",

@@ -46,6 +46,7 @@ import ConversationPage from "./pages/AgentBuilderPage/ConversationPage";
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
+const AllRequestsPage = lazy(() => import("./pages/AllRequestsPage"));
 
 const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
@@ -192,6 +193,7 @@ const router = createBrowserRouter(
                     </ProtectedAdminRoute>
                   }
                 />
+                <Route path="all-requests" element={<AllRequestsPage />} />
               </Route>
               <Route path="flow/:id/">
                 <Route path="" element={<CustomDashboardWrapperPage />}>

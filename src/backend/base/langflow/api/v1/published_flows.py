@@ -11,11 +11,8 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.api.v1.flows import clone_flow_for_marketplace
-from langflow.initial_setup.setup import get_or_create_marketplace_agent_folder
 from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.published_flow.model import (
     PublishedFlow,
     PublishedFlowCreate,
@@ -32,6 +29,8 @@ from langflow.services.database.models.published_flow_version.model import (
     RevertToVersionResponse,
 )
 from langflow.services.database.models.user.model import User
+from langflow.services.database.models.flow_version.model import FlowVersion
+from langflow.services.database.models.flow_status.model import FlowStatus, FlowStatusEnum
 from langflow.services.auth.permissions import can_edit_flow, get_user_roles_from_request
 from langflow.services.deps import get_settings_service
 from langflow.services.vector_database import VectorDatabaseService
@@ -163,18 +162,14 @@ async def publish_flow(
                 detail=f"A flow with the name '{marketplace_name}' already exists in the marketplace",
             )
 
-        # 4. Use Marketplace Agent folder for the cloned flow
-        marketplace_folder = await get_or_create_marketplace_agent_folder(session)
-        target_folder_id = marketplace_folder.id
-
-        # 5. Check if already published (by flow_cloned_from)
+        # 4. Check if already published (by flow_cloned_from)
         existing_result = await session.exec(
             select(PublishedFlow).where(PublishedFlow.flow_cloned_from == flow_id)
         )
         existing = existing_result.first()
 
         if existing:
-            # RE-PUBLISH: Create new version with versioning support
+            # RE-PUBLISH: Use existing clone from flow_version (created during submit for approval)
 
             # Step 1: Validate version uniqueness for this original flow
             version_check_query = select(PublishedFlowVersion).where(
@@ -188,39 +183,56 @@ async def publish_flow(
                     detail=f"Version '{payload.version}' already exists for this flow. Please use a unique version."
                 )
 
-            # Step 2: Clone flow with new version (create new cloned flow for this version)
-            folder_id_str = str(original_flow.folder_id)
-            new_cloned_flow = await clone_flow_for_marketplace(
-                session=session,
-                original_flow=original_flow,
-                target_folder_id=target_folder_id,
-                user_id=current_user.id,
-                marketplace_flow_name=f"{marketplace_name}-Published-{payload.version}-folder-{folder_id_str}",  # Include version and folder_id in name
-                tags=payload.tags,
-                description=payload.description,
+            # Step 2: Find the latest Approved flow_version for this flow (from new submission cycle)
+            approved_status_result = await session.exec(
+                select(FlowStatus).where(FlowStatus.status_name == FlowStatusEnum.APPROVED.value)
             )
+            approved_status = approved_status_result.first()
+
+            if not approved_status:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Approved status not found in database",
+                )
+
+            flow_version_result = await session.exec(
+                select(FlowVersion)
+                .where(FlowVersion.original_flow_id == flow_id)
+                .where(FlowVersion.status_id == approved_status.id)
+                .order_by(FlowVersion.created_at.desc())
+                .limit(1)
+            )
+            flow_version = flow_version_result.first()
+
+            if not flow_version:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="No approved version found for this flow. Please submit for approval first.",
+                )
+
+            if not flow_version.version_flow_id:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Approved flow version does not have a cloned flow snapshot.",
+                )
+
+            # Get the existing cloned flow from version_flow_id
+            new_cloned_flow = await session.get(Flow, flow_version.version_flow_id)
+            if not new_cloned_flow:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Cloned flow snapshot not found.",
+                )
 
             # Step 3: Update original flow name (keep consistent naming)
             original_flow.name = marketplace_name
             original_flow.tags = payload.tags
             original_flow.description = payload.description or original_flow.description
+            # Unlock the flow after publishing
+            original_flow.locked = False
 
-            # Step 4: Deactivate all previous versions for this published_flow
-            await session.exec(
-                update(PublishedFlowVersion)
-                .where(PublishedFlowVersion.published_flow_id == existing.id)
-                .values(active=False)
-            )
-
-            # Clear all drafted flags for this flow before setting new one
-            await session.exec(
-                update(PublishedFlowVersion)
-                .where(PublishedFlowVersion.flow_id_cloned_from == flow_id)
-                .values(drafted=False)
-            )
-
-            # Step 5: Update published_flow record to point to new cloned flow
-            existing.flow_id = new_cloned_flow.id  # Point to new cloned flow
+            # Step 4: Update published_flow record to point to existing clone from flow_version
+            existing.flow_id = new_cloned_flow.id  # Use existing clone from flow_version
             existing.version = payload.version  # Update to new version
             existing.tags = payload.tags
             existing.description = payload.description or original_flow.description
@@ -234,27 +246,9 @@ async def publish_flow(
             existing.updated_at = datetime.now(timezone.utc)
             existing.status = PublishStatusEnum.PUBLISHED
 
-            # Step 6: Create new version record
-            new_version = PublishedFlowVersion(
-                version=payload.version,
-                flow_id_cloned_to=new_cloned_flow.id,
-                flow_id_cloned_from=flow_id,
-                published_flow_id=existing.id,
-                flow_name=marketplace_name,
-                flow_icon=payload.flow_icon or existing.flow_icon,
-                description=payload.description or original_flow.description,
-                tags=payload.tags,
-                active=True,
-                drafted=True,
-                published_by=current_user.id,
-                published_at=datetime.now(timezone.utc),
-            )
-
-            session.add(new_cloned_flow)
             session.add(existing)
             session.add(original_flow)
-            session.add(new_version)
-            
+
             # Create PublishedFlowInputSample record if sample data is provided
             if any([payload.storage_account, payload.container_name, payload.file_names, payload.sample_text, payload.sample_output]):
                 input_sample = PublishedFlowInputSample(
@@ -268,10 +262,63 @@ async def publish_flow(
                     updated_at=datetime.now(timezone.utc),
                 )
                 session.add(input_sample)
-            
-            await session.flush()  # Added explicit flush
+
+            await session.flush()
             await session.commit()
             await session.refresh(existing)
+
+            # Update flow_version status to Published (for approval workflow tracking)
+            published_status_result = await session.exec(
+                select(FlowStatus).where(FlowStatus.status_name == FlowStatusEnum.PUBLISHED.value)
+            )
+            published_status = published_status_result.first()
+
+            if published_status:
+                # Mark all previous Published versions as Unpublished
+                unpublished_status_result = await session.exec(
+                    select(FlowStatus).where(FlowStatus.status_name == FlowStatusEnum.UNPUBLISHED.value)
+                )
+                unpublished_status = unpublished_status_result.first()
+
+                if unpublished_status:
+                    await session.exec(
+                        update(FlowVersion)
+                        .where(FlowVersion.original_flow_id == flow_id)
+                        .where(FlowVersion.status_id == published_status.id)
+                        .where(FlowVersion.id != flow_version.id)
+                        .values(status_id=unpublished_status.id, updated_at=datetime.now(timezone.utc))
+                    )
+                    logger.info(f"Marked previous Published versions as Unpublished for flow {flow_id}")
+
+                # Extract publisher name and email from request
+                publisher_name = None
+                publisher_email = None
+                try:
+                    if hasattr(request.state, "user") and request.state.user:
+                        user = request.state.user
+                        if hasattr(user, "_user_data"):
+                            user_data = user._user_data
+                            first_name = user_data.get("firstName", "")
+                            last_name = user_data.get("lastName", "")
+                            publisher_name = f"{first_name} {last_name}".strip() or user_data.get("username", "")
+                            publisher_email = user_data.get("email", "")
+                        elif hasattr(user, "email"):
+                            publisher_email = user.email
+                            publisher_name = getattr(user, "username", "")
+                except Exception as e:
+                    logger.warning(f"Could not extract publisher info from request: {e}")
+
+                # Update flow_version to Published status
+                flow_version.status_id = published_status.id
+                flow_version.published_by = current_user.id
+                flow_version.published_by_name = publisher_name
+                flow_version.published_by_email = publisher_email
+                flow_version.published_at = datetime.now(timezone.utc)
+                flow_version.updated_at = datetime.now(timezone.utc)
+
+                session.add(flow_version)
+                await session.commit()
+                logger.info(f"Updated flow_version {flow_version.id} to Published status")
 
             # Eager-load input_samples to avoid async lazy-load during Pydantic serialization
             existing_with_samples_result = await session.exec(
@@ -294,26 +341,59 @@ async def publish_flow(
             result_data = PublishedFlowRead.model_validate(existing_with_samples, from_attributes=True)
             return result_data
 
-        # NEW PUBLISH: Clone flow and create published_flow record with first version
-        folder_id_str = str(original_flow.folder_id)
-        cloned_flow = await clone_flow_for_marketplace(
-            session=session,
-            original_flow=original_flow,
-            target_folder_id=target_folder_id,
-            user_id=current_user.id,
-            marketplace_flow_name=f"{marketplace_name}-Published-{payload.version}-folder-{folder_id_str}",  # Include version and folder_id in name
-            tags=payload.tags,
-            description=payload.description,
+        # NEW PUBLISH: Use existing clone from flow_version (created during submit for approval)
+
+        # Find the latest Approved flow_version for this flow
+        approved_status_result = await session.exec(
+            select(FlowStatus).where(FlowStatus.status_name == FlowStatusEnum.APPROVED.value)
         )
+        approved_status = approved_status_result.first()
+
+        if not approved_status:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Approved status not found in database",
+            )
+
+        flow_version_result = await session.exec(
+            select(FlowVersion)
+            .where(FlowVersion.original_flow_id == flow_id)
+            .where(FlowVersion.status_id == approved_status.id)
+            .order_by(FlowVersion.created_at.desc())
+            .limit(1)
+        )
+        flow_version = flow_version_result.first()
+
+        if not flow_version:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No approved version found for this flow. Please submit for approval first.",
+            )
+
+        if not flow_version.version_flow_id:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Approved flow version does not have a cloned flow snapshot.",
+            )
+
+        # Get the existing cloned flow from version_flow_id
+        cloned_flow = await session.get(Flow, flow_version.version_flow_id)
+        if not cloned_flow:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Cloned flow snapshot not found.",
+            )
 
         # Update original flow name to marketplace name
         original_flow.name = marketplace_name
         original_flow.tags = payload.tags
         original_flow.description = payload.description or original_flow.description
+        # Unlock the flow after publishing
+        original_flow.locked = False
 
-        # Create published_flow record
+        # Create published_flow record using the existing clone
         published_flow = PublishedFlow(
-            flow_id=cloned_flow.id,
+            flow_id=cloned_flow.id,  # Use existing clone from flow_version
             flow_cloned_from=flow_id,
             user_id=current_user.id,
             published_by=current_user.id,
@@ -332,35 +412,7 @@ async def publish_flow(
 
         session.add(published_flow)
         session.add(original_flow)
-        await session.flush()  # Added explicit flush
-        await session.commit()
-        await session.refresh(published_flow)
 
-        # Clear all drafted flags for this flow (in case there are any old versions)
-        await session.exec(
-            update(PublishedFlowVersion)
-            .where(PublishedFlowVersion.flow_id_cloned_from == flow_id)
-            .values(drafted=False)
-        )
-
-        # Create first version record
-        first_version = PublishedFlowVersion(
-            version=payload.version,
-            flow_id_cloned_to=cloned_flow.id,
-            flow_id_cloned_from=flow_id,
-            published_flow_id=published_flow.id,
-            flow_name=marketplace_name,
-            flow_icon=payload.flow_icon,
-            description=payload.description or original_flow.description,
-            tags=payload.tags,
-            active=True,
-            drafted=True,
-            published_by=current_user.id,
-            published_at=datetime.now(timezone.utc),
-        )
-
-        session.add(first_version)
-        
         # Create PublishedFlowInputSample record if sample data is provided
         if any([payload.storage_account, payload.container_name, payload.file_names, payload.sample_text, payload.sample_output]):
             input_sample = PublishedFlowInputSample(
@@ -374,9 +426,62 @@ async def publish_flow(
                 updated_at=datetime.now(timezone.utc),
             )
             session.add(input_sample)
-        
-        await session.flush()  # Added explicit flush
+
+        await session.flush()
         await session.commit()
+
+        # Update flow_version status to Published (for approval workflow tracking)
+        published_status_result = await session.exec(
+            select(FlowStatus).where(FlowStatus.status_name == FlowStatusEnum.PUBLISHED.value)
+        )
+        published_status = published_status_result.first()
+
+        if published_status:
+            # Mark all previous Published versions as Unpublished
+            unpublished_status_result = await session.exec(
+                select(FlowStatus).where(FlowStatus.status_name == FlowStatusEnum.UNPUBLISHED.value)
+            )
+            unpublished_status = unpublished_status_result.first()
+
+            if unpublished_status:
+                await session.exec(
+                    update(FlowVersion)
+                    .where(FlowVersion.original_flow_id == flow_id)
+                    .where(FlowVersion.status_id == published_status.id)
+                    .where(FlowVersion.id != flow_version.id)
+                    .values(status_id=unpublished_status.id, updated_at=datetime.now(timezone.utc))
+                )
+                logger.info(f"Marked previous Published versions as Unpublished for flow {flow_id}")
+
+            # Extract publisher name and email from request
+            publisher_name = None
+            publisher_email = None
+            try:
+                if hasattr(request.state, "user") and request.state.user:
+                    user = request.state.user
+                    if hasattr(user, "_user_data"):
+                        user_data = user._user_data
+                        first_name = user_data.get("firstName", "")
+                        last_name = user_data.get("lastName", "")
+                        publisher_name = f"{first_name} {last_name}".strip() or user_data.get("username", "")
+                        publisher_email = user_data.get("email", "")
+                    elif hasattr(user, "email"):
+                        publisher_email = user.email
+                        publisher_name = getattr(user, "username", "")
+            except Exception as e:
+                logger.warning(f"Could not extract publisher info from request: {e}")
+
+            # Update flow_version to Published status
+            flow_version.status_id = published_status.id
+            flow_version.published_by = current_user.id
+            flow_version.published_by_name = publisher_name
+            flow_version.published_by_email = publisher_email
+            flow_version.published_at = datetime.now(timezone.utc)
+            flow_version.updated_at = datetime.now(timezone.utc)
+
+            session.add(flow_version)
+            await session.commit()
+            logger.info(f"Updated flow_version {flow_version.id} to Published status")
 
         logger.info(f"Published flow as '{marketplace_name}' version '{payload.version}' (Original ID: {flow_id})")
 

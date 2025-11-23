@@ -34,6 +34,8 @@ export const usePublishFlow = () => {
       queryClient.invalidateQueries({ queryKey: ["published-flow-check"] });
       queryClient.invalidateQueries({ queryKey: ["flow-versions", variables.flowId] });
       queryClient.invalidateQueries({ queryKey: ["published-flow"] });
+      // Invalidate flow-latest-status to update status badge on flow page
+      queryClient.invalidateQueries({ queryKey: ["flow-latest-status"] });
     },
   });
 };

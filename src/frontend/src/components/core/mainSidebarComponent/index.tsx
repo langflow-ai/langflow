@@ -9,6 +9,7 @@ import {
   FolderCode,
   PanelLeftOpen,
   PanelLeftClose,
+  ClipboardList,
 } from "lucide-react";
 import { useSidebar } from "@/contexts/sidebarContext";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -39,6 +40,7 @@ const sidebarItems: SidebarItem[] = [
   },
   { id: "monitor", icon: Store, path: "/store", label: "Monitor" },
   { id: "prompt-management", icon: FolderCode, path: envConfig.promptsUrl ?? "prompt-management", label: "Prompts", external: true },
+  { id: "all-requests", icon: ClipboardList, path: "/all-requests", label: "All Requests" },
 ];
 
 export default function MainSidebar(): JSX.Element {
