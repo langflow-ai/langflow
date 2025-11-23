@@ -3,7 +3,7 @@ from lfx.base.composio.composio_base import ComposioBaseComponent
 
 class ComposioYoutubeAPIComponent(ComposioBaseComponent):
     display_name: str = "YouTube"
-    icon = "youTube"
+    icon = "YouTube"
     documentation: str = "https://docs.composio.dev"
     app_name = "youtube"
 
