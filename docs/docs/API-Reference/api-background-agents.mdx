@@ -1,0 +1,441 @@
+---
+title: Background Agents API
+sidebar_position: 8
+---
+
+# Background Agents API
+
+Background Agents enable persistent execution of Langflow flows independently of the UI session. Agents can be scheduled, triggered by events, or invoked via webhooks, supporting autonomous workflows and always-on automation.
+
+## Overview
+
+Background Agents allow you to:
+- **Schedule flows** to run at specific times or intervals using cron expressions
+- **Trigger flows** automatically based on events or webhooks
+- **Monitor execution history** and agent status
+- **Manage agent lifecycle** (start, stop, pause, resume)
+- **Run workflows autonomously** without manual UI interaction
+
+## Trigger Types
+
+Background Agents support multiple trigger types:
+
+| Trigger Type | Description | Configuration |
+|-------------|-------------|---------------|
+| `CRON` | Schedule using cron expressions | `minute`, `hour`, `day`, `month`, `day_of_week` |
+| `INTERVAL` | Run at fixed intervals | `seconds`, `minutes`, `hours`, `days`, `weeks` |
+| `DATE` | One-time execution at specific datetime | `run_date` (ISO 8601 format) |
+| `WEBHOOK` | Triggered by external API calls | No scheduling - triggered manually |
+| `EVENT` | Triggered by system events | No scheduling - event-driven |
+
+## Agent Status
+
+Agents can be in one of four states:
+
+- **ACTIVE**: Agent is running and scheduled (for scheduled triggers)
+- **PAUSED**: Agent is temporarily paused
+- **STOPPED**: Agent is not running
+- **ERROR**: Agent encountered an error during execution
+
+## API Endpoints
+
+### Create Background Agent
+
+Create a new background agent for a flow.
+
+```http
+POST /api/v1/background_agents/
+```
+
+**Request Body:**
+
+```json
+{
+  "name": "Daily Report Generator",
+  "description": "Generates daily reports at 9 AM",
+  "flow_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "trigger_type": "CRON",
+  "trigger_config": {
+    "minute": "0",
+    "hour": "9",
+    "day": "*",
+    "month": "*",
+    "day_of_week": "*"
+  },
+  "input_config": {
+    "input_value": "Generate daily report",
+    "input_type": "chat",
+    "output_type": "all"
+  },
+  "enabled": true
+}
+```
+
+**Response:** `201 Created`
+
+```json
+{
+  "id": "7b8a3d21-9c4e-4f5a-8b2d-1e6f7a8b9c0d",
+  "name": "Daily Report Generator",
+  "description": "Generates daily reports at 9 AM",
+  "flow_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "trigger_type": "CRON",
+  "trigger_config": {...},
+  "input_config": {...},
+  "status": "STOPPED",
+  "enabled": true,
+  "user_id": "user-uuid",
+  "created_at": "2025-01-03T00:00:00Z",
+  "updated_at": "2025-01-03T00:00:00Z",
+  "last_run_at": null,
+  "next_run_at": null
+}
+```
+
+### List Background Agents
+
+Retrieve all background agents for the current user.
+
+```http
+GET /api/v1/background_agents/
+```
+
+**Query Parameters:**
+- `flow_id` (optional): Filter agents by flow ID
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "7b8a3d21-9c4e-4f5a-8b2d-1e6f7a8b9c0d",
+    "name": "Daily Report Generator",
+    "flow_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "trigger_type": "CRON",
+    "status": "ACTIVE",
+    "enabled": true,
+    ...
+  }
+]
+```
+
+### Get Background Agent
+
+Retrieve a specific background agent.
+
+```http
+GET /api/v1/background_agents/{agent_id}
+```
+
+**Response:** `200 OK`
+
+### Update Background Agent
+
+Update an existing background agent's configuration.
+
+```http
+PATCH /api/v1/background_agents/{agent_id}
+```
+
+**Request Body:**
+
+```json
+{
+  "name": "Updated Agent Name",
+  "trigger_config": {
+    "minute": "0",
+    "hour": "10"
+  },
+  "enabled": true
+}
+```
+
+**Response:** `200 OK`
+
+### Delete Background Agent
+
+Delete a background agent. The agent will be stopped if currently running.
+
+```http
+DELETE /api/v1/background_agents/{agent_id}
+```
+
+**Response:** `204 No Content`
+
+### Start Agent
+
+Start a background agent and begin scheduling (for scheduled triggers).
+
+```http
+POST /api/v1/background_agents/{agent_id}/start
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "status": "started",
+  "agent_id": "7b8a3d21-9c4e-4f5a-8b2d-1e6f7a8b9c0d",
+  "next_run_at": "2025-01-04T09:00:00Z"
+}
+```
+
+### Stop Agent
+
+Stop a running background agent.
+
+```http
+POST /api/v1/background_agents/{agent_id}/stop
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "status": "stopped",
+  "agent_id": "7b8a3d21-9c4e-4f5a-8b2d-1e6f7a8b9c0d"
+}
+```
+
+### Pause Agent
+
+Temporarily pause a running agent without removing its schedule.
+
+```http
+POST /api/v1/background_agents/{agent_id}/pause
+```
+
+**Response:** `200 OK`
+
+### Resume Agent
+
+Resume a paused agent.
+
+```http
+POST /api/v1/background_agents/{agent_id}/resume
+```
+
+**Response:** `200 OK`
+
+### Trigger Agent
+
+Manually trigger an agent execution.
+
+```http
+POST /api/v1/background_agents/{agent_id}/trigger
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "status": "triggered",
+  "agent_id": "7b8a3d21-9c4e-4f5a-8b2d-1e6f7a8b9c0d",
+  "execution_id": "9d2c4e6f-8a1b-4c5d-7e3f-2a6b8c9d0e1f"
+}
+```
+
+### Get Agent Status
+
+Retrieve the current status of an agent.
+
+```http
+GET /api/v1/background_agents/{agent_id}/status
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "agent_id": "7b8a3d21-9c4e-4f5a-8b2d-1e6f7a8b9c0d",
+  "name": "Daily Report Generator",
+  "status": "ACTIVE",
+  "enabled": true,
+  "last_run_at": "2025-01-03T09:00:00Z",
+  "next_run_at": "2025-01-04T09:00:00Z",
+  "trigger_type": "CRON"
+}
+```
+
+### Get Execution History
+
+Retrieve execution history for an agent.
+
+```http
+GET /api/v1/background_agents/{agent_id}/executions?limit=10&offset=0
+```
+
+**Query Parameters:**
+- `limit` (default: 10): Maximum number of executions to return
+- `offset` (default: 0): Number of executions to skip for pagination
+
+**Response:** `200 OK`
+
+```json
+{
+  "executions": [
+    {
+      "execution_id": "9d2c4e6f-8a1b-4c5d-7e3f-2a6b8c9d0e1f",
+      "started_at": "2025-01-03T09:00:00Z",
+      "completed_at": "2025-01-03T09:05:30Z",
+      "status": "SUCCESS",
+      "trigger_source": "scheduled",
+      "error_message": null
+    }
+  ],
+  "count": 1
+}
+```
+
+## Usage Examples
+
+### Example 1: Hourly Data Sync
+
+Create an agent that syncs data every hour:
+
+```python
+import requests
+
+# Create agent with interval trigger
+agent_data = {
+    "name": "Hourly Data Sync",
+    "flow_id": "your-flow-id",
+    "trigger_type": "INTERVAL",
+    "trigger_config": {
+        "hours": 1
+    },
+    "input_config": {
+        "input_value": "Sync data",
+        "input_type": "chat"
+    }
+}
+
+response = requests.post(
+    "http://localhost:7860/api/v1/background_agents/",
+    json=agent_data,
+    headers={"Authorization": f"Bearer {access_token}"}
+)
+
+agent_id = response.json()["id"]
+
+# Start the agent
+requests.post(
+    f"http://localhost:7860/api/v1/background_agents/{agent_id}/start",
+    headers={"Authorization": f"Bearer {access_token}"}
+)
+```
+
+### Example 2: Daily Report at Specific Time
+
+Create an agent that runs every day at 9:00 AM:
+
+```python
+agent_data = {
+    "name": "Daily Morning Report",
+    "flow_id": "your-flow-id",
+    "trigger_type": "CRON",
+    "trigger_config": {
+        "minute": "0",
+        "hour": "9",
+        "day": "*",
+        "month": "*",
+        "day_of_week": "*"
+    },
+    "input_config": {
+        "input_value": "Generate morning report"
+    }
+}
+```
+
+### Example 3: Webhook-Triggered Agent
+
+Create an agent that waits for webhook triggers:
+
+```python
+agent_data = {
+    "name": "Webhook Handler",
+    "flow_id": "your-flow-id",
+    "trigger_type": "WEBHOOK",
+    "trigger_config": {},
+    "input_config": {
+        "input_value": "Process webhook data"
+    }
+}
+
+# Create the agent
+response = requests.post(
+    "http://localhost:7860/api/v1/background_agents/",
+    json=agent_data,
+    headers={"Authorization": f"Bearer {access_token}"}
+)
+
+agent_id = response.json()["id"]
+
+# Trigger it manually when webhook is received
+requests.post(
+    f"http://localhost:7860/api/v1/background_agents/{agent_id}/trigger",
+    headers={"Authorization": f"Bearer {access_token}"}
+)
+```
+
+### Example 4: One-Time Scheduled Execution
+
+Create an agent that runs once at a specific datetime:
+
+```python
+from datetime import datetime, timedelta
+
+# Schedule for tomorrow at 3 PM
+run_time = datetime.now() + timedelta(days=1)
+run_time = run_time.replace(hour=15, minute=0, second=0)
+
+agent_data = {
+    "name": "One-Time Report",
+    "flow_id": "your-flow-id",
+    "trigger_type": "DATE",
+    "trigger_config": {
+        "run_date": run_time.isoformat()
+    },
+    "input_config": {
+        "input_value": "Generate report"
+    }
+}
+```
+
+## Best Practices
+
+1. **Error Handling**: Monitor execution history regularly to catch and address failures
+2. **Resource Management**: Be mindful of the frequency of scheduled executions to avoid overloading the system
+3. **Input Configuration**: Provide clear and consistent input configurations for reliable execution
+4. **Status Monitoring**: Use the status endpoint to verify agents are running as expected
+5. **Cleanup**: Delete unused agents to keep the system organized
+6. **Testing**: Test agents with manual triggers before enabling scheduled execution
+
+## Troubleshooting
+
+### Agent Not Running
+
+If an agent is not executing as expected:
+
+1. Check the agent status: `GET /api/v1/background_agents/{agent_id}/status`
+2. Verify the agent is in `ACTIVE` state
+3. Check `next_run_at` to see when the next execution is scheduled
+4. Review execution history for error messages
+
+### Execution Failures
+
+If executions are failing:
+
+1. Review execution history: `GET /api/v1/background_agents/{agent_id}/executions`
+2. Check `error_message` in failed executions
+3. Verify the flow works correctly when run manually
+4. Ensure input configuration is valid for the flow
+
+### Agent Won't Start
+
+If an agent fails to start:
+
+1. Verify the flow exists and is accessible
+2. Check trigger configuration is valid
+3. Ensure you have proper permissions for the flow
+4. Review system logs for detailed error messages
