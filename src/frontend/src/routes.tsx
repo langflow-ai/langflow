@@ -8,7 +8,9 @@ import {
 import { ProtectedAdminRoute } from "./components/authorization/authAdminGuard";
 import { ProtectedRoute } from "./components/authorization/authGuard";
 import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
+import { ProtectedRoleRoute } from "./components/authorization/authRoleGuard";
 import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
+import { USER_ROLES } from "./types/auth";
 import ContextWrapper from "./contexts";
 import CustomDashboardWrapperPage from "./customization/components/custom-DashboardWrapperPage";
 import { CustomNavigate } from "./customization/components/custom-navigate";
@@ -193,7 +195,14 @@ const router = createBrowserRouter(
                     </ProtectedAdminRoute>
                   }
                 />
-                <Route path="all-requests" element={<AllRequestsPage />} />
+                <Route
+                  path="all-requests"
+                  element={
+                    <ProtectedRoleRoute requiredRoles={[USER_ROLES.MARKETPLACE_ADMIN]}>
+                      <AllRequestsPage />
+                    </ProtectedRoleRoute>
+                  }
+                />
               </Route>
               <Route path="flow/:id/">
                 <Route path="" element={<CustomDashboardWrapperPage />}>

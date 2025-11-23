@@ -9,6 +9,7 @@ feature parity with the genesis-bff architecture while eliminating the proxy lay
 import os
 from typing import Any
 
+import jwt
 import requests
 from fastapi import APIRouter, Header, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
@@ -309,33 +310,44 @@ async def invalidate_user_cache(
     return JSONResponse(status_code=status_code, content=response_data)
 
 
-@auth_proxy_router.get("/user/email/{email_id}")
+@auth_proxy_router.get("/user/email")
 async def find_user_by_email(
-    email_id: str,
     artifactId: str = Query(None, description="Artifact ID (optional)"),
     artifactType: str = Query(None, description="Artifact Type (optional)"),
-    authorization: str = Header(None),
+    authorization: str = Header(...),
 ) -> JSONResponse:
     """
-    Find user by email ID with optional artifact context.
+    Find user by email extracted from authorization token.
 
     Forwards user lookup request to auth service which will:
-    - Look up user by email
+    - Look up user by email (extracted from token)
     - Return user information with artifact context (if provided)
 
     Args:
-        email_id: User's email ID
         artifactId: Optional artifact ID for context
         artifactType: Optional type of artifact
-        authorization: JWT token from Authorization header
+        authorization: JWT token from Authorization header (required)
 
     Returns:
         JSONResponse with user information
     """
-    # Forward to auth service with query parameters
-    headers = {}
-    if authorization:
-        headers["authorization"] = authorization
+    # Extract email from JWT token
+    try:
+        token = authorization.replace("Bearer ", "")
+        decoded = jwt.decode(token, options={"verify_signature": False})
+        email_id = decoded.get("email")
+        if not email_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Email not found in token",
+            )
+    except jwt.exceptions.DecodeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid token: {str(e)}",
+        )
+
+    headers = {"authorization": authorization}
 
     # Build query string with optional parameters
     query_params = []
@@ -343,7 +355,7 @@ async def find_user_by_email(
         query_params.append(f"artifactId={artifactId}")
     if artifactType:
         query_params.append(f"artifactType={artifactType}")
-# auth/api/v1/user/email
+
     endpoint = f"/auth/api/v1/user/email/{email_id}"
     if query_params:
         endpoint += "?" + "&".join(query_params)

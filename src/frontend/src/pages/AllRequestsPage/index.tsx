@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,7 @@ import useAlertStore from "@/stores/alertStore";
 import CustomLoader from "@/customization/components/custom-loader";
 
 export default function AllRequestsPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("submitted");
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<FlowVersionRead | null>(null);
@@ -38,6 +40,10 @@ export default function AllRequestsPage() {
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  const handleReview = (flowId: string) => {
+    navigate(`/flow/${flowId}`);
+  };
 
   // Fetch data for each tab
   const { data: pendingReviews, isLoading: loadingPending } = useGetPendingReviews();
@@ -134,6 +140,7 @@ export default function AllRequestsPage() {
             <TableHead>Submission Date</TableHead>
             <TableHead>Versions</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Detail Page</TableHead>
             {/* Tags column - commented out for now
             <TableHead>Tags</TableHead>
             */}
@@ -161,6 +168,16 @@ export default function AllRequestsPage() {
                 <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
                   Under Review
                 </span>
+              </TableCell>
+              <TableCell>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleReview(version.original_flow_id)}
+                >
+                  <IconComponent name="Eye" className="h-4 w-4 mr-1" />
+                  Review
+                </Button>
               </TableCell>
               {/* Tags cell - commented out for now
               <TableCell>
@@ -244,6 +261,7 @@ export default function AllRequestsPage() {
             <TableHead>Submission Date</TableHead>
             <TableHead>Versions</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Detail Page</TableHead>
             <TableHead>Reviewed By</TableHead>
           </TableRow>
         </TableHeader>
@@ -268,6 +286,16 @@ export default function AllRequestsPage() {
                 <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
                   Approved
                 </span>
+              </TableCell>
+              <TableCell>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleReview(version.original_flow_id)}
+                >
+                  <IconComponent name="Eye" className="h-4 w-4 mr-1" />
+                  Review
+                </Button>
               </TableCell>
               <TableCell>{version.reviewed_by_name || version.reviewer_name || "Unknown"}</TableCell>
             </TableRow>
@@ -305,6 +333,7 @@ export default function AllRequestsPage() {
             <TableHead>Submission Date</TableHead>
             <TableHead>Versions</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Detail Page</TableHead>
             <TableHead>Rejection Reason</TableHead>
           </TableRow>
         </TableHeader>
@@ -329,6 +358,16 @@ export default function AllRequestsPage() {
                 <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
                   Rejected
                 </span>
+              </TableCell>
+              <TableCell>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleReview(version.original_flow_id)}
+                >
+                  <IconComponent name="Eye" className="h-4 w-4 mr-1" />
+                  Review
+                </Button>
               </TableCell>
               <TableCell className="max-w-xs truncate">
                 {version.rejection_reason || <span className="text-muted-foreground">No reason provided</span>}

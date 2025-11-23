@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Home,
@@ -14,6 +14,8 @@ import {
 import { useSidebar } from "@/contexts/sidebarContext";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { envConfig } from "@/config/env";
+import useAuthStore from "@/stores/authStore";
+import { USER_ROLES } from "@/types/auth";
 
 interface SidebarItem {
   id: string;
@@ -21,6 +23,7 @@ interface SidebarItem {
   path: string;
   label: string;
   external?: boolean;
+  requiredRoles?: string[]; // Roles required to see this menu item
 }
 
 const sidebarItems: SidebarItem[] = [
@@ -40,13 +43,26 @@ const sidebarItems: SidebarItem[] = [
   },
   { id: "monitor", icon: Store, path: "/store", label: "Monitor" },
   { id: "prompt-management", icon: FolderCode, path: envConfig.promptsUrl ?? "prompt-management", label: "Prompts", external: true },
-  { id: "all-requests", icon: ClipboardList, path: "/all-requests", label: "All Requests" },
+  { id: "all-requests", icon: ClipboardList, path: "/all-requests", label: "All Requests", requiredRoles: [USER_ROLES.MARKETPLACE_ADMIN] },
 ];
 
 export default function MainSidebar(): JSX.Element {
   const location = useLocation();
   const navigate = useNavigate();
   const { isCollapsed, toggleSidebar } = useSidebar();
+  const userRoles = useAuthStore((state) => state.userRoles);
+
+  // Filter sidebar items based on user roles
+  const visibleSidebarItems = useMemo(() => {
+    return sidebarItems.filter((item) => {
+      // If no required roles, show to everyone
+      if (!item.requiredRoles || item.requiredRoles.length === 0) {
+        return true;
+      }
+      // Check if user has any of the required roles
+      return item.requiredRoles.some((role) => userRoles.includes(role));
+    });
+  }, [userRoles]);
 
   const isActive = (path: string) => {
     if (path === "/") {
@@ -76,7 +92,7 @@ export default function MainSidebar(): JSX.Element {
           isCollapsed ? "items-center px-1.5" : "px-3"
         }`}
       >
-        {sidebarItems.map((item) => {
+        {visibleSidebarItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
           const disabled = item.id === "integration" || item.id === "monitor";
