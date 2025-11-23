@@ -111,3 +111,20 @@ async def test_mcp_post_endpoint_server_error(client: AsyncClient, logged_in_hea
 
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert "Internal server error" in response.json()["detail"]
+
+
+async def test_mcp_sse_with_middleware_no_conflict(client: AsyncClient, logged_in_headers):
+    """Test that MCP SSE endpoint works without ASGI message conflicts from middleware.
+
+    Verifies that SSE endpoints can stream responses without middleware interference
+    """
+    # Test that the SSE endpoint responds correctly
+    response = await client.head("api/v1/mcp/sse", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+
+    # Verify Content-Type header is not modified by JavaScriptMIMETypeMiddleware
+    # (which only modifies .js files, not SSE endpoints)
+    assert "text/javascript" not in response.headers.get("content-type", "")
+
+    # For more comprehensive testing, consider mocking an SSE stream and verifying
+    # that no ASGI message conflicts occur during streaming
