@@ -224,7 +224,7 @@ export const SIDEBAR_CATEGORIES = [
   },
   { display_name: "Processing", name: "processing", icon: "ListFilter" },
   {
-    display_name: "Flow Controls",
+    display_name: "Flow Control",
     name: "flow_controls",
     icon: "ArrowRightLeft",
   },
