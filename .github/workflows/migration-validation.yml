@@ -111,7 +111,7 @@ jobs:
                 }
 
                 message += `### 📚 Resources\n`;
-                message += `- Review the [DB Migration Guide](./alembic/DB-MIGRATION-GUIDE.MD)\n`;
+                message += `- Review the [DB Migration Guide](./src/backend/base/langflow/alembic/DB-MIGRATION-GUIDE.MD)\n`;
                 message += `- Use \`python scripts/generate_migration.py --help\` to generate compliant migrations\n\n`;
 
                 message += `### Common Issues & Solutions\n`;
