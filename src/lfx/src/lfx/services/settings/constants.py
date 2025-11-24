@@ -31,4 +31,13 @@ VARIABLES_TO_GET_FROM_ENVIRONMENT = [
     "AWS_SECRET_ACCESS_KEY",
     "NOVITA_API_KEY",
     "TAVILY_API_KEY",
+    "COMETAPI_KEY",
+]
+
+# Agentic experience specific variables
+AGENTIC_VARIABLES = [
+    "FLOW_ID",
+    "COMPONENT_ID",
+    "FIELD_NAME",
+    "ASTRA_TOKEN",
 ]

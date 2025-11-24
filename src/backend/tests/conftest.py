@@ -152,6 +152,18 @@ def get_text():
         assert path.exists(), f"File {path} does not exist. Available files: {list(data_path.iterdir())}"
 
 
+# def _has_nonempty_env(var: str) -> bool:
+#     return bool((os.getenv(var) or "").strip())
+
+
+# def pytest_runtest_setup(item):
+#     """Auto-skip tests marked with `api_key_required` when no valid OPENAI_API_KEY is provided."""
+#     if item.get_closest_marker("api_key_required") and not _has_nonempty_env("OPENAI_API_KEY"):
+#         import pytest as _pytest
+
+#         _pytest.skip("OPENAI_API_KEY is not set or is empty")
+
+
 def pytest_collection_modifyitems(config, items):  # noqa: ARG001
     """Automatically add markers based on test file location."""
     for item in items:

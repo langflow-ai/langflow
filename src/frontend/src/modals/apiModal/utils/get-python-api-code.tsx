@@ -48,7 +48,8 @@ export function getNewPythonApiCode({
 import os
 import uuid
 
-${authSection}url = "${apiUrl}"  # The complete API endpoint URL for this flow
+${authSection}
+url = "${apiUrl}"  # The complete API endpoint URL for this flow
 
 # Request payload configuration
 payload = ${payloadString}

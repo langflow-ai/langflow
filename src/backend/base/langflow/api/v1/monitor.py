@@ -58,7 +58,7 @@ async def get_message_sessions(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/messages")
+@router.get("/messages", dependencies=[Depends(get_current_active_user)])
 async def get_messages(
     session: DbSession,
     flow_id: Annotated[UUID | None, Query()] = None,
@@ -162,7 +162,7 @@ async def update_session_id(
     return message_responses
 
 
-@router.delete("/messages/session/{session_id}", status_code=204)
+@router.delete("/messages/session/{session_id}", status_code=204, dependencies=[Depends(get_current_active_user)])
 async def delete_messages_session(
     session_id: str,
     session: DbSession,
@@ -180,7 +180,7 @@ async def delete_messages_session(
     return {"message": "Messages deleted successfully"}
 
 
-@router.get("/transactions")
+@router.get("/transactions", dependencies=[Depends(get_current_active_user)])
 async def get_transactions(
     flow_id: Annotated[UUID, Query()],
     session: DbSession,

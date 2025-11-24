@@ -2,8 +2,8 @@ from lfx.base.composio.composio_base import ComposioBaseComponent
 
 
 class ComposioYoutubeAPIComponent(ComposioBaseComponent):
-    display_name: str = "Youtube"
-    icon = "Youtube"
+    display_name: str = "YouTube"
+    icon = "YouTube"
     documentation: str = "https://docs.composio.dev"
     app_name = "youtube"
 
