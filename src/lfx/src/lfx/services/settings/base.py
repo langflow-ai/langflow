@@ -294,9 +294,8 @@ class Settings(BaseSettings):
     # MCP Composer
     mcp_composer_enabled: bool = True
     """If set to False, Langflow will not start the MCP Composer service."""
-    mcp_composer_version: str = "~=0.1.0.7"
-    """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax.
-    ~=0.1.0.7 allows patch updates (0.1.0.x) but prevents minor/major version changes."""
+    mcp_composer_version: str = "==0.1.0.8.10"
+    """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax."""
 
     # Agentic Experience
     agentic_experience: bool = False
@@ -391,7 +390,7 @@ class Settings(BaseSettings):
         Supports PEP 440 specifiers: ==, !=, <=, >=, <, >, ~=, ===
         """
         if not value:
-            return "~=0.1.0.7"  # Default
+            return "==0.1.0.8.10"  # Default
 
         # Check if it already has a version specifier
         # Order matters: check longer specifiers first to avoid false matches
