@@ -35,7 +35,8 @@ export default function AllRequestsPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("submitted");
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
-  const [selectedVersion, setSelectedVersion] = useState<FlowVersionRead | null>(null);
+  const [selectedVersion, setSelectedVersion] =
+    useState<FlowVersionRead | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -46,15 +47,22 @@ export default function AllRequestsPage() {
   };
 
   // Fetch data for each tab
-  const { data: pendingReviews, isLoading: loadingPending } = useGetPendingReviews();
-  const { data: approvedVersions, isLoading: loadingApproved } = useGetVersionsByStatus("Approved");
-  const { data: rejectedVersions, isLoading: loadingRejected } = useGetVersionsByStatus("Rejected");
+  const { data: pendingReviews, isLoading: loadingPending } =
+    useGetPendingReviews();
+  const { data: approvedVersions, isLoading: loadingApproved } =
+    useGetVersionsByStatus("Approved");
+  const { data: rejectedVersions, isLoading: loadingRejected } =
+    useGetVersionsByStatus("Rejected");
 
   // Calculate total count
-  const totalCount = (pendingReviews?.length || 0) + (approvedVersions?.length || 0) + (rejectedVersions?.length || 0);
+  const totalCount =
+    (pendingReviews?.length || 0) +
+    (approvedVersions?.length || 0) +
+    (rejectedVersions?.length || 0);
 
   // Mutations
-  const { mutate: approveVersion, isPending: isApproving } = useApproveVersion();
+  const { mutate: approveVersion, isPending: isApproving } =
+    useApproveVersion();
   const { mutate: rejectVersion, isPending: isRejecting } = useRejectVersion();
 
   const handleApprove = (version: FlowVersionRead) => {
@@ -65,7 +73,9 @@ export default function AllRequestsPage() {
       onError: (error: any) => {
         setErrorData({
           title: "Failed to approve",
-          list: [error?.response?.data?.detail || error.message || "Unknown error"],
+          list: [
+            error?.response?.data?.detail || error.message || "Unknown error",
+          ],
         });
       },
     });
@@ -83,11 +93,15 @@ export default function AllRequestsPage() {
     rejectVersion(
       {
         versionId: selectedVersion.id,
-        payload: rejectionReason ? { rejection_reason: rejectionReason } : undefined,
+        payload: rejectionReason
+          ? { rejection_reason: rejectionReason }
+          : undefined,
       },
       {
         onSuccess: () => {
-          setSuccessData({ title: `"${selectedVersion.title}" has been rejected` });
+          setSuccessData({
+            title: `"${selectedVersion.title}" has been rejected`,
+          });
           setRejectModalOpen(false);
           setSelectedVersion(null);
           setRejectionReason("");
@@ -95,7 +109,9 @@ export default function AllRequestsPage() {
         onError: (error: any) => {
           setErrorData({
             title: "Failed to reject",
-            list: [error?.response?.data?.detail || error.message || "Unknown error"],
+            list: [
+              error?.response?.data?.detail || error.message || "Unknown error",
+            ],
           });
         },
       }
@@ -152,13 +168,21 @@ export default function AllRequestsPage() {
             <TableRow key={version.id}>
               <TableCell className="font-medium">{version.title}</TableCell>
               <TableCell className="max-w-xs truncate text-muted-foreground">
-                {version.description || <span className="text-muted-foreground">-</span>}
+                {version.description || (
+                  <span className="text-muted-foreground">-</span>
+                )}
               </TableCell>
               <TableCell>
                 <div>
-                  <div>{version.submitted_by_name || version.submitter_name || "Unknown"}</div>
+                  <div>
+                    {version.submitted_by_name ||
+                      version.submitter_name ||
+                      "Unknown"}
+                  </div>
                   {(version.submitted_by_email || version.submitter_email) && (
-                    <div className="text-xs text-muted-foreground">{version.submitted_by_email || version.submitter_email}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {version.submitted_by_email || version.submitter_email}
+                    </div>
                   )}
                 </div>
               </TableCell>
@@ -270,13 +294,21 @@ export default function AllRequestsPage() {
             <TableRow key={version.id}>
               <TableCell className="font-medium">{version.title}</TableCell>
               <TableCell className="max-w-xs truncate text-muted-foreground">
-                {version.description || <span className="text-muted-foreground">-</span>}
+                {version.description || (
+                  <span className="text-muted-foreground">-</span>
+                )}
               </TableCell>
               <TableCell>
                 <div>
-                  <div>{version.submitted_by_name || version.submitter_name || "Unknown"}</div>
+                  <div>
+                    {version.submitted_by_name ||
+                      version.submitter_name ||
+                      "Unknown"}
+                  </div>
                   {(version.submitted_by_email || version.submitter_email) && (
-                    <div className="text-xs text-muted-foreground">{version.submitted_by_email || version.submitter_email}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {version.submitted_by_email || version.submitter_email}
+                    </div>
                   )}
                 </div>
               </TableCell>
@@ -297,7 +329,9 @@ export default function AllRequestsPage() {
                   Review
                 </Button>
               </TableCell>
-              <TableCell>{version.reviewed_by_name || version.reviewer_name || "Unknown"}</TableCell>
+              <TableCell>
+                {version.reviewed_by_name || version.reviewer_name || "Unknown"}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -342,13 +376,21 @@ export default function AllRequestsPage() {
             <TableRow key={version.id}>
               <TableCell className="font-medium">{version.title}</TableCell>
               <TableCell className="max-w-xs truncate text-muted-foreground">
-                {version.description || <span className="text-muted-foreground">-</span>}
+                {version.description || (
+                  <span className="text-muted-foreground">-</span>
+                )}
               </TableCell>
               <TableCell>
                 <div>
-                  <div>{version.submitted_by_name || version.submitter_name || "Unknown"}</div>
+                  <div>
+                    {version.submitted_by_name ||
+                      version.submitter_name ||
+                      "Unknown"}
+                  </div>
                   {(version.submitted_by_email || version.submitter_email) && (
-                    <div className="text-xs text-muted-foreground">{version.submitted_by_email || version.submitter_email}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {version.submitted_by_email || version.submitter_email}
+                    </div>
                   )}
                 </div>
               </TableCell>
@@ -370,7 +412,11 @@ export default function AllRequestsPage() {
                 </Button>
               </TableCell>
               <TableCell className="max-w-xs truncate">
-                {version.rejection_reason || <span className="text-muted-foreground">No reason provided</span>}
+                {version.rejection_reason || (
+                  <span className="text-muted-foreground">
+                    No reason provided
+                  </span>
+                )}
               </TableCell>
             </TableRow>
           ))}
@@ -380,15 +426,16 @@ export default function AllRequestsPage() {
   };
 
   return (
-    <div className="flex h-full flex-col p-6">
+    <div className="flex w-full h-full flex-col p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold">
-          All Requests {totalCount > 0 && <span className="text-muted-foreground">({totalCount})</span>}
+        <h1 className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal">
+          All Requests{" "}
+          {totalCount > 0 && <span className="">({totalCount})</span>}
         </h1>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-        <TabsList className="mb-4">
+        <TabsList className="mb-4 border-b border-[#efefef] w-full gap-8">
           <TabsTrigger value="submitted" className="gap-2">
             Submitted
             {pendingReviews && pendingReviews.length > 0 && (
@@ -428,11 +475,14 @@ export default function AllRequestsPage() {
           <DialogHeader>
             <DialogTitle>Reject Submission</DialogTitle>
             <DialogDescription>
-              Are you sure you want to reject "{selectedVersion?.title}"? You can optionally provide a reason.
+              Are you sure you want to reject "{selectedVersion?.title}"? You
+              can optionally provide a reason.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Label htmlFor="rejection-reason">Rejection Reason (Optional)</Label>
+            <Label htmlFor="rejection-reason">
+              Rejection Reason (Optional)
+            </Label>
             <Textarea
               id="rejection-reason"
               placeholder="Provide a reason for rejection..."
