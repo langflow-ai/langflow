@@ -3239,15 +3239,15 @@ wheels = [
 
 [[package]]
 name = "gigachat"
-version = "0.1.42.post2"
+version = "0.1.43"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f3/65/be50c11d851f6330d2e4b761070922eb377f06c703983a7ee7586c4d350c/gigachat-0.1.42.post2.tar.gz", hash = "sha256:bef416d62cb603b4f71ded1752a4a6e258bafa25bc0a3de2d03a8e60eb09971e", size = 34058, upload-time = "2025-08-25T14:38:59.706Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b6/f7/e3356dfa881202633301f640ae1e087d522e8f8a4754af3e453da41e8429/gigachat-0.1.43.tar.gz", hash = "sha256:70c7f34d030d43826d1b80b935c9074e14770780bcf8204b316b39dd5ee69a98", size = 34170, upload-time = "2025-11-11T12:18:32.506Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ba/f9/1cbd9f592f5deb75696acd4d8573f52a46aa5bbe8e467d2708f91bca4d66/gigachat-0.1.42.post2-py3-none-any.whl", hash = "sha256:db7c0bd1db9e4ca0b78f73a533553dcfc79bf1eb0eba951aad0f00b9e7aacc48", size = 69704, upload-time = "2025-08-25T14:38:58.276Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/48/e6dec5d2a2616bb53cf85c8f531477e2643d804e88ba09bd34ad744625eb/gigachat-0.1.43-py3-none-any.whl", hash = "sha256:b5820cebf3f1056822dfc92ef9cca886bbb0e79e3d6b9882afa4e7bb93a71d88", size = 69884, upload-time = "2025-11-11T12:18:31.229Z" },
 ]
 
 [[package]]
@@ -5664,7 +5664,7 @@ requires-dist = [
     { name = "langchain-community", specifier = ">=0.3.21,<1.0.0" },
     { name = "langchain-docling", marker = "extra == 'docling'", specifier = ">=1.1.0" },
     { name = "langchain-elasticsearch", specifier = "==0.3.0" },
-    { name = "langchain-gigachat", specifier = "==0.3.12" },
+    { name = "langchain-gigachat", specifier = ">=0.3.12" },
     { name = "langchain-google-calendar-tools", specifier = "==0.0.1" },
     { name = "langchain-google-community", specifier = "==2.0.3" },
     { name = "langchain-google-genai", specifier = "==2.0.6" },

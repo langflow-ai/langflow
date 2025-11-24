@@ -137,7 +137,7 @@ dependencies = [
     "cuga==0.1.10",
     "agent-lifecycle-toolkit~=0.4.1",
     "astrapy>=2.1.0,<3.0.0",
-    "langchain-gigachat==0.3.12",
+    "langchain-gigachat>=0.3.12",
 ]
 
 
