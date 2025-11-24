@@ -196,10 +196,10 @@ export default function AllRequestsPage() {
               <TableCell>
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="link"
                   onClick={() => handleReview(version.original_flow_id)}
+                  className="!text-[#7421e3] hover:!text-[#350e84] !p-0"
                 >
-                  <IconComponent name="Eye" className="h-4 w-4 mr-1" />
                   Review
                 </Button>
               </TableCell>
@@ -436,19 +436,19 @@ export default function AllRequestsPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
         <TabsList className="mb-4 border-b border-[#efefef] w-full gap-8">
-          <TabsTrigger value="submitted" className="gap-2">
+          <TabsTrigger value="submitted" className="gap-1">
             Submitted
             {pendingReviews && pendingReviews.length > 0 && (
               <span className="ml-1">({pendingReviews.length})</span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="approved" className="gap-2">
+          <TabsTrigger value="approved" className="gap-1">
             Approved
             {approvedVersions && approvedVersions.length > 0 && (
               <span className="ml-1">({approvedVersions.length})</span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="rejected" className="gap-2">
+          <TabsTrigger value="rejected" className="gap-1">
             Rejected
             {rejectedVersions && rejectedVersions.length > 0 && (
               <span className="ml-1">({rejectedVersions.length})</span>
