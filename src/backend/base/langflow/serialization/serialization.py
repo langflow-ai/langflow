@@ -278,13 +278,8 @@ def serialize(
 
         # Handle class-based Pydantic types and other types
         if isinstance(obj, type):
-            try:
-                if issubclass(obj, BaseModel | BaseModelV1):
-                    return repr(obj)
-            except TypeError:
-                # obj passes isinstance(obj, type) but isn't a proper class
-                # (e.g., typing special forms like Union, Optional, generic aliases)
-                pass
+            if issubclass(obj, BaseModel | BaseModelV1):
+                return repr(obj)
             return str(obj)  # Handle other class types
 
         # Handle type aliases and generic types

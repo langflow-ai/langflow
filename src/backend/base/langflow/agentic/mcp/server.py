@@ -526,7 +526,7 @@ async def update_flow_component_field(
     flow_id_or_name: str,
     component_id: str,
     field_name: str,
-    new_value: Any,
+    new_value: str,
     user_id: str,
 ) -> dict[str, Any]:
     """Update the value of a specific field in a flow component.
