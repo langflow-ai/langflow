@@ -30,7 +30,6 @@ jobs:
         run: |
           # Get all changed Python files in alembic/versions directories
 
-          # Was commented to exclude test migrations
           # CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep -E '(alembic|migrations)/versions/.*\.py$' || echo "")
 
           # Exclude test migrations, as they are not part of the main codebase
