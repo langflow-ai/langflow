@@ -55,3 +55,9 @@ repos:
         files: ^src/backend/base/langflow/initial_setup/starter_projects/.*\.json$
         pass_filenames: false
         args: [--security-check]
+      - id: check-deprecated-imports
+        name: Check for deprecated langchain imports
+        entry: uv run python scripts/check_deprecated_imports.py
+        language: system
+        files: ^src/lfx/src/lfx/components/.*\.py$
+        pass_filenames: false
