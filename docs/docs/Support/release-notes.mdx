@@ -54,6 +54,12 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
+- Support for streamable HTTP protocol for MCP clients
+
+    When using Langflow as an MCP client, you can now connect to MCP servers with [streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http).
+    SSE transport is still supported as a fallback for backwards compatibility.
+    Streamable HTTP transport support for Langflow as an MCP server is planned for a future release.
+
 - Webhook authentication
 
     Added the `LANGFLOW_WEBHOOK_AUTH_ENABLE` environment variable for authenticating requests to the [`/webhook` endpoint](/api-flows-run#webhook-run-flow). When `LANGFLOW_WEBHOOK_AUTH_ENABLE=TRUE`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `FALSE`, no Langflow API key is required and all requests to the webhook endpoint are treated as being sent by the flow owner.
@@ -93,8 +99,9 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
   The **LLM Router** component is now called the [**LLM Selector** component](/llm-selector).
 
-### Deprecations
+  The [**Web Search** component](/web-search) now consolidates Web Search, News Search, and RSS Reader into a single component with tabs for different search modes. You can search the web using DuckDuckGo, search Google News, or read RSS feeds—all from one component. The separate **News Search** and **RSS Reader** components have been removed.
 
+### Deprecations
 
 ## 1.6.0
 
@@ -249,7 +256,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     The [**MCP Tools** component](/mcp-client) is now under the **Agents** category.
 
-    Tools that performed the same function were combined into single components that support multiple providers, such as the [**Web Search** component](/web-search) and the [**News Search** component](/news-search).
+    Tools that performed the same function were combined into single components that support multiple providers, such as the [**Web Search** component](/web-search) and the **News Search** component.
 
 
 - Stability improvements
