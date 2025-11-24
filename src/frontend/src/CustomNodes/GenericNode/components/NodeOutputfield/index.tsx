@@ -276,13 +276,16 @@ function NodeOutputField({
   const loopInputColorName = useMemo(() => {
     if (data.node?.outputs![index].allows_loop) {
       const output = data.node?.outputs![index];
-      const loopTypeColors = output.loop_types
-        ?.map((type) => nodeColorsName[type] ?? nodeColorsName.unknown)
-        .filter((color) => color) ?? [];
+      const loopTypeColors =
+        output.loop_types
+          ?.map((type) => nodeColorsName[type] ?? nodeColorsName.unknown)
+          .filter((color) => color) ?? [];
 
       if (loopTypeColors.length > 0) {
         // Combine original color with loop type colors, removing duplicates
-        const combinedColors = colorName ? [...colorName, ...loopTypeColors] : loopTypeColors;
+        const combinedColors = colorName
+          ? [...colorName, ...loopTypeColors]
+          : loopTypeColors;
         return Array.from(new Set(combinedColors));
       }
     }

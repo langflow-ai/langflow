@@ -431,8 +431,8 @@ export function isValidConnection(
   // (which already includes original type + loop_types from the output configuration)
   const loopInputTypeCheck =
     isLoopInput &&
-    (sourceHandleObject.output_types.some(
-      (t) => targetHandleObject.output_types?.includes(t),
+    (sourceHandleObject.output_types.some((t) =>
+      targetHandleObject.output_types?.includes(t),
     ) ||
       targetHandleObject.output_types?.includes(sourceHandleObject.dataType));
   if (
