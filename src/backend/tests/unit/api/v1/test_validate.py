@@ -179,6 +179,44 @@ def test(items: List[str]) -> Optional[str]:
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_validate_code_allows_langflow_modules(client: AsyncClient, logged_in_headers):
+    """Test that langflow.* modules are allowed."""
+    # Code importing langflow.* modules should work
+    langflow_code = """
+import langflow
+from langflow.schema import Data
+
+def test():
+    return Data(data={"test": "value"})
+"""
+    response = await client.post("api/v1/validate/code", json={"code": langflow_code}, headers=logged_in_headers)
+    result = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    # Should execute without errors - langflow.* modules are allowed
+    assert len(result["imports"]["errors"]) == 0
+    assert len(result["function"]["errors"]) == 0
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_validate_code_allows_lfx_modules(client: AsyncClient, logged_in_headers):
+    """Test that lfx.* modules are allowed."""
+    # Code importing lfx.* modules should work
+    lfx_code = """
+import lfx
+from lfx.custom import Component
+
+def test():
+    return Component()
+"""
+    response = await client.post("api/v1/validate/code", json={"code": lfx_code}, headers=logged_in_headers)
+    result = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    # Should execute without errors - lfx.* modules are allowed
+    assert len(result["imports"]["errors"]) == 0
+    assert len(result["function"]["errors"]) == 0
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_validate_code_cannot_access_real_builtins(client: AsyncClient, logged_in_headers):
     """Test that code cannot escape via real __builtins__.
     

@@ -189,8 +189,11 @@ def create_isolated_import():
                     f"Dangerous module '{module_name}' is blocked. "
                     f"Set LANGFLOW_ALLOW_DANGEROUS_CODE_VALIDATION=true to allow."
                 )
-            # Only allow whitelisted modules or lfx.* modules
-            if module_name not in ALLOWED_MODULES and not module_name.startswith("lfx."):
+            # Only allow whitelisted modules, lfx/lfx.* modules, or langflow/langflow.* modules
+            is_lfx_module = module_name == "lfx" or module_name.startswith("lfx.")
+            is_langflow_module = module_name == "langflow" or module_name.startswith("langflow.")
+            
+            if module_name not in ALLOWED_MODULES and not is_lfx_module and not is_langflow_module:
                 # Check if it's a submodule of an allowed module
                 is_allowed_submodule = any(
                     name.startswith(allowed + ".") for allowed in ALLOWED_MODULES
@@ -216,8 +219,9 @@ def execute_in_sandbox(code_obj: Any, exec_globals: Dict[str, Any]) -> None:
     - The real __builtins__ module (prevents escaping the sandbox)
     - Parent frame globals/locals
 
-    Code can execute "dangerous" operations (like file I/O, subprocess, etc.)
-    but they run in isolation and cannot affect the server environment.
+    By default, dangerous operations (file I/O, subprocess, network access, etc.)
+    are blocked. Set LANGFLOW_ALLOW_DANGEROUS_CODE_VALIDATION=true to allow them.
+    Even when allowed, code runs in isolation and cannot access server Python variables.
 
     Args:
         code_obj: Compiled code object to execute
