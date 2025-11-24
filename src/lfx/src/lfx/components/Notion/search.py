@@ -13,7 +13,7 @@ from lfx.schema.data import Data
 class NotionSearch(LCToolComponent):
     display_name: str = "Search "
     description: str = "Searches all pages and databases that have been shared with an integration."
-    documentation: str = "https://docs.langflow.org/bundles-notion"
+    documentation: str = "https://docs.langflow.org/integrations/notion/search"
     icon = "NotionDirectoryLoader"
 
     inputs = [
