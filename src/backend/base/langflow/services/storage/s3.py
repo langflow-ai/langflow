@@ -92,17 +92,23 @@ class S3StorageService(StorageService):
         """Get or create an S3 client using the async context manager."""
         return self.session.client("s3")
 
-    async def save_file(self, flow_id: str, file_name: str, data: bytes) -> None:
+    async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:
         """Save a file to S3.
 
         Args:
             flow_id: The flow/user identifier for namespacing
             file_name: The name of the file to be saved
             data: The byte content of the file
+            append: If True, append to existing file (not supported in S3, will raise error)
 
         Raises:
             Exception: If the file cannot be saved to S3
+            NotImplementedError: If append=True (not supported in S3)
         """
+        if append:
+            msg = "Append mode is not supported for S3 storage"
+            raise NotImplementedError(msg)
+
         key = self.build_full_path(flow_id, file_name)
 
         try:
