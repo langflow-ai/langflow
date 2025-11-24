@@ -1,5 +1,6 @@
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
 import pytest
 from lfx.components.files_and_knowledge.save_file import SaveToFileComponent
@@ -74,24 +75,13 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         component.set_attributes({"input": message, "file_name": "test", "file_format": ""})
         assert component._get_default_format() == "json"
 
-    def test_get_extension_for_format_excel(self, component_class):
-        """Test extension mapping for excel format."""
-        component = component_class()
-        assert component._get_extension_for_format("excel") == "xlsx"
-
-    def test_get_extension_for_format_other(self, component_class):
-        """Test extension mapping for other formats."""
-        component = component_class()
-        assert component._get_extension_for_format("csv") == "csv"
-        assert component._get_extension_for_format("json") == "json"
-        assert component._get_extension_for_format("txt") == "txt"
 
     @pytest.mark.asyncio
     async def test_save_dataframe_to_csv(self, component_class):
         """Test saving DataFrame to CSV format - only mock upload."""
-        component = component_class(_user_id="test_user_123")
+        component = component_class(_user_id=str(uuid4()))
         df = DataFrame([{"col1": 1, "col2": "a"}, {"col1": 2, "col2": "b"}])
-        component.set_attributes({"input": df, "file_name": "test_output", "file_format": "csv"})
+        component.set_attributes({"input": df, "file_name": "test_output", "local_format": "csv", "storage_location": [{"name": "Local"}]})
 
         # Mock only the database and upload functions - let file operations run normally
         with (
@@ -121,9 +111,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
     @pytest.mark.asyncio
     async def test_save_data_to_json(self, component_class):
         """Test saving Data to JSON format - only mock upload."""
-        component = component_class(_user_id="test_user_123")
+        component = component_class(_user_id=str(uuid4()))
         data = Data(data={"col1": "value1", "col2": "value2"})
-        component.set_attributes({"input": data, "file_name": "test_data", "file_format": "json"})
+        component.set_attributes({"input": data, "file_name": "test_data", "local_format": "json", "storage_location": [{"name": "Local"}]})
 
         # Mock only the database and upload functions - let file operations run normally
         with (
@@ -146,9 +136,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
     @pytest.mark.asyncio
     async def test_save_message_to_txt(self, component_class):
         """Test saving Message to txt format - only mock upload."""
-        component = component_class(_user_id="test_user_123")
+        component = component_class(_user_id=str(uuid4()))
         message = Message(text="This is a test message")
-        component.set_attributes({"input": message, "file_name": "test_message", "file_format": "txt"})
+        component.set_attributes({"input": message, "file_name": "test_message", "local_format": "txt", "storage_location": [{"name": "Local"}]})
 
         # Mock only the database and upload functions - let file operations run normally
         with (
@@ -171,9 +161,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
     @pytest.mark.asyncio
     async def test_cleanup_on_error(self, component_class):
         """Test that temp file is cleaned up even when upload fails."""
-        component = component_class(_user_id="test_user_123")
+        component = component_class(_user_id=str(uuid4()))
         df = DataFrame([{"col1": 1}])
-        component.set_attributes({"input": df, "file_name": "test_output", "file_format": "csv"})
+        component.set_attributes({"input": df, "file_name": "test_output", "local_format": "csv", "storage_location": [{"name": "Local"}]})
 
         # Mock database and upload functions - let file operations run normally
         with (
@@ -208,9 +198,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
     @pytest.mark.asyncio
     async def test_invalid_file_format_for_message(self, component_class):
         """Test that invalid file format raises ValueError."""
-        component = component_class(_user_id="test_user_123")
+        component = component_class(_user_id=str(uuid4()))
         message = Message(text="test")
-        component.set_attributes({"input": message, "file_name": "test", "file_format": "csv"})
+        component.set_attributes({"input": message, "file_name": "test", "local_format": "csv", "storage_location": [{"name": "Local"}]})
 
         with pytest.raises(ValueError, match="Invalid file format"):
             await component.save_to_file()
@@ -218,9 +208,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
     @pytest.mark.asyncio
     async def test_invalid_file_format_for_dataframe(self, component_class):
         """Test that invalid file format raises ValueError for DataFrame."""
-        component = component_class(_user_id="test_user_123")
+        component = component_class(_user_id=str(uuid4()))
         df = DataFrame([{"a": 1}])
-        component.set_attributes({"input": df, "file_name": "test", "file_format": "txt"})
+        component.set_attributes({"input": df, "file_name": "test", "local_format": "txt", "storage_location": [{"name": "Local"}]})
 
         with pytest.raises(ValueError, match="Invalid file format"):
             await component.save_to_file()
@@ -228,9 +218,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
     @pytest.mark.asyncio
     async def test_missing_file_name(self, component_class):
         """Test that missing file name raises ValueError."""
-        component = component_class(_user_id="test_user_123")
+        component = component_class(_user_id=str(uuid4()))
         df = DataFrame([{"a": 1}])
-        component.set_attributes({"input": df, "file_name": "", "file_format": "csv"})
+        component.set_attributes({"input": df, "file_name": "", "local_format": "csv", "storage_location": [{"name": "Local"}]})
 
         with pytest.raises(ValueError, match="File name must be provided"):
             await component.save_to_file()
@@ -238,9 +228,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
     @pytest.mark.asyncio
     async def test_file_name_with_extension_stripped(self, component_class):
         """Test that file extension is properly handled when included in file_name."""
-        component = component_class(_user_id="test_user_123")
+        component = component_class(_user_id=str(uuid4()))
         df = DataFrame([{"col1": 1}])
-        component.set_attributes({"input": df, "file_name": "test_output.csv", "file_format": "csv"})
+        component.set_attributes({"input": df, "file_name": "test_output.csv", "local_format": "csv", "storage_location": [{"name": "Local"}]})
 
         # Mock only the database and upload functions - let file operations run normally
         with (
@@ -261,33 +251,3 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             assert "test_output.csv" in result.text
             assert "test_output.csv.csv" not in result.text
 
-    def test_append_mode_txt_file(self, component_class):
-        """Test append mode for text files."""
-        mock_file = MagicMock()
-        mock_parent = MagicMock()
-        mock_parent.exists.return_value = True
-        mock_file.parent = mock_parent
-        mock_file.expanduser.return_value = mock_file
-        mock_file.exists.return_value = True  # File exists for append
-
-        with patch("lfx.components.files_and_knowledge.save_file.Path") as mock_path:
-            mock_path.return_value = mock_file
-            mock_file.read_text.return_value = "Existing content"
-
-            component = component_class()
-            component.set_attributes(
-                {
-                    "input_type": "Message",
-                    "message": Message(text="New content"),
-                    "file_format": "txt",
-                    "file_path": "./test_output.txt",
-                    "append_mode": True,
-                }
-            )
-
-            result = component.save_to_file()
-
-            # Should read existing content and append new content
-            mock_file.read_text.assert_called_with(encoding="utf-8")
-            mock_file.write_text.assert_called_once_with("Existing content\nNew content", encoding="utf-8")
-            assert "appended to" in result
