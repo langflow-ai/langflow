@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Test migrations with actual database."""
 
 import sqlite3

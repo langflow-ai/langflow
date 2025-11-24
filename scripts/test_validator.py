@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Test script for migration validator."""
 
 import os

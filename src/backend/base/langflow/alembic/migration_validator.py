@@ -45,7 +45,7 @@ class MigrationValidator:
     def __init__(self, *, strict_mode: bool = True):
         self.strict_mode = strict_mode
 
-    ### Main validation method - it's template method Go4 style.###
+    ### Main validation method - it's a template method Go4 style.###
 
     def validate_migration_file(self, filepath: Path) -> dict[str, Any]:
         """Validate a single migration file."""
