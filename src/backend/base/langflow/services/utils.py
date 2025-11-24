@@ -27,7 +27,7 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
     from langflow.services.database.models.user.model import User
 
     stmt = select(User).where(User.username == username)
-    result = await session.exec(stmt)    
+    result = await session.exec(stmt)
     user = result.first()
 
     if user and user.is_superuser:
@@ -135,7 +135,7 @@ async def teardown_services() -> None:
             await teardown_superuser(get_settings_service(), session)
     except Exception as exc:  # noqa: BLE001
         logger.exception(exc)
-    
+
     try:
         from lfx.services.manager import get_service_manager
 

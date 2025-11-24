@@ -9,7 +9,7 @@ context is available before downstream dependencies run.
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator  # noqa:TCH003
+from collections.abc import AsyncGenerator  # noqa:TC003
 from contextvars import Token
 from typing import Annotated
 

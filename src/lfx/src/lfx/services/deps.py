@@ -11,7 +11,9 @@ from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+
     from sqlmodel.ext.asyncio.session import AsyncSession
+
     from lfx.services.interfaces import (
         CacheServiceProtocol,
         ChatServiceProtocol,
@@ -56,9 +58,9 @@ def get_service(service_type: ServiceType, default=None):
 
 def get_db_service(*, use_organisation: bool = True) -> DatabaseServiceProtocol | None:
     """Retrieves the database service instance."""
-    from lfx.services.schema import ServiceType
-
     from langflow.services.database.organisation import OrganizationService
+
+    from lfx.services.schema import ServiceType
 
     if use_organisation and get_settings_service().auth_settings.CLERK_AUTH_ENABLED:
         return OrganizationService.get_db_service_for_request()

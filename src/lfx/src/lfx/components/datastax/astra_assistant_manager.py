@@ -30,6 +30,7 @@ class AstraAssistantManager(ComponentWithCache):
     name = "Astra Assistant Agent"
     description = "Manages Assistant Interactions"
     icon = "AstraDB"
+    legacy = True
 
     inputs = [
         DropdownInput(

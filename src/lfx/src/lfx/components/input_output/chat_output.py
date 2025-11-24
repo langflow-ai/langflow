@@ -64,6 +64,13 @@ class ChatOutput(ChatComponent):
             advanced=True,
         ),
         MessageTextInput(
+            name="context_id",
+            display_name="Context ID",
+            info="The context ID of the chat. Adds an extra layer to the local memory.",
+            value="",
+            advanced=True,
+        ),
+        MessageTextInput(
             name="data_template",
             display_name="Data Template",
             value="{text}",
@@ -121,6 +128,7 @@ class ChatOutput(ChatComponent):
         message.sender = self.sender
         message.sender_name = self.sender_name
         message.session_id = self.session_id
+        message.context_id = self.context_id
         message.flow_id = self.graph.flow_id if hasattr(self, "graph") else None
         message.properties.source = self._build_source(source_id, display_name, source)
 

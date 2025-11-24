@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
@@ -67,7 +68,12 @@ export default function TemplateGetStartedCardComponent({
           </span>
         </div>
         <div className="flex w-full items-center justify-between">
-          <h3 className="line-clamp-3 text-lg font-bold lg:text-xl">
+          <h3
+            data-testid={`template-get-started-card-${convertTestName(
+              flow?.name,
+            )}`}
+            className="line-clamp-3 text-lg font-bold lg:text-xl"
+          >
             {flow.name}
           </h3>
           <ForwardedIconComponent
