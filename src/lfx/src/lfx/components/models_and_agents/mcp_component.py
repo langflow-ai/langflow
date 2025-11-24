@@ -23,6 +23,31 @@ from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service, get_storage_service, session_scope
 
 
+def resolve_mcp_config(
+    server_name: str,  # noqa: ARG001
+    server_config_from_value: dict | None,
+    server_config_from_db: dict | None,
+) -> dict | None:
+    """Resolve MCP server config with proper precedence.
+
+    Resolves the configuration for an MCP server with the following precedence:
+    1. Database config (takes priority) - ensures edits are reflected
+    2. Config from value/tweaks (fallback) - allows REST API to provide config for new servers
+
+    Args:
+        server_name: Name of the MCP server
+        server_config_from_value: Config provided via value/tweaks (optional)
+        server_config_from_db: Config from database (optional)
+
+    Returns:
+        Final config to use (DB takes priority, falls back to value)
+        Returns None if no config found in either location
+    """
+    if server_config_from_db:
+        return server_config_from_db
+    return server_config_from_value
+
+
 class MCPToolsComponent(ComponentWithCache):
     schema_inputs: list = []
     tools: list[StructuredTool] = []
@@ -201,7 +226,7 @@ class MCPToolsComponent(ComponentWithCache):
                 )
                 raise ImportError(msg) from e
 
-            server_config = None
+            server_config_from_db = None
             async with session_scope() as db:
                 if not self.user_id:
                     msg = "User ID is required for fetching MCP tools."
@@ -209,7 +234,7 @@ class MCPToolsComponent(ComponentWithCache):
                 current_user = await get_user_by_id(db, self.user_id)
 
                 # Try to get server config from DB/API
-                server_config = await get_server(
+                server_config_from_db = await get_server(
                     server_name,
                     current_user,
                     db,
@@ -217,10 +242,12 @@ class MCPToolsComponent(ComponentWithCache):
                     settings_service=get_settings_service(),
                 )
 
-            # Fall back to config from tweaks/value if database doesn't have it
-            # This allows REST API calls to provide config for servers not yet in the database
-            if not server_config and server_config_from_value:
-                server_config = server_config_from_value
+            # Resolve config with proper precedence: DB takes priority, falls back to value
+            server_config = resolve_mcp_config(
+                server_name=server_name,
+                server_config_from_value=server_config_from_value,
+                server_config_from_db=server_config_from_db,
+            )
 
             if not server_config:
                 self.tools = []

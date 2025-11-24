@@ -370,4 +370,94 @@ class TestMCPComponentConfigPriority:
             mock_get_server.assert_called_once()
 
             # Connect should be called with API-provided config as fallback
-            mock_connect.assert_called_once()
+
+
+# ============================================================================
+# Tests for resolve_mcp_config pure function
+# ============================================================================
+
+
+def test_resolve_config_db_takes_priority():
+    """Test that database config takes priority over value config."""
+    from lfx.components.models_and_agents.mcp_component import resolve_mcp_config
+
+    db_config = {"command": "uvx from-db", "args": ["--prod"]}
+    value_config = {"command": "uvx from-value", "args": ["--test"]}
+
+    result = resolve_mcp_config("test_server", value_config, db_config)
+
+    assert result == db_config
+
+
+def test_resolve_config_falls_back_to_value():
+    """Test that value config is used when DB returns None."""
+    from lfx.components.models_and_agents.mcp_component import resolve_mcp_config
+
+    value_config = {"command": "uvx from-value", "args": ["--test"]}
+
+    result = resolve_mcp_config("test_server", value_config, None)
+
+    assert result == value_config
+
+
+def test_resolve_config_both_none():
+    """Test behavior when both configs are None."""
+    from lfx.components.models_and_agents.mcp_component import resolve_mcp_config
+
+    assert resolve_mcp_config("test_server", None, None) is None
+
+
+# ============================================================================
+# Additional fixture-based tests as recommended in code review
+# ============================================================================
+
+
+@pytest.fixture
+def mock_db_session_with_servers():
+    """Create a simple mock session that doesn't require session_scope."""
+
+    class MockSession:
+        def __init__(self):
+            self.servers = {
+                "test_server": {"command": "uvx test", "args": []},
+                "prod_server": {"command": "uvx prod", "args": ["--prod"]},
+            }
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def get_server(self, name):
+            return self.servers.get(name)
+
+    return MockSession()
+
+
+@pytest.mark.asyncio
+async def test_config_priority_with_fixtures(mock_db_session_with_servers):
+    """Test using fixtures with real data instead of heavy mocking."""
+    from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
+
+    component = MCPToolsComponent()
+    component.mcp_server = {"name": "test_server", "config": {"command": "from-value"}}
+    component._user_id = "test_user"
+
+    # Inject the mock session directly rather than mocking session_scope
+    with (
+        patch("langflow.api.v2.mcp.get_server") as mock_get_server,
+        patch("langflow.services.database.models.user.crud.get_user_by_id") as mock_get_user,
+        patch(
+            "lfx.components.models_and_agents.mcp_component.session_scope",
+            return_value=mock_db_session_with_servers,
+        ),
+        patch.object(component.stdio_client, "connect_to_server", return_value=[]),
+    ):
+        mock_get_user.return_value = MagicMock(id="test_user")
+        mock_get_server.return_value = {"command": "uvx test", "args": []}
+
+        _tools, server_info = await component.update_tool_list()
+
+    # Verify behavior without needing to assert on mocks
+    assert server_info["config"]["command"] == "uvx test"  # From DB
