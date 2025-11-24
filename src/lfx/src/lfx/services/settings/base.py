@@ -17,7 +17,7 @@ from typing_extensions import override
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.log.logger import logger
 from lfx.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
-from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
+from lfx.services.settings.constants import AGENTIC_VARIABLES, VARIABLES_TO_GET_FROM_ENVIRONMENT
 from lfx.utils.util_strings import is_valid_database_url
 
 
@@ -245,6 +245,8 @@ class Settings(BaseSettings):
     """The path to log file for Langflow."""
     alembic_log_file: str = "alembic/alembic.log"
     """The path to log file for Alembic for SQLAlchemy."""
+    alembic_log_to_stdout: bool = False
+    """If set to True, the log file will be ignored and Alembic will log to stdout."""
     frontend_path: str | None = None
     """The path to the frontend directory containing build files. This is for development purposes only.."""
     open_browser: bool = False
@@ -292,9 +294,13 @@ class Settings(BaseSettings):
     # MCP Composer
     mcp_composer_enabled: bool = True
     """If set to False, Langflow will not start the MCP Composer service."""
-    mcp_composer_version: str = "~=0.1.0.7"
-    """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax.
-    ~=0.1.0.7 allows patch updates (0.1.0.x) but prevents minor/major version changes."""
+    mcp_composer_version: str = "==0.1.0.8.10"
+    """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax."""
+
+    # Agentic Experience
+    agentic_experience: bool = False
+    """If set to True, Langflow will start the agentic MCP server that provides tools for
+    flow/component operations, template search, and graph visualization."""
 
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
@@ -384,7 +390,7 @@ class Settings(BaseSettings):
         Supports PEP 440 specifiers: ==, !=, <=, >=, <, >, ~=, ===
         """
         if not value:
-            return "~=0.1.0.7"  # Default
+            return "==0.1.0.8.10"  # Default
 
         # Check if it already has a version specifier
         # Order matters: check longer specifiers first to avoid false matches
@@ -406,9 +412,19 @@ class Settings(BaseSettings):
     @field_validator("variables_to_get_from_environment", mode="before")
     @classmethod
     def set_variables_to_get_from_environment(cls, value):
+        import os
+
         if isinstance(value, str):
             value = value.split(",")
-        return list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
+
+        result = list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
+
+        # Add agentic variables if agentic_experience is enabled
+        # Check env var directly since we can't access instance attributes in validator
+        if os.getenv("LANGFLOW_AGENTIC_EXPERIENCE", "true").lower() == "true":
+            result.extend(AGENTIC_VARIABLES)
+
+        return list(set(result))
 
     @field_validator("log_file", mode="before")
     @classmethod
