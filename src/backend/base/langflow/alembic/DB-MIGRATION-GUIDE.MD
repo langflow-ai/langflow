@@ -54,9 +54,9 @@ flowchart LR
 ```
 **Diagram Description:**  
 The Expand-Contract migration pattern consists of three phases:  
-- **Expand:** Add new schema elements (shown in green).  
-- **Migrate:** Transition data and service usage (shown in beige).  
-- **Contract:** Remove old schema elements after full adoption (shown in pink).  
+- **Expand:** Add new schema elements (shown in neutral grey).  
+- **Migrate:** Transition data and service usage (shown in light blue).  
+- **Contract:** Remove old schema elements after full adoption (shown in light green).  
 Each phase flows sequentially: Current Schema → Expand → Migrate → Contract.
 
 
