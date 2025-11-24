@@ -55,7 +55,7 @@ export default function ChatMessage({
       return chat.sender_name || "User";
     }
     // Always return "Autonomize agent" for bot/AI messages
-    return "Autonomize agent";
+    return "Autonomize Agent";
   };
 
   useEffect(() => {

@@ -93,6 +93,14 @@ export default function ChatInput({
     }
     if (file) {
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
+      const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+      if (file.size > MAX_FILE_SIZE) {
+        setErrorData({
+          title: "File size exceeds 5MB limit",
+        });
+        return;
+      }
 
       try {
         validateFileSize(file);

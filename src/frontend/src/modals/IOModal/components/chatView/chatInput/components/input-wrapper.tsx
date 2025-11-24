@@ -123,13 +123,20 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
             {hasFilePathInput &&
               (!playgroundPage ||
                 (playgroundPage && ENABLE_IMAGE_ON_PLAYGROUND)) && (
-              <UploadFileButton
-                isBuilding={isBuilding}
-                fileInputRef={fileInputRef}
-                handleFileChange={handleFileChange}
-                handleButtonClick={handleButtonClick}
-              />
-            )}
+                <div className="flex items-center gap-2">
+                  <UploadFileButton
+                    isBuilding={isBuilding}
+                    fileInputRef={fileInputRef}
+                    handleFileChange={handleFileChange}
+                    handleButtonClick={handleButtonClick}
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    Max file size: 5 MB
+                    <br />
+                    Disclaimer: Do not upload files containing PDI/PHI data.
+                  </span>
+                </div>
+              )}
           </div>
           <div className="flex items-center gap-2">
             {ENABLE_VOICE_ASSISTANT && config?.voice_mode_available && (
