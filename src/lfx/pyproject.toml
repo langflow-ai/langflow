@@ -40,8 +40,6 @@ dependencies = [
     "langchain~=0.3.23",
     "validators>=0.34.0,<1.0.0",
     "filelock>=3.20.0",
-    "pip>=25.3,<26.0.0",
-    "setuptools>=78.1.1,<79.0.0",
 ]
 
 [project.scripts]
