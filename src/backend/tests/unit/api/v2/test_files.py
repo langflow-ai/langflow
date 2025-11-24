@@ -22,7 +22,7 @@ from langflow.api.v2.files import (
 from langflow.api.v2.mcp import get_mcp_file
 from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
-from langflow.services.database.models.api_key.model import ApiKey
+from langflow.services.database.models.api_key.model import ApiKey, UnmaskedApiKeyRead
 from langflow.services.database.models.user.model import User, UserRead
 from lfx.services.deps import session_scope
 from sqlalchemy.orm import selectinload
@@ -43,14 +43,20 @@ async def files_created_api_key(files_client, files_active_user):  # noqa: ARG00
     async with session_scope() as session:
         stmt = select(ApiKey).where(ApiKey.api_key == api_key.api_key)
         if existing_api_key := (await session.exec(stmt)).first():
+            existing_api_key = UnmaskedApiKeyRead.model_validate(existing_api_key, from_attributes=True)
             yield existing_api_key
             return
         session.add(api_key)
         await session.flush()
         await session.refresh(api_key)
-        yield api_key
-        # Clean up
-        await session.delete(api_key)
+        api_key = UnmaskedApiKeyRead.model_validate(api_key, from_attributes=True)
+
+    yield api_key
+
+    async with session_scope() as session:
+        db_key = await session.get(ApiKey, api_key.id)
+        if db_key:
+            await session.delete(db_key)
 
 
 @pytest.fixture(name="files_active_user")
@@ -563,14 +569,20 @@ async def s3_files_created_api_key(s3_files_client, s3_files_active_user):  # no
     async with session_scope() as session:
         stmt = select(ApiKey).where(ApiKey.api_key == api_key.api_key)
         if existing_api_key := (await session.exec(stmt)).first():
+            existing_api_key = UnmaskedApiKeyRead.model_validate(existing_api_key, from_attributes=True)
             yield existing_api_key
             return
         session.add(api_key)
         await session.flush()
         await session.refresh(api_key)
-        yield api_key
-        # Clean up
-        await session.delete(api_key)
+        api_key = UnmaskedApiKeyRead.model_validate(api_key, from_attributes=True)
+
+    yield api_key
+
+    async with session_scope() as session:
+        db_key = await session.get(ApiKey, api_key.id)
+        if db_key:
+            await session.delete(db_key)
 
 
 @pytest.fixture(name="s3_files_active_user")
