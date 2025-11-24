@@ -1,6 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { AxiosError } from "axios";
 import { flushSync } from "react-dom";
+import { cloneDeep } from "lodash";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   BUILD_POLLING_INTERVAL,
@@ -17,7 +18,7 @@ import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
 import useFlowStore from "../stores/flowStore";
-import type { VertexBuildTypeAPI } from "../types/api";
+import type { APIClassType, VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import type { VertexLayerElementType } from "../types/zustand/flow";
 import { isStringArray, tryParseJson } from "./utils";
@@ -198,7 +199,7 @@ async function pollBuildEvents(
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
         errorData.detail ||
-          "Langflow was not able to connect to the server. Please make sure your connection is working properly.",
+        "Langflow was not able to connect to the server. Please make sure your connection is working properly.",
       );
     }
 
@@ -296,12 +297,29 @@ export async function buildFlowVertices({
   }
 
   const postData = {};
-  if (files) {
-    postData["files"] = files;
-  }
+  // if (files) {
+  //   postData["files"] = files;
+  // }
   if (nodes) {
+    let newNodes = nodes;
+    if (files && files.length > 0) {
+      const filePathInputNode = newNodes.find(
+        (node) => node.data.type === "FilePathInput",
+      );
+      if (filePathInputNode) {
+        newNodes = newNodes.map((node) => {
+          if (node.data.type === "FilePathInput") {
+            const newNode = cloneDeep(node);
+            (newNode.data.node as APIClassType).template.input_value.value =
+              files.join("\n");
+            return newNode;
+          }
+          return node;
+        });
+      }
+    }
     postData["data"] = {
-      nodes,
+      nodes: newNodes,
       edges,
     };
   }
@@ -465,7 +483,7 @@ export async function buildFlowVertices({
     }
     onBuildError!("Error Building Flow", [
       (error as Error).message ||
-        "Langflow was not able to connect to the server. Please make sure your connection is working properly.",
+      "Langflow was not able to connect to the server. Please make sure your connection is working properly.",
     ]);
     throw error;
   }

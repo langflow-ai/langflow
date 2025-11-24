@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import { useStickToBottomContext } from "use-stick-to-bottom";
-import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import { usePostReadPresignedUrl, usePostUploadPresignedUrl, useUploadToBlob } from "@/controllers/API/queries/flexstore";
 import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
@@ -63,7 +63,9 @@ export default function ChatInput({
   useFocusOnUnlock(isBuilding, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
 
-  const { mutate } = usePostUploadFile();
+  const uploadPresignedUrlMutation = usePostUploadPresignedUrl();
+  const uploadToBlobMutation = useUploadToBlob();
+  const readPresignedUrlMutation = usePostReadPresignedUrl();
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
@@ -124,38 +126,96 @@ export default function ChatInput({
         { file, loading: true, error: false, id, type },
       ]);
 
-      mutate(
-        { file, id: currentFlowId },
+      const fileName = `agent-sample-run/${id}_${file.name}`;
+
+      // 1. Get upload signed URL
+      uploadPresignedUrlMutation.mutate(
         {
-          onSuccess: (data) => {
-            setFiles((prev) => {
-              const newFiles = [...prev];
-              const updatedIndex = newFiles.findIndex((file) => file.id === id);
-              newFiles[updatedIndex].loading = false;
-              newFiles[updatedIndex].path = data.file_path;
-              return newFiles;
-            });
+          sourceType: "azureblobstorage",
+          fileName,
+          sourceDetails: {
+            containerName: process.env.FLEXSTORE_DEFAULT_CONTAINERNAME || "ai-studio-v2",
+            storageAccount: process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT || "autonomizestorageaccount"
+          }
+        },
+        {
+          onSuccess: (uploadData) => {
+            const uploadUrl = uploadData.presignedUrl.data.signedUrl;
+
+            // 2. Upload file to blob
+            uploadToBlobMutation.mutate(
+              {
+                presignedUrl: uploadUrl,
+                file: file!,
+              },
+              {
+                onSuccess: () => {
+                  // 3. Get read signed URL
+                  readPresignedUrlMutation.mutate(
+                    {
+                      sourceType: "azureblobstorage",
+                      fileName,
+                      sourceDetails: {
+                        containerName: process.env.FLEXSTORE_DEFAULT_CONTAINERNAME || "ai-studio-v2",
+                        storageAccount: process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT || "autonomizestorageaccount"
+                      }
+                    },
+                    {
+                      onSuccess: (readData) => {
+                        const readUrl = readData.presignedUrl.data.signedUrl;
+
+                        setFiles((prev) => {
+                          const newFiles = [...prev];
+                          const updatedIndex = newFiles.findIndex((file) => file.id === id);
+                          if (updatedIndex !== -1) {
+                            newFiles[updatedIndex].loading = false;
+                            newFiles[updatedIndex].path = readUrl;
+                          }
+                          return newFiles;
+                        });
+                      },
+                      onError: (error) => {
+                        console.error("Error getting read signed URL:", error);
+                        handleUploadError(id, "Error generating read URL");
+                      }
+                    }
+                  );
+                },
+                onError: (error) => {
+                  console.error("Error uploading to blob:", error);
+                  handleUploadError(id, "Error uploading file to storage");
+                }
+              }
+            );
           },
           onError: (error) => {
-            setFiles((prev) => {
-              const newFiles = [...prev];
-              const updatedIndex = newFiles.findIndex((file) => file.id === id);
-              newFiles[updatedIndex].loading = false;
-              newFiles[updatedIndex].error = true;
-              return newFiles;
-            });
-            setErrorData({
-              title: "Error uploading file",
-              list: [error.response?.data?.detail],
-            });
-          },
-        },
+            console.error("Error getting upload signed URL:", error);
+            handleUploadError(id, "Error initiating upload");
+          }
+        }
       );
+
     }
 
     if ("target" in event && event.target instanceof HTMLInputElement) {
       event.target.value = "";
     }
+  };
+
+  const handleUploadError = (fileId: string, errorMessage: string) => {
+    setFiles((prev) => {
+      const newFiles = [...prev];
+      const updatedIndex = newFiles.findIndex((file) => file.id === fileId);
+      if (updatedIndex !== -1) {
+        newFiles[updatedIndex].loading = false;
+        newFiles[updatedIndex].error = true;
+      }
+      return newFiles;
+    });
+    setErrorData({
+      title: "Error uploading file",
+      list: [errorMessage],
+    });
   };
 
   useEffect(() => {
