@@ -10,7 +10,7 @@ class LoopComponent(Component):
     description = (
         "Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs."
     )
-    documentation: str = "https://docs.langflow.org/components-logic#loop"
+    documentation: str = "https://docs.langflow.org/loop"
     icon = "infinity"
 
     inputs = [
