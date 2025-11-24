@@ -71,6 +71,7 @@ class FileComponent(BaseFileComponent):
         if isinstance(input_item, FileInput) and input_item.name == "path":
             input_item.real_time_refresh = True
             input_item.tool_mode = False  # Disable tool mode for file upload input
+            input_item.required = False  # Make it optional so it doesn't error in tool mode
             break
 
     inputs = [
@@ -78,10 +79,14 @@ class FileComponent(BaseFileComponent):
         StrInput(
             name="file_path_str",
             display_name="File Path",
-            info="Path to the file to read. Used when component is called as a tool.",
+            info=(
+                "Path to the file to read. Used when component is called as a tool. "
+                "If not provided, will use the uploaded file from 'path' input."
+            ),
             show=False,
             advanced=True,
             tool_mode=True,
+            required=False,
         ),
         BoolInput(
             name="advanced_mode",
@@ -272,11 +277,13 @@ class FileComponent(BaseFileComponent):
     def _validate_and_resolve_paths(self) -> list[BaseFileComponent.BaseFile]:
         """Override to handle file_path_str input from tool mode.
 
-        When called as a tool, the file_path_str parameter will be set,
-        and we should use that instead of the path FileInput.
+        When called as a tool, the file_path_str parameter can be set.
+        If not provided, it will fall back to using the path FileInput (uploaded file).
+        Priority:
+        1. file_path_str (if provided by the tool call)
+        2. path (uploaded file from UI)
         """
         # Check if file_path_str is provided (from tool mode)
-        # file_path_str will be set when component is called as a tool
         file_path_str = getattr(self, "file_path_str", None)
         if file_path_str:
             # Use the string path from tool mode
@@ -295,7 +302,7 @@ class FileComponent(BaseFileComponent):
             data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(resolved_path)})
             return [BaseFileComponent.BaseFile(data_obj, resolved_path, delete_after_processing=False)]
 
-        # Otherwise use the default implementation
+        # Otherwise use the default implementation (uses path FileInput)
         return super()._validate_and_resolve_paths()
 
     def _is_docling_compatible(self, file_path: str) -> bool:
