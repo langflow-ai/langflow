@@ -300,8 +300,6 @@ module.exports = {
                 "Components/mock-data",
                 "Components/url",
                 "Components/web-search",
-                "Components/news-search",
-                "Components/rss-reader",
               ]
             },
             {
@@ -328,7 +326,7 @@ module.exports = {
               label: "LLM Operations",
               items: [
                 "Components/batch-run",
-                "Components/llm-router",
+                "Components/llm-selector",
                 "Components/smart-router",
                 "Components/smart-transform",
                 "Components/structured-output",
