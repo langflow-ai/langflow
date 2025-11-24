@@ -137,6 +137,7 @@ dependencies = [
     "cuga==0.1.7",
     "agent-lifecycle-toolkit~=0.4.1",
     "astrapy>=2.1.0,<3.0.0",
+    "openlayer",  # Using local editable version for debugging
 ]
 
 
@@ -194,6 +195,7 @@ dev = [
 langflow-base = { workspace = true }
 langflow = { workspace = true }
 lfx = { workspace = true }
+openlayer = { path = "../../openlayer-python", editable = true }
 
 [tool.uv.workspace]
 members = [
