@@ -47,7 +47,8 @@ export const useGetPendingReviews = () => {
       );
       return response.data;
     },
-    staleTime: 30000,
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: "always", // Refetch when component mounts
     refetchOnWindowFocus: true,
   });
 };

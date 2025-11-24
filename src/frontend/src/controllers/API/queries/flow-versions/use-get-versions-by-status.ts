@@ -15,7 +15,8 @@ export const useGetVersionsByStatus = (statusName: FlowStatusName, enabled = tru
       return response.data;
     },
     enabled,
-    staleTime: 30000,
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: "always", // Refetch when component mounts
     refetchOnWindowFocus: true,
   });
 };

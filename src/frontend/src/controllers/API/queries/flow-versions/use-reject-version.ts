@@ -20,12 +20,33 @@ export const useRejectVersion = () => {
     },
     onSuccess: () => {
       // Invalidate all relevant queries
-      queryClient.invalidateQueries({ queryKey: ["pending-reviews"] });
-      queryClient.invalidateQueries({ queryKey: ["flow-versions-by-status", "Submitted"] });
-      queryClient.invalidateQueries({ queryKey: ["flow-versions-by-status", "Rejected"] });
-      queryClient.invalidateQueries({ queryKey: ["my-submissions"] });
+      // Use refetchType: "all" to ensure immediate refetch of all matching queries
+      queryClient.invalidateQueries({
+        queryKey: ["pending-reviews"],
+        refetchType: "all"
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["flow-versions-by-status", "Submitted"],
+        refetchType: "all"
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["flow-versions-by-status", "Rejected"],
+        refetchType: "all"
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["my-submissions"],
+        refetchType: "all"
+      });
       // Invalidate flow-latest-status to update Submit for Review button state
-      queryClient.invalidateQueries({ queryKey: ["flow-latest-status"] });
+      queryClient.invalidateQueries({
+        queryKey: ["flow-latest-status"],
+        refetchType: "all"
+      });
+      // Invalidate flows to update the locked state (flow is unlocked on rejection)
+      queryClient.invalidateQueries({
+        queryKey: ["useGetRefreshFlowsQuery"],
+        refetchType: "all"
+      });
     },
   });
 };

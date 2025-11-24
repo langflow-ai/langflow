@@ -15,12 +15,28 @@ export const useApproveVersion = () => {
     },
     onSuccess: () => {
       // Invalidate all relevant queries
-      queryClient.invalidateQueries({ queryKey: ["pending-reviews"] });
-      queryClient.invalidateQueries({ queryKey: ["flow-versions-by-status", "Submitted"] });
-      queryClient.invalidateQueries({ queryKey: ["flow-versions-by-status", "Approved"] });
-      queryClient.invalidateQueries({ queryKey: ["my-submissions"] });
+      // Use refetchType: "all" to ensure immediate refetch of all matching queries
+      queryClient.invalidateQueries({
+        queryKey: ["pending-reviews"],
+        refetchType: "all"
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["flow-versions-by-status", "Submitted"],
+        refetchType: "all"
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["flow-versions-by-status", "Approved"],
+        refetchType: "all"
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["my-submissions"],
+        refetchType: "all"
+      });
       // Invalidate flow-latest-status to update button states on flow page
-      queryClient.invalidateQueries({ queryKey: ["flow-latest-status"] });
+      queryClient.invalidateQueries({
+        queryKey: ["flow-latest-status"],
+        refetchType: "all"
+      });
     },
   });
 };

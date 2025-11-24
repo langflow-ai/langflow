@@ -26,7 +26,8 @@ export const useGetFlowLatestStatus = (flowId: string | undefined) => {
       return response.data;
     },
     enabled: !!flowId,
-    staleTime: 30000, // 30 seconds
+    staleTime: 0, // Always consider data stale to ensure fresh data
+    refetchOnMount: "always", // Refetch when component mounts
     refetchOnWindowFocus: false,
   });
 };

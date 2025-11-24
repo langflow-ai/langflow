@@ -48,12 +48,28 @@ export const useSubmitFlowForApproval = () => {
     },
     onSuccess: (_, variables) => {
       // Invalidate relevant queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: ["flow-latest-status", variables.flowId] });
-      queryClient.invalidateQueries({ queryKey: ["flow-versions", variables.flowId] });
-      queryClient.invalidateQueries({ queryKey: ["my-submissions"] });
-      queryClient.invalidateQueries({ queryKey: ["pending-reviews"] });
+      // Use refetchType: "all" to ensure immediate refetch of all matching queries
+      queryClient.invalidateQueries({
+        queryKey: ["flow-latest-status", variables.flowId],
+        refetchType: "all"
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["flow-versions", variables.flowId],
+        refetchType: "all"
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["my-submissions"],
+        refetchType: "all"
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["pending-reviews"],
+        refetchType: "all"
+      });
       // Invalidate flows query to update title/description in flow header
-      queryClient.invalidateQueries({ queryKey: ["flows"] });
+      queryClient.invalidateQueries({
+        queryKey: ["flows"],
+        refetchType: "all"
+      });
     },
   });
 };
