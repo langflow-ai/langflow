@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import time
-import types
 from typing import TYPE_CHECKING, Any
 
+from langchain_core.documents import Document
+from langchain_core.messages import BaseMessage
 from typing_extensions import override
 
+from langflow.schema.data import Data
+from langflow.schema.message import Message
 from langflow.services.tracing.base import BaseTracer
 
 if TYPE_CHECKING:
@@ -21,6 +25,8 @@ if TYPE_CHECKING:
     from langflow.services.tracing.schema import Log
 
 from openlayer.lib.tracing.context import UserSessionContext
+
+logger = logging.getLogger(__name__)
 
 # Component name constants
 CHAT_OUTPUT_NAMES = ("Chat Output", "ChatOutput")
@@ -49,7 +55,6 @@ class OpenlayerTracer(BaseTracer):
 
         # Store component steps using SDK Step objects
         self.component_steps: dict = {}  # component_id -> Step object from SDK
-        self.component_parent_ids: dict = {}  # component_id -> parent_component_id
         self.trace_obj = None  # Trace object from SDK
         self.langchain_handler: Any = None  # Store handler to access its trace later
 
@@ -65,11 +70,13 @@ class OpenlayerTracer(BaseTracer):
         """Initialize Openlayer SDK utilities."""
         # Validate configuration
         if not config:
+            logger.debug("Openlayer tracer not initialized: empty configuration")
             return False
 
         required_keys = ["api_key", "inference_pipeline_id"]
         for key in required_keys:
             if key not in config or not config[key]:
+                logger.debug("Openlayer tracer not initialized: missing required key '%s'", key)
                 return False
 
         try:
@@ -92,9 +99,11 @@ class OpenlayerTracer(BaseTracer):
                 UserSessionContext.set_session_id(self.session_id)
 
             configure(inference_pipeline_id=config["inference_pipeline_id"])
-        except ImportError:
+        except ImportError as e:
+            logger.debug("Openlayer tracer not initialized: import error - %s", e)
             return False
-        except Exception:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Openlayer tracer not initialized: unexpected error - %s", e)
             return False
         else:
             return True
@@ -161,12 +170,6 @@ class OpenlayerTracer(BaseTracer):
 
         # Set as current step so LangChain callbacks can nest under it
         self._openlayer_tracer._current_step.set(step)
-
-        # Find parent from vertex edges for hierarchy tracking
-        if vertex and hasattr(vertex, "incoming_edges") and len(vertex.incoming_edges) > 0:
-            valid_parents = [edge.source_id for edge in vertex.incoming_edges if edge.source_id in self.component_steps]
-            if valid_parents:
-                self.component_parent_ids[trace_id] = valid_parents[-1]
 
     @override
     def end_trace(
@@ -324,11 +327,6 @@ class OpenlayerTracer(BaseTracer):
             return default
         return step.inputs.get(key, default)
 
-    def _is_tool_provider(self, step: Any) -> bool:
-        if not hasattr(step, "output") or not isinstance(step.output, dict):
-            return False
-        return len(step.output) == 1 and "component_as_tool" in step.output
-
     def _build_and_add_hierarchy(self) -> list[Any]:
         if self.langchain_handler and hasattr(self.langchain_handler, "_traces_by_root"):
             langchain_traces = self.langchain_handler._traces_by_root
@@ -389,12 +387,14 @@ class OpenlayerTracer(BaseTracer):
         return {str(key): self._convert_to_openlayer_type(value) for key, value in io_dict.items()}
 
     def _convert_to_openlayer_type(self, value: Any) -> Any:
-        from langchain_core.documents import Document
-        from langchain_core.messages import BaseMessage
+        """Convert LangFlow/LangChain types to Openlayer-compatible primitives.
 
-        from langflow.schema.data import Data
-        from langflow.schema.message import Message
+        Args:
+            value: Input value to convert
 
+        Returns:
+            Converted value suitable for Openlayer ingestion
+        """
         if isinstance(value, dict):
             return {key: self._convert_to_openlayer_type(val) for key, val in value.items()}
 
@@ -413,17 +413,12 @@ class OpenlayerTracer(BaseTracer):
         if isinstance(value, Document):
             return value.page_content
 
-        if isinstance(value, (types.GeneratorType | types.NoneType)):
-            return str(value)
-
-        if hasattr(value, "model_dump") and callable(value.model_dump):
-            if isinstance(value, type):
+        # Handle Pydantic models
+        if hasattr(value, "model_dump") and callable(value.model_dump) and not isinstance(value, type):
+            try:
+                return self._convert_to_openlayer_type(value.model_dump())
+            except Exception:  # noqa: BLE001, S110
                 pass
-            else:
-                try:
-                    return self._convert_to_openlayer_type(value.model_dump())
-                except Exception:  # noqa: BLE001, S110
-                    pass
 
         # Handle LangChain tools
         if hasattr(value, "name") and hasattr(value, "description"):
@@ -435,7 +430,7 @@ class OpenlayerTracer(BaseTracer):
             except Exception:  # noqa: BLE001, S110
                 pass
 
-        # Fallback to string
+        # Fallback to string for all other types (including generators, None, etc.)
         try:
             return str(value)
         except Exception:  # noqa: BLE001
