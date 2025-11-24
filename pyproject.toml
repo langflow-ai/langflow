@@ -134,7 +134,7 @@ dependencies = [
     "fastparquet>=2024.11.0,<2025.0.0",
     "traceloop-sdk>=0.43.1,<1.0.0",
     "vlmrun[all]>=0.2.0",
-    "cuga==0.1.7",
+    "cuga==0.1.10",
     "agent-lifecycle-toolkit~=0.4.1",
     "astrapy>=2.1.0,<3.0.0",
     "langchain-polaris-ai-datainsight>=1.0.0",
