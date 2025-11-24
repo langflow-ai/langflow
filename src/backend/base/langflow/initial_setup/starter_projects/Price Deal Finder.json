@@ -1612,7 +1612,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.10.6"
+                    "version": "2.11.10"
                   },
                   {
                     "name": "lfx",
@@ -1774,6 +1774,7 @@
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
@@ -1917,6 +1918,7 @@
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": true,
                 "type": "int",
                 "value": ""
               },
@@ -1999,6 +2001,7 @@
                   "gpt-4-turbo-preview",
                   "gpt-4",
                   "gpt-3.5-turbo",
+                  "gpt-5.1",
                   "gpt-5",
                   "gpt-5-mini",
                   "gpt-5-nano",
@@ -2137,6 +2140,7 @@
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },

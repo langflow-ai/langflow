@@ -408,6 +408,9 @@ async def update_project_mcp_settings(
             should_start_composer = False
             should_stop_composer = False
 
+            # Store original auth settings in case we need to rollback
+            original_auth_settings = project.auth_settings
+
             # Update project-level auth settings with encryption
             if "auth_settings" in request.model_fields_set and request.auth_settings is not None:
                 auth_result = handle_auth_settings_update(
@@ -418,8 +421,6 @@ async def update_project_mcp_settings(
                 should_handle_mcp_composer = auth_result["should_handle_composer"]
                 should_start_composer = auth_result["should_start_composer"]
                 should_stop_composer = auth_result["should_stop_composer"]
-
-            session.add(project)
 
             # Query flows in the project
             flows = (await session.exec(select(Flow).where(Flow.folder_id == project_id))).all()
@@ -439,13 +440,17 @@ async def update_project_mcp_settings(
                     session.add(flow)
                     updated_flows.append(flow)
 
-            await session.commit()
-
             response: dict[str, Any] = {
                 "message": f"Updated MCP settings for {len(updated_flows)} flows and project auth settings"
             }
 
+            # Handle MCP Composer start/stop before committing auth settings
             if should_handle_mcp_composer:
+                # Get MCP Composer service once for all branches
+                mcp_composer_service: MCPComposerService = cast(
+                    MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+                )
+
                 if should_start_composer:
                     await logger.adebug(
                         f"Auth settings changed to OAuth for project {project.name} ({project_id}), "
@@ -457,23 +462,34 @@ async def update_project_mcp_settings(
                             auth_config = await _get_mcp_composer_auth_config(project)
                             await get_or_start_mcp_composer(auth_config, project.name, project_id)
                             composer_sse_url = await get_composer_sse_url(project)
+                            # Clear any previous error on success
+                            mcp_composer_service.clear_last_error(str(project_id))
                             response["result"] = {
                                 "project_id": str(project_id),
                                 "sse_url": composer_sse_url,
                                 "uses_composer": True,
                             }
                         except MCPComposerError as e:
+                            # Don't rollback auth settings - persist them so UI can show the error
+                            await logger.awarning(f"MCP Composer failed to start for project {project_id}: {e.message}")
+                            # Store the error message so it can be retrieved via composer-url endpoint
+                            mcp_composer_service.set_last_error(str(project_id), e.message)
                             response["result"] = {
                                 "project_id": str(project_id),
                                 "uses_composer": True,
                                 "error_message": e.message,
                             }
                         except Exception as e:
-                            # Unexpected errors
-                            await logger.aerror(f"Failed to get mcp composer URL for project {project_id}: {e}")
+                            # Rollback auth settings on unexpected errors
+                            await logger.aerror(
+                                f"Unexpected error starting MCP Composer for project {project_id}, "
+                                f"rolling back auth settings: {e}"
+                            )
+                            project.auth_settings = original_auth_settings
                             raise HTTPException(status_code=500, detail=str(e)) from e
                     else:
-                        # This shouldn't happen - we determined we should start composer but now we can't use it
+                        # OAuth is set but MCP Composer is disabled - save settings but return error
+                        # Don't rollback - keep the auth settings so they can be used when composer is enabled
                         await logger.aerror(
                             f"PATCH: OAuth set but MCP Composer is disabled in settings for project {project_id}"
                         )
@@ -487,10 +503,9 @@ async def update_project_mcp_settings(
                         f"Auth settings changed from OAuth for project {project.name} ({project_id}), "
                         "stopping MCP Composer"
                     )
-                    mcp_composer_service: MCPComposerService = cast(
-                        "MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE)
-                    )
                     await mcp_composer_service.stop_project_composer(str(project_id))
+                    # Clear any error when user explicitly disables OAuth
+                    mcp_composer_service.clear_last_error(str(project_id))
 
                     # Provide the direct SSE URL since we're no longer using composer
                     sse_url = await get_project_sse_url(project_id)
@@ -502,6 +517,10 @@ async def update_project_mcp_settings(
                         "sse_url": sse_url,
                         "uses_composer": False,
                     }
+
+            # Only commit if composer started successfully (or wasn't needed)
+            session.add(project)
+            await session.commit()
 
             return response
 
@@ -754,7 +773,22 @@ async def get_project_composer_url(
     """
     try:
         project = await verify_project_access(project_id, current_user)
+        mcp_composer_service: MCPComposerService = cast(
+            MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+        )
+
         if not should_use_mcp_composer(project):
+            # Check if there's a recent error from a failed OAuth attempt
+            last_error = mcp_composer_service.get_last_error(str(project_id))
+
+            # If there's a recent error, return it even though OAuth is not currently active
+            # This happens when OAuth was attempted but rolled back due to an error
+            if last_error:
+                return {
+                    "project_id": str(project_id),
+                    "uses_composer": False,
+                    "error_message": last_error,
+                }
             return {
                 "project_id": str(project_id),
                 "uses_composer": False,
@@ -768,6 +802,8 @@ async def get_project_composer_url(
         try:
             await get_or_start_mcp_composer(auth_config, project.name, project_id)
             composer_sse_url = await get_composer_sse_url(project)
+            # Clear any previous error on success
+            mcp_composer_service.clear_last_error(str(project_id))
             return {"project_id": str(project_id), "sse_url": composer_sse_url, "uses_composer": True}
         except MCPComposerError as e:
             return {"project_id": str(project_id), "uses_composer": True, "error_message": e.message}

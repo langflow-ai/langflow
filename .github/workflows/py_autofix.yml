@@ -12,9 +12,10 @@ env:
 jobs:
   lint:
     name: Run Ruff Check and Format
+    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -29,9 +30,10 @@ jobs:
 
   update-starter-projects:
     name: Update Starter Projects
+    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -53,9 +55,10 @@ jobs:
 
   update-component-index:
     name: Update Component Index
+    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
