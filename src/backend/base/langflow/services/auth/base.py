@@ -416,7 +416,7 @@ class AuthServiceBase(Service, abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_user_id_from_token(self, token: str) -> UUID:
+    def get_user_id_from_token(self, token: str) -> "UUID":
         """Extract the user ID from a token.
 
         Args:
