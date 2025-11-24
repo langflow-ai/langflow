@@ -90,7 +90,7 @@ dependencies = [
     "langchain-milvus==0.1.7",
     "langchain-mongodb==0.7.0",
     "langchain-nvidia-ai-endpoints==0.3.8",
-    "nemo-microservices>=1.2.0",
+    "nemo-microservices==1.4.0",
     "langchain-google-calendar-tools==0.0.1",
     "langchain-google-community==2.0.3",
     "langchain-elasticsearch==0.3.0",
