@@ -1,0 +1,220 @@
+import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { useGetSystemMessageGenQuery } from "@/controllers/API/queries/assistant";
+import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
+import useAssistantManagerStore from "@/stores/assistantManagerStore";
+import { useFolderStore } from "@/stores/foldersStore";
+import { targetHandleType } from "@/types/flow";
+import Pill from "./pills";
+
+interface AssistantNudgesProps {
+  type: "field" | "flow" | "project" | "header";
+  setNudgesOpen;
+  handleOnNewValue: handleOnNewValueType;
+}
+
+export const AssistantNudges: React.FC<AssistantNudgesProps> = ({
+  type,
+  setNudgesOpen,
+  handleOnNewValue,
+}) => {
+  const getComponentNudges = {
+    nudges: [
+      {
+        id: "addChatInput",
+        display_text: "Connect a Chat Input",
+        description:
+          "Adds a Chat Input component to your flow if one does not exist and connects it to this node.",
+        type: "connect_component",
+        trigger: {
+          action: "connect_component",
+          componentId: "ChatInput",
+        },
+        ui: {
+          icon: "messages-square",
+          variant_type: "pill",
+          variant_size: "small",
+        },
+      },
+      {
+        id: "addPromptTemplate",
+        display_text: "Connect a Prompt Template",
+        description:
+          "Adds a Prompt Template component to your flow if one does not exist and connects it to this node.",
+        type: "connect_component",
+        trigger: {
+          action: "connect_component",
+          componentId: "Prompt Template",
+        },
+        ui: {
+          icon: "braces",
+          variant_type: "pill",
+          variant_size: "small",
+        },
+      },
+      {
+        id: "exploreTemplates",
+        display_text: "Explore Templates",
+        description:
+          "Jumpstart your project with pre-built Langflow templates.",
+        type: "route",
+        trigger: {
+          action: "navigate",
+          payload: { path: "/templates" },
+        },
+        ui: {
+          icon: "layout-template",
+          variant_type: "pill",
+          variant_size: "small",
+        },
+      },
+      {
+        id: "docsNudge",
+        display_text: "Read Langflow Docs",
+        description:
+          "Learn about nodes, connections, and advanced flow building.",
+        type: "button_preview",
+        trigger: {
+          action: "navigate",
+          payload: { path: "https://docs.langflow.org" },
+        },
+        ui: {
+          icon: "book-open",
+          variant_type: "pill",
+          variant_size: "small",
+        },
+      },
+      {
+        id: "feedbackPrompt",
+        display_text: "Share Feedback",
+        description:
+          "Have ideas or issues with your Langflow experience? Let's improve together.",
+        type: "chat_input",
+        trigger: {
+          action: "send_message",
+          payload: {
+            text: "I'd like to share feedback about my Langflow experience.",
+          },
+        },
+        ui: {
+          icon: "message-square",
+          variant_type: "pill",
+          variant_size: "small",
+        },
+      },
+    ],
+  };
+  const flowId = useGetFlowId();
+  const { folderId } = useParams();
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const projectId = folderId ?? myCollectionId ?? "";
+  const [selectedMode, setSelectedMode] = useState("PROMPT");
+  const [userInput, setUserInput] = useState("");
+  const [promptOutput, setPromptOutput] = useState("Generate a Prompt");
+  const { selectedCompData } = useAssistantManagerStore();
+
+  const { isFetching, refetch: prompt } = useGetSystemMessageGenQuery({
+    compId: selectedCompData?.id,
+    flowId,
+    fieldName: selectedCompData?.fieldName,
+    inputValue: userInput,
+  });
+
+  const onGenButtonClick = async () => {
+    switch (type) {
+      case "field": {
+        const result = await prompt();
+        setPromptOutput(
+          result.data?.data?.outputs[0]?.outputs[0]?.outputs?.message?.message,
+        );
+        break;
+      }
+      case "header":
+      default:
+        break;
+    }
+  };
+  const onReplaecuttonClick = async () => {
+    switch (type) {
+      case "field": {
+        handleOnNewValue({
+          value: promptOutput,
+        });
+        setNudgesOpen(false);
+        break;
+      }
+      case "header":
+      default:
+        break;
+    }
+  };
+
+  return (
+    <>
+      <Tabs value={selectedMode} onValueChange={setSelectedMode}>
+        <TabsList>
+          <TabsTrigger data-testid="prompt-tab" value="PROMPT">
+            Prompt
+          </TabsTrigger>
+          <TabsTrigger data-testid="component-tab" value="COMPONENT">
+            Component
+          </TabsTrigger>
+        </TabsList>
+        <div className="overflow-hidden rounded-lg border border-border">
+          <TabsContent value="PROMPT">
+            <div className="flex flex-col gap-2">
+              <Label className="!text-mmd">TODO USER INPUT HELPER TEXT</Label>
+              <Textarea
+                value={userInput}
+                data-testid="prompt-user-input"
+                onChange={(e) => setUserInput(e.target.value)}
+                className="min-h-[50px] font-mono text-mmd"
+                placeholder="Prompt Mode"
+              />
+              <Label className="!text-mmd">
+                TODO PROMPT OUTPUT HELPER TEXT
+              </Label>
+              <Textarea
+                value={promptOutput}
+                data-testid="prompt-user-input"
+                onChange={(e) => setPromptOutput(e.target.value)}
+                className="min-h-[50px] font-mono text-mmd"
+                placeholder="Prompt Mode"
+              />
+              <div>
+                <Button variant="secondary" onClick={onGenButtonClick}>
+                  Generate Prompt
+                </Button>
+                <Button variant="destructive" onClick={onReplaecuttonClick}>
+                  Replace with Prompt
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
+          <TabsContent value="COMPONENT">
+            <div className="flex flex-col gap-2">
+              <Label className="!text-mmd">TODO COMPONENT HELPER TEXT</Label>
+              <Textarea
+                value={userInput}
+                data-testid="component-user-input"
+                onChange={(e) => setUserInput(e.target.value)}
+                className="min-h-[25px] font-mono text-mmd"
+                placeholder="Component Mode"
+              />
+              {getComponentNudges.nudges.map((nudge) => {
+                return (
+                  <Pill nudge={nudge} setNudgesOpen={setNudgesOpen}></Pill>
+                );
+              })}
+            </div>
+          </TabsContent>
+        </div>
+      </Tabs>
+    </>
+  );
+};
