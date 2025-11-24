@@ -10,8 +10,8 @@ if TYPE_CHECKING:
         FAISS,
         Notion,
         agentql,
-        agents,
         aiml,
+        altk,
         amazon,
         anthropic,
         apify,
@@ -31,6 +31,7 @@ if TYPE_CHECKING:
         confluence,
         couchbase,
         crewai,
+        cuga,
         custom_component,
         data,
         datastax,
@@ -113,8 +114,8 @@ if TYPE_CHECKING:
 _dynamic_imports = {
     # Category modules (existing functionality)
     "agentql": "__module__",
-    "agents": "__module__",
     "aiml": "__module__",
+    "altk": "__module__",
     "amazon": "__module__",
     "anthropic": "__module__",
     "apify": "__module__",
@@ -134,6 +135,7 @@ _dynamic_imports = {
     "confluence": "__module__",
     "couchbase": "__module__",
     "crewai": "__module__",
+    "cuga": "__module__",
     "custom_component": "__module__",
     "data": "__module__",
     "datastax": "__module__",
@@ -246,8 +248,8 @@ __all__ = [
     "FAISS",
     "Notion",
     "agentql",
-    "agents",
     "aiml",
+    "altk",
     "amazon",
     "anthropic",
     "apify",
@@ -267,6 +269,7 @@ __all__ = [
     "confluence",
     "couchbase",
     "crewai",
+    "cuga",
     "custom_component",
     "data",
     "datastax",
@@ -388,10 +391,10 @@ def __getattr__(attr_name: str) -> Any:
         elif "." in module_path:
             # This is a component import (e.g., components.AgentComponent -> agents.agent)
             module_name, component_file = module_path.split(".", 1)
-            # Check if this is an alias module (agents, data, helpers, logic, models)
+            # Check if this is an alias module (data, helpers, logic, models)
             # These modules forward to other modules, so we need to import directly from the module
             # instead of trying to import from a submodule that doesn't exist
-            if module_name in ("agents", "data", "helpers", "logic", "models"):
+            if module_name in ("data", "helpers", "logic", "models"):
                 # For alias modules, import the module and get the component directly
                 alias_module = import_mod(module_name, "__module__", __spec__.parent)
                 result = getattr(alias_module, attr_name)

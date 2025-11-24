@@ -61,7 +61,7 @@ test(
       "disclosure-llm operations",
       "disclosure-files",
       "disclosure-processing",
-      "disclosure-flow controls",
+      "disclosure-flow control",
       "disclosure-utilities",
       "disclosure-bundles-langchain",
       "disclosure-bundles-assemblyai",
