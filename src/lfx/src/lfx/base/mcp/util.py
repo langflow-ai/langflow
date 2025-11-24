@@ -285,6 +285,26 @@ def _convert_camel_case_to_snake_case(provided_args: dict[str, Any], arg_schema:
     return converted_args
 
 
+async def _convert_string_objects_to_objects(
+    provided_args: dict[str, Any], arg_schema: type[BaseModel]
+) -> dict[str, Any]:
+    """Convert object string fields to object if the schema expects an object field."""
+    # Convert objects as strings to objects
+    for key, value in provided_args.items():
+        # Skip if field doesn't exist in schema
+        if key not in arg_schema.model_fields:
+            continue
+        # Parse JSON strings for AnonModel fields
+        if isinstance(value, str) and "AnonModel" in str(arg_schema.model_fields[key].annotation):
+            try:
+                provided_args[key] = json.loads(value)
+            except json.JSONDecodeError as e:
+                # Let validation handle the error with better context
+                await logger.awarning(f"Failed to parse JSON for field '{key}': {e}")
+
+    return provided_args
+
+
 def _handle_tool_validation_error(
     e: Exception, tool_name: str, provided_args: dict[str, Any], arg_schema: type[BaseModel]
 ) -> None:
@@ -316,6 +336,7 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
             provided_args[field_names[i]] = arg
         # Merge in keyword arguments
         provided_args.update(kwargs)
+        provided_args = await _convert_string_objects_to_objects(provided_args, arg_schema)
         provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
         # Validate input and fill defaults for missing optional fields
         try:
