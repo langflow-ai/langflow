@@ -73,13 +73,14 @@ class StorageService(Service):
         self._ready = True
 
     @abstractmethod
-    async def save_file(self, flow_id: str, file_name: str, data: bytes) -> None:
+    async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:
         """Save a file to storage.
 
         Args:
             flow_id: The flow/user identifier for namespacing
             file_name: The name of the file to save
             data: The file content as bytes
+            append: If True, append to existing file instead of overwriting.
 
         Raises:
             Exception: If the file cannot be saved

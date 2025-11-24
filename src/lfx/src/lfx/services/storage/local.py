@@ -57,7 +57,7 @@ class LocalStorageService(StorageService):
         """Build the full path of a file in the local storage."""
         return str(self.data_dir / flow_id / file_name)
 
-    async def save_file(self, flow_id: str, file_name: str, data: bytes) -> None:
+    async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:
         """Save a file in the local storage.
 
         Args:
@@ -75,12 +75,15 @@ class LocalStorageService(StorageService):
         file_path = folder_path / file_name
 
         try:
-            async with async_open(str(file_path), "wb") as f:
+            mode = "ab" if append else "wb"
+            async with async_open(str(file_path), mode) as f:
                 await f.write(data)
-            await logger.ainfo(f"File {file_name} saved successfully in flow {flow_id}.")
+            action = "appended to" if append else "saved"
+            await logger.ainfo(f"File {file_name} {action} successfully in flow {flow_id}.")
         except Exception:
             logger.exception(f"Error saving file {file_name} in flow {flow_id}")
             raise
+
 
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """Retrieve a file from the local storage.
