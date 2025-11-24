@@ -427,14 +427,14 @@ export function isValidConnection(
   // Check if target is an loop input (loop component)
   const isLoopInput = !!targetHandleObject.output_types;
 
-  // For loop inputs, allow the original output types plus Message type
+  // For loop inputs, check if source types match any of the configured target output_types
+  // (which already includes original type + loop_types from the output configuration)
   const loopInputTypeCheck =
     isLoopInput &&
     (sourceHandleObject.output_types.some(
-      (t) => targetHandleObject.output_types?.includes(t) || t === "Message",
+      (t) => targetHandleObject.output_types?.includes(t),
     ) ||
-      targetHandleObject.output_types?.includes(sourceHandleObject.dataType) ||
-      sourceHandleObject.dataType === "Message");
+      targetHandleObject.output_types?.includes(sourceHandleObject.dataType));
   if (
     targetHandleObject.inputTypes?.some(
       (n) => n === sourceHandleObject.dataType,

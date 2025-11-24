@@ -34,6 +34,7 @@ import {
   logTypeIsError,
   logTypeIsUnknown,
 } from "../../../../utils/utils";
+import { nodeColorsName } from "../../../../utils/styleUtils";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputComponent from "../OutputComponent";
 import OutputModal from "../outputModal";
@@ -270,13 +271,20 @@ function NodeOutputField({
   const outputInspection = useShortcutsStore((state) => state.outputInspection);
   useHotkeys(outputInspection, handleOpenOutputModal, { preventDefault: true });
 
-  // Create separate colors for loop input (left handle) - should be white
+  // Create separate colors for loop input (left handle)
+  // Derive colors from loop_types dynamically instead of hardcoding
   const loopInputColorName = useMemo(() => {
     if (data.node?.outputs![index].allows_loop) {
-      // Add "indigo" (Message color) to make it multi-color (white)
-      return colorName && !colorName.includes("indigo")
-        ? [...colorName, "indigo"]
-        : colorName || ["gray", "indigo"];
+      const output = data.node?.outputs![index];
+      const loopTypeColors = output.loop_types
+        ?.map((type) => nodeColorsName[type] ?? nodeColorsName.unknown)
+        .filter((color) => color) ?? [];
+
+      if (loopTypeColors.length > 0) {
+        // Combine original color with loop type colors, removing duplicates
+        const combinedColors = colorName ? [...colorName, ...loopTypeColors] : loopTypeColors;
+        return Array.from(new Set(combinedColors));
+      }
     }
     return colorName;
   }, [colorName, data.node?.outputs, index]);

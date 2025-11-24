@@ -152,12 +152,14 @@ class Edge:
 
         # Check if this is an loop input (loop target handle with output_types)
         is_loop_input = hasattr(self.target_handle, "input_types") and self.target_handle.input_types
+        loop_input_types = []
 
         if is_loop_input:
-            # For loop inputs, accept both the declared types AND Message type
-            loop_types = [*list(self.target_handle.input_types), "Message"]
+            # For loop inputs, use the configured input_types
+            # (which already includes original type + loop_types from frontend)
+            loop_input_types = list(self.target_handle.input_types)
             self.valid = any(
-                any(output_type in loop_types for output_type in output["types"]) for output in self.source_types
+                any(output_type in loop_input_types for output_type in output["types"]) for output in self.source_types
             )
             # Find the first matching type
             self.matched_type = next(
@@ -165,7 +167,7 @@ class Edge:
                     output_type
                     for output in self.source_types
                     for output_type in output["types"]
-                    if output_type in loop_types
+                    if output_type in loop_input_types
                 ),
                 None,
             )
@@ -195,7 +197,7 @@ class Edge:
         no_matched_type = self.matched_type is None
         if no_matched_type:
             logger.debug(self.source_types)
-            logger.debug(self.target_reqs if not is_loop_input else loop_types)
+            logger.debug(self.target_reqs if not is_loop_input else loop_input_types)
             msg = f"Edge between {source.vertex_type} and {target.vertex_type} has no matched type."
             raise ValueError(msg)
 
