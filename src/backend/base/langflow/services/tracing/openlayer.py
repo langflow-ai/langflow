@@ -472,6 +472,7 @@ class OpenlayerTracer(BaseTracer):
 
             # Store reference to handler
             self.langchain_handler = handler
+            return handler
         except Exception:  # noqa: BLE001
             return None
         else:
