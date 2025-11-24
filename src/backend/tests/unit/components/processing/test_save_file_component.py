@@ -1,7 +1,6 @@
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pandas as pd
 import pytest
 from lfx.components.files_and_knowledge.save_file import SaveToFileComponent
 from lfx.schema import Data, DataFrame, Message
