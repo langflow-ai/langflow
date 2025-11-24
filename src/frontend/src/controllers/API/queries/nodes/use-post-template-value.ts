@@ -37,7 +37,9 @@ export const usePostTemplateValue: useMutationFunctionType<
   const { mutate } = UseRequestProcessor();
   const getNode = useFlowStore((state) => state.getNode);
   const flowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const folderId = useFlowsManagerStore((state) => state.currentFlow?.folder_id);
+  const folderId = useFlowsManagerStore(
+    (state) => state.currentFlow?.folder_id,
+  );
 
   const postTemplateValueFn = async (
     payload: IPostTemplateValue,
@@ -47,8 +49,8 @@ export const usePostTemplateValue: useMutationFunctionType<
     if (!template) return;
     const preparedTemplate = {
       ...template,
-      ...(flowId ? { _frontend_node_flow_id: {value: flowId}  } : {}),
-      ...(folderId ? { _frontend_node_folder_id: {value: folderId}  } : {}),
+      ...(flowId ? { _frontend_node_flow_id: { value: flowId } } : {}),
+      ...(folderId ? { _frontend_node_folder_id: { value: folderId } } : {}),
       is_refresh: payload.is_refresh,
     };
     const lastUpdated = new Date().toISOString();

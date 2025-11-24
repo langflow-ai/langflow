@@ -114,7 +114,14 @@ export default function Dropdown({
   // Utility functions
   const filterMetadataKeys = (
     metadata: Record<string, any> = {},
-    excludeKeys: string[] = ["api_endpoint", "icon", "status", "org_id", "id", "updated_at"],
+    excludeKeys: string[] = [
+      "api_endpoint",
+      "icon",
+      "status",
+      "org_id",
+      "id",
+      "updated_at",
+    ],
   ) => {
     return Object.fromEntries(
       Object.entries(metadata).filter(([key]) => !excludeKeys.includes(key)),
@@ -271,10 +278,10 @@ export default function Dropdown({
       handleNodeClass,
       postTemplateValue,
       setErrorData,
-      undefined,  // parameterName
-      undefined,  // callback
-      undefined,  // toolMode
-      true,       // isRefresh
+      undefined, // parameterName
+      undefined, // callback
+      undefined, // toolMode
+      true, // isRefresh
     )?.then(() => {
       setTimeout(() => {
         setRefreshOptions(false);
@@ -287,7 +294,13 @@ export default function Dropdown({
 
     const metadata = filteredMetadata[index];
     const metadataEntries = Object.entries(metadata)
-      .filter(([key, value]) => value !== null && key !== "icon" && key !== "id" && key !== "updated_at")
+      .filter(
+        ([key, value]) =>
+          value !== null &&
+          key !== "icon" &&
+          key !== "id" &&
+          key !== "updated_at",
+      )
       .map(([key, value]) => {
         const displayValue =
           typeof value === "string" && value.length > 20
@@ -498,7 +511,12 @@ export default function Dropdown({
                 <CommandItem
                   value={option}
                   onSelect={(currentValue) => {
-                    onSelect(currentValue, undefined, undefined, filteredMetadata?.[index]);
+                    onSelect(
+                      currentValue,
+                      undefined,
+                      undefined,
+                      filteredMetadata?.[index],
+                    );
                     setOpen(false);
                     setWaitingForResponse(false);
                   }}

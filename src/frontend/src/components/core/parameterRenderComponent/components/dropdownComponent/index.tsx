@@ -24,10 +24,15 @@ export default function DropdownComponent({
   hasRefreshButton,
   ...baseInputProps
 }: InputProps<string, DropDownComponentType>) {
-  const onChange = (value: any, dbValue?: boolean, skipSnapshot?: boolean, selectedMetadata?: any) => {
-    const changes: Record<string, any> = { 
-      value, 
-      load_from_db: dbValue 
+  const onChange = (
+    value: any,
+    dbValue?: boolean,
+    skipSnapshot?: boolean,
+    selectedMetadata?: any,
+  ) => {
+    const changes: Record<string, any> = {
+      value,
+      load_from_db: dbValue,
     };
     // If metadata provided, include it as selected_metadata
     if (selectedMetadata !== undefined) {
