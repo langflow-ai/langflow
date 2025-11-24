@@ -275,197 +275,192 @@ class TestNVIDIANeMoGuardrailsComponent:
             assert metadata[0]["description"] == "Guardrails configuration"
 
     @pytest.mark.asyncio
-    async def test_text_response(self, component):
-        """Test text_response in check mode."""
-        component.validation_mode = "input"
-        component.input_value = "Test input"
-
-        with patch.object(component, "process", new_callable=AsyncMock) as mock_process:
-            mock_process.return_value = {
-                "validated_output": Message(text="Validated input", error=False, category="message")
-            }
-
-            result = await component.text_response()
-
-            assert result.text == "Validated input"
-            assert result.error is False
-            assert result.category == "message"
-            mock_process.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_text_response_error(self, component):
-        """Test text_response with validation error."""
-        component.validation_mode = "input"
-        component.input_value = "Blocked input"
-
-        with patch.object(component, "process", new_callable=AsyncMock) as mock_process:
-            mock_process.return_value = {
-                "validated_output": Message(text="I cannot process that input.", error=True, category="error")
-            }
-
-            result = await component.text_response()
-
-            assert result.text == "I cannot process that input."
-            assert result.error is True
-            assert result.category == "error"
-            mock_process.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_validated_output_method(self, component):
-        """Test the validated_output method returns correct Message structure."""
-        component.validation_mode = "input"
-        component.input_value = "Test input"
-
-        with patch.object(component, "process", new_callable=AsyncMock) as mock_process:
-            mock_process.return_value = {
-                "validated_output": Message(text="Test input", error=False, category="message")
-            }
-
-            result = await component.validated_output()
-
-            assert result.text == "Test input"
-            assert result.error is False
-            assert result.category == "message"
-            mock_process.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_validated_output_method_error(self, component):
-        """Test the validated_output method with validation error."""
-        component.validation_mode = "input"
-        component.input_value = "Blocked input"
-
-        with patch.object(component, "process", new_callable=AsyncMock) as mock_process:
-            mock_process.return_value = {
-                "validated_output": Message(text="I cannot process that input.", error=True, category="error")
-            }
-
-            result = await component.validated_output()
-
-            assert result.text == "I cannot process that input."
-            assert result.error is True
-            assert result.category == "error"
-            mock_process.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_process_validation_success_input_mode(self, component):
-        """Test process method with successful input validation."""
+    async def test_passed_output_success(self, component):
+        """Test passed_output returns validated message when guardrails pass."""
         component.validation_mode = "input"
         component.input_value = "Test input"
         component.config = "test_config"
 
         # Mock the guardrail.check response for successful validation
         mock_response = Mock()
+        mock_response.status = "allowed"  # Primary method
         mock_response.blocked = False
-        mock_response.choices = []  # Empty choices list for successful validation
-        mock_response.choices = []  # Empty choices list for successful validation
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
             mock_client.guardrail.check = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            result = await component.process()
+            result = await component.passed_output()
 
-            assert "validated_output" in result
-            validated_output = result["validated_output"]
-            assert validated_output.text == "Test input"
-            assert validated_output.error is False
-            assert validated_output.category == "message"
+            assert result.text == "Test input"
+            assert result.error is False
+            assert result.category == "message"
+
+    @pytest.mark.asyncio
+    async def test_passed_output_blocked(self, component):
+        """Test passed_output returns empty message when guardrails block."""
+        component.validation_mode = "input"
+        component.input_value = "Blocked input"
+        component.config = "test_config"
+
+        # Mock the guardrail.check response for blocked validation
+        mock_response = Mock()
+        mock_response.status = "blocked"  # Primary method
+
+        with patch.object(component, "get_nemo_client") as mock_get_client:
+            mock_client = Mock()
+            mock_client.guardrail.check = AsyncMock(return_value=mock_response)
+            mock_get_client.return_value = mock_client
+
+            result = await component.passed_output()
+
+            # Should return empty message when blocked
+            assert result.text == ""
+
+    @pytest.mark.asyncio
+    async def test_passed_output_success_input_mode(self, component):
+        """Test passed_output with successful input validation."""
+        component.validation_mode = "input"
+        component.input_value = "Test input"
+        component.config = "test_config"
+
+        # Mock the guardrail.check response for successful validation
+        mock_response = Mock()
+        mock_response.status = "allowed"  # Primary method
+        mock_response.blocked = False
+
+        with patch.object(component, "get_nemo_client") as mock_get_client:
+            mock_client = Mock()
+            mock_client.guardrail.check = AsyncMock(return_value=mock_response)
+            mock_get_client.return_value = mock_client
+
+            result = await component.passed_output()
+
+            assert result.text == "Test input"
+            assert result.error is False
+            assert result.category == "message"
             assert component.status == "Input validated successfully"
 
             # Verify the guardrail.check was called with correct parameters
             mock_client.guardrail.check.assert_called_once_with(
                 messages=[{"role": "user", "content": "Test input"}],
+                model="nvidia/llama-3.1-8b-instruct",
                 guardrails={"config_id": "test_config"},
                 extra_headers=component.get_auth_headers(),
             )
 
     @pytest.mark.asyncio
-    async def test_process_validation_success_output_mode(self, component):
-        """Test process method with successful output validation."""
+    async def test_passed_output_success_output_mode(self, component):
+        """Test passed_output with successful output validation."""
         component.validation_mode = "output"
         component.input_value = "Test output"
         component.config = "test_config"
 
         # Mock the guardrail.check response for successful validation
         mock_response = Mock()
+        mock_response.status = "allowed"  # Primary method
         mock_response.blocked = False
-        mock_response.choices = []  # Empty choices list for successful validation
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
             mock_client.guardrail.check = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            result = await component.process()
+            result = await component.passed_output()
 
-            assert "validated_output" in result
-            validated_output = result["validated_output"]
-            assert validated_output.text == "Test output"
-            assert validated_output.error is False
-            assert validated_output.category == "message"
+            assert result.text == "Test output"
+            assert result.error is False
+            assert result.category == "message"
             assert component.status == "Output validated successfully"
 
             # Verify the guardrail.check was called with correct parameters
             mock_client.guardrail.check.assert_called_once_with(
                 messages=[{"role": "assistant", "content": "Test output"}],
+                model="nvidia/llama-3.1-8b-instruct",
                 guardrails={"config_id": "test_config"},
                 extra_headers=component.get_auth_headers(),
             )
 
     @pytest.mark.asyncio
-    async def test_process_validation_blocked_input_mode(self, component):
-        """Test process method with blocked input validation."""
+    async def test_blocked_output_blocked_input_mode(self, component):
+        """Test blocked_output with blocked input validation."""
         component.validation_mode = "input"
         component.input_value = "Blocked input"
         component.config = "test_config"
 
         # Mock the guardrail.check response for blocked validation
         mock_response = Mock()
-        mock_response.blocked = True
+        mock_response.status = "blocked"  # Primary method
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
             mock_client.guardrail.check = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            result = await component.process()
+            result = await component.blocked_output()
 
-            assert "validated_output" in result
-            validated_output = result["validated_output"]
-            assert validated_output.text == "I cannot process that input."
-            assert validated_output.error is True
-            assert validated_output.category == "error"
+            assert result.text == "I cannot process that input."
+            assert result.error is True
+            assert result.category == "error"
             assert component.status == "Input blocked by guardrails"
+            # Verify content_blocks are present
+            assert result.content_blocks is not None
+            assert len(result.content_blocks) > 0
 
     @pytest.mark.asyncio
-    async def test_process_validation_blocked_output_mode(self, component):
-        """Test process method with blocked output validation."""
+    async def test_blocked_output_blocked_output_mode(self, component):
+        """Test blocked_output with blocked output validation."""
         component.validation_mode = "output"
         component.input_value = "Blocked output"
         component.config = "test_config"
 
         # Mock the guardrail.check response for blocked validation
         mock_response = Mock()
-        mock_response.blocked = True
+        mock_response.status = "blocked"  # Primary method
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
             mock_client.guardrail.check = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            result = await component.process()
+            result = await component.blocked_output()
 
-            assert "validated_output" in result
-            validated_output = result["validated_output"]
-            assert validated_output.text == "I cannot process that output."
-            assert validated_output.error is True
-            assert validated_output.category == "error"
+            assert result.text == "I cannot process that output."
+            assert result.error is True
+            assert result.category == "error"
             assert component.status == "Output blocked by guardrails"
+            # Verify content_blocks are present
+            assert result.content_blocks is not None
+            assert len(result.content_blocks) > 0
 
     @pytest.mark.asyncio
-    async def test_process_validation_fallback_choices_format(self, component):
-        """Test process method with fallback choices format when blocked field not available."""
+    async def test_blocked_output_fallback_blocked_field(self, component):
+        """Test blocked_output with fallback blocked field when status not available."""
+        component.validation_mode = "input"
+        component.input_value = "Test input"
+        component.config = "test_config"
+
+        # Mock the guardrail.check response with blocked field (fallback)
+        mock_response = Mock()
+        mock_response.status = None  # Simulate missing status field
+        mock_response.blocked = True  # Fallback to blocked field
+
+        with patch.object(component, "get_nemo_client") as mock_get_client:
+            mock_client = Mock()
+            mock_client.guardrail.check = AsyncMock(return_value=mock_response)
+            mock_get_client.return_value = mock_client
+
+            result = await component.blocked_output()
+
+            assert result.text == "I cannot process that input."
+            assert result.error is True
+            assert result.category == "error"
+            assert component.status == "Input blocked by guardrails"
+
+    @pytest.mark.asyncio
+    async def test_blocked_output_fallback_choices_format(self, component):
+        """Test blocked_output with fallback choices format when status/blocked not available."""
         component.validation_mode = "input"
         component.input_value = "Test input"
         component.config = "test_config"
@@ -474,6 +469,7 @@ class TestNVIDIANeMoGuardrailsComponent:
         mock_choice = Mock()
         mock_choice.finish_reason = "guardrail_blocked"
         mock_response = Mock()
+        mock_response.status = None  # Simulate missing status field
         mock_response.blocked = None  # Simulate missing blocked field
         mock_response.choices = [mock_choice]
 
@@ -482,56 +478,74 @@ class TestNVIDIANeMoGuardrailsComponent:
             mock_client.guardrail.check = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            result = await component.process()
+            result = await component.blocked_output()
 
-            assert "validated_output" in result
-            validated_output = result["validated_output"]
-            assert validated_output.text == "I cannot process that input."
-            assert validated_output.error is True
-            assert validated_output.category == "error"
+            assert result.text == "I cannot process that input."
+            assert result.error is True
+            assert result.category == "error"
             assert component.status == "Input blocked by guardrails"
 
     @pytest.mark.asyncio
-    async def test_process_validation_success_fallback_choices_format(self, component):
-        """Test process method with successful validation using fallback choices format."""
+    async def test_blocked_output_passed_validation(self, component):
+        """Test blocked_output returns empty message when validation passes."""
         component.validation_mode = "input"
         component.input_value = "Test input"
         component.config = "test_config"
 
-        # Mock the guardrail.check response with choices format (fallback) - no blocking
-        mock_choice = Mock()
-        mock_choice.finish_reason = "stop"  # Normal completion, not blocked
+        # Mock the guardrail.check response for successful validation
         mock_response = Mock()
-        mock_response.blocked = None  # Simulate missing blocked field
-        mock_response.choices = [mock_choice]
+        mock_response.status = "allowed"  # Primary method
+        mock_response.blocked = False
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
             mock_client.guardrail.check = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            result = await component.process()
+            result = await component.blocked_output()
 
-            assert "validated_output" in result
-            validated_output = result["validated_output"]
-            assert validated_output.text == "Test input"
-            assert validated_output.error is False
-            assert validated_output.category == "message"
-            assert component.status == "Input validated successfully"
+            # Should return empty message when validation passes
+            assert result.text == ""
 
     @pytest.mark.asyncio
-    async def test_process_validation_empty_input(self, component):
-        """Test process method with empty input."""
+    async def test_blocked_output_rails_status_blocked(self, component):
+        """Test blocked_output with rails_status indicating blocked."""
+        component.validation_mode = "input"
+        component.input_value = "Test input"
+        component.config = "test_config"
+
+        # Mock the guardrail.check response with rails_status indicating blocked
+        mock_rail_status = Mock()
+        mock_rail_status.status = "blocked"
+        mock_response = Mock()
+        mock_response.status = None  # No top-level status
+        mock_response.rails_status = {"content_safety": mock_rail_status}
+
+        with patch.object(component, "get_nemo_client") as mock_get_client:
+            mock_client = Mock()
+            mock_client.guardrail.check = AsyncMock(return_value=mock_response)
+            mock_get_client.return_value = mock_client
+
+            result = await component.blocked_output()
+
+            assert result.text == "I cannot process that input."
+            assert result.error is True
+            assert result.category == "error"
+
+    @pytest.mark.asyncio
+    async def test_validation_empty_input(self, component):
+        """Test validation with empty input."""
         component.validation_mode = "input"
         component.input_value = ""
         component.system_message = ""
+        component.config = "test_config"
 
         with pytest.raises(ValueError, match="The message you want to validate is empty"):
-            await component.process()
+            await component.passed_output()
 
     @pytest.mark.asyncio
-    async def test_process_validation_with_system_message(self, component):
-        """Test process method with system message included."""
+    async def test_passed_output_with_system_message(self, component):
+        """Test passed_output with system message included."""
         component.validation_mode = "input"
         component.input_value = "Test input"
         component.system_message = "System instruction"
@@ -539,49 +553,45 @@ class TestNVIDIANeMoGuardrailsComponent:
 
         # Mock the guardrail.check response for successful validation
         mock_response = Mock()
+        mock_response.status = "allowed"  # Primary method
         mock_response.blocked = False
-        mock_response.choices = []  # Empty choices list for successful validation
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
             mock_client.guardrail.check = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            result = await component.process()
+            result = await component.passed_output()
 
-            assert "validated_output" in result
-            validated_output = result["validated_output"]
             # Should include system message in the validated text
-            assert "System instruction" in validated_output.text
-            assert "Test input" in validated_output.text
+            assert "System instruction" in result.text
+            assert "Test input" in result.text
 
     @pytest.mark.asyncio
-    async def test_process_validation_with_message_object(self, component):
-        """Test process method with Message object input."""
+    async def test_passed_output_with_message_object(self, component):
+        """Test passed_output with Message object input."""
         component.validation_mode = "input"
         component.input_value = Message(text="Test message")
         component.config = "test_config"
 
         # Mock the guardrail.check response for successful validation
         mock_response = Mock()
+        mock_response.status = "allowed"  # Primary method
         mock_response.blocked = False
-        mock_response.choices = []  # Empty choices list for successful validation
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
             mock_client.guardrail.check = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            result = await component.process()
+            result = await component.passed_output()
 
-            assert "validated_output" in result
-            validated_output = result["validated_output"]
-            assert validated_output.text == "Test message"
-            assert validated_output.error is False
+            assert result.text == "Test message"
+            assert result.error is False
 
     @pytest.mark.asyncio
-    async def test_process_validation_api_error(self, component):
-        """Test process method with API error."""
+    async def test_validation_api_error(self, component):
+        """Test validation with API error."""
         component.validation_mode = "input"
         component.input_value = "Test input"
         component.config = "test_config"
@@ -592,11 +602,11 @@ class TestNVIDIANeMoGuardrailsComponent:
             mock_get_client.return_value = mock_client
 
             with pytest.raises(Exception, match="API Error"):
-                await component.process()
+                await component.passed_output()
 
     @pytest.mark.asyncio
-    async def test_process_validation_http_error_with_response(self, component):
-        """Test process method with HTTP error that has response details."""
+    async def test_validation_http_error_with_response(self, component):
+        """Test validation with HTTP error that has response details."""
         component.validation_mode = "input"
         component.input_value = "Test input"
         component.config = "test_config"
@@ -614,11 +624,11 @@ class TestNVIDIANeMoGuardrailsComponent:
             mock_get_client.return_value = mock_client
 
             with pytest.raises(Exception, match="HTTP Error"):
-                await component.process()
+                await component.passed_output()
 
     @pytest.mark.asyncio
-    async def test_process_validation_nemo_exception_message(self, component):
-        """Test process method with NeMo exception that has a message."""
+    async def test_validation_nemo_exception_message(self, component):
+        """Test validation with NeMo exception that has a message."""
         component.validation_mode = "input"
         component.input_value = "Test input"
         component.config = "test_config"
@@ -633,4 +643,4 @@ class TestNVIDIANeMoGuardrailsComponent:
             mock_get_client.return_value = mock_client
 
             with pytest.raises(ValueError, match="Guardrails configuration not found"):
-                await component.process()
+                await component.passed_output()

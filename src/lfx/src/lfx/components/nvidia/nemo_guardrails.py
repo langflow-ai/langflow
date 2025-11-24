@@ -246,6 +246,7 @@ class NVIDIANeMoGuardrailsComponent(Component):
     )
     icon = "NVIDIA"
     name = "NVIDIANemoGuardrails"
+    beta = True
     trace_type = "guardrails"
 
     inputs = [
@@ -790,18 +791,15 @@ class NVIDIANeMoGuardrailsComponent(Component):
 
             # Set the value in build_config - this is critical as it's used to initialize the component
             build_config["config"]["value"] = field_value
-            logger.debug(f"Set config value in build_config: {field_value}")
 
             # Also set it on the component instance to ensure it's available immediately
             # This helps avoid timing issues where the value isn't set before execution
             if hasattr(self, "_inputs") and "config" in self._inputs:
                 self._inputs["config"].value = field_value
-                logger.debug(f"Set config value on component instance: {field_value}")
 
             # Also set it in _parameters so it's available during component initialization
             if hasattr(self, "_parameters"):
                 self._parameters["config"] = field_value
-                logger.debug(f"Set config value in _parameters: {field_value}")
 
             return build_config
 
@@ -866,12 +864,6 @@ class NVIDIANeMoGuardrailsComponent(Component):
 
     def set_attributes(self, params: dict) -> None:
         """Override set_attributes to ensure config value is set on input object."""
-        # Log what params we're receiving, especially config
-        config_in_params = params.get("config")
-        logger.debug(
-            f"set_attributes called with config value: '{config_in_params}' (params keys: {list(params.keys())})"
-        )
-
         # Call parent implementation first
         super().set_attributes(params)
 
@@ -881,18 +873,8 @@ class NVIDIANeMoGuardrailsComponent(Component):
             config_value = params.get("config")
             if config_value:
                 self._inputs["config"].value = config_value
-                logger.debug(f"Set config value on input object in set_attributes: {config_value}")
             else:
                 logger.warning(f"Config key exists in params but value is empty/falsy: '{config_value}'")
-        else:
-            has_inputs = hasattr(self, "_inputs")
-            config_in_inputs = hasattr(self, "_inputs") and "config" in self._inputs if has_inputs else False
-            logger.warning(
-                f"Config not in params or _inputs not ready. "
-                f"Config in params: {'config' in params}, "
-                f"Has _inputs: {has_inputs}, "
-                f"Config in _inputs: {config_in_inputs}"
-            )
 
     def _pre_run_setup(self):
         """Initialize validation result cache before processing outputs."""
@@ -902,7 +884,6 @@ class NVIDIANeMoGuardrailsComponent(Component):
         # This handles cases where the value might not be properly initialized from build_config
         if hasattr(self, "_inputs") and "config" in self._inputs:
             config_value = self._inputs["config"].value
-            logger.debug(f"Config value in _pre_run_setup from _inputs: '{config_value}'")
 
             # If config is empty, try to get it from _attributes (set via set_attributes) or _parameters
             if not config_value or config_value == "":
@@ -910,12 +891,10 @@ class NVIDIANeMoGuardrailsComponent(Component):
                     attr_value = self._attributes.get("config")
                     if attr_value and attr_value != "":
                         self._inputs["config"].value = attr_value
-                        logger.debug(f"Restored config value from _attributes in _pre_run_setup: {attr_value}")
                 elif hasattr(self, "_parameters") and "config" in self._parameters:
                     param_value = self._parameters.get("config")
                     if param_value and param_value != "":
                         self._inputs["config"].value = param_value
-                        logger.debug(f"Restored config value from _parameters in _pre_run_setup: {param_value}")
                 # Try vertex template as last resort (the source of truth from build_config)
                 elif hasattr(self, "_vertex") and self._vertex:
                     try:
@@ -924,9 +903,6 @@ class NVIDIANeMoGuardrailsComponent(Component):
                         template_value = config_template.get("value") if isinstance(config_template, dict) else None
                         if template_value and template_value != "":
                             self._inputs["config"].value = template_value
-                            logger.debug(
-                                f"Restored config value from vertex template in _pre_run_setup: {template_value}"
-                            )
                         else:
                             logger.warning(
                                 "Config value is empty and not found in any source - this may cause validation to fail"
@@ -980,19 +956,16 @@ class NVIDIANeMoGuardrailsComponent(Component):
         config_value = getattr(self, "config", None)
         if hasattr(self, "_inputs") and "config" in self._inputs:
             input_config_value = self._inputs["config"].value
-            logger.debug(f"Config from _inputs: '{input_config_value}', Config from getattr: {config_value}")
             # Use the input value if it's set and getattr returned None/empty
             # Handle both None and empty string cases
             if (not config_value or config_value == "") and input_config_value and input_config_value != "":
                 config_value = input_config_value
-                logger.debug(f"Using config from _inputs: {config_value}")
 
         # Also check _parameters as a fallback (set during component initialization)
         if (not config_value or config_value == "") and hasattr(self, "_parameters") and "config" in self._parameters:
             param_config_value = self._parameters.get("config")
             if param_config_value and param_config_value != "":
                 config_value = param_config_value
-                logger.debug(f"Using config from _parameters: {config_value}")
                 # Also set it on the input so it's available for future access
                 if hasattr(self, "_inputs") and "config" in self._inputs:
                     self._inputs["config"].value = config_value
@@ -1005,7 +978,6 @@ class NVIDIANeMoGuardrailsComponent(Component):
                 template_value = config_template.get("value") if isinstance(config_template, dict) else None
                 if template_value and template_value != "":
                     config_value = template_value
-                    logger.debug(f"Using config from vertex template: {config_value}")
                     # Also set it on the input so it's available for future access
                     if hasattr(self, "_inputs") and "config" in self._inputs:
                         self._inputs["config"].value = config_value
@@ -1059,23 +1031,18 @@ class NVIDIANeMoGuardrailsComponent(Component):
             # First, check the top-level status field (primary method for GuardrailCheckResponse)
             if hasattr(validation_response, "status"):
                 status_value = validation_response.status
-                logger.debug(f"Response has status field: {status_value} (type: {type(status_value)})")
                 # Check for blocked status (case-insensitive comparison for robustness)
                 if str(status_value).lower() == "blocked":
                     is_blocked = True
-                    logger.info(f"Blocked status detected from response.status: {status_value}")
 
             # Also check rails_status for blocking information (this is important as it may be more specific)
-            if hasattr(validation_response, "rails_status") and validation_response.rails_status:
-                logger.debug(f"Response has rails_status: {validation_response.rails_status}")
+            if not is_blocked and hasattr(validation_response, "rails_status") and validation_response.rails_status:
                 # Check if any rail has a blocked status
-                for rail_name, rail_status in validation_response.rails_status.items():
+                for rail_status in validation_response.rails_status.values():
                     if hasattr(rail_status, "status"):
                         rail_status_value = rail_status.status
-                        logger.debug(f"Rail '{rail_name}' has status: {rail_status_value}")
                         if str(rail_status_value).lower() == "blocked":
                             is_blocked = True
-                            logger.info(f"Blocked status detected from rails_status[{rail_name}]: {rail_status_value}")
                             break
 
             # Fallback checks if status/rails_status didn't indicate blocking
@@ -1083,15 +1050,11 @@ class NVIDIANeMoGuardrailsComponent(Component):
                 if hasattr(validation_response, "blocked") and validation_response.blocked:
                     # Fallback to blocked boolean field if status not available
                     is_blocked = True
-                    logger.info("Blocked status detected from response.blocked")
                 elif hasattr(validation_response, "choices") and validation_response.choices:
                     # Fallback to checking choices if neither status nor blocked available
                     choice = validation_response.choices[0]
                     if hasattr(choice, "finish_reason") and choice.finish_reason == "guardrail_blocked":
                         is_blocked = True
-                        logger.info("Blocked status detected from choice.finish_reason")
-
-            logger.debug(f"Final is_blocked determination: {is_blocked}")
 
             if is_blocked:
                 logger.info(f"{validation_mode.capitalize()} blocked by guardrails")
@@ -1135,17 +1098,12 @@ class NVIDIANeMoGuardrailsComponent(Component):
         This follows the pattern used by ConditionalRouterComponent.
         """
         is_blocked, _input_text = await self._validate_input()
-        logger.debug(
-            f"blocked_output: is_blocked={is_blocked}, input_text length={len(_input_text) if _input_text else 0}"
-        )
         if not is_blocked:
             # Return empty message so this output is not used
-            logger.debug("blocked_output: Validation passed, returning empty message")
             return Message(text="")
         # Validation failed - return error message
         validation_mode = getattr(self, "validation_mode", "input")
         error_message = f"I cannot process that {validation_mode}."
-        logger.info(f"blocked_output: Returning blocked error message: {error_message}")
 
         # Create source properties for error display using component's own attributes
         from lfx.schema.properties import Properties
@@ -1187,9 +1145,4 @@ class NVIDIANeMoGuardrailsComponent(Component):
         # This is critical because ChatOutput calls convert_to_string() which uses get_text()
         # set_text() ensures the text is stored in data[text_key]
         error_msg.set_text(error_message)
-        logger.debug(
-            f"blocked_output: Set error message text='{error_message}', "
-            f"get_text() returns='{error_msg.get_text()}', "
-            f"text attribute='{error_msg.text}'"
-        )
         return error_msg
