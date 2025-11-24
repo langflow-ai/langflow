@@ -663,18 +663,18 @@ async def created_api_key(active_user):
         api_key="random_key",
         hashed_api_key=hashed,
     )
-    db_manager = get_db_service()
-    async with session_getter(db_manager) as session:
+    async with session_scope() as session:
         stmt = select(ApiKey).where(ApiKey.api_key == api_key.api_key)
         if existing_api_key := (await session.exec(stmt)).first():
             yield existing_api_key
             return
         session.add(api_key)
-        await session.flush()
+        await session.commit()
         await session.refresh(api_key)
         yield api_key
         # Clean up
         await session.delete(api_key)
+        await session.commit()
 
 
 @pytest.fixture
