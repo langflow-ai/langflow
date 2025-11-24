@@ -70,10 +70,24 @@ class FileComponent(BaseFileComponent):
     for input_item in _base_inputs:
         if isinstance(input_item, FileInput) and input_item.name == "path":
             input_item.real_time_refresh = True
+            input_item.tool_mode = False  # Disable tool mode for file upload input
+            input_item.required = False  # Make it optional so it doesn't error in tool mode
             break
 
     inputs = [
         *_base_inputs,
+        StrInput(
+            name="file_path_str",
+            display_name="File Path",
+            info=(
+                "Path to the file to read. Used when component is called as a tool. "
+                "If not provided, will use the uploaded file from 'path' input."
+            ),
+            show=False,
+            advanced=True,
+            tool_mode=True,
+            required=False,
+        ),
         BoolInput(
             name="advanced_mode",
             display_name="Advanced Parser",
@@ -152,7 +166,7 @@ class FileComponent(BaseFileComponent):
     ]
 
     outputs = [
-        Output(display_name="Raw Content", name="message", method="load_files_message"),
+        Output(display_name="Raw Content", name="message", method="load_files_message", tool_mode=True),
     ]
 
     # ------------------------------ UI helpers --------------------------------------
@@ -213,38 +227,83 @@ class FileComponent(BaseFileComponent):
             file_path = paths[0] if field_name == "path" else frontend_node["template"]["path"]["file_path"][0]
             if file_path.endswith((".csv", ".xlsx", ".parquet")):
                 frontend_node["outputs"].append(
-                    Output(display_name="Structured Content", name="dataframe", method="load_files_structured"),
+                    Output(
+                        display_name="Structured Content",
+                        name="dataframe",
+                        method="load_files_structured",
+                        tool_mode=True,
+                    ),
                 )
             elif file_path.endswith(".json"):
                 frontend_node["outputs"].append(
-                    Output(display_name="Structured Content", name="json", method="load_files_json"),
+                    Output(display_name="Structured Content", name="json", method="load_files_json", tool_mode=True),
                 )
 
             advanced_mode = frontend_node.get("template", {}).get("advanced_mode", {}).get("value", False)
             if advanced_mode:
                 frontend_node["outputs"].append(
-                    Output(display_name="Structured Output", name="advanced_dataframe", method="load_files_dataframe"),
+                    Output(
+                        display_name="Structured Output",
+                        name="advanced_dataframe",
+                        method="load_files_dataframe",
+                        tool_mode=True,
+                    ),
                 )
                 frontend_node["outputs"].append(
-                    Output(display_name="Markdown", name="advanced_markdown", method="load_files_markdown"),
+                    Output(
+                        display_name="Markdown", name="advanced_markdown", method="load_files_markdown", tool_mode=True
+                    ),
                 )
                 frontend_node["outputs"].append(
-                    Output(display_name="File Path", name="path", method="load_files_path"),
+                    Output(display_name="File Path", name="path", method="load_files_path", tool_mode=True),
                 )
             else:
                 frontend_node["outputs"].append(
-                    Output(display_name="Raw Content", name="message", method="load_files_message"),
+                    Output(display_name="Raw Content", name="message", method="load_files_message", tool_mode=True),
                 )
                 frontend_node["outputs"].append(
-                    Output(display_name="File Path", name="path", method="load_files_path"),
+                    Output(display_name="File Path", name="path", method="load_files_path", tool_mode=True),
                 )
         else:
             # Multiple files => DataFrame output; advanced parser disabled
-            frontend_node["outputs"].append(Output(display_name="Files", name="dataframe", method="load_files"))
+            frontend_node["outputs"].append(
+                Output(display_name="Files", name="dataframe", method="load_files", tool_mode=True)
+            )
 
         return frontend_node
 
     # ------------------------------ Core processing ----------------------------------
+
+    def _validate_and_resolve_paths(self) -> list[BaseFileComponent.BaseFile]:
+        """Override to handle file_path_str input from tool mode.
+
+        When called as a tool, the file_path_str parameter can be set.
+        If not provided, it will fall back to using the path FileInput (uploaded file).
+        Priority:
+        1. file_path_str (if provided by the tool call)
+        2. path (uploaded file from UI)
+        """
+        # Check if file_path_str is provided (from tool mode)
+        file_path_str = getattr(self, "file_path_str", None)
+        if file_path_str:
+            # Use the string path from tool mode
+            from pathlib import Path
+
+            from lfx.schema.data import Data
+
+            resolved_path = Path(self.resolve_path(file_path_str))
+            if not resolved_path.exists():
+                msg = f"File or directory not found: {file_path_str}"
+                self.log(msg)
+                if not self.silent_errors:
+                    raise ValueError(msg)
+                return []
+
+            data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(resolved_path)})
+            return [BaseFileComponent.BaseFile(data_obj, resolved_path, delete_after_processing=False)]
+
+        # Otherwise use the default implementation (uses path FileInput)
+        return super()._validate_and_resolve_paths()
 
     def _is_docling_compatible(self, file_path: str) -> bool:
         """Lightweight extension gate for Docling-compatible types."""
