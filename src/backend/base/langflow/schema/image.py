@@ -44,6 +44,10 @@ def get_file_paths(files: list[str | dict]):
         if not file_path_str:  # Skip empty paths
             continue
 
+        if file_path_str.startswith(("http://", "https://")):
+            file_paths.append(file_path_str)
+            continue
+
         file_path = Path(file_path_str)
         # Handle edge case where path might be just a filename without parent
         if file_path.parent == Path():

@@ -87,6 +87,9 @@ def create_image_content_dict(image_path: str | Path, mime_type: str | None = No
         IOError: If there's an error reading the image file.
         ValueError: If the image path is empty or invalid.
     """
+    if str(image_path).startswith(("http://", "https://")):
+        return {"type": "image_url", "image_url": {"url": str(image_path)}}
+
     if not mime_type:
         mime_type = mimetypes.guess_type(str(image_path))[0]
         if not mime_type:

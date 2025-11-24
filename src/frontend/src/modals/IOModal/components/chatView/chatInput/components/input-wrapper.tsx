@@ -14,6 +14,8 @@ import ButtonSendWrapper from "./button-send-wrapper";
 import TextAreaWrapper from "./text-area-wrapper";
 import UploadFileButton from "./upload-file-button";
 import VoiceButton from "./voice-assistant/components/voice-button";
+import useFlowStore from "@/stores/flowStore";
+// import { useFlowStore } from "@/stores/flowStore";
 
 interface InputWrapperProps {
   isBuilding: boolean;
@@ -54,6 +56,12 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
 
   // Check if voice mode is available
   const { data: config } = useGetConfig();
+
+  // Only show upload button if current flow has a File input component
+  const nodes = useFlowStore((state) => state.nodes);
+  const hasFilePathInput = Array.isArray(nodes)
+    ? nodes.some((node) => node?.data?.type === "FilePathInput")
+    : false;
 
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -112,8 +120,9 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
         </div>
         <div className="flex w-full items-end justify-between">
           <div className={isBuilding ? "cursor-not-allowed" : ""}>
-            {(!playgroundPage ||
-              (playgroundPage && ENABLE_IMAGE_ON_PLAYGROUND)) && (
+            {hasFilePathInput &&
+              (!playgroundPage ||
+                (playgroundPage && ENABLE_IMAGE_ON_PLAYGROUND)) && (
               <UploadFileButton
                 isBuilding={isBuilding}
                 fileInputRef={fileInputRef}
