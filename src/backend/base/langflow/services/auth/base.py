@@ -15,6 +15,7 @@ from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
+    from datetime import timedelta
     from uuid import UUID
 
     from fastapi import Request
@@ -403,12 +404,12 @@ class AuthServiceBase(Service, abc.ABC):
         """
 
     @abc.abstractmethod
-    def create_token(self, data: dict, expires_delta: int) -> str:
+    def create_token(self, data: dict, expires_delta: "timedelta") -> str:
         """Create an access token for the given data and expiration.
 
         Args:
             data: The payload to encode in the token
-            expires_delta: Expiration time in seconds
+            expires_delta: Expiration time as a timedelta
 
         Returns:
             The encoded token as a string

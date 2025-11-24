@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
@@ -98,7 +99,7 @@ def get_password_hash(password: str) -> str:
     return _auth_service().get_password_hash(password)
 
 
-def create_token(data: dict, expires_delta: int) -> str:
+def create_token(data: dict, expires_delta: timedelta) -> str:
     return _auth_service().create_token(data, expires_delta)
 
 
