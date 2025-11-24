@@ -238,5 +238,5 @@ class TestS3FileEndpoints:
 
                 # Verify storage service was called
                 mock_storage_service.save_file.assert_called_once_with(
-                    flow_id="user_123", file_name="upload.txt", data=b"file content"
+                    flow_id="user_123", file_name="upload.txt", data=b"file content", append=False
                 )
