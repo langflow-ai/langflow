@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import json
 import os
+import re
 import time
 import types
 from typing import TYPE_CHECKING, Any
 
-from lfx.log.logger import logger
 from typing_extensions import override
 
 from langflow.services.tracing.base import BaseTracer
@@ -51,8 +52,10 @@ class OpenlayerTracer(BaseTracer):
         self.component_steps: dict = {}  # component_id -> Step object from SDK
         self.component_parent_ids: dict = {}  # component_id -> parent_component_id
         self.trace_obj = None  # Trace object from SDK
+        self.langchain_handler: Any = None  # Store handler to access its trace later
 
-        config = self._get_config()
+        # Get config based on flow name
+        config = self._get_config(trace_name)
         self._ready: bool = self.setup_openlayer(config) if config else False
 
     @property
@@ -61,17 +64,13 @@ class OpenlayerTracer(BaseTracer):
 
     def setup_openlayer(self, config) -> bool:
         """Initialize Openlayer SDK utilities."""
-        logger.debug("[Openlayer] Setting up Openlayer tracer with SDK")
-        
         # Validate configuration
         if not config:
-            logger.warning("[Openlayer] No configuration provided")
             return False
         
         required_keys = ["api_key", "inference_pipeline_id"]
         for key in required_keys:
             if key not in config or not config[key]:
-                logger.warning(f"[Openlayer] Missing required config: {key}")
                 return False
         
         try:
@@ -80,14 +79,12 @@ class OpenlayerTracer(BaseTracer):
             from openlayer.lib.tracing import tracer as openlayer_tracer
             from openlayer.lib.tracing import traces as openlayer_traces
             from openlayer.lib.tracing.context import UserSessionContext
-            from openlayer.lib.integrations.langchain_callback import OpenlayerHandler
+            from openlayer.lib.tracing import configure
 
             self._openlayer_tracer = openlayer_tracer
             self._openlayer_steps = openlayer_steps
             self._openlayer_traces = openlayer_traces
             self._openlayer_enums = openlayer_enums
-            self._UserSessionContext = UserSessionContext
-            self._OpenlayerHandler = OpenlayerHandler
             self._inference_pipeline_id = config["inference_pipeline_id"]
 
             if self.user_id:
@@ -95,15 +92,10 @@ class OpenlayerTracer(BaseTracer):
             if self.session_id:
                 UserSessionContext.set_session_id(self.session_id)
 
-            client = self._openlayer_tracer._get_client()
-            if not client:
-                logger.debug("[Openlayer] SDK client not available")
-                return False
-
+            configure(inference_pipeline_id=config["inference_pipeline_id"])
             return True
 
         except ImportError:
-            logger.exception("Could not import openlayer SDK. Please install it with `pip install openlayer`.")
             return False
         except Exception as e:  # noqa: BLE001
             return False
@@ -163,11 +155,12 @@ class OpenlayerTracer(BaseTracer):
             )
             step.start_time = time.time()
         except Exception as e:  # noqa: BLE001
-            logger.error(f"[Openlayer] Failed to create step '{name}': {e}")
             return
 
         # Store step and set as current in SDK context
         self.component_steps[trace_id] = step
+        
+        # Set as current step so LangChain callbacks can nest under it
         self._openlayer_tracer._current_step.set(step)
 
         # Find parent from vertex edges for hierarchy tracking
@@ -175,8 +168,6 @@ class OpenlayerTracer(BaseTracer):
             valid_parents = [edge.source_id for edge in vertex.incoming_edges if edge.source_id in self.component_steps]
             if valid_parents:
                 self.component_parent_ids[trace_id] = valid_parents[-1]
-
-        logger.debug(f"[Openlayer] Added {trace_type} step: {name}")
 
     @override
     def end_trace(
@@ -193,7 +184,6 @@ class OpenlayerTracer(BaseTracer):
 
         step = self.component_steps.get(trace_id)
         if not step:
-            logger.warning(f"[Openlayer] Step not found: {trace_id}")
             return
 
         # Set end time and latency (as int for API compatibility)
@@ -210,13 +200,16 @@ class OpenlayerTracer(BaseTracer):
             if not step.metadata:
                 step.metadata = {}
             step.metadata["error"] = str(error)
-            logger.error(f"[Openlayer] Error in {step.name}: {error}")
         if logs:
             if not step.metadata:
                 step.metadata = {}
             step.metadata["logs"] = [log if isinstance(log, dict) else log.model_dump() for log in logs]
 
-        logger.debug(f"[Openlayer] Completed: {step.name} ({step.latency:.0f}ms)")
+        # Clear current step context
+        # Use None as positional argument to avoid LookupError when ContextVar is not set
+        current_step = self._openlayer_tracer._current_step.get(None)
+        if current_step == step:
+            self._openlayer_tracer._current_step.set(None)
 
     @override
     def end(
@@ -226,29 +219,24 @@ class OpenlayerTracer(BaseTracer):
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        """Build hierarchy and send using SDK (like OpenAI Agents pattern)."""
+        """Build hierarchy and send using SDK."""
         if not self._ready or not self.trace_obj:
             return
 
-        logger.debug(f"[Openlayer] Finalizing trace: {len(self.component_steps)} components")
-
         try:
             # Build hierarchy and add to trace
+            # This will integrate handler's traces and then clear them
             root_steps = self._build_and_add_hierarchy()
 
             # Use SDK's post_process_trace
             try:
                 trace_data, input_variable_names = self._openlayer_tracer.post_process_trace(self.trace_obj)
             except Exception as e:  # noqa: BLE001
-                logger.error(f"[Openlayer] post_process_trace failed: {e}")
                 return
             
             # Validate trace_data
             if not trace_data or not isinstance(trace_data, dict):
-                logger.error("[Openlayer] Invalid trace_data from SDK")
                 return
-            
-            logger.debug(f"[Openlayer] Processed {len(trace_data.get('steps', []))} steps")
 
             # Build config using SDK's ConfigLlmData
             config = dict(
@@ -280,18 +268,11 @@ class OpenlayerTracer(BaseTracer):
                         rows=[trace_data],
                         config=config,
                     )
-                    logger.info(f"[Openlayer] Sent trace {self.trace_id} ({len(trace_data.get('steps', []))} steps)")
-                    logger.debug(f"[Openlayer] Response: {response}")
-            else:
-                logger.debug("[Openlayer] Publish disabled")
             
             # Clean up SDK context
             self._cleanup_sdk_context()
 
         except Exception as e:  # noqa: BLE001
-            logger.error(f"[Openlayer] Failed to send trace: {e}")
-            import traceback
-            logger.debug(f"[Openlayer] Traceback: {traceback.format_exc()}")
             # Still clean up even on error
             self._cleanup_sdk_context()
 
@@ -299,8 +280,8 @@ class OpenlayerTracer(BaseTracer):
         try:
             self._openlayer_tracer._current_trace.set(None)
             self._openlayer_tracer._current_step.set(None)
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"[Openlayer] Cleanup error: {e}")
+        except Exception:  # noqa: BLE001
+            pass
 
     def _extract_flow_metadata(self, components: list[Any]) -> dict[str, Any]:
         metadata = {
@@ -344,45 +325,51 @@ class OpenlayerTracer(BaseTracer):
         return len(step.output) == 1 and "component_as_tool" in step.output
 
     def _build_and_add_hierarchy(self) -> list[Any]:
-        logger.debug(f"[Openlayer] Building trace from {len(self.component_steps)} steps")
+        if self.langchain_handler and hasattr(self.langchain_handler, '_traces_by_root'):
+            langchain_traces = self.langchain_handler._traces_by_root
+            
+            if langchain_traces:
+                target_component = None
+                for component_step in self.component_steps.values():
+                    if component_step.name == "Agent":
+                        target_component = component_step
+                        break
 
-        # Filter out tool provider components using list comprehension
-        component_steps_list = [
-            step for step in self.component_steps.values()
-            # if not self._is_tool_provider(step)
-        ]
-        
-        filtered_count = len(self.component_steps) - len(component_steps_list)
-        if filtered_count > 0:
-            logger.debug(f"[Openlayer] Filtered {filtered_count} tool providers")
-        logger.debug(f"[Openlayer] Processing {len(component_steps_list)} components")
-        
+                if target_component is None:
+                    for component_step in self.component_steps.values():
+                        if hasattr(component_step, 'step_type') and component_step.step_type.value in ['llm', 'chain', 'agent', 'chat_completion']:
+                            target_component = component_step
 
+                for run_id, lc_trace in langchain_traces.items():
+                    for lc_step in lc_trace.steps:
+                        if target_component:
+                            target_component.add_nested_step(lc_step)
+
+                # Clear handler's traces after integration
+                self.langchain_handler._traces_by_root.clear()
+        
         flow_name = self.trace_name.split(" - ")[0] if " - " in self.trace_name else self.trace_name
         
-        flow_metadata = self._extract_flow_metadata(component_steps_list)
+        flow_metadata = self._extract_flow_metadata(self.component_steps.values())
         
         root_step = self._openlayer_steps.UserCallStep(
             name=flow_name,
             inputs=flow_metadata["chat_input"],
             output=flow_metadata["chat_output"],
-            metadata={"component_count": len(component_steps_list)}
+            metadata={"flow_name": flow_name}
         )
         
         # Set timing from extracted metadata
         if flow_metadata["start_time"] and flow_metadata["end_time"]:
             root_step.start_time = flow_metadata["start_time"]
             root_step.end_time = flow_metadata["end_time"]
-            # Ensure latency is int (API requires int32/int64/float32/float64)
-            root_step.latency = int((root_step.end_time - root_step.start_time) * 1000)  # ms as int
-            logger.debug(f"[Openlayer] Flow latency: {root_step.latency}ms")
+            root_step.latency = int((root_step.end_time - root_step.start_time) * 1000)
         
-        for step in component_steps_list:
+        for step in self.component_steps.values():
             root_step.add_nested_step(step)
         
-        # Add root step to trace
+        # Add root to trace
         self.trace_obj.add_step(root_step)
-        logger.debug(f"[Openlayer] Created root step '{flow_name}' with {len(component_steps_list)} nested components")
 
         return [root_step]
 
@@ -425,8 +412,7 @@ class OpenlayerTracer(BaseTracer):
             else:
                 try:
                     return self._convert_to_openlayer_type(value.model_dump())
-                except Exception as e:  # noqa: BLE001
-                    logger.debug(f"[Openlayer] Pydantic model_dump() failed for {type(value).__name__}: {e}")
+                except Exception:  # noqa: BLE001
                     pass
 
         # Handle LangChain tools
@@ -436,33 +422,113 @@ class OpenlayerTracer(BaseTracer):
                     "name": str(value.name),
                     "description": str(value.description) if value.description else None,
                 }
-            except Exception as e:  # noqa: BLE001
-                logger.debug(f"[Openlayer] Tool conversion failed for {type(value).__name__}: {e}")
+            except Exception:  # noqa: BLE001
                 pass
 
         # Fallback to string
         try:
             return str(value)
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"[Openlayer] String conversion failed for {type(value).__name__}: {e}")
+        except Exception:  # noqa: BLE001
             return None
 
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
-        """Return OpenlayerHandler (will integrate with our trace via SDK context)."""
+        """Return AsyncOpenlayerHandler for LangChain integration."""
         if not self._ready:
             return None
 
-        return self._OpenlayerHandler()
+        # Reuse existing handler if already created
+        if self.langchain_handler is not None:
+            return self.langchain_handler
+
+        try:
+            from openlayer.lib.integrations.langchain_callback import AsyncOpenlayerHandler
+
+            # Ensure trace exists
+            if self.trace_obj is None:
+                self.trace_obj = self._openlayer_traces.Trace()
+            
+            # Set trace in ContextVar - handler will detect and use it automatically
+            self._openlayer_tracer._current_trace.set(self.trace_obj)
+
+            # Create handler - it will automatically detect our trace from context
+            # and integrate all steps into it (no standalone traces, no uploads)
+            handler = AsyncOpenlayerHandler(
+                ignore_llm=False,
+                ignore_chat_model=False,
+                ignore_chain=False,
+                ignore_retriever=False,
+                ignore_agent=False,
+            )
+
+            # Store reference to handler
+            self.langchain_handler = handler
+            return handler
+        except Exception as e:  # noqa: BLE001
+            return None
 
     @staticmethod
-    def _get_config() -> dict:
-        """Get Openlayer configuration from environment variables."""
+    def _sanitize_flow_name(flow_name: str) -> str:
+        """Sanitize flow name for use in environment variable names.
+
+        Converts to uppercase and replaces non-alphanumeric characters with underscores.
+        Example: "My Flow-Name" -> "MY_FLOW_NAME"
+        """
+        # Replace non-alphanumeric characters with underscores
+        sanitized = re.sub(r'[^a-zA-Z0-9]+', '_', flow_name)
+        # Remove leading/trailing underscores and convert to uppercase
+        return sanitized.strip('_').upper()
+
+    @staticmethod
+    def _get_config(trace_name: str | None = None) -> dict:
+        """Get Openlayer configuration from environment variables.
+
+        Configuration is resolved in the following order (highest priority first):
+        1. Flow-specific env var: OPENLAYER_PIPELINE_<FLOW_NAME>
+        2. JSON mapping: OPENLAYER_LANGFLOW_MAPPING
+        3. Default env var: OPENLAYER_INFERENCE_PIPELINE_ID
+
+        Args:
+            trace_name: The trace name which may contain the flow name
+
+        Returns:
+            Configuration dict with 'api_key' and 'inference_pipeline_id', or empty dict
+        """
         api_key = os.getenv("OPENLAYER_API_KEY", None)
-        inference_pipeline_id = os.getenv("OPENLAYER_INFERENCE_PIPELINE_ID", None)
+        if not api_key:
+            return {}
+
+        inference_pipeline_id = None
+
+        # Extract flow name from trace_name (format: "flow_name - flow_id")
+        flow_name = None
+        if trace_name:
+            flow_name = trace_name.split(" - ")[0] if " - " in trace_name else trace_name
+
+        # 1. Try flow-specific environment variable (highest priority)
+        if flow_name:
+            sanitized_flow_name = OpenlayerTracer._sanitize_flow_name(flow_name)
+            flow_specific_var = f"OPENLAYER_PIPELINE_{sanitized_flow_name}"
+            inference_pipeline_id = os.getenv(flow_specific_var)
+
+        # 2. Try JSON mapping (medium priority)
+        if not inference_pipeline_id:
+            mapping_json = os.getenv("OPENLAYER_LANGFLOW_MAPPING")
+            if mapping_json and flow_name:
+                try:
+                    mapping = json.loads(mapping_json)
+                    if isinstance(mapping, dict) and flow_name in mapping:
+                        inference_pipeline_id = mapping[flow_name]
+                except json.JSONDecodeError as e:
+                    pass
+
+        # 3. Fall back to default environment variable (lowest priority)
+        if not inference_pipeline_id:
+            inference_pipeline_id = os.getenv("OPENLAYER_INFERENCE_PIPELINE_ID")
 
         if api_key and inference_pipeline_id:
             return {
                 "api_key": api_key,
                 "inference_pipeline_id": inference_pipeline_id,
             }
+
         return {}
