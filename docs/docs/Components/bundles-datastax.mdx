@@ -319,19 +319,15 @@ The following DataStax components are in legacy status:
 <details>
 <summary>Astra DB Tool</summary>
 
+Replace the **Astra DB Tool** component with the [**Astra DB** component](#astra-db).
+
 The **Astra DB Tool** component enables searching data in Astra DB collections, including hybrid search, vector search, and regular filter-based search.
 Specialized searches require that the collection is pre-configured with the required parameters.
 
 Outputs a list of [`Data`](/data-types#data) objects containing the query results from Astra DB. Each `Data` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter and the upper limit of the Astra DB Data API, depending on the type of search.
 
 You can use the component to execute queries directly as isolated steps in a flow, or you can connect it as a [tool for an agent](/agents-tools) to allow the agent to query data from Astra DB collections as needed to respond to user queries.
-For more information, see [Use Langflow agents](/agents).
 
-Replace it with the [**Astra DB** component](#astra-db).
-
-### Astra DB Tool parameters
-
-The following parameters are for the **Astra DB Tool** component overall.
 
 The values for **Collection Name**, **Astra DB Application Token**, and **Astra DB API Endpoint** are found in your Astra DB deployment. For more information, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html).
 
@@ -357,12 +353,11 @@ The values for **Collection Name**, **Astra DB Application Token**, and **Astra 
 <details>
 <summary>Astra DB Graph</summary>
 
+Replace the **Astra DB Graph** component with the [**Graph RAG** component](#graph-rag).
+
 The **Astra DB Graph** component uses `AstraDBGraphVectorStore`, an instance of [LangChain graph vector store](https://python.langchain.com/api_reference/community/graph_vectorstores.html), for graph traversal and graph-based document retrieval in an Astra DB collection. It also supports writing to the vector store.
 For more information, see [Build a Graph RAG system with LangChain and GraphRetriever](https://docs.datastax.com/en/astra-db-serverless/tutorials/graph-rag.html).
 
-Replace it with the [**Graph RAG** component](#graph-rag).
-
-### Astra DB Graph parameters
 
 You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
 
@@ -403,7 +398,7 @@ For information about accepted values and functionality, see the [Astra DB Serve
 <details>
 <summary>Assistants API components</summary>
 
-The following DataStax components are used to create and manage Assistants API functions in a flow:
+The following DataStax components were used to create and manage Assistants API functions in a flow:
 
 * **Astra Assistant Agent**
 * **Create Assistant**
@@ -419,10 +414,10 @@ These components are legacy and should be replaced with Langflow's native agent 
 <details>
 <summary>Environment variable components</summary>
 
-The following DataStax components are used to load and retrieve environment variables in a flow:
+The following DataStax components were used to load and retrieve environment variables in a flow:
 
-* **Dotenv** - Loads environment variables from a `.env` file
-* **Get Environment Variable** - Retrieves the value of an environment variable
+* **Dotenv**: Loads environment variables from a `.env` file
+* **Get Environment Variable**: Retrieves the value of an environment variable
 
 These components are legacy. Use Langflow's built-in environment variable support or global variables instead.
 
