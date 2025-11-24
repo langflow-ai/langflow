@@ -1672,7 +1672,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": "2.10.6"
                   },
                   {
                     "name": "lfx",
@@ -2398,7 +2398,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": "2.10.6"
                   },
                   {
                     "name": "lfx",
@@ -3124,7 +3124,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": "2.10.6"
                   },
                   {
                     "name": "lfx",
