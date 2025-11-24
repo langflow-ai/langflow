@@ -321,7 +321,7 @@ module.exports = {
               label: "LLM Operations",
               items: [
                 "Components/batch-run",
-                "Components/llm-router",
+                "Components/llm-selector",
                 "Components/smart-router",
                 "Components/smart-transform",
                 "Components/structured-output",
