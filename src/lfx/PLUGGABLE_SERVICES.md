@@ -107,6 +107,7 @@ storage_service = "package.module:ClassName"
 Service keys **must** match `ServiceType` enum values exactly:
 
 - `database_service`
+- `auth_service`
 - `storage_service`
 - `cache_service`
 - `chat_service`
