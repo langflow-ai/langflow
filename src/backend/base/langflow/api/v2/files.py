@@ -244,7 +244,7 @@ async def upload_user_file(
                 path=f"{current_user.id}/{stored_file_name}",
                 size=file_size,
             )
- 
+
         session.add(new_file)
         try:
             await session.flush()

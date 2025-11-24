@@ -84,7 +84,6 @@ class LocalStorageService(StorageService):
             logger.exception(f"Error saving file {file_name} in flow {flow_id}")
             raise
 
-
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """Retrieve a file from the local storage.
 

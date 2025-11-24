@@ -6,11 +6,12 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 import anyio
+
 from langflow.services.base import Service
 
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
     from langflow.services.session.service import SessionService
+    from langflow.services.settings.service import SettingsService
 
 
 class StorageService(Service):
