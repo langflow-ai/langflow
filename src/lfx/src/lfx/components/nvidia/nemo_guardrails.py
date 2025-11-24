@@ -1003,13 +1003,16 @@ class NVIDIANeMoGuardrailsComponent(Component):
 
             # Also check rails_status for blocking information (this is important as it may be more specific)
             if not is_blocked and hasattr(validation_response, "rails_status") and validation_response.rails_status:
-                # Check if any rail has a blocked status
-                for rail_status in validation_response.rails_status.values():
-                    if hasattr(rail_status, "status"):
-                        rail_status_value = rail_status.status
-                        if str(rail_status_value).lower() == "blocked":
-                            is_blocked = True
-                            break
+                # Check if rails_status is a dict-like object before iterating
+                rails_status = validation_response.rails_status
+                if isinstance(rails_status, dict):
+                    # Check if any rail has a blocked status
+                    for rail_status in rails_status.values():
+                        if hasattr(rail_status, "status"):
+                            rail_status_value = rail_status.status
+                            if str(rail_status_value).lower() == "blocked":
+                                is_blocked = True
+                                break
 
             # Fallback checks if status/rails_status didn't indicate blocking
             if not is_blocked:

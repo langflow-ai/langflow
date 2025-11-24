@@ -86,6 +86,11 @@ class TestNVIDIANeMoGuardrailsComponent:
 
         mock_response = Mock()
         mock_response.data = [mock_config]
+        # Add pagination info to prevent infinite loop
+        mock_pagination = Mock()
+        mock_pagination.page = 1  # Use actual integer
+        mock_pagination.total_pages = 1  # Use actual integer
+        mock_response.pagination = mock_pagination
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
@@ -104,6 +109,11 @@ class TestNVIDIANeMoGuardrailsComponent:
         """Test guardrails config fetching with empty response."""
         mock_response = Mock()
         mock_response.data = []
+        # Add pagination info
+        mock_pagination = Mock()
+        mock_pagination.page = 1
+        mock_pagination.total_pages = 1
+        mock_response.pagination = mock_pagination
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
@@ -167,19 +177,19 @@ class TestNVIDIANeMoGuardrailsComponent:
 
         params = component._build_guardrails_params(config_data, rail_types)
 
-        assert "content safety check input" in params["rails"]["input"]["flows"]
-        assert "content safety check output" in params["rails"]["output"]["flows"]
+        assert "content safety check input $model=content_safety" in params["rails"]["input"]["flows"]
+        assert "content safety check output $model=content_safety" in params["rails"]["output"]["flows"]
         assert len(params["prompts"]) == 2
         assert params["prompts"][0]["content"] == "Custom safety prompt"
 
     def test_build_guardrails_params_topic_control(self, component):
         """Test parameter building for topic control rails."""
-        config_data = {"05_topic_control_prompt": "Custom topic prompt"}
+        config_data = {"06_topic_control_prompt": "Custom topic prompt"}
         rail_types = ["topic_control"]
 
         params = component._build_guardrails_params(config_data, rail_types)
 
-        assert "topic safety check input" in params["rails"]["input"]["flows"]
+        assert "topic safety check input $model=topic_control" in params["rails"]["input"]["flows"]
         assert len(params["prompts"]) == 1
         assert params["prompts"][0]["content"] == "Custom topic prompt"
 
@@ -218,6 +228,11 @@ class TestNVIDIANeMoGuardrailsComponent:
 
         mock_response = Mock()
         mock_response.data = [mock_config]
+        # Add pagination info
+        mock_pagination = Mock()
+        mock_pagination.page = 1
+        mock_pagination.total_pages = 1
+        mock_response.pagination = mock_pagination
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
@@ -252,8 +267,18 @@ class TestNVIDIANeMoGuardrailsComponent:
             mock_get_client.return_value = mock_client
 
             # Mock response with empty description
+            mock_config = Mock()
+            mock_config.name = "test-config"  # Set name attribute properly
+            mock_config.description = ""
+            mock_config.created = None
+            mock_config.updated = None
             mock_response = Mock()
-            mock_response.data = [Mock(name="test-config", description="", created=None, updated=None)]
+            mock_response.data = [mock_config]
+            # Add pagination info
+            mock_pagination = Mock()
+            mock_pagination.page = 1
+            mock_pagination.total_pages = 1
+            mock_response.pagination = mock_pagination
             mock_client.guardrail.configs.list.return_value = mock_response
 
             configs, metadata = await component.fetch_guardrails_configs()
@@ -273,6 +298,8 @@ class TestNVIDIANeMoGuardrailsComponent:
         mock_response = Mock()
         mock_response.status = "allowed"  # Primary method
         mock_response.blocked = False
+        mock_response.rails_status = None  # No rails_status for simple success case
+        mock_response.choices = []  # Empty choices list
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
@@ -317,6 +344,8 @@ class TestNVIDIANeMoGuardrailsComponent:
         mock_response = Mock()
         mock_response.status = "allowed"  # Primary method
         mock_response.blocked = False
+        mock_response.rails_status = None  # No rails_status for simple success case
+        mock_response.choices = []  # Empty choices list
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
@@ -349,6 +378,8 @@ class TestNVIDIANeMoGuardrailsComponent:
         mock_response = Mock()
         mock_response.status = "allowed"  # Primary method
         mock_response.blocked = False
+        mock_response.rails_status = None  # No rails_status for simple success case
+        mock_response.choices = []  # Empty choices list
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
@@ -433,6 +464,7 @@ class TestNVIDIANeMoGuardrailsComponent:
         mock_response = Mock()
         mock_response.status = None  # Simulate missing status field
         mock_response.blocked = True  # Fallback to blocked field
+        mock_response.rails_status = None  # No rails_status for this test
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
@@ -459,6 +491,7 @@ class TestNVIDIANeMoGuardrailsComponent:
         mock_response = Mock()
         mock_response.status = None  # Simulate missing status field
         mock_response.blocked = None  # Simulate missing blocked field
+        mock_response.rails_status = None  # No rails_status for this test
         mock_response.choices = [mock_choice]
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
@@ -484,6 +517,8 @@ class TestNVIDIANeMoGuardrailsComponent:
         mock_response = Mock()
         mock_response.status = "allowed"  # Primary method
         mock_response.blocked = False
+        mock_response.rails_status = None  # No rails_status for simple success case
+        mock_response.choices = []  # Empty choices list
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
@@ -543,6 +578,8 @@ class TestNVIDIANeMoGuardrailsComponent:
         mock_response = Mock()
         mock_response.status = "allowed"  # Primary method
         mock_response.blocked = False
+        mock_response.rails_status = None  # No rails_status for simple success case
+        mock_response.choices = []  # Empty choices list
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
@@ -566,6 +603,8 @@ class TestNVIDIANeMoGuardrailsComponent:
         mock_response = Mock()
         mock_response.status = "allowed"  # Primary method
         mock_response.blocked = False
+        mock_response.rails_status = None  # No rails_status for simple success case
+        mock_response.choices = []  # Empty choices list
 
         with patch.object(component, "get_nemo_client") as mock_get_client:
             mock_client = Mock()
