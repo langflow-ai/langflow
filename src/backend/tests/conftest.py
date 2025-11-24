@@ -20,13 +20,12 @@ from httpx import ASGITransport, AsyncClient
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
-from langflow.services.database.models.api_key.model import ApiKey, ApiKeyRead, UnmaskedApiKeyRead
+from langflow.services.database.models.api_key.model import ApiKey, UnmaskedApiKeyRead
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User, UserCreate, UserRead
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
-from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, session_scope
 from lfx.components.input_output import ChatInput
 from lfx.graph import Graph
@@ -749,6 +748,7 @@ async def created_user_two_api_key(user_two: User) -> AsyncGenerator[ApiKey, Non
         db_key = await session.get(ApiKey, api_key.id)
         if db_key:
             await session.delete(db_key)
+
 
 @pytest.fixture
 def user_two_api_key(created_user_two_api_key: ApiKey) -> str:

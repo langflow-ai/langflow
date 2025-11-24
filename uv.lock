@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -83,6 +83,42 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9a/40/410e5f4d44ca46e997edb7bc011efa0c4cd0af268599a5aa13026f560996/agent_lifecycle_toolkit-0.4.1.tar.gz", hash = "sha256:2a415e87a336ee3f88bfbbec1c51801cbfbdde9a3b58899e8c42097fac04c56b", size = 7041483, upload-time = "2025-10-25T04:29:41.675Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7f/a5/65d27b8a0ba7dc172f62ed480772d3a2f0382463eae4be5978341458adfa/agent_lifecycle_toolkit-0.4.1-py3-none-any.whl", hash = "sha256:6a128813233ecb2053c3d8e68c072722885b16e7920fce93e3b4f35926652a27", size = 200434, upload-time = "2025-10-25T04:29:40.002Z" },
+]
+
+[[package]]
+name = "aioboto3"
+version = "15.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiobotocore", extra = ["boto3"] },
+    { name = "aiofiles" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a2/01/92e9ab00f36e2899315f49eefcd5b4685fbb19016c7f19a9edf06da80bb0/aioboto3-15.5.0.tar.gz", hash = "sha256:ea8d8787d315594842fbfcf2c4dce3bac2ad61be275bc8584b2ce9a3402a6979", size = 255069, upload-time = "2025-10-30T13:37:16.122Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e5/3e/e8f5b665bca646d43b916763c901e00a07e40f7746c9128bdc912a089424/aioboto3-15.5.0-py3-none-any.whl", hash = "sha256:cc880c4d6a8481dd7e05da89f41c384dbd841454fc1998ae25ca9c39201437a6", size = 35913, upload-time = "2025-10-30T13:37:14.549Z" },
+]
+
+[[package]]
+name = "aiobotocore"
+version = "2.25.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "aioitertools" },
+    { name = "botocore" },
+    { name = "jmespath" },
+    { name = "multidict" },
+    { name = "python-dateutil" },
+    { name = "wrapt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/62/94/2e4ec48cf1abb89971cb2612d86f979a6240520f0a659b53a43116d344dc/aiobotocore-2.25.1.tar.gz", hash = "sha256:ea9be739bfd7ece8864f072ec99bb9ed5c7e78ebb2b0b15f29781fbe02daedbc", size = 120560, upload-time = "2025-10-28T22:33:21.787Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/95/2a/d275ec4ce5cd0096665043995a7d76f5d0524853c76a3d04656de49f8808/aiobotocore-2.25.1-py3-none-any.whl", hash = "sha256:eb6daebe3cbef5b39a0bb2a97cffbe9c7cb46b2fcc399ad141f369f3c2134b1f", size = 86039, upload-time = "2025-10-28T22:33:19.949Z" },
+]
+
+[package.optional-dependencies]
+boto3 = [
+    { name = "boto3" },
 ]
 
 [[package]]
@@ -211,6 +247,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9d/61/ebda4d8e3d8cfa1fd3db0fb428db2dd7461d5742cea35178277ad180b033/aiohttp_retry-2.9.1.tar.gz", hash = "sha256:8eb75e904ed4ee5c2ec242fefe85bf04240f685391c4879d8f541d6028ff01f1", size = 13608, upload-time = "2024-11-06T10:44:54.574Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1a/99/84ba7273339d0f3dfa57901b846489d2e5c2cd731470167757f1935fffbd/aiohttp_retry-2.9.1-py3-none-any.whl", hash = "sha256:66d2759d1921838256a05a3f80ad7e724936f083e35be5abb5e16eed6be6dc54", size = 9981, upload-time = "2024-11-06T10:44:52.917Z" },
+]
+
+[[package]]
+name = "aioitertools"
+version = "0.13.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fd/3c/53c4a17a05fb9ea2313ee1777ff53f5e001aefd5cc85aa2f4c2d982e1e38/aioitertools-0.13.0.tar.gz", hash = "sha256:620bd241acc0bbb9ec819f1ab215866871b4bbd1f73836a55f799200ee86950c", size = 19322, upload-time = "2025-11-06T22:17:07.609Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/10/a1/510b0a7fadc6f43a6ce50152e69dbd86415240835868bb0bd9b5b88b1e06/aioitertools-0.13.0-py3-none-any.whl", hash = "sha256:0be0292b856f08dfac90e31f4739432f4cb6d7520ab9eb73e143f4f2fa5259be", size = 24182, upload-time = "2025-11-06T22:17:06.502Z" },
 ]
 
 [[package]]
@@ -5469,6 +5514,7 @@ version = "1.7.0"
 source = { editable = "." }
 dependencies = [
     { name = "agent-lifecycle-toolkit" },
+    { name = "aioboto3" },
     { name = "aiofile" },
     { name = "aiosqlite" },
     { name = "apify-client" },
@@ -5677,6 +5723,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "agent-lifecycle-toolkit", specifier = "~=0.4.1" },
+    { name = "aioboto3", specifier = ">=15.2.0,<16.0.0" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "aiosqlite", specifier = "==0.21.0" },
     { name = "apify-client", specifier = ">=1.8.1,<2.0.0" },
@@ -5726,14 +5773,14 @@ requires-dist = [
     { name = "langchain", specifier = "==0.3.23" },
     { name = "langchain-anthropic", specifier = "==0.3.14" },
     { name = "langchain-astradb", specifier = ">=0.6.1,<1.0.0" },
-    { name = "langchain-aws", specifier = "==0.2.33" },
+    { name = "langchain-aws", specifier = ">=0.2.33,<1.0.0" },
     { name = "langchain-chroma", specifier = ">=0.2.6,<1.0.0" },
-    { name = "langchain-cohere", specifier = "==0.3.3" },
+    { name = "langchain-cohere", specifier = ">=0.3.3,<1.0.0" },
     { name = "langchain-community", specifier = ">=0.3.21,<1.0.0" },
     { name = "langchain-docling", marker = "extra == 'docling'", specifier = ">=1.1.0" },
-    { name = "langchain-elasticsearch", specifier = "==0.3.0" },
+    { name = "langchain-elasticsearch", specifier = ">=0.3.0,<1.0.0" },
     { name = "langchain-google-calendar-tools", specifier = "==0.0.1" },
-    { name = "langchain-google-community", specifier = "==2.0.3" },
+    { name = "langchain-google-community", specifier = ">=2.0.3,<3.0.0" },
     { name = "langchain-google-genai", specifier = "==2.0.6" },
     { name = "langchain-google-vertexai", specifier = ">=2.0.7,<3.0.0" },
     { name = "langchain-graph-retriever", specifier = "==0.8.0" },
@@ -6041,9 +6088,9 @@ requires-dist = [
     { name = "jsonquerylang", specifier = ">=1.1.1,<2.0.0" },
     { name = "langchain", specifier = "~=0.3.21" },
     { name = "langchain-chroma", specifier = ">=0.1.4,<1.0.0" },
-    { name = "langchain-community", specifier = "~=0.3.20" },
-    { name = "langchain-core", specifier = "~=0.3.45" },
-    { name = "langchain-experimental", specifier = ">=0.3.4,<1.0.0" },
+    { name = "langchain-community", specifier = ">=0.3.0,<1.0.0" },
+    { name = "langchain-core", specifier = ">=0.3.45,<1.0.0" },
+    { name = "langchain-experimental", specifier = ">=0.3.0,<1.0.0" },
     { name = "langchain-ibm", specifier = ">=0.3.8,<1.0.0" },
     { name = "langchainhub", specifier = "~=0.1.15" },
     { name = "lfx", editable = "src/lfx" },
@@ -6350,6 +6397,7 @@ dependencies = [
     { name = "platformdirs" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "pypdf" },
     { name = "python-dotenv" },
     { name = "rich" },
     { name = "structlog" },
@@ -6398,6 +6446,7 @@ requires-dist = [
     { name = "platformdirs", specifier = ">=4.3.8,<5.0.0" },
     { name = "pydantic", specifier = ">=2.0.0,<3.0.0" },
     { name = "pydantic-settings", specifier = ">=2.10.1,<3.0.0" },
+    { name = "pypdf", specifier = ">=5.1.0" },
     { name = "python-dotenv", specifier = ">=1.0.0,<2.0.0" },
     { name = "rich", specifier = ">=13.0.0,<14.0.0" },
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
