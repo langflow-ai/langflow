@@ -1,9 +1,15 @@
+"""Transaction CRUD operations.
+
+Most operations should use langflow.services.database.crud.transaction_crud.
+This module contains specialized transaction operations.
+"""
+
 from uuid import UUID
 
 from lfx.log.logger import logger
-from sqlmodel import col, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.services.database.crud import transaction_crud
 from langflow.services.database.models.transactions.model import (
     TransactionBase,
     TransactionReadResponse,
@@ -15,15 +21,17 @@ from langflow.services.deps import get_settings_service
 async def get_transactions_by_flow_id(
     db: AsyncSession, flow_id: UUID, limit: int | None = 1000
 ) -> list[TransactionTable]:
-    stmt = (
-        select(TransactionTable)
-        .where(TransactionTable.flow_id == flow_id)
-        .order_by(col(TransactionTable.timestamp))
-        .limit(limit)
-    )
+    """Get transactions by flow ID.
 
-    transactions = await db.exec(stmt)
-    return list(transactions)
+    Args:
+        db: Database session
+        flow_id: Flow identifier
+        limit: Maximum number of transactions to return
+
+    Returns:
+        List of transaction instances
+    """
+    return await transaction_crud.get_by_flow_id(db, flow_id, limit=limit)
 
 
 async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> TransactionTable | None:
