@@ -52,11 +52,11 @@ flowchart LR
 
 
 ```
-**Diagram Description:**  
-The Expand-Contract migration pattern consists of three phases:  
-- **Expand:** Add new schema elements (shown in neutral grey).  
-- **Migrate:** Transition data and service usage (shown in light blue).  
-- **Contract:** Remove old schema elements after full adoption (shown in light green).  
+**Diagram Description:**
+The Expand-Contract migration pattern consists of three phases:
+- **Expand:** Add new schema elements (shown in neutral grey).
+- **Migrate:** Transition data and service usage (shown in light blue).
+- **Contract:** Remove old schema elements after full adoption (shown in light green).
 Each phase flows sequentially: Current Schema → Expand → Migrate → Contract.
 
 
@@ -84,12 +84,12 @@ def upgrade() -> None:
     bind = op.get_bind()
     inspector = sa.inspect(bind)
     columns = [col['name'] for col in inspector.get_columns('table_name')]
-    
+
     # Always check existence to ensure idempotency
     if 'new_column' not in columns:
         # CRITICAL: Use nullable=True for backward compatibility
         op.add_column('table_name', sa.Column('new_column', sa.String(), nullable=True))
-        
+
         # Optional: Add index for performance
         op.create_index('ix_table_new_column', 'table_name', ['new_column'])
 ```
@@ -105,12 +105,12 @@ def upgrade() -> None:
 **Database Operations**:
 ```sql
 -- Backfill existing data if needed
-UPDATE table_name 
-SET new_column = old_column 
+UPDATE table_name
+SET new_column = old_column
 WHERE new_column IS NULL AND old_column IS NOT NULL;
 
 -- Monitor adoption
-SELECT 
+SELECT
     COUNT(*) FILTER (WHERE new_column IS NOT NULL) as using_new,
     COUNT(*) FILTER (WHERE new_column IS NULL) as not_using_new
 FROM table_name
@@ -129,7 +129,7 @@ class ServiceAdapter:
             # Fallback to old column if new doesn't exist
             'data': row.new_column or row.old_column
         }
-    
+
     def write_data(self, data):
         """Write to both old and new schema during transition"""
         return Model(
@@ -155,16 +155,16 @@ def upgrade_contract_phase() -> None:
     """
     # Verify no services are using old column
     bind = op.get_bind()
-    
+
     # Safety check: Log usage before removal
     result = bind.execute(sa.text("""
-        SELECT COUNT(*) as cnt FROM table_name 
+        SELECT COUNT(*) as cnt FROM table_name
         WHERE old_column IS NOT NULL AND new_column IS NULL
     """)).first()
-    
+
     if result and result.cnt > 0:
         raise Exception(f"Cannot contract: {result.cnt} rows still depend on old_column")
-    
+
     # Safe to remove
     op.drop_column('table_name', 'old_column')
 ```
@@ -179,7 +179,7 @@ def upgrade_contract_phase() -> None:
 op.add_column('message', sa.Column('context_id', sa.String(), nullable=True))
 
 # Add default value if needed (database-level)
-op.add_column('message', sa.Column('status', sa.String(), 
+op.add_column('message', sa.Column('status', sa.String(),
               nullable=True, server_default='pending'))
 ```
 
@@ -231,21 +231,21 @@ op.alter_column('table_name', 'old_name', new_column_name='new_name')
 def pre_migration_checks():
     """Run before applying migration"""
     bind = op.get_bind()
-    
+
     # Check table size for performance impact
     result = bind.execute(sa.text(
         "SELECT COUNT(*) as cnt FROM table_name"
     )).first()
-    
+
     if result.cnt > 1000000:
         print(f"WARNING: Large table ({result.cnt} rows) - migration may be slow")
-    
+
     # Check for running transactions
     result = bind.execute(sa.text("""
-        SELECT COUNT(*) FROM pg_stat_activity 
+        SELECT COUNT(*) FROM pg_stat_activity
         WHERE state = 'active' AND query_start < NOW() - INTERVAL '5 minutes'
     """)).first()
-    
+
     if result[0] > 0:
         print(f"WARNING: {result[0]} long-running transactions detected")
 ```
@@ -257,17 +257,17 @@ def post_migration_validation():
     """Verify migration succeeded"""
     bind = op.get_bind()
     inspector = sa.inspect(bind)
-    
+
     # Verify column exists
     columns = [col['name'] for col in inspector.get_columns('table_name')]
     assert 'new_column' in columns, "Migration failed: column not added"
-    
+
     # Verify data integrity
     result = bind.execute(sa.text("""
-        SELECT COUNT(*) FROM table_name 
+        SELECT COUNT(*) FROM table_name
         WHERE new_column IS NOT NULL
     """)).first()
-    
+
     print(f"Migration complete: {result[0]} rows have new_column populated")
 ```
 
@@ -289,13 +289,13 @@ def downgrade() -> None:
     """
     bind = op.get_bind()
     inspector = sa.inspect(bind)
-    
+
     # Check for data that would be lost
     result = bind.execute(sa.text("""
-        SELECT COUNT(*) as cnt FROM table_name 
+        SELECT COUNT(*) as cnt FROM table_name
         WHERE new_column IS NOT NULL
     """)).first()
-    
+
     if result and result.cnt > 0:
         # Backup data before dropping
         bind.execute(sa.text("""
@@ -304,7 +304,7 @@ def downgrade() -> None:
             FROM table_name WHERE new_column IS NOT NULL
         """))
         print(f"Backed up {result.cnt} rows to table_name_backup")
-    
+
     # Safe to drop column
     columns = [col['name'] for col in inspector.get_columns('table_name')]
     if 'new_column' in columns:
@@ -356,7 +356,7 @@ class MessageService:
 ```sql
 -- Create monitoring view
 CREATE VIEW migration_progress AS
-SELECT 
+SELECT
     'context_id_adoption' as migration,
     COUNT(*) FILTER (WHERE context_id IS NOT NULL) * 100.0 / COUNT(*) as percentage_complete,
     COUNT(*) as total_records,
@@ -405,7 +405,7 @@ if datetime.now() > deployment_date:
 ```python
 # Migration 1: EXPAND (Day 1)
 def upgrade_expand():
-    op.add_column('user', sa.Column('email_verified', sa.Boolean(), 
+    op.add_column('user', sa.Column('email_verified', sa.Boolean(),
                   nullable=True, server_default='false'))
 
 # Migration 2: MIGRATE (Day 30, after all services updated)
@@ -424,11 +424,11 @@ def upgrade_contract():
 # Migration 1: Add new column
 def upgrade_phase1():
     op.add_column('order', sa.Column('status_code', sa.Integer(), nullable=True))
-    
+
     # Copy data from old column
     op.execute("""
-        UPDATE order SET status_code = 
-        CASE status_text 
+        UPDATE order SET status_code =
+        CASE status_text
             WHEN 'pending' THEN 1
             WHEN 'processing' THEN 2
             WHEN 'complete' THEN 3
@@ -457,8 +457,8 @@ CREATE TABLE service_schema_usage (
 -- Update from application
 INSERT INTO service_schema_usage (service_name, schema_version, uses_new_schema)
 VALUES ('user-service', 'v2.1.0', true)
-ON CONFLICT (service_name) 
-DO UPDATE SET 
+ON CONFLICT (service_name)
+DO UPDATE SET
     schema_version = EXCLUDED.schema_version,
     last_seen = NOW(),
     uses_new_schema = EXCLUDED.uses_new_schema;
@@ -468,7 +468,7 @@ DO UPDATE SET
 
 ```sql
 -- Check migration adoption rate
-SELECT 
+SELECT
     migration_name,
     adopted_services,
     total_services,
@@ -478,8 +478,9 @@ FROM migration_tracking
 WHERE is_active = true
 ORDER BY days_since_deployment DESC;
 
+```sql
 -- Identify services not yet migrated
-SELECT 
+SELECT
     s.service_name,
     s.version,
     s.last_deployment,
@@ -487,8 +488,8 @@ SELECT
 FROM services s
 CROSS JOIN active_migrations m
 WHERE NOT EXISTS (
-    SELECT 1 FROM service_migrations sm 
-    WHERE sm.service_name = s.service_name 
+    SELECT 1 FROM service_migrations sm
+    WHERE sm.service_name = s.service_name
     AND sm.migration_name = m.migration_name
 );
 ```
