@@ -7,9 +7,7 @@ import Icon from "@site/src/components/icon";
 
 Each Langflow server has a file management system where you can store files that you want to use in your flows.
 
-Files uploaded to Langflow file management are stored in your configured storage backend and are available to all of your flows.
-Langflow supports two storage backends: local filesystem storage and AWS S3 storage.
-Langflow uses local file storage as default. To configure Langflow to use S3 for file storage, see [configure file storage](/concepts-file-management#configure-file-storage).
+Files uploaded to Langflow file management are stored in Langflow's [storage backend (local or AWS S3)](/concepts-file-management#configure-file-storage), and they are available to all of your flows.
 
 Uploading files to Langflow file management keeps your files in a central location, and allows you to reuse files across flows without repeated manual uploads.
 
@@ -148,15 +146,15 @@ AWS_SECRET_ACCESS_KEY=S3_ACCESS_SECRET_KEY
 AWS_DEFAULT_REGION=S3_REGION
 ```
 
-Replace the following values:
+Replace the following placeholders with the actual values for your S3 instance:
+
 * `S3_BUCKET_NAME`: The name of your S3 bucket.
 * `S3_BUCKET_DIRECTORY`: An optional folder path within the bucket where files are stored, such as `s3://S3_BUCKET_NAME/S3_BUCKET_DIRECTORY`.
 * `S3_ACCESS_KEY`: Your AWS Access Key ID.
 * `S3_ACCESS_SECRET_KEY`: Your AWS Secret Access Key.
 * `S3_REGION`: The AWS region where your bucket is located, such as `us-east-2`.
 
-Your AWS credentials must have the necessary S3 permissions.
-Your requirements will vary depending on your use case.
+Your AWS credentials must have the necessary permissions to perform the required S3 operations for your use case, such as reading, writing, and deleting files in S3.
 This example policy allows basic CRUD operations on S3 objects.
 
 ```json
@@ -181,7 +179,9 @@ This example policy allows basic CRUD operations on S3 objects.
     ]
 }
 ```
-Replace the following values:
+
+Replace the following placeholders with the actual values for your IAM policy and S3 instance:
+
 * `S3_BUCKET_NAME`: The name of your S3 bucket.
 * `S3_BUCKET_DIRECTORY`: An optional folder path within the bucket where files are stored, such as `s3://S3_BUCKET_NAME/S3_BUCKET_DIRECTORY`.
 
