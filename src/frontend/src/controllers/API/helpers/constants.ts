@@ -32,6 +32,8 @@ export const URLs = {
   KNOWLEDGE_BASES: `knowledge_bases`,
   MODELS: `models`,
   MODEL_PROVIDERS: `models/providers`,
+  RUN: `run`,
+  RUN_SESSION: `run/session`,
   REGISTRATION: `registration`,
 } as const;
 

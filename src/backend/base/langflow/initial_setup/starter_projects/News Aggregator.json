@@ -1184,7 +1184,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.10.6"
+                    "version": "2.11.10"
                   },
                   {
                     "name": "lfx",
@@ -1942,7 +1942,7 @@
                   },
                   {
                     "name": "google",
-                    "version": "0.6.15"
+                    "version": "0.8.5"
                   },
                   {
                     "name": "googleapiclient",

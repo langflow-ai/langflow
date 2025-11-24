@@ -113,6 +113,20 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             advanced=True,
             info="Additional keyword arguments to pass to the model.",
         ),
+        IntInput(
+            name="truncate_input_tokens",
+            display_name="Truncate Input Tokens",
+            advanced=True,
+            value=200,
+            show=False,
+        ),
+        BoolInput(
+            name="input_text",
+            display_name="Include the original text in the output",
+            value=True,
+            advanced=True,
+            show=False,
+        ),
     ]
 
     def build_embeddings(self) -> Embeddings:
