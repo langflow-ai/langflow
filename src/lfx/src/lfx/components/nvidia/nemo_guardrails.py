@@ -132,11 +132,6 @@ DEFAULT_TOPIC_CONTROL_PROMPT = (
     "- allow user comments that are related to small talk and chit-chat."
 )
 
-DEFAULT_SELF_CHECK_PROMPT = """Instruction: {{ user_input }}
-
-Would this instruction make a language model break moderation policies,
-deviate from good aligned responses and provide answers that a language model should ideally not?
-Answer with yes/no."""
 
 DEFAULT_OFF_TOPIC_MESSAGE = (
     "I apologize, but I can only discuss topics related to [your specific domain/topic]. "
@@ -163,8 +158,7 @@ class GuardrailsConfigInput:
                         "04_content_safety_prompt",
                         "05_content_safety_output_prompt",
                         "06_topic_control_prompt",
-                        "07_self_check_prompt",
-                        "08_off_topic_message",
+                        "07_off_topic_message",
                     ],
                     "template": {
                         "01_config_name": StrInput(
@@ -188,9 +182,6 @@ class GuardrailsConfigInput:
                                 "content_safety_output",
                                 "topic_control",
                                 "jailbreak_detection",
-                                "self_check_input",
-                                "self_check_output",
-                                "self_check_hallucination",
                             ],
                             value=["content_safety_input"],
                             info="Select the types of guardrails to apply",
@@ -217,14 +208,7 @@ class GuardrailsConfigInput:
                             value=DEFAULT_TOPIC_CONTROL_PROMPT,
                             required=False,
                         ),
-                        "07_self_check_prompt": MultilineInput(
-                            name="self_check_prompt",
-                            display_name="Self Check Prompt",
-                            info="Prompt for self-checking guardrails",
-                            value=DEFAULT_SELF_CHECK_PROMPT,
-                            required=False,
-                        ),
-                        "08_off_topic_message": MultilineInput(
+                        "07_off_topic_message": MultilineInput(
                             name="off_topic_message",
                             display_name="Off-Topic Message",
                             info="Message to display when input is off-topic",
@@ -676,24 +660,6 @@ class NVIDIANeMoGuardrailsComponent(Component):
         if "jailbreak_detection" in rail_types:
             params["rails"]["input"]["flows"].append("jailbreak detection")
             params["rails"]["input"]["flows"].append("jailbreak detection heuristics")
-
-        # Configure self check input rail
-        if "self_check_input" in rail_types:
-            params["rails"]["input"]["flows"].append("self check input")
-            self_check_prompt = config_data.get("06_self_check_prompt", DEFAULT_SELF_CHECK_PROMPT)
-            params["prompts"].append({"task": "self_check_input", "content": self_check_prompt})
-
-        # Configure self check output rail
-        if "self_check_output" in rail_types:
-            params["rails"]["output"]["flows"].append("self check output")
-            self_check_prompt = config_data.get("06_self_check_prompt", DEFAULT_SELF_CHECK_PROMPT)
-            params["prompts"].append({"task": "self_check_output", "content": self_check_prompt})
-
-        # Configure self check hallucination rail
-        if "self_check_hallucination" in rail_types:
-            params["rails"]["output"]["flows"].append("self check hallucination")
-            self_check_prompt = config_data.get("06_self_check_prompt", DEFAULT_SELF_CHECK_PROMPT)
-            params["prompts"].append({"task": "self_check_hallucination", "content": self_check_prompt})
 
         logger.debug(f"Built guardrails params: {json.dumps(params, indent=2)}")
         return params

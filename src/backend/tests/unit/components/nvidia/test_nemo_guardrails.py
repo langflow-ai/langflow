@@ -183,18 +183,6 @@ class TestNVIDIANeMoGuardrailsComponent:
         assert len(params["prompts"]) == 1
         assert params["prompts"][0]["content"] == "Custom topic prompt"
 
-    def test_build_guardrails_params_self_check(self, component):
-        """Test parameter building for self-check rails."""
-        config_data = {"06_self_check_prompt": "Custom self-check prompt"}
-        rail_types = ["self_check_input", "self_check_output", "self_check_hallucination"]
-
-        params = component._build_guardrails_params(config_data, rail_types)
-
-        assert "self check input" in params["rails"]["input"]["flows"]
-        assert "self check output" in params["rails"]["output"]["flows"]
-        assert "self check hallucination" in params["rails"]["output"]["flows"]
-        assert len(params["prompts"]) == 3
-
     def test_build_guardrails_params_jailbreak_detection(self, component):
         """Test parameter building for jailbreak detection."""
         config_data = {}
