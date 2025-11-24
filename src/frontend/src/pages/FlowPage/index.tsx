@@ -211,7 +211,8 @@ export default function FlowPage({
       blocker.state === "blocked" &&
       autoSaving &&
       changesNotSaved &&
-      !isBuilding
+      !isBuilding &&
+      !currentFlow?.locked // Don't autosave locked flows
     ) {
       // Prevent auto-save if current flow doesn't have an ID yet
       if (!currentFlow?.id) {
@@ -228,7 +229,8 @@ export default function FlowPage({
     if (blocker.state === "blocked") {
       if (isBuilding) {
         stopBuilding();
-      } else if (!changesNotSaved) {
+      } else if (!changesNotSaved || currentFlow?.locked) {
+        // Proceed if no changes OR if flow is locked (don't save locked flows)
         blocker.proceed && blocker.proceed();
       }
     }
