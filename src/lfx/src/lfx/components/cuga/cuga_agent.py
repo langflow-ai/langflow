@@ -66,7 +66,7 @@ class CugaComponent(ToolCallingAgentComponent):
 
     display_name: str = "Cuga"
     description: str = "Define the Cuga agent's policies, then assign it a task."
-    documentation: str = "https://docs.langflow.org/bundles-cuga"
+    documentation: str = "https://docs.langflow.org/agents"
     icon = "bot"
     name = "Cuga"
 

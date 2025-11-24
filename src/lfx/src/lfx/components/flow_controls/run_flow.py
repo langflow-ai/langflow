@@ -12,7 +12,7 @@ class RunFlowComponent(RunFlowBaseComponent):
         "Creates a tool component from a Flow that takes all its inputs and runs it. "
         " \n **Select a Flow to use the tool mode**"
     )
-    documentation: str = "https://docs.langflow.org/run-flow"
+    documentation: str = "https://docs.langflow.org/components-logic#run-flow"
     beta = True
     name = "RunFlow"
     icon = "Workflow"
