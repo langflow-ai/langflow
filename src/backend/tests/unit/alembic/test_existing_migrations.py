@@ -12,7 +12,7 @@ class TestExistingMigrations:
 
         They should be identified as valid or invalid by the validator.
         """
-        workspace_root = Path("/home/hfurtado/development/db-migration-guideline/langflow")
+        workspace_root = Path(__file__).resolve().parents[5]
         migrations_dir = workspace_root / "src/backend/base/langflow/alembic/versions"
 
         if not migrations_dir.exists():
@@ -51,7 +51,7 @@ class TestExistingMigrations:
 
         This confirms the validator catches them.
         """
-        workspace_root = Path("/home/hfurtado/development/db-migration-guideline/langflow")
+        workspace_root = Path(__file__).resolve().parents[5]
         migrations_dir = workspace_root / "src/backend/base/langflow/alembic/versions"
 
         validator = MigrationValidator(strict_mode=False)

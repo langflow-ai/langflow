@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import tempfile
+from pathlib import Path
 
 import pytest
 from alembic import command
@@ -27,13 +28,13 @@ def test_real_migration_execution():
         # Create alembic.ini
         alembic_cfg = Config()
         # Ensure path is correct relative to where tests run
-        # If running from root:
-        script_location = "src/backend/base/langflow/alembic"
-        if not os.path.exists(script_location):  # noqa: PTH110
-            # Fallback or adjustment if running from another directory
-            pass
+        workspace_root = Path(__file__).resolve().parents[5]
+        script_location = workspace_root / "src/backend/base/langflow/alembic"
 
-        alembic_cfg.set_main_option("script_location", script_location)
+        if not script_location.exists():
+            pytest.fail(f"Alembic script location not found at {script_location}")
+
+        alembic_cfg.set_main_option("script_location", str(script_location))
         alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite+aiosqlite:///{db_path}")
 
         # Run migration
