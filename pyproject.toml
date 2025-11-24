@@ -137,6 +137,7 @@ dependencies = [
     "cuga==0.1.10",
     "agent-lifecycle-toolkit~=0.4.1",
     "astrapy>=2.1.0,<3.0.0",
+    "openlayer>=0.8.1,<1.0.0",
 ]
 
 
