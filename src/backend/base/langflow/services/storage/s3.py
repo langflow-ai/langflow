@@ -15,20 +15,31 @@ class S3StorageService(StorageService):
         self.s3_client = boto3.client("s3")
         self.set_ready()
 
-    async def save_file(self, folder: str, file_name: str, data) -> None:
+    async def save_file(self, folder: str, file_name: str, data, *, append: bool = False) -> None:
         """Save a file to the S3 bucket.
 
         Args:
             folder: The folder in the bucket to save the file.
             file_name: The name of the file to be saved.
             data: The byte content of the file.
+            append: If True, append to existing file instead of overwriting.
 
         Raises:
             Exception: If an error occurs during file saving.
         """
         try:
+            if append:
+                # For S3, we need to retrieve existing content and append
+                try:
+                    existing_data = await self.get_file(folder, file_name)
+                    data = existing_data + data
+                except ClientError:
+                    # File doesn't exist, proceed with new data
+                    pass
+
             self.s3_client.put_object(Bucket=self.bucket, Key=f"{folder}/{file_name}", Body=data)
-            await logger.ainfo(f"File {file_name} saved successfully in folder {folder}.")
+            action = "appended to" if append else "saved"
+            await logger.ainfo(f"File {file_name} {action} successfully in folder {folder}.")
         except NoCredentialsError:
             await logger.aexception("Credentials not available for AWS S3.")
             raise

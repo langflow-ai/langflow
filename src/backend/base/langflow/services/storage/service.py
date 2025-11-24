@@ -29,7 +29,7 @@ class StorageService(Service):
         self.ready = True
 
     @abstractmethod
-    async def save_file(self, flow_id: str, file_name: str, data) -> None:
+    async def save_file(self, flow_id: str, file_name: str, data, *, append: bool = False) -> None:
         raise NotImplementedError
 
     @abstractmethod

@@ -9,7 +9,7 @@ from fastapi.encoders import jsonable_encoder
 
 from lfx.custom import Component
 from lfx.inputs import SortableListInput
-from lfx.io import DropdownInput, HandleInput, SecretStrInput, StrInput
+from lfx.io import BoolInput, DropdownInput, HandleInput, SecretStrInput, StrInput
 from lfx.schema import Data, DataFrame, Message
 from lfx.services.deps import get_settings_service, get_storage_service, session_scope
 from lfx.template.field.base import Output
@@ -73,6 +73,13 @@ class SaveToFileComponent(Component):
             required=True,
             show=False,
             tool_mode=True,
+        ),
+        BoolInput(
+            name="append_mode",
+            display_name="Append",
+            info="Append to file if it exists (only for plain text formats). Disabled for binary formats like Excel.",
+            value=False,
+            show=False,
         ),
         # Format inputs (dynamic based on storage location)
         DropdownInput(
@@ -168,6 +175,7 @@ class SaveToFileComponent(Component):
         # Hide all dynamic fields first
         dynamic_fields = [
             "file_name",  # Common fields (input is always visible)
+            "append_mode",
             "local_format",
             "aws_format",
             "gdrive_format",
@@ -188,9 +196,11 @@ class SaveToFileComponent(Component):
         if len(selected) == 1:
             location = selected[0]
 
-            # Show file_name when any storage location is selected (input is always visible)
+            # Show file_name and append_mode when any storage location is selected
             if "file_name" in build_config:
                 build_config["file_name"]["show"] = True
+            if "append_mode" in build_config:
+                build_config["append_mode"]["show"] = True
 
             if location == "Local":
                 if "local_format" in build_config:
@@ -274,6 +284,11 @@ class SaveToFileComponent(Component):
             return Path(f"{path}.xlsx").expanduser() if file_extension not in ["xlsx", "xls"] else path
         return Path(f"{path}.{fmt}").expanduser() if file_extension != fmt else path
 
+    def _is_plain_text_format(self, fmt: str) -> bool:
+        """Check if a file format is plain text (supports appending)."""
+        plain_text_formats = ["txt", "json", "markdown", "md", "csv", "xml", "html", "yaml", "log", "tsv", "jsonl"]
+        return fmt.lower() in plain_text_formats
+
     async def _upload_file(self, file_path: Path) -> None:
         """Upload the saved file using the upload_user_file service."""
         from langflow.api.v2.files import upload_user_file
@@ -284,7 +299,8 @@ class SaveToFileComponent(Component):
             msg = f"File not found: {file_path}"
             raise FileNotFoundError(msg)
 
-        # Upload the file
+        # Upload the file - always use append=False because the local file already contains
+        # the correct content (either new or appended locally)
         with file_path.open("rb") as f:
             async with session_scope() as db:
                 if not self.user_id:
@@ -298,39 +314,109 @@ class SaveToFileComponent(Component):
                     current_user=current_user,
                     storage_service=get_storage_service(),
                     settings_service=get_settings_service(),
+                    append=False,
                 )
 
     def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> str:
         """Save a DataFrame to the specified file format."""
+        append_mode = getattr(self, "append_mode", False)
+        should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
+
         if fmt == "csv":
-            dataframe.to_csv(path, index=False)
+            dataframe.to_csv(path, index=False, mode="a" if should_append else "w", header=not should_append)
         elif fmt == "excel":
             dataframe.to_excel(path, index=False, engine="openpyxl")
         elif fmt == "json":
-            dataframe.to_json(path, orient="records", indent=2)
+            if should_append:
+                # Read and parse existing JSON
+                existing_data = []
+                try:
+                    existing_content = path.read_text(encoding="utf-8").strip()
+                    if existing_content:
+                        parsed = json.loads(existing_content)
+                        # Handle case where existing content is a single object
+                        if isinstance(parsed, dict):
+                            existing_data = [parsed]
+                        elif isinstance(parsed, list):
+                            existing_data = parsed
+                except (json.JSONDecodeError, FileNotFoundError):
+                    # Treat parse errors or missing file as empty array
+                    existing_data = []
+
+                # Append new data
+                new_records = json.loads(dataframe.to_json(orient="records"))
+                existing_data.extend(new_records)
+
+                # Write back as a single JSON array
+                path.write_text(json.dumps(existing_data, indent=2), encoding="utf-8")
+            else:
+                dataframe.to_json(path, orient="records", indent=2)
         elif fmt == "markdown":
-            path.write_text(dataframe.to_markdown(index=False), encoding="utf-8")
+            content = dataframe.to_markdown(index=False)
+            if should_append:
+                path.write_text(path.read_text(encoding="utf-8") + "\n\n" + content, encoding="utf-8")
+            else:
+                path.write_text(content, encoding="utf-8")
         else:
             msg = f"Unsupported DataFrame format: {fmt}"
             raise ValueError(msg)
-        return f"DataFrame saved successfully as '{path}'"
+        action = "appended to" if should_append else "saved successfully as"
+        return f"DataFrame {action} '{path}'"
 
     def _save_data(self, data: Data, path: Path, fmt: str) -> str:
         """Save a Data object to the specified file format."""
+        append_mode = getattr(self, "append_mode", False)
+        should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
+
         if fmt == "csv":
-            pd.DataFrame(data.data).to_csv(path, index=False)
+            pd.DataFrame(data.data).to_csv(
+                path,
+                index=False,
+                mode="a" if should_append else "w",
+                header=not should_append,
+            )
         elif fmt == "excel":
             pd.DataFrame(data.data).to_excel(path, index=False, engine="openpyxl")
         elif fmt == "json":
-            path.write_text(
-                orjson.dumps(jsonable_encoder(data.data), option=orjson.OPT_INDENT_2).decode("utf-8"), encoding="utf-8"
-            )
+            new_data = jsonable_encoder(data.data)
+            if should_append:
+                # Read and parse existing JSON
+                existing_data = []
+                try:
+                    existing_content = path.read_text(encoding="utf-8").strip()
+                    if existing_content:
+                        parsed = json.loads(existing_content)
+                        # Handle case where existing content is a single object
+                        if isinstance(parsed, dict):
+                            existing_data = [parsed]
+                        elif isinstance(parsed, list):
+                            existing_data = parsed
+                except (json.JSONDecodeError, FileNotFoundError):
+                    # Treat parse errors or missing file as empty array
+                    existing_data = []
+
+                # Append new data
+                if isinstance(new_data, list):
+                    existing_data.extend(new_data)
+                else:
+                    existing_data.append(new_data)
+
+                # Write back as a single JSON array
+                path.write_text(json.dumps(existing_data, indent=2), encoding="utf-8")
+            else:
+                content = orjson.dumps(new_data, option=orjson.OPT_INDENT_2).decode("utf-8")
+                path.write_text(content, encoding="utf-8")
         elif fmt == "markdown":
-            path.write_text(pd.DataFrame(data.data).to_markdown(index=False), encoding="utf-8")
+            content = pd.DataFrame(data.data).to_markdown(index=False)
+            if should_append:
+                path.write_text(path.read_text(encoding="utf-8") + "\n\n" + content, encoding="utf-8")
+            else:
+                path.write_text(content, encoding="utf-8")
         else:
             msg = f"Unsupported Data format: {fmt}"
             raise ValueError(msg)
-        return f"Data saved successfully as '{path}'"
+        action = "appended to" if should_append else "saved successfully as"
+        return f"Data {action} '{path}'"
 
     async def _save_message(self, message: Message, path: Path, fmt: str) -> str:
         """Save a Message to the specified file format, handling async iterators."""
@@ -346,16 +432,50 @@ class SaveToFileComponent(Component):
         else:
             content = str(message.text)
 
+        append_mode = getattr(self, "append_mode", False)
+        should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
+
         if fmt == "txt":
-            path.write_text(content, encoding="utf-8")
+            if should_append:
+                path.write_text(path.read_text(encoding="utf-8") + "\n" + content, encoding="utf-8")
+            else:
+                path.write_text(content, encoding="utf-8")
         elif fmt == "json":
-            path.write_text(json.dumps({"message": content}, indent=2), encoding="utf-8")
+            new_message = {"message": content}
+            if should_append:
+                # Read and parse existing JSON
+                existing_data = []
+                try:
+                    existing_content = path.read_text(encoding="utf-8").strip()
+                    if existing_content:
+                        parsed = json.loads(existing_content)
+                        # Handle case where existing content is a single object
+                        if isinstance(parsed, dict):
+                            existing_data = [parsed]
+                        elif isinstance(parsed, list):
+                            existing_data = parsed
+                except (json.JSONDecodeError, FileNotFoundError):
+                    # Treat parse errors or missing file as empty array
+                    existing_data = []
+
+                # Append new message
+                existing_data.append(new_message)
+
+                # Write back as a single JSON array
+                path.write_text(json.dumps(existing_data, indent=2), encoding="utf-8")
+            else:
+                path.write_text(json.dumps(new_message, indent=2), encoding="utf-8")
         elif fmt == "markdown":
-            path.write_text(f"**Message:**\n\n{content}", encoding="utf-8")
+            md_content = f"**Message:**\n\n{content}"
+            if should_append:
+                path.write_text(path.read_text(encoding="utf-8") + "\n\n" + md_content, encoding="utf-8")
+            else:
+                path.write_text(md_content, encoding="utf-8")
         else:
             msg = f"Unsupported Message format: {fmt}"
             raise ValueError(msg)
-        return f"Message saved successfully as '{path}'"
+        action = "appended to" if should_append else "saved successfully as"
+        return f"Message {action} '{path}'"
 
     def _get_selected_storage_location(self) -> str:
         """Get the selected storage location from the SortableListInput."""
