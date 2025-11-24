@@ -17,7 +17,9 @@ class AutonomizeModelComponent(ATModelComponent):
     """Unified component for Autonomize text-based models with dropdown selection."""
 
     display_name: str = "Autonomize Model"
-    description: str = "Unified interface for Autonomize text-based AI models with dropdown selection"
+    description: str = (
+        "Unified interface for Autonomize text-based AI models with dropdown selection"
+    )
     documentation: str = "https://docs.example.com/autonomize-models"
     icon: str = "Autonomize"
     name: str = "AutonomizeModel"
@@ -32,6 +34,8 @@ class AutonomizeModelComponent(ATModelComponent):
         "CPT Code": ModelEndpoint.CPT_CODE,
         "ICD-10 Code": ModelEndpoint.ICD_10,
         "RxNorm Code": ModelEndpoint.RXNORM,
+        "Hedis Object Detection CCS": ModelEndpoint.HEDIS_OBJECT_DETECTION_CCS,
+        "Hedis SLM Validation CCS": ModelEndpoint.HEDIS_SLM_VALIDATION_CCS,
     }
 
     # Model descriptions for UI
@@ -42,6 +46,8 @@ class AutonomizeModelComponent(ATModelComponent):
         "CPT Code": "Extract CPT codes from medical text",
         "ICD-10 Code": "Extract ICD-10 codes from medical text",
         "RxNorm Code": "Extract RxNorm codes for medications",
+        "Hedis Object Detection CCS": "hedis object extraction",
+        "Hedis SLM Validation CCS": "hedis validation",
     }
 
     inputs = [
@@ -50,8 +56,9 @@ class AutonomizeModelComponent(ATModelComponent):
             display_name="Model",
             options=list(MODEL_OPTIONS.keys()),
             value=next(iter(MODEL_OPTIONS.keys())),
-            info="Select the Autonomize model to use",
+            info="Select the Autonomize document model to use",
             real_time_refresh=True,
+            tool_mode=True,
         ),
         MultilineInput(
             name="search_query",
@@ -64,11 +71,7 @@ class AutonomizeModelComponent(ATModelComponent):
     ]
 
     outputs = [
-        Output(
-            name="prediction",
-            display_name="Model Output",
-            method="build_output"
-        ),
+        Output(name="prediction", display_name="Model Output", method="build_output"),
     ]
 
     def __init__(self, **kwargs):
@@ -151,7 +154,7 @@ class AutonomizeModelComponent(ATModelComponent):
         output_data = {
             "model": self.selected_model,
             "model_description": self.MODEL_DESCRIPTIONS.get(self.selected_model, ""),
-            "data": query_results
+            "data": query_results,
         }
 
         data = Data(value=output_data)

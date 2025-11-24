@@ -17,6 +17,8 @@ class ModelEndpoint(Enum):
     SRF_EXTRACTION = "SRF_EXTRACTION_MODEL"
     SRF_IDENTIFICATION = "SRF_IDENTIFICATION_MODEL"
     EMBEDDING = "EMBEDDING_MODEL"
+    HEDIS_OBJECT_DETECTION_CCS = "HEDIS_OBJECT_DETECTION_CCS"
+    HEDIS_SLM_VALIDATION_CCS = "HEDIS_SLM_VALIDATION_CCS"
 
     def get_model(self) -> str:
         """Retrieves the model name string from settings based on the enum value."""

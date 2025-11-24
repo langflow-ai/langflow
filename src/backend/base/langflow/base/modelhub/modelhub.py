@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import base64
+from io import BytesIO
 import traceback
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Dict
 
 import aiohttp
 from loguru import logger
@@ -40,7 +42,9 @@ class ATModelComponent(LCToolComponent):
             "extraction": "https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/extraction:predict",
             "identification": "https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/identification:predict",
             "srf-extraction": "https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/extraction:predict",
-            "srf-identification": "https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/identification:predict"
+            "srf-identification": "https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/identification:predict",
+            "hedis-ccs-object-detection": "https://solution.uat.genesis.autonomize.ai/genesis-platform/modelhub-bff/modelhub/api/v1/client/1/copilot/68db7fb4816140e17622484f/model-card/hedis-ccs-object-detection/infer",
+            "hedis-ccs-slm-validation": "https://solution.uat.genesis.autonomize.ai/genesis-platform/modelhub-bff/modelhub/api/v1/client/1/copilot/68db7fb4816140e17622484f/model-card/hedis-ccs-slm-validation/infer",
         }
         return direct_endpoints.get(model_name)
 
@@ -77,6 +81,80 @@ class ATModelComponent(LCToolComponent):
 
         except Exception as e:
             logger.error(f"Direct file inference failed: {e}")
+            raise
+
+    async def _direct_text_inference(
+        self, endpoint: str, text: Path, parameters: Dict |None=None
+    ) -> Any:
+        """Make direct text inference call to bypass ModelHub service issues."""
+        try:
+            # Use the modelhub client's credential directly to get the proper token
+            from langflow.services.deps import get_modelhub_service
+
+            service = get_modelhub_service()
+
+            # Access the credential and get token directly from the modelhub client
+            credential = service.client.credential
+            auth_token = credential.get_token()
+
+            # Prepare headers for direct endpoint (matching working curl)
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            }
+
+            logger.debug(f"Making direct request to: {endpoint}")
+            logger.debug(f"text: {text}")
+
+            # Make request with raw binary data
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    endpoint, json={"text":text}, headers=headers
+                ) as response:
+                    response.raise_for_status()
+                    result = await response.json()
+                    logger.debug(f"Direct endpoint response: {result}")
+                    return result
+
+        except Exception as e:
+            logger.error(f"Direct text inference failed: {e}")
+            raise
+
+    async def _direct_infer_call_for_object_detection(self, endpoint: str, file_path: Path) -> Any:
+        """Make direct file inference call to bypass ModelHub service issues."""
+        try:
+            # Use the modelhub client's credential directly to get the proper token
+            from langflow.services.deps import get_modelhub_service
+            service = get_modelhub_service()
+
+            # Access the credential and get token directly from the modelhub client
+            credential = service.client.credential
+            auth_token = credential.get_token()
+
+            file_content = file_path.read_bytes()
+            bytes_io = BytesIO(file_content)
+            base64_content = base64.b64encode(bytes_io.read()).decode("utf-8")
+
+            # Prepare headers for direct endpoint (matching working curl)
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}"
+            }
+
+            logger.debug(f"Making direct request to: {endpoint}")
+
+            # Make request with raw binary data
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    endpoint, json={"data": {"image": base64_content}}, headers=headers
+                ) as response:
+                    response.raise_for_status()
+                    result = await response.json()
+                    logger.debug(f"Direct endpoint response for hedis: {result}")
+                    return result.get('result',{}).get('data',None)
+
+        except Exception as e:
+            logger.error(f"Direct file inference failed for hedis: {e}")
             raise
 
     async def predict(self, **kwargs) -> Any:
@@ -132,7 +210,10 @@ class ATModelComponent(LCToolComponent):
                 try:
                     # Check if we have a direct endpoint for this model (to bypass ModelHub service issues)
                     direct_endpoint = self._get_direct_model_endpoint(resolved_model_name)
-                    if direct_endpoint:
+                    if direct_endpoint and any(key in resolved_model_name for key in ["object-detection"]):
+                        logger.info(f"🔄 Using direct endpoint for hedis models: {direct_endpoint}")
+                        response = await self._direct_infer_call_for_object_detection(direct_endpoint,file_path)
+                    elif direct_endpoint:
                         logger.info(f"🔄 Using direct endpoint for file inference: {direct_endpoint}")
                         response = await self._direct_file_inference(direct_endpoint, file_path, content_type)
                     else:
@@ -153,13 +234,17 @@ class ATModelComponent(LCToolComponent):
             else:
                 # Text-based inference
                 text = kwargs.get("text")
+                direct_endpoint = self._get_direct_model_endpoint(resolved_model_name)
                 logger.info("🔍 Making text inference call...")
                 logger.info(f"🔍 Text input: {text[:100] + '...' if text and len(text) > 100 else text}")
                 logger.info(f"🔍 Model: {resolved_model_name}")
 
                 try:
-                    response = await service.text_inference(resolved_model_name, text)
-                    logger.info("✅ Text inference successful")
+                    if direct_endpoint:
+                        response = await self._direct_text_inference(direct_endpoint, text)
+                    else: 
+                        response = await service.text_inference(resolved_model_name, text)
+                        logger.info("✅ Text inference successful")
                 except Exception as e:
                     logger.error(f"❌ Text inference failed: {e}")
                     logger.error(f"❌ Error type: {type(e).__name__}")

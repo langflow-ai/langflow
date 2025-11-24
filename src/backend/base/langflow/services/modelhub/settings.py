@@ -88,6 +88,9 @@ class ModelHubSettings(BaseSettings):
     SRF_EXTRACTION_MODEL: str | None = None
     SRF_IDENTIFICATION_MODEL: str | None = None
     EMBEDDING_MODEL: str | None = None
+    # HEDIS MODELS
+    HEDIS_OBJECT_DETECTION_CCS: str | None = None
+    HEDIS_SLM_VALIDATION_CCS: str | None = None
 
     def is_configured(self) -> bool:
         """Check if required settings are configured."""

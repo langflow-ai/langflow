@@ -23,7 +23,9 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
     """Unified component for Autonomize document/file-based models with dropdown selection."""
 
     display_name: str = "Autonomize Document Model"
-    description: str = "Unified interface for Autonomize document and image processing models"
+    description: str = (
+        "Unified interface for Autonomize document and image processing models"
+    )
     documentation: str = "https://docs.example.com/autonomize-document-models"
     icon: str = "Autonomize"
     name: str = "AutonomizeDocumentModel"
@@ -34,12 +36,14 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
     MODEL_OPTIONS = {
         "SRF Extraction": ModelEndpoint.SRF_EXTRACTION,
         "SRF Identification": ModelEndpoint.SRF_IDENTIFICATION,
+        "Hedis Object Detection CCS": ModelEndpoint.HEDIS_OBJECT_DETECTION_CCS,
     }
 
     # Model descriptions for UI
     MODEL_DESCRIPTIONS = {
         "SRF Extraction": "Extract structured retinal findings from medical images",
         "SRF Identification": "Identify subretinal fluid in OCT images",
+        "Hedis Object Detection CCS": "hedis object extraction",
     }
 
     # Valid file extensions based on model
@@ -58,6 +62,7 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
             value=next(iter(MODEL_OPTIONS.keys())),
             info="Select the Autonomize document model to use",
             real_time_refresh=True,
+            tool_mode=True,
         ),
         HandleInput(
             name="file_path",
@@ -101,7 +106,7 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
         Output(
             name="document_analysis",
             display_name="Document Analysis",
-            method="process_document"
+            method="process_document",
         ),
     ]
 
@@ -152,7 +157,9 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
                 raise
             return None
 
-    async def _validate_and_resolve_paths_async(self) -> list[BaseFileComponent.BaseFile]:
+    async def _validate_and_resolve_paths_async(
+        self,
+    ) -> list[BaseFileComponent.BaseFile]:
         """Handle URLs and local paths asynchronously."""
         resolved_files = []
         file_paths = self._file_path_as_list()
@@ -178,14 +185,16 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
                 for path in paths_to_process:
                     try:
                         # Check if it's a URL
-                        if isinstance(path, str) and path.startswith(("http://", "https://")):
+                        if isinstance(path, str) and path.startswith(
+                            ("http://", "https://")
+                        ):
                             local_path = await self._download_file_from_url(path)
                             if local_path:
                                 file_obj = BaseFileComponent.BaseFile(
                                     data=obj,
                                     path=Path(local_path),
                                     delete_after_processing=True,  # Mark downloaded files for deletion
-                                    silent_errors=self.silent_errors
+                                    silent_errors=self.silent_errors,
                                 )
                                 resolved_files.append(file_obj)
                         else:
@@ -196,7 +205,7 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
                                     data=obj,
                                     path=path_obj,
                                     delete_after_processing=self.delete_server_file_after_processing,
-                                    silent_errors=self.silent_errors
+                                    silent_errors=self.silent_errors,
                                 )
                                 resolved_files.append(file_obj)
                             elif not self.silent_errors:
@@ -214,7 +223,9 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
 
         return resolved_files
 
-    async def process_files(self, files: list[BaseFileComponent.BaseFile]) -> dict[str, Any]:
+    async def process_files(
+        self, files: list[BaseFileComponent.BaseFile]
+    ) -> dict[str, Any]:
         """Process files using the selected model."""
         results = []
 
@@ -222,12 +233,16 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
             file_path = file_obj.path
 
             # Validate file extension
-            valid_extensions = self.MODEL_EXTENSIONS.get(self.selected_model, self.VALID_EXTENSIONS)
+            valid_extensions = self.MODEL_EXTENSIONS.get(
+                self.selected_model, self.VALID_EXTENSIONS
+            )
             file_extension = file_path.suffix.lower().lstrip(".")
 
             if file_extension not in [ext.lower() for ext in valid_extensions]:
                 if not self.ignore_unsupported_extensions:
-                    raise ValueError(f"File extension '{file_extension}' not supported by {self.selected_model}")
+                    raise ValueError(
+                        f"File extension '{file_extension}' not supported by {self.selected_model}"
+                    )
                 continue
 
             try:
@@ -242,8 +257,7 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
 
                 # Process with the selected model
                 response = await self.predict(
-                    file_path=file_path,
-                    content_type=content_type
+                    file_path=file_path, content_type=content_type
                 )
 
                 # Handle string responses
@@ -256,27 +270,31 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
                 result = {
                     "file_path": str(file_path),
                     "model": self.selected_model,
-                    "response": response
+                    "response": response,
                 }
                 results.append(result)
 
             except Exception as e:
-                error_msg = f"Error processing {file_path} with {self.selected_model}: {e!s}"
+                error_msg = (
+                    f"Error processing {file_path} with {self.selected_model}: {e!s}"
+                )
                 logger.error(error_msg)
                 if not self.silent_errors:
                     raise ValueError(error_msg) from e
 
-                results.append({
-                    "file_path": str(file_path),
-                    "model": self.selected_model,
-                    "error": str(e)
-                })
+                results.append(
+                    {
+                        "file_path": str(file_path),
+                        "model": self.selected_model,
+                        "error": str(e),
+                    }
+                )
 
         return {
             "model": self.selected_model,
             "model_description": self.MODEL_DESCRIPTIONS.get(self.selected_model, ""),
             "processed_files": len(results),
-            "results": results
+            "results": results,
         }
 
     async def process_document(self) -> Data:
@@ -298,7 +316,9 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
                         file_obj.path.unlink()
                         logger.debug(f"Deleted temporary file: {file_obj.path}")
                     except Exception as e:
-                        logger.warning(f"Failed to delete temporary file {file_obj.path}: {e}")
+                        logger.warning(
+                            f"Failed to delete temporary file {file_obj.path}: {e}"
+                        )
 
             data = Data(value=results)
             self.status = f"Processed {len(files)} files with {self.selected_model}"
@@ -317,4 +337,3 @@ class AutonomizeDocumentModelComponent(ATModelComponent, BaseFileComponent):
     def build(self):
         """Return the main build function for Langflow framework."""
         return self.process_document
-
