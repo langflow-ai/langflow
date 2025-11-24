@@ -98,7 +98,10 @@ def test():
     assert len(result["imports"]["errors"]) > 0 or len(result["function"]["errors"]) > 0
     # Should mention that module is blocked
     all_errors = result["imports"]["errors"] + result["function"]["errors"]
-    assert any("blocked" in str(err).lower() or "os" in str(err).lower() or "subprocess" in str(err).lower() for err in all_errors)
+    assert any(
+        "blocked" in str(err).lower() or "os" in str(err).lower() or "subprocess" in str(err).lower()
+        for err in all_errors
+    )
 
 
 @pytest.mark.usefixtures("active_user")
@@ -130,7 +133,9 @@ def test():
     # This should execute but in isolation - can't access server's sys module state
     return sys.version
 """
-    response = await client.post("api/v1/validate/code", json={"code": code_trying_to_escape}, headers=logged_in_headers)
+    response = await client.post(
+        "api/v1/validate/code", json={"code": code_trying_to_escape}, headers=logged_in_headers
+    )
     result = response.json()
     assert response.status_code == status.HTTP_200_OK
     # Code executes but in isolation - sys is imported fresh, not server's sys
@@ -181,7 +186,7 @@ def test(items: List[str]) -> Optional[str]:
 @pytest.mark.usefixtures("active_user")
 async def test_validate_code_allows_third_party_libraries(client: AsyncClient, logged_in_headers):
     """Test that third-party libraries (not in a whitelist) can be imported.
-    
+
     Users should be able to import legitimate third-party libraries like AI libraries,
     data processing libraries, etc. We only block dangerous system-level modules.
     """
@@ -249,7 +254,7 @@ def test():
 @pytest.mark.usefixtures("active_user")
 async def test_validate_code_cannot_access_real_builtins(client: AsyncClient, logged_in_headers):
     """Test that code cannot escape via real __builtins__.
-    
+
     If isolation were broken, code could access the real __builtins__ to escape.
     We test this by trying to access __builtins__ directly (which should be isolated).
     """
@@ -265,7 +270,9 @@ def test():
     except Exception:
         return 'isolated'
 """
-    response = await client.post("api/v1/validate/code", json={"code": code_trying_builtins_escape}, headers=logged_in_headers)
+    response = await client.post(
+        "api/v1/validate/code", json={"code": code_trying_builtins_escape}, headers=logged_in_headers
+    )
     result = response.json()
     assert response.status_code == status.HTTP_200_OK
     # Code should execute successfully - the key is that __builtins__ is isolated
@@ -277,7 +284,7 @@ def test():
 @pytest.mark.usefixtures("active_user")
 async def test_validate_code_uses_isolated_sandbox(client: AsyncClient, logged_in_headers):
     """Test that validate endpoint uses isolated sandbox.
-    
+
     This test verifies that code executes in sandbox (doesn't crash).
     Actual isolation behavior is tested in sandbox unit tests.
     """
@@ -293,5 +300,3 @@ def test():
     assert response.status_code == status.HTTP_200_OK
     # Should execute without errors - proves sandbox is being used
     assert len(result["function"]["errors"]) == 0
-
-

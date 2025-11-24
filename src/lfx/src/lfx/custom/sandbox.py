@@ -7,23 +7,22 @@ to the server environment.
 By default, dangerous operations (file I/O, network, subprocess) are blocked.
 Set LANGFLOW_ALLOW_DANGEROUS_CODE_VALIDATION=true to allow them (not recommended).
 """
+
 import builtins
 import importlib
 import os
-from typing import Any, Dict, Set
+from typing import Any
 
 
 class SecurityViolation(Exception):
     """Raised when code attempts to escape the sandbox or use blocked operations."""
-
-    pass
 
 
 # Check if dangerous operations are allowed via environment variable
 ALLOW_DANGEROUS_CODE = os.getenv("LANGFLOW_ALLOW_DANGEROUS_CODE_VALIDATION", "false").lower() == "true"
 
 # Dangerous builtins that should be blocked by default
-BLOCKED_BUILTINS: Set[str] = {
+BLOCKED_BUILTINS: set[str] = {
     "open",  # File I/O
     "input",  # User input
     "compile",  # Code compilation
@@ -39,7 +38,7 @@ BLOCKED_BUILTINS: Set[str] = {
 }
 
 # Dangerous modules that should be blocked by default
-BLOCKED_MODULES: Set[str] = {
+BLOCKED_MODULES: set[str] = {
     # System access
     "os",
     "sys",
@@ -85,7 +84,7 @@ BLOCKED_MODULES: Set[str] = {
 # while still blocking dangerous system-level operations.
 
 
-def create_isolated_builtins() -> Dict[str, Any]:
+def create_isolated_builtins() -> dict[str, Any]:
     """Create an isolated set of builtins to prevent escaping the sandbox.
 
     By default, blocks dangerous builtins (open, eval, exec, etc.).
@@ -96,7 +95,7 @@ def create_isolated_builtins() -> Dict[str, Any]:
     """
     # Create a copy of builtins to prevent modification of the real one
     isolated_builtins = {}
-    
+
     # Copy safe builtins (block dangerous ones by default)
     for name in dir(builtins):
         if not name.startswith("_"):
@@ -107,33 +106,36 @@ def create_isolated_builtins() -> Dict[str, Any]:
                 isolated_builtins[name] = getattr(builtins, name)
             except AttributeError:
                 pass
-    
+
     # Include essential builtins that start with underscore
     essential_underscore_builtins = ["__name__", "__doc__", "__package__", "__loader__", "__spec__"]
     for name in essential_underscore_builtins:
         if hasattr(builtins, name):
             isolated_builtins[name] = getattr(builtins, name)
-    
+
     # Critical: Make __builtins__ point to this isolated copy, not the real one
     # This prevents code from accessing the real builtins module
     isolated_builtins["__builtins__"] = isolated_builtins.copy()
-    
+
     # Prevent access to the real builtins module
     # If code tries to import builtins, they get our isolated version
     class IsolatedBuiltinsModule:
         """Fake builtins module that prevents escaping."""
+
         def __getattr__(self, name: str) -> Any:
             # Block dangerous builtins unless explicitly allowed
             if not ALLOW_DANGEROUS_CODE and name in BLOCKED_BUILTINS:
-                raise SecurityViolation(f"Dangerous builtin '{name}' is blocked. Set LANGFLOW_ALLOW_DANGEROUS_CODE_VALIDATION=true to allow.")
+                raise SecurityViolation(
+                    f"Dangerous builtin '{name}' is blocked. Set LANGFLOW_ALLOW_DANGEROUS_CODE_VALIDATION=true to allow."
+                )
             if name == "__builtins__":
                 return isolated_builtins
             if hasattr(builtins, name):
                 return getattr(builtins, name)
             raise AttributeError(f"module 'builtins' has no attribute '{name}'")
-    
+
     isolated_builtins["builtins"] = IsolatedBuiltinsModule()
-    
+
     return isolated_builtins
 
 
@@ -146,11 +148,12 @@ def create_isolated_import():
     Returns:
         A function that performs isolated imports
     """
+
     def isolated_import(name: str, globals=None, locals=None, fromlist=(), level=0):  # noqa: A002, ARG001
         """Import function that blocks dangerous modules by default."""
         # Extract top-level module name
         module_name = name.split(".")[0]
-        
+
         # Block dangerous modules unless explicitly allowed
         if not ALLOW_DANGEROUS_CODE:
             if module_name in BLOCKED_MODULES:
@@ -163,22 +166,22 @@ def create_isolated_import():
             # while still blocking dangerous system-level operations
             is_lfx_module = module_name == "lfx" or module_name.startswith("lfx.")
             is_langflow_module = module_name == "langflow" or module_name.startswith("langflow.")
-            
+
             # If it's not a blocked module, and not langflow/lfx, it's allowed
             # (We've already checked BLOCKED_MODULES above, so anything reaching here is safe)
-        
+
         # Import the module (still isolated namespace-wise)
         return importlib.import_module(name)
-    
+
     return isolated_import
 
 
-def execute_in_sandbox(code_obj: Any, exec_globals: Dict[str, Any]) -> None:
+def execute_in_sandbox(code_obj: Any, exec_globals: dict[str, Any]) -> None:
     """Execute code in an isolated sandbox environment.
 
     The code executes in a completely isolated namespace with no access to:
     - The server's global namespace
-    - The server's local namespace  
+    - The server's local namespace
     - The real __builtins__ module (prevents escaping the sandbox)
     - Parent frame globals/locals
 
@@ -202,7 +205,7 @@ def execute_in_sandbox(code_obj: Any, exec_globals: Dict[str, Any]) -> None:
 
     # Create completely isolated execution environment
     # Start with a fresh, empty namespace
-    sandbox_globals: Dict[str, Any] = {
+    sandbox_globals: dict[str, Any] = {
         # Isolated builtins - code cannot access real __builtins__
         "__builtins__": isolated_builtins,
         # Standard module attributes (isolated)
@@ -223,7 +226,7 @@ def execute_in_sandbox(code_obj: Any, exec_globals: Dict[str, Any]) -> None:
     sandbox_globals.update(exec_globals)
 
     # Create empty locals - ensures no access to parent scope
-    sandbox_locals: Dict[str, Any] = {}
+    sandbox_locals: dict[str, Any] = {}
 
     # Execute in isolated sandbox
     # Using both globals and locals ensures complete isolation
@@ -233,8 +236,7 @@ def execute_in_sandbox(code_obj: Any, exec_globals: Dict[str, Any]) -> None:
     except SecurityViolation:
         # Re-raise security violations
         raise
-    except Exception as e:
+    except Exception:
         # Re-raise all other exceptions as-is (validation errors, syntax errors, etc.)
         # These are expected and should be reported to the user
         raise
-
