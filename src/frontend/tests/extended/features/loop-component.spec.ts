@@ -160,7 +160,7 @@ test(
     await page.getByTestId("canvas_controls_dropdown").click();
 
     await zoomOut(page, 2);
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await page.getByTestId("div-generic-node").nth(5).click();
 
