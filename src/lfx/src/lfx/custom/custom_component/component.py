@@ -1543,6 +1543,9 @@ class Component(CustomComponent):
         # Lazy import to avoid circular dependency
         from lfx.graph.utils import has_chat_input
 
+        if self.graph is None:
+            return False 
+
         return has_chat_input(self.graph.get_vertex_neighbors(self._vertex))
 
     def _should_skip_message(self, message: Message) -> bool:
