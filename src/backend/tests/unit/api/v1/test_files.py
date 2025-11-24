@@ -291,11 +291,13 @@ async def test_upload_file_size_limit(files_client, files_created_api_key, files
 
 
 @pytest.fixture
-async def setup_profile_pictures(files_client, monkeypatch):  # noqa: ARG001
+async def setup_profile_pictures(monkeypatch):
     """Fixture to set up profile pictures in a temporary config directory.
 
+    This fixture must run before files_client to set LANGFLOW_CONFIG_DIR
+    before app initialization.
+
     Args:
-        files_client: Required for fixture dependency ordering (ensures app is initialized)
         monkeypatch: For overriding environment variables
     """
     # Create a temporary directory for profile pictures
@@ -315,7 +317,7 @@ async def setup_profile_pictures(files_client, monkeypatch):  # noqa: ARG001
     (space_dir / "046-rocket.svg").write_bytes(rocket_svg)
     (people_dir / "001-person.svg").write_bytes(person_svg)
 
-    # Override the config_dir setting
+    # Override the config_dir setting BEFORE app initialization
     monkeypatch.setenv("LANGFLOW_CONFIG_DIR", str(config_path))
 
     yield config_path
@@ -326,7 +328,7 @@ async def setup_profile_pictures(files_client, monkeypatch):  # noqa: ARG001
     shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-async def test_list_profile_pictures(files_client, setup_profile_pictures):  # noqa: ARG001
+async def test_list_profile_pictures(setup_profile_pictures, files_client):  # noqa: ARG001
     """Test listing profile pictures from local filesystem.
 
     Args:
@@ -352,7 +354,7 @@ async def test_list_profile_pictures(files_client, setup_profile_pictures):  # n
     assert "Space/046-rocket.svg" in files, "Should have the rocket profile picture"
 
 
-async def test_download_profile_picture_space_rocket(files_client, setup_profile_pictures):  # noqa: ARG001
+async def test_download_profile_picture_space_rocket(setup_profile_pictures, files_client):  # noqa: ARG001
     """Test downloading the rocket profile picture from Space folder.
 
     Args:
@@ -373,7 +375,7 @@ async def test_download_profile_picture_space_rocket(files_client, setup_profile
     assert len(content) > 100, "SVG content should be substantial"
 
 
-async def test_download_profile_picture_people(files_client, setup_profile_pictures):  # noqa: ARG001
+async def test_download_profile_picture_people(setup_profile_pictures, files_client):  # noqa: ARG001
     """Test downloading a profile picture from People folder.
 
     Note: The actual people profile pictures are copied during app init,
@@ -409,7 +411,7 @@ async def test_download_profile_picture_people(files_client, setup_profile_pictu
     assert len(content) > 100, "SVG content should be substantial"
 
 
-async def test_download_profile_picture_not_found(files_client, setup_profile_pictures):  # noqa: ARG001
+async def test_download_profile_picture_not_found(setup_profile_pictures, files_client):  # noqa: ARG001
     """Test downloading a non-existent profile picture returns 404.
 
     Args:
@@ -423,7 +425,7 @@ async def test_download_profile_picture_not_found(files_client, setup_profile_pi
     assert "not found" in data["detail"].lower()
 
 
-async def test_profile_pictures_with_s3_storage(files_client, setup_profile_pictures, monkeypatch):  # noqa: ARG001
+async def test_profile_pictures_with_s3_storage(setup_profile_pictures, files_client, monkeypatch):  # noqa: ARG001
     """Test that profile pictures work with S3 storage type.
 
     Profile pictures should always be served from local filesystem,
@@ -451,7 +453,7 @@ async def test_profile_pictures_with_s3_storage(files_client, setup_profile_pict
     assert b"<svg" in response.content
 
 
-async def test_profile_pictures_different_file_types(files_client, setup_profile_pictures):  # noqa: ARG001
+async def test_profile_pictures_different_file_types(setup_profile_pictures, files_client):  # noqa: ARG001
     """Test that content-type headers are correct for SVG files.
 
     The real profile pictures are all SVG files. This test verifies
