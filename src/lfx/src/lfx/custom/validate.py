@@ -8,6 +8,7 @@ from typing import Optional, Union
 from langchain_core._api.deprecation import LangChainDeprecationWarning
 from pydantic import ValidationError
 
+from lfx.custom.sandbox import create_isolated_import, execute_in_sandbox
 from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 from lfx.log.logger import logger
 
@@ -47,23 +48,40 @@ def validate_code(code):
     add_type_ignores()
     tree.type_ignores = []
 
-    # Evaluate the import statements
+    # Evaluate the import statements using sandbox's isolated import
+    # This will block dangerous modules by default
+    isolated_import = create_isolated_import()
     for node in tree.body:
         if isinstance(node, ast.Import):
             for alias in node.names:
                 try:
-                    importlib.import_module(alias.name)
+                    # Use sandbox's isolated import - blocks dangerous modules
+                    isolated_import(alias.name, None, None, (), 0)
                 except ModuleNotFoundError as e:
                     errors["imports"]["errors"].append(str(e))
+                except Exception as e:  # noqa: BLE001
+                    errors["imports"]["errors"].append(str(e))
+        elif isinstance(node, ast.ImportFrom):
+            if node.module:
+                try:
+                    # Use sandbox's isolated import - blocks dangerous modules
+                    isolated_import(node.module, None, None, (), 0)
+                except ModuleNotFoundError as e:
+                    errors["imports"]["errors"].append(str(e))
+                except Exception as e:  # noqa: BLE001
+                    errors["imports"]["errors"].append(str(e))
 
-    # Evaluate the function definition with langflow context
+    # Evaluate the function definition in isolated sandbox
+    # This will catch function-definition-time evaluations like decorators and default arguments
+    # Code executes in complete isolation - cannot access server environment
     for node in tree.body:
         if isinstance(node, ast.FunctionDef):
             code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
             try:
                 # Create execution context with common langflow imports
                 exec_globals = _create_langflow_execution_context()
-                exec(code_obj, exec_globals)
+                # Execute in isolated sandbox - code cannot access server environment
+                execute_in_sandbox(code_obj, exec_globals)
             except Exception as e:  # noqa: BLE001
                 logger.debug("Error executing function code", exc_info=True)
                 errors["function"]["errors"].append(str(e))

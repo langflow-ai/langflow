@@ -67,11 +67,12 @@ def hello_world():
     def test_code_with_valid_imports(self):
         """Test validation passes for code with valid imports."""
         code = """
-import os
-import sys
+from typing import List, Optional
+import json
+import math
 
-def get_path():
-    return os.path.join(sys.path[0], "test")
+def process_data(items: List[str]) -> Optional[str]:
+    return json.dumps({"count": math.sqrt(len(items))})
 """
         result = validate_code(code)
         assert result["imports"]["errors"] == []
