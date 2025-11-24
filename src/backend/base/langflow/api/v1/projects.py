@@ -27,7 +27,7 @@ from langflow.api.v1.schemas import FlowListCreate
 from langflow.api.v2.mcp import update_server
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
-from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.database.models.api_key.crud import create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
@@ -501,6 +501,15 @@ async def delete_project(
 
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    # Prevent deletion of the Langflow Assistant folder
+    if project.name == ASSISTANT_FOLDER_NAME:
+        msg = f"Cannot delete the '{ASSISTANT_FOLDER_NAME}' folder, that contains pre-built flows."
+        await logger.adebug(msg)
+        raise HTTPException(
+            status_code=403,
+            detail=msg,
+        )
 
     # Check if project has OAuth authentication and stop MCP Composer if needed
     if project.auth_settings and project.auth_settings.get("auth_type") == "oauth":
