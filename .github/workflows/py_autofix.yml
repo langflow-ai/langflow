@@ -15,7 +15,7 @@ jobs:
     if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -33,7 +33,7 @@ jobs:
     if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -58,7 +58,7 @@ jobs:
     if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:

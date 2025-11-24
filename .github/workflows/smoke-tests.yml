@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout PR
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.ref || github.ref }}
@@ -71,7 +71,7 @@ jobs:
 
     steps:
       - name: Checkout PR
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.ref || github.ref }}
@@ -114,7 +114,7 @@ jobs:
 
     steps:
       - name: Checkout PR
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.ref || github.ref }}

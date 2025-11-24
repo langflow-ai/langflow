@@ -56,7 +56,7 @@ jobs:
     steps:
 
       - name: Check out the code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
 
@@ -150,7 +150,7 @@ jobs:
     steps:
 
       - name: Check out the code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
 
@@ -243,7 +243,7 @@ jobs:
     steps:
 
       - name: Check out the code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
 
@@ -337,7 +337,7 @@ jobs:
           prune-cache: false
 
       - name: Check out the code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
 
