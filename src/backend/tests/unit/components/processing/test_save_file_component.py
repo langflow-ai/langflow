@@ -4,8 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pandas as pd
 import pytest
 from lfx.components.files_and_knowledge.save_file import SaveToFileComponent
-from lfx.schema import Data, Message
-from pandas import DataFrame
+from lfx.schema import Data, DataFrame, Message
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -19,7 +18,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self):
         """Return the default kwargs for the component."""
-        sample_df = pd.DataFrame([{"col1": 1, "col2": "a"}, {"col1": 2, "col2": "b"}])
+        sample_df = DataFrame([{"col1": 1, "col2": "a"}, {"col1": 2, "col2": "b"}])
         return {"input": sample_df, "file_name": "test_output", "file_format": "csv"}
 
     @pytest.fixture
