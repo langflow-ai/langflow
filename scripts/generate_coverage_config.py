@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Script to generate a custom .coveragerc file for backend testing.
 
 This script:

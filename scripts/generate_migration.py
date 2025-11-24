@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Generate Expand-Contract pattern compliant Alembic migrations."""
 
 import hashlib  # noqa: F401
