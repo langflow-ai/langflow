@@ -556,7 +556,7 @@ async def flow(
     flow_data = FlowCreate(name="test_flow", data=loaded_json.get("data"), user_id=active_user.id)
 
     flow = Flow.model_validate(flow_data)
-    async with session_getter(get_db_service()) as session:
+    async with session_scope() as session:
         session.add(flow)
         await session.flush()
         await session.refresh(flow)
@@ -669,12 +669,11 @@ async def created_api_key(active_user):
             yield existing_api_key
             return
         session.add(api_key)
-        await session.commit()
+        await session.flush()
         await session.refresh(api_key)
         yield api_key
         # Clean up
         await session.delete(api_key)
-        await session.commit()
 
 
 @pytest.fixture
@@ -697,17 +696,19 @@ async def user_two(
             is_active=True,
         )
         session.add(user)
+        await session.flush()
         await session.refresh(user)
-
+        # Yield inside session context - session_scope() will commit on exit
+        # The user object stays attached, but we only use user.id in other fixtures
         yield user
 
         # Cleanup related API keys first
-        keys_to_delete = (await session.exec(select(ApiKey).where(ApiKey.user_id == user.id))).all()
+        keys_to_delete = (await session.exec(select(ApiKey).where(ApiKey.user_id == user_id))).all()
         for key in keys_to_delete:
             await session.delete(key)
 
         # Cleanup the user
-        user_to_delete = await session.get(User, user.id)
+        user_to_delete = await session.get(User, user_id)
         if user_to_delete:
             await session.delete(user_to_delete)
 
