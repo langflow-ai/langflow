@@ -238,3 +238,34 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         result = component._adjust_file_path_with_format(input_path, "csv")
         assert str(result) == str(expected_path)
         assert "~" not in str(result)  # Ensure ~ was expanded
+
+    def test_append_mode_txt_file(self, component_class):
+        """Test append mode for text files."""
+        mock_file = MagicMock()
+        mock_parent = MagicMock()
+        mock_parent.exists.return_value = True
+        mock_file.parent = mock_parent
+        mock_file.expanduser.return_value = mock_file
+        mock_file.exists.return_value = True  # File exists for append
+
+        with patch("lfx.components.files_and_knowledge.save_file.Path") as mock_path:
+            mock_path.return_value = mock_file
+            mock_file.read_text.return_value = "Existing content"
+
+            component = component_class()
+            component.set_attributes(
+                {
+                    "input_type": "Message",
+                    "message": Message(text="New content"),
+                    "file_format": "txt",
+                    "file_path": "./test_output.txt",
+                    "append_mode": True,
+                }
+            )
+
+            result = component.save_to_file()
+
+            # Should read existing content and append new content
+            mock_file.read_text.assert_called_with(encoding="utf-8")
+            mock_file.write_text.assert_called_once_with("Existing content\nNew content", encoding="utf-8")
+            assert "appended to" in result
