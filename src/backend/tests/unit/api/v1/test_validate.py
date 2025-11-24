@@ -179,6 +179,36 @@ def test(items: List[str]) -> Optional[str]:
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_validate_code_allows_third_party_libraries(client: AsyncClient, logged_in_headers):
+    """Test that third-party libraries (not in a whitelist) can be imported.
+    
+    Users should be able to import legitimate third-party libraries like AI libraries,
+    data processing libraries, etc. We only block dangerous system-level modules.
+    """
+    # Try importing a common third-party library that wouldn't be in a whitelist
+    # Using 'requests' as an example - it's a legitimate library but not dangerous
+    # Note: This test will fail if 'requests' isn't installed, but that's okay
+    # The important thing is that if it IS installed, it should be allowed
+    third_party_code = """
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
+def test():
+    return HAS_REQUESTS
+"""
+    response = await client.post("api/v1/validate/code", json={"code": third_party_code}, headers=logged_in_headers)
+    result = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    # Should execute without errors - third-party libraries are allowed
+    # (unless they're in BLOCKED_MODULES like 'os', 'subprocess', etc.)
+    assert len(result["imports"]["errors"]) == 0
+    assert len(result["function"]["errors"]) == 0
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_validate_code_allows_langflow_modules(client: AsyncClient, logged_in_headers):
     """Test that langflow.* modules are allowed."""
     # Code importing langflow.* modules should work

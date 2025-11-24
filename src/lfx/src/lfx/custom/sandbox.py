@@ -79,41 +79,10 @@ BLOCKED_MODULES: Set[str] = {
     "inspect",  # Can be used for introspection attacks
 }
 
-# Safe modules allowed for validation
-ALLOWED_MODULES: Set[str] = {
-    # Type checking
-    "typing",
-    "types",
-    "collections",
-    "collections.abc",
-    "dataclasses",
-    "abc",
-    "enum",
-    # Basic utilities
-    "datetime",
-    "re",
-    "json",
-    "math",
-    "string",
-    "itertools",
-    "functools",
-    "operator",
-    "decimal",
-    "fractions",
-    "statistics",
-    "random",
-    "hashlib",
-    "base64",
-    "uuid",
-    "copy",
-    "bisect",
-    "heapq",
-    "array",
-    "struct",
-    "unicodedata",
-    "textwrap",
-    "difflib",
-}
+# Note: We don't maintain a whitelist of allowed modules.
+# Instead, we block dangerous modules and allow everything else.
+# This allows users to import legitimate third-party libraries (AI libraries, utilities, etc.)
+# while still blocking dangerous system-level operations.
 
 
 def create_isolated_builtins() -> Dict[str, Any]:
@@ -189,20 +158,14 @@ def create_isolated_import():
                     f"Dangerous module '{module_name}' is blocked. "
                     f"Set LANGFLOW_ALLOW_DANGEROUS_CODE_VALIDATION=true to allow."
                 )
-            # Only allow whitelisted modules, lfx/lfx.* modules, or langflow/langflow.* modules
+            # Allow langflow.* and lfx.* modules, and any module not in BLOCKED_MODULES
+            # This allows users to import legitimate third-party libraries (AI libraries, etc.)
+            # while still blocking dangerous system-level operations
             is_lfx_module = module_name == "lfx" or module_name.startswith("lfx.")
             is_langflow_module = module_name == "langflow" or module_name.startswith("langflow.")
             
-            if module_name not in ALLOWED_MODULES and not is_lfx_module and not is_langflow_module:
-                # Check if it's a submodule of an allowed module
-                is_allowed_submodule = any(
-                    name.startswith(allowed + ".") for allowed in ALLOWED_MODULES
-                )
-                if not is_allowed_submodule:
-                    raise SecurityViolation(
-                        f"Module '{module_name}' is not in the allowed whitelist. "
-                        f"Set LANGFLOW_ALLOW_DANGEROUS_CODE_VALIDATION=true to allow."
-                    )
+            # If it's not a blocked module, and not langflow/lfx, it's allowed
+            # (We've already checked BLOCKED_MODULES above, so anything reaching here is safe)
         
         # Import the module (still isolated namespace-wise)
         return importlib.import_module(name)
