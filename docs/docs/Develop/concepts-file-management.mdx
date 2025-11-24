@@ -197,14 +197,18 @@ The following environment variables configure file storage backends for Langflow
 | `LANGFLOW_OBJECT_STORAGE_BUCKET_NAME` | String | Not set | The name of the S3 bucket to use for file storage. Required when `LANGFLOW_STORAGE_TYPE=s3`. |
 | `LANGFLOW_OBJECT_STORAGE_PREFIX` | String | Not set | Optional prefix/folder path within the S3 bucket where files will be stored. If not set, files are stored at the bucket root. |
 
-
 ### S3 credentials
 
-When using S3 storage (`LANGFLOW_STORAGE_TYPE=s3`), you must also configure AWS credentials using one of the following methods:
+When using S3 storage (`LANGFLOW_STORAGE_TYPE=s3`), you must also configure AWS credentials.
 
-- **Environment variables**: Set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_DEFAULT_REGION`
-- **AWS credentials file**: Configure in `~/.aws/credentials` or `~/.aws/config`
-- **IAM roles**: Use IAM roles when running on AWS infrastructure (EC2, ECS, Lambda)
+Langflow uses the `boto3` library to interact with S3, which follows the [AWS credential chain](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html). This means credentials are sourced in the following order:
+
+1. **Explicit credentials**: Environment variables for `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` set in Langflow's `.env` file.
+2. **AWS credentials**: Environment variables for `aws_access_key_id` and `aws_secret_access_key` in the AWS credentials file at `~/.aws/credentials`.
+3. **IAM roles**: When Langflow is running on AWS infrastructure, boto3 automatically retrieves temporary credentials from the AWS metadata service. For more information, see the [AWS documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html).
+
+When Langflow runs on AWS infrastructure, you can use IAM roles instead of explicit credentials.
+When Langflow runs elsewhere, you must use environment variables or an AWS credentials file to provide S3 access credentials.
 
 ## See also
 
