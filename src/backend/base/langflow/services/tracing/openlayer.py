@@ -16,12 +16,11 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
-    from lfx.graph.vertex.base import Vertex
 
     from langflow.services.tracing.schema import Log
+    from lfx.graph.vertex.base import Vertex
 
 from openlayer.lib.tracing.context import UserSessionContext
-
 
 # Component name constants
 CHAT_OUTPUT_NAMES = ("Chat Output", "ChatOutput")
@@ -47,7 +46,7 @@ class OpenlayerTracer(BaseTracer):
         self.user_id = user_id
         self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
-        
+
         # Store component steps using SDK Step objects
         self.component_steps: dict = {}  # component_id -> Step object from SDK
         self.component_parent_ids: dict = {}  # component_id -> parent_component_id
@@ -67,19 +66,19 @@ class OpenlayerTracer(BaseTracer):
         # Validate configuration
         if not config:
             return False
-        
+
         required_keys = ["api_key", "inference_pipeline_id"]
         for key in required_keys:
             if key not in config or not config[key]:
                 return False
-        
+
         try:
+            from openlayer.lib.tracing import configure
             from openlayer.lib.tracing import enums as openlayer_enums
             from openlayer.lib.tracing import steps as openlayer_steps
             from openlayer.lib.tracing import tracer as openlayer_tracer
             from openlayer.lib.tracing import traces as openlayer_traces
             from openlayer.lib.tracing.context import UserSessionContext
-            from openlayer.lib.tracing import configure
 
             self._openlayer_tracer = openlayer_tracer
             self._openlayer_steps = openlayer_steps
@@ -93,12 +92,12 @@ class OpenlayerTracer(BaseTracer):
                 UserSessionContext.set_session_id(self.session_id)
 
             configure(inference_pipeline_id=config["inference_pipeline_id"])
-            return True
-
         except ImportError:
             return False
-        except Exception as e:  # noqa: BLE001
+        except Exception:  # noqa: BLE001
             return False
+        else:
+            return True
 
     @override
     def add_trace(
@@ -154,12 +153,12 @@ class OpenlayerTracer(BaseTracer):
                 metadata=converted_metadata,
             )
             step.start_time = time.time()
-        except Exception as e:  # noqa: BLE001
+        except Exception:  # noqa: BLE001
             return
 
         # Store step and set as current in SDK context
         self.component_steps[trace_id] = step
-        
+
         # Set as current step so LangChain callbacks can nest under it
         self._openlayer_tracer._current_step.set(step)
 
@@ -226,14 +225,14 @@ class OpenlayerTracer(BaseTracer):
         try:
             # Build hierarchy and add to trace
             # This will integrate handler's traces and then clear them
-            root_steps = self._build_and_add_hierarchy()
+            self._build_and_add_hierarchy()
 
             # Use SDK's post_process_trace
             try:
                 trace_data, input_variable_names = self._openlayer_tracer.post_process_trace(self.trace_obj)
-            except Exception as e:  # noqa: BLE001
+            except Exception:  # noqa: BLE001
                 return
-            
+
             # Validate trace_data
             if not trace_data or not isinstance(trace_data, dict):
                 return
@@ -247,7 +246,7 @@ class OpenlayerTracer(BaseTracer):
                     cost_column_name="cost",
                     timestamp_column_name="inferenceTimestamp",
                     inference_id_column_name="inferenceId",
-                    num_of_token_column_name="tokens",
+                    num_of_token_column_name="tokens",  # noqa: S106
                 )
             )
 
@@ -263,16 +262,16 @@ class OpenlayerTracer(BaseTracer):
             if self._openlayer_tracer._publish:
                 client = self._openlayer_tracer._get_client()
                 if client:
-                    response = client.inference_pipelines.data.stream(
+                    client.inference_pipelines.data.stream(
                         inference_pipeline_id=self._inference_pipeline_id,
                         rows=[trace_data],
                         config=config,
                     )
-            
+
             # Clean up SDK context
             self._cleanup_sdk_context()
 
-        except Exception as e:  # noqa: BLE001
+        except Exception:  # noqa: BLE001
             # Still clean up even on error
             self._cleanup_sdk_context()
 
@@ -280,7 +279,7 @@ class OpenlayerTracer(BaseTracer):
         try:
             self._openlayer_tracer._current_trace.set(None)
             self._openlayer_tracer._current_step.set(None)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S110
             pass
 
     def _extract_flow_metadata(self, components: list[Any]) -> dict[str, Any]:
@@ -290,28 +289,34 @@ class OpenlayerTracer(BaseTracer):
             "start_time": None,
             "end_time": None,
         }
-        
+
         for step in components:
             # Extract Chat Output
             if step.name in CHAT_OUTPUT_NAMES:
                 chat_output = self._safe_get_input(step, "input_value")
                 if chat_output:
                     metadata["chat_output"] = chat_output
-            
+
             # Extract Chat Input
             if step.name in CHAT_INPUT_NAMES:
                 input_val = self._safe_get_input(step, "input_value")
                 if input_val:
                     metadata["chat_input"] = {"user_query": input_val}
-            
+
             # Extract timing
-            if hasattr(step, "start_time") and step.start_time:
-                if metadata["start_time"] is None or step.start_time < metadata["start_time"]:
-                    metadata["start_time"] = step.start_time
-            if hasattr(step, "end_time") and step.end_time:
-                if metadata["end_time"] is None or step.end_time > metadata["end_time"]:
-                    metadata["end_time"] = step.end_time
-        
+            if (
+                hasattr(step, "start_time")
+                and step.start_time
+                and (metadata["start_time"] is None or step.start_time < metadata["start_time"])
+            ):
+                metadata["start_time"] = step.start_time
+            if (
+                hasattr(step, "end_time")
+                and step.end_time
+                and (metadata["end_time"] is None or step.end_time > metadata["end_time"])
+            ):
+                metadata["end_time"] = step.end_time
+
         return metadata
 
     def _safe_get_input(self, step: Any, key: str, default: Any = None) -> Any:
@@ -325,9 +330,9 @@ class OpenlayerTracer(BaseTracer):
         return len(step.output) == 1 and "component_as_tool" in step.output
 
     def _build_and_add_hierarchy(self) -> list[Any]:
-        if self.langchain_handler and hasattr(self.langchain_handler, '_traces_by_root'):
+        if self.langchain_handler and hasattr(self.langchain_handler, "_traces_by_root"):
             langchain_traces = self.langchain_handler._traces_by_root
-            
+
             if langchain_traces:
                 target_component = None
                 for component_step in self.component_steps.values():
@@ -337,37 +342,42 @@ class OpenlayerTracer(BaseTracer):
 
                 if target_component is None:
                     for component_step in self.component_steps.values():
-                        if hasattr(component_step, 'step_type') and component_step.step_type.value in ['llm', 'chain', 'agent', 'chat_completion']:
+                        if hasattr(component_step, "step_type") and component_step.step_type.value in [
+                            "llm",
+                            "chain",
+                            "agent",
+                            "chat_completion",
+                        ]:
                             target_component = component_step
 
-                for run_id, lc_trace in langchain_traces.items():
+                for lc_trace in langchain_traces.values():
                     for lc_step in lc_trace.steps:
                         if target_component:
                             target_component.add_nested_step(lc_step)
 
                 # Clear handler's traces after integration
                 self.langchain_handler._traces_by_root.clear()
-        
+
         flow_name = self.trace_name.split(" - ")[0] if " - " in self.trace_name else self.trace_name
-        
+
         flow_metadata = self._extract_flow_metadata(self.component_steps.values())
-        
+
         root_step = self._openlayer_steps.UserCallStep(
             name=flow_name,
             inputs=flow_metadata["chat_input"],
             output=flow_metadata["chat_output"],
-            metadata={"flow_name": flow_name}
+            metadata={"flow_name": flow_name},
         )
-        
+
         # Set timing from extracted metadata
         if flow_metadata["start_time"] and flow_metadata["end_time"]:
             root_step.start_time = flow_metadata["start_time"]
             root_step.end_time = flow_metadata["end_time"]
             root_step.latency = int((root_step.end_time - root_step.start_time) * 1000)
-        
+
         for step in self.component_steps.values():
             root_step.add_nested_step(step)
-        
+
         # Add root to trace
         self.trace_obj.add_step(root_step)
 
@@ -406,13 +416,13 @@ class OpenlayerTracer(BaseTracer):
         if isinstance(value, (types.GeneratorType | types.NoneType)):
             return str(value)
 
-        if hasattr(value, "model_dump") and callable(getattr(value, "model_dump")):
+        if hasattr(value, "model_dump") and callable(value.model_dump):
             if isinstance(value, type):
                 pass
             else:
                 try:
                     return self._convert_to_openlayer_type(value.model_dump())
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001, S110
                     pass
 
         # Handle LangChain tools
@@ -422,7 +432,7 @@ class OpenlayerTracer(BaseTracer):
                     "name": str(value.name),
                     "description": str(value.description) if value.description else None,
                 }
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001, S110
                 pass
 
         # Fallback to string
@@ -446,7 +456,7 @@ class OpenlayerTracer(BaseTracer):
             # Ensure trace exists
             if self.trace_obj is None:
                 self.trace_obj = self._openlayer_traces.Trace()
-            
+
             # Set trace in ContextVar - handler will detect and use it automatically
             self._openlayer_tracer._current_trace.set(self.trace_obj)
 
@@ -462,9 +472,10 @@ class OpenlayerTracer(BaseTracer):
 
             # Store reference to handler
             self.langchain_handler = handler
-            return handler
-        except Exception as e:  # noqa: BLE001
+        except Exception:  # noqa: BLE001
             return None
+        else:
+            return handler
 
     @staticmethod
     def _sanitize_flow_name(flow_name: str) -> str:
@@ -474,9 +485,9 @@ class OpenlayerTracer(BaseTracer):
         Example: "My Flow-Name" -> "MY_FLOW_NAME"
         """
         # Replace non-alphanumeric characters with underscores
-        sanitized = re.sub(r'[^a-zA-Z0-9]+', '_', flow_name)
+        sanitized = re.sub(r"[^a-zA-Z0-9]+", "_", flow_name)
         # Remove leading/trailing underscores and convert to uppercase
-        return sanitized.strip('_').upper()
+        return sanitized.strip("_").upper()
 
     @staticmethod
     def _get_config(trace_name: str | None = None) -> dict:
@@ -518,7 +529,7 @@ class OpenlayerTracer(BaseTracer):
                     mapping = json.loads(mapping_json)
                     if isinstance(mapping, dict) and flow_name in mapping:
                         inference_pipeline_id = mapping[flow_name]
-                except json.JSONDecodeError as e:
+                except json.JSONDecodeError:
                     pass
 
         # 3. Fall back to default environment variable (lowest priority)
