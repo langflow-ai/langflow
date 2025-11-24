@@ -75,13 +75,14 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         component.set_attributes({"input": message, "file_name": "test", "file_format": ""})
         assert component._get_default_format() == "json"
 
-
     @pytest.mark.asyncio
     async def test_save_dataframe_to_csv(self, component_class):
         """Test saving DataFrame to CSV format - only mock upload."""
         component = component_class(_user_id=str(uuid4()))
         df = DataFrame([{"col1": 1, "col2": "a"}, {"col1": 2, "col2": "b"}])
-        component.set_attributes({"input": df, "file_name": "test_output", "local_format": "csv", "storage_location": [{"name": "Local"}]})
+        component.set_attributes(
+            {"input": df, "file_name": "test_output", "local_format": "csv", "storage_location": [{"name": "Local"}]}
+        )
 
         # Mock only the database and upload functions - let file operations run normally
         with (
@@ -113,7 +114,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         """Test saving Data to JSON format - only mock upload."""
         component = component_class(_user_id=str(uuid4()))
         data = Data(data={"col1": "value1", "col2": "value2"})
-        component.set_attributes({"input": data, "file_name": "test_data", "local_format": "json", "storage_location": [{"name": "Local"}]})
+        component.set_attributes(
+            {"input": data, "file_name": "test_data", "local_format": "json", "storage_location": [{"name": "Local"}]}
+        )
 
         # Mock only the database and upload functions - let file operations run normally
         with (
@@ -138,7 +141,14 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         """Test saving Message to txt format - only mock upload."""
         component = component_class(_user_id=str(uuid4()))
         message = Message(text="This is a test message")
-        component.set_attributes({"input": message, "file_name": "test_message", "local_format": "txt", "storage_location": [{"name": "Local"}]})
+        component.set_attributes(
+            {
+                "input": message,
+                "file_name": "test_message",
+                "local_format": "txt",
+                "storage_location": [{"name": "Local"}],
+            }
+        )
 
         # Mock only the database and upload functions - let file operations run normally
         with (
@@ -163,7 +173,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         """Test that temp file is cleaned up even when upload fails."""
         component = component_class(_user_id=str(uuid4()))
         df = DataFrame([{"col1": 1}])
-        component.set_attributes({"input": df, "file_name": "test_output", "local_format": "csv", "storage_location": [{"name": "Local"}]})
+        component.set_attributes(
+            {"input": df, "file_name": "test_output", "local_format": "csv", "storage_location": [{"name": "Local"}]}
+        )
 
         # Mock database and upload functions - let file operations run normally
         with (
@@ -200,7 +212,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         """Test that invalid file format raises ValueError."""
         component = component_class(_user_id=str(uuid4()))
         message = Message(text="test")
-        component.set_attributes({"input": message, "file_name": "test", "local_format": "csv", "storage_location": [{"name": "Local"}]})
+        component.set_attributes(
+            {"input": message, "file_name": "test", "local_format": "csv", "storage_location": [{"name": "Local"}]}
+        )
 
         with pytest.raises(ValueError, match="Invalid file format"):
             await component.save_to_file()
@@ -210,7 +224,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         """Test that invalid file format raises ValueError for DataFrame."""
         component = component_class(_user_id=str(uuid4()))
         df = DataFrame([{"a": 1}])
-        component.set_attributes({"input": df, "file_name": "test", "local_format": "txt", "storage_location": [{"name": "Local"}]})
+        component.set_attributes(
+            {"input": df, "file_name": "test", "local_format": "txt", "storage_location": [{"name": "Local"}]}
+        )
 
         with pytest.raises(ValueError, match="Invalid file format"):
             await component.save_to_file()
@@ -220,7 +236,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         """Test that missing file name raises ValueError."""
         component = component_class(_user_id=str(uuid4()))
         df = DataFrame([{"a": 1}])
-        component.set_attributes({"input": df, "file_name": "", "local_format": "csv", "storage_location": [{"name": "Local"}]})
+        component.set_attributes(
+            {"input": df, "file_name": "", "local_format": "csv", "storage_location": [{"name": "Local"}]}
+        )
 
         with pytest.raises(ValueError, match="File name must be provided"):
             await component.save_to_file()
@@ -230,7 +248,14 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         """Test that file extension is properly handled when included in file_name."""
         component = component_class(_user_id=str(uuid4()))
         df = DataFrame([{"col1": 1}])
-        component.set_attributes({"input": df, "file_name": "test_output.csv", "local_format": "csv", "storage_location": [{"name": "Local"}]})
+        component.set_attributes(
+            {
+                "input": df,
+                "file_name": "test_output.csv",
+                "local_format": "csv",
+                "storage_location": [{"name": "Local"}],
+            }
+        )
 
         # Mock only the database and upload functions - let file operations run normally
         with (
@@ -250,4 +275,3 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             # Should only have .csv once, not .csv.csv
             assert "test_output.csv" in result.text
             assert "test_output.csv.csv" not in result.text
-
