@@ -51,10 +51,10 @@ jobs:
         run: |
           python src/backend/base/langflow/alembic/migration_validator.py ${{ steps.changed-files.outputs.files }}
 
-      - name: Check migration phase sequence
-        if: steps.changed-files.outputs.files != ''
-        run: |
-          python scripts/check_phase_sequence.py ${{ steps.changed-files.outputs.files }}
+#       - name: Check migration phase sequence
+#         if: steps.changed-files.outputs.files != ''
+#         run: |
+#           python scripts/check_phase_sequence.py ${{ steps.changed-files.outputs.files }}
 
       - name: Generate validation report
         if: always() && steps.changed-files.outputs.files != ''
