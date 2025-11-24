@@ -20,9 +20,9 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
-    from lfx.graph.vertex.base import Vertex
 
     from langflow.services.tracing.schema import Log
+    from lfx.graph.vertex.base import Vertex
 
 from openlayer.lib.tracing.context import UserSessionContext
 
@@ -222,6 +222,7 @@ class OpenlayerTracer(BaseTracer):
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Build hierarchy and send using SDK."""
+        # Early guard return before entering try/finally
         if not self._ready or not self.trace_obj:
             return
 
@@ -234,11 +235,11 @@ class OpenlayerTracer(BaseTracer):
             try:
                 trace_data, input_variable_names = self._openlayer_tracer.post_process_trace(self.trace_obj)
             except Exception:  # noqa: BLE001
-                return
+                return  # finally block will still execute
 
             # Validate trace_data
             if not trace_data or not isinstance(trace_data, dict):
-                return
+                return  # finally block will still execute
 
             # Build config using SDK's ConfigLlmData
             config = dict(
@@ -271,11 +272,12 @@ class OpenlayerTracer(BaseTracer):
                         config=config,
                     )
 
-            # Clean up SDK context
-            self._cleanup_sdk_context()
-
-        except Exception:  # noqa: BLE001
-            # Still clean up even on error
+        except Exception:  # noqa: BLE001, S110
+            # Silently handle any unexpected exceptions
+            # finally block will still execute for cleanup
+            pass
+        finally:
+            # Always clean up SDK context regardless of early returns or exceptions
             self._cleanup_sdk_context()
 
     def _cleanup_sdk_context(self) -> None:
