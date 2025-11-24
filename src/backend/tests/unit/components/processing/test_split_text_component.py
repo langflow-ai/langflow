@@ -1,5 +1,4 @@
 import pytest
-from langflow.components.data import URLComponent
 from langflow.components.processing import SplitTextComponent
 from langflow.schema import Data, DataFrame
 
@@ -249,8 +248,25 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
     def test_with_url_loader(self):
         """Test splitting text with URL loader."""
         component = SplitTextComponent()
-        url = ["https://en.wikipedia.org/wiki/London", "https://en.wikipedia.org/wiki/Paris"]
-        data_frame = URLComponent(urls=url, format="Text").fetch_content()
+
+        # Create mock data that simulates URL content with newlines
+        # This avoids relying on external Wikipedia URLs which can be blocked
+        mock_text_london = (
+            "London is the capital of England.\nIt has a rich history.\n"
+            "The city is known for Big Ben.\nAnd the Tower Bridge.\nMany tourists visit yearly."
+        )
+        mock_text_paris = (
+            "Paris is the capital of France.\nIt is known for the Eiffel Tower.\n"
+            "The Louvre museum is famous.\nMany artists lived here.\nIt's called the City of Light."
+        )
+
+        data_frame = DataFrame(
+            [
+                Data(text=mock_text_london, url="https://en.wikipedia.org/wiki/London"),
+                Data(text=mock_text_paris, url="https://en.wikipedia.org/wiki/Paris"),
+            ]
+        )
+
         assert isinstance(data_frame, DataFrame), "Expected DataFrame instance"
         assert len(data_frame) == 2, f"Expected DataFrame with 2 rows, got {len(data_frame)}"
         component.set_attributes(
