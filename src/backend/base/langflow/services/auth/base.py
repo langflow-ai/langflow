@@ -380,3 +380,47 @@ class AuthServiceBase(Service, abc.ABC):
         Raises:
             HTTPException: If user is inactive
         """
+
+    # -------------------------------------------------------------------------
+    # Methods required by public API (utils.py)
+    # -------------------------------------------------------------------------
+
+    @abc.abstractmethod
+    async def get_current_user_from_access_token(
+        self, token: str | Coroutine | None, db: "AsyncSession"
+    ) -> "User":
+        """Get the current user from an access token.
+
+        Args:
+            token: The access token (JWT or similar), may be None
+            db: Database session
+
+        Returns:
+            The authenticated User object
+
+        Raises:
+            HTTPException: If authentication fails
+        """
+
+    @abc.abstractmethod
+    def create_token(self, data: dict, expires_delta: int) -> str:
+        """Create an access token for the given data and expiration.
+
+        Args:
+            data: The payload to encode in the token
+            expires_delta: Expiration time in seconds
+
+        Returns:
+            The encoded token as a string
+        """
+
+    @abc.abstractmethod
+    def get_user_id_from_token(self, token: str) -> UUID:
+        """Extract the user ID from a token.
+
+        Args:
+            token: The access token
+
+        Returns:
+            The user ID as a UUID
+        """
