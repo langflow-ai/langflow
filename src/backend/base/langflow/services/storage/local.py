@@ -63,6 +63,7 @@ class LocalStorageService(StorageService):
             flow_id: The identifier for the flow.
             file_name: The name of the file to be saved.
             data: The byte content of the file.
+            append: If True, append to existing file; if False, overwrite.
 
         Raises:
             FileNotFoundError: If the specified flow does not exist.
