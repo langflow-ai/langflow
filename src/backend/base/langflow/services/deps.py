@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
+    from langflow.services.auth.base import AuthServiceBase
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
@@ -244,3 +245,10 @@ def get_queue_service() -> JobQueueService:
     from langflow.services.job_queue.factory import JobQueueServiceFactory
 
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
+
+
+def get_auth_service() -> AuthServiceBase:
+    """Retrieve the authentication service."""
+    from langflow.services.auth.factory import AuthServiceFactory
+
+    return get_service(ServiceType.AUTH_SERVICE, AuthServiceFactory())
