@@ -1,3 +1,4 @@
+from lfx.services.settings.service import SettingsService
 from typing_extensions import override
 
 from langflow.services.auth.service import AuthService
@@ -11,5 +12,5 @@ class AuthServiceFactory(ServiceFactory):
         super().__init__(AuthService)
 
     @override
-    def create(self, settings_service):
+    def create(self, settings_service: SettingsService) -> AuthService:
         return AuthService(settings_service)
