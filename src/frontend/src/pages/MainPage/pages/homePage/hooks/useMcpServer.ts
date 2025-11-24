@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   useGetFlowsMCP,
   usePatchFlowsMCP,
@@ -11,7 +12,6 @@ import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import type { InputFieldType } from "@/types/api";
-import { FlowType } from "@/types/flow";
 import type { AuthSettingsType, MCPSettingsType } from "@/types/mcp";
 import {
   buildMcpServerJson,
@@ -30,7 +30,11 @@ type State = {
   isCopied: boolean;
   loadingMCP: string[];
   authModalOpen: boolean;
+  isWaitingForComposer: boolean;
+  showSlowWarning: boolean;
 };
+
+const AUTH_TYPE = "oauth";
 
 export const useMcpServer = ({
   projectId,
@@ -43,21 +47,26 @@ export const useMcpServer = ({
 }) => {
   const setSuccessData = useAlertStore((s) => s.setSuccessData);
   const setErrorData = useAlertStore((s) => s.setErrorData);
+  const queryClient = useQueryClient();
 
   const { data: mcpProjectData, isLoading: isLoadingMCPProjectData } =
     useGetFlowsMCP({ projectId });
   const { mutate: patchFlowsMCP, isPending: isPatchingFlowsMCP } =
     usePatchFlowsMCP({ project_id: projectId });
-  const { data: composerUrlData } = useGetProjectComposerUrl(
-    { projectId },
-    {
-      enabled:
-        !!projectId &&
-        mcpProjectData?.auth_settings?.auth_type === "oauth" &&
-        ENABLE_MCP_COMPOSER &&
-        !isPatchingFlowsMCP,
-    },
-  );
+
+  const enableProjectComposerUrl =
+    !!projectId &&
+    mcpProjectData?.auth_settings?.auth_type === AUTH_TYPE &&
+    ENABLE_MCP_COMPOSER &&
+    !isPatchingFlowsMCP;
+
+  const { data: composerUrlData, isLoading: isLoadingComposerUrl } =
+    useGetProjectComposerUrl(
+      { projectId },
+      {
+        enabled: enableProjectComposerUrl,
+      },
+    );
   const { data: installedMCPData } = useGetInstalledMCP({ projectId });
   const { mutate: patchInstallMCP } = usePatchInstallMCP({
     project_id: projectId,
@@ -74,7 +83,20 @@ export const useMcpServer = ({
     isCopied: false,
     loadingMCP: [],
     authModalOpen: false,
+    isWaitingForComposer: false,
+    showSlowWarning: false,
   });
+
+  // Clear waiting state when composer URL is loaded
+  useEffect(() => {
+    if (s.isWaitingForComposer && !isLoadingComposerUrl && composerUrlData) {
+      setS((prev) => ({
+        ...prev,
+        isWaitingForComposer: false,
+        showSlowWarning: false,
+      }));
+    }
+  }, [s.isWaitingForComposer, isLoadingComposerUrl, composerUrlData]);
   // auth store selectors
   const apiKeyFromStore = useAuthStore((st) => st.apiKey);
   const isAutoLoginFromStore = useAuthStore((st) => st.autoLogin);
@@ -134,7 +156,9 @@ export const useMcpServer = ({
         {
           onSuccess: () => {
             setSuccessData({
-              title: `MCP Server installed successfully on ${clientTitle ?? clientName}. You may need to restart your client to see the changes.`,
+              title: `MCP Server installed successfully on ${
+                clientTitle ?? clientName
+              }. You may need to restart your client to see the changes.`,
             });
             setS((p) => ({
               ...p,
@@ -144,7 +168,9 @@ export const useMcpServer = ({
           onError: (e) => {
             const message = (e as { message?: string })?.message ?? String(e);
             setErrorData({
-              title: `Failed to install MCP Server on ${clientTitle ?? clientName}`,
+              title: `Failed to install MCP Server on ${
+                clientTitle ?? clientName
+              }`,
               list: [message],
             });
             setS((p) => ({
@@ -188,9 +214,20 @@ export const useMcpServer = ({
         action_description: f.action_description,
         mcp_enabled: f.mcp_enabled,
       }));
+
+      // Clear cached composer URL data BEFORE making the request to ensure fresh errors are fetched
+      queryClient.removeQueries({
+        queryKey: ["project-composer-url", projectId],
+      });
+
+      // Set waiting state for OAuth before making the request
+      if (authSettings.auth_type === "oauth") {
+        setS((prev) => ({ ...prev, isWaitingForComposer: true }));
+      }
+
       patchFlowsMCP({ settings, auth_settings: authSettings });
     },
-    [patchFlowsMCP, flows],
+    [patchFlowsMCP, flows, queryClient, projectId],
   );
 
   const authHeadersFragment = useMemo(
@@ -259,6 +296,9 @@ export const useMcpServer = ({
     composerUrlData,
     composerError,
     hasOAuthError,
+    isWaitingForComposer: s.isWaitingForComposer,
+    showSlowWarning: s.showSlowWarning,
+    isLoadingComposerUrl,
     // mcp json + url
     apiUrl,
     authHeadersFragment,

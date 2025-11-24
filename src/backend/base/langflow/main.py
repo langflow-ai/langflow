@@ -52,6 +52,10 @@ if TYPE_CHECKING:
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 
+# Suppress ResourceWarning from anyio streams (SSE connections)
+warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObjectReceiveStream.*")
+warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObjectSendStream.*")
+
 _tasks: list[asyncio.Task] = []
 
 MAX_PORT = 65535
