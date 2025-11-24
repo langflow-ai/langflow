@@ -311,8 +311,17 @@ async def setup_profile_pictures(monkeypatch):
     space_dir.mkdir(parents=True, exist_ok=True)
 
     # Create test profile picture files (must be > 100 bytes for test assertions)
-    rocket_svg = b'<svg height="100" width="100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40" fill="red" stroke="darkred" stroke-width="2"/><path d="M 50 10 L 60 30 L 50 25 L 40 30 Z" fill="orange"/></svg>'
-    person_svg = b'<svg height="100" width="100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40" fill="blue" stroke="darkblue" stroke-width="2"/><circle cx="40" cy="40" r="5" fill="white"/><circle cx="60" cy="40" r="5" fill="white"/><path d="M 40 65 Q 50 70 60 65" stroke="white" stroke-width="2" fill="none"/></svg>'
+    rocket_svg = (
+        b'<svg height="100" width="100" xmlns="http://www.w3.org/2000/svg">'
+        b'<circle cx="50" cy="50" r="40" fill="red" stroke="darkred" stroke-width="2"/>'
+        b'<path d="M 50 10 L 60 30 L 50 25 L 40 30 Z" fill="orange"/></svg>'
+    )
+    person_svg = (
+        b'<svg height="100" width="100" xmlns="http://www.w3.org/2000/svg">'
+        b'<circle cx="50" cy="50" r="40" fill="blue" stroke="darkblue" stroke-width="2"/>'
+        b'<circle cx="40" cy="40" r="5" fill="white"/><circle cx="60" cy="40" r="5" fill="white"/>'
+        b'<path d="M 40 65 Q 50 70 60 65" stroke="white" stroke-width="2" fill="none"/></svg>'
+    )
 
     (space_dir / "046-rocket.svg").write_bytes(rocket_svg)
     (people_dir / "001-person.svg").write_bytes(person_svg)
