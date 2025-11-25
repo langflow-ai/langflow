@@ -46,10 +46,10 @@ const withStoreSetup = (
 ) => {
   return (Story: React.ComponentType) => {
     const StoreWrapper = () => {
-      useEffect(() => {
-        useAuthStore.setState({ autoLogin });
-        useStoreStore.setState({ hasStore });
-      }, []);
+      // Initialize stores on mount, before component renders
+      useAuthStore.setState({ autoLogin });
+      useStoreStore.setState({ hasStore });
+
       return <Story />;
     };
     return <StoreWrapper />;
