@@ -186,10 +186,8 @@ const HeaderComponent = ({
               <div className="flex items-center">
                 <div
                   className={cn(
-                    "w-0 items-center gap-2",
-                    selectedFlows.length > 0
-                      ? "w-36 opacity-100 flex"
-                      : "hidden",
+                    "flex w-0 items-center gap-2 overflow-hidden opacity-0 transition-all duration-300",
+                    selectedFlows.length > 0 && "w-36 opacity-100",
                   )}
                 >
                   <Button
@@ -199,6 +197,7 @@ const HeaderComponent = ({
                     data-testid="download-bulk-btn"
                     onClick={handleDownload}
                     loading={isDownloading}
+                    tabIndex={-1}
                   >
                     <ForwardedIconComponent name="Download" />
                   </Button>
@@ -218,6 +217,7 @@ const HeaderComponent = ({
                       className="px-2.5 !text-mmd"
                       data-testid="delete-bulk-btn"
                       loading={isDeleting}
+                      tabIndex={-1}
                     >
                       <ForwardedIconComponent name="Trash2" />
                       Delete
