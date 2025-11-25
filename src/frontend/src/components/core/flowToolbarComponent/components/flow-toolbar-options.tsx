@@ -37,7 +37,9 @@ export default function FlowToolbarOptions() {
 
   const hasIO = useFlowStore((state) => state.hasIO);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlow?.id);
-  const currentFlowName = useFlowsManagerStore((state) => state.currentFlow?.name);
+  const currentFlowName = useFlowsManagerStore(
+    (state) => state.currentFlow?.name
+  );
   // Get user_id from flowStore (working state) as it has the complete flow data
   const flowUserId = useFlowStore((state) => state.currentFlow?.user_id);
 
@@ -48,7 +50,11 @@ export default function FlowToolbarOptions() {
 
   // Check if current user is the flow owner (both are strings from langflow's internal system)
   const currentUserId = userData?.id;
-  const isFlowOwner = !!(flowUserId && currentUserId && flowUserId === currentUserId);
+  const isFlowOwner = !!(
+    flowUserId &&
+    currentUserId &&
+    flowUserId === currentUserId
+  );
 
   // Alert store for success/error messages
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -64,21 +70,24 @@ export default function FlowToolbarOptions() {
   const latestVersionId = flowStatusData?.latest_version_id;
 
   // Mutations for approve/reject
-  const { mutate: approveVersion, isPending: isApproving } = useApproveVersion();
+  const { mutate: approveVersion, isPending: isApproving } =
+    useApproveVersion();
   const { mutate: rejectVersion, isPending: isRejecting } = useRejectVersion();
 
   // Button visibility logic based on status and ownership
   // Submit for Review: Show for Draft, Rejected, Published, Submitted, or no status - ONLY if user is flow owner
   // Disabled when status is 'Submitted' (under review)
   const hiddenSubmitStatuses = ["Approved", "Unpublished", "Deleted"];
-  const showSubmitButton = isFlowOwner && !hiddenSubmitStatuses.includes(latestStatus || "");
+  const showSubmitButton =
+    isFlowOwner && !hiddenSubmitStatuses.includes(latestStatus || "");
   const isUnderReview = latestStatus === "Submitted";
 
   // Publish to Marketplace: Show only when status is Approved - ONLY if user is flow owner
   const showPublishButton = isFlowOwner && latestStatus === "Approved";
 
   // Approve and Reject: Only for Marketplace Admin when status is Submitted
-  const showApproveRejectButtons = isMarketplaceAdmin && latestStatus === "Submitted";
+  const showApproveRejectButtons =
+    isMarketplaceAdmin && latestStatus === "Submitted";
 
   // Handlers for approve/reject
   const handleApprove = () => {
@@ -91,7 +100,9 @@ export default function FlowToolbarOptions() {
       onError: (error: any) => {
         setErrorData({
           title: "Failed to approve",
-          list: [error?.response?.data?.detail || error.message || "Unknown error"],
+          list: [
+            error?.response?.data?.detail || error.message || "Unknown error",
+          ],
         });
       },
     });
@@ -108,7 +119,9 @@ export default function FlowToolbarOptions() {
     rejectVersion(
       {
         versionId: latestVersionId,
-        payload: rejectionReason ? { rejection_reason: rejectionReason } : undefined,
+        payload: rejectionReason
+          ? { rejection_reason: rejectionReason }
+          : undefined,
       },
       {
         onSuccess: () => {
@@ -119,7 +132,9 @@ export default function FlowToolbarOptions() {
         onError: (error: any) => {
           setErrorData({
             title: "Failed to reject",
-            list: [error?.response?.data?.detail || error.message || "Unknown error"],
+            list: [
+              error?.response?.data?.detail || error.message || "Unknown error",
+            ],
           });
         },
       }
@@ -143,7 +158,7 @@ export default function FlowToolbarOptions() {
           <>
             <Button
               variant="ghost"
-              size="md"
+              size="xs"
               className="!px-2.5 font-normal text-green-600 hover:text-green-700 hover:bg-green-50"
               onClick={handleApprove}
               disabled={isApproving}
@@ -154,7 +169,7 @@ export default function FlowToolbarOptions() {
             </Button>
             <Button
               variant="ghost"
-              size="md"
+              size="xs"
               className="!px-2.5 font-normal text-red-600 hover:text-red-700 hover:bg-red-50"
               onClick={handleRejectClick}
               disabled={isRejecting}
@@ -170,7 +185,7 @@ export default function FlowToolbarOptions() {
         {showSubmitButton && (
           <Button
             variant="ghost"
-            size="md"
+            size="xs"
             className="!px-2.5 font-normal"
             onClick={() => setOpenSubmitModal(true)}
             disabled={isUnderReview}
@@ -225,11 +240,14 @@ export default function FlowToolbarOptions() {
           <DialogHeader>
             <DialogTitle>Reject Submission</DialogTitle>
             <DialogDescription>
-              Are you sure you want to reject "{currentFlowName}"? You can optionally provide a reason.
+              Are you sure you want to reject "{currentFlowName}"? You can
+              optionally provide a reason.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Label htmlFor="rejection-reason">Rejection Reason (Optional)</Label>
+            <Label htmlFor="rejection-reason">
+              Rejection Reason (Optional)
+            </Label>
             <Textarea
               id="rejection-reason"
               placeholder="Provide a reason for rejection..."
