@@ -199,11 +199,6 @@ The output is a list of [`Data`](/data-types#data) objects containing the query 
 The **Graph RAG** component uses an instance of [`GraphRetriever`](https://datastax.github.io/graph-rag/reference/langchain_graph_retriever/) for Graph RAG traversal enabling graph-based document retrieval in an Astra DB vector store.
 For more information, see the [DataStax Graph RAG documentation](https://datastax.github.io/graph-rag/).
 
-:::info
-This component can be a Graph RAG extension for the [**Astra DB** vector store component](#astra-db).
-However, the [**Astra DB Graph** component](#astra-db-graph) includes both the vector store connection and Graph RAG functionality.
-:::
-
 ### Graph RAG parameters
 
 You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
@@ -349,6 +344,7 @@ The values for **Collection Name**, **Astra DB Application Token**, and **Astra 
 | Semantic Search Instruction | String | Input parameter. The query to use for similarity search. Default: `"Find documents similar to the query."`. This instruction is used to guide the model in performing semantic search. |
 
 </details>
+
 
 <details>
 <summary>Astra DB Graph</summary>
