@@ -117,7 +117,7 @@ class ChatOutput(ChatComponent):
         source, _, display_name, source_id = self.get_properties_from_source_component()
 
         # Create or use existing Message object
-        if isinstance(self.input_value, Message):
+        if isinstance(self.input_value, Message) and not self.is_connected_to_chat_input():
             message = self.input_value
             # Update message properties
             message.text = text
