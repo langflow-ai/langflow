@@ -387,9 +387,7 @@ class AuthServiceBase(Service, abc.ABC):
     # -------------------------------------------------------------------------
 
     @abc.abstractmethod
-    async def get_current_user_from_access_token(
-        self, token: str | Coroutine | None, db: "AsyncSession"
-    ) -> "User":
+    async def get_current_user_from_access_token(self, token: str | Coroutine | None, db: AsyncSession) -> User:
         """Get the current user from an access token.
 
         Args:
@@ -404,7 +402,7 @@ class AuthServiceBase(Service, abc.ABC):
         """
 
     @abc.abstractmethod
-    def create_token(self, data: dict, expires_delta: "timedelta") -> str:
+    def create_token(self, data: dict, expires_delta: timedelta) -> str:
         """Create an access token for the given data and expiration.
 
         Args:
@@ -416,7 +414,7 @@ class AuthServiceBase(Service, abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_user_id_from_token(self, token: str) -> "UUID":
+    def get_user_id_from_token(self, token: str) -> UUID:
         """Extract the user ID from a token.
 
         Args:

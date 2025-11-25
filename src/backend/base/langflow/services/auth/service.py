@@ -51,7 +51,7 @@ class AuthService(AuthServiceBase):
         self.set_ready()
 
     @property
-    def settings(self) -> "SettingsService":
+    def settings(self) -> SettingsService:
         return self.settings_service
 
     async def api_key_security(self, query_param: str | None, header_param: str | None) -> UserRead | None:
