@@ -118,6 +118,10 @@ export const AssistantNudges: React.FC<AssistantNudgesProps> = ({
   const [promptOutput, setPromptOutput] = useState("Generate a Prompt");
   const { selectedCompData } = useAssistantManagerStore();
 
+  // timer
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [generatePromptClicked, setGeneratePromptClicked] = useState(false);
+
   const { isFetching, refetch: prompt } = useGetSystemMessageGenQuery({
     compId: selectedCompData?.id,
     flowId,
@@ -125,13 +129,33 @@ export const AssistantNudges: React.FC<AssistantNudgesProps> = ({
     inputValue: userInput,
   });
 
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    if (isFetching) {
+      setElapsedTime(0);
+      interval = setInterval(() => {
+        setElapsedTime((prev) => prev + 1);
+      }, 1000);
+    } else if (!isFetching) {
+      // Cleanup when done
+      clearInterval(interval!);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isFetching]);
+
   const onGenButtonClick = async () => {
     switch (type) {
       case "field": {
+        setGeneratePromptClicked(true);
         const result = await prompt();
         setPromptOutput(
           result.data?.data?.outputs[0]?.outputs[0]?.outputs?.message?.message,
         );
+        setGeneratePromptClicked(false);
         break;
       }
       case "header":
@@ -139,7 +163,7 @@ export const AssistantNudges: React.FC<AssistantNudgesProps> = ({
         break;
     }
   };
-  const onReplaecuttonClick = async () => {
+  const onReplaceButtonClick = async () => {
     switch (type) {
       case "field": {
         handleOnNewValue({
@@ -187,10 +211,19 @@ export const AssistantNudges: React.FC<AssistantNudgesProps> = ({
                 placeholder="Prompt Mode"
               />
               <div>
-                <Button variant="secondary" onClick={onGenButtonClick}>
+                <Button
+                  variant="secondary"
+                  onClick={onGenButtonClick}
+                  disabled={generatePromptClicked}
+                >
                   Generate Prompt
+                  {generatePromptClicked && type === "field" && (
+                    <span className="text-xs text-muted-foreground">
+                      {elapsedTime}s
+                    </span>
+                  )}
                 </Button>
-                <Button variant="destructive" onClick={onReplaecuttonClick}>
+                <Button variant="destructive" onClick={onReplaceButtonClick}>
                   Replace with Prompt
                 </Button>
               </div>
