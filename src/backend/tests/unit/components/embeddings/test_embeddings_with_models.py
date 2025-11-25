@@ -361,4 +361,3 @@ class TestEmbeddingsWithModelsIntegration:
 
         assert len(primary_vec) == 384
         assert len(single_vec) == 512
-

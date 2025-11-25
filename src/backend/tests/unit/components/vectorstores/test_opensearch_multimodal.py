@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.embeddings import Embeddings
-
 from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
 from lfx.components.elastic.opensearch_multimodal import (
     OpenSearchVectorStoreComponentMultimodalMultiEmbedding,
@@ -13,6 +12,7 @@ from lfx.components.elastic.opensearch_multimodal import (
     normalize_model_name,
 )
 from lfx.schema.data import Data
+
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
 
@@ -450,13 +450,15 @@ class TestOpenSearchMultimodalIntegration:
     def test_multi_embedding_configuration(self, embeddings_with_models_openai, embeddings_with_models_ollama):
         """Test that multiple embeddings are properly configured."""
         component = OpenSearchVectorStoreComponentMultimodalMultiEmbedding()
-        component.set_attributes({
-            "opensearch_url": "http://localhost:9200",
-            "index_name": "test_index",
-            "embedding": [embeddings_with_models_openai, embeddings_with_models_ollama],
-            "auth_mode": "No Authentication",
-            "number_of_results": 5,
-        })
+        component.set_attributes(
+            {
+                "opensearch_url": "http://localhost:9200",
+                "index_name": "test_index",
+                "embedding": [embeddings_with_models_openai, embeddings_with_models_ollama],
+                "auth_mode": "No Authentication",
+                "number_of_results": 5,
+            }
+        )
 
         assert isinstance(component.embedding, list)
         assert len(component.embedding) == 2
@@ -480,7 +482,12 @@ class TestOpenSearchMultimodalIntegration:
             "chunk_embedding_qwen3_embedding_4b",
         ]
 
-        for model_name in ["text-embedding-3-small", "text-embedding-3-large", "bge-large:latest", "qwen3-embedding:4b"]:
+        for model_name in [
+            "text-embedding-3-small",
+            "text-embedding-3-large",
+            "bge-large:latest",
+            "qwen3-embedding:4b",
+        ]:
             field_name = get_embedding_field_name(model_name)
             assert field_name in expected_fields
 
@@ -533,12 +540,14 @@ class TestOpenSearchMultimodalIntegration:
         wrapper = EmbeddingsWithModels(embeddings=embedding, available_models={})
 
         component = OpenSearchVectorStoreComponentMultimodalMultiEmbedding()
-        component.set_attributes({
-            "opensearch_url": "http://localhost:9200",
-            "index_name": "test_index",
-            "embedding": wrapper,
-            "auth_mode": "No Authentication",
-        })
+        component.set_attributes(
+            {
+                "opensearch_url": "http://localhost:9200",
+                "index_name": "test_index",
+                "embedding": wrapper,
+                "auth_mode": "No Authentication",
+            }
+        )
 
         # Should still work with empty available_models
         assert isinstance(component.embedding, EmbeddingsWithModels)
@@ -553,14 +562,15 @@ class TestOpenSearchMultimodalIntegration:
         )
 
         component = OpenSearchVectorStoreComponentMultimodalMultiEmbedding()
-        component.set_attributes({
-            "opensearch_url": "http://localhost:9200",
-            "index_name": "test_index",
-            "embedding": [regular_embedding, wrapped_embedding],
-            "auth_mode": "No Authentication",
-        })
+        component.set_attributes(
+            {
+                "opensearch_url": "http://localhost:9200",
+                "index_name": "test_index",
+                "embedding": [regular_embedding, wrapped_embedding],
+                "auth_mode": "No Authentication",
+            }
+        )
 
         # Should handle mixed types
         assert isinstance(component.embedding, list)
         assert len(component.embedding) == 2
-

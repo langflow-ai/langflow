@@ -110,8 +110,4 @@ class EmbeddingsWithModels(Embeddings):
 
     def __repr__(self) -> str:
         """Return string representation of the wrapper."""
-        return (
-            f"EmbeddingsWithModels(embeddings={self.embeddings!r}, "
-            f"available_models={self.available_models!r})"
-        )
-
+        return f"EmbeddingsWithModels(embeddings={self.embeddings!r}, available_models={self.available_models!r})"
