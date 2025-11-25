@@ -516,6 +516,9 @@ class CustomComponent(BaseComponent):
             msg = "Session is invalid"
             raise ValueError(msg)
         try:
+            from langflow.api.v1.published_flows import list_all_published_flows
+
+            return await list_all_published_flows()
             return await list_flows(user_id=str(self.user_id))
         except Exception as e:
             msg = f"Error listing flows: {e}"
