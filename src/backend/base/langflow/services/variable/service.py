@@ -94,8 +94,6 @@ class DatabaseVariableService(VariableService, Service):
                             # Variable was modified by user, don't overwrite with environment variable
                             # Only update default_fields if they're not set
                             if not existing.default_fields and default_fields:
-                                from langflow.services.database.models.variable.model import VariableUpdate
-
                                 variable_update = VariableUpdate(
                                     id=existing.id,
                                     default_fields=default_fields,
@@ -112,8 +110,6 @@ class DatabaseVariableService(VariableService, Service):
                         # Variable was not user-modified, safe to update from environment
                         elif not existing.default_fields and default_fields:
                             # Update both value and default_fields
-                            from langflow.services.database.models.variable.model import VariableUpdate
-
                             variable_update = VariableUpdate(
                                 id=existing.id,
                                 value=value,
