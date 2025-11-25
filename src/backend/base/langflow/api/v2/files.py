@@ -176,6 +176,8 @@ async def upload_user_file(
             existing_mcp_file = await get_file_by_name(mcp_file, current_user, session)
             if existing_mcp_file:
                 await delete_file(existing_mcp_file.id, current_user, session, storage_service)
+                # Flush the session to ensure the deletion is committed before creating the new file
+                await session.flush()
             unique_filename = new_filename
         elif append:
             # In append mode, check if file exists and reuse the same filename
