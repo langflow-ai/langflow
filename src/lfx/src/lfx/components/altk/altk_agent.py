@@ -43,7 +43,7 @@ class ALTKAgentComponent(ALTKBaseAgentComponent):
 
     display_name: str = "ALTK Agent"
     description: str = "Advanced agent with both pre-tool validation and post-tool processing capabilities."
-    documentation: str = "https://docs.langflow.org/agents"
+    documentation: str = "https://docs.langflow.org/bundles-altk"
     icon = "zap"
     beta = True
     name = "ALTK Agent"
