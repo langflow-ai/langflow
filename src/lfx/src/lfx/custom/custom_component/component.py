@@ -94,6 +94,19 @@ class PlaceholderGraph(NamedTuple):
     context: dict
     flow_name: str | None
 
+    def get_vertex_neighbors(self, vertex) -> dict:
+        """Returns an empty dictionary since PlaceholderGraph has no edges or neighbors.
+            
+        This method exists for compatibility with real Graph objects, allowing components
+        to check graph connectivity even when running in isolation (e.g., in tests).
+            
+        Args:
+            vertex: The vertex to check neighbors for (ignored in placeholder context).
+                
+        Returns:
+            An empty dictionary, indicating no neighbors exist.
+        """
+        return {}
 
 class Component(CustomComponent):
     inputs: list[InputTypes] = []
