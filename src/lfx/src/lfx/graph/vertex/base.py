@@ -7,6 +7,7 @@ import types
 from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from enum import Enum
 from typing import TYPE_CHECKING, Any
+from ag_ui.core import StepStartedEvent, StepFinishedEvent
 
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
@@ -21,6 +22,7 @@ from lfx.schema.message import Message
 from lfx.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
 from lfx.utils.schemas import ChatOutputResponse
 from lfx.utils.util import sync_to_async
+from lfx.events.observability.lifecycle_events import observable
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -180,6 +182,7 @@ class Vertex:
 
         if isinstance(self.built_result, UnbuiltResult):
             return {}
+
         return self.built_result if isinstance(self.built_result, dict) else {"result": self.built_result}
 
     def set_artifacts(self) -> None:
@@ -381,6 +384,7 @@ class Vertex:
                 vertex=self,
             )
 
+    @observable
     async def _build(
         self,
         fallback_to_env_vars,
@@ -390,7 +394,6 @@ class Vertex:
         """Initiate the build process."""
         await logger.adebug(f"Building {self.display_name}")
         await self._build_each_vertex_in_params_dict()
-
         if self.base_type is None:
             msg = f"Base type for vertex {self.display_name} not found"
             raise ValueError(msg)
@@ -824,3 +827,40 @@ class Vertex:
             return
         # Apply the function to each output
         [func(output) for output in self.custom_component.get_outputs_map().values()]
+
+    # AGUI/AG UI Event Streaming Callbacks/Methods - (Optional, see Observable decorator)
+    def raw_event_metrics(self, optional_fields: dict | None) -> dict:  # noqa: ARG002
+        """This method is used to get the metrics of the vertex by the Observable decorator.
+
+        If the vertex has a get_metrics method, it will be called, and the metrics will be captured
+        to stream back to the user in an AGUI compliant format.
+        Additional fields/metrics to be captured can be modified in this method, or in the callback methods,
+        which are before_callback_event and after_callback_event before returning the AGUI event.
+        """
+
+        if optional_fields is None:
+            optional_fields = {}
+        import time
+
+        return {"timestamp": time.time(), **optional_fields}
+
+    def before_callback_event(self, *args, **kwargs) -> StepStartedEvent:  # noqa: ARG002
+        """Should be a AGUI compatible event.
+
+        VERTEX class generates a StepStartedEvent event.
+        """
+        metrics = {}
+        if hasattr(self, "raw_event_metrics"):
+            metrics = self.raw_event_metrics({"component_id": self.id})
+
+        return StepStartedEvent(step_name=self.display_name, raw_event={"langflow": metrics})
+
+    def after_callback_event(self, result, *args, **kwargs) -> StepFinishedEvent:  # noqa: ARG002
+        """Should be a AGUI compatible event.
+
+        VERTEX class generates a StepFinishedEvent event.
+        """
+        metrics = {}
+        if hasattr(self, "raw_event_metrics"):
+            metrics = self.raw_event_metrics({"component_id": self.id})
+        return StepFinishedEvent(step_name=self.display_name, raw_event={"langflow": metrics})
