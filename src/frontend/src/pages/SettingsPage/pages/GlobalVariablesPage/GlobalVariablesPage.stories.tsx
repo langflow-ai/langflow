@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { useDarkStore } from "@/stores/darkStore";
@@ -38,10 +39,25 @@ const withRouter = (Story: React.ComponentType) => {
   );
 };
 
+const withQueryClient = (Story: React.ComponentType) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Story />
+    </QueryClientProvider>
+  );
+};
+
 const meta: Meta<typeof GlobalVariablesPage> = {
   title: "Pages/SettingsPage/GlobalVariablesPage",
   component: GlobalVariablesPage,
-  decorators: [withRouter, withDarkMode],
+  decorators: [withQueryClient, withRouter, withDarkMode],
   parameters: {
     layout: "padded",
   },
