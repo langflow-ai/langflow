@@ -18,7 +18,7 @@ from lfx.template.field.base import Output
 class SaveToFileComponent(Component):
     display_name = "Write File"
     description = "Save data to local file, AWS S3, or Google Drive in the selected format."
-    documentation: str = "https://docs.langflow.org/components-processing#save-file"
+    documentation: str = "https://docs.langflow.org/write-file"
     icon = "file-text"
     name = "SaveToFile"
 
