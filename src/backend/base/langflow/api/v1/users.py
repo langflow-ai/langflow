@@ -118,7 +118,7 @@ async def reset_password(
 
     new_password = get_password_hash(user_update.password)
     user.password = new_password
-    session.add(user)
+
     await session.flush()
     await session.refresh(user)
 
