@@ -274,20 +274,20 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             name="username",
             display_name="Username",
             value="admin",
-            show=False,
+            show=True,
         ),
         SecretStrInput(
             name="password",
             display_name="OpenSearch Password",
             value="admin",
-            show=False,
+            show=True,
         ),
         SecretStrInput(
             name="jwt_token",
             display_name="JWT Token",
             value="JWT",
             load_from_db=False,
-            show=True,
+            show=False,
             info=(
                 "Valid JSON Web Token for authentication. "
                 "Will be sent in the Authorization header (with optional 'Bearer ' prefix)."
@@ -1533,8 +1533,8 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 build_config["jwt_header"]["required"] = is_jwt
                 build_config["bearer_prefix"]["required"] = False
 
-                if is_basic:
-                    build_config["jwt_token"]["value"] = ""
+                # if is_basic:
+                #     build_config["jwt_token"]["value"] = ""
 
                 return build_config
 
