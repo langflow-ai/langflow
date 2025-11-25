@@ -173,10 +173,9 @@ async def list_profile_pictures(
         people_path = config_path / "profile_pictures" / "People"
         space_path = config_path / "profile_pictures" / "Space"
 
-        # List files directly from local filesystem
+        # List files directly from local filesystem - bundled with the container
         people = [f.name for f in people_path.iterdir() if f.is_file()] if people_path.exists() else []
         space = [f.name for f in space_path.iterdir() if f.is_file()] if space_path.exists() else []
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

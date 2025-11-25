@@ -112,6 +112,7 @@ export type OutputFieldType = {
   hidden?: boolean;
   proxy?: OutputFieldProxyType;
   allows_loop?: boolean;
+  loop_types?: Array<string>;
   options?: { [key: string]: any };
 };
 export type errorsTypeAPI = {

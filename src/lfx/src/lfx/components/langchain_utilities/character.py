@@ -10,7 +10,7 @@ from lfx.utils.util import unescape_string
 class CharacterTextSplitterComponent(LCTextSplitterComponent):
     display_name = "Character Text Splitter"
     description = "Split text by number of characters."
-    documentation = "https://docs.langflow.org/components/text-splitters#charactertextsplitter"
+    documentation = "https://docs.langflow.org/bundles-langchain"
     name = "CharacterTextSplitter"
     icon = "LangChain"
 
