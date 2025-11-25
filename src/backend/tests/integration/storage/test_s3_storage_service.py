@@ -265,11 +265,11 @@ class TestS3StorageServiceStreamOperations:
             await s3_storage_service.save_file(test_flow_id, file_name, data)
 
             # Test 1: Verify we can stream all chunks (context stays open)
-            chunks = []
-            async for chunk in s3_storage_service.get_file_stream(test_flow_id, file_name, chunk_size=1024):
-                chunks.append(chunk)
-                # Context manager should still be open at this point
-                # If it closed early, we wouldn't be able to get subsequent chunks
+            chunks = [
+                chunk async for chunk in s3_storage_service.get_file_stream(test_flow_id, file_name, chunk_size=1024)
+            ]
+            # Context manager should still be open at this point
+            # If it closed early, we wouldn't be able to get subsequent chunks
 
             # Verify we got all chunks
             streamed_data = b"".join(chunks)
@@ -309,10 +309,8 @@ class TestS3StorageServiceStreamOperations:
                         break
             finally:
                 # Ensure generator is closed even if break doesn't trigger aclose
-                try:
+                with contextlib.suppress(StopAsyncIteration, RuntimeError):
                     await gen.aclose()
-                except (StopAsyncIteration, RuntimeError):
-                    pass  # Generator already closed
 
             # Verify we got partial data
             assert len(chunks_received) == 3, "Should have received exactly 3 chunks before termination"
@@ -321,9 +319,9 @@ class TestS3StorageServiceStreamOperations:
 
             # Verify we can create a new generator and stream the full file
             # (This confirms the previous generator cleaned up properly)
-            full_chunks = []
-            async for chunk in s3_storage_service.get_file_stream(test_flow_id, file_name, chunk_size=1024):
-                full_chunks.append(chunk)
+            full_chunks = [
+                chunk async for chunk in s3_storage_service.get_file_stream(test_flow_id, file_name, chunk_size=1024)
+            ]
 
             full_data = b"".join(full_chunks)
             assert full_data == data, "Should be able to stream full file after early termination"
