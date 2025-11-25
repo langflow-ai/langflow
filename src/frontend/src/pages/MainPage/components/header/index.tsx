@@ -197,7 +197,7 @@ const HeaderComponent = ({
                     data-testid="download-bulk-btn"
                     onClick={handleDownload}
                     loading={isDownloading}
-                    tabIndex={-1}
+                    tabIndex={selectedFlows.length === 0 ? -1 : 0}
                   >
                     <ForwardedIconComponent name="Download" />
                   </Button>
@@ -217,7 +217,7 @@ const HeaderComponent = ({
                       className="px-2.5 !text-mmd"
                       data-testid="delete-bulk-btn"
                       loading={isDeleting}
-                      tabIndex={-1}
+                      tabIndex={selectedFlows.length === 0 ? -1 : 0}
                     >
                       <ForwardedIconComponent name="Trash2" />
                       Delete
