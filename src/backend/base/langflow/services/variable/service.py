@@ -41,6 +41,14 @@ class DatabaseVariableService(VariableService, Service):
             var_to_provider = {}
 
         for var_name in self.settings_service.settings.variables_to_get_from_environment:
+            # Check if session is still usable before processing each variable
+            if not session.is_active:
+                await logger.awarning(
+                    "Session is no longer active during variable initialization. "
+                    "Some environment variables may not have been processed."
+                )
+                break
+
             if var_name in os.environ and os.environ[var_name].strip():
                 value = os.environ[var_name].strip()
 
@@ -55,13 +63,22 @@ class DatabaseVariableService(VariableService, Service):
                     continue
 
                 query = select(Variable).where(Variable.user_id == user_id, Variable.name == var_name)
-                existing = (await session.exec(query)).first()
-
                 # Set default_fields if this is a known provider variable
                 default_fields = []
-                if is_api_key_variable:
-                    provider_name = var_to_provider[var_name]
-                    default_fields = [provider_name, "api_key"]
+                try:
+                    if is_api_key_variable:
+                        provider_name = var_to_provider[var_name]
+                        default_fields = [provider_name, "api_key"]
+                    existing = (await session.exec(query)).first()
+                except Exception as e:  # noqa: BLE001
+                    await logger.aexception(f"Error querying {var_name} variable: {e!s}")
+                    # If session got rolled back during query, stop processing
+                    if not session.is_active:
+                        await logger.awarning(
+                            f"Session rolled back during {var_name} query. Stopping variable initialization."
+                        )
+                        break
+                    continue
 
                 try:
                     if existing:
@@ -122,6 +139,12 @@ class DatabaseVariableService(VariableService, Service):
                     await logger.adebug(f"Processed {var_name} variable from environment.")
                 except Exception as e:  # noqa: BLE001
                     await logger.aexception(f"Error processing {var_name} variable: {e!s}")
+                    # If session got rolled back due to error, stop processing
+                    if not session.is_active:
+                        await logger.awarning(
+                            f"Session rolled back after error processing {var_name}. Stopping variable initialization."
+                        )
+                        break
 
     async def get_variable_object(
         self,
@@ -217,7 +240,7 @@ class DatabaseVariableService(VariableService, Service):
             variable.value = value
         variable.updated_at = datetime.now(timezone.utc)
         session.add(variable)
-        await session.commit()
+        await session.flush()
         await session.refresh(variable)
         return variable
 
@@ -248,7 +271,7 @@ class DatabaseVariableService(VariableService, Service):
             setattr(db_variable, key, value)
 
         session.add(db_variable)
-        await session.commit()
+        await session.flush()
         await session.refresh(db_variable)
         return db_variable
 
@@ -264,7 +287,6 @@ class DatabaseVariableService(VariableService, Service):
             msg = f"{name} variable not found."
             raise ValueError(msg)
         await session.delete(variable)
-        await session.commit()
 
     async def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: AsyncSession) -> None:
         stmt = select(Variable).where(Variable.user_id == user_id, Variable.id == variable_id)
@@ -273,7 +295,6 @@ class DatabaseVariableService(VariableService, Service):
             msg = f"{variable_id} variable not found."
             raise ValueError(msg)
         await session.delete(variable)
-        await session.commit()
 
     async def create_variable(
         self,
@@ -299,6 +320,6 @@ class DatabaseVariableService(VariableService, Service):
         )
         variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
         session.add(variable)
-        await session.commit()
+        await session.flush()
         await session.refresh(variable)
         return variable

@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from langflow.custom import Component
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
-from lfx.components.altk import ALTKAgentComponent
+from lfx.components.altk.altk_agent import ALTKAgentComponent
 from lfx.components.tools.calculator import CalculatorToolComponent
 
 from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
