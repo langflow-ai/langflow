@@ -2,9 +2,11 @@ import csv
 import io
 from pathlib import Path
 
+from lfx.base.data.storage_utils import read_file_text
 from lfx.custom.custom_component.component import Component
 from lfx.io import FileInput, MessageTextInput, MultilineInput, Output
 from lfx.schema.data import Data
+from lfx.utils.async_helpers import run_until_complete
 
 
 class CSVToDataComponent(Component):
@@ -52,21 +54,24 @@ class CSVToDataComponent(Component):
         csv_data = None
         try:
             if self.csv_file:
-                resolved_path = self.resolve_path(self.csv_file)
-                file_path = Path(resolved_path)
-                if file_path.suffix.lower() != ".csv":
+                # FileInput always provides a local file path
+                file_path = self.csv_file
+                if not file_path.lower().endswith(".csv"):
                     self.status = "The provided file must be a CSV file."
                 else:
-                    with file_path.open(newline="", encoding="utf-8") as csvfile:
-                        csv_data = csvfile.read()
+                    # Resolve to absolute path and read from local filesystem
+                    resolved_path = self.resolve_path(file_path)
+                    csv_bytes = Path(resolved_path).read_bytes()
+                    csv_data = csv_bytes.decode("utf-8")
 
             elif self.csv_path:
-                file_path = Path(self.csv_path)
-                if file_path.suffix.lower() != ".csv":
-                    self.status = "The provided file must be a CSV file."
+                file_path = self.csv_path
+                if not file_path.lower().endswith(".csv"):
+                    self.status = "The provided path must be to a CSV file."
                 else:
-                    with file_path.open(newline="", encoding="utf-8") as csvfile:
-                        csv_data = csvfile.read()
+                    csv_data = run_until_complete(
+                        read_file_text(file_path, encoding="utf-8", resolve_path=self.resolve_path, newline="")
+                    )
 
             else:
                 csv_data = self.csv_string

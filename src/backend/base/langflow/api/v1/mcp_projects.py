@@ -440,6 +440,8 @@ async def update_project_mcp_settings(
                     session.add(flow)
                     updated_flows.append(flow)
 
+            await session.flush()
+
             response: dict[str, Any] = {
                 "message": f"Updated MCP settings for {len(updated_flows)} flows and project auth settings"
             }
@@ -1201,8 +1203,6 @@ async def init_mcp_servers():
 
             # Auto-configure starter projects with MCP server settings if enabled
             await auto_configure_starter_projects_mcp(session)
-            # Commit any auth settings updates
-            await session.commit()
 
     except Exception as e:  # noqa: BLE001
         msg = f"Failed to initialize MCP servers: {e}"

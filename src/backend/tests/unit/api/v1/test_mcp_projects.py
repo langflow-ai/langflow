@@ -16,7 +16,8 @@ from langflow.services.auth.utils import create_user_longterm_token, get_passwor
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_db_service, get_settings_service, session_scope
+from langflow.services.deps import get_settings_service
+from lfx.services.deps import session_scope
 from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 
@@ -111,7 +112,7 @@ async def other_test_user():
             is_superuser=False,
         )
         session.add(user)
-        await session.commit()
+        await session.flush()
         await session.refresh(user)
     yield user
     # Clean up
@@ -119,7 +120,6 @@ async def other_test_user():
         user = await session.get(User, user_id)
         if user:
             await session.delete(user)
-            await session.commit()
 
 
 @pytest.fixture
@@ -129,7 +129,7 @@ async def other_test_project(other_test_user):
     async with session_scope() as session:
         project = Folder(id=project_id, name="Other Test Project", user_id=other_test_user.id)
         session.add(project)
-        await session.commit()
+        await session.flush()
         await session.refresh(project)
     yield project
     # Clean up
@@ -137,7 +137,6 @@ async def other_test_project(other_test_user):
         project = await session.get(Folder, project_id)
         if project:
             await session.delete(project)
-            await session.commit()
 
 
 @pytest.fixture(autouse=True)
@@ -219,7 +218,7 @@ async def test_flow_for_update(active_user, user_test_project):
     async with session_scope() as session:
         flow = Flow(**flow_data)
         session.add(flow)
-        await session.commit()
+        await session.flush()
         await session.refresh(flow)
 
     yield flow
@@ -230,7 +229,6 @@ async def test_flow_for_update(active_user, user_test_project):
         flow = await session.get(Flow, flow_id)
         if flow:
             await session.delete(flow)
-            await session.commit()
 
 
 async def test_update_project_mcp_settings_success(
@@ -380,7 +378,6 @@ async def test_user_data_isolation_with_real_db(
 
         # Add flow to database
         session.add(second_flow)
-        await session.commit()
 
     try:
         # Test that first user can't see the project
@@ -400,7 +397,6 @@ async def test_user_data_isolation_with_real_db(
             second_flow = await session.get(Flow, second_flow_id)
             if second_flow:
                 await session.delete(second_flow)
-                await session.commit()
 
 
 @pytest.fixture
@@ -410,7 +406,7 @@ async def user_test_project(active_user):
     async with session_scope() as session:
         project = Folder(id=project_id, name="User Test Project", user_id=active_user.id)
         session.add(project)
-        await session.commit()
+        await session.flush()
         await session.refresh(project)
     yield project
     # Clean up
@@ -418,7 +414,6 @@ async def user_test_project(active_user):
         project = await session.get(Folder, project_id)
         if project:
             await session.delete(project)
-            await session.commit()
 
 
 @pytest.fixture
@@ -437,7 +432,7 @@ async def user_test_flow(active_user, user_test_project):
             user_id=active_user.id,
         )
         session.add(flow)
-        await session.commit()
+        await session.flush()
         await session.refresh(flow)
     yield flow
     # Clean up
@@ -445,7 +440,6 @@ async def user_test_flow(active_user, user_test_project):
         flow = await session.get(Flow, flow_id)
         if flow:
             await session.delete(flow)
-            await session.commit()
 
 
 async def test_user_can_update_own_flow_mcp_settings(
@@ -669,14 +663,13 @@ async def test_mcp_longterm_token_fails_without_superuser():
     settings_service.auth_settings.AUTO_LOGIN = False
 
     # Ensure no superuser exists in DB
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         result = await session.exec(select(User).where(User.is_superuser == True))  # noqa: E712
         users = result.all()
         for user in users:
             await session.delete(user)
-        await session.commit()
 
     # Now attempt to create long-term token -> expect HTTPException 400
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         with pytest.raises(HTTPException, match="Auto login required to create a long-term token"):
             await create_user_longterm_token(session)

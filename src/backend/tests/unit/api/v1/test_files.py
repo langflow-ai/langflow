@@ -16,7 +16,6 @@ from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_db_service
 from lfx.services.deps import session_scope
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
@@ -36,21 +35,24 @@ async def files_created_api_key(files_client, files_active_user):  # noqa: ARG00
     async with session_scope() as session:
         stmt = select(ApiKey).where(ApiKey.api_key == api_key.api_key)
         if existing_api_key := (await session.exec(stmt)).first():
-            yield existing_api_key
-            return
-        session.add(api_key)
-        await session.commit()
-        await session.refresh(api_key)
-        yield api_key
-        # Clean up
-        await session.delete(api_key)
-        await session.commit()
+            api_key = existing_api_key
+        else:
+            session.add(api_key)
+            await session.flush()
+            await session.refresh(api_key)
+    # Yield outside session scope to avoid database locks
+    yield api_key
+    # Clean up
+    async with session_scope() as session:
+        # Re-attach api_key to new session
+        key_to_delete = await session.get(ApiKey, api_key.id)
+        if key_to_delete:
+            await session.delete(key_to_delete)
 
 
 @pytest.fixture(name="files_active_user")
 async def files_active_user(files_client):  # noqa: ARG001
-    db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         user = User(
             username="files_active_user",
             password=get_password_hash("testpassword"),
@@ -62,18 +64,16 @@ async def files_active_user(files_client):  # noqa: ARG001
             user = active_user
         else:
             session.add(user)
-            await session.commit()
+            await session.flush()
             await session.refresh(user)
         user = UserRead.model_validate(user, from_attributes=True)
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         user = await session.get(User, user.id, options=[selectinload(User.flows)])
         await _delete_transactions_and_vertex_builds(session, user.flows)
         await session.delete(user)
-
-        await session.commit()
 
 
 @pytest.fixture(name="files_flow")
@@ -84,16 +84,19 @@ async def files_flow(
 ):
     loaded_json = json.loads(json_flow)
     flow_data = FlowCreate(name="test_flow", data=loaded_json.get("data"), user_id=files_active_user.id)
-    db_manager = get_db_service()
     flow = Flow.model_validate(flow_data)
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         session.add(flow)
-        await session.commit()
+        await session.flush()
         await session.refresh(flow)
-        yield flow
-        # Clean up
-        await session.delete(flow)
-        await session.commit()
+    # Yield outside session scope to avoid database locks
+    yield flow
+    # Clean up
+    async with session_scope() as session:
+        # Re-attach flow to new session
+        flow_to_delete = await session.get(Flow, flow.id)
+        if flow_to_delete:
+            await session.delete(flow_to_delete)
 
 
 @pytest.fixture
@@ -288,11 +291,13 @@ async def test_upload_file_size_limit(files_client, files_created_api_key, files
 
 
 @pytest.fixture
-async def setup_profile_pictures(files_client, monkeypatch):  # noqa: ARG001
+async def setup_profile_pictures(monkeypatch):
     """Fixture to set up profile pictures in a temporary config directory.
 
+    This fixture must run before files_client to set LANGFLOW_CONFIG_DIR
+    before app initialization.
+
     Args:
-        files_client: Required for fixture dependency ordering (ensures app is initialized)
         monkeypatch: For overriding environment variables
     """
     # Create a temporary directory for profile pictures
@@ -305,14 +310,23 @@ async def setup_profile_pictures(files_client, monkeypatch):  # noqa: ARG001
     people_dir.mkdir(parents=True, exist_ok=True)
     space_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create test profile picture files
-    rocket_svg = b'<svg height="100" width="100"><circle cx="50" cy="50" r="40" fill="red" /></svg>'
-    person_svg = b'<svg height="100" width="100"><circle cx="50" cy="50" r="40" fill="blue" /></svg>'
+    # Create test profile picture files (must be > 100 bytes for test assertions)
+    rocket_svg = (
+        b'<svg height="100" width="100" xmlns="http://www.w3.org/2000/svg">'
+        b'<circle cx="50" cy="50" r="40" fill="red" stroke="darkred" stroke-width="2"/>'
+        b'<path d="M 50 10 L 60 30 L 50 25 L 40 30 Z" fill="orange"/></svg>'
+    )
+    person_svg = (
+        b'<svg height="100" width="100" xmlns="http://www.w3.org/2000/svg">'
+        b'<circle cx="50" cy="50" r="40" fill="blue" stroke="darkblue" stroke-width="2"/>'
+        b'<circle cx="40" cy="40" r="5" fill="white"/><circle cx="60" cy="40" r="5" fill="white"/>'
+        b'<path d="M 40 65 Q 50 70 60 65" stroke="white" stroke-width="2" fill="none"/></svg>'
+    )
 
     (space_dir / "046-rocket.svg").write_bytes(rocket_svg)
     (people_dir / "001-person.svg").write_bytes(person_svg)
 
-    # Override the config_dir setting
+    # Override the config_dir setting BEFORE app initialization
     monkeypatch.setenv("LANGFLOW_CONFIG_DIR", str(config_path))
 
     yield config_path
@@ -323,7 +337,7 @@ async def setup_profile_pictures(files_client, monkeypatch):  # noqa: ARG001
     shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-async def test_list_profile_pictures(files_client, setup_profile_pictures):  # noqa: ARG001
+async def test_list_profile_pictures(setup_profile_pictures, files_client):  # noqa: ARG001
     """Test listing profile pictures from local filesystem.
 
     Args:
@@ -349,7 +363,7 @@ async def test_list_profile_pictures(files_client, setup_profile_pictures):  # n
     assert "Space/046-rocket.svg" in files, "Should have the rocket profile picture"
 
 
-async def test_download_profile_picture_space_rocket(files_client, setup_profile_pictures):  # noqa: ARG001
+async def test_download_profile_picture_space_rocket(setup_profile_pictures, files_client):  # noqa: ARG001
     """Test downloading the rocket profile picture from Space folder.
 
     Args:
@@ -370,7 +384,7 @@ async def test_download_profile_picture_space_rocket(files_client, setup_profile
     assert len(content) > 100, "SVG content should be substantial"
 
 
-async def test_download_profile_picture_people(files_client, setup_profile_pictures):  # noqa: ARG001
+async def test_download_profile_picture_people(setup_profile_pictures, files_client):  # noqa: ARG001
     """Test downloading a profile picture from People folder.
 
     Note: The actual people profile pictures are copied during app init,
@@ -406,7 +420,7 @@ async def test_download_profile_picture_people(files_client, setup_profile_pictu
     assert len(content) > 100, "SVG content should be substantial"
 
 
-async def test_download_profile_picture_not_found(files_client, setup_profile_pictures):  # noqa: ARG001
+async def test_download_profile_picture_not_found(setup_profile_pictures, files_client):  # noqa: ARG001
     """Test downloading a non-existent profile picture returns 404.
 
     Args:
@@ -420,7 +434,7 @@ async def test_download_profile_picture_not_found(files_client, setup_profile_pi
     assert "not found" in data["detail"].lower()
 
 
-async def test_profile_pictures_with_s3_storage(files_client, setup_profile_pictures, monkeypatch):  # noqa: ARG001
+async def test_profile_pictures_with_s3_storage(setup_profile_pictures, files_client, monkeypatch):  # noqa: ARG001
     """Test that profile pictures work with S3 storage type.
 
     Profile pictures should always be served from local filesystem,
@@ -448,7 +462,7 @@ async def test_profile_pictures_with_s3_storage(files_client, setup_profile_pict
     assert b"<svg" in response.content
 
 
-async def test_profile_pictures_different_file_types(files_client, setup_profile_pictures):  # noqa: ARG001
+async def test_profile_pictures_different_file_types(setup_profile_pictures, files_client):  # noqa: ARG001
     """Test that content-type headers are correct for SVG files.
 
     The real profile pictures are all SVG files. This test verifies

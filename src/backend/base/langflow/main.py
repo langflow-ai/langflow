@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import re
+import tempfile
 import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
@@ -17,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
+from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -209,9 +211,6 @@ def get_lifespan(*, fix_migration=False, version=None):
             # the initialization work.
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Creating/updating starter projects")
-            import tempfile
-
-            from filelock import FileLock
 
             lock_file = Path(tempfile.gettempdir()) / "langflow_starter_projects.lock"
             lock = FileLock(lock_file, timeout=1)

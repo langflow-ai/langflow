@@ -1,7 +1,8 @@
 import pytest
 from langflow.services.auth.utils import create_user_longterm_token
-from langflow.services.deps import get_db_service, get_settings_service
+from langflow.services.deps import get_settings_service
 from langflow.services.utils import initialize_services
+from lfx.services.deps import session_scope
 
 
 @pytest.mark.skip(reason="MCP Projects can only create long-term tokens if AUTO_LOGIN is enabled")
@@ -17,7 +18,7 @@ async def test_mcp_longterm_token_headless_superuser_integration():
 
     await initialize_services()
 
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         user_id, tokens = await create_user_longterm_token(session)
         assert user_id is not None
         assert tokens.get("access_token")

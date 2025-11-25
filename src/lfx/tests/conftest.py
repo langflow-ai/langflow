@@ -61,9 +61,26 @@ def pytest_collection_modifyitems(config, items):  # noqa: ARG001
             item.add_marker(pytest.mark.slow)
 
 
+@pytest.fixture(autouse=True)
+def use_noop_database():
+    """Ensure all LFX tests use NoopDatabaseService.
+
+    This fixture automatically applies to all tests, ensuring that get_db_service()
+    always returns NoopDatabaseService, preventing tests from requiring a real database.
+    """
+    from lfx.services.database.service import NoopDatabaseService
+
+    with patch("lfx.services.deps.get_db_service", return_value=NoopDatabaseService()):
+        yield
+
+
 @pytest.fixture
 def use_noop_session():
-    """Force the use of NoopSession for testing."""
+    """Force the use of NoopSession for testing.
+
+    DEPRECATED: This fixture is kept for backwards compatibility but is no longer needed
+    since use_noop_database (autouse=True) ensures all tests use the noop database.
+    """
     from lfx.services.session import NoopSession
 
     # Mock session_scope to always return NoopSession

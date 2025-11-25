@@ -171,17 +171,22 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
                 await logger.awarning(error_message)
                 raise ValueError(error_message)
 
-        # Batch commit all updates at once
-        await session.commit()
-
-        # Skip refresh during commit - the msg objects already have the updated values
-        # Refresh is only needed if we need database-generated values (like timestamps)
-        # For streaming performance, we skip this extra round-trip
-
         return [MessageRead.model_validate(message, from_attributes=True) for message in updated_messages]
 
 
-async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession):
+async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession, retry_count: int = 0):
+    """Add messages to the database with retry logic for CancelledError.
+
+    Args:
+        messages: List of MessageTable objects to add
+        session: Database session
+        retry_count: Internal retry counter (max 3 retries to prevent infinite loops)
+
+    This function includes a workaround for CancelledError that can occur during
+    session.commit() when called from build_public_tmp but not from build_flow.
+    The retry mechanism has a limit to prevent infinite recursion.
+    """
+    max_retries = 3
     try:
         try:
             for message in messages:
@@ -192,7 +197,13 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
             # while build_flow does not.
         except asyncio.CancelledError:
             await session.rollback()
-            return await aadd_messagetables(messages, session)
+            if retry_count >= max_retries:
+                await logger.awarning(
+                    f"Max retries ({max_retries}) reached for aadd_messagetables due to CancelledError"
+                )
+                error_msg = "Add Message operation cancelled after multiple retries"
+                raise ValueError(error_msg) from None
+            return await aadd_messagetables(messages, session, retry_count + 1)
         for message in messages:
             await session.refresh(message)
     except asyncio.CancelledError as e:
@@ -259,7 +270,6 @@ async def delete_message(id_: str) -> None:
         message = await session.get(MessageTable, id_)
         if message:
             await session.delete(message)
-            await session.commit()
 
 
 def store_message(
