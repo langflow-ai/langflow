@@ -203,3 +203,26 @@ export const FullConfiguration: Story = {
     await expect(sidebar).toBeVisible();
   },
 };
+
+// Story 7: Verify store state is accessible
+export const VerifyStoreState: Story = {
+  args: {
+    darkMode: false,
+  },
+  decorators: [withRouter, withStoreSetup(false, true), withDarkMode],
+  play: async ({ canvasElement }) => {
+    // Verify we can access store state
+    const authState = useAuthStore.getState();
+    const storeState = useStoreStore.getState();
+
+    // Verify store values match what we set
+    expect(authState.autoLogin).toBe(false);
+    expect(storeState.hasStore).toBe(true);
+
+    const canvas = within(canvasElement);
+    // Verify the UI reflects the store state
+    // hasStore=true should show General settings
+    await expect(canvas.getByText("General")).toBeVisible();
+    await expect(canvas.getByText("Settings")).toBeVisible();
+  },
+};
