@@ -133,7 +133,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
                   <span className="text-xs text-muted-foreground">
                     Max file size: 5 MB
                     <br />
-                    Disclaimer: Do not upload files containing PDI/PHI data.
+                    Disclaimer: Please do not upload or enter PII/PHI data.
                   </span>
                 </div>
               )}
