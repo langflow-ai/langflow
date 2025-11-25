@@ -26,31 +26,34 @@ To modify this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment va
 <summary>Supported file types</summary>
 
 The following file types are supported by the **Read File** component.
-Use archive and compressed formats to bundle multiple files together, or use the [**Directory** component](/directory) to load all files in a directory.
 
-- `.bz2`
 - `.csv`
-- `.docx`
-- `.gz`
-- `.htm`
-- `.html`
 - `.json`
-- `.js`
+- `.pdf`
+- `.txt`
 - `.md`
 - `.mdx`
-- `.pdf`
+- `.yaml`
+- `.yml`
+- `.xml`
+- `.html`
+- `.htm`
+- `.docx`
 - `.py`
 - `.sh`
 - `.sql`
-- `.tar`
-- `.tgz`
+- `.js`
 - `.ts`
 - `.tsx`
-- `.txt`
-- `.xml`
-- `.yaml`
-- `.yml`
+
+The following archive file types are supported by the **Read File** component.
+Use archive and compressed formats to bundle multiple files together, or use the [**Directory** component](/directory) to load all files in a directory.
+
 - `.zip`
+- `.tar`
+- `.tgz`
+- `.bz2`
+- `.gz`
 
 </details>
 
@@ -102,9 +105,48 @@ To use advanced parsing, do the following:
     If you select multiple files, the **Read File** component processes the first file only, ignoring any additional files.
     To process multiple files with advanced parsing, pass each file to a separate **Read File** components, or use the dedicated [**Docling** components](/bundles-docling).
 
-    * Advanced parsing can process any of the **Read File** component's supported file types except `.csv`, `.xlsx`, and `.parquet` files because it is designed for document processing, such as extracting text from PDFs.
-    For structured data analysis, use the [**Parser** component](/parser).
-    :::
+    * Advanced parsing and the **Read File** component accept different sets of file formats.
+    If a file type is supported by **Read File** but not by*Docling, disable advanced parsing in the **Read File** component.
+    If **Docling** supports a type that **Read File** does not, use the dedicated **Docling** components.
+
+    <details>
+    <summary>Advanced parsing file types</summary>
+
+    The following file types are supported by the [**Docling**](https://docling-project.github.io/docling/) library and the **Read File** component when advanced parsing is available for that file type.
+
+    - `.adoc`
+    - `.asciidoc`
+    - `.asc`
+    - `.bmp`
+    - `.csv`
+    - `.dotx`
+    - `.dotm`
+    - `.docm`
+    - `.docx`
+    - `.htm`
+    - `.html`
+    - `.jpg`
+    - `.jpeg`
+    - `.json`
+    - `.md`
+    - `.pdf`
+    - `.png`
+    - `.potx`
+    - `.ppsx`
+    - `.pptm`
+    - `.potm`
+    - `.ppsm`
+    - `.pptx`
+    - `.tiff`
+    - `.txt`
+    - `.xls`
+    - `.xlsx`
+    - `.xhtml`
+    - `.xml`
+    - `.webp`
+
+    </details>
+   :::
 
 3. Enable **Advanced Parsing**.
 
@@ -166,4 +208,3 @@ If you upload multiple files, the component outputs **Files**, which is a [`Data
 
 </TabItem>
 </Tabs>
-
