@@ -138,7 +138,8 @@ dependencies = [
     "cuga~=0.1.11",
     "agent-lifecycle-toolkit~=0.4.4",
     "astrapy>=2.1.0,<3.0.0",
-    "aioboto3>=15.2.0,<16.0.0"
+    "aioboto3>=15.2.0,<16.0.0",
+    "ag-ui-protocol>=0.1.10",
 ]
 
 
