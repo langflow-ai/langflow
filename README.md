@@ -103,6 +103,32 @@ Navigate to `http://127.0.0.1:7860` and start creating agents with natural langu
 
 ## 🚀 Production Deployment
 
+### Recommended Architecture (Redis + Celery)
+
+For production environments, we strongly recommend enabling Redis and Celery to handle background tasks and caching efficiently. This architecture ensures:
+- **Scalability**: Heavy tasks are offloaded to background workers.
+- **Reliability**: Redis acts as a robust message broker and cache.
+- **Performance**: Asynchronous processing prevents the API from blocking.
+
+**Configuration:**
+
+1.  **Redis**: Deploy a Redis instance (e.g., via AWS ElastiCache or a Docker container).
+2.  **Celery Workers**: Run one or more Celery worker processes.
+3.  **Environment Variables**:
+    ```bash
+    LANGFLOW_CACHE_TYPE=redis
+    LANGFLOW_CELERY_ENABLED=true
+    LANGFLOW_REDIS_HOST=your-redis-host
+    LANGFLOW_REDIS_PORT=6379
+    ```
+
+**Running Workers:**
+```bash
+celery -A langflow.worker worker --loglevel=info -c 4
+```
+
+### Kubernetes / Helm
+
 AI Studio is deployed using Helm charts maintained in the **[platform-charts](https://github.com/autonomizeai/platform-charts)** repository, following GitOps best practices.
 
 ### Quick Deploy
