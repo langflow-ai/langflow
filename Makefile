@@ -265,6 +265,25 @@ else
 	@make start host=$(host) port=$(port) log_level=debug
 endif
 
+run_cli_be: install_backend ## run the CLI quickly (without building frontend)
+	@echo 'Running the CLI quickly (without building frontend)'
+	@uv run langflow run \
+		--frontend-path $(path) \
+		--log-level $(log_level) \
+		--host $(host) \
+		--port $(port) \
+		$(if $(env),--env-file $(env),) \
+		$(if $(filter false,$(open_browser)),--no-open-browser)
+
+run_cli_fe: clean_frontend_build install_frontend build_frontend ## run the CLI quickly (without building backend)
+	@echo 'Running the CLI quickly (without building backend)'
+	@uv run langflow run \
+		--frontend-path $(path) \
+		--log-level $(log_level) \
+		--host $(host) \
+		--port $(port) \
+		$(if $(env),--env-file $(env),) \
+		$(if $(filter false,$(open_browser)),--no-open-browser)
 
 setup_devcontainer: ## set up the development container
 	make install_backend

@@ -3,6 +3,8 @@ import httpx
 import os
 
 LANGFLOW_API_KEY = os.getenv("LANGFLOW_API_KEY", "sk-private")
+
+# Put multiple flow URLs here
 FLOW_URLS = [
     "http://localhost:7860/api/v1/run/cc255b04-b8b2-4077-85f6-dca5b43d41c9",
     "http://localhost:7860/api/v1/run/2dc917a4-9592-4872-898c-49123c18e7e4",
@@ -10,6 +12,8 @@ FLOW_URLS = [
     "http://localhost:7860/api/v1/run/caf3179f-2f2c-4f52-8a4f-ab9b2e874549",
     "http://localhost:7860/api/v1/run/213420e9-da09-4750-a273-4f2737e02f3b",
 ]
+
+# Each flow gets its own message
 FLOW_MESSAGES = [
     "Hello",
     "what is my name",
@@ -20,6 +24,10 @@ FLOW_MESSAGES = [
 
 
 async def run_flow(flow_url: str, message: str):
+    """
+    Call a single LangFlow flow via async httpx.
+    Uses the same payload structure LangFlow expects.
+    """
     payload = {
         "input_type": "chat",
         "output_type": "chat",
