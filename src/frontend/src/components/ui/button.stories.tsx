@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { ArgTypes, Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "@storybook/test";
 import { useEffect } from "react";
 import { useDarkStore } from "@/stores/darkStore";
@@ -95,13 +95,13 @@ const meta: Meta<typeof Button> = {
     },
     loading: { control: "boolean" },
     disabled: { control: "boolean" },
-    // @ts-expect-error - darkMode is a story-level arg, not a Button prop
+    // darkMode is a story-level control, not a Button prop
     darkMode: {
       control: "boolean",
       description: "Toggle dark mode",
       table: { category: "Theme" },
     },
-  },
+  } as ArgTypes<ButtonProps & { darkMode?: boolean }>,
 };
 
 export default meta;
