@@ -34,6 +34,7 @@ export const URLs = {
   KNOWLEDGE_BASES: `knowledge_bases`,
   AGENT_MARKETPLACE: `agent-marketplace`,
   PUBLISHED_FLOWS: `published-flows`,
+  FLOW_VERSIONS: `flow-versions`,
   RUN: `run`,
   SPEC_BUILDER: `spec-builder`
   ,

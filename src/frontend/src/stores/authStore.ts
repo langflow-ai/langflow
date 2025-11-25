@@ -8,6 +8,7 @@ import {
 } from "@/constants/constants";
 import { envConfig } from "@/config/env";
 import type { AuthStoreType } from "@/types/zustand/auth";
+import { USER_ROLES } from "@/types/auth";
 
 const cookies = new Cookies();
 
@@ -44,6 +45,10 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
   apiKey: initialAuthState.apiKey,
   authenticationErrorCount: 0,
 
+  // Role-based access control
+  userRoles: [],
+  authUserData: null,
+
   setIsAdmin: (isAdmin) => set({ isAdmin }),
   setIsAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
   setAccessToken: (accessToken) => set({ accessToken }),
@@ -52,6 +57,23 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
   setApiKey: (apiKey) => set({ apiKey }),
   setAuthenticationErrorCount: (authenticationErrorCount) =>
     set({ authenticationErrorCount }),
+
+  // Role-based access control methods
+  setUserRoles: (roles) => set({ userRoles: roles }),
+  setAuthUserData: (authUserData) => set({ authUserData }),
+
+  hasRole: (roleName) => {
+    const { userRoles } = get();
+    return userRoles.includes(roleName);
+  },
+
+  isMarketplaceAdmin: () => {
+    return get().hasRole(USER_ROLES.MARKETPLACE_ADMIN);
+  },
+
+  isAgentDeveloper: () => {
+    return get().hasRole(USER_ROLES.AGENT_DEVELOPER);
+  },
 
   logout: async () => {
     get().setIsAuthenticated(false);
@@ -69,6 +91,8 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
       isAuthenticated: false,
       autoLogin: false,
       apiKey: null,
+      userRoles: [],
+      authUserData: null,
     });
   },
 }));

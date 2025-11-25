@@ -1,6 +1,7 @@
 export * from "./use-delete-users";
 export * from "./use-get-autologin";
 export * from "./use-get-user";
+export * from "./use-get-user-roles";
 export * from "./use-get-users-page";
 export * from "./use-patch-reset-password";
 export * from "./use-patch-update-user";

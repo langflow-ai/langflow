@@ -1,4 +1,5 @@
 import type { Users } from "@/types/api";
+import type { AuthUserData } from "@/types/auth";
 
 export interface AuthStoreType {
   isAdmin: boolean;
@@ -9,6 +10,10 @@ export interface AuthStoreType {
   apiKey: string | null;
   authenticationErrorCount: number;
 
+  // Role-based access control
+  userRoles: string[];
+  authUserData: AuthUserData | null;
+
   setIsAdmin: (isAdmin: boolean) => void;
   setIsAuthenticated: (isAuthenticated: boolean) => void;
   setAccessToken: (accessToken: string | null) => void;
@@ -17,11 +22,11 @@ export interface AuthStoreType {
   setApiKey: (apiKey: string | null) => void;
   setAuthenticationErrorCount: (authenticationErrorCount: number) => void;
   logout: () => Promise<void>;
-  // setUserData: (userData: Users | null) => void;
-  // setIsAdmin: (isAdmin: boolean) => void;
-  // setApiKey: (apiKey: string | null) => void;
 
-  // getUser: () => void;
-  // login: (newAccessToken: string) => void;
-  // storeApiKey: (apikey: string) => void;
+  // Role-based access control methods
+  setUserRoles: (roles: string[]) => void;
+  setAuthUserData: (authUserData: AuthUserData | null) => void;
+  hasRole: (roleName: string) => boolean;
+  isMarketplaceAdmin: () => boolean;
+  isAgentDeveloper: () => boolean;
 }

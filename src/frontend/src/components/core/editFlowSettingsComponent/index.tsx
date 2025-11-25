@@ -181,7 +181,7 @@ export const EditFlowSettings: React.FC<
         <Form.Message match="valueMissing" className="field-invalid">
           Please enter a description
         </Form.Message>
-        <div className="mt-3">
+        {/* <div className="mt-3">
           <div className="flex items-center gap-2">
             <div>
               <div className="flex items-center gap-2">
@@ -207,7 +207,7 @@ export const EditFlowSettings: React.FC<
               data-testid="lock-flow-switch"
             />
           </div>
-        </div>
+        </div> */}
       </Form.Field>
     </>
   );

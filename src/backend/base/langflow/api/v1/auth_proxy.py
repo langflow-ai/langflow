@@ -6,23 +6,38 @@ from the frontend to the genesis-service-auth service (port 3005), maintaining
 feature parity with the genesis-bff architecture while eliminating the proxy layer.
 """
 
+import os
 from typing import Any
 
+import jwt
 import requests
-from fastapi import APIRouter, Header, HTTPException, Request, status
+from fastapi import APIRouter, Header, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 from loguru import logger
+from pydantic import BaseModel
 
-from langflow.services.deps import get_settings_service
+
+class RefreshTokenRequest(BaseModel):
+    """Request body for refresh token endpoint."""
+    refreshToken: str
+
+
+class IntrospectTokenRequest(BaseModel):
+    """Request body for introspect token endpoint."""
+    accessToken: str
+
+
+class UpdateUserStatusRequest(BaseModel):
+    """Request body for update user status endpoint."""
+    status: str | None = None
+
 
 # Create router with /auth prefix
 auth_proxy_router = APIRouter(prefix="/auth", tags=["auth-proxy"])
 
-
 def _get_auth_service_url() -> str:
-    """Get auth service URL from settings."""
-    settings_service = get_settings_service()
-    auth_url = settings_service.settings.genesis_service_auth_url
+    """Get auth service URL from environment."""
+    auth_url = os.getenv("GENESIS_SERVICE_AUTH_URL")
     if not auth_url:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -59,7 +74,6 @@ def _forward_to_auth_service(
 
     try:
         logger.debug(f"Forwarding {method} request to auth service: {url}")
-
         response = requests.request(
             method=method,
             url=url,
@@ -140,7 +154,7 @@ async def logout(
 @auth_proxy_router.post("/refresh-token/{email_id}")
 async def refresh_token(
     email_id: str,
-    request: Request,
+    body: RefreshTokenRequest,
 ) -> JSONResponse:
     """
     Refresh access token using refresh token.
@@ -152,25 +166,16 @@ async def refresh_token(
 
     Args:
         email_id: User's email ID
-        request: FastAPI request object (expects {"refreshToken": "..."})
+        body: Request body containing refreshToken
 
     Returns:
         JSONResponse with new tokens
     """
-    # Get request body
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Request body must contain refreshToken",
-        )
-
     # Forward to auth service
     status_code, response_data = _forward_to_auth_service(
         method="POST",
-        endpoint=f"/refresh-token/{email_id}",
-        json_data=body,
+        endpoint=f"/auth/api/v1/auth/refresh-token/{email_id}",
+        json_data=body.model_dump(),
     )
 
     return JSONResponse(status_code=status_code, content=response_data)
@@ -179,7 +184,7 @@ async def refresh_token(
 @auth_proxy_router.post("/introspect-token/{email_id}")
 async def introspect_token_by_email(
     email_id: str,
-    request: Request,
+    body: IntrospectTokenRequest,
 ) -> JSONResponse:
     """
     Validate token and get user information by email ID.
@@ -191,60 +196,16 @@ async def introspect_token_by_email(
 
     Args:
         email_id: User's email ID
-        request: FastAPI request object (expects {"token": "..."})
+        body: Request body containing accessToken
 
     Returns:
         JSONResponse with user information
     """
-    # Get request body
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Request body must contain token",
-        )
-
     # Forward to auth service
     status_code, response_data = _forward_to_auth_service(
         method="POST",
-        endpoint=f"/introspect-token/{email_id}",
-        json_data=body,
-    )
-
-    return JSONResponse(status_code=status_code, content=response_data)
-
-
-@auth_proxy_router.get("/introspect-token")
-async def introspect_token_from_header(
-    authorization: str = Header(None),
-) -> JSONResponse:
-    """
-    Validate token from Authorization header and get user information.
-
-    Forwards introspection request to auth service which will:
-    - Validate the token from Authorization header
-    - Return user information if valid
-    - Check token expiration
-
-    Args:
-        authorization: JWT token from Authorization header
-
-    Returns:
-        JSONResponse with user information
-    """
-    if not authorization:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization header required",
-        )
-
-    # Forward to auth service
-    headers = {"authorization": authorization}
-    status_code, response_data = _forward_to_auth_service(
-        method="GET",
-        endpoint="/introspect-token",
-        headers=headers,
+        endpoint=f"/auth/api/v1/auth/introspect-token/{email_id}",
+        json_data=body.model_dump(),
     )
 
     return JSONResponse(status_code=status_code, content=response_data)
@@ -253,8 +214,7 @@ async def introspect_token_from_header(
 @auth_proxy_router.post("/update-user-status/{email_id}")
 async def update_user_status(
     email_id: str,
-    request: Request,
-    authorization: str = Header(None),
+    body: UpdateUserStatusRequest,
 ) -> JSONResponse:
     """
     Update user status (e.g., active, inactive, banned).
@@ -266,31 +226,44 @@ async def update_user_status(
 
     Args:
         email_id: User's email ID
-        request: FastAPI request object (expects {"status": "..."})
-        authorization: JWT token from Authorization header
+        body: Request body containing status
 
     Returns:
         JSONResponse with update result
     """
-    # Get request body
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Request body must contain status",
-        )
-
     # Forward to auth service
-    headers = {}
-    if authorization:
-        headers["authorization"] = authorization
-
     status_code, response_data = _forward_to_auth_service(
         method="POST",
-        endpoint=f"/update-user-status/{email_id}",
+        endpoint=f"/auth/api/v1/auth/update-user-status/{email_id}",
+        json_data=body.model_dump(exclude_none=True),
+    )
+
+    return JSONResponse(status_code=status_code, content=response_data)
+
+
+@auth_proxy_router.get("/validate-token")
+async def validate_token(
+    authorization: str = Header(...),
+) -> JSONResponse:
+    """
+    Validate token from Authorization header.
+
+    Forwards validation request to auth service which will:
+    - Validate the token from Authorization header
+    - Return validation result
+
+    Args:
+        authorization: JWT token from Authorization header (required)
+
+    Returns:
+        JSONResponse with validation result
+    """
+    headers = {"authorization": authorization}
+
+    status_code, response_data = _forward_to_auth_service(
+        method="GET",
+        endpoint="/auth/api/v1/auth/validate-token",
         headers=headers,
-        json_data=body,
     )
 
     return JSONResponse(status_code=status_code, content=response_data)
@@ -332,6 +305,65 @@ async def invalidate_user_cache(
         endpoint="/invalidate-user-cache",
         headers=headers,
         json_data=body,
+    )
+
+    return JSONResponse(status_code=status_code, content=response_data)
+
+
+@auth_proxy_router.get("/user/email")
+async def find_user_by_email(
+    artifactId: str = Query(None, description="Artifact ID (optional)"),
+    artifactType: str = Query(None, description="Artifact Type (optional)"),
+    authorization: str = Header(...),
+) -> JSONResponse:
+    """
+    Find user by email extracted from authorization token.
+
+    Forwards user lookup request to auth service which will:
+    - Look up user by email (extracted from token)
+    - Return user information with artifact context (if provided)
+
+    Args:
+        artifactId: Optional artifact ID for context
+        artifactType: Optional type of artifact
+        authorization: JWT token from Authorization header (required)
+
+    Returns:
+        JSONResponse with user information
+    """
+    # Extract email from JWT token
+    try:
+        token = authorization.replace("Bearer ", "")
+        decoded = jwt.decode(token, options={"verify_signature": False})
+        email_id = decoded.get("email")
+        if not email_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Email not found in token",
+            )
+    except jwt.exceptions.DecodeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid token: {str(e)}",
+        )
+
+    headers = {"authorization": authorization}
+
+    # Build query string with optional parameters
+    query_params = []
+    if artifactId:
+        query_params.append(f"artifactId={artifactId}")
+    if artifactType:
+        query_params.append(f"artifactType={artifactType}")
+
+    endpoint = f"/auth/api/v1/user/email/{email_id}"
+    if query_params:
+        endpoint += "?" + "&".join(query_params)
+
+    status_code, response_data = _forward_to_auth_service(
+        method="GET",
+        endpoint=endpoint,
+        headers=headers,
     )
 
     return JSONResponse(status_code=status_code, content=response_data)
