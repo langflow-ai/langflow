@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from opensearchpy import OpenSearch, helpers
-from opensearchpy.exceptions import RequestError
+from opensearchpy.exceptions import OpenSearchException, RequestError
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
@@ -491,9 +491,9 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
 
         properties = self._get_index_properties(client)
         if not self._is_knn_vector_field(properties, field_name):
-            raise ValueError(
-                f"Field '{field_name}' is not mapped as knn_vector. Current mapping: {properties.get(field_name)}"
-            )
+            msg = f"Field '{field_name}' is not mapped as knn_vector. Current mapping: {properties.get(field_name)}"
+            logger.aerror(msg)
+            raise ValueError(msg)
 
     def _validate_aoss_with_engines(self, *, is_aoss: bool, engine: str) -> None:
         """Validate engine compatibility with Amazon OpenSearch Serverless (AOSS).
@@ -715,9 +715,11 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
 
                 # Add all models from available_models dict
                 if available_models_attr and isinstance(available_models_attr, dict):
-                    for model_key in available_models_attr:
-                        if model_key and str(model_key).strip():
-                            possible_names.append(str(model_key).strip())
+                    possible_names.extend(
+                        str(model_key).strip()
+                        for model_key in available_models_attr
+                        if model_key and str(model_key).strip()
+                    )
 
                 # Match if target matches any of the possible names
                 if target_model_name in possible_names:
@@ -730,16 +732,12 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                         # Use the dedicated embedding instance from the dict
                         selected_embedding = available_models_attr[target_model_name]
                         embedding_model = target_model_name
-                        self.log(
-                            f"Found dedicated embedding instance for '{embedding_model}' in available_models dict"
-                        )
+                        self.log(f"Found dedicated embedding instance for '{embedding_model}' in available_models dict")
                     else:
                         # Traditional identifier match
                         selected_embedding = emb_obj
                         embedding_model = self._get_embedding_model_name(emb_obj)
-                        self.log(
-                            f"Found matching embedding model: {embedding_model} (matched on: {target_model_name})"
-                        )
+                        self.log(f"Found matching embedding model: {embedding_model} (matched on: {target_model_name})")
                     break
 
             if not selected_embedding:
@@ -851,8 +849,9 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         last_exception: Exception | None = None
         delay = 1.0
         attempts = 0
+        max_attempts = 3
 
-        while attempts < 3:
+        while attempts < max_attempts:
             attempts += 1
             try:
                 max_workers = min(max(len(texts), 1), 8)
@@ -865,7 +864,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 break
             except Exception as exc:
                 last_exception = exc
-                if attempts >= 3:
+                if attempts >= max_attempts:
                     logger.error(
                         f"Embedding generation failed for model {embedding_model} after retries",
                         error=str(exc),
@@ -875,7 +874,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                     "Threaded embedding generation failed for model %s (attempt %s/%s), retrying in %.1fs",
                     embedding_model,
                     attempts,
-                    3,
+                    max_attempts,
                     delay,
                 )
                 time.sleep(delay)
@@ -1031,7 +1030,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 context_clauses.append({"terms": {field: values}})
         return context_clauses
 
-    def _detect_available_models(self, client: OpenSearch, filter_clauses: list[dict] = None) -> list[str]:
+    def _detect_available_models(self, client: OpenSearch, filter_clauses: list[dict] | None = None) -> list[str]:
         """Detect which embedding models have documents in the index.
 
         Uses aggregation to find all unique embedding_model values, optionally
@@ -1063,17 +1062,18 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 f"Detected embedding models in corpus: {models}"
                 + (f" (with {len(filter_clauses)} filters)" if filter_clauses else "")
             )
-            return models
-        except Exception as e:
+        except (OpenSearchException, KeyError, ValueError) as e:
             logger.warning(f"Failed to detect embedding models: {e}")
             # Fallback to current model
             return [self._get_embedding_model_name()]
+        else:
+            return models
 
     def _get_index_properties(self, client: OpenSearch) -> dict[str, Any] | None:
         """Retrieve flattened mapping properties for the current index."""
         try:
             mapping = client.indices.get_mapping(index=self.index_name)
-        except Exception as e:
+        except OpenSearchException as e:
             logger.warning(
                 f"Failed to fetch mapping for index '{self.index_name}': {e}. Proceeding without mapping metadata."
             )
@@ -1100,10 +1100,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             return True
 
         nested_props = field_def.get("properties")
-        if isinstance(nested_props, dict) and nested_props.get("type") == "knn_vector":
-            return True
-
-        return False
+        return bool(isinstance(nested_props, dict) and nested_props.get("type") == "knn_vector")
 
     def _get_field_dimension(self, properties: dict[str, Any] | None, field_name: str) -> int | None:
         """Get the dimension of a knn_vector field from the index mapping.
@@ -1216,26 +1213,20 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
 
             # If this embedding has available_models dict, map all models to their dedicated instances
             if available_models and isinstance(available_models, dict):
-                logger.info(
-                    f"Embedding object {idx} provides {len(available_models)} models via available_models dict"
-                )
+                logger.info(f"Embedding object {idx} provides {len(available_models)} models via available_models dict")
                 for model_name_key, dedicated_embedding in available_models.items():
                     if model_name_key and str(model_name_key).strip():
                         model_str = str(model_name_key).strip()
                         if model_str not in embedding_by_model:
                             # Use the dedicated embedding instance from the dict
                             embedding_by_model[model_str] = dedicated_embedding
-                            logger.info(
-                                f"Mapped available model '{model_str}' to dedicated embedding instance"
-                            )
+                            logger.info(f"Mapped available model '{model_str}' to dedicated embedding instance")
                         else:
                             # Conflict detected - track it
                             if model_str not in identifier_conflicts:
                                 identifier_conflicts[model_str] = [embedding_by_model[model_str]]
                             identifier_conflicts[model_str].append(dedicated_embedding)
-                            logger.warning(
-                                f"Available model '{model_str}' has conflict - used by multiple embeddings"
-                            )
+                            logger.warning(f"Available model '{model_str}' has conflict - used by multiple embeddings")
 
             # Also map traditional identifiers (for backward compatibility)
             if deployment:
@@ -1307,17 +1298,14 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                     # Use the embedding instance directly - no model switching needed!
                     vec = emb_obj.embed_query(q)
                     query_embeddings[model_name] = vec
-                    logger.info(
-                        f"Generated embedding for model: {model_name} "
-                        f"(actual dimensions: {len(vec)})"
-                    )
+                    logger.info(f"Generated embedding for model: {model_name} (actual dimensions: {len(vec)})")
                 else:
                     # No matching embedding found for this model
                     logger.warning(
                         f"No matching embedding found for model '{model_name}'. "
                         f"This model will be skipped. Available models: {list(embedding_by_model.keys())}"
                     )
-            except Exception as e:
+            except (RuntimeError, ValueError, ConnectionError, TimeoutError, AttributeError, KeyError) as e:
                 logger.warning(f"Failed to generate embedding for {model_name}: {e}")
 
         if not query_embeddings:
@@ -1578,9 +1566,6 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 build_config["jwt_token"]["required"] = is_jwt
                 build_config["jwt_header"]["required"] = is_jwt
                 build_config["bearer_prefix"]["required"] = False
-
-                # if is_basic:
-                #     build_config["jwt_token"]["value"] = ""
 
                 return build_config
 
