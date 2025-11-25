@@ -1067,7 +1067,7 @@ class TestStorageFailureHandling:
 
         deleted_file_ids = set()
 
-        async def mock_delete_file(flow_id: str = None, file_name: str = None) -> None:
+        async def mock_delete_file(_flow_id: str | None = None, file_name: str | None = None) -> None:
             if file_name == f"{file_ids[0]}.txt":
                 msg = f"File {file_name} not found"
                 raise FileNotFoundError(msg)
@@ -1162,7 +1162,7 @@ class TestStorageFailureHandling:
 
         call_count = 0
 
-        async def mock_delete_file(flow_id: str = None, file_name: str = None) -> None:
+        async def mock_delete_file(_flow_id: str | None = None, _file_name: str | None = None) -> None:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -1246,7 +1246,7 @@ class TestStorageFailureHandling:
 
         call_count = 0
 
-        async def mock_delete_file(flow_id: str = None, file_name: str = None) -> None:
+        async def mock_delete_file(_flow_id: str | None = None, _file_name: str | None = None) -> None:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
