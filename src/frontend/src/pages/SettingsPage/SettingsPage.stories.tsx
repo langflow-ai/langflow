@@ -32,14 +32,6 @@ const withDarkMode = (
   return <DarkModeWrapper />;
 };
 
-const withRouter = (Story: React.ComponentType) => {
-  return (
-    <MemoryRouter initialEntries={["/settings"]}>
-      <Story />
-    </MemoryRouter>
-  );
-};
-
 const withStoreSetup = (
   autoLogin: boolean = false,
   hasStore: boolean = false,
@@ -56,10 +48,20 @@ const withStoreSetup = (
   };
 };
 
+const withRouter = (Story: React.ComponentType) => {
+  // Router must be outermost to provide context to all child components
+  return (
+    <MemoryRouter initialEntries={["/settings"]}>
+      <Story />
+    </MemoryRouter>
+  );
+};
+
 const meta: Meta<typeof SettingsPage> = {
   title: "Pages/SettingsPage",
   component: SettingsPage,
-  decorators: [withRouter, withStoreSetup(false, false), withDarkMode],
+  // Decorators run from bottom to top, so router (outermost) should be last
+  decorators: [withStoreSetup(false, false), withDarkMode, withRouter],
   parameters: {
     layout: "fullscreen",
   },
@@ -81,7 +83,7 @@ export const Default: Story = {
   args: {
     darkMode: false,
   },
-  decorators: [withRouter, withStoreSetup(false, false), withDarkMode],
+  decorators: [withStoreSetup(false, false), withDarkMode, withRouter],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     // Verify Settings page title
@@ -104,7 +106,7 @@ export const WithStoreFeatures: Story = {
   args: {
     darkMode: false,
   },
-  decorators: [withRouter, withStoreSetup(false, true), withDarkMode],
+  decorators: [withStoreSetup(false, true), withDarkMode, withRouter],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     // Verify General is shown (hasStore=true triggers showGeneralSettings)
@@ -119,7 +121,7 @@ export const AutoLoginMode: Story = {
   args: {
     darkMode: false,
   },
-  decorators: [withRouter, withStoreSetup(true, false), withDarkMode],
+  decorators: [withStoreSetup(true, false), withDarkMode, withRouter],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     // Verify Settings page loads
@@ -140,7 +142,7 @@ export const InteractiveSidebar: Story = {
   args: {
     darkMode: false,
   },
-  decorators: [withRouter, withStoreSetup(false, false), withDarkMode],
+  decorators: [withStoreSetup(false, false), withDarkMode, withRouter],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     // Verify sidebar is visible
@@ -169,7 +171,7 @@ export const DarkMode: Story = {
   args: {
     darkMode: true,
   },
-  decorators: [withRouter, withStoreSetup(false, false), withDarkMode],
+  decorators: [withStoreSetup(false, false), withDarkMode, withRouter],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     // Verify page loads in dark mode
@@ -187,7 +189,7 @@ export const FullConfiguration: Story = {
   args: {
     darkMode: false,
   },
-  decorators: [withRouter, withStoreSetup(false, true), withDarkMode],
+  decorators: [withStoreSetup(false, true), withDarkMode, withRouter],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     // Verify all standard items
@@ -209,7 +211,7 @@ export const VerifyStoreState: Story = {
   args: {
     darkMode: false,
   },
-  decorators: [withRouter, withStoreSetup(false, true), withDarkMode],
+  decorators: [withStoreSetup(false, true), withDarkMode, withRouter],
   play: async ({ canvasElement }) => {
     // Verify we can access store state
     const authState = useAuthStore.getState();
