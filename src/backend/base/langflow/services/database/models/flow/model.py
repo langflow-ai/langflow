@@ -203,6 +203,7 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
             "name": serialized.pop("name"),
             "description": serialized.pop("description"),
             "updated_at": serialized.pop("updated_at"),
+            "folder_id": serialized.pop("folder_id"),
         }
         return Data(data=data)
 
