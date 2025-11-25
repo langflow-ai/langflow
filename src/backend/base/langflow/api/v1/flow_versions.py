@@ -663,6 +663,109 @@ async def reject_version(
         )
 
 
+@router.post("/cancel/{version_id}", response_model=FlowVersionRead)
+async def cancel_submission(
+    version_id: UUID,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+):
+    """
+    Cancel a submitted flow version.
+
+    Changes status from "Submitted" back to "Draft" and unlocks the flow.
+    Only the flow owner can cancel their own submission.
+    """
+    try:
+        # 1. Fetch the flow version
+        stmt = (
+            select(FlowVersion)
+            .where(FlowVersion.id == version_id)
+            .options(joinedload(FlowVersion.status))
+        )
+        result = await session.exec(stmt)
+        flow_version = result.first()
+
+        if not flow_version:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Flow version not found",
+            )
+
+        # 2. Verify user is the submitter
+        if flow_version.submitted_by != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the submitter can cancel this submission",
+            )
+
+        # 3. Verify current status is "Submitted"
+        if flow_version.status and flow_version.status.status_name != FlowStatusEnum.SUBMITTED.value:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Can only cancel flows in 'Submitted' status. Current status: {flow_version.status.status_name}",
+            )
+
+        # 4. Get "Draft" status ID
+        draft_status_id = await _get_status_id_by_name(session, FlowStatusEnum.DRAFT.value)
+
+        # 5. Update the flow version - revert to draft
+        flow_version.status_id = draft_status_id
+        flow_version.reviewed_by = None
+        flow_version.reviewed_by_name = None
+        flow_version.reviewed_by_email = None
+        flow_version.reviewed_at = None
+        flow_version.rejection_reason = None
+        flow_version.updated_at = datetime.now(timezone.utc)
+
+        # 6. Unlock the original flow so user can edit
+        original_flow = await session.get(Flow, flow_version.original_flow_id)
+        if original_flow:
+            original_flow.locked = False
+            session.add(original_flow)
+
+        await session.commit()
+        await session.refresh(flow_version)
+
+        logger.info(f"Flow version {version_id} submission cancelled by user {current_user.id}")
+
+        return FlowVersionRead(
+            id=flow_version.id,
+            original_flow_id=flow_version.original_flow_id,
+            version_flow_id=flow_version.version_flow_id,
+            status_id=flow_version.status_id,
+            version=flow_version.version,
+            title=flow_version.title,
+            description=flow_version.description,
+            tags=flow_version.tags,
+            agent_logo=flow_version.agent_logo,
+            sample_id=flow_version.sample_id,
+            submitted_by=flow_version.submitted_by,
+            submitted_by_name=flow_version.submitted_by_name,
+            submitted_by_email=flow_version.submitted_by_email,
+            submitted_at=flow_version.submitted_at,
+            reviewed_by=flow_version.reviewed_by,
+            reviewed_by_name=flow_version.reviewed_by_name,
+            reviewed_by_email=flow_version.reviewed_by_email,
+            reviewed_at=flow_version.reviewed_at,
+            rejection_reason=flow_version.rejection_reason,
+            created_at=flow_version.created_at,
+            updated_at=flow_version.updated_at,
+            status_name=FlowStatusEnum.DRAFT.value,
+            submitter_name=flow_version.submitted_by_name,
+            submitter_email=flow_version.submitted_by_email,
+            reviewer_name=flow_version.reviewed_by_name,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error cancelling submission: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to cancel submission: {str(e)}",
+        )
+
+
 @router.get("/{version_id}", response_model=FlowVersionRead)
 async def get_version(
     version_id: UUID,
@@ -846,6 +949,7 @@ async def get_flow_latest_status(
             "latest_version_id": str(latest_version.id),
             "submitted_at": latest_version.submitted_at.isoformat() if latest_version.submitted_at else None,
             "reviewed_at": latest_version.reviewed_at.isoformat() if latest_version.reviewed_at else None,
+            "rejection_reason": latest_version.rejection_reason,
             # Data for pre-populating re-submissions
             "sample_text": sample_text,
             "file_names": file_names,

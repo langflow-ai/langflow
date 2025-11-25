@@ -1,4 +1,7 @@
 import { cn } from "@/utils/utils";
+import { useState } from "react";
+import IconComponent from "../genericIconComponent";
+import ShadTooltip from "../shadTooltipComponent";
 
 export type FlowStatus =
   | "Draft"
@@ -13,6 +16,7 @@ export type FlowStatus =
 interface FlowStatusBadgeProps {
   status: FlowStatus;
   className?: string;
+  rejectionReason?: string | null;
 }
 
 const statusConfig: Record<
@@ -49,7 +53,9 @@ const statusConfig: Record<
   },
 };
 
-export function FlowStatusBadge({ status, className }: FlowStatusBadgeProps) {
+export function FlowStatusBadge({ status, className, rejectionReason }: FlowStatusBadgeProps) {
+  const [showTooltip, setShowTooltip] = useState(false);
+
   if (!status) {
     // Show Draft badge for flows with no submissions
     return (
@@ -66,11 +72,43 @@ export function FlowStatusBadge({ status, className }: FlowStatusBadgeProps) {
   }
 
   const config = statusConfig[status];
+  const isRejected = status === "Rejected";
+  const hasRejectionReason = isRejected && rejectionReason;
+
+  if (hasRejectionReason) {
+    return (
+      <ShadTooltip
+        content={rejectionReason}
+        side="bottom"
+        open={showTooltip}
+        setOpen={setShowTooltip}
+        delayDuration={0}
+      >
+        <span
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowTooltip(!showTooltip);
+          }}
+          className={cn(
+            "ml-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium cursor-pointer",
+            config.className,
+            className
+          )}
+        >
+          {config.label}
+          <IconComponent
+            name="Info"
+            className="h-3.5 w-3.5"
+          />
+        </span>
+      </ShadTooltip>
+    );
+  }
 
   return (
     <span
       className={cn(
-        "ml-2 inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
+        "ml-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
         config.className,
         className
       )}

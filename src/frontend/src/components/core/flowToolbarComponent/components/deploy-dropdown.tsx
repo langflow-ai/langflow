@@ -145,7 +145,7 @@ export default function PublishDropdown() {
           className="w-full min-w-[275px]"
         >
           {/* Publish to Marketplace - only show if user is flow owner */}
-          {isFlowOwner && (
+          {/* {isFlowOwner && (
             <DropdownMenuItem
               className="deploy-dropdown-item group"
               onClick={() => setOpenPublishFlowModal(true)}
@@ -160,7 +160,7 @@ export default function PublishDropdown() {
                   : "Publish to Marketplace"}
               </span>
             </DropdownMenuItem>
-          )}
+          )} */}
           <DropdownMenuItem
             className="deploy-dropdown-item group"
             onClick={() => setOpenApiModal(true)}

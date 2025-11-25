@@ -65,6 +65,7 @@ export const MenuBar = memo((): JSX.Element => {
   // Fetch flow latest status for the badge
   const { data: flowStatusData } = useGetFlowLatestStatus(currentFlowId);
   const flowStatus = flowStatusData?.latest_status as FlowStatus;
+  const rejectionReason = flowStatusData?.rejection_reason;
 
   const { data: folders, isFetched: isFoldersFetched } = useGetFoldersQuery();
 
@@ -152,13 +153,13 @@ export const MenuBar = memo((): JSX.Element => {
               className="h-3.5 w-3.5"
             />
           </div>}
-          <PopoverTrigger asChild>
-            <div
-              className="group relative -mr-5 flex shrink-0 cursor-pointer items-center gap-2 text-sm sm:whitespace-normal"
-              data-testid="menu_bar_display"
-            >
-              {!shouldHideFlowName && (
-                <>
+          {!shouldHideFlowName && (
+            <>
+              <PopoverTrigger asChild>
+                <div
+                  className="group relative flex shrink-0 cursor-pointer items-center gap-1.5 text-sm sm:whitespace-normal"
+                  data-testid="menu_bar_display"
+                >
                   <span
                     ref={measureRef}
                     className="w-fit max-w-[35vw] truncate whitespace-pre text-mmd font-semibold sm:max-w-full sm:text-sm text-white"
@@ -167,19 +168,19 @@ export const MenuBar = memo((): JSX.Element => {
                   >
                     {currentFlowName || "Untitled Flow"}
                   </span>
-                  <FlowStatusBadge status={flowStatus} />
                   <IconComponent
                     name="pencil"
                     className={cn(
-                      "h-5 w-3.5 -translate-x-2 opacity-0 transition-all",
+                      "h-4 w-4 opacity-0 transition-all",
                       !openSettings &&
-                        "sm:group-hover:translate-x-0 sm:group-hover:opacity-100",
+                        "sm:group-hover:opacity-100",
                     )}
                   />
-                </>
-              )}
-            </div>
-          </PopoverTrigger> 
+                </div>
+              </PopoverTrigger>
+              <FlowStatusBadge status={flowStatus} rejectionReason={rejectionReason} />
+            </>
+          )} 
           <div className={"ml-5 hidden shrink-0 items-center sm:flex"}>
             {!autoSaving && (
               <ShadTooltip

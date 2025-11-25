@@ -23,7 +23,9 @@ import {
   useGetFlowLatestStatus,
   useApproveVersion,
   useRejectVersion,
+  useCancelSubmission,
 } from "@/controllers/API/queries/flow-versions";
+import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { USER_ROLES } from "@/types/auth";
 import SubmitForApprovalModal from "@/modals/submitForApprovalModal";
 import PublishFlowModal from "@/modals/publishFlowModal";
@@ -69,10 +71,16 @@ export default function FlowToolbarOptions() {
   const latestStatus = flowStatusData?.latest_status;
   const latestVersionId = flowStatusData?.latest_version_id;
 
-  // Mutations for approve/reject
+  // Mutations for approve/reject/cancel
   const { mutate: approveVersion, isPending: isApproving } =
     useApproveVersion();
   const { mutate: rejectVersion, isPending: isRejecting } = useRejectVersion();
+  const { mutate: cancelSubmission, isPending: isCancelling } = useCancelSubmission();
+  const { mutateAsync: getFlowMutation } = useGetFlow();
+
+  // For updating flow after cancel submission
+  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
+  const setCurrentFlowInFlowStore = useFlowStore((state) => state.setCurrentFlow);
 
   // Button visibility logic based on status and ownership
   // Submit for Review: Show for Draft, Rejected, Published, Submitted, or no status - ONLY if user is flow owner
@@ -141,6 +149,35 @@ export default function FlowToolbarOptions() {
     );
   };
 
+  const handleCancelSubmission = () => {
+    if (!latestVersionId || !currentFlowId) return;
+
+    cancelSubmission(latestVersionId, {
+      onSuccess: async () => {
+        setSuccessData({ title: `Submission cancelled for "${currentFlowName}"` });
+
+        // Refetch the updated flow to get the unlocked state
+        try {
+          const updatedFlow = await getFlowMutation({ id: currentFlowId });
+          if (updatedFlow) {
+            setCurrentFlow(updatedFlow);  // Update flowsManagerStore
+            setCurrentFlowInFlowStore(updatedFlow);  // Update flowStore
+          }
+        } catch (error) {
+          console.error("Failed to refetch flow after cancel:", error);
+        }
+      },
+      onError: (error: any) => {
+        setErrorData({
+          title: "Failed to cancel submission",
+          list: [
+            error?.response?.data?.detail || error.message || "Unknown error",
+          ],
+        });
+      },
+    });
+  };
+
   return (
     <>
       <div className="flex items-center gap-1.5">
@@ -182,16 +219,30 @@ export default function FlowToolbarOptions() {
         )}
 
         {/* Submit for Review Button - show for Agent Developer (not Marketplace Admin), disabled when under review */}
-        {showSubmitButton && (
+        {showSubmitButton && !isUnderReview && (
           <Button
             variant="ghost"
             size="xs"
             className="!px-2.5 font-normal"
             onClick={() => setOpenSubmitModal(true)}
-            disabled={isUnderReview}
             data-testid="submit-for-review-button"
           >
             Submit for Review
+          </Button>
+        )}
+
+        {/* Cancel Submission Button - show when status is Submitted and user is flow owner */}
+        {isFlowOwner && isUnderReview && (
+          <Button
+            variant="ghost"
+            size="xs"
+            className="!px-2.5 font-normal text-red-600 hover:text-red-700 hover:bg-red-50"
+            onClick={handleCancelSubmission}
+            disabled={isCancelling}
+            data-testid="cancel-submission-button"
+          >
+            <IconComponent name="XCircle" className="mr-1.5 h-4 w-4" />
+            Cancel Submission
           </Button>
         )}
 
