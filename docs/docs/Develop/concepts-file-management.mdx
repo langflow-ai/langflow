@@ -198,7 +198,7 @@ The following environment variables configure file storage backends for Langflow
 | `LANGFLOW_STORAGE_TYPE` | String | `local` | Set the file storage backend. Supported values: `local` (files stored in the Langflow configuration directory) or `s3` (files stored in AWS S3). For S3 storage, you must also configure AWS credentials and bucket settings. |
 | `LANGFLOW_OBJECT_STORAGE_BUCKET_NAME` | String | Not set | The name of the S3 bucket to use for file storage. Required when `LANGFLOW_STORAGE_TYPE=s3`. |
 | `LANGFLOW_OBJECT_STORAGE_PREFIX` | String | Not set | Optional prefix/folder path within the S3 bucket where files will be stored. If not set, files are stored at the bucket root. |
-| `LANGFLOW_OBJECT_STORAGE_TAGS` | JSON object | Not set | Optional S3 object tags applied to stored files when `LANGFLOW_STORAGE_TYPE=s3`. Ignored for local storage. Provided as a JSON map of string keys to string values, such as {"env": "prod", "owner": "data-team"}. |
+| `LANGFLOW_OBJECT_STORAGE_TAGS` | JSON object | Not set | Optional S3 object tags applied to stored files when `LANGFLOW_STORAGE_TYPE=s3`. Ignored for local storage. Provided as a JSON map of string keys to string values, such as `{"env": "prod", "owner": "data-team"}`. |
 
 ## See also
 
