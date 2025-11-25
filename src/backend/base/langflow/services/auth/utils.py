@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import TYPE_CHECKING, Annotated
+from uuid import UUID
 
 from fastapi import Depends, Request, Security, WebSocket
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
@@ -146,15 +148,15 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
     return await _auth_service().get_webhook_user(flow_id, request)
 
 
-def verify_password(plain_password, hashed_password):
+def verify_password(plain_password: str, hashed_password: str) -> bool:
     return _auth_service().verify_password(plain_password, hashed_password)
 
 
-def get_password_hash(password):
+def get_password_hash(password: str) -> str:
     return _auth_service().get_password_hash(password)
 
 
-def create_token(data: dict, expires_delta):
+def create_token(data: dict, expires_delta: timedelta) -> str:
     return _auth_service().create_token(data, expires_delta)
 
 
@@ -166,35 +168,35 @@ async def create_super_user(
     return await _auth_service().create_super_user(username, password, db)
 
 
-async def create_user_longterm_token(db: AsyncSession):
+async def create_user_longterm_token(db: AsyncSession) -> tuple[UUID, dict]:
     return await _auth_service().create_user_longterm_token(db)
 
 
-def create_user_api_key(user_id):
+def create_user_api_key(user_id: UUID) -> dict:
     return _auth_service().create_user_api_key(user_id)
 
 
-def get_user_id_from_token(token: str):
+def get_user_id_from_token(token: str) -> UUID:
     return _auth_service().get_user_id_from_token(token)
 
 
-async def create_user_tokens(user_id, db: AsyncSession, *, update_last_login: bool = False):
+async def create_user_tokens(user_id: UUID, db: AsyncSession, *, update_last_login: bool = False) -> dict:
     return await _auth_service().create_user_tokens(user_id, db, update_last_login=update_last_login)
 
 
-async def create_refresh_token(refresh_token: str, db: AsyncSession):
+async def create_refresh_token(refresh_token: str, db: AsyncSession) -> dict:
     return await _auth_service().create_refresh_token(refresh_token, db)
 
 
-async def authenticate_user(username: str, password: str, db: AsyncSession):
+async def authenticate_user(username: str, password: str, db: AsyncSession) -> User | None:
     return await _auth_service().authenticate_user(username, password, db)
 
 
-def encrypt_api_key(api_key: str):
+def encrypt_api_key(api_key: str) -> str:
     return _auth_service().encrypt_api_key(api_key)
 
 
-def decrypt_api_key(encrypted_api_key: str):
+def decrypt_api_key(encrypted_api_key: str) -> str:
     return _auth_service().decrypt_api_key(encrypted_api_key)
 
 
