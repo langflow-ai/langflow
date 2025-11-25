@@ -4,6 +4,7 @@ import requests
 from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
 from langchain_openai import OpenAIEmbeddings
 
+from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.base.models.model_utils import get_ollama_models, is_valid_ollama_url
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
@@ -151,7 +152,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             logger.exception("Error fetching models")
             return WATSONX_EMBEDDING_MODEL_NAMES
 
-    def build_embeddings(self) -> Embeddings:
+    async def build_embeddings(self) -> Embeddings:
         provider = self.provider
         model = self.model
         api_key = self.api_key
@@ -169,7 +170,9 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             if not api_key:
                 msg = "OpenAI API key is required when using OpenAI provider"
                 raise ValueError(msg)
-            return OpenAIEmbeddings(
+
+            # Create the primary embedding instance
+            embeddings_instance = OpenAIEmbeddings(
                 model=model,
                 dimensions=dimensions or None,
                 base_url=api_base or None,
@@ -179,6 +182,26 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 timeout=request_timeout or None,
                 show_progress_bar=show_progress_bar,
                 model_kwargs=model_kwargs,
+            )
+
+            # Create dedicated instances for each available model
+            available_models_dict = {}
+            for model_name in OPENAI_EMBEDDING_MODEL_NAMES:
+                available_models_dict[model_name] = OpenAIEmbeddings(
+                    model=model_name,
+                    dimensions=dimensions or None,  # Use same dimensions config for all
+                    base_url=api_base or None,
+                    api_key=api_key,
+                    chunk_size=chunk_size,
+                    max_retries=max_retries,
+                    timeout=request_timeout or None,
+                    show_progress_bar=show_progress_bar,
+                    model_kwargs=model_kwargs,
+                )
+
+            return EmbeddingsWithModels(
+                embeddings=embeddings_instance,
+                available_models=available_models_dict,
             )
 
         if provider == "Ollama":
@@ -204,10 +227,36 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                     "Learn more at https://docs.ollama.com/openai#openai-compatibility"
                 )
 
-            return OllamaEmbeddings(
+            final_base_url = transformed_base_url or "http://localhost:11434"
+
+            # Create the primary embedding instance
+            embeddings_instance = OllamaEmbeddings(
                 model=model,
-                base_url=transformed_base_url or "http://localhost:11434",
+                base_url=final_base_url,
                 **model_kwargs,
+            )
+
+            # Fetch available Ollama models
+            available_model_names = await get_ollama_models(
+                base_url_value=self.ollama_base_url,
+                desired_capability=DESIRED_CAPABILITY,
+                json_models_key=JSON_MODELS_KEY,
+                json_name_key=JSON_NAME_KEY,
+                json_capabilities_key=JSON_CAPABILITIES_KEY,
+            )
+
+            # Create dedicated instances for each available model
+            available_models_dict = {}
+            for model_name in available_model_names:
+                available_models_dict[model_name] = OllamaEmbeddings(
+                    model=model_name,
+                    base_url=final_base_url,
+                    **model_kwargs,
+                )
+
+            return EmbeddingsWithModels(
+                embeddings=embeddings_instance,
+                available_models=available_models_dict,
             )
 
         if provider == "IBM watsonx.ai":
@@ -229,9 +278,11 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
 
             from ibm_watsonx_ai import APIClient, Credentials
 
+            final_url = base_url_ibm_watsonx or "https://us-south.ml.cloud.ibm.com"
+
             credentials = Credentials(
                 api_key=self.api_key,
-                url=base_url_ibm_watsonx or "https://us-south.ml.cloud.ibm.com",
+                url=final_url,
             )
 
             api_client = APIClient(credentials)
@@ -241,11 +292,30 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 EmbedTextParamsMetaNames.RETURN_OPTIONS: {"input_text": self.input_text},
             }
 
-            return WatsonxEmbeddings(
+            # Create the primary embedding instance
+            embeddings_instance = WatsonxEmbeddings(
                 model_id=model,
                 params=params,
                 watsonx_client=api_client,
                 project_id=project_id,
+            )
+
+            # Fetch available IBM watsonx.ai models
+            available_model_names = self.fetch_ibm_models(final_url)
+
+            # Create dedicated instances for each available model
+            available_models_dict = {}
+            for model_name in available_model_names:
+                available_models_dict[model_name] = WatsonxEmbeddings(
+                    model_id=model_name,
+                    params=params,
+                    watsonx_client=api_client,
+                    project_id=project_id,
+                )
+
+            return EmbeddingsWithModels(
+                embeddings=embeddings_instance,
+                available_models=available_models_dict,
             )
 
         msg = f"Unknown provider: {provider}"
