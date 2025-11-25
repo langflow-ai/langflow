@@ -84,26 +84,6 @@ export const Default: Story = {
   },
 };
 
-export const WithGeneralSettings: Story = {
-  args: {
-    darkMode: false,
-  },
-  decorators: [
-    withRouter,
-    (Story) => {
-      const StoreWrapper = () => {
-        useEffect(() => {
-          useAuthStore.setState({ autoLogin: false });
-          useStoreStore.setState({ hasStore: true });
-        }, []);
-        return <Story />;
-      };
-      return <StoreWrapper />;
-    },
-    withDarkMode,
-  ],
-};
-
 export const DarkMode: Story = {
   args: {
     darkMode: true,
