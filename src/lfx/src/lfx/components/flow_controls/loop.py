@@ -14,7 +14,7 @@ class LoopComponent(Component):
         "aggregating results from loop inputs. Message objects are automatically converted to "
         "Data objects for consistent processing."
     )
-    documentation: str = "https://docs.langflow.org/components-logic#loop"
+    documentation: str = "https://docs.langflow.org/loop"
     icon = "infinity"
 
     inputs = [
