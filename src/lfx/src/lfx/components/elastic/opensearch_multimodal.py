@@ -713,24 +713,29 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 if deployment and model and deployment != model:
                     possible_names.append(f"{deployment}:{model}")
 
-                # Add all models from available_models list
-                if available_models_attr and isinstance(available_models_attr, list):
-                    for avail_model in available_models_attr:
-                        if avail_model and str(avail_model).strip():
-                            possible_names.append(str(avail_model).strip())
+                # Add all models from available_models dict
+                if available_models_attr and isinstance(available_models_attr, dict):
+                    for model_key in available_models_attr:
+                        if model_key and str(model_key).strip():
+                            possible_names.append(str(model_key).strip())
 
                 # Match if target matches any of the possible names
                 if target_model_name in possible_names:
-                    selected_embedding = emb_obj
-                    # If matched via available_models, use the target name directly
-                    if available_models_attr and target_model_name in available_models_attr:
+                    # Check if target is in available_models dict - use dedicated instance
+                    if (
+                        available_models_attr
+                        and isinstance(available_models_attr, dict)
+                        and target_model_name in available_models_attr
+                    ):
+                        # Use the dedicated embedding instance from the dict
+                        selected_embedding = available_models_attr[target_model_name]
                         embedding_model = target_model_name
                         self.log(
-                            f"Found matching embedding via available_models: {embedding_model} "
-                            f"(matched on: {target_model_name})"
+                            f"Found dedicated embedding instance for '{embedding_model}' in available_models dict"
                         )
                     else:
-                        # Use the actual identifier from the embedding (deployment/model/model_id priority)
+                        # Traditional identifier match
+                        selected_embedding = emb_obj
                         embedding_model = self._get_embedding_model_name(emb_obj)
                         self.log(
                             f"Found matching embedding model: {embedding_model} (matched on: {target_model_name})"
@@ -762,9 +767,9 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                     if deployment and model and deployment != model:
                         identifiers.append(f"combined='{deployment}:{model}'")
 
-                    # Add available_models list if present
-                    if available_models_attr and isinstance(available_models_attr, list):
-                        identifiers.append(f"available_models={available_models_attr}")
+                    # Add available_models dict if present
+                    if available_models_attr and isinstance(available_models_attr, dict):
+                        identifiers.append(f"available_models={list(available_models_attr.keys())}")
 
                     available_info.append(
                         f"  [{idx}] {emb_type}: {', '.join(identifiers) if identifiers else 'No identifiers'}"
@@ -802,42 +807,9 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         if hasattr(selected_embedding, "available_models"):
             logger.info(f"Embedding available_models: {selected_embedding.available_models}")
 
-        # Check if we need to switch the model for this embedding
-        # (when using available_models and the target model differs from current model)
-        needs_model_switch = False
-        available_models_attr = getattr(selected_embedding, "available_models", None)
-        current_model = getattr(selected_embedding, "model", None)
-        current_deployment = getattr(selected_embedding, "deployment", None)
-
-        if (
-            available_models_attr
-            and isinstance(available_models_attr, list)
-            and embedding_model in available_models_attr
-            and embedding_model not in {current_model, current_deployment}
-        ):
-            needs_model_switch = True
-            logger.info(
-                f"Will switch embedding model from '{current_model}' to '{embedding_model}' "
-                f"for ingestion (model is in available_models list)"
-            )
-
-        # Store original model settings if we need to switch
-        original_model = None
-        original_deployment = None
-        original_dimensions = None
-
-        if needs_model_switch:
-            original_model = getattr(selected_embedding, "model", None)
-            original_deployment = getattr(selected_embedding, "deployment", None)
-            original_dimensions = getattr(selected_embedding, "dimensions", None)
-
-            # Switch to the target model
-            if hasattr(selected_embedding, "model"):
-                selected_embedding.model = embedding_model
-            if hasattr(selected_embedding, "dimensions"):
-                selected_embedding.dimensions = None  # Let model determine dimensions
-
-            logger.info(f"Switched embedding model to '{embedding_model}' for ingestion")
+        # No model switching needed - each model in available_models has its own dedicated instance
+        # The selected_embedding is already configured correctly for the target model
+        logger.info(f"Using embedding instance for '{embedding_model}' - pre-configured and ready to use")
 
         # Extract texts and metadata from documents
         texts = []
@@ -872,135 +844,120 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         self.log(metadatas)
 
         # Generate embeddings (threaded for concurrency) with retries
-        # Wrap in try-finally to ensure model settings are restored
-        try:
-            def embed_chunk(chunk_text: str) -> list[float]:
-                return selected_embedding.embed_documents([chunk_text])[0]
+        def embed_chunk(chunk_text: str) -> list[float]:
+            return selected_embedding.embed_documents([chunk_text])[0]
 
-            vectors: list[list[float]] | None = None
-            last_exception: Exception | None = None
-            delay = 1.0
-            attempts = 0
+        vectors: list[list[float]] | None = None
+        last_exception: Exception | None = None
+        delay = 1.0
+        attempts = 0
 
-            while attempts < 3:
-                attempts += 1
-                try:
-                    max_workers = min(max(len(texts), 1), 8)
-                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                        futures = {executor.submit(embed_chunk, chunk): idx for idx, chunk in enumerate(texts)}
-                        vectors = [None] * len(texts)
-                        for future in as_completed(futures):
-                            idx = futures[future]
-                            vectors[idx] = future.result()
-                    break
-                except Exception as exc:
-                    last_exception = exc
-                    if attempts >= 3:
-                        logger.error(
-                            f"Embedding generation failed for model {embedding_model} after retries",
-                            error=str(exc),
-                        )
-                        raise
-                    logger.warning(
-                        "Threaded embedding generation failed for model %s (attempt %s/%s), retrying in %.1fs",
-                        embedding_model,
-                        attempts,
-                        3,
-                        delay,
-                    )
-                    time.sleep(delay)
-                    delay = min(delay * 2, 8.0)
-
-            if vectors is None:
-                raise RuntimeError(
-                    f"Embedding generation failed for {embedding_model}: {last_exception}"
-                    if last_exception
-                    else f"Embedding generation failed for {embedding_model}"
-                )
-
-            if not vectors:
-                self.log(f"No vectors generated from documents for model {embedding_model}.")
-                return
-
-            # Get vector dimension for mapping
-            dim = len(vectors[0]) if vectors else 768  # default fallback
-
-            # Check for AOSS
-            auth_kwargs = self._build_auth_kwargs()
-            is_aoss = self._is_aoss_enabled(auth_kwargs.get("http_auth"))
-
-            # Validate engine with AOSS
-            engine = getattr(self, "engine", "jvector")
-            self._validate_aoss_with_engines(is_aoss=is_aoss, engine=engine)
-
-            # Create mapping with proper KNN settings
-            space_type = getattr(self, "space_type", "l2")
-            ef_construction = getattr(self, "ef_construction", 512)
-            m = getattr(self, "m", 16)
-
-            mapping = self._default_text_mapping(
-                dim=dim,
-                engine=engine,
-                space_type=space_type,
-                ef_construction=ef_construction,
-                m=m,
-                vector_field=dynamic_field_name,  # Use dynamic field name
-            )
-
-            # Ensure index exists with baseline mapping
+        while attempts < 3:
+            attempts += 1
             try:
-                if not client.indices.exists(index=self.index_name):
-                    self.log(f"Creating index '{self.index_name}' with base mapping")
-                    client.indices.create(index=self.index_name, body=mapping)
-            except RequestError as creation_error:
-                if creation_error.error != "resource_already_exists_exception":
-                    logger.warning(f"Failed to create index '{self.index_name}': {creation_error}")
-
-            # Ensure the dynamic field exists in the index
-            self._ensure_embedding_field_mapping(
-                client=client,
-                index_name=self.index_name,
-                field_name=dynamic_field_name,
-                dim=dim,
-                engine=engine,
-                space_type=space_type,
-                ef_construction=ef_construction,
-                m=m,
-            )
-
-            self.log(f"Indexing {len(texts)} documents into '{self.index_name}' with model '{embedding_model}'...")
-            logger.info(f"Will store embeddings in field: {dynamic_field_name}")
-            logger.info(f"Will tag documents with embedding_model: {embedding_model}")
-
-            # Use the bulk ingestion with model tracking
-            return_ids = self._bulk_ingest_embeddings(
-                client=client,
-                index_name=self.index_name,
-                embeddings=vectors,
-                texts=texts,
-                metadatas=metadatas,
-                vector_field=dynamic_field_name,  # Use dynamic field name
-                text_field="text",
-                embedding_model=embedding_model,  # Track the model
-                mapping=mapping,
-                is_aoss=is_aoss,
-            )
-            self.log(metadatas)
-
-            self.log(f"Successfully indexed {len(return_ids)} documents with model {embedding_model}.")
-        finally:
-            # Restore original model settings if we switched
-            if needs_model_switch:
-                if hasattr(selected_embedding, "model"):
-                    selected_embedding.model = original_model
-                if hasattr(selected_embedding, "deployment"):
-                    selected_embedding.deployment = original_deployment
-                if hasattr(selected_embedding, "dimensions"):
-                    selected_embedding.dimensions = original_dimensions
-                logger.info(
-                    f"Restored embedding model to original settings: model={original_model}, "
-                    f"deployment={original_deployment}"
+                max_workers = min(max(len(texts), 1), 8)
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    futures = {executor.submit(embed_chunk, chunk): idx for idx, chunk in enumerate(texts)}
+                    vectors = [None] * len(texts)
+                    for future in as_completed(futures):
+                        idx = futures[future]
+                        vectors[idx] = future.result()
+                break
+            except Exception as exc:
+                last_exception = exc
+                if attempts >= 3:
+                    logger.error(
+                        f"Embedding generation failed for model {embedding_model} after retries",
+                        error=str(exc),
+                    )
+                    raise
+                logger.warning(
+                    "Threaded embedding generation failed for model %s (attempt %s/%s), retrying in %.1fs",
+                    embedding_model,
+                    attempts,
+                    3,
+                    delay,
                 )
+                time.sleep(delay)
+                delay = min(delay * 2, 8.0)
+
+        if vectors is None:
+            raise RuntimeError(
+                f"Embedding generation failed for {embedding_model}: {last_exception}"
+                if last_exception
+                else f"Embedding generation failed for {embedding_model}"
+            )
+
+        if not vectors:
+            self.log(f"No vectors generated from documents for model {embedding_model}.")
+            return
+
+        # Get vector dimension for mapping
+        dim = len(vectors[0]) if vectors else 768  # default fallback
+
+        # Check for AOSS
+        auth_kwargs = self._build_auth_kwargs()
+        is_aoss = self._is_aoss_enabled(auth_kwargs.get("http_auth"))
+
+        # Validate engine with AOSS
+        engine = getattr(self, "engine", "jvector")
+        self._validate_aoss_with_engines(is_aoss=is_aoss, engine=engine)
+
+        # Create mapping with proper KNN settings
+        space_type = getattr(self, "space_type", "l2")
+        ef_construction = getattr(self, "ef_construction", 512)
+        m = getattr(self, "m", 16)
+
+        mapping = self._default_text_mapping(
+            dim=dim,
+            engine=engine,
+            space_type=space_type,
+            ef_construction=ef_construction,
+            m=m,
+            vector_field=dynamic_field_name,  # Use dynamic field name
+        )
+
+        # Ensure index exists with baseline mapping
+        try:
+            if not client.indices.exists(index=self.index_name):
+                self.log(f"Creating index '{self.index_name}' with base mapping")
+                client.indices.create(index=self.index_name, body=mapping)
+        except RequestError as creation_error:
+            if creation_error.error != "resource_already_exists_exception":
+                logger.warning(f"Failed to create index '{self.index_name}': {creation_error}")
+
+        # Ensure the dynamic field exists in the index
+        self._ensure_embedding_field_mapping(
+            client=client,
+            index_name=self.index_name,
+            field_name=dynamic_field_name,
+            dim=dim,
+            engine=engine,
+            space_type=space_type,
+            ef_construction=ef_construction,
+            m=m,
+        )
+
+        self.log(f"Indexing {len(texts)} documents into '{self.index_name}' with model '{embedding_model}'...")
+        logger.info(f"Will store embeddings in field: {dynamic_field_name}")
+        logger.info(f"Will tag documents with embedding_model: {embedding_model}")
+
+        # Use the bulk ingestion with model tracking
+        return_ids = self._bulk_ingest_embeddings(
+            client=client,
+            index_name=self.index_name,
+            embeddings=vectors,
+            texts=texts,
+            metadatas=metadatas,
+            vector_field=dynamic_field_name,  # Use dynamic field name
+            text_field="text",
+            embedding_model=embedding_model,  # Track the model
+            mapping=mapping,
+            is_aoss=is_aoss,
+        )
+        self.log(metadatas)
+
+        self.log(f"Successfully indexed {len(return_ids)} documents with model {embedding_model}.")
 
     # ---------- helpers for filters ----------
     def _is_placeholder_term(self, term_obj: dict) -> bool:
@@ -1257,23 +1214,25 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 f"available_models={available_models}"
             )
 
-            # If this embedding has available_models, map all of them to this embedding
-            if available_models and isinstance(available_models, list):
+            # If this embedding has available_models dict, map all models to their dedicated instances
+            if available_models and isinstance(available_models, dict):
                 logger.info(
-                    f"Embedding object {idx} supports {len(available_models)} models via available_models: "
-                    f"{available_models}"
+                    f"Embedding object {idx} provides {len(available_models)} models via available_models dict"
                 )
-                for available_model in available_models:
-                    if available_model and str(available_model).strip():
-                        model_str = str(available_model).strip()
+                for model_name_key, dedicated_embedding in available_models.items():
+                    if model_name_key and str(model_name_key).strip():
+                        model_str = str(model_name_key).strip()
                         if model_str not in embedding_by_model:
-                            embedding_by_model[model_str] = emb_obj
-                            logger.info(f"Mapped available model '{model_str}' to embedding object {idx}")
+                            # Use the dedicated embedding instance from the dict
+                            embedding_by_model[model_str] = dedicated_embedding
+                            logger.info(
+                                f"Mapped available model '{model_str}' to dedicated embedding instance"
+                            )
                         else:
                             # Conflict detected - track it
                             if model_str not in identifier_conflicts:
                                 identifier_conflicts[model_str] = [embedding_by_model[model_str]]
-                            identifier_conflicts[model_str].append(emb_obj)
+                            identifier_conflicts[model_str].append(dedicated_embedding)
                             logger.warning(
                                 f"Available model '{model_str}' has conflict - used by multiple embeddings"
                             )
@@ -1335,97 +1294,29 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                     logger.info(
                         f"Using embedding object for model '{model_name}': "
                         f"deployment={emb_deployment}, model={emb_model}, model_id={emb_model_id}, "
-                        f"dimensions={emb_dimensions}, available_models={emb_available_models}"
+                        f"dimensions={emb_dimensions}"
                     )
 
-                    # Check if this embedding supports multiple models via available_models
-                    # If so, we need to dynamically set the model attribute to match the target model
-                    needs_model_switch = (
-                        emb_available_models
-                        and isinstance(emb_available_models, list)
-                        and model_name in emb_available_models
-                        and model_name not in {emb_model, emb_deployment}
+                    # Check if this is a dedicated instance from available_models dict
+                    if emb_available_models and isinstance(emb_available_models, dict):
+                        logger.info(
+                            f"Model '{model_name}' using dedicated instance from available_models dict "
+                            f"(pre-configured with correct model and dimensions)"
+                        )
+
+                    # Use the embedding instance directly - no model switching needed!
+                    vec = emb_obj.embed_query(q)
+                    query_embeddings[model_name] = vec
+                    logger.info(
+                        f"Generated embedding for model: {model_name} "
+                        f"(actual dimensions: {len(vec)})"
                     )
-                    if needs_model_switch:
-                        logger.info(
-                            f"Model '{model_name}' is in available_models list - "
-                            f"will switch from current model '{emb_model}' to '{model_name}'"
-                        )
-
-                    if needs_model_switch:
-                        # Temporarily switch the model to generate embedding for this specific model
-                        original_model = getattr(emb_obj, "model", None)
-                        original_deployment = getattr(emb_obj, "deployment", None)
-                        original_dimensions = getattr(emb_obj, "dimensions", None)
-
-                        try:
-                            # Set the model to the target model name
-                            if hasattr(emb_obj, "model"):
-                                emb_obj.model = model_name
-                            if hasattr(emb_obj, "deployment"):
-                                # Keep deployment as-is or set to model_name if needed
-                                pass  # Usually deployment stays the same
-                            if hasattr(emb_obj, "dimensions"):
-                                # Reset dimensions to let the model determine it
-                                emb_obj.dimensions = None
-
-                            logger.info(f"Switched embedding model to '{model_name}' for query generation")
-                            vec = emb_obj.embed_query(q)
-                            query_embeddings[model_name] = vec
-                            logger.info(
-                                f"Generated embedding for model: {model_name} "
-                                f"(actual dimensions: {len(vec)}, using available_models)"
-                            )
-                        finally:
-                            # Restore original attributes
-                            if hasattr(emb_obj, "model"):
-                                emb_obj.model = original_model
-                            if hasattr(emb_obj, "deployment"):
-                                emb_obj.deployment = original_deployment
-                            if hasattr(emb_obj, "dimensions"):
-                                emb_obj.dimensions = original_dimensions
-                            logger.info(
-                                f"Restored embedding model to original: model={original_model}, "
-                                f"deployment={original_deployment}"
-                            )
-                    else:
-                        # Use the embedding as-is (model is already set correctly or no switch needed)
-                        vec = emb_obj.embed_query(q)
-                        query_embeddings[model_name] = vec
-                        logger.info(
-                            f"Generated embedding for model: {model_name} "
-                            f"(actual dimensions: {len(vec)}, using matching embedding object)"
-                        )
                 else:
-                    # Fallback: try to dynamically set the model on the first embedding
-                    # This handles cases where model attribute can be changed dynamically
+                    # No matching embedding found for this model
                     logger.warning(
                         f"No matching embedding found for model '{model_name}'. "
-                        f"Attempting dynamic model switching (may cause dimension mismatch)."
+                        f"This model will be skipped. Available models: {list(embedding_by_model.keys())}"
                     )
-                    emb_obj = embeddings_list[0]
-                    original_model_attr = getattr(emb_obj, "model", None)
-                    original_deployment_attr = getattr(emb_obj, "deployment", None)
-                    original_dimensions_attr = getattr(emb_obj, "dimensions", None)
-
-                    try:
-                        if hasattr(emb_obj, "deployment"):
-                            emb_obj.deployment = model_name
-                        if hasattr(emb_obj, "model"):
-                            emb_obj.model = model_name
-                        if hasattr(emb_obj, "dimensions"):
-                            emb_obj.dimensions = None
-                        vec = emb_obj.embed_query(q)
-                        query_embeddings[model_name] = vec
-                        logger.info(f"Generated embedding for model: {model_name} (using dynamic model switching)")
-                    finally:
-                        # Restore original attributes
-                        if hasattr(emb_obj, "deployment"):
-                            emb_obj.deployment = original_deployment_attr
-                        if hasattr(emb_obj, "model"):
-                            emb_obj.model = original_model_attr
-                        if hasattr(emb_obj, "dimensions"):
-                            emb_obj.dimensions = original_dimensions_attr
             except Exception as e:
                 logger.warning(f"Failed to generate embedding for {model_name}: {e}")
 

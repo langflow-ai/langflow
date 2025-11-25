@@ -4,26 +4,34 @@ from langchain_core.embeddings import Embeddings
 
 
 class EmbeddingsWithModels(Embeddings):
-    """Extended Embeddings class that includes available models metadata.
+    """Extended Embeddings class that includes available models with dedicated instances.
 
-    This class inherits from LangChain Embeddings and adds an available_models
-    field to store the list of available model providers/names.
+    This class inherits from LangChain Embeddings and provides a mapping of model names
+    to their dedicated embedding instances, enabling multi-model support without the need
+    for dynamic model switching.
 
     Attributes:
-        embeddings: The underlying LangChain Embeddings instance.
-        available_models: List of available model provider names or model identifiers.
+        embeddings: The primary LangChain Embeddings instance (used as fallback).
+        available_models: Dict mapping model names to their dedicated Embeddings instances.
+                         Each model has its own pre-configured instance with specific parameters.
     """
 
-    def __init__(self, embeddings: Embeddings, available_models: list[str] | None = None):
+    def __init__(
+        self,
+        embeddings: Embeddings,
+        available_models: dict[str, Embeddings] | None = None,
+    ):
         """Initialize the EmbeddingsWithModels wrapper.
 
         Args:
-            embeddings: The LangChain Embeddings instance to wrap.
-            available_models: Optional list of available model names. Defaults to empty list.
+            embeddings: The primary LangChain Embeddings instance (used as default/fallback).
+            available_models: Dict mapping model names to dedicated Embeddings instances.
+                            Each value should be a fully configured Embeddings object ready to use.
+                            Defaults to empty dict if not provided.
         """
         super().__init__()
         self.embeddings = embeddings
-        self.available_models = available_models or []
+        self.available_models = available_models if available_models is not None else {}
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Embed search docs by delegating to the underlying embeddings instance.
