@@ -26,8 +26,7 @@ class RunFlowComponent(RunFlowBaseComponent):
         build_config: dotdict,
         field_value: Any,
         field_name: str | None = None,
-        ):
-
+    ):
         missing_keys = [key for key in self.default_keys if key not in build_config]
         for key in missing_keys:
             if key == "flow_name_selected":
@@ -45,8 +44,9 @@ class RunFlowComponent(RunFlowBaseComponent):
             build_config["flow_name_selected"]["options_metadata"] = []
             for flow in options:
                 # populate options_metadata
-                build_config["flow_name_selected"]["options_metadata"] \
-                    .append({"id": flow.data["id"], "updated_at": flow.data["updated_at"]})
+                build_config["flow_name_selected"]["options_metadata"].append(
+                    {"id": flow.data["id"], "updated_at": flow.data["updated_at"]}
+                )
                 # update selected flow if it is stale
                 if str(flow.data["id"]) == self.flow_id_selected:
                     await self.check_and_update_stale_flow(flow, build_config)
@@ -55,15 +55,12 @@ class RunFlowComponent(RunFlowBaseComponent):
             try:
                 # derive flow id if the field_name is flow_name_selected
                 build_config["flow_id_selected"]["value"] = (
-                    self.get_selected_flow_meta(build_config, "id")
-                    or build_config["flow_id_selected"]["value"]
-                    )
+                    self.get_selected_flow_meta(build_config, "id") or build_config["flow_id_selected"]["value"]
+                )
                 updated_at = self.get_selected_flow_meta(build_config, "updated_at")
                 await self.load_graph_and_update_cfg(
-                    build_config,
-                    build_config["flow_id_selected"]["value"],
-                    updated_at
-                    )
+                    build_config, build_config["flow_id_selected"]["value"], updated_at
+                )
             except Exception as e:
                 msg = f"Error building graph for flow {field_value}"
                 await logger.aexception(msg)
@@ -91,10 +88,10 @@ class RunFlowComponent(RunFlowBaseComponent):
     def should_update_stale_flow(self, flow: Data, build_config: dotdict) -> bool:
         """Check if the flow should be updated."""
         return (
-            (updated_at := self.get_str_isots(flow.data["updated_at"])) and # true updated_at date just fetched from db
-            (stale_at := self.get_selected_flow_meta(build_config, "updated_at")) # outdated date in bcfg
-            and self._parse_timestamp(updated_at) > self._parse_timestamp(stale_at) # stale flow condition
-            )
+            (updated_at := self.get_str_isots(flow.data["updated_at"]))  # true updated_at date just fetched from db
+            and (stale_at := self.get_selected_flow_meta(build_config, "updated_at"))  # outdated date in bcfg
+            and self._parse_timestamp(updated_at) > self._parse_timestamp(stale_at)  # stale flow condition
+        )
 
     async def check_and_update_stale_flow(self, flow: Data, build_config: dotdict) -> None:
         """Check if the flow should be updated and update it if necessary."""
@@ -104,7 +101,7 @@ class RunFlowComponent(RunFlowBaseComponent):
                 build_config,
                 flow.data["id"],
                 flow.data["updated_at"],
-                )
+            )
 
     def get_str_isots(self, date: datetime | str) -> str:
         """Get a string timestamp from a datetime or string."""

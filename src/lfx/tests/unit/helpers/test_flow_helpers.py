@@ -116,10 +116,7 @@ class TestListFlowsByFlowFolder:
     @pytest.mark.asyncio
     async def test_list_flows_by_flow_folder_returns_empty_list_in_lfx(self):
         """Test that function returns empty list (stub implementation)."""
-        result = await list_flows_by_flow_folder(
-            user_id=str(uuid4()),
-            flow_id=str(uuid4())
-        )
+        result = await list_flows_by_flow_folder(user_id=str(uuid4()), flow_id=str(uuid4()))
 
         assert result == []
 
@@ -142,10 +139,7 @@ class TestListFlowsByFolderId:
     @pytest.mark.asyncio
     async def test_list_flows_by_folder_id_returns_empty_list_in_lfx(self):
         """Test that function returns empty list (stub implementation)."""
-        result = await list_flows_by_folder_id(
-            user_id=str(uuid4()),
-            folder_id=str(uuid4())
-        )
+        result = await list_flows_by_folder_id(user_id=str(uuid4()), folder_id=str(uuid4()))
 
         assert result == []
 
@@ -168,10 +162,7 @@ class TestGetFlowByIdOrName:
     @pytest.mark.asyncio
     async def test_get_flow_by_id_or_name_returns_none_in_lfx(self):
         """Test that function returns None (stub implementation)."""
-        result = await get_flow_by_id_or_name(
-            user_id=str(uuid4()),
-            flow_id=str(uuid4())
-        )
+        result = await get_flow_by_id_or_name(user_id=str(uuid4()), flow_id=str(uuid4()))
 
         assert result is None
 
@@ -183,10 +174,7 @@ class TestLoadFlow:
     async def test_load_flow_raises_not_implemented_error(self):
         """Test that load_flow raises NotImplementedError in lfx."""
         with pytest.raises(NotImplementedError, match="load_flow not implemented"):
-            await load_flow(
-                user_id=str(uuid4()),
-                flow_id=str(uuid4())
-            )
+            await load_flow(user_id=str(uuid4()), flow_id=str(uuid4()))
 
 
 class TestRunFlow:
@@ -217,12 +205,7 @@ class TestRunFlow:
         mock_graph.vertices = []
         mock_graph.arun = AsyncMock(return_value=[])
 
-        await run_flow(
-            user_id=user_id,
-            run_id=run_id,
-            session_id=session_id,
-            graph=mock_graph
-        )
+        await run_flow(user_id=user_id, run_id=run_id, session_id=session_id, graph=mock_graph)
 
         mock_graph.set_run_id.assert_called_once_with(UUID(run_id))
         assert mock_graph.session_id == session_id
@@ -245,12 +228,7 @@ class TestRunFlow:
         mock_graph.vertices = [mock_output_vertex]
         mock_graph.arun = AsyncMock(return_value=[])
 
-        await run_flow(
-            user_id=user_id,
-            inputs=inputs,
-            graph=mock_graph,
-            output_type="chat"
-        )
+        await run_flow(user_id=user_id, inputs=inputs, graph=mock_graph, output_type="chat")
 
         mock_graph.arun.assert_called_once()
         call_args = mock_graph.arun.call_args
@@ -280,4 +258,3 @@ class TestRunFlow:
 
         call_args = mock_graph.arun.call_args
         assert len(call_args[0][0]) == 1  # Converted to list with one element
-

@@ -21,6 +21,7 @@ def mock_shared_cache():
         mock_get_cache.return_value = mock_cache
         yield mock_cache
 
+
 class TestRunFlowBaseComponentInitialization:
     """Test RunFlowBaseComponent initialization."""
 
@@ -139,15 +140,14 @@ class TestRunFlowBaseComponentFlowRetrieval:
         mock_graph = MagicMock(spec=Graph)
         mock_graph.updated_at = updated_at
 
-        with patch.object(component, "_flow_cache_call") as mock_cache_call, \
-             patch.object(component, "_is_cached_flow_up_to_date") as mock_is_up_to_date:
+        with (
+            patch.object(component, "_flow_cache_call") as mock_cache_call,
+            patch.object(component, "_is_cached_flow_up_to_date") as mock_is_up_to_date,
+        ):
             mock_cache_call.return_value = mock_graph
             mock_is_up_to_date.return_value = True
 
-            result = await component.get_graph(
-                flow_id_selected=flow_id,
-                updated_at=updated_at
-            )
+            result = await component.get_graph(flow_id_selected=flow_id, updated_at=updated_at)
 
             assert result == mock_graph
             mock_cache_call.assert_called_once_with("get", flow_id=flow_id)
@@ -162,25 +162,20 @@ class TestRunFlowBaseComponentFlowRetrieval:
         flow_name = "test_flow"
         flow_id = str(uuid4())
 
-        flow_data = Data(data={
-            "data": {"nodes": [], "edges": []},
-            "description": "Test flow"
-        })
+        flow_data = Data(data={"data": {"nodes": [], "edges": []}, "description": "Test flow"})
 
         mock_graph = MagicMock(spec=Graph)
 
-        with patch.object(component, "_flow_cache_call") as mock_cache_call, \
-             patch.object(component, "get_flow", new_callable=AsyncMock) as mock_get_flow, \
-             patch("lfx.base.tools.run_flow.Graph.from_payload") as mock_from_payload:
-
+        with (
+            patch.object(component, "_flow_cache_call") as mock_cache_call,
+            patch.object(component, "get_flow", new_callable=AsyncMock) as mock_get_flow,
+            patch("lfx.base.tools.run_flow.Graph.from_payload") as mock_from_payload,
+        ):
             mock_cache_call.return_value = None  # Not in cache
             mock_get_flow.return_value = flow_data
             mock_from_payload.return_value = mock_graph
 
-            result = await component.get_graph(
-                flow_name_selected=flow_name,
-                flow_id_selected=flow_id
-            )
+            result = await component.get_graph(flow_name_selected=flow_name, flow_id_selected=flow_id)
 
             assert result == mock_graph
             mock_get_flow.assert_called_once_with(flow_name_selected=flow_name, flow_id_selected=flow_id)
@@ -201,30 +196,26 @@ class TestRunFlowBaseComponentFlowRetrieval:
         stale_graph = MagicMock(spec=Graph)
         stale_graph.updated_at = old_updated_at
 
-        flow_data = Data(data={
-            "data": {"nodes": [], "edges": []},
-            "description": "Test flow",
-            "updated_at": new_updated_at
-        })
+        flow_data = Data(
+            data={"data": {"nodes": [], "edges": []}, "description": "Test flow", "updated_at": new_updated_at}
+        )
 
         fresh_graph = MagicMock(spec=Graph)
         fresh_graph.updated_at = new_updated_at
 
-        with patch.object(component, "_flow_cache_call") as mock_cache_call, \
-             patch.object(component, "_is_cached_flow_up_to_date") as mock_is_up_to_date, \
-             patch.object(component, "get_flow", new_callable=AsyncMock) as mock_get_flow, \
-             patch("lfx.base.tools.run_flow.Graph.from_payload") as mock_from_payload:
-
+        with (
+            patch.object(component, "_flow_cache_call") as mock_cache_call,
+            patch.object(component, "_is_cached_flow_up_to_date") as mock_is_up_to_date,
+            patch.object(component, "get_flow", new_callable=AsyncMock) as mock_get_flow,
+            patch("lfx.base.tools.run_flow.Graph.from_payload") as mock_from_payload,
+        ):
             # First call returns stale graph, second call is delete, third call is set
             mock_cache_call.side_effect = [stale_graph, None, None]
             mock_is_up_to_date.return_value = False  # Cache is stale
             mock_get_flow.return_value = flow_data
             mock_from_payload.return_value = fresh_graph
 
-            result = await component.get_graph(
-                flow_id_selected=flow_id,
-                updated_at=new_updated_at
-            )
+            result = await component.get_graph(flow_id_selected=flow_id, updated_at=new_updated_at)
 
             assert result == fresh_graph
             # Should have called cache "get", "delete", and "set"
@@ -637,10 +628,7 @@ class TestRunFlowBaseComponentOutputMethods:
         with patch.object(component, "_get_cached_run_outputs", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = [mock_run_output]
 
-            result = await component._resolve_flow_output(
-                vertex_id=vertex_id,
-                output_name=output_name
-            )
+            result = await component._resolve_flow_output(vertex_id=vertex_id, output_name=output_name)
 
             assert result == expected_value
 
@@ -675,13 +663,10 @@ class TestRunFlowBaseComponentToolGeneration:
             mock_get_graph.return_value = mock_graph
 
             with patch.object(component, "get_new_fields_from_graph") as mock_get_fields:
-                mock_get_fields.return_value = [
-                    dotdict({"name": "input1", "tool_mode": True, "input_types": None})
-                ]
+                mock_get_fields.return_value = [dotdict({"name": "input1", "tool_mode": True, "input_types": None})]
 
                 description, fields = await component.get_required_data()
 
                 assert description == "Test flow description"
                 assert len(fields) == 1
                 assert fields[0]["name"] == "input1"
-

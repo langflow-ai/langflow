@@ -104,11 +104,7 @@ class TestListFlowsByFlowFolder:
             mock_session_scope.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_scope.return_value.__aexit__ = AsyncMock()
 
-            result = await list_flows_by_flow_folder(
-                user_id=user_id,
-                flow_id=flow_id,
-                order_params=order_params
-            )
+            result = await list_flows_by_flow_folder(user_id=user_id, flow_id=flow_id, order_params=order_params)
 
             # Verify query was executed (result should be empty list from mock)
             assert result == []
@@ -229,11 +225,7 @@ class TestGetFlowByIdOrName:
             mock_session_scope.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_scope.return_value.__aexit__ = AsyncMock()
 
-            result = await get_flow_by_id_or_name(
-                user_id=user_id,
-                flow_id=flow_id,
-                flow_name=flow_name
-            )
+            result = await get_flow_by_id_or_name(user_id=user_id, flow_id=flow_id, flow_name=flow_name)
 
             assert isinstance(result, Data)
             # The query should have been made with flow_id (checking it was called)

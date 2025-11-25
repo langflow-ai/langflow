@@ -89,8 +89,8 @@ async def list_flows_by_flow_folder(
     *,
     user_id: str | None = None,
     flow_id: str | None = None,
-    order_params: dict | None = {"column": "updated_at", "direction": "desc"} # noqa: B006, ARG001
-    ) -> list[Data]:
+    order_params: dict | None = {"column": "updated_at", "direction": "desc"},  # noqa: B006, ARG001
+) -> list[Data]:
     """Lists flows for the given user and in the same folder as the specified flow.
 
     Retrieves all flows belonging to the given user and identified by user_id
@@ -135,7 +135,7 @@ async def list_flows_by_folder_id(
     *,
     user_id: str | None = None,
     folder_id: str | None = None,
-    ) -> list[Data]:
+) -> list[Data]:
     """Lists flows for the given user and in the same folder as the specified folder.
 
     Retrieves all flows belonging to the user identified by user_id

@@ -555,7 +555,7 @@ class CustomComponent(BaseComponent):
 
     async def alist_flows(self) -> list[Data]:
         """List all flows for the current user."""
-        try: # user id is validated in the function
+        try:  # user id is validated in the function
             return await list_flows(user_id=str(self.user_id))
         except Exception as e:
             msg = f"Error listing flows: {e}"
@@ -565,11 +565,8 @@ class CustomComponent(BaseComponent):
         """List all flows for the current user in the same folder as the current flow."""
         flow_id = self._get_runtime_or_frontend_node_attr("flow_id")
         if flow_id is not None:
-            try: # user and flow ids are validated in the function
-                return await list_flows_by_flow_folder(
-                    user_id=str(self.user_id),
-                    flow_id=str(flow_id)
-                    )
+            try:  # user and flow ids are validated in the function
+                return await list_flows_by_flow_folder(user_id=str(self.user_id), flow_id=str(flow_id))
             except Exception as e:
                 msg = f"Error listing flows: {e}"
                 raise ValueError(msg) from e
@@ -579,7 +576,7 @@ class CustomComponent(BaseComponent):
         """List all flows for the current user in the same folder as the current flow."""
         folder_id = self._get_runtime_or_frontend_node_attr("folder_id")
         if folder_id is not None:
-            try: # user and flow ids are validated in the function
+            try:  # user and flow ids are validated in the function
                 return await list_flows_by_folder_id(
                     user_id=str(self.user_id),
                     folder_id=str(folder_id),
@@ -593,12 +590,10 @@ class CustomComponent(BaseComponent):
         flow_id = self._get_runtime_or_frontend_node_attr("flow_id")
         flow_name = self._get_runtime_or_frontend_node_attr("flow_name")
         if flow_id or flow_name:
-            try: # user and flow ids are validated in the function
+            try:  # user and flow ids are validated in the function
                 return await get_flow_by_id_or_name(
-                    user_id=str(self.user_id),
-                    flow_id=str(flow_id) if flow_id else None,
-                    flow_name=flow_name
-                    )
+                    user_id=str(self.user_id), flow_id=str(flow_id) if flow_id else None, flow_name=flow_name
+                )
             except Exception as e:
                 msg = f"Error listing flows: {e}"
                 raise ValueError(msg) from e
