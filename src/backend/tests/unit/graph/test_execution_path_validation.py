@@ -34,7 +34,7 @@ TEST_FLOWS = [
 @pytest.fixture
 def loop_csv_path() -> Generator[Path, None, None]:
     """Copy loop_test.csv to current working directory so File component can find it.
-    
+
     The File component resolves relative paths relative to the current working directory,
     so we need to place the file there rather than in the cache directory.
     """
