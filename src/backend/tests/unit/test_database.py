@@ -14,8 +14,6 @@ from langflow.services.database.models.folder.model import FolderCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from lfx.graph.utils import log_transaction, log_vertex_build
-from lfx.services.deps import session_scope
-from sqlalchemy import text
 
 
 @pytest.fixture(scope="module")
@@ -625,15 +623,15 @@ async def test_sqlite_pragmas():
     import asyncio
     import sqlite3
     from urllib.parse import unquote
-    
+
     # PRAGMA queries don't work well through SQLModel's async session abstraction
     # They need direct database access, so we use sqlite3 directly
     db_service = get_db_service()
     database_url = db_service.database_url
-    
+
     if not database_url.startswith("sqlite"):
         pytest.skip("This test only works with SQLite databases")
-    
+
     # Extract the database path from the URL
     if "///" in database_url:
         db_path = database_url.split("///", 1)[1]
@@ -641,9 +639,9 @@ async def test_sqlite_pragmas():
         db_path = database_url.split("//", 1)[1]
     else:
         pytest.skip("Could not extract database path from URL")
-    
+
     db_path = unquote(db_path)
-    
+
     def get_pragmas():
         conn = sqlite3.connect(db_path)
         try:
@@ -652,7 +650,7 @@ async def test_sqlite_pragmas():
             return journal_mode, synchronous
         finally:
             conn.close()
-    
+
     journal_mode, synchronous = await asyncio.to_thread(get_pragmas)
     assert journal_mode == "wal"
     assert synchronous in [0, 1, 2], f"Unexpected synchronous value: {synchronous}"
