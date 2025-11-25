@@ -128,6 +128,8 @@ class ParameterHandler:
 
     def should_skip_field(self, field_name: str, field: dict, params: dict[str, Any]) -> bool:
         """Determine if field should be skipped."""
+        if field.get("override_skip"):
+            return False
         return (
             field.get("type") == "other"
             or field_name in params
