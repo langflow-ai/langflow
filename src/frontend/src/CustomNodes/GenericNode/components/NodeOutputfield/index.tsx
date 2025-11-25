@@ -38,7 +38,7 @@ import { nodeColorsName } from "../../../../utils/styleUtils";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputComponent from "../OutputComponent";
 import OutputModal from "../outputModal";
-import FreezeAllSvg from "@/icons/freezeAll/freezeAll";
+import { SnowflakeIcon } from "@/icons/Snowflake";
 
 const _EyeIcon = memo(
   ({ hidden, className }: { hidden: boolean; className: string }) => (
@@ -376,8 +376,8 @@ function NodeOutputField({
         </div>
 
         {data.node?.frozen && (
-          <div className="pr-1" data-testid="frozen-icon">
-            <FreezeAllSvg className="text-ice" />
+          <div data-testid="frozen-icon">
+            <SnowflakeIcon />
           </div>
         )}
 
@@ -427,7 +427,7 @@ function NodeOutputField({
                   errorOutput={errorOutput ?? false}
                   isToolMode={isToolMode}
                   title={title}
-                  onClick={() => {}}
+                  onClick={() => { }}
                   id={data?.type}
                 />
               </OutputModal>
