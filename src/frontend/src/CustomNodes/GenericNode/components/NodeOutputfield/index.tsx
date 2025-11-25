@@ -50,7 +50,6 @@ const _EyeIcon = memo(
   ),
 );
 
-
 const InspectButton = memo(
   forwardRef(
     (
@@ -378,7 +377,7 @@ function NodeOutputField({
 
         {data.node?.frozen && (
           <div className="pr-1" data-testid="frozen-icon">
-            <FreezeAllSvg className='text-ice' />
+            <FreezeAllSvg className="text-ice" />
           </div>
         )}
 
@@ -428,7 +427,7 @@ function NodeOutputField({
                   errorOutput={errorOutput ?? false}
                   isToolMode={isToolMode}
                   title={title}
-                  onClick={() => { }}
+                  onClick={() => {}}
                   id={data?.type}
                 />
               </OutputModal>
