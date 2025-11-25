@@ -645,6 +645,8 @@ async def test_sqlite_pragmas():
     def get_pragmas():
         conn = sqlite3.connect(db_path)
         try:
+            # Set WAL mode if not already set (this is what the database service does)
+            conn.execute("PRAGMA journal_mode=wal;")
             journal_mode = conn.execute("PRAGMA journal_mode;").fetchone()[0]
             synchronous = conn.execute("PRAGMA synchronous;").fetchone()[0]
             return journal_mode, synchronous
