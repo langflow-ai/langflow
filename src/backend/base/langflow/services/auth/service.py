@@ -51,7 +51,7 @@ class AuthService(AuthServiceBase):
         self.set_ready()
 
     @property
-    def settings(self):
+    def settings(self) -> "SettingsService":
         return self.settings_service
 
     async def api_key_security(self, query_param: str | None, header_param: str | None) -> UserRead | None:
@@ -160,9 +160,16 @@ class AuthService(AuthServiceBase):
 
     async def get_current_user_from_access_token(
         self,
-        token: str | Coroutine,
+        token: str | Coroutine | None,
         db: AsyncSession,
     ) -> User:
+        if token is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing authentication token.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         settings_service = self.settings
 
         if isinstance(token, Coroutine):
