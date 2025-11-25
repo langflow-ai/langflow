@@ -75,10 +75,10 @@ test(
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .click();
 
-      await page.getByTestId("icon-ChevronLeft").click();
+    await page.getByTestId("icon-ChevronLeft").click();
 
-        await page.getByText("New Flow").isVisible();
-  await page.getByTestId("new-project-btn").click();
+    await page.getByText("New Flow").isVisible();
+    await page.getByTestId("new-project-btn").click();
 
     await page.getByTestId("blank-flow").click();
 
@@ -95,31 +95,35 @@ test(
         await page.getByTestId("add-component-button-run-flow").click();
       });
 
-      await page.getByTestId("value-dropdown-dropdown_str_flow_name_selected").click();
+    await page
+      .getByTestId("value-dropdown-dropdown_str_flow_name_selected")
+      .click();
 
-      await page.getByTestId("refresh-dropdown-list-flow_name_selected").click();
-      
+    await page.getByTestId("refresh-dropdown-list-flow_name_selected").click();
+
     await page.waitForSelector("text=Loading", { timeout: 30000 });
     await page.waitForSelector("text=Select an option", { timeout: 30000 });
 
-      await page.getByTestId("value-dropdown-dropdown_str_flow_name_selected").click();
+    await page
+      .getByTestId("value-dropdown-dropdown_str_flow_name_selected")
+      .click();
 
-      await page.getByTestId("dropdown-option-0-container").click();
+    await page.getByTestId("dropdown-option-0-container").click();
 
-      await page.getByPlaceholder("Type something...").click();
-      await page.getByPlaceholder("Type something...").fill("THIS IS A TEST FOR RUN FLOW COMPONENT");
+    await page.getByPlaceholder("Type something...").click();
+    await page
+      .getByPlaceholder("Type something...")
+      .fill("THIS IS A TEST FOR RUN FLOW COMPONENT");
 
-      await page.getByTestId("button_run_run flow").click();
+    await page.getByTestId("button_run_run flow").click();
     await page.waitForSelector("text=built successfully", {
       timeout: 30000,
     });
 
     await page.getByTestId("icon-TextSearchIcon").click();
 
-    const value = await page
-      .getByPlaceholder("Empty")
-      .inputValue();
+    const value = await page.getByPlaceholder("Empty").inputValue();
 
-      expect(value).toBe("THIS IS A TEST FOR RUN FLOW COMPONENT");
+    expect(value).toBe("THIS IS A TEST FOR RUN FLOW COMPONENT");
   },
 );
