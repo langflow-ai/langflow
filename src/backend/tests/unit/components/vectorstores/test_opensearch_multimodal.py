@@ -37,7 +37,7 @@ class MockEmbeddings(Embeddings):
 
     def embed_query(self, text: str) -> list[float]:
         """Return simple fixed-dimension embedding for query."""
-        #mocking the embeddings length to be the length of the text
+        # mocking the embeddings length to be the length of the text
         return [0.5] * (self.dimension * len(text))
 
     async def aembed_documents(self, texts: list[str]) -> list[list[float]]:
