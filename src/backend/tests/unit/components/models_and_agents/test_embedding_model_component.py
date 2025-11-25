@@ -187,7 +187,13 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
     @patch("ibm_watsonx_ai.Credentials")
     @patch("langchain_ibm.WatsonxEmbeddings")
     async def test_build_embeddings_watsonx(
-        self, mock_watsonx_embeddings, mock_credentials, mock_api_client, mock_fetch_ibm_models, component_class, default_kwargs
+        self,
+        mock_watsonx_embeddings,
+        mock_credentials,
+        mock_api_client,
+        mock_fetch_ibm_models,
+        component_class,
+        default_kwargs,
     ):
         # Setup mocks
         mock_instance = MagicMock()
