@@ -7,6 +7,11 @@ from lfx.inputs.inputs import DictInput, HandleInput, MessageTextInput, NestedDi
 from lfx.io import Output
 from lfx.log.logger import logger
 from lfx.schema.data import Data
+from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
+
+disable_component_in_astra_cloud_msg = (
+    "Mem0 chat memory is not supported in Astra cloud environment. Please use local storage mode or mem0 cloud."
+)
 
 
 class Mem0MemoryComponent(LCChatMemoryComponent):
@@ -80,6 +85,8 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
 
     def build_mem0(self) -> Memory:
         """Initializes a Mem0 memory instance based on provided configuration and API keys."""
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
         if self.openai_api_key:
             os.environ["OPENAI_API_KEY"] = self.openai_api_key
 
@@ -95,6 +102,8 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
 
     def ingest_data(self) -> Memory:
         """Ingests a new message into Mem0 memory and returns the updated memory instance."""
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
         mem0_memory = self.existing_memory or self.build_mem0()
 
         if not self.ingest_message or not self.user_id:
@@ -115,6 +124,8 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
 
     def build_search_results(self) -> Data:
         """Searches the Mem0 memory for related messages based on the search query and returns the results."""
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
         mem0_memory = self.ingest_data()
         search_query = self.search_query
         user_id = self.user_id
