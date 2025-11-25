@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { useDownloadYaml } from "@/controllers/API/queries/flows/use-download-yaml";
 import { useCheckFlowPublished } from "@/controllers/API/queries/published-flows";
+import { useGetFlowLatestStatus } from "@/controllers/API/queries/flow-versions";
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
 import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
@@ -43,6 +44,7 @@ export default function PublishDropdown() {
   const isPublished = currentFlow?.access_type === "PUBLIC";
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
+  const userData = useAuthStore((state) => state.userData);
   const [openApiModal, setOpenApiModal] = useState(false);
   const [publishAgent, setPublishModal] = useState(false);
   const [openExportModal, setOpenExportModal] = useState(false);
@@ -50,6 +52,17 @@ export default function PublishDropdown() {
 
   // Check if flow is published to marketplace
   const { data: publishCheck } = useCheckFlowPublished(flowId);
+
+  // Check flow approval status for Publish to Marketplace button
+  const { data: flowStatusData } = useGetFlowLatestStatus(flowId);
+  const latestStatus = flowStatusData?.latest_status;
+  const isUnderReview = latestStatus === "Submitted";
+  const isApproved = latestStatus === "Approved";
+
+  // Check if current user is the flow owner
+  // Get user_id from flowStore (working state) as it has the complete flow data
+  const flowUserId = useFlowStore((state) => state.currentFlow?.user_id);
+  const isFlowOwner = flowUserId && userData?.id && flowUserId === userData.id;
 
   // Download YAML mutation
   const { mutate: downloadYaml, isPending: isDownloadingYaml } = useDownloadYaml({
@@ -131,17 +144,23 @@ export default function PublishDropdown() {
           align="end"
           className="w-full min-w-[275px]"
         >
-          <DropdownMenuItem
-            className="deploy-dropdown-item group"
-            onClick={() => setOpenPublishFlowModal(true)}
-          >
-            <IconComponent name="Upload" className={`icon-size mr-2`} />
-            <span>
-              {isPublishedToMarketplace
-                ? "Published to Marketplace ✓"
-                : "Publish to Marketplace"}
-            </span>
-          </DropdownMenuItem>
+          {/* Publish to Marketplace - only show if user is flow owner */}
+          {isFlowOwner && (
+            <DropdownMenuItem
+              className="deploy-dropdown-item group"
+              onClick={() => setOpenPublishFlowModal(true)}
+              disabled={isUnderReview}
+            >
+              <IconComponent name="Upload" className={`icon-size mr-2`} />
+              <span>
+                {isPublishedToMarketplace
+                  ? "Published to Marketplace"
+                  : isApproved
+                  ? "Publish to Marketplace (Approved)"
+                  : "Publish to Marketplace"}
+              </span>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             className="deploy-dropdown-item group"
             onClick={() => setOpenApiModal(true)}

@@ -8,7 +8,9 @@ import {
 import { ProtectedAdminRoute } from "./components/authorization/authAdminGuard";
 import { ProtectedRoute } from "./components/authorization/authGuard";
 import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
+import { ProtectedRoleRoute } from "./components/authorization/authRoleGuard";
 import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
+import { USER_ROLES } from "./types/auth";
 import ContextWrapper from "./contexts";
 import CustomDashboardWrapperPage from "./customization/components/custom-DashboardWrapperPage";
 import { CustomNavigate } from "./customization/components/custom-navigate";
@@ -46,6 +48,7 @@ import ConversationPage from "./pages/AgentBuilderPage/ConversationPage";
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
+const AllRequestsPage = lazy(() => import("./pages/AllRequestsPage"));
 
 const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
@@ -190,6 +193,14 @@ const router = createBrowserRouter(
                     <ProtectedAdminRoute>
                       <AdminPage />
                     </ProtectedAdminRoute>
+                  }
+                />
+                <Route
+                  path="all-requests"
+                  element={
+                    <ProtectedRoleRoute requiredRoles={[USER_ROLES.MARKETPLACE_ADMIN]}>
+                      <AllRequestsPage />
+                    </ProtectedRoleRoute>
                   }
                 />
               </Route>

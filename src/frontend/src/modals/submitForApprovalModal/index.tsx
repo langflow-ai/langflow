@@ -10,59 +10,42 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MultiSelect } from "@/components/ui/multi-select";
-import {
-  usePublishFlow,
-  useValidateMarketplaceName,
-  useGetPublishedFlow,
-  usePatchInputSample,
-  useDeleteInputSampleFile,
-  useDeleteInputSampleText,
-  type PublishCheckResponse,
-} from "@/controllers/API/queries/published-flows";
+import { useSubmitFlowForApproval, useGetFlowLatestStatus } from "@/controllers/API/queries/flow-versions";
+import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
+import { incrementPatchVersion } from "@/utils/versionUtils";
 import {
   usePostUploadPresignedUrl,
   useUploadToBlob,
 } from "@/controllers/API/queries/flexstore";
-import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { validateFlowForPublish } from "@/utils/flowValidation";
-import { incrementPatchVersion } from "@/utils/versionUtils";
 import type { AllNodeType, EdgeType } from "@/types/flow";
 import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
-import { Upload, X, AlertCircle } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { ALLOWED_IMAGE_INPUT_EXTENSIONS } from "@/constants/constants";
 import { AgentLogo } from "@/components/AgentLogo";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import type { FlowLatestStatusResponse } from "@/controllers/API/queries/flow-versions";
 
-interface PublishFlowModalProps {
+interface SubmitForApprovalModalProps {
   open: boolean;
   setOpen: (open: boolean) => void;
   flowId: string;
   flowName: string;
-  existingPublishedData?: PublishCheckResponse;
-  approvalData?: FlowLatestStatusResponse;
 }
 
-export default function PublishFlowModal({
+export default function SubmitForApprovalModal({
   open,
   setOpen,
   flowId,
   flowName,
-  existingPublishedData,
-  approvalData,
-}: PublishFlowModalProps) {
-  const [marketplaceName, setMarketplaceName] = useState(flowName);
-  const [version, setVersion] = useState("");
+}: SubmitForApprovalModalProps) {
+  const [title, setTitle] = useState(flowName);
+  const [version, setVersion] = useState("1.0.0");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-
-  // Debounce marketplace name to avoid excessive API calls while typing
-  const debouncedMarketplaceName = useDebouncedValue(marketplaceName, 500);
 
   // Logo upload state
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -70,8 +53,7 @@ export default function PublishFlowModal({
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-  const [logoRemoved, setLogoRemoved] = useState(false);
-  const [approvedLogoBlobPath, setApprovedLogoBlobPath] = useState<string | null>(null);
+  const [existingLogoBlobPath, setExistingLogoBlobPath] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sample input state
@@ -80,47 +62,19 @@ export default function PublishFlowModal({
   const [isUploadingSamples, setIsUploadingSamples] = useState(false);
   const [uploadedSampleFiles, setUploadedSampleFiles] = useState<{ name: string; path: string }[]>([]);
   const sampleFilesInputRef = useRef<HTMLInputElement>(null);
-  const [sampleTexts, setSampleTexts] = useState<string[]>([""]); // show one placeholder by default
-  // Removed Sample Output state: modal no longer manages sample output here
+  const [sampleTexts, setSampleTexts] = useState<string[]>([""]);
 
-  const { mutate: publishFlow, isPending } = usePublishFlow();
-  // Ensure `publishedFlowId` is `string | undefined` (coerce possible `null` to `undefined`)
-  const publishedFlowId: string | undefined = existingPublishedData?.published_flow_id ?? undefined;
-  const { mutate: patchInputSample } = usePatchInputSample(publishedFlowId);
-  const { mutate: deleteInputSampleFile } = useDeleteInputSampleFile(publishedFlowId);
-  const { mutate: deleteInputSampleText } = useDeleteInputSampleText(publishedFlowId);
+  const { mutate: submitFlow, isPending } = useSubmitFlowForApproval();
+  const { data: latestStatus } = useGetFlowLatestStatus(flowId);
   const { mutateAsync: getUploadUrl } = usePostUploadPresignedUrl();
   const { mutateAsync: uploadToBlob } = useUploadToBlob();
-  const { mutateAsync: getFlow } = useGetFlow();
   const { validateFileSize } = useFileSizeValidator();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
+  const { mutateAsync: getFlow } = useGetFlow();
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const setCurrentFlowInFlowStore = useFlowStore((state) => state.setCurrentFlow);
-
-  // Fetch existing published flow details (including input samples) if available
-  const { data: publishedFlowData } = useGetPublishedFlow(publishedFlowId);
-
-  // Derived lists for existing sample files and texts grouped by sample record
-  const existingSampleRecords = (publishedFlowData?.input_samples ?? []) as Array<{
-    id: string;
-    file_names?: string[] | null;
-    sample_text?: string[] | null;
-  }>;
-  const existingFiles = useMemo(
-    () =>
-      existingSampleRecords.flatMap((rec) =>
-        (rec.file_names ?? []).map((fname) => ({
-          displayName: fname.split("/").pop() || fname,
-          rawName: fname,
-          sampleId: rec.id,
-        }))
-      ),
-    [existingSampleRecords]
-  );
-
-  // Sample Output removed: no prefill or tracking here
 
   // Detect presence of inputs in the current flow to conditionally render sections
   const hasTextOrChatInput = useMemo(() => {
@@ -136,92 +90,54 @@ export default function PublishFlowModal({
     return nodes.some((node) => node.data?.type === "FilePathInput");
   }, [currentFlow]);
 
-  // Validate marketplace name with debouncing to reduce API calls
-  const {
-    data: nameValidation,
-    isLoading: isValidatingName,
-  } = useValidateMarketplaceName({
-    marketplaceName: debouncedMarketplaceName,
-    excludeFlowId: flowId, // Exclude current flow when re-publishing
-    folderId: currentFlow?.folder_id, // Include folder_id for folder-scoped validation
-    enabled: open && debouncedMarketplaceName.trim().length > 0,
-  });
-
   // Pre-fill form fields when modal opens
   useEffect(() => {
     if (open) {
-      // Check if flow has been published before (includes both published and unpublished)
-      if (existingPublishedData?.marketplace_flow_name) {
-        // Previously published: Always use current flow name
-        setMarketplaceName(currentFlow?.name || flowName);
-
-        // Auto-increment version only if currently published, otherwise keep same version
-        if (existingPublishedData.is_published) {
-          const newVersion = incrementPatchVersion(existingPublishedData.version);
-          setVersion(newVersion);
-        } else {
-          // Unpublished: Keep the same version (user can edit)
-          setVersion(existingPublishedData.version || "1.0.0");
-        }
-
-        setDescription(currentFlow?.description || "");
-        setTags(existingPublishedData.tags || []);
-        // Clear approved logo since we have published data
-        setApprovedLogoBlobPath(null);
-      } else {
-        // Never published: Default to original flow data
-        setMarketplaceName(currentFlow?.name || flowName);
-        setDescription(currentFlow?.description || "");
-
-        // Pre-populate tags from approval submission
-        if (approvalData?.tags && approvalData.tags.length > 0) {
-          setTags(approvalData.tags);
-        } else {
-          setTags([]);
-        }
-
-        // Use approval data for version and logo if available (approved but not yet published)
-        if (approvalData?.latest_version) {
-          // Keep the approved version (don't auto-increment for first publish)
-          setVersion(approvalData.latest_version);
-        } else {
-          setVersion("1.0.0");
-        }
-
-        // Pre-populate logo from approval submission
-        if (approvalData?.agent_logo) {
-          setApprovedLogoBlobPath(approvalData.agent_logo);
-          setLogoUrl(approvalData.agent_logo);
-        } else {
-          setApprovedLogoBlobPath(null);
-          setLogoUrl(null);
-        }
-
-        // Pre-populate sample texts from approval submission
-        if (approvalData?.sample_text && approvalData.sample_text.length > 0) {
-          setSampleTexts(approvalData.sample_text);
-        } else {
-          setSampleTexts([""]);
-        }
-
-        // Pre-populate sample files from approval submission
-        if (approvalData?.file_names && approvalData.file_names.length > 0) {
-          setUploadedSampleFiles(
-            approvalData.file_names.map((path) => ({
-              name: path.split("/").pop() || path,
-              path: path,
-            }))
-          );
-        } else {
-          setUploadedSampleFiles([]);
-        }
-      }
-      // Reset logo removal flag and new file state when modal opens
-      setLogoRemoved(false);
+      setTitle(currentFlow?.name || flowName);
+      // Auto-increment version from this flow's latest version
+      const nextVersion = latestStatus?.latest_version
+        ? incrementPatchVersion(latestStatus.latest_version)
+        : "1.0.0";
+      setVersion(nextVersion);
+      setDescription(currentFlow?.description || "");
       setLogoFile(null);
       setLogoPreviewUrl(null);
+
+      // Pre-populate tags from previous submission
+      if (latestStatus?.tags && latestStatus.tags.length > 0) {
+        setTags(latestStatus.tags);
+      } else {
+        setTags([]);
+      }
+
+      // Pre-populate logo from previous submission
+      if (latestStatus?.agent_logo) {
+        setExistingLogoBlobPath(latestStatus.agent_logo);
+        setLogoUrl(latestStatus.agent_logo);
+      } else {
+        setExistingLogoBlobPath(null);
+        setLogoUrl(null);
+      }
+
+      // Pre-populate sample inputs from previous submission (for re-submissions)
+      if (latestStatus?.sample_text && latestStatus.sample_text.length > 0) {
+        setSampleTexts(latestStatus.sample_text);
+      } else {
+        setSampleTexts([""]);
+      }
+
+      if (latestStatus?.file_names && latestStatus.file_names.length > 0) {
+        setUploadedSampleFiles(
+          latestStatus.file_names.map((path) => ({
+            name: path.split("/").pop() || path,
+            path: path,
+          }))
+        );
+      } else {
+        setUploadedSampleFiles([]);
+      }
     }
-  }, [open, existingPublishedData, approvalData, flowName, currentFlow?.name, currentFlow?.description]);
+  }, [open, flowName, currentFlow?.name, currentFlow?.description, latestStatus]);
 
   // Run validation when modal opens
   useEffect(() => {
@@ -235,7 +151,6 @@ export default function PublishFlowModal({
 
   // Logo upload handlers
   const handleFileSelect = (file: File) => {
-    // Validate file type
     const fileExtension = file.name.split(".").pop()?.toLowerCase();
     if (!fileExtension || !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)) {
       setErrorData({
@@ -247,15 +162,12 @@ export default function PublishFlowModal({
       return;
     }
 
-    // Validate file size (5MB limit)
     if (!validateFileSize(file.size)) {
-      return; // Error message shown by validator
+      return;
     }
 
     setLogoFile(file);
-    setLogoRemoved(false);
 
-    // Create preview URL
     const reader = new FileReader();
     reader.onloadend = () => {
       setLogoPreviewUrl(reader.result as string);
@@ -286,8 +198,7 @@ export default function PublishFlowModal({
     setLogoFile(null);
     setLogoPreviewUrl(null);
     setLogoUrl(null);
-    setLogoRemoved(true);
-    setApprovedLogoBlobPath(null);
+    setExistingLogoBlobPath(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -302,7 +213,6 @@ export default function PublishFlowModal({
       const fileExtension = logoFile.name.split(".").pop();
       const fileName = `agent-logos/logo-${flowId}-${Date.now()}.${fileExtension}`;
 
-      // Step 1: Get presigned upload URL
       const uploadResponse = await getUploadUrl({
         sourceType: "azureblobstorage",
         fileName: fileName,
@@ -312,17 +222,14 @@ export default function PublishFlowModal({
         },
       });
 
-      // Step 2: Upload file to Azure blob storage
       await uploadToBlob({
         presignedUrl: uploadResponse.presignedUrl.data.signedUrl,
         file: logoFile,
       });
 
-      // Step 3: Return blob path (not signed URL) to store in database
-      // Frontend will generate fresh signed URLs on-demand when displaying the logo
       setLogoUrl(fileName);
       setIsUploadingLogo(false);
-      return fileName; // Return blob path like "agent-logos/logo-xxxxx.png"
+      return fileName;
     } catch (error: any) {
       console.error("Logo upload error:", error);
       setIsUploadingLogo(false);
@@ -334,19 +241,18 @@ export default function PublishFlowModal({
     }
   };
 
-  // Sample images upload handlers
+  // Sample files upload handlers
   const uploadSampleFilesToAzure = async (files: File[]): Promise<string[]> => {
     const uploaded: string[] = [];
     try {
       setIsUploadingSamples(true);
 
       for (const file of files) {
-        // Validate size only; allow any file type (PDF, DOCX, etc.)
         if (!validateFileSize(file.size)) {
-          continue; // Error shown by validator
+          continue;
         }
 
-        const fileName = `marketplace-samples/${flowId}/${file.name}`;
+        const fileName = `approval-samples/${flowId}/${file.name}`;
 
         const uploadResponse = await getUploadUrl({
           sourceType: "azureblobstorage",
@@ -397,38 +303,28 @@ export default function PublishFlowModal({
   const removeSampleText = (index: number) =>
     setSampleTexts((prev) => prev.filter((_, i) => i !== index));
 
-  const handlePublish = async () => {
+  const handleSubmit = async () => {
     // Validate required fields
-    if (!marketplaceName.trim()) {
+    if (!title.trim()) {
       setErrorData({
-        title: "Cannot publish flow",
-        list: ["Marketplace flow name is required"],
+        title: "Cannot submit flow",
+        list: ["Title is required"],
       });
       return;
     }
 
-    // Validate version is required
-    if (!version || !version.trim()) {
+    if (!version.trim()) {
       setErrorData({
-        title: "Cannot publish flow",
+        title: "Cannot submit flow",
         list: ["Version is required"],
       });
       return;
     }
 
-    // Check if name is available
-    if (nameValidation && !nameValidation.available) {
-      setErrorData({
-        title: "Cannot publish flow",
-        list: [nameValidation.message || "This marketplace name is already taken"],
-      });
-      return;
-    }
-
-    // Validate flow before publishing
+    // Validate flow before submitting
     if (!currentFlow) {
       setErrorData({
-        title: "Cannot publish flow",
+        title: "Cannot submit flow",
         list: ["Flow data not available"],
       });
       return;
@@ -441,54 +337,45 @@ export default function PublishFlowModal({
     if (errors.length > 0) {
       setValidationErrors(errors);
       setErrorData({
-        title: "Cannot Publish Flow",
+        title: "Cannot Submit Flow",
         list: errors,
       });
       return;
     }
 
-    // Validation passed - clear any previous errors and proceed with publish
     setValidationErrors([]);
 
-    // Sample Output removed: no parsing or patching on publish
-
     // Upload logo if a new one was selected
-    let finalLogoUrl = logoRemoved ? null : (logoUrl || existingPublishedData?.flow_icon || null);
-    if (logoFile && !logoUrl && !logoRemoved) {
+    let finalLogoUrl = logoUrl || null;
+    if (logoFile && !logoUrl) {
       const uploadedLogoUrl = await uploadLogoToAzure();
       if (uploadedLogoUrl) {
         finalLogoUrl = uploadedLogoUrl;
-      } else {
-        // Logo upload failed, but we can still publish without it
-        // Error was already shown by uploadLogoToAzure
-        finalLogoUrl = null;
       }
     }
 
-    publishFlow(
+    submitFlow(
       {
         flowId,
         payload: {
-          marketplace_flow_name: marketplaceName,
-          version: version || undefined,
+          title,
+          version,
           description: description || undefined,
           tags: tags.length > 0 ? tags : undefined,
-          flow_icon: finalLogoUrl || undefined,
-          // Sample input payload
+          agent_logo: finalLogoUrl || undefined,
           storage_account: DEFAULT_STORAGE_ACCOUNT,
           container_name: DEFAULT_CONTAINER_NAME,
           file_names: uploadedSampleFiles.length ? uploadedSampleFiles.map((f) => f.path) : undefined,
           sample_text: sampleTexts.filter((t) => t.trim().length > 0),
-          // sample_output removed from publish payload
         },
       },
       {
         onSuccess: async () => {
           setSuccessData({
-            title: "Flow published successfully!",
+            title: "Flow submitted for approval!",
           });
 
-          // Refetch the updated flow to get the new marketplace name
+          // Refetch the updated flow to get the new title/description
           try {
             const updatedFlow = await getFlow({ id: flowId });
             if (updatedFlow) {
@@ -496,23 +383,22 @@ export default function PublishFlowModal({
               setCurrentFlowInFlowStore(updatedFlow);  // Update flowStore
             }
           } catch (error) {
-            console.error("Failed to refetch flow after publish:", error);
-            // Don't show error to user - publish succeeded, this is just a UI update
+            console.error("Failed to refetch flow after submit:", error);
           }
 
           setOpen(false);
           // Reset form
-          setMarketplaceName("");
-          setVersion("");
+          setTitle("");
+          setVersion("1.0.0");
           setDescription("");
           setTags([]);
           handleRemoveLogo();
           setUploadedSampleFiles([]);
-          setSampleTexts([]);
+          setSampleTexts([""]);
         },
         onError: (error: any) => {
           setErrorData({
-            title: "Failed to publish flow",
+            title: "Failed to submit flow",
             list: [
               error?.response?.data?.detail || error.message || "Unknown error",
             ],
@@ -526,80 +412,53 @@ export default function PublishFlowModal({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Publish the Agent to MarketPlace</DialogTitle>
+          <DialogTitle>Submit Agent for Approval</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4 overflow-y-auto pr-2">
           <div className="space-y-2">
-            <Label htmlFor="marketplace-name">
-              Name <span className="text-destructive">*</span>
+            <Label htmlFor="title">
+              Title <span className="text-destructive">*</span>
             </Label>
-            <div className="relative">
-              <Input
-                id="marketplace-name"
-                placeholder={flowName}
-                value={marketplaceName}
-                onChange={(e) => setMarketplaceName(e.target.value)}
-                required
-                className={
-                  nameValidation && !nameValidation.available
-                    ? "border-destructive focus-visible:ring-destructive"
-                    : ""
-                }
-              />
-              {(isValidatingName || marketplaceName !== debouncedMarketplaceName) && marketplaceName.trim().length > 0 && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                </div>
-              )}
-            </div>
-            <div className="h-4">
-              {nameValidation && !nameValidation.available && (
-                <div className="flex items-start gap-2 text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span>{nameValidation.message}</span>
-                </div>
-              )}
-              {nameValidation && nameValidation.available && marketplaceName.trim().length > 0 && (
-                <p className="text-sm text-green-600 dark:text-green-500">
-                  ✓ This name is available
-                </p>
-              )}
-            </div>
+            <Input
+              id="title"
+              placeholder={flowName}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+            />
             <p className="text-xs text-muted-foreground">
-              Name for workflow in the marketplace
+              Title for the agent submission
             </p>
           </div>
 
-          <div className="flex gap-4">
-            <div className="space-y-2 flex-[2]">
-              <Label htmlFor="version">
-                Version <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="version"
-                placeholder="1.0.0"
-                value={version}
-                onChange={(e) => setVersion(e.target.value)}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Semantic versioning recommended (e.g., 1.0.0, 1.2.3)
-              </p>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="version">
+              Version <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="version"
+              placeholder="1.0.0"
+              value={version}
+              onChange={(e) => setVersion(e.target.value)}
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Semantic versioning recommended (e.g., 1.0.0, 1.2.3)
+            </p>
+          </div>
 
-            <div className="space-y-2 flex-[3]">
-              <Label htmlFor="tags">Tags (Optional)</Label>
-              <MultiSelect
-                options={MARKETPLACE_TAGS}
-                selected={tags}
-                onChange={setTags}
-                placeholder="Select tags..."
-              />
-              <p className="text-xs text-muted-foreground">
-                Select one or more tags to categorize your flow
-              </p>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="tags">Tags (Optional)</Label>
+            <MultiSelect
+              options={MARKETPLACE_TAGS}
+              selected={tags}
+              onChange={setTags}
+              placeholder="Select tags..."
+            />
+            <p className="text-xs text-muted-foreground">
+              Select one or more tags to categorize your agent
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -620,27 +479,34 @@ export default function PublishFlowModal({
           <div className="space-y-2">
             <Label htmlFor="agent-logo">Agent Logo (Optional)</Label>
             <div className="flex gap-4 items-start">
-              {/* Logo Preview */}
-              {!logoRemoved && (logoPreviewUrl || existingPublishedData?.flow_icon || approvedLogoBlobPath) && (
+              {/* New Logo Preview (from file upload) */}
+              {logoPreviewUrl && (
                 <div className="relative h-24 w-24 rounded-lg border bg-muted flex-shrink-0">
-                  {logoPreviewUrl ? (
-                    // Local file preview (before upload)
-                    <img
-                      src={logoPreviewUrl}
-                      alt="Agent logo preview"
-                      className="h-full w-full object-contain rounded-lg p-1"
-                    />
-                  ) : (
-                    // Existing logo (from published data or approved submission) - generate signed URL
-                    <div className="h-full w-full">
-                      <AgentLogo
-                        blobPath={existingPublishedData?.flow_icon || approvedLogoBlobPath || null}
-                        updatedAt={existingPublishedData?.flow_icon_updated_at || null}
-                        altText="Agent logo preview"
-                        className="h-full w-full"
-                      />
-                    </div>
-                  )}
+                  <img
+                    src={logoPreviewUrl}
+                    alt="Agent logo preview"
+                    className="h-full w-full object-contain rounded-lg p-1"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 p-0"
+                    onClick={handleRemoveLogo}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              {/* Existing Logo Preview (from previous submission) */}
+              {!logoPreviewUrl && existingLogoBlobPath && (
+                <div className="relative h-24 w-24 rounded-lg border bg-muted flex-shrink-0">
+                  <AgentLogo
+                    blobPath={existingLogoBlobPath}
+                    altText="Previous agent logo"
+                    className="h-full w-full"
+                  />
                   <Button
                     type="button"
                     size="sm"
@@ -654,7 +520,7 @@ export default function PublishFlowModal({
               )}
 
               {/* Upload Dropzone */}
-              {(logoRemoved || (!logoPreviewUrl && !existingPublishedData?.flow_icon && !approvedLogoBlobPath)) && (
+              {!logoPreviewUrl && !existingLogoBlobPath && (
                 <div
                   className={`flex h-24 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed transition-colors ${
                     isDragging
@@ -684,7 +550,7 @@ export default function PublishFlowModal({
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Upload a logo for your agent (PNG, JPG, JPEG). This will be displayed in the marketplace.
+              Upload a logo for your agent (PNG, JPG, JPEG). This will be displayed during review.
             </p>
           </div>
 
@@ -707,13 +573,6 @@ export default function PublishFlowModal({
                       >
                         {isUploadingSamples ? "Uploading..." : "Add File"}
                       </Button>
-                      <button
-                        type="button"
-                        className="text-sm text-primary hover:underline"
-                        onClick={() => sampleFilesInputRef.current?.click()}
-                        disabled={isUploadingSamples}
-                      >
-                      </button>
                     </div>
                     <input
                       ref={sampleFilesInputRef}
@@ -739,40 +598,6 @@ export default function PublishFlowModal({
                           </Button>
                         </div>
                       ))}
-                    </div>
-                  )}
-
-                  {/* Existing Sample Files (from published data) */}
-                  {existingFiles.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      <p className="text-xs text-muted-foreground">Existing files</p>
-                      <div className="flex flex-wrap gap-2">
-                        {existingFiles.map((f) => (
-                          <div key={`${f.sampleId}-${f.rawName}`} className="flex items-center gap-2 bg-muted px-2 py-1 rounded">
-                            <span className="text-xs">{f.displayName}</span>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0"
-                            onClick={() =>
-                              deleteInputSampleFile(
-                                { sample_id: f.sampleId, name: f.rawName },
-                                {
-                                  onError: (error: any) =>
-                                    setErrorData({
-                                      title: "Failed to remove file",
-                                      list: [error?.response?.data?.detail || error?.message || "Unknown error"],
-                                    }),
-                                }
-                              )
-                            }
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
                     </div>
                   )}
                 </div>
@@ -803,69 +628,18 @@ export default function PublishFlowModal({
                       ))}
                     </div>
                   )}
-
-                  {/* Existing Sample Texts (grouped by sample record) */}
-                  {existingSampleRecords.length > 0 && (
-                    <div className="mt-2 space-y-2">
-                      <p className="text-xs text-muted-foreground">Existing sample texts</p>
-                      {existingSampleRecords.map((rec) => (
-                        <div key={`existing-sample-texts-${rec.id}`} className="space-y-2">
-                          {(rec.sample_text ?? []).map((txt, index) => (
-                            <div key={`${rec.id}-${index}`} className="flex items-center gap-2">
-                              <Input
-                                defaultValue={txt}
-                                onBlur={(e) => {
-                                  const next = [...(rec.sample_text ?? [])];
-                                  next[index] = e.target.value;
-                                  patchInputSample(
-                                    { sample_id: rec.id, data: { sample_text: next } },
-                                    {
-                                      onError: (error: any) =>
-                                        setErrorData({
-                                          title: "Failed to update sample text",
-                                          list: [error?.response?.data?.detail || error?.message || "Unknown error"],
-                                        }),
-                                    }
-                                  );
-                                }}
-                              />
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                onClick={() =>
-                                  deleteInputSampleText(
-                                    { sample_id: rec.id, index },
-                                    {
-                                      onError: (error: any) =>
-                                        setErrorData({
-                                          title: "Failed to remove sample text",
-                                          list: [error?.response?.data?.detail || error?.message || "Unknown error"],
-                                        }),
-                                    }
-                                  )
-                                }
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
-
             </div>
           )}
 
           {validationErrors.length === 0 && (
             <div className="rounded-lg bg-muted p-4 text-sm space-y-2">
-              <p className="font-medium">What happens when you publish?</p>
+              <p className="font-medium">What happens when you submit for approval?</p>
               <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                <li>Your flow will be visible to all users in the Marketplace</li>
-                <li>To update the marketplace, you'll need to re-publish</li>
+                <li>Your flow will be sent to an admin for review</li>
+                <li>You will not be able to edit the flow while it is under review</li>
+                <li>Once approved, you can publish it to the marketplace</li>
               </ul>
             </div>
           )}
@@ -873,7 +647,7 @@ export default function PublishFlowModal({
           {validationErrors.length > 0 && (
             <div className="rounded-md bg-red-50 p-4 border border-red-200">
               <h4 className="text-sm font-semibold text-red-800 mb-2">
-                ⚠️ Cannot Publish - Please Fix These Issues:
+                Cannot Submit - Please Fix These Issues:
               </h4>
               <ul className="list-disc list-inside space-y-1">
                 {validationErrors.map((error, index) => (
@@ -895,14 +669,12 @@ export default function PublishFlowModal({
             Cancel
           </Button>
           <Button
-            onClick={handlePublish}
+            onClick={handleSubmit}
             disabled={
               isPending ||
               isUploadingLogo ||
               isUploadingSamples ||
-              validationErrors.length > 0 ||
-              isValidatingName ||
-              (nameValidation && !nameValidation.available)
+              validationErrors.length > 0
             }
           >
             {isUploadingLogo
@@ -910,8 +682,8 @@ export default function PublishFlowModal({
               : isUploadingSamples
               ? "Uploading Samples..."
               : isPending
-              ? "Publishing..."
-              : "Publish to Marketplace"}
+              ? "Submitting..."
+              : "Submit for Approval"}
           </Button>
         </div>
       </DialogContent>

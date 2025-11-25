@@ -4,6 +4,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { FlowStatusBadge, FlowStatus } from "@/components/common/flowStatusBadge";
 import FlowSettingsComponent from "@/components/core/flowSettingsComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,7 @@ import {
 import { SAVED_HOVER } from "@/constants/constants";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
+import { useGetFlowLatestStatus } from "@/controllers/API/queries/flow-versions";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
@@ -59,6 +61,10 @@ export const MenuBar = memo((): JSX.Element => {
   const measureRef = useRef<HTMLSpanElement>(null);
   const changesNotSaved = useUnsavedChanges();
   const location = useLocation();
+
+  // Fetch flow latest status for the badge
+  const { data: flowStatusData } = useGetFlowLatestStatus(currentFlowId);
+  const flowStatus = flowStatusData?.latest_status as FlowStatus;
 
   const { data: folders, isFetched: isFoldersFetched } = useGetFoldersQuery();
 
@@ -161,6 +167,7 @@ export const MenuBar = memo((): JSX.Element => {
                   >
                     {currentFlowName || "Untitled Flow"}
                   </span>
+                  <FlowStatusBadge status={flowStatus} />
                   <IconComponent
                     name="pencil"
                     className={cn(
