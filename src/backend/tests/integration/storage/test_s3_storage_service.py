@@ -250,6 +250,127 @@ class TestS3StorageServiceStreamOperations:
             async for _ in s3_storage_service.get_file_stream(test_flow_id, "no_file.txt"):
                 pass
 
+    async def test_get_file_stream_context_manager_lifecycle(self, s3_storage_service, test_flow_id):
+        """Test that context manager stays open during streaming and cleans up properly.
+
+        This test verifies that the async context manager in get_file_stream()
+        remains open throughout the entire generator lifecycle, even when yielding
+        chunks. The context should only exit after the generator is exhausted or closed.
+        """
+        file_name = "context_test.txt"
+        # Create a file large enough to require multiple chunks
+        data = b"B" * 20000  # 20KB, will be multiple chunks with default chunk_size
+
+        try:
+            await s3_storage_service.save_file(test_flow_id, file_name, data)
+
+            # Test 1: Verify we can stream all chunks (context stays open)
+            chunks = []
+            async for chunk in s3_storage_service.get_file_stream(test_flow_id, file_name, chunk_size=1024):
+                chunks.append(chunk)
+                # Context manager should still be open at this point
+                # If it closed early, we wouldn't be able to get subsequent chunks
+
+            # Verify we got all chunks
+            streamed_data = b"".join(chunks)
+            assert streamed_data == data
+            assert len(chunks) > 1, "Should have multiple chunks to test context lifecycle"
+
+        finally:
+            # Cleanup
+            with contextlib.suppress(Exception):
+                await s3_storage_service.delete_file(test_flow_id, file_name)
+
+    async def test_get_file_stream_early_termination(self, s3_storage_service, test_flow_id):
+        """Test that early termination (client disconnect) properly cleans up resources.
+
+        This test verifies that when a generator is closed early (simulating a client
+        disconnect), the context manager properly exits and resources are cleaned up.
+        """
+        file_name = "early_termination_test.txt"
+        data = b"C" * 30000  # 30KB, ensures multiple chunks
+
+        try:
+            await s3_storage_service.save_file(test_flow_id, file_name, data)
+
+            # Create generator
+            gen = s3_storage_service.get_file_stream(test_flow_id, file_name, chunk_size=1024)
+
+            # Consume only first few chunks (simulating client disconnect)
+            chunks_received = []
+            chunk_count = 0
+            try:
+                async for chunk in gen:
+                    chunks_received.append(chunk)
+                    chunk_count += 1
+                    if chunk_count >= 3:  # Only consume first 3 chunks
+                        # Close generator early (simulating client disconnect)
+                        await gen.aclose()
+                        break
+            finally:
+                # Ensure generator is closed even if break doesn't trigger aclose
+                try:
+                    await gen.aclose()
+                except (StopAsyncIteration, RuntimeError):
+                    pass  # Generator already closed
+
+            # Verify we got partial data
+            assert len(chunks_received) == 3, "Should have received exactly 3 chunks before termination"
+            partial_data = b"".join(chunks_received)
+            assert len(partial_data) < len(data), "Should have less data than full file"
+
+            # Verify we can create a new generator and stream the full file
+            # (This confirms the previous generator cleaned up properly)
+            full_chunks = []
+            async for chunk in s3_storage_service.get_file_stream(test_flow_id, file_name, chunk_size=1024):
+                full_chunks.append(chunk)
+
+            full_data = b"".join(full_chunks)
+            assert full_data == data, "Should be able to stream full file after early termination"
+
+        finally:
+            # Cleanup
+            with contextlib.suppress(Exception):
+                await s3_storage_service.delete_file(test_flow_id, file_name)
+
+    async def test_get_file_stream_multiple_concurrent_streams(self, s3_storage_service, test_flow_id):
+        """Test that multiple concurrent streams work correctly with independent context managers.
+
+        This test verifies that each generator has its own context manager lifecycle
+        and they don't interfere with each other.
+        """
+        import asyncio
+
+        file_name = "concurrent_test.txt"
+        data = b"D" * 15000  # 15KB
+
+        try:
+            await s3_storage_service.save_file(test_flow_id, file_name, data)
+
+            # Create multiple generators concurrently
+            gen1 = s3_storage_service.get_file_stream(test_flow_id, file_name, chunk_size=1024)
+            gen2 = s3_storage_service.get_file_stream(test_flow_id, file_name, chunk_size=1024)
+
+            # Consume from both generators concurrently using asyncio.gather
+            async def consume_gen(gen, chunks_list):
+                async for chunk in gen:
+                    chunks_list.append(chunk)
+
+            chunks1 = []
+            chunks2 = []
+            await asyncio.gather(consume_gen(gen1, chunks1), consume_gen(gen2, chunks2))
+
+            # Verify both streams got complete data
+            data1 = b"".join(chunks1)
+            data2 = b"".join(chunks2)
+            assert data1 == data, "First stream should have complete data"
+            assert data2 == data, "Second stream should have complete data"
+
+        finally:
+            # Cleanup
+            with contextlib.suppress(Exception):
+                await s3_storage_service.delete_file(test_flow_id, file_name)
+
 
 @pytest.mark.asyncio
 class TestS3StorageServiceListOperations:
