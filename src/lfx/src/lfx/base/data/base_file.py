@@ -766,7 +766,7 @@ class BaseFileComponent(Component, ABC):
             raise ValueError(msg)
 
     def _filter_and_mark_files(self, files: list[BaseFile]) -> list[BaseFile]:
-        """Validate file types and mark files for removal.
+        """Validate file types and filter out invalid files.
 
         Args:
             files (list[BaseFile]): List of BaseFile instances.
@@ -777,20 +777,23 @@ class BaseFileComponent(Component, ABC):
         Raises:
             ValueError: If unsupported files are encountered and `ignore_unsupported_extensions` is False.
         """
+        settings = get_settings_service().settings
+        is_s3_storage = settings.storage_type == "s3"
         final_files = []
         ignored_files = []
 
         for file in files:
+            # For local storage, verify the path is actually a file
             # For S3 storage, paths are virtual keys that don't exist locally
-            # Skip filesystem checks and only validate extensions
-            if get_settings_service().settings.storage_type != "s3" and not file.path.is_file():
+            if not is_s3_storage and not file.path.is_file():
                 self.log(f"Not a file: {file.path.name}")
                 continue
 
             # Validate file extension
-            extension = file.path.suffix[1:].lower()
+            extension = file.path.suffix[1:].lower() if file.path.suffix else ""
             if extension not in self.valid_extensions:
-                if get_settings_service().settings.storage_type != "s3" and self.ignore_unsupported_extensions:
+                # For local storage, optionally ignore unsupported extensions
+                if not is_s3_storage and self.ignore_unsupported_extensions:
                     ignored_files.append(file.path.name)
                     continue
 

@@ -275,3 +275,52 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             # Should only have .csv once, not .csv.csv
             assert "test_output.csv" in result.text
             assert "test_output.csv.csv" not in result.text
+
+    @pytest.mark.asyncio
+    async def test_append_mode_txt_file(self, component_class):
+        """Test append mode for text files."""
+        from tempfile import NamedTemporaryFile
+
+        # Create a temporary file with existing content
+        with NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as tmp_file:
+            tmp_file.write("Existing content")
+            tmp_path = Path(tmp_file.name)
+
+        try:
+            component = component_class(_user_id=str(uuid4()))
+            component.set_attributes(
+                {
+                    "input": Message(text="New content"),
+                    "file_name": tmp_path.stem,  # Use filename without extension
+                    "local_format": "txt",
+                    "storage_location": [{"name": "Local"}],
+                    "append_mode": True,
+                }
+            )
+
+            # Mock the path resolution to return our temp file
+            with (
+                patch("lfx.components.files_and_knowledge.save_file.Path") as mock_path_class,
+                patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
+                patch("lfx.services.deps.session_scope") as mock_session,
+                patch(
+                    "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
+                ) as mock_get_user,
+            ):
+                # Make Path() return our temp file path
+                mock_path_class.return_value = tmp_path
+                mock_db = AsyncMock()
+                mock_session.return_value.__aenter__.return_value = mock_db
+                mock_get_user.return_value = MagicMock()
+                mock_upload.return_value = tmp_path.name
+
+                result = await component.save_to_file()
+
+                # Verify append happened
+                assert "appended to" in result.text
+                # Verify the file contains both old and new content
+                assert tmp_path.read_text(encoding="utf-8") == "Existing content\nNew content"
+        finally:
+            # Clean up temp file
+            if tmp_path.exists():
+                tmp_path.unlink()
