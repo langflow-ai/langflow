@@ -29,9 +29,11 @@ export default function DeleteConfirmationModal({
 }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild={!children ? true : asChild} tabIndex={-1}>
-        {children ?? <></>}
-      </DialogTrigger>
+      {children && (
+        <DialogTrigger asChild={!children ? true : asChild} tabIndex={-1}>
+          {children}
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>

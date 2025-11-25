@@ -184,44 +184,6 @@ const HeaderComponent = ({
                 </div>
               </div>
               <div className="flex items-center">
-                <div
-                  className={cn(
-                    "flex w-0 items-center gap-2 overflow-hidden opacity-0 transition-all duration-300",
-                    selectedFlows.length > 0 && "w-36 opacity-100",
-                  )}
-                >
-                  <Button
-                    variant="outline"
-                    size="iconMd"
-                    className="h-8 w-8"
-                    data-testid="download-bulk-btn"
-                    onClick={handleDownload}
-                    loading={isDownloading}
-                  >
-                    <ForwardedIconComponent name="Download" />
-                  </Button>
-
-                  <DeleteConfirmationModal
-                    onConfirm={handleDelete}
-                    description={"flow" + (selectedFlows.length > 1 ? "s" : "")}
-                    note={
-                      "and " +
-                      (selectedFlows.length > 1 ? "their" : "its") +
-                      " message history"
-                    }
-                  >
-                    <Button
-                      variant="destructive"
-                      size="iconMd"
-                      className="px-2.5 !text-mmd"
-                      data-testid="delete-bulk-btn"
-                      loading={isDeleting}
-                    >
-                      <ForwardedIconComponent name="Trash2" />
-                      Delete
-                    </Button>
-                  </DeleteConfirmationModal>
-                </div>
                 <ShadTooltip content="New Flow" side="bottom">
                   <Button
                     variant="default"
