@@ -69,7 +69,15 @@ async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser,
     return file
 
 
-async def save_file_routine(file, storage_service, current_user: CurrentActiveUser, file_content=None, file_name=None):
+async def save_file_routine(
+    file,
+    storage_service,
+    current_user: CurrentActiveUser,
+    file_content=None,
+    file_name=None,
+    *,
+    append: bool = False,
+):
     """Routine to save the file content to the storage service."""
     file_id = uuid.uuid4()
 
@@ -79,7 +87,7 @@ async def save_file_routine(file, storage_service, current_user: CurrentActiveUs
         file_name = file.filename
 
     # Save the file using the storage service.
-    await storage_service.save_file(flow_id=str(current_user.id), file_name=file_name, data=file_content)
+    await storage_service.save_file(flow_id=str(current_user.id), file_name=file_name, data=file_content, append=append)
 
     return file_id, file_name
 
@@ -92,6 +100,8 @@ async def upload_user_file(
     current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
+    *,
+    append: bool = False,
 ) -> UploadFileResponse:
     """Upload a file for the current user and track it in the database."""
     # Get the max allowed file size from settings (in MB)
@@ -124,12 +134,25 @@ async def upload_user_file(
         mcp_file = await get_mcp_file(current_user)
         mcp_file_ext = await get_mcp_file(current_user, extension=True)
 
+        # Initialize existing_file for append mode
+        existing_file = None
+
         if new_filename == mcp_file_ext:
             # Check if an existing record exists; if so, delete it to replace with the new one
             existing_mcp_file = await get_file_by_name(mcp_file, current_user, session)
             if existing_mcp_file:
                 await delete_file(existing_mcp_file.id, current_user, session, storage_service)
             unique_filename = new_filename
+        elif append:
+            # In append mode, check if file exists and reuse the same filename
+            existing_file = await get_file_by_name(root_filename, current_user, session)
+            if existing_file:
+                # File exists, append to it by reusing the same filename
+                # Extract the filename from the path
+                unique_filename = existing_file.path.split("/")[-1] if "/" in existing_file.path else existing_file.path
+            else:
+                # File doesn't exist yet, create new one with extension
+                unique_filename = f"{root_filename}.{file_extension}" if file_extension else root_filename
         else:
             # For normal files, ensure unique name by appending a count if necessary
             stmt = select(UserFile).where(
@@ -156,7 +179,7 @@ async def upload_user_file(
         # Read file content and save with unique filename
         try:
             file_id, stored_file_name = await save_file_routine(
-                file, storage_service, current_user, file_name=unique_filename
+                file, storage_service, current_user, file_name=unique_filename, append=append
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error saving file: {e}") from e
@@ -167,18 +190,26 @@ async def upload_user_file(
             file_name=stored_file_name,
         )
 
-        # Create a new file record
-        new_file = UserFile(
-            id=file_id,
-            user_id=current_user.id,
-            name=root_filename,
-            path=f"{current_user.id}/{stored_file_name}",
-            size=file_size,
-        )
-        session.add(new_file)
+        # In append mode, update existing file record if it exists
+        if append and existing_file:
+            existing_file.size = file_size
+            session.add(existing_file)
+            await session.commit()
+            await session.refresh(existing_file)
+            new_file = existing_file
+        else:
+            # Create a new file record
+            new_file = UserFile(
+                id=file_id,
+                user_id=current_user.id,
+                name=root_filename,
+                path=f"{current_user.id}/{stored_file_name}",
+                size=file_size,
+            )
+            session.add(new_file)
 
-        await session.commit()
-        await session.refresh(new_file)
+            await session.commit()
+            await session.refresh(new_file)
     except Exception as e:
         # Optionally, you could also delete the file from disk if the DB insert fails.
         raise HTTPException(status_code=500, detail=f"Database error: {e}") from e
