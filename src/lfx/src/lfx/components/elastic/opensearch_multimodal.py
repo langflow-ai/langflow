@@ -750,10 +750,10 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 msg = (
                     f"Embedding model '{target_model_name}' not found in available embeddings.\n\n"
                     f"Available embeddings:\n" + "\n".join(available_info) + "\n\n"
-                    f"Please set 'embedding_model_name' to one of the identifier values shown above "
-                    f"(use the value after the '=' sign, without quotes).\n"
-                    f"For duplicate deployments, use the 'combined' format.\n"
-                    f"Or leave it empty to use the first embedding."
+                    "Please set 'embedding_model_name' to one of the identifier values shown above "
+                    "(use the value after the '=' sign, without quotes).\n"
+                    "For duplicate deployments, use the 'combined' format.\n"
+                    "Or leave it empty to use the first embedding."
                 )
                 raise ValueError(msg)
         else:
@@ -1255,22 +1255,22 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
 
                     try:
                         if hasattr(emb_obj, "deployment"):
-                            setattr(emb_obj, "deployment", model_name)
+                            emb_obj.deployment = model_name
                         if hasattr(emb_obj, "model"):
-                            setattr(emb_obj, "model", model_name)
+                            emb_obj.model = model_name
                         if hasattr(emb_obj, "dimensions"):
-                            setattr(emb_obj, "dimensions", None)
+                            emb_obj.dimensions = None
                         vec = emb_obj.embed_query(q)
                         query_embeddings[model_name] = vec
                         logger.info(f"Generated embedding for model: {model_name} (using dynamic model switching)")
                     finally:
                         # Restore original attributes
                         if hasattr(emb_obj, "deployment"):
-                            setattr(emb_obj, "deployment", original_deployment_attr)
+                            emb_obj.deployment = original_deployment_attr
                         if hasattr(emb_obj, "model"):
-                            setattr(emb_obj, "model", original_model_attr)
+                            emb_obj.model = original_model_attr
                         if hasattr(emb_obj, "dimensions"):
-                            setattr(emb_obj, "dimensions", original_dimensions_attr)
+                            emb_obj.dimensions = original_dimensions_attr
             except Exception as e:
                 logger.warning(f"Failed to generate embedding for {model_name}: {e}")
 
