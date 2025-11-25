@@ -806,3 +806,29 @@ async def get_starter_project(client, active_user):  # noqa: ARG001
         # Clean up
         await session.delete(new_flow)
         await session.commit()
+
+
+@pytest.fixture
+async def test_flow(client, logged_in_headers):
+    """Create a simple test flow for background agent testing."""
+    flow_data = {
+        "name": "Test Flow for Background Agent",
+        "description": "A simple test flow",
+        "data": {"nodes": [], "edges": []},
+    }
+    response = await client.post("api/v1/flows/", json=flow_data, headers=logged_in_headers)
+    assert response.status_code == 201
+    flow = response.json()
+    
+    # Convert to an object-like structure for easier access
+    class FlowObject:
+        def __init__(self, data):
+            self.id = data["id"]
+            self.name = data["name"]
+            self.user_id = data["user_id"]
+            self.data = data
+    
+    yield FlowObject(flow)
+    
+    # Clean up
+    await client.delete(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)

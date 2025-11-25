@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
+    from langflow.services.background_agent.service import BackgroundAgentService
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
@@ -266,3 +267,14 @@ def get_queue_service() -> JobQueueService:
     from langflow.services.job_queue.factory import JobQueueServiceFactory
 
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
+
+
+def get_background_agent_service():
+    """Retrieves the BackgroundAgentService instance from the service manager.
+
+    Returns:
+        BackgroundAgentService: The BackgroundAgentService instance.
+    """
+    from langflow.services.background_agent.factory import BackgroundAgentServiceFactory
+
+    return get_service(ServiceType.BACKGROUND_AGENT_SERVICE, BackgroundAgentServiceFactory())
