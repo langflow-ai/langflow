@@ -160,6 +160,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         except Exception:  # noqa: BLE001
             logger.exception("Error fetching models")
             return WATSONX_EMBEDDING_MODEL_NAMES
+
     async def fetch_ollama_models(self) -> list[str]:
         try:
             return await get_ollama_models(
@@ -170,9 +171,9 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 json_capabilities_key=JSON_CAPABILITIES_KEY,
             )
         except Exception:  # noqa: BLE001
-
             logger.exception("Error fetching models")
             return []
+
     async def build_embeddings(self) -> Embeddings:
         provider = self.provider
         model = self.model

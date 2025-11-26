@@ -642,13 +642,13 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
     def build_vector_store(self) -> OpenSearch:
         # Return raw OpenSearch client as our "vector store."
         client = self.build_client()
-        
+
         # Check if we're in ingestion-only mode (no search query)
         has_search_query = bool((self.search_query or "").strip())
         if not has_search_query:
             logger.debug("🔄 Ingestion-only mode activated: search operations will be skipped")
             logger.debug("Starting ingestion mode...")
-        
+
         logger.warning(f"Embedding: {self.embedding}")
         self._add_documents_to_vector_store(client=client)
         return client
@@ -669,9 +669,13 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         logger.debug("[INGESTION] _add_documents_to_vector_store called")
         # Convert DataFrame to Data if needed using parent's method
         self.ingest_data = self._prepare_ingest_data()
-        
-        logger.debug(f"[INGESTION] ingest_data type: {type(self.ingest_data)}, length: {len(self.ingest_data) if self.ingest_data else 0}")
-        logger.debug(f"[INGESTION] ingest_data content: {self.ingest_data[:2] if self.ingest_data and len(self.ingest_data) > 0 else 'empty'}")
+
+        logger.debug(
+            f"[INGESTION] ingest_data type: {type(self.ingest_data)}, length: {len(self.ingest_data) if self.ingest_data else 0}"
+        )
+        logger.debug(
+            f"[INGESTION] ingest_data content: {self.ingest_data[:2] if self.ingest_data and len(self.ingest_data) > 0 else 'empty'}"
+        )
 
         docs = self.ingest_data or []
         if not docs:
@@ -681,13 +685,13 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         if not self.embedding:
             msg = "Embedding handle is required to embed documents."
             raise ValueError(msg)
-        
+
         # Normalize embedding to list first
         embeddings_list = self.embedding if isinstance(self.embedding, list) else [self.embedding]
-        
+
         # Filter out None values (fail-safe mode) - do this BEFORE checking if empty
         embeddings_list = [e for e in embeddings_list if e is not None]
-        
+
         # NOW check if we have any valid embeddings left after filtering
         if not embeddings_list:
             logger.warning("All embeddings returned None (fail-safe mode enabled). Skipping document ingestion.")
@@ -974,7 +978,9 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         )
         self.log(metadatas)
 
-        logger.info(f"✓ Ingestion complete: Successfully indexed {len(return_ids)} documents with model '{embedding_model}'")
+        logger.info(
+            f"✓ Ingestion complete: Successfully indexed {len(return_ids)} documents with model '{embedding_model}'"
+        )
         self.log(f"Successfully indexed {len(return_ids)} documents with model {embedding_model}.")
 
     # ---------- helpers for filters ----------
@@ -1190,7 +1196,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         if not self.embedding:
             msg = "Embedding is required to run hybrid search (KNN + keyword)."
             raise ValueError(msg)
-        
+
         # Check if embedding is None (fail-safe mode)
         if self.embedding is None or (isinstance(self.embedding, list) and all(e is None for e in self.embedding)):
             logger.error("Embedding returned None (fail-safe mode enabled). Cannot perform search.")
@@ -1213,9 +1219,11 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         embeddings_list = self.embedding if isinstance(self.embedding, list) else [self.embedding]
         # Filter out None values (fail-safe mode)
         embeddings_list = [e for e in embeddings_list if e is not None]
-        
+
         if not embeddings_list:
-            logger.error("No valid embeddings available after filtering None values (fail-safe mode). Cannot perform search.")
+            logger.error(
+                "No valid embeddings available after filtering None values (fail-safe mode). Cannot perform search."
+            )
             return []
 
         # Create a comprehensive map of model names to embedding objects
@@ -1561,13 +1569,13 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             # Always build/cache the vector store to ensure ingestion happens
             if self._cached_vector_store is None:
                 self.build_vector_store()
-            
+
             # Only perform search if query is provided
             search_query = (self.search_query or "").strip()
             if not search_query:
                 self.log("No search query provided - ingestion completed, returning empty results")
                 return []
-            
+
             # Perform search with the provided query
             raw = self.search(search_query)
             return [Data(text=hit["page_content"], **hit["metadata"]) for hit in raw]
