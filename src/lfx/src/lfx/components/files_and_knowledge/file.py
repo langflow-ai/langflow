@@ -212,7 +212,7 @@ class FileComponent(BaseFileComponent):
 
         if file_names:
             files_str = ", ".join(file_names)
-            return f"{base_description} Available files: {files_str}. Call this tool to read the content of these files."
+            return f"{base_description} Available files: {files_str}. Call this tool to read these files."
 
         return base_description
 
@@ -234,8 +234,6 @@ class FileComponent(BaseFileComponent):
         class EmptySchema(BaseModel):
             """No parameters required - uses pre-uploaded files."""
 
-            pass
-
         async def read_files_tool() -> str:
             """Read the content of uploaded files."""
             try:
@@ -245,7 +243,7 @@ class FileComponent(BaseFileComponent):
                 if hasattr(result, "text"):
                     return result.text
                 return str(result)
-            except Exception as e:
+            except (FileNotFoundError, ValueError, OSError, RuntimeError) as e:
                 return f"Error reading files: {e}"
 
         description = self.get_tool_description()
