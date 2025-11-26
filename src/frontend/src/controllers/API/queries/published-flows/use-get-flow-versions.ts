@@ -3,11 +3,11 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 
 export interface PublishedFlowVersion {
-  id: number;
+  id: number | string;  // number for old published_flow_version, string (UUID) for flow_version
   version: string;
-  flow_id_cloned_to: string;
+  flow_id_cloned_to: string | null;
   flow_id_cloned_from: string;
-  published_flow_id: string;
+  published_flow_id: string | null;
   flow_name: string;
   flow_icon: string | null;
   description: string | null;
@@ -17,6 +17,7 @@ export interface PublishedFlowVersion {
   published_by: string;
   published_at: string;
   created_at: string;
+  status_name?: string | null;  // Status from flow_status table (Published, Approved, etc.)
 }
 
 export const useGetFlowVersions = (flowId: string | undefined) => {

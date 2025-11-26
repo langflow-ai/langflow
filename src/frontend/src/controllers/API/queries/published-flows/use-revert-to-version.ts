@@ -5,7 +5,7 @@ import useAlertStore from "@/stores/alertStore";
 
 export interface RevertToVersionParams {
   flowId: string;
-  versionId: number;
+  versionId: number | string;  // number for old published_flow_version, string (UUID) for flow_version
 }
 
 export interface RevertToVersionResponse {
