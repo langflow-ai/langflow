@@ -14,7 +14,7 @@ async def test_event_recorder_captures_all_mutations():
     from lfx.debug.event_recorder import record_graph_with_events
     from lfx.graph.graph.base import Graph
 
-    test_file = Path("src/backend/tests/data/LoopTest.json")
+    test_file = Path(__file__).parent.parent.parent.parent / "data" / "LoopTest.json"
     data = json.loads(test_file.read_text())
 
     graph = Graph.from_payload(data["data"])
@@ -41,7 +41,7 @@ async def test_queue_evolution_tracking():
     from lfx.debug.event_recorder import record_graph_with_events
     from lfx.graph.graph.base import Graph
 
-    test_file = Path("src/backend/tests/data/LoopTest.json")
+    test_file = Path(__file__).parent.parent.parent.parent / "data" / "LoopTest.json"
     data = json.loads(test_file.read_text())
 
     graph = Graph.from_payload(data["data"])
