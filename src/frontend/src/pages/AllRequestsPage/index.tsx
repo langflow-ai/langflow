@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -10,11 +9,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -30,7 +24,6 @@ import FlowPagination from "@/pages/MarketplacePage/components/FlowPagination";
 export default function AllRequestsPage() {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Pagination state
   const [pageIndex, setPageIndex] = useState(1);
@@ -44,7 +37,6 @@ export default function AllRequestsPage() {
   const handleStatusFilterChange = (value: string) => {
     setStatusFilter(value);
     setPageIndex(1); // Reset to first page
-    setIsFilterOpen(false); // Close popover
   };
 
   // Pagination handlers
@@ -209,38 +201,17 @@ export default function AllRequestsPage() {
         </h1>
 
         {/* Status Filter */}
-        <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Filter className="h-4 w-4" />
-              Filter
-              {statusFilter !== "all" && (
-                <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
-                  1
-                </span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-64">
-            <div className="space-y-2">
-              <div className="text-base font-semibold">Status</div>
-              <Select
-                value={statusFilter}
-                onValueChange={handleStatusFilterChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="Submitted">Submitted</SelectItem>
-                  <SelectItem value="Approved">Approved</SelectItem>
-                  <SelectItem value="Rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </PopoverContent>
-        </Popover>
+        <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="Submitted">Submitted</SelectItem>
+            <SelectItem value="Approved">Approved</SelectItem>
+            <SelectItem value="Rejected">Rejected</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex flex-col gap-4">
