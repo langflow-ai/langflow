@@ -56,9 +56,7 @@ async def handle_global_call_tool(name: str, arguments: dict) -> list[types.Text
 
 
 sse = SseServerTransport("/api/v1/mcp/")
-# TODO: create environment variable for stateless flag
-streamable_http_manager = StreamableHTTPSessionManager(server, stateless=True)
-
+streamable_http_manager = StreamableHTTPSessionManager(server)
 
 def find_validation_error(exc):
     """Searches for a pydantic.ValidationError in the exception chain."""
@@ -156,10 +154,7 @@ async def _dispatch_streamable_http(
 
     return Response()
 
-
 streamable_http_methods = ["GET", "POST", "DELETE"]
-
-
 @router.api_route("/streamable", methods=streamable_http_methods)
 @router.api_route("/streamable/", methods=streamable_http_methods)
 async def handle_streamable_http(request: Request, current_user: CurrentActiveMCPUser):

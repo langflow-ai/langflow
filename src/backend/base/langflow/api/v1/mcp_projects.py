@@ -77,6 +77,7 @@ DEFAULT_NOTIFICATION_OPTIONS = NotificationOptions(
 )
 
 
+
 async def verify_project_auth(
     db: AsyncSession,
     project_id: UUID,
@@ -211,6 +212,7 @@ def get_project_sse(project_id: UUID | None) -> SseServerTransport:
     return project_sse_transports[project_id_str]
 
 
+
 async def _build_project_tools_response(
     project_id: UUID,
     current_user: CurrentActiveMCPUser,
@@ -316,19 +318,12 @@ async def im_alive(project_id: str):  # noqa: ARG001
     return Response()
 
 
-@router.head("/{project_id}/streamable", include_in_schema=False)
-async def streamable_health(project_id: UUID):  # noqa: ARG001
-    return Response()
-
-
 async def _dispatch_project_streamable_http(
     project_id: UUID,
     request: Request,
     current_user: User,
 ) -> Response:
     """Common handler for project-specific Streamable HTTP requests."""
-    # Lazily initialize the project's Streamable HTTP manager
-    # to pick up new projects as they are created.
     project_server = get_project_mcp_server(project_id)
     await project_server.ensure_session_manager_running()
 
@@ -342,7 +337,9 @@ async def _dispatch_project_streamable_http(
     except HTTPException:
         raise
     except Exception as exc:
-        await logger.aexception(f"Error handling Streamable HTTP request for project {project_id}: {exc!s}")
+        await logger.aexception(
+            f"Error handling Streamable HTTP request for project {project_id}: {exc!s}"
+        )
         raise HTTPException(status_code=500, detail="Internal server error in project MCP transport") from exc
     finally:
         current_request_variables_ctx.reset(request_vars_token)
@@ -429,33 +426,45 @@ async def _handle_project_sse_messages(
         current_request_variables_ctx.reset(req_vars_token)
 
 
-# legacy SSE transport
-project_messages_methods = ["POST", "DELETE"]
-
-
-@router.api_route("/{project_id}", methods=project_messages_methods)
-@router.api_route("/{project_id}/", methods=project_messages_methods)
+@router.api_route("/{project_id}", methods=["POST", "DELETE"])
 async def handle_project_messages(
     project_id: UUID,
     request: Request,
     current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
     """Handle POST/DELETE messages for a project-specific MCP server."""
-    return await _handle_project_sse_messages(project_id, request, current_user)
+    if request.query_params.get("session_id"):
+        return await _handle_project_sse_messages(project_id, request, current_user)
+    return await _dispatch_project_streamable_http(project_id, request, current_user)
 
 
-# Streamable HTTP transport
-streamable_http_methods = ["GET", "POST", "DELETE"]
+@router.api_route("/{project_id}/", methods=["POST", "DELETE"])
+async def handle_project_messages_with_slash(
+    project_id: UUID,
+    request: Request,
+    current_user: Annotated[User, Depends(verify_project_auth_conditional)],
+):
+    """Handle messages for a project-specific MCP server with trailing slash."""
+    return await handle_project_messages(project_id, request, current_user)
 
 
-@router.api_route("/{project_id}/streamable", methods=streamable_http_methods)
-@router.api_route("/{project_id}/streamable/", methods=streamable_http_methods)
+@router.api_route("/{project_id}/streamable", methods=["GET", "POST", "DELETE"])
 async def handle_project_streamable_http(
     project_id: UUID,
     request: Request,
     current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
     """Handle Streamable HTTP connections for a specific project."""
+    return await _dispatch_project_streamable_http(project_id, request, current_user)
+
+
+@router.api_route("/{project_id}/streamable/", methods=["GET", "POST", "DELETE"])
+async def handle_project_streamable_http_with_slash(
+    project_id: UUID,
+    request: Request,
+    current_user: Annotated[User, Depends(verify_project_auth_conditional)],
+):
+    """Handle Streamable HTTP connections for trailing slash routes."""
     return await _dispatch_project_streamable_http(project_id, request, current_user)
 
 

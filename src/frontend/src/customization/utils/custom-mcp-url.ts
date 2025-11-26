@@ -10,7 +10,7 @@ type ComposerConnectionOptions = {
 export const customGetMCPUrl = (
   projectId: string,
   options: ComposerConnectionOptions = {},
-  transport: MCPTransport = "streamablehttp",
+  transport: MCPTransport = "sse",
 ) => {
   const { useComposer, streamableHttpUrl, legacySseUrl } = options;
 
