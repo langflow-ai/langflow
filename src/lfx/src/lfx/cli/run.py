@@ -8,12 +8,6 @@ from pathlib import Path
 import typer
 from asyncer import syncify
 
-from lfx.cli.script_loader import (
-    extract_structured_result,
-    extract_text_from_result,
-    find_graph_variable,
-    load_graph_from_script,
-)
 from lfx.cli.validation import validate_global_variables_for_env
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
@@ -213,6 +207,8 @@ async def run(
             if verbosity > 0:
                 typer.echo(f"Analyzing {file_type}: {script_path}", file=sys.stderr)
             if file_extension == ".py":
+                from lfx.cli.script_loader import find_graph_variable, load_graph_from_script
+
                 graph_info = find_graph_variable(script_path)
                 if not graph_info:
                     error_msg = (
@@ -454,6 +450,8 @@ async def run(
                 for ct in component_timings
             ],
         }
+
+    from lfx.cli.script_loader import extract_structured_result, extract_text_from_result
 
     if output_format == "json":
         result_data = extract_structured_result(results)
