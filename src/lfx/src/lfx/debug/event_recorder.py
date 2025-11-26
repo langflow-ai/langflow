@@ -29,21 +29,26 @@ class EventBasedRecording:
     component_executions: list[str] = field(default_factory=list)  # Vertex IDs
 
     def save(self, file_path: str | Any) -> None:
-        """Save recording to file.
+        """Save recording to file using JSON serialization.
 
         Args:
-            file_path: Path to save the recording
+            file_path: Path to save the recording (recommended: .json extension)
         """
-        import pickle
+        import json
         from pathlib import Path
 
-        with Path(file_path).open("wb") as f:
-            pickle.dump(self, f)
+        data = {
+            "flow_name": self.flow_name,
+            "events": [e.to_dict() for e in self.events],
+            "component_executions": self.component_executions,
+        }
+        with Path(file_path).open("w") as f:
+            json.dump(data, f, indent=2)
         print(f"✅ Saved {len(self.events)} events to {file_path}")
 
     @classmethod
     def load(cls, file_path: str | Any) -> EventBasedRecording:
-        """Load a saved recording.
+        """Load a saved recording from JSON file.
 
         Args:
             file_path: Path to the saved recording
@@ -51,11 +56,20 @@ class EventBasedRecording:
         Returns:
             EventBasedRecording instance
         """
-        import pickle
+        import json
         from pathlib import Path
 
-        with Path(file_path).open("rb") as f:
-            recording = pickle.load(f)  # noqa: S301
+        from lfx.debug.events import GraphMutationEvent
+
+        with Path(file_path).open() as f:
+            data = json.load(f)
+
+        events = [GraphMutationEvent.from_dict(e) for e in data["events"]]
+        recording = cls(
+            flow_name=data["flow_name"],
+            events=events,
+            component_executions=data["component_executions"],
+        )
         print(f"✅ Loaded {len(recording.events)} events from {file_path}")
         return recording
 
