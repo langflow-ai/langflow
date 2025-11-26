@@ -1,5 +1,4 @@
 from typing import Any
-
 import requests
 from ibm_watsonx_ai import APIClient, Credentials
 from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
@@ -19,7 +18,7 @@ class WatsonxEmbeddingsComponentCPD(LCEmbeddingsModel):
     icon = "WatsonxAI"
     name = "WatsonxEmbeddingsComponent"
 
-    # These LLMs are used only for SaaS - On-Prem models as input field according to what has been deployed on-prem
+ # These LLMs are used only for SaaS - On-Prem models as input field according to what has been deployed on-prem
     _default_models = [
         "ibm/slate-30m-english-rtrvr-v2",
         "ibm/slate-125m-english-rtrvr-v2",
@@ -88,8 +87,8 @@ class WatsonxEmbeddingsComponentCPD(LCEmbeddingsModel):
         ),
     ]
 
-    @staticmethod
-    def fetch_models(base_url: str) -> list[str]:
+    @classmethod
+    def fetch_models(cls, base_url: str) -> list[str]:
         """Fetch available models (SaaS only)."""
         try:
             endpoint = f"{base_url}/ml/v1/foundation_model_specs"
@@ -99,11 +98,11 @@ class WatsonxEmbeddingsComponentCPD(LCEmbeddingsModel):
             data = response.json()
             models = [model["model_id"] for model in data.get("resources", [])]
             return sorted(models)
-        except Exception:
+        except (requests.RequestException, KeyError, ValueError) as e:
             logger.exception("Could not fetch models from SaaS API.")
-            return WatsonxEmbeddingsComponent._default_models
+            return cls._default_models
 
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+    def update_build_config(self, build_config: dotdict, _field_value: Any, field_name: str | None = None):
         """Update model dropdown when connection type changes."""
         deployment = build_config.deployment_type.value
 
@@ -129,7 +128,7 @@ class WatsonxEmbeddingsComponentCPD(LCEmbeddingsModel):
                     build_config.model_name.options = models
                     build_config.model_name.value = models[0] if models else None
                     logger.info(f"Loaded {len(models)} models from SaaS.")
-                except Exception:
+                except (requests.RequestException, KeyError, ValueError) as e:
                     logger.exception("Error loading SaaS models.")
             else:
                 # On-Prem fallback – static model list
@@ -149,7 +148,7 @@ class WatsonxEmbeddingsComponentCPD(LCEmbeddingsModel):
                     url=self.url,
                     username=username,
                     password=password,
-                    instance_id="openshift",
+                    instance_id="openshift",  
                     auth_type="cpd",
                 )
             except TypeError:
