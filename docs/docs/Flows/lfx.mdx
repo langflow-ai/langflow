@@ -214,16 +214,35 @@ Users who call your endpoint don't need to install Langflow or configure their o
 
 To make your server publicly accessible, use a [tunneling service like ngrok](/deployment-public-server), or deploy to a public cloud provider such as [DigitalOcean](/deployment-nginx-ssl).
 
+### LFX response schema
+
+The LFX server's response schema is different from the Langflow API `/run` endpoint's schema.
+Requests to the LFX server's `/flows/{flow_id}/run` endpoint return the following fields:
+
+```json
+{
+  "result": "string",      // Output result from the flow execution
+  "success": true,         // Whether execution was successful
+  "logs": "string",        // Captured logs from execution
+  "type": "message",       // Type of result
+  "component": "string"    // The component that generated the result (for example, "Chat Output")
+}
+```
+
+To view the LFX server's API docs and schema, see the `/docs` endpoint at `http://localhost:8000/docs`.
+
 ### LFX serve options
 
-| Option                                 | Description                                                                                   |
-|-----------------------------------------|-----------------------------------------------------------------------------------------------|
-| `--check-variables`/`--no-check-variables` | Check global variables for environment variables.                                             |
-| `--env-file`                           | The path to the `.env` file.                                                                   |
-| `--host`, `-h`                         | Host to bind server. Default: `127.0.0.1` (localhost only). Use `0.0.0.0` to make it publicly accessible from other machines. |
-| `--log-level`                          | Set logging level. Options are `debug`, `info`, `warning`, `error`, or `critical`.            |
-| `--port`, `-p`                         | Port to bind server. Default:`8000`.                                                          |
-| `--verbose`, `-v`                      | Print diagnostic output.                                                                    |
+| Option                                      | Description                                                                                                          |
+|---------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| `--check-variables` / `--no-check-variables` | Check global variables for environment compatibility. Default: `--check-variables`.                                 |
+| `--env-file`                                | Path to the `.env` file containing environment variables.                                                           |
+| `--host`, `-h`                              | Host to bind the server to. Default: `127.0.0.1`.                                                                   |
+| `--log-level`                               | Logging level. One of: `debug`, `info`, `warning`, `error`, `critical`. Default: `warning`.                         |
+| `--port`, `-p`                              | Port to bind the server to. Default: `8000`.                                                                        |
+| `--verbose`, `-v`                           | Show diagnostic output and execution details.                                                                       |
+| `--flow-json`                               | Read inline flow JSON content as a string, e.g. `uv run lfx serve --flow-json '{...}'` where `{...}` is the flow JSON definition. |
+| `--stdin`                                   | Read JSON flow content from `stdin`, e.g. `cat flow.json \| uv run lfx serve --stdin`.                              |
 
 ## Run the simple agent flow with `lfx run` {#run}
 
