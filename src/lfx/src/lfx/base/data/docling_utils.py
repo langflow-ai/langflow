@@ -32,14 +32,48 @@ def extract_docling_documents(data_inputs: Data | list[Data] | DataFrame, doc_ke
             msg = "DataFrame is empty"
             raise TypeError(msg)
 
-        if doc_key not in data_inputs.columns:
-            msg = f"Column '{doc_key}' not found in DataFrame"
-            raise TypeError(msg)
-        try:
-            documents = data_inputs[doc_key].tolist()
-        except Exception as e:
-            msg = f"Error extracting DoclingDocument from DataFrame: {e}"
-            raise TypeError(msg) from e
+        # Primary: Check for exact column name match
+        if doc_key in data_inputs.columns:
+            try:
+                documents = data_inputs[doc_key].tolist()
+            except Exception as e:
+                msg = f"Error extracting DoclingDocument from DataFrame column '{doc_key}': {e}"
+                raise TypeError(msg) from e
+        else:
+            # Fallback: Search all columns for DoclingDocument objects
+            found_column = None
+            for col in data_inputs.columns:
+                try:
+                    # Check if this column contains DoclingDocument objects
+                    sample = data_inputs[col].dropna().iloc[0] if len(data_inputs[col].dropna()) > 0 else None
+                    if sample is not None and isinstance(sample, DoclingDocument):
+                        found_column = col
+                        break
+                except (IndexError, AttributeError):
+                    continue
+
+            if found_column:
+                logger.warning(
+                    f"Column '{doc_key}' not found, but found DoclingDocument objects in column '{found_column}'. "
+                    f"Using '{found_column}' instead. Consider updating the 'Doc Key' parameter."
+                )
+                try:
+                    documents = data_inputs[found_column].tolist()
+                except Exception as e:
+                    msg = f"Error extracting DoclingDocument from DataFrame column '{found_column}': {e}"
+                    raise TypeError(msg) from e
+            else:
+                # Provide helpful error message
+                available_columns = list(data_inputs.columns)
+                msg = (
+                    f"Column '{doc_key}' not found in DataFrame. "
+                    f"Available columns: {available_columns}. "
+                    f"\n\nPossible solutions:\n"
+                    f"1. Use the 'Data' output from Docling component instead of 'DataFrame' output\n"
+                    f"2. Update the 'Doc Key' parameter to match one of the available columns\n"
+                    f"3. If using VLM pipeline, try using the standard pipeline"
+                )
+                raise TypeError(msg)
     else:
         if not data_inputs:
             msg = "No data inputs provided"
