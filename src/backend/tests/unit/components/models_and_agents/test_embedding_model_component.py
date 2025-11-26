@@ -73,7 +73,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         component.model_kwargs = None
 
         # Build the embeddings
-        embeddings = component.build_embeddings()
+        embeddings = await component.build_embeddings()
 
         # Verify the embedding class getter was called
         mock_embedding_classes_dict.get.assert_called_once_with("OpenAIEmbeddings")
@@ -178,7 +178,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         component.model_kwargs = None
 
         # Build the embeddings
-        embeddings = component.build_embeddings()
+        embeddings = await component.build_embeddings()
 
         # Verify the embedding class getter was called
         mock_embedding_classes_dict.get.assert_called_once_with("GoogleGenerativeAIEmbeddings")
