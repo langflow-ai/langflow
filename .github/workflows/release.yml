@@ -142,7 +142,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-          python-version: "3.13"
+          python-version: "3.12"
           prune-cache: false
       - name: Install the project
         run: uv sync
@@ -212,7 +212,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-          python-version: "3.13"
+          python-version: "3.12"
           prune-cache: false
       - name: Install the project
         run: uv sync
@@ -303,7 +303,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: false
-          python-version: "3.13"
+          python-version: "3.12"
       - name: Publish base to PyPI
         if: ${{ !inputs.dry_run }}
         env:
@@ -326,7 +326,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: false
-          python-version: "3.13"
+          python-version: "3.12"
       - name: Publish main to PyPI
         if: ${{ !inputs.dry_run }}
         env:
