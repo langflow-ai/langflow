@@ -33,7 +33,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
     last_ingestion_df: pd.DataFrame | None = None
 
     inputs = [
-        StrInput(name="collection_name", display_name="Collection Name", required=True),
+        StrInput(name="collection_name", display_name="Collection Name", required=True, real_time_refresh=True),
         MessageTextInput(name="document_hash", display_name="Document Hash", required=False, tool_mode=True),
         StrInput(name="host", display_name="Host", value="localhost", advanced=True),
         IntInput(name="port", display_name="Port", value=6333, advanced=True),
@@ -126,6 +126,13 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             logger.error(f"Error checking document existence: {e}")
             return False
 
+    def update_build_config(self, build_config, field_value, field_name=None):
+        """Update build config when collection_name changes to set API key default."""
+        if field_name == "collection_name":
+            # Set API key default from environment variable
+            build_config["api_key"]["value"] = os.environ.get("QUADRANT_API_KEY", "")
+        return build_config
+
     @check_cached_vector_store
     def build_vector_store(self) -> Qdrant:
         qdrant_kwargs = {
@@ -135,7 +142,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
         }
 
         # Try both common env var spellings
-        api_key = self.api_key or os.getenv("QDRANT_API_KEY", "") or os.getenv("QUADRANT_API_KEY", "")
+        api_key = self.api_key or os.environ.get("QDRANT_API_KEY", "") or os.environ.get("QUADRANT_API_KEY", "")
 
         server_kwargs = {
             "host": self.host or None,

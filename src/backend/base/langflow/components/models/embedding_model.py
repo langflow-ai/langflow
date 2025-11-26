@@ -42,6 +42,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             options=OPENAI_EMBEDDING_MODEL_NAMES,
             value=OPENAI_EMBEDDING_MODEL_NAMES[0],
             info="Select the embedding model to use",
+            real_time_refresh=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -50,7 +51,6 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             required=True,
             show=True,
             real_time_refresh=True,
-            value=os.getenv("OPENAI_API_KEY", ""),
         ),
         MessageTextInput(
             name="api_base",
@@ -80,7 +80,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
     def build_embeddings(self) -> Embeddings:
         provider = self.provider
         model = self.model
-        api_key = self.api_key or os.getenv("OPENAI_API_KEY")
+        api_key = self.api_key or os.environ.get("OPENAI_API_KEY")
         api_base = self.api_base
         dimensions = self.dimensions
         chunk_size = self.chunk_size
@@ -110,8 +110,11 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         if field_name == "provider" and field_value == "OpenAI":
             build_config["model"]["options"] = OPENAI_EMBEDDING_MODEL_NAMES
-            build_config["model"]["value"] = OPENAI_EMBEDDING_MODEL_NAMES[0]
             build_config["api_key"]["display_name"] = "OpenAI API Key"
-            build_config["api_key"]["value"] = os.getenv("AZURE_OPENAI_API_KEY", "")
             build_config["api_base"]["display_name"] = "OpenAI API Base URL"
+        
+        # Set API key default when any model is selected
+        if field_name == "model":
+            build_config["api_key"]["value"] = os.environ.get("OPENAI_API_KEY", "")
+        
         return build_config
