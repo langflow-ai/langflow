@@ -47,7 +47,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
 
     @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
     @patch("lfx.components.models_and_agents.embedding_model.get_embedding_classes")
-    async def test_build_embeddings_openai(
+    def test_build_embeddings_openai(
         self, mock_get_embedding_classes, mock_get_api_key, component_class, default_kwargs
     ):
         # Setup mock for get_api_key_for_provider
@@ -73,7 +73,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         component.model_kwargs = None
 
         # Build the embeddings
-        embeddings = await component.build_embeddings()
+        embeddings = component.build_embeddings()
 
         # Verify the embedding class getter was called
         mock_embedding_classes_dict.get.assert_called_once_with("OpenAIEmbeddings")
@@ -89,7 +89,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         assert embeddings == mock_instance
 
     @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
-    async def test_build_embeddings_openai_missing_api_key(self, mock_get_api_key, component_class, default_kwargs):
+    def test_build_embeddings_openai_missing_api_key(self, mock_get_api_key, component_class, default_kwargs):
         # Setup mock to return None (no API key)
         mock_get_api_key.return_value = None
 
@@ -100,7 +100,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="OpenAI API key is required"):
             component.build_embeddings()
 
-    async def test_build_embeddings_invalid_model_format(self, component_class, default_kwargs):
+    def test_build_embeddings_invalid_model_format(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         component.model = None
 
@@ -109,7 +109,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
 
     @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
     @patch("lfx.components.models_and_agents.embedding_model.get_embedding_classes")
-    async def test_build_embeddings_unknown_embedding_class(
+    def test_build_embeddings_unknown_embedding_class(
         self, mock_get_embedding_classes, mock_get_api_key, component_class, default_kwargs
     ):
         # Setup mock for get_api_key_for_provider
@@ -137,7 +137,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
 
     @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
     @patch("lfx.components.models_and_agents.embedding_model.get_embedding_classes")
-    async def test_build_embeddings_google(self, mock_get_embedding_classes, mock_get_api_key, component_class):
+    def test_build_embeddings_google(self, mock_get_embedding_classes, mock_get_api_key, component_class):
         # Setup mock for get_api_key_for_provider
         mock_get_api_key.return_value = "test-google-key"
 
@@ -178,7 +178,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         component.model_kwargs = None
 
         # Build the embeddings
-        embeddings = await component.build_embeddings()
+        embeddings = component.build_embeddings()
 
         # Verify the embedding class getter was called
         mock_embedding_classes_dict.get.assert_called_once_with("GoogleGenerativeAIEmbeddings")
