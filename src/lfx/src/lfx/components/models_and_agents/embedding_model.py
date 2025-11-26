@@ -132,6 +132,14 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             advanced=True,
             show=False,
         ),
+        BoolInput(
+            name="fail_safe_mode",
+            display_name="Fail-Safe Mode",
+            value=False,
+            advanced=True,
+            info="When enabled, errors will be logged instead of raising exceptions. The component will return None on error.",
+            real_time_refresh=True,
+        ),
     ]
 
     @staticmethod
@@ -151,7 +159,19 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         except Exception:  # noqa: BLE001
             logger.exception("Error fetching models")
             return WATSONX_EMBEDDING_MODEL_NAMES
+    async def fetch_ollama_models(self) -> list[str]:
+        try:
+            return await self.get_ollama_models(
+                base_url_value=self.ollama_base_url,
+                desired_capability=DESIRED_CAPABILITY,
+                json_models_key=JSON_MODELS_KEY,
+                json_name_key=JSON_NAME_KEY,
+                json_capabilities_key=JSON_CAPABILITIES_KEY,
+            )
+        except Exception:  # noqa: BLE001
 
+            logger.exception("Error fetching models")
+            return []
     async def build_embeddings(self) -> Embeddings:
         provider = self.provider
         model = self.model
@@ -169,6 +189,9 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         if provider == "OpenAI":
             if not api_key:
                 msg = "OpenAI API key is required when using OpenAI provider"
+                if self.fail_safe_mode:
+                    logger.error(msg)
+                    return None
                 raise ValueError(msg)
 
             # Create the primary embedding instance
@@ -212,6 +235,9 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                     from langchain_community.embeddings import OllamaEmbeddings
                 except ImportError:
                     msg = "Please install langchain-ollama: pip install langchain-ollama"
+                    if self.fail_safe_mode:
+                        logger.error(msg)
+                        return None
                     raise ImportError(msg) from None
 
             transformed_base_url = transform_localhost_url(ollama_base_url)
@@ -237,13 +263,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             )
 
             # Fetch available Ollama models
-            available_model_names = await get_ollama_models(
-                base_url_value=self.ollama_base_url,
-                desired_capability=DESIRED_CAPABILITY,
-                json_models_key=JSON_MODELS_KEY,
-                json_name_key=JSON_NAME_KEY,
-                json_capabilities_key=JSON_CAPABILITIES_KEY,
-            )
+            available_model_names = await self.fetch_ollama_models()
 
             # Create dedicated instances for each available model
             available_models_dict = {}
@@ -264,16 +284,25 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 from langchain_ibm import WatsonxEmbeddings
             except ImportError:
                 msg = "Please install langchain-ibm: pip install langchain-ibm"
+                if self.fail_safe_mode:
+                    logger.error(msg)
+                    return None
                 raise ImportError(msg) from None
 
             if not api_key:
                 msg = "IBM watsonx.ai API key is required when using IBM watsonx.ai provider"
+                if self.fail_safe_mode:
+                    logger.error(msg)
+                    return None
                 raise ValueError(msg)
 
             project_id = self.project_id
 
             if not project_id:
                 msg = "Project ID is required for IBM watsonx.ai provider"
+                if self.fail_safe_mode:
+                    logger.error(msg)
+                    return None
                 raise ValueError(msg)
 
             from ibm_watsonx_ai import APIClient, Credentials
@@ -319,17 +348,32 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             )
 
         msg = f"Unknown provider: {provider}"
+        if self.fail_safe_mode:
+            logger.error(msg)
+            return None
         raise ValueError(msg)
 
     async def update_build_config(
         self, build_config: dotdict, field_value: Any, field_name: str | None = None
     ) -> dotdict:
+        # Handle fail_safe_mode changes first - set all required fields to False if enabled
+        if field_name == "fail_safe_mode":
+            if field_value:  # If fail_safe_mode is enabled
+                build_config["api_key"]["required"] = False
+            else:  # If fail_safe_mode is disabled, restore required flags based on provider
+                if hasattr(self, "provider"):
+                    if self.provider in ["OpenAI", "IBM watsonx.ai"]:
+                        build_config["api_key"]["required"] = True
+                    else:  # Ollama
+                        build_config["api_key"]["required"] = False
+        
         if field_name == "provider":
             if field_value == "OpenAI":
                 build_config["model"]["options"] = OPENAI_EMBEDDING_MODEL_NAMES
                 build_config["model"]["value"] = OPENAI_EMBEDDING_MODEL_NAMES[0]
                 build_config["api_key"]["display_name"] = "OpenAI API Key"
-                build_config["api_key"]["required"] = True
+                # Only set required=True if fail_safe_mode is not enabled
+                build_config["api_key"]["required"] = not (hasattr(self, "fail_safe_mode") and self.fail_safe_mode)
                 build_config["api_key"]["show"] = True
                 build_config["api_base"]["display_name"] = "OpenAI API Base URL"
                 build_config["api_base"]["advanced"] = True
@@ -344,13 +388,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
 
                 if await is_valid_ollama_url(url=self.ollama_base_url):
                     try:
-                        models = await get_ollama_models(
-                            base_url_value=self.ollama_base_url,
-                            desired_capability=DESIRED_CAPABILITY,
-                            json_models_key=JSON_MODELS_KEY,
-                            json_name_key=JSON_NAME_KEY,
-                            json_capabilities_key=JSON_CAPABILITIES_KEY,
-                        )
+                        models = await self.fetch_ollama_models()
                         build_config["model"]["options"] = models
                         build_config["model"]["value"] = models[0] if models else ""
                     except ValueError:
@@ -372,7 +410,8 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 build_config["model"]["options"] = self.fetch_ibm_models(base_url=self.base_url_ibm_watsonx)
                 build_config["model"]["value"] = self.fetch_ibm_models(base_url=self.base_url_ibm_watsonx)[0]
                 build_config["api_key"]["display_name"] = "IBM watsonx.ai API Key"
-                build_config["api_key"]["required"] = True
+                # Only set required=True if fail_safe_mode is not enabled
+                build_config["api_key"]["required"] = not (hasattr(self, "fail_safe_mode") and self.fail_safe_mode)
                 build_config["api_key"]["show"] = True
                 build_config["api_base"]["show"] = False
                 build_config["ollama_base_url"]["show"] = False
@@ -390,13 +429,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             ollama_url = self.ollama_base_url
             if await is_valid_ollama_url(url=ollama_url):
                 try:
-                    models = await get_ollama_models(
-                        base_url_value=ollama_url,
-                        desired_capability=DESIRED_CAPABILITY,
-                        json_models_key=JSON_MODELS_KEY,
-                        json_name_key=JSON_NAME_KEY,
-                        json_capabilities_key=JSON_CAPABILITIES_KEY,
-                    )
+                    models = await self.fetch_ollama_models()
                     build_config["model"]["options"] = models
                     build_config["model"]["value"] = models[0] if models else ""
                 except ValueError:
@@ -408,13 +441,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             ollama_url = self.ollama_base_url
             if await is_valid_ollama_url(url=ollama_url):
                 try:
-                    models = await get_ollama_models(
-                        base_url_value=ollama_url,
-                        desired_capability=DESIRED_CAPABILITY,
-                        json_models_key=JSON_MODELS_KEY,
-                        json_name_key=JSON_NAME_KEY,
-                        json_capabilities_key=JSON_CAPABILITIES_KEY,
-                    )
+                    models = await self.fetch_ollama_models()
                     build_config["model"]["options"] = models
                 except ValueError:
                     await logger.awarning("Failed to refresh Ollama embedding models.")
