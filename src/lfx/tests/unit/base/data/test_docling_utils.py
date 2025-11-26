@@ -2,7 +2,6 @@
 
 import pytest
 from docling_core.types.doc import DoclingDocument
-
 from lfx.base.data.docling_utils import extract_docling_documents
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
