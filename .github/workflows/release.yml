@@ -66,14 +66,31 @@ jobs:
           echo "create_release: ${{ inputs.create_release }}"
           echo "dry_run: ${{ inputs.dry_run }}"
 
-  #TODO REVERT VALIDATE TAG SKIP
   validate-tag:
     name: Validate Tag Input
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          echo "Skipping build..."
-          exit 0
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # Fetch all history - required for tags (?)
+      - name: Validate that input is a tag, not a branch
+        run: |
+          # Check if the input exists as a tag
+          if ! git tag -l | grep -q "^${{ inputs.release_tag }}$"; then
+            echo "Error: '${{ inputs.release_tag }}' is not a valid tag."
+            echo "Available tags:"
+            git tag -l | head -20
+            exit 1
+          fi
+
+          # Check if the input also exists as a branch (warn if so, but don't fail)
+          if git branch -r | grep -q "origin/${{ inputs.release_tag }}$"; then
+            echo "Tag '${{ inputs.release_tag }}' also exists as a branch. Exiting out of caution."
+            exit 1
+          fi
+
+          echo "Validated: '${{ inputs.release_tag }}' is a valid tag."
 
   validate-dependencies:
     name: Validate Release Dependencies
