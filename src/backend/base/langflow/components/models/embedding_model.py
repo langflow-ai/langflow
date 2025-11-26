@@ -80,7 +80,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
     def build_embeddings(self) -> Embeddings:
         provider = self.provider
         model = self.model
-        api_key = self.api_key or os.environ.get("AZURE_OPENAI_EMBEDDING_API_KEY")
+        api_key = self.api_key or os.environ.get("OPENAI_API_KEY")
         api_base = self.api_base
         dimensions = self.dimensions
         chunk_size = self.chunk_size
@@ -115,6 +115,6 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         
         # Set API key default when any model is selected
         if field_name == "model":
-            build_config["api_key"]["value"] = os.environ.get("AZURE_OPENAI_EMBEDDING_API_KEY", "")
+            build_config["api_key"]["value"] = os.environ.get("OPENAI_API_KEY", "")
         
         return build_config
