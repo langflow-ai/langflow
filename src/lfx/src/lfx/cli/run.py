@@ -227,7 +227,7 @@ async def run(
                 typer.echo(f"Type: {graph_info['type']}", file=sys.stderr)
                 typer.echo(f"Source: {graph_info['source_line']}", file=sys.stderr)
                 typer.echo("Loading and executing script...", file=sys.stderr)
-            graph = load_graph_from_script(script_path)
+            graph = await load_graph_from_script(script_path)
         elif file_extension == ".json":
             if verbosity > 0:
                 typer.echo("Valid JSON flow file detected", file=sys.stderr)
