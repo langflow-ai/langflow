@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -52,7 +52,7 @@ wheels = [
 
 [[package]]
 name = "agent-lifecycle-toolkit"
-version = "0.4.1"
+version = "0.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "genson" },
@@ -81,9 +81,9 @@ dependencies = [
     { name = "trl" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9a/40/410e5f4d44ca46e997edb7bc011efa0c4cd0af268599a5aa13026f560996/agent_lifecycle_toolkit-0.4.1.tar.gz", hash = "sha256:2a415e87a336ee3f88bfbbec1c51801cbfbdde9a3b58899e8c42097fac04c56b", size = 7041483, upload-time = "2025-10-25T04:29:41.675Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/84/55/313373ca1529790065b803265f04890ea575bd7dd566093fb154b03301dc/agent_lifecycle_toolkit-0.4.2.tar.gz", hash = "sha256:9162bac95ee814b46f04f620f3eeaab13da27d9d45e43464f7480f02d3901324", size = 7044591, upload-time = "2025-11-12T17:20:58.63Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/a5/65d27b8a0ba7dc172f62ed480772d3a2f0382463eae4be5978341458adfa/agent_lifecycle_toolkit-0.4.1-py3-none-any.whl", hash = "sha256:6a128813233ecb2053c3d8e68c072722885b16e7920fce93e3b4f35926652a27", size = 200434, upload-time = "2025-10-25T04:29:40.002Z" },
+    { url = "https://files.pythonhosted.org/packages/86/b0/c971e662b7229b4731d51907066a80073ec887a74fbe3ae126291c2c11e5/agent_lifecycle_toolkit-0.4.2-py3-none-any.whl", hash = "sha256:ca8074158ee06407deb57c40bd2f69cadc98b2a034650c57a815b8c833809f30", size = 200714, upload-time = "2025-11-12T17:20:56.705Z" },
 ]
 
 [[package]]
@@ -5492,7 +5492,7 @@ name = "langflow"
 version = "1.7.0"
 source = { editable = "." }
 dependencies = [
-    { name = "agent-lifecycle-toolkit" },
+    { name = "agent-lifecycle-toolkit", marker = "sys_platform != 'win32'" },
     { name = "aioboto3" },
     { name = "aiofile" },
     { name = "aiosqlite" },
@@ -5585,6 +5585,7 @@ dependencies = [
     { name = "opensearch-py" },
     { name = "opik" },
     { name = "pgvector" },
+    { name = "podman", marker = "sys_platform != 'win32'" },
     { name = "pyarrow" },
     { name = "pydantic-ai" },
     { name = "pydantic-settings" },
@@ -5701,7 +5702,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-lifecycle-toolkit", specifier = "~=0.4.1" },
+    { name = "agent-lifecycle-toolkit", marker = "sys_platform != 'win32'", specifier = "~=0.4.1" },
     { name = "aioboto3", specifier = ">=15.2.0,<16.0.0" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "aiosqlite", specifier = "==0.21.0" },
@@ -5802,6 +5803,7 @@ requires-dist = [
     { name = "opensearch-py", specifier = "==2.8.0" },
     { name = "opik", specifier = ">=1.6.3,<2.0.0" },
     { name = "pgvector", specifier = "==0.3.6" },
+    { name = "podman", marker = "sys_platform != 'win32'", specifier = ">=5.0.0,<6.0.0" },
     { name = "pyarrow", specifier = "==19.0.0" },
     { name = "pydantic-ai", specifier = ">=0.0.19,<1.0.0" },
     { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
@@ -6640,11 +6642,14 @@ wheels = [
 
 [[package]]
 name = "llm-sandbox"
-version = "0.2.5"
+version = "0.3.25"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/22/9d/69843457b4ac8111e1b1453f87e2ffc396942bdb9f22a34812cb33dded44/llm_sandbox-0.2.5.tar.gz", hash = "sha256:17b2e30e9a7453a17c0143dbc6253811df73780a16605dec5077ed13116ab31b", size = 18696, upload-time = "2025-05-22T15:06:05.02Z" }
+dependencies = [
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f7/65/ed58ffdeac4145823a9d6afca4d2e81beb3e3cf0e610727807f58819bf7e/llm_sandbox-0.3.25.tar.gz", hash = "sha256:656930f38c6b280fb32128f171be8f7fb60bf2d175729eaa224e2038e75937e5", size = 518964, upload-time = "2025-11-14T07:52:06.18Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6b/fd/a6bc8248386f088aa8edf3c9c952e01875616d84492c18b423417026bfa8/llm_sandbox-0.2.5-py3-none-any.whl", hash = "sha256:88367690533e26d568df43abc9b7ad2ec3ce0d3bde5194532a2abfaa41a4db74", size = 21670, upload-time = "2025-05-22T15:06:03.866Z" },
+    { url = "https://files.pythonhosted.org/packages/06/a9/277c9864b36f77d9c23b5757bc103ec8b421bdfe23e2ca197785860bbc4e/llm_sandbox-0.3.25-py3-none-any.whl", hash = "sha256:57a5ebf3ef00c8b5aee179937c8cf51ff11e7a729fd217f848c236cc2825143a", size = 78279, upload-time = "2025-11-14T07:52:05.171Z" },
 ]
 
 [package.optional-dependencies]
@@ -9605,6 +9610,20 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3", size = 69412, upload-time = "2025-05-15T12:30:07.975Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746", size = 20538, upload-time = "2025-05-15T12:30:06.134Z" },
+]
+
+[[package]]
+name = "podman"
+version = "5.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3b/36/070e7bf682ac0868450584df79198c178323e80f73b8fb9b6fec8bde0a65/podman-5.6.0.tar.gz", hash = "sha256:cc5f7aa9562e30f992fc170a48da970a7132be60d8a2e2941e6c17bd0a0b35c9", size = 72832, upload-time = "2025-09-05T09:42:40.071Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/9e/8c62f05b104d9f00edbb4c298b152deceb393ea67f0288d89d1139d7a859/podman-5.6.0-py3-none-any.whl", hash = "sha256:967ff8ad8c6b851bc5da1a9410973882d80e235a9410b7d1e931ce0c3324fbe3", size = 88713, upload-time = "2025-09-05T09:42:38.405Z" },
 ]
 
 [[package]]
@@ -13503,16 +13522,16 @@ wheels = [
 
 [[package]]
 name = "trl"
-version = "0.24.0"
+version = "0.25.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "accelerate" },
     { name = "datasets" },
     { name = "transformers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e8/2e/30ece0055eee5763126e2d52f6e04aec294bcae34b46d9ca16c53c4b5852/trl-0.24.0.tar.gz", hash = "sha256:eee495223725d3da0596be2607581969db89ba0f7c00b075802addc31e61eac9", size = 368447, upload-time = "2025-10-16T00:10:37.65Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/69/77/351cb85122c0eb9d14f0bf613b42e6868d8bb9347bd0f9c73ac27453a864/trl-0.25.1.tar.gz", hash = "sha256:451f0cc9146aadb46f3a755a5375668869dd93c57e936f7070a92145eb2333c7", size = 406597, upload-time = "2025-11-12T16:49:46.556Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/87/5f/c647fedde9d59ae35ee189cc49e419da5ac1d9ad9933cb69401a7eac4705/trl-0.24.0-py3-none-any.whl", hash = "sha256:a9145b7d4a4a33778de117bda48530f0cf5b2ac25acc07db80ad04836f490dfc", size = 423143, upload-time = "2025-10-16T00:10:35.809Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/6b/bece2a5bf3216493c6fc1c5003b2654719ccb635bcabd4049da5a5caaa3e/trl-0.25.1-py3-none-any.whl", hash = "sha256:4983310e7cf7b126f46b9cf2a4006ea160f52d9627230efe74e498211039c0c7", size = 465497, upload-time = "2025-11-12T16:49:44.945Z" },
 ]
 
 [[package]]
