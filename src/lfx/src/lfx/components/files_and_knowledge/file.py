@@ -212,7 +212,9 @@ class FileComponent(BaseFileComponent):
 
         if file_names:
             files_str = ", ".join(file_names)
-            return f"{base_description} Available files: {files_str}. Call this tool to read the content of these files."
+            return (
+                f"{base_description} Available files: {files_str}. Call this tool to read the content of these files."
+            )
 
         return base_description
 
@@ -233,8 +235,6 @@ class FileComponent(BaseFileComponent):
         # Empty schema - no parameters needed
         class EmptySchema(BaseModel):
             """No parameters required - uses pre-uploaded files."""
-
-            pass
 
         async def read_files_tool() -> str:
             """Read the content of uploaded files."""
