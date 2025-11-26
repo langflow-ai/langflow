@@ -30,6 +30,7 @@ import {
 } from "@/controllers/API/queries/flow-versions";
 import useAlertStore from "@/stores/alertStore";
 import CustomLoader from "@/customization/components/custom-loader";
+import FlowPagination from "@/pages/MarketplacePage/components/FlowPagination";
 
 export default function AllRequestsPage() {
   const navigate = useNavigate();
@@ -39,6 +40,10 @@ export default function AllRequestsPage() {
     useState<FlowVersionRead | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
+  // Pagination state
+  const [pageIndex, setPageIndex] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -46,19 +51,56 @@ export default function AllRequestsPage() {
     navigate(`/flow/${flowId}`);
   };
 
-  // Fetch data for each tab
-  const { data: pendingReviews, isLoading: loadingPending } =
-    useGetPendingReviews();
-  const { data: approvedVersions, isLoading: loadingApproved } =
-    useGetVersionsByStatus("Approved");
-  const { data: rejectedVersions, isLoading: loadingRejected } =
-    useGetVersionsByStatus("Rejected");
+  // Reset to page 1 when switching tabs
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setPageIndex(1);
+  };
 
-  // Calculate total count
+  // Pagination handlers
+  const handlePageChange = (page: number) => {
+    setPageIndex(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPageIndex(1); // Reset to first page when changing page size
+  };
+
+  // Fetch data for each tab with pagination
+  const { data: pendingReviewsData, isLoading: loadingPending } =
+    useGetPendingReviews(pageIndex, pageSize);
+  const { data: approvedVersionsData, isLoading: loadingApproved } =
+    useGetVersionsByStatus("Approved", pageIndex, pageSize);
+  const { data: rejectedVersionsData, isLoading: loadingRejected } =
+    useGetVersionsByStatus("Rejected", pageIndex, pageSize);
+
+  // Extract items and metadata
+  const pendingReviews = pendingReviewsData?.items || [];
+  const approvedVersions = approvedVersionsData?.items || [];
+  const rejectedVersions = rejectedVersionsData?.items || [];
+
+  // Get current tab data for pagination
+  const getCurrentTabData = () => {
+    switch (activeTab) {
+      case "submitted":
+        return pendingReviewsData;
+      case "approved":
+        return approvedVersionsData;
+      case "rejected":
+        return rejectedVersionsData;
+      default:
+        return null;
+    }
+  };
+
+  const currentTabData = getCurrentTabData();
+
+  // Calculate total count across all tabs
   const totalCount =
-    (pendingReviews?.length || 0) +
-    (approvedVersions?.length || 0) +
-    (rejectedVersions?.length || 0);
+    (pendingReviewsData?.total || 0) +
+    (approvedVersionsData?.total || 0) +
+    (rejectedVersionsData?.total || 0);
 
   // Mutations
   const { mutate: approveVersion, isPending: isApproving } =
@@ -433,38 +475,78 @@ export default function AllRequestsPage() {
         {totalCount > 0 && <span className="">({totalCount})</span>}
       </h1>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1">
         <TabsList className="mb-4 border-b border-[#efefef] w-full gap-8">
           <TabsTrigger value="submitted">
             Submitted
-            {pendingReviews && pendingReviews.length > 0 && (
-              <span className="ml-1">({pendingReviews.length})</span>
+            {pendingReviewsData && pendingReviewsData.total > 0 && (
+              <span className="ml-1">({pendingReviewsData.total})</span>
             )}
           </TabsTrigger>
           <TabsTrigger value="approved">
             Approved
-            {approvedVersions && approvedVersions.length > 0 && (
-              <span className="ml-1">({approvedVersions.length})</span>
+            {approvedVersionsData && approvedVersionsData.total > 0 && (
+              <span className="ml-1">({approvedVersionsData.total})</span>
             )}
           </TabsTrigger>
           <TabsTrigger value="rejected">
             Rejected
-            {rejectedVersions && rejectedVersions.length > 0 && (
-              <span className="ml-1">({rejectedVersions.length})</span>
+            {rejectedVersionsData && rejectedVersionsData.total > 0 && (
+              <span className="ml-1">({rejectedVersionsData.total})</span>
             )}
           </TabsTrigger>
         </TabsList>
 
-        <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
-          <TabsContent value="submitted" className="m-0">
-            {renderSubmittedTable()}
-          </TabsContent>
-          <TabsContent value="approved" className="m-0">
-            {renderApprovedTable()}
-          </TabsContent>
-          <TabsContent value="rejected" className="m-0">
-            {renderRejectedTable()}
-          </TabsContent>
+        <div className="flex flex-col gap-4">
+          {/* Results info and pagination */}
+          {/* {currentTabData && currentTabData.total > 0 && (
+            <div className="flex items-center justify-between px-1">
+              <div className="text-sm text-muted-foreground">
+                Showing{" "}
+                {Math.min((pageIndex - 1) * pageSize + 1, currentTabData.total)}{" "}
+                - {Math.min(pageIndex * pageSize, currentTabData.total)} of{" "}
+                {currentTabData.total} results
+              </div>
+              <FlowPagination
+                currentPage={pageIndex}
+                pageSize={pageSize}
+                totalPages={currentTabData.pages}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            </div>
+          )} */}
+
+          <div className="max-h-[calc(100vh-280px)] overflow-y-auto">
+            <TabsContent value="submitted" className="m-0">
+              {renderSubmittedTable()}
+            </TabsContent>
+            <TabsContent value="approved" className="m-0">
+              {renderApprovedTable()}
+            </TabsContent>
+            <TabsContent value="rejected" className="m-0">
+              {renderRejectedTable()}
+            </TabsContent>
+          </div>
+
+          {/* Bottom pagination */}
+          {currentTabData && currentTabData.total > 0 && (
+            <div className="flex items-center justify-between px-1 pb-4">
+              <div className="text-sm text-muted-foreground">
+                Showing{" "}
+                {Math.min((pageIndex - 1) * pageSize + 1, currentTabData.total)}{" "}
+                - {Math.min(pageIndex * pageSize, currentTabData.total)} of{" "}
+                {currentTabData.total} results
+              </div>
+              <FlowPagination
+                currentPage={pageIndex}
+                pageSize={pageSize}
+                totalPages={currentTabData.pages}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            </div>
+          )}
         </div>
       </Tabs>
 

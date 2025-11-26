@@ -236,5 +236,14 @@ class FlowVersionRejectRequest(SQLModel):
     rejection_reason: str | None = None
 
 
+class FlowVersionPaginatedResponse(SQLModel):
+    """Schema for paginated flow version responses."""
+
+    items: list[FlowVersionRead]
+    total: int
+    page: int
+    pages: int
+
+
 # Rebuild Pydantic models to resolve forward references
 FlowVersionRead.model_rebuild()

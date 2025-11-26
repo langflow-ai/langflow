@@ -38,12 +38,22 @@ export interface FlowVersionRead {
   updated_at: string;
 }
 
-export const useGetPendingReviews = () => {
-  return useQuery<FlowVersionRead[]>({
-    queryKey: ["pending-reviews"],
+export interface FlowVersionPaginatedResponse {
+  items: FlowVersionRead[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
+export const useGetPendingReviews = (page: number = 1, limit: number = 12) => {
+  return useQuery<FlowVersionPaginatedResponse>({
+    queryKey: ["pending-reviews", page, limit],
     queryFn: async () => {
-      const response = await api.get<FlowVersionRead[]>(
-        `${getURL("FLOW_VERSIONS")}/pending-reviews`
+      const response = await api.get<FlowVersionPaginatedResponse>(
+        `${getURL("FLOW_VERSIONS")}/pending-reviews`,
+        {
+          params: { page, limit },
+        }
       );
       return response.data;
     },

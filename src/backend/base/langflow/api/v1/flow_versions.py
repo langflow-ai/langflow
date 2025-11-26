@@ -20,6 +20,7 @@ from langflow.services.database.models.flow_version.model import (
     FlowVersionCreate,
     FlowVersionRead,
     FlowVersionRejectRequest,
+    FlowVersionPaginatedResponse,
 )
 from langflow.services.database.models.version_flow_input_sample.model import (
     VersionFlowInputSample,
@@ -251,22 +252,37 @@ async def submit_for_approval(
         )
 
 
-@router.get("/pending-reviews", response_model=list[FlowVersionRead])
+@router.get("/pending-reviews", response_model=FlowVersionPaginatedResponse)
 async def get_pending_reviews(
     session: DbSession,
     current_user: CurrentActiveUser,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    page: int = Query(1, ge=1),
+    limit: int = Query(12, ge=1, le=100),
 ):
     """
     Get all flow versions pending review (status = Submitted).
 
     This endpoint is intended for admin users to see all submissions awaiting approval.
+    Returns paginated results.
     """
     try:
         # Get "Submitted" status ID
         submitted_status_id = await _get_status_id_by_name(session, FlowStatusEnum.SUBMITTED.value)
 
+        # Count total items
+        count_stmt = (
+            select(func.count())
+            .select_from(FlowVersion)
+            .where(FlowVersion.status_id == submitted_status_id)
+        )
+        count_result = await session.exec(count_stmt)
+        total = count_result.one()
+
+        # Calculate pagination
+        pages = (total + limit - 1) // limit  # Ceiling division
+        offset = (page - 1) * limit
+
+        # Get paginated results
         stmt = (
             select(FlowVersion)
             .where(FlowVersion.status_id == submitted_status_id)
@@ -275,13 +291,13 @@ async def get_pending_reviews(
                 joinedload(FlowVersion.status),
             )
             .order_by(FlowVersion.submitted_at.desc())
-            .offset(skip)
+            .offset(offset)
             .limit(limit)
         )
         result = await session.exec(stmt)
         versions = result.unique().all()
 
-        return [
+        items = [
             FlowVersionRead(
                 id=v.id,
                 original_flow_id=v.original_flow_id,
@@ -311,6 +327,13 @@ async def get_pending_reviews(
             )
             for v in versions
         ]
+
+        return FlowVersionPaginatedResponse(
+            items=items,
+            total=total,
+            page=page,
+            pages=pages,
+        )
 
     except HTTPException:
         raise
@@ -385,18 +408,19 @@ async def get_my_submissions(
         )
 
 
-@router.get("/by-status/{status_name}", response_model=list[FlowVersionRead])
+@router.get("/by-status/{status_name}", response_model=FlowVersionPaginatedResponse)
 async def get_versions_by_status(
     status_name: str,
     session: DbSession,
     current_user: CurrentActiveUser,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    page: int = Query(1, ge=1),
+    limit: int = Query(12, ge=1, le=100),
 ):
     """
     Get flow versions filtered by status name.
 
     Valid status names: Draft, Submitted, Approved, Rejected, Published, Unpublished, Deleted
+    Returns paginated results.
     """
     try:
         # Validate status name
@@ -409,6 +433,20 @@ async def get_versions_by_status(
 
         status_id = await _get_status_id_by_name(session, status_name)
 
+        # Count total items
+        count_stmt = (
+            select(func.count())
+            .select_from(FlowVersion)
+            .where(FlowVersion.status_id == status_id)
+        )
+        count_result = await session.exec(count_stmt)
+        total = count_result.one()
+
+        # Calculate pagination
+        pages = (total + limit - 1) // limit  # Ceiling division
+        offset = (page - 1) * limit
+
+        # Get paginated results
         stmt = (
             select(FlowVersion)
             .where(FlowVersion.status_id == status_id)
@@ -418,13 +456,13 @@ async def get_versions_by_status(
                 joinedload(FlowVersion.status),
             )
             .order_by(FlowVersion.submitted_at.desc())
-            .offset(skip)
+            .offset(offset)
             .limit(limit)
         )
         result = await session.exec(stmt)
         versions = result.unique().all()
 
-        return [
+        items = [
             FlowVersionRead(
                 id=v.id,
                 original_flow_id=v.original_flow_id,
@@ -455,6 +493,13 @@ async def get_versions_by_status(
             )
             for v in versions
         ]
+
+        return FlowVersionPaginatedResponse(
+            items=items,
+            total=total,
+            page=page,
+            pages=pages,
+        )
 
     except HTTPException:
         raise
