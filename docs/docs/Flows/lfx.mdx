@@ -44,10 +44,7 @@ LFX can be installed in multiple ways.
    cd langflow/src/lfx
    ```
 
-3. Run LFX commands using `uv run`:
-   ```bash
-   uv run lfx serve simple-agent-flow.json
-   ```
+   From this directory, you can run `lfx` commands as shown in [`lfx serve`](#serve) or [`lfx run`](#run).
 
 </TabItem>
 <TabItem value="pypi" label="Install from PyPI">
@@ -65,22 +62,26 @@ LFX can be installed in multiple ways.
    uv pip install lfx
    ```
 
-3. Run LFX commands using `uv run`:
-
-   ```bash
-   uv run lfx serve simple-agent-flow.json
-   ```
-
+   To run `lfx` commands, continue to [`lfx serve`](#serve) or [`lfx run`](#run).
 </TabItem>
 <TabItem value="uvx" label="Run without installing">
 
-Run LFX without installing it using `uvx`:
+Run LFX without installing it locally using `uvx`.
+
+1. Create a [Langflow API key](/api-keys-and-authentication), and set `LANGFLOW_API_KEY` in the same terminal session as `lfx`:
+
+   ```bash
+   export LANGFLOW_API_KEY="sk..."
+   ```
+
+2. Run `lfx serve` using `uvx`:
 
    ```bash
    uvx lfx serve simple-agent-flow.json
    ```
 
    This command downloads and runs LFX in a temporary environment without permanent installation.
+   From the same environment, you can also run flows directly with [`lfx run`](#run).
 
 </TabItem>
 </Tabs>
