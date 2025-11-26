@@ -3,7 +3,8 @@ import json
 import os
 import platform
 from asyncio.subprocess import create_subprocess_exec
-from collections.abc import Awaitable, Sequence
+from collections.abc import Sequence
+from contextlib import AsyncExitStack
 from contextvars import ContextVar
 from datetime import datetime, timezone
 from ipaddress import ip_address
@@ -75,6 +76,7 @@ DEFAULT_NOTIFICATION_OPTIONS = NotificationOptions(
     resources_changed=True,
     tools_changed=True,
 )
+
 
 
 async def verify_project_auth(
@@ -211,6 +213,7 @@ def get_project_sse(project_id: UUID | None) -> SseServerTransport:
     return project_sse_transports[project_id_str]
 
 
+
 async def _build_project_tools_response(
     project_id: UUID,
     current_user: CurrentActiveMCPUser,
@@ -295,11 +298,18 @@ async def _build_project_tools_response(
 @router.get("/{project_id}")
 async def list_project_tools(
     project_id: UUID,
+    request: Request,
     current_user: CurrentActiveMCPUser,
     *,
     mcp_enabled: bool = True,
 ) -> Response:
     """List project MCP tools, or open a Streamable HTTP stream when requested."""
+    accept_header = (request.headers.get("accept") or "").lower()
+
+    if "text/event-stream" in accept_header:
+        auth_user = await verify_project_auth_conditional(project_id, request)
+        return await _dispatch_project_streamable_http(project_id, request, auth_user)
+
     metadata = await _build_project_tools_response(project_id, current_user, mcp_enabled=mcp_enabled)
     return JSONResponse(content=metadata.model_dump(mode="json"))
 
@@ -309,19 +319,12 @@ async def im_alive(project_id: str):  # noqa: ARG001
     return Response()
 
 
-@router.head("/{project_id}/streamable", include_in_schema=False)
-async def streamable_health(project_id: UUID):  # noqa: ARG001
-    return Response()
-
-
 async def _dispatch_project_streamable_http(
     project_id: UUID,
     request: Request,
     current_user: User,
 ) -> Response:
     """Common handler for project-specific Streamable HTTP requests."""
-    # Lazily initialize the project's Streamable HTTP manager
-    # to pick up new projects as they are created.
     project_server = get_project_mcp_server(project_id)
     await project_server.ensure_session_manager_running()
 
@@ -335,7 +338,9 @@ async def _dispatch_project_streamable_http(
     except HTTPException:
         raise
     except Exception as exc:
-        await logger.aexception(f"Error handling Streamable HTTP request for project {project_id}: {exc!s}")
+        await logger.aexception(
+            f"Error handling Streamable HTTP request for project {project_id}: {exc!s}"
+        )
         raise HTTPException(status_code=500, detail="Internal server error in project MCP transport") from exc
     finally:
         current_request_variables_ctx.reset(request_vars_token)
@@ -422,83 +427,45 @@ async def _handle_project_sse_messages(
         current_request_variables_ctx.reset(req_vars_token)
 
 
-# legacy SSE transport
-project_messages_methods = ["POST", "DELETE"]
-
-
-def _is_streamable_http_request(request: Request) -> bool:
-    """Detect if a request is for Streamable HTTP transport.
-    
-    Streamable HTTP requests typically have:
-    - A session_id header (for stateless mode) - x-mcp-session-id or session-id
-    - Content-Type: application/json (for POST requests)
-    - Accept header that includes application/json
-    
-    SSE requests typically have:
-    - Accept: text/event-stream header (often exclusive or primary)
-    - No session_id header
-    """
-    # Check for session_id header (Streamable HTTP uses this for stateless mode)
-    if request.headers.get("x-mcp-session-id") or request.headers.get("session-id"):
-        return True
-    
-    # Check Content-Type for POST requests (Streamable HTTP uses application/json)
-    content_type = request.headers.get("content-type", "").lower()
-    if request.method == "POST" and "application/json" in content_type:
-        # If it's a POST with JSON content, check Accept header
-        accept_header = request.headers.get("accept", "").lower()
-        # If Accept includes application/json (even if it also includes text/event-stream),
-        # prefer Streamable HTTP for POST requests with JSON body
-        if "application/json" in accept_header:
-            return True
-    
-    # For GET requests, check Accept header more carefully
-    if request.method == "GET":
-        accept_header = request.headers.get("accept", "").lower()
-        # If it accepts application/json but text/event-stream is not the primary type,
-        # likely Streamable HTTP
-        if "application/json" in accept_header:
-            # If text/event-stream is listed first or is the only type, it's SSE
-            if accept_header.startswith("text/event-stream"):
-                return False
-            # Otherwise, prefer Streamable HTTP if application/json is present
-            return True
-    
-    # Default to SSE for backward compatibility
-    return False
-
-
-@router.api_route("/{project_id}", methods=project_messages_methods)
-@router.api_route("/{project_id}/", methods=project_messages_methods)
+@router.api_route("/{project_id}", methods=["POST", "DELETE"])
 async def handle_project_messages(
     project_id: UUID,
     request: Request,
     current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
-    """Handle POST/DELETE messages for a project-specific MCP server.
-    
-    This endpoint supports both Streamable HTTP and SSE transports.
-    It automatically detects the transport type and routes to the appropriate handler.
-    """
-    # Detect transport type and route accordingly
-    if _is_streamable_http_request(request):
-        return await _dispatch_project_streamable_http(project_id, request, current_user)
-    else:
+    """Handle POST/DELETE messages for a project-specific MCP server."""
+    if request.query_params.get("session_id"):
         return await _handle_project_sse_messages(project_id, request, current_user)
+    return await _dispatch_project_streamable_http(project_id, request, current_user)
 
 
-# Streamable HTTP transport
-streamable_http_methods = ["GET", "POST", "DELETE"]
+@router.api_route("/{project_id}/", methods=["POST", "DELETE"])
+async def handle_project_messages_with_slash(
+    project_id: UUID,
+    request: Request,
+    current_user: Annotated[User, Depends(verify_project_auth_conditional)],
+):
+    """Handle messages for a project-specific MCP server with trailing slash."""
+    return await handle_project_messages(project_id, request, current_user)
 
 
-@router.api_route("/{project_id}/streamable", methods=streamable_http_methods)
-@router.api_route("/{project_id}/streamable/", methods=streamable_http_methods)
+@router.api_route("/{project_id}/streamable", methods=["GET", "POST", "DELETE"])
 async def handle_project_streamable_http(
     project_id: UUID,
     request: Request,
     current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
     """Handle Streamable HTTP connections for a specific project."""
+    return await _dispatch_project_streamable_http(project_id, request, current_user)
+
+
+@router.api_route("/{project_id}/streamable/", methods=["GET", "POST", "DELETE"])
+async def handle_project_streamable_http_with_slash(
+    project_id: UUID,
+    request: Request,
+    current_user: Annotated[User, Depends(verify_project_auth_conditional)],
+):
+    """Handle Streamable HTTP connections for trailing slash routes."""
     return await _dispatch_project_streamable_http(project_id, request, current_user)
 
 
@@ -1243,16 +1210,12 @@ class ProjectMCPServer:
     def __init__(self, project_id: UUID):
         self.project_id = project_id
         self.server = Server(f"langflow-mcp-project-{project_id}")
-        # TODO: implement an environment variable to enable/disable stateless mode
-        self.session_manager = StreamableHTTPSessionManager(self.server, stateless=True)
-        # since we lazily initialize the session manager's
-        # lifecyle (via .run(), which can only be called once),
-        # we use the lock to prevent race conditions on concurrent requests.
+        # _configure_server_notification_defaults(self.server)
+
+        self.session_manager = StreamableHTTPSessionManager(self.server)
         self._manager_lock = asyncio.Lock()
-        self._manager_started = False  # whether or not the session manager is running
-        self._runner_task: asyncio.Task | None = None  # session manager run()
-        self._shutdown_event: asyncio.Event | None = None  # session manager run ended
-        self._started_event: asyncio.Event | None = None  # session manager run started
+        self._manager_stack: AsyncExitStack | None = None
+        self._manager_started = False
 
         # Register handlers that filter by project
         @self.server.list_tools()
@@ -1296,36 +1259,21 @@ class ProjectMCPServer:
             if self._manager_started:
                 return
 
-            self._shutdown_event = asyncio.Event()
-            self._started_event = asyncio.Event()
-            tg = get_project_task_group_tg()
-            self._runner_task = tg.create_task(self._run_session_manager())
+            self._manager_stack = AsyncExitStack()
+            await self._manager_stack.enter_async_context(self.session_manager.run())
             self._manager_started = True
             await logger.adebug("Streamable HTTP manager started for project %s", self.project_id)
-            await self._started_event.wait()
 
-    async def _run_session_manager(self) -> None:
-        """Own the lifecycle of the project's Streamable HTTP session manager."""
-        try:
-            async with self.session_manager.run():
-                self._started_event.set()
-                await self._shutdown_event.wait()
-        except asyncio.CancelledError:
-            raise
-        except Exception as exc:  # noqa: BLE001
-            await logger.aexception(f"Project {self.project_id} Streamable HTTP manager crashed: {exc}")
-        finally:
-            self._started_event.set()  # prevent hanging if run() fails
-            self._runner_task = None
-            self._shutdown_event = None
-            self._started_event = None
+    async def stop_session_manager(self) -> None:
+        """Stop the project's Streamable HTTP manager if it is running."""
+        async with self._manager_lock:
+            if not self._manager_started or self._manager_stack is None:
+                return
+
+            await self._manager_stack.aclose()
+            self._manager_stack = None
             self._manager_started = False
             await logger.adebug("Streamable HTTP manager stopped for project %s", self.project_id)
-
-    def request_shutdown(self) -> None:
-        """Signal the runner task to stop."""
-        if self._shutdown_event and not self._shutdown_event.is_set():
-            self._shutdown_event.set()
 
 
 # Cache of project MCP servers
@@ -1422,6 +1370,16 @@ def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:
     if project_id_str not in project_mcp_servers:
         project_mcp_servers[project_id_str] = ProjectMCPServer(project_id)
     return project_mcp_servers[project_id_str]
+
+
+@router.on_event("shutdown")
+async def _shutdown_project_session_managers() -> None:
+    """Ensure all per-project session managers are cleanly stopped."""
+    for server in project_mcp_servers.values():
+        try:
+            await server.stop_session_manager()
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(f"Error stopping Streamable HTTP manager for project {server.project_id}: {exc!s}")
 
 
 async def register_project_with_composer(project: Folder):

@@ -32,30 +32,11 @@ def mock_mcp_server():
 
 
 @pytest.fixture
-async def mock_streamable_http_manager():
-    """Provide a mocked Streamable HTTP manager without starting the real transport."""
-    manager = AsyncMock()
-
-    async def fake_handle_request(_scope, _receive, send):
-        await send(
-            {
-                "type": "http.response.start",
-                "status": status.HTTP_200_OK,
-                "headers": [],
-            }
-        )
-        await send(
-            {
-                "type": "http.response.body",
-                "body": b"",
-                "more_body": False,
-            }
-        )
-
-    manager.handle_request = AsyncMock(side_effect=fake_handle_request)
-
-    with patch("langflow.api.v1.mcp.get_streamable_http_manager", return_value=manager):
-        yield manager
+def mock_streamable_http_manager():
+    """Mock the StreamableHTTPSessionManager."""
+    with patch("langflow.api.v1.mcp.streamable_http_manager") as mock:
+        mock.handle_request = AsyncMock()
+        yield mock
 
 
 @pytest.fixture
@@ -211,7 +192,6 @@ async def test_find_validation_error_with_pydantic_error():
     # Create a pydantic ValidationError by catching it
     validation_error = None
     try:
-
         class TestModel(pydantic.BaseModel):
             required_field: str
 
@@ -246,7 +226,6 @@ async def test_find_validation_error_with_context():
     # Create a pydantic ValidationError by catching it
     validation_error = None
     try:
-
         class TestModel(pydantic.BaseModel):
             required_field: str
 
@@ -284,10 +263,8 @@ async def test_mcp_sse_validation_error_logged():
     # Verify the function exists and works
     validation_error = None
     try:
-
         class TestModel(pydantic.BaseModel):
             required_field: str
-
         TestModel()
     except pydantic.ValidationError as e:
         validation_error = e
