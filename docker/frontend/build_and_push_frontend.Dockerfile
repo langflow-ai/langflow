@@ -6,7 +6,7 @@
 ################################
 
 # 1. force platform to the current architecture to increase build speed time on multi-platform builds
-FROM --platform=$BUILDPLATFORM node:lts-bookworm-slim AS builder-base
+FROM node:lts-bookworm-slim AS builder-base
 COPY src/frontend /frontend
 
 RUN cd /frontend && npm install && npm run build
