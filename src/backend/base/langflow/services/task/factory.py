@@ -9,6 +9,5 @@ class TaskServiceFactory(ServiceFactory):
         super().__init__(TaskService)
 
     @override
-    def create(self):
-        # Here you would have logic to create and configure a TaskService
-        return TaskService()
+    def create(self, settings_service):
+        return TaskService(settings_service)

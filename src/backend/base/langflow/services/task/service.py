@@ -16,7 +16,7 @@ class TaskService(Service):
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
-        self.use_celery = False
+        self.use_celery = self.settings_service.settings.celery_enabled
         self.backend = self.get_backend()
 
     @property
@@ -24,6 +24,10 @@ class TaskService(Service):
         return self.backend.name
 
     def get_backend(self) -> TaskBackend:
+        if self.use_celery:
+            from langflow.services.task.backends.celery import CeleryBackend
+
+            return CeleryBackend()
         return AnyIOBackend()
 
     # In your TaskService class

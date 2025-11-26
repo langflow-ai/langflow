@@ -139,7 +139,7 @@ export default function AllRequestsPage() {
 
     if (!pendingReviews || pendingReviews.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground h-full">
           <IconComponent name="Inbox" className="h-12 w-12 mb-4" />
           <p>No pending submissions</p>
         </div>
@@ -154,13 +154,13 @@ export default function AllRequestsPage() {
             <TableHead>Description</TableHead>
             <TableHead>Submitted by</TableHead>
             <TableHead>Submission Date</TableHead>
-            <TableHead>Versions</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Detail Page</TableHead>
+            <TableHead className="text-center">Versions</TableHead>
+            <TableHead className="text-center">Status</TableHead>
+            <TableHead>Action</TableHead>
             {/* Tags column - commented out for now
             <TableHead>Tags</TableHead>
-            */}
-            <TableHead className="text-right">Action</TableHead>
+            
+            <TableHead className="text-right">Action</TableHead>*/}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -173,7 +173,7 @@ export default function AllRequestsPage() {
                 )}
               </TableCell>
               <TableCell>
-                <div>
+                <>
                   <div>
                     {version.submitted_by_name ||
                       version.submitter_name ||
@@ -184,12 +184,12 @@ export default function AllRequestsPage() {
                       {version.submitted_by_email || version.submitter_email}
                     </div>
                   )}
-                </div>
+                </>
               </TableCell>
               <TableCell>{formatDate(version.submitted_at)}</TableCell>
-              <TableCell>{version.version}</TableCell>
-              <TableCell>
-                <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
+              <TableCell className="text-center">{version.version}</TableCell>
+              <TableCell className="text-center">
+                <span className="inline-flex items-center rounded-full bg-[#FDFDD2] px-2.5 py-0.5 text-xs font-medium text-[#826D29] min-h-6">
                   Under Review
                 </span>
               </TableCell>
@@ -198,7 +198,7 @@ export default function AllRequestsPage() {
                   size="sm"
                   variant="link"
                   onClick={() => handleReview(version.original_flow_id)}
-                  className="!text-[#7421e3] hover:!text-[#350e84] !p-0"
+                  className="!text-[#7421e3] hover:!text-[#350e84] !p-0 !font-normal"
                 >
                   Review
                 </Button>
@@ -225,7 +225,7 @@ export default function AllRequestsPage() {
                   <span className="text-muted-foreground">-</span>
                 )}
               </TableCell>
-              */}
+              
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
                   <Button
@@ -250,6 +250,7 @@ export default function AllRequestsPage() {
                   </Button>
                 </div>
               </TableCell>
+              */}
             </TableRow>
           ))}
         </TableBody>
@@ -283,10 +284,10 @@ export default function AllRequestsPage() {
             <TableHead>Description</TableHead>
             <TableHead>Submitted by</TableHead>
             <TableHead>Submission Date</TableHead>
-            <TableHead>Versions</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Detail Page</TableHead>
+            <TableHead className="text-center">Versions</TableHead>
+            <TableHead className="text-center">Status</TableHead>
             <TableHead>Reviewed By</TableHead>
+            <TableHead>Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -313,24 +314,24 @@ export default function AllRequestsPage() {
                 </div>
               </TableCell>
               <TableCell>{formatDate(version.submitted_at)}</TableCell>
-              <TableCell>{version.version}</TableCell>
-              <TableCell>
-                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+              <TableCell className="text-center">{version.version}</TableCell>
+              <TableCell className="text-center">
+                <span className="inline-flex items-center rounded-full bg-[#f2fff0] px-2.5 py-0.5 text-xs font-medium text-[#3fa33c] min-h-6">
                   Approved
                 </span>
               </TableCell>
               <TableCell>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleReview(version.original_flow_id)}
-                >
-                  <IconComponent name="Eye" className="h-4 w-4 mr-1" />
-                  Review
-                </Button>
+                {version.reviewed_by_name || version.reviewer_name || "Unknown"}
               </TableCell>
               <TableCell>
-                {version.reviewed_by_name || version.reviewer_name || "Unknown"}
+                <Button
+                  size="sm"
+                  variant="link"
+                  onClick={() => handleReview(version.original_flow_id)}
+                  className="!text-[#7421e3] hover:!text-[#350e84] !p-0 !font-normal"
+                >
+                  Review
+                </Button>
               </TableCell>
             </TableRow>
           ))}
@@ -365,10 +366,10 @@ export default function AllRequestsPage() {
             <TableHead>Description</TableHead>
             <TableHead>Submitted by</TableHead>
             <TableHead>Submission Date</TableHead>
-            <TableHead>Versions</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Detail Page</TableHead>
+            <TableHead className="text-center">Versions</TableHead>
+            <TableHead className="text-center">Status</TableHead>
             <TableHead>Rejection Reason</TableHead>
+            <TableHead>Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -395,21 +396,11 @@ export default function AllRequestsPage() {
                 </div>
               </TableCell>
               <TableCell>{formatDate(version.submitted_at)}</TableCell>
-              <TableCell>{version.version}</TableCell>
-              <TableCell>
-                <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+              <TableCell className="text-center">{version.version}</TableCell>
+              <TableCell className="text-center">
+                <span className="inline-flex items-center rounded-full bg-[#fdf4f3] px-2.5 py-0.5 text-xs font-medium text-[#d7503e] min-h-6">
                   Rejected
                 </span>
-              </TableCell>
-              <TableCell>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleReview(version.original_flow_id)}
-                >
-                  <IconComponent name="Eye" className="h-4 w-4 mr-1" />
-                  Review
-                </Button>
               </TableCell>
               <TableCell className="max-w-xs truncate">
                 {version.rejection_reason || (
@@ -417,6 +408,16 @@ export default function AllRequestsPage() {
                     No reason provided
                   </span>
                 )}
+              </TableCell>
+              <TableCell>
+                <Button
+                  size="sm"
+                  variant="link"
+                  onClick={() => handleReview(version.original_flow_id)}
+                  className="!text-[#7421e3] hover:!text-[#350e84] !p-0 !font-normal"
+                >
+                  Review
+                </Button>
               </TableCell>
             </TableRow>
           ))}
@@ -426,29 +427,27 @@ export default function AllRequestsPage() {
   };
 
   return (
-    <div className="flex w-full h-full flex-col p-6">
-      <div className="mb-6">
-        <h1 className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal">
-          All Requests{" "}
-          {totalCount > 0 && <span className="">({totalCount})</span>}
-        </h1>
-      </div>
+    <div className="flex h-full w-full flex-col bg-main-bg p-4 overflow-y-auto">
+      <h1 className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal mb-2">
+        All Requests{" "}
+        {totalCount > 0 && <span className="">({totalCount})</span>}
+      </h1>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
         <TabsList className="mb-4 border-b border-[#efefef] w-full gap-8">
-          <TabsTrigger value="submitted" className="gap-1">
+          <TabsTrigger value="submitted">
             Submitted
             {pendingReviews && pendingReviews.length > 0 && (
               <span className="ml-1">({pendingReviews.length})</span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="approved" className="gap-1">
+          <TabsTrigger value="approved">
             Approved
             {approvedVersions && approvedVersions.length > 0 && (
               <span className="ml-1">({approvedVersions.length})</span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="rejected" className="gap-1">
+          <TabsTrigger value="rejected">
             Rejected
             {rejectedVersions && rejectedVersions.length > 0 && (
               <span className="ml-1">({rejectedVersions.length})</span>
@@ -456,7 +455,7 @@ export default function AllRequestsPage() {
           </TabsTrigger>
         </TabsList>
 
-        <div className="rounded-lg border bg-card">
+        <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
           <TabsContent value="submitted" className="m-0">
             {renderSubmittedTable()}
           </TabsContent>

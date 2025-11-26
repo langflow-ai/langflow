@@ -569,9 +569,9 @@ async def get_flow_versions(
     current_user: CurrentActiveUser,
 ):
     """
-    Get all published versions for a flow (for version dropdown).
-    Returns versions ordered by published_at ascending (v1, v2, v3...).
-    Active version is marked with active=True.
+    Get all flow versions for a flow (for version dropdown).
+    Returns versions from flow_version table ordered by created_at descending.
+    Uses status_name from flow_status table to show version status.
     No permission check - any authenticated user can view versions.
     """
     # Check if flow exists
@@ -582,10 +582,13 @@ async def get_flow_versions(
             detail="Flow not found",
         )
 
-    # Get all versions for this original flow
-    query = select(PublishedFlowVersion).where(
-        PublishedFlowVersion.flow_id_cloned_from == flow_id
-    ).order_by(PublishedFlowVersion.published_at.asc())  # Oldest first (v1, v2, v3...)
+    # Get all versions for this original flow from flow_version table
+    query = (
+        select(FlowVersion)
+        .where(FlowVersion.original_flow_id == flow_id)
+        .options(joinedload(FlowVersion.status))
+        .order_by(FlowVersion.created_at.desc())  # Newest first
+    )
 
     result = await session.exec(query)
     versions = result.all()
@@ -593,16 +596,36 @@ async def get_flow_versions(
     if not versions:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No published versions found for this flow",
+            detail="No versions found for this flow",
         )
 
-    return [PublishedFlowVersionRead.model_validate(v, from_attributes=True) for v in versions]
+    # Convert FlowVersion to PublishedFlowVersionRead format
+    return [
+        PublishedFlowVersionRead(
+            id=str(v.id),  # UUID to string
+            version=v.version,
+            flow_id_cloned_to=str(v.version_flow_id) if v.version_flow_id else None,
+            flow_id_cloned_from=str(v.original_flow_id),
+            published_flow_id=None,  # Not applicable for flow_version
+            flow_name=v.title or "",
+            flow_icon=v.agent_logo,
+            description=v.description,
+            tags=v.tags,
+            active=(v.status.status_name == FlowStatusEnum.PUBLISHED.value if v.status else False),
+            drafted=False,  # Not used with flow_version
+            published_by=str(v.published_by) if v.published_by else str(v.submitted_by),
+            published_at=v.published_at.isoformat() if v.published_at else v.created_at.isoformat(),
+            created_at=v.created_at.isoformat(),
+            status_name=v.status.status_name if v.status else None,  # Add status name
+        )
+        for v in versions
+    ]
 
 
 @router.post("/revert/{flow_id}/{version_id}", response_model=RevertToVersionResponse, status_code=status.HTTP_200_OK)
 async def revert_to_version(
     flow_id: UUID,
-    version_id: int,
+    version_id: str,  # Changed from int to str (UUID)
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
@@ -610,10 +633,20 @@ async def revert_to_version(
     Revert original flow to a specific version by cloning version's data.
     This REPLACES the original flow's data with the selected version's data.
     User can then edit and publish as a new version.
+    Uses flow_version table instead of published_flow_version.
     No permission check - any authenticated user can revert.
     """
-    # Get the version record
-    version = await session.get(PublishedFlowVersion, version_id)
+    # Convert version_id string to UUID
+    try:
+        version_uuid = UUID(version_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid version ID format",
+        )
+
+    # Get the version record from flow_version table
+    version = await session.get(FlowVersion, version_uuid)
     if not version:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -621,7 +654,7 @@ async def revert_to_version(
         )
 
     # Validate version belongs to this flow
-    if version.flow_id_cloned_from != flow_id:
+    if version.original_flow_id != flow_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Version does not belong to this flow",
@@ -636,7 +669,13 @@ async def revert_to_version(
         )
 
     # Get the versioned flow data
-    versioned_flow = await session.get(Flow, version.flow_id_cloned_to)
+    if not version.version_flow_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Versioned flow data not found",
+        )
+
+    versioned_flow = await session.get(Flow, version.version_flow_id)
     if not versioned_flow:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -652,27 +691,16 @@ async def revert_to_version(
 
     session.add(original_flow)
 
-    # Update drafted flags: set all versions to drafted=False for this flow
-    await session.exec(
-        update(PublishedFlowVersion)
-        .where(PublishedFlowVersion.flow_id_cloned_from == flow_id)
-        .values(drafted=False)
-    )
-
-    # Set the reverted version as drafted
-    version.drafted = True
-    session.add(version)
-
     await session.commit()
     await session.refresh(original_flow)
 
-    logger.info(f"Reverted flow {flow_id} to version {version.version} (version_id: {version_id}), marked as drafted")
+    logger.info(f"Reverted flow {flow_id} to version {version.version} (version_id: {version_id})")
 
     return RevertToVersionResponse(
         message=f"Successfully reverted to version {version.version}",
         version=version.version,
         flow_id=flow_id,
-        cloned_flow_id=version.flow_id_cloned_to,
+        cloned_flow_id=version.version_flow_id,
     )
 
 

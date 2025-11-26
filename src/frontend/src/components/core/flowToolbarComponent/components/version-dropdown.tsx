@@ -119,7 +119,7 @@ export default function VersionDropdown({
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{version.version}</span>
-                  {version.active && (
+                  {version.status_name === "Published" && (
                     <Badge variant="default" className="text-xs">
                       Published
                     </Badge>
@@ -129,13 +129,6 @@ export default function VersionDropdown({
                   {moment(version.published_at).fromNow()}
                 </span>
               </div>
-
-                  {version.drafted && (
-                     <ForwardedIconComponent
-                      name="Check"
-                      className="h-4 w-4 text-primary"
-                    />
-                  )}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>

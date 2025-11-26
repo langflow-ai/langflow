@@ -9,6 +9,7 @@ export interface FlowLatestStatusResponse {
   latest_version_id?: string | null;
   submitted_at?: string | null;
   reviewed_at?: string | null;
+  rejection_reason?: string | null;
   // Data for pre-populating re-submissions
   sample_text?: string[] | null;
   file_names?: string[] | null;

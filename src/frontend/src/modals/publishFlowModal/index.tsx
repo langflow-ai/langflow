@@ -526,7 +526,7 @@ export default function PublishFlowModal({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Publish the Agent to MarketPlace</DialogTitle>
+          <DialogTitle>Publish the Agent to Marketplace</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4 overflow-y-auto pr-2">

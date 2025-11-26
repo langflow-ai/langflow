@@ -106,13 +106,14 @@ class PublishedFlowVersion(PublishedFlowVersionBase, table=True):  # type: ignor
 class PublishedFlowVersionRead(PublishedFlowVersionBase):
     """Schema for reading published flow version."""
 
-    id: int
-    flow_id_cloned_to: UUID
+    id: int | str  # int for published_flow_version, str (UUID) for flow_version
+    flow_id_cloned_to: UUID | None
     flow_id_cloned_from: UUID
-    published_flow_id: UUID
+    published_flow_id: UUID | None
     published_by: UUID
     created_at: datetime
     drafted: bool
+    status_name: str | None = None  # Status from flow_status table (when using flow_version)
 
 
 class RevertToVersionResponse(SQLModel):

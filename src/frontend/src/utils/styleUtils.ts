@@ -219,12 +219,12 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Data", name: "data", icon: "Database" },
   ...(ENABLE_KNOWLEDGE_BASES
     ? [
-        {
-          display_name: "Knowledge Bases",
-          name: "knowledge_bases",
-          icon: "Library",
-        },
-      ]
+      {
+        display_name: "Knowledge Bases",
+        name: "knowledge_bases",
+        icon: "Library",
+      },
+    ]
     : []),
   { display_name: "Connectors", name: "healthcare", icon: "Cable" },
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
