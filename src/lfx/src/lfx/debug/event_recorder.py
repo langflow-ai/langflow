@@ -25,8 +25,8 @@ class EventBasedRecording:
     """Recording built from mutation events (pure observer pattern)."""
 
     flow_name: str
-    events: list[Any] = field(default_factory=list)  # GraphMutationEvent list
-    component_executions: list[str] = field(default_factory=list)  # Vertex IDs
+    events: list[GraphMutationEvent] = field(default_factory=list)
+    component_executions: list[str] = field(default_factory=list)
 
     def save(self, file_path: str | Any) -> None:
         """Save recording to file using JSON serialization.
@@ -73,15 +73,15 @@ class EventBasedRecording:
         print(f"✅ Loaded {len(recording.events)} events from {file_path}")
         return recording
 
-    def get_events_for_vertex(self, vertex_id: str) -> list[Any]:
+    def get_events_for_vertex(self, vertex_id: str) -> list[GraphMutationEvent]:
         """Get all events related to a specific vertex."""
         return [e for e in self.events if e.vertex_id == vertex_id]
 
-    def get_events_by_type(self, event_type: str) -> list[Any]:
+    def get_events_by_type(self, event_type: str) -> list[GraphMutationEvent]:
         """Get all events of a specific type."""
         return [e for e in self.events if e.event_type == event_type]
 
-    def get_events_by_component(self, component_name: str) -> list[Any]:
+    def get_events_by_component(self, component_name: str) -> list[GraphMutationEvent]:
         """Get events for components matching name.
 
         Args:
@@ -158,7 +158,7 @@ class EventBasedRecording:
         if len(after_events) > MAX_TIMELINE_EVENTS:
             print(f"\n... and {len(after_events) - MAX_TIMELINE_EVENTS} more events")
 
-    def get_events_at_step(self, step: int) -> list[Any]:
+    def get_events_at_step(self, step: int) -> list[GraphMutationEvent]:
         """Get all events at a specific step (usually 2: before + after).
 
         Args:
