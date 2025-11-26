@@ -44,7 +44,7 @@ async def list_flows(*, user_id: str | None = None) -> list[Data]:
 
 
 async def load_flow(
-    user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
+    user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None, bypass_user_check: bool =False
 ) -> Graph:
     from langflow.graph.graph.base import Graph
     from langflow.processing.process import process_tweaks
@@ -53,7 +53,7 @@ async def load_flow(
         msg = "Flow ID or Flow Name is required"
         raise ValueError(msg)
     if not flow_id and flow_name:
-        flow_id = await find_flow(flow_name, user_id)
+        flow_id = await find_flow(flow_name, user_id, bypass_user_check)
         if not flow_id:
             msg = f"Flow {flow_name} not found"
             raise ValueError(msg)
@@ -68,10 +68,14 @@ async def load_flow(
     return Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
 
 
-async def find_flow(flow_name: str, user_id: str) -> str | None:
+async def find_flow(flow_name: str, user_id: str, bypass_user_check:bool=False) -> str | None:
     async with session_scope() as session:
         uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
-        stmt = select(Flow).where(Flow.name == flow_name).where(Flow.user_id == uuid_user_id)
+        stmt=""
+        if bypass_user_check:
+            stmt = (select(Flow).where(Flow.name == flow_name))
+        else:
+            stmt = select(Flow).where(Flow.name == flow_name).where(Flow.user_id == uuid_user_id)
         flow = (await session.exec(stmt)).first()
         return flow.id if flow else None
 
@@ -91,7 +95,7 @@ async def run_flow(
         msg = "Session is invalid"
         raise ValueError(msg)
     if graph is None:
-        graph = await load_flow(user_id, flow_id, flow_name, tweaks)
+        graph = await load_flow(user_id, flow_id, flow_name, tweaks, bypass_user_check=True)
     if run_id:
         graph.set_run_id(UUID(run_id))
     if session_id:
