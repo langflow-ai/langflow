@@ -9,6 +9,7 @@ from ...field_typing.range_spec import RangeSpec
 from ...inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
 from ...log import logger
 
+
 class BailingChatModel(LCModelComponent):
     display_name = "Bailing Model"
     description = "Generate text using Bailing large model"
@@ -154,4 +155,3 @@ class BailingChatModel(LCModelComponent):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         return build_config
-
