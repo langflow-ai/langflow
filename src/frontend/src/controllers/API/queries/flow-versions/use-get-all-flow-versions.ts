@@ -3,26 +3,26 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import type { FlowVersionPaginatedResponse } from "./use-get-pending-reviews";
 
-export type FlowStatusName = "Draft" | "Submitted" | "Approved" | "Rejected" | "Published" | "Unpublished" | "Deleted";
-
-export const useGetVersionsByStatus = (
-  statusName: FlowStatusName,
+export const useGetAllFlowVersions = (
   page: number = 1,
   limit: number = 12,
-  enabled = true
+  status?: string
 ) => {
   return useQuery<FlowVersionPaginatedResponse>({
-    queryKey: ["flow-versions-by-status", statusName, page, limit],
+    queryKey: ["all-flow-versions", page, limit, status],
     queryFn: async () => {
       const response = await api.get<FlowVersionPaginatedResponse>(
-        `${getURL("FLOW_VERSIONS")}/by-status/${statusName}`,
+        `${getURL("FLOW_VERSIONS")}/all`,
         {
-          params: { page, limit },
+          params: {
+            page,
+            limit,
+            ...(status && status !== "all" ? { status } : {}),
+          },
         }
       );
       return response.data;
     },
-    enabled,
     staleTime: 0, // Always fetch fresh data
     refetchOnMount: "always", // Refetch when component mounts
     refetchOnWindowFocus: true,

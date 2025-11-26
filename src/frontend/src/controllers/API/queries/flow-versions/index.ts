@@ -2,6 +2,7 @@ export * from "./use-get-flow-latest-status";
 export * from "./use-submit-flow-for-approval";
 export * from "./use-get-pending-reviews";
 export * from "./use-get-versions-by-status";
+export * from "./use-get-all-flow-versions";
 export * from "./use-approve-version";
 export * from "./use-reject-version";
 export * from "./use-cancel-submission";
