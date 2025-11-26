@@ -6,7 +6,7 @@ from langchain_openai import OpenAIEmbeddings
 
 from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
 from lfx.base.embeddings.model import LCEmbeddingsModel
-from lfx.base.models.model_utils import get_ollama_models, is_valid_ollama_url
+from lfx.base.models.model_utils import is_valid_ollama_url
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from lfx.base.models.watsonx_constants import (
     IBM_WATSONX_URLS,
@@ -159,6 +159,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         except Exception:  # noqa: BLE001
             logger.exception("Error fetching models")
             return WATSONX_EMBEDDING_MODEL_NAMES
+
     async def fetch_ollama_models(self) -> list[str]:
         try:
             return await self.get_ollama_models(
@@ -169,9 +170,9 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 json_capabilities_key=JSON_CAPABILITIES_KEY,
             )
         except Exception:  # noqa: BLE001
-
             logger.exception("Error fetching models")
             return []
+
     async def build_embeddings(self) -> Embeddings:
         provider = self.provider
         model = self.model
@@ -360,13 +361,12 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         if field_name == "fail_safe_mode":
             if field_value:  # If fail_safe_mode is enabled
                 build_config["api_key"]["required"] = False
-            else:  # If fail_safe_mode is disabled, restore required flags based on provider
-                if hasattr(self, "provider"):
-                    if self.provider in ["OpenAI", "IBM watsonx.ai"]:
-                        build_config["api_key"]["required"] = True
-                    else:  # Ollama
-                        build_config["api_key"]["required"] = False
-        
+            elif hasattr(self, "provider"):
+                if self.provider in ["OpenAI", "IBM watsonx.ai"]:
+                    build_config["api_key"]["required"] = True
+                else:  # Ollama
+                    build_config["api_key"]["required"] = False
+
         if field_name == "provider":
             if field_value == "OpenAI":
                 build_config["model"]["options"] = OPENAI_EMBEDDING_MODEL_NAMES
