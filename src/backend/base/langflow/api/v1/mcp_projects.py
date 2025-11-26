@@ -13,7 +13,6 @@ from types import MethodType
 from typing import Annotated, Any, cast
 from uuid import UUID
 
-from anyio import BrokenResourceError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH

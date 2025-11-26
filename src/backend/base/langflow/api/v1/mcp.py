@@ -4,7 +4,6 @@ from types import MethodType
 from typing import Any
 
 import pydantic
-from anyio import BrokenResourceError
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 from lfx.log.logger import logger
