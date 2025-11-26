@@ -124,39 +124,61 @@ class EventBasedRecording:
             if event.timing == "after"
         ]
 
-    def show_summary(self) -> None:
-        """Display summary of recording."""
-        print(f"\n{'=' * 80}")
-        print(f"Event Recording: {self.flow_name}")
-        print(f"{'=' * 80}\n")
-        print(f"Total events: {len(self.events)}")
-        print(f"Components executed: {len(set(self.component_executions))}")
+    def get_summary(self) -> str:
+        """Return summary of recording as a string."""
+        lines = [
+            "",
+            "=" * 80,
+            f"Event Recording: {self.flow_name}",
+            "=" * 80,
+            "",
+            f"Total events: {len(self.events)}",
+            f"Components executed: {len(set(self.component_executions))}",
+        ]
 
         # Count by type
-        by_type = {}
+        by_type: dict[str, int] = {}
         for event in self.events:
             by_type[event.event_type] = by_type.get(event.event_type, 0) + 1
 
-        print("\nEvent types:")
+        lines.append("")
+        lines.append("Event types:")
         for event_type, count in sorted(by_type.items()):
-            print(f"  {event_type}: {count}")
+            lines.append(f"  {event_type}: {count}")
 
-    def show_timeline(self) -> None:
-        """Display event timeline."""
-        print(f"\n{'=' * 80}")
-        print(f"Event Timeline: {self.flow_name}")
-        print(f"{'=' * 80}\n")
-        print(f"Total events: {len(self.events)}\n")
+        return "\n".join(lines)
 
-        print("Timeline (after events only):")
+    def show_summary(self) -> None:
+        """Print summary of recording to stdout."""
+        print(self.get_summary())
+
+    def get_timeline(self) -> str:
+        """Return event timeline as a string."""
+        lines = [
+            "",
+            "=" * 80,
+            f"Event Timeline: {self.flow_name}",
+            "=" * 80,
+            "",
+            f"Total events: {len(self.events)}",
+            "",
+            "Timeline (after events only):",
+        ]
+
         after_events = [e for e in self.events if e.timing == "after"]
 
         for i, event in enumerate(after_events[:MAX_TIMELINE_EVENTS]):
             vertex = event.vertex_id.split("-")[0] if event.vertex_id else "Graph"
-            print(f"[{i:3d}] {event.event_type:20s} {vertex}")
+            lines.append(f"[{i:3d}] {event.event_type:20s} {vertex}")
 
         if len(after_events) > MAX_TIMELINE_EVENTS:
-            print(f"\n... and {len(after_events) - MAX_TIMELINE_EVENTS} more events")
+            lines.append(f"\n... and {len(after_events) - MAX_TIMELINE_EVENTS} more events")
+
+        return "\n".join(lines)
+
+    def show_timeline(self) -> None:
+        """Print event timeline to stdout."""
+        print(self.get_timeline())
 
     def get_events_at_step(self, step: int) -> list[GraphMutationEvent]:
         """Get all events at a specific step (usually 2: before + after).
@@ -169,23 +191,40 @@ class EventBasedRecording:
         """
         return [e for e in self.events if e.step == step]
 
+    def get_events_for_component_str(self, component_name: str) -> str:
+        """Return events for a specific component as a string.
+
+        Args:
+            component_name: Component name to filter by
+
+        Returns:
+            Formatted string of events for the component
+        """
+        comp_events = self.get_events_by_component(component_name)
+
+        lines = [
+            "",
+            f"Events for {component_name}: {len(comp_events)}",
+            "",
+        ]
+
+        for event in comp_events[:MAX_COMPONENT_EVENTS]:
+            lines.append(f"[{event.step:3d}] {event.timing:6s} {event.event_type}")
+            if event.timing == "after" and event.changes:
+                lines.append(f"      Changes: {list(event.changes.keys())}")
+
+        if len(comp_events) > MAX_COMPONENT_EVENTS:
+            lines.append(f"\n... and {len(comp_events) - MAX_COMPONENT_EVENTS} more")
+
+        return "\n".join(lines)
+
     def show_events_for_component(self, component_name: str) -> None:
-        """Show all events for a specific component.
+        """Print events for a specific component to stdout.
 
         Args:
             component_name: Component name to filter by
         """
-        comp_events = self.get_events_by_component(component_name)
-
-        print(f"\nEvents for {component_name}: {len(comp_events)}\n")
-
-        for event in comp_events[:MAX_COMPONENT_EVENTS]:
-            print(f"[{event.step:3d}] {event.timing:6s} {event.event_type}")
-            if event.timing == "after" and event.changes:
-                print(f"      Changes: {list(event.changes.keys())}")
-
-        if len(comp_events) > MAX_COMPONENT_EVENTS:
-            print(f"\n... and {len(comp_events) - MAX_COMPONENT_EVENTS} more")
+        print(self.get_events_for_component_str(component_name))
 
 
 class EventRecorder:
