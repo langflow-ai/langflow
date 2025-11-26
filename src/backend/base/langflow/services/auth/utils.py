@@ -169,20 +169,32 @@ async def get_current_user_by_jwt(
     if isinstance(token, Coroutine):
         token = await token
 
-    secret_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-    if secret_key is None:
-        logger.error("Secret key is not set in settings.")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            # Careful not to leak sensitive information
-            detail="Authentication failure: Verify authentication settings.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    algorithm = settings_service.auth_settings.ALGORITHM
+
+    # Use appropriate key based on algorithm
+    if algorithm in ("RS256", "RS512"):
+        verification_key = settings_service.auth_settings.PUBLIC_KEY
+        if not verification_key:
+            logger.error("Public key is not set in settings for RS256/RS512.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication failure: Verify authentication settings.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    else:
+        verification_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
+        if verification_key is None:
+            logger.error("Secret key is not set in settings.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication failure: Verify authentication settings.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            payload = jwt.decode(token, secret_key, algorithms=[settings_service.auth_settings.ALGORITHM])
+            payload = jwt.decode(token, verification_key, algorithms=[algorithm])
         user_id: UUID = payload.get("sub")  # type: ignore[assignment]
         token_type: str = payload.get("type")  # type: ignore[assignment]
         if expires := payload.get("exp", None):
@@ -353,10 +365,18 @@ def create_token(data: dict, expires_delta: timedelta):
     expire = datetime.now(timezone.utc) + expires_delta
     to_encode["exp"] = expire
 
+    algorithm = settings_service.auth_settings.ALGORITHM
+
+    # Use appropriate key based on algorithm
+    if algorithm in ("RS256", "RS512"):
+        signing_key = settings_service.auth_settings.PRIVATE_KEY.get_secret_value()
+    else:
+        signing_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
+
     return jwt.encode(
         to_encode,
-        settings_service.auth_settings.SECRET_KEY.get_secret_value(),
-        algorithm=settings_service.auth_settings.ALGORITHM,
+        signing_key,
+        algorithm=algorithm,
     )
 
 
@@ -473,14 +493,22 @@ async def create_user_tokens(user_id: UUID, db: AsyncSession, *, update_last_log
 async def create_refresh_token(refresh_token: str, db: AsyncSession):
     settings_service = get_settings_service()
 
+    algorithm = settings_service.auth_settings.ALGORITHM
+
+    # Use appropriate key based on algorithm
+    if algorithm in ("RS256", "RS512"):
+        verification_key = settings_service.auth_settings.PUBLIC_KEY
+    else:
+        verification_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
+
     try:
         # Ignore warning about datetime.utcnow
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             payload = jwt.decode(
                 refresh_token,
-                settings_service.auth_settings.SECRET_KEY.get_secret_value(),
-                algorithms=[settings_service.auth_settings.ALGORITHM],
+                verification_key,
+                algorithms=[algorithm],
             )
         user_id: UUID = payload.get("sub")  # type: ignore[assignment]
         token_type: str = payload.get("type")  # type: ignore[assignment]

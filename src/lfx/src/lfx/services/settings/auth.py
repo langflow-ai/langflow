@@ -3,12 +3,12 @@ from pathlib import Path
 from typing import Literal
 
 from passlib.context import CryptContext
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from lfx.log.logger import logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
-from lfx.services.settings.utils import read_secret_from_file, write_secret_to_file
+from lfx.services.settings.utils import generate_rsa_key_pair, read_secret_from_file, write_secret_to_file
 
 
 class AuthSettings(BaseSettings):
@@ -16,10 +16,22 @@ class AuthSettings(BaseSettings):
     CONFIG_DIR: str
     SECRET_KEY: SecretStr = Field(
         default=SecretStr(""),
-        description="Secret key for JWT. If not provided, a random one will be generated.",
+        description="Secret key for JWT (used with HS256). If not provided, a random one will be generated.",
         frozen=False,
     )
-    ALGORITHM: str = "HS256"
+    PRIVATE_KEY: SecretStr = Field(
+        default=SecretStr(""),
+        description="RSA private key for JWT signing (used with RS256/RS512). If not provided, a key pair will be generated.",
+        frozen=False,
+    )
+    PUBLIC_KEY: str = Field(
+        default="",
+        description="RSA public key for JWT verification (used with RS256/RS512). If not provided, derived from private key.",
+    )
+    ALGORITHM: Literal["HS256", "RS256", "RS512"] = Field(
+        default="HS256",
+        description="JWT signing algorithm. Use RS256 or RS512 for asymmetric signing (recommended for production).",
+    )
     ACCESS_TOKEN_EXPIRE_SECONDS: int = 60 * 60  # 1 hour
     REFRESH_TOKEN_EXPIRE_SECONDS: int = 60 * 60 * 24 * 7  # 7 days
 
@@ -131,3 +143,85 @@ class AuthSettings(BaseSettings):
                 logger.debug("Saved secret key")
 
         return value if isinstance(value, SecretStr) else SecretStr(value).get_secret_value()
+
+    @model_validator(mode="after")
+    def setup_rsa_keys(self):
+        """Generate or load RSA keys when using RS256/RS512 algorithm."""
+        if self.ALGORITHM not in ("RS256", "RS512"):
+            return self
+
+        config_dir = self.CONFIG_DIR
+        private_key_value = self.PRIVATE_KEY.get_secret_value() if self.PRIVATE_KEY else ""
+
+        if not config_dir:
+            # No config dir - generate keys in memory if not provided
+            if not private_key_value:
+                logger.debug("No CONFIG_DIR provided, generating RSA keys in memory")
+                private_key_pem, public_key_pem = generate_rsa_key_pair()
+                object.__setattr__(self, "PRIVATE_KEY", SecretStr(private_key_pem))
+                object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
+            elif not self.PUBLIC_KEY:
+                # Derive public key from private key
+                from cryptography.hazmat.primitives import serialization
+                from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+                private_key = load_pem_private_key(private_key_value.encode(), password=None)
+                public_key_pem = private_key.public_key().public_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PublicFormat.SubjectPublicKeyInfo,
+                ).decode("utf-8")
+                object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
+            return self
+
+        private_key_path = Path(config_dir) / "private_key.pem"
+        public_key_path = Path(config_dir) / "public_key.pem"
+
+        if private_key_value:
+            # Private key provided via env var - save it and derive public key
+            logger.debug("RSA private key provided")
+            write_secret_to_file(private_key_path, private_key_value)
+
+            if not self.PUBLIC_KEY:
+                from cryptography.hazmat.primitives import serialization
+                from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+                private_key = load_pem_private_key(private_key_value.encode(), password=None)
+                public_key_pem = private_key.public_key().public_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PublicFormat.SubjectPublicKeyInfo,
+                ).decode("utf-8")
+                object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
+                public_key_path.write_text(public_key_pem, encoding="utf-8")
+        else:
+            # No private key provided - load from file or generate
+            if private_key_path.exists():
+                logger.debug("Loading RSA keys from files")
+                private_key_pem = read_secret_from_file(private_key_path)
+                object.__setattr__(self, "PRIVATE_KEY", SecretStr(private_key_pem))
+
+                if public_key_path.exists():
+                    public_key_pem = public_key_path.read_text(encoding="utf-8")
+                    object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
+                else:
+                    # Derive public key from private key
+                    from cryptography.hazmat.primitives import serialization
+                    from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+                    private_key = load_pem_private_key(private_key_pem.encode(), password=None)
+                    public_key_pem = private_key.public_key().public_bytes(
+                        encoding=serialization.Encoding.PEM,
+                        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+                    ).decode("utf-8")
+                    object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
+                    public_key_path.write_text(public_key_pem, encoding="utf-8")
+            else:
+                # Generate new RSA key pair
+                logger.debug("Generating new RSA key pair")
+                private_key_pem, public_key_pem = generate_rsa_key_pair()
+                write_secret_to_file(private_key_path, private_key_pem)
+                public_key_path.write_text(public_key_pem, encoding="utf-8")
+                object.__setattr__(self, "PRIVATE_KEY", SecretStr(private_key_pem))
+                object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
+                logger.debug("RSA key pair generated and saved")
+
+        return self
