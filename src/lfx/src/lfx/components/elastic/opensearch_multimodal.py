@@ -671,10 +671,12 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         self.ingest_data = self._prepare_ingest_data()
 
         logger.debug(
-            f"[INGESTION] ingest_data type: {type(self.ingest_data)}, length: {len(self.ingest_data) if self.ingest_data else 0}"
+            f"[INGESTION] ingest_data type: "
+            f"{type(self.ingest_data)}, length: {len(self.ingest_data) if self.ingest_data else 0}"
         )
         logger.debug(
-            f"[INGESTION] ingest_data content: {self.ingest_data[:2] if self.ingest_data and len(self.ingest_data) > 0 else 'empty'}"
+            f"[INGESTION] ingest_data content: "
+            f"{self.ingest_data[:2] if self.ingest_data and len(self.ingest_data) > 0 else 'empty'}"
         )
 
         docs = self.ingest_data or []
