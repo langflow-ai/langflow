@@ -70,14 +70,14 @@ def test_empty_version_gets_default(monkeypatch):
     """Test that empty string gets default value."""
     monkeypatch.setenv("LANGFLOW_MCP_COMPOSER_VERSION", "")
     settings = Settings()
-    assert settings.mcp_composer_version == "~=0.1.0.7"
+    assert settings.mcp_composer_version == "==0.1.0.8.10"
 
 
 def test_no_env_var_uses_default(monkeypatch):
     """Test that missing env var uses default value."""
     monkeypatch.delenv("LANGFLOW_MCP_COMPOSER_VERSION", raising=False)
     settings = Settings()
-    assert settings.mcp_composer_version == "~=0.1.0.7"
+    assert settings.mcp_composer_version == "==0.1.0.8.10"
 
 
 def test_three_part_version_gets_prefix(monkeypatch):
@@ -113,8 +113,8 @@ def test_validator_directly():
 
     # Test empty
     result = Settings.validate_mcp_composer_version("")
-    assert result == "~=0.1.0.7"
+    assert result == "==0.1.0.8.10"
 
     # Test None
     result = Settings.validate_mcp_composer_version(None)
-    assert result == "~=0.1.0.7"
+    assert result == "==0.1.0.8.10"
