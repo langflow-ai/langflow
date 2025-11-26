@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history - required for tags (?)
       - name: Validate that input is a tag, not a branch
@@ -137,7 +137,7 @@ jobs:
       skipped: ${{ steps.check-version.outputs.skipped }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.release_tag }}
       - name: Setup Environment
@@ -207,7 +207,7 @@ jobs:
       version: ${{ steps.check-version.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.release_tag }}
       - name: Setup Environment
@@ -346,7 +346,7 @@ jobs:
       version: ${{ steps.check-version.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.release_tag }}
       - name: Setup Environment
@@ -460,8 +460,8 @@ jobs:
 
   call_docker_build_main_backend:
     name: Call Docker Build Workflow for Langflow Backend
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci]
+    if: ${{ inputs.build_docker_main && !inputs.dry_run }}
+    needs: [call_docker_build_main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -472,8 +472,8 @@ jobs:
 
   call_docker_build_main_frontend:
     name: Call Docker Build Workflow for Langflow Frontend
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci]
+    if: ${{ inputs.build_docker_main && !inputs.dry_run }}
+    needs: [call_docker_build_main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}

@@ -22,6 +22,11 @@ on:
         required: false
         type: boolean
         default: false
+      skip_slack:
+        description: "Skip slack message on failure. Only do this for testing purposes."
+        required: false
+        type: boolean
+        default: false
       push_to_registry:
         description: "Whether to push images to registries. Set to false for testing builds without publishing."
         required: false
@@ -60,7 +65,7 @@ jobs:
       lfx_tag: ${{ steps.generate_lfx_tag.outputs.lfx_tag }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: true
       - name: "Setup Environment"
@@ -142,7 +147,7 @@ jobs:
           # TODO: notify on failure
 
       - name: Checkout main nightly tag
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ steps.generate_main_tag.outputs.main_tag }}
 
@@ -229,7 +234,7 @@ jobs:
   slack-notification:
     name: Send Slack Notification
     needs: [frontend-tests, backend-unit-tests, release-nightly-build]
-    if: ${{ github.repository == 'langflow-ai/langflow' && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
+    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Send failure notification to Slack
