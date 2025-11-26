@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,6 +32,7 @@ import SubmitForApprovalModal from "@/modals/submitForApprovalModal";
 import PublishFlowModal from "@/modals/publishFlowModal";
 
 export default function FlowToolbarOptions() {
+  const navigate = useNavigate();
   const [open, setOpen] = useState<boolean>(false);
   const [openSubmitModal, setOpenSubmitModal] = useState<boolean>(false);
   const [openPublishModal, setOpenPublishModal] = useState<boolean>(false);
@@ -104,6 +106,7 @@ export default function FlowToolbarOptions() {
     approveVersion(latestVersionId, {
       onSuccess: () => {
         setSuccessData({ title: `"${currentFlowName}" has been approved` });
+        navigate("/all-requests");
       },
       onError: (error: any) => {
         setErrorData({
@@ -136,6 +139,7 @@ export default function FlowToolbarOptions() {
           setSuccessData({ title: `"${currentFlowName}" has been rejected` });
           setOpenRejectModal(false);
           setRejectionReason("");
+          navigate("/all-requests");
         },
         onError: (error: any) => {
           setErrorData({
