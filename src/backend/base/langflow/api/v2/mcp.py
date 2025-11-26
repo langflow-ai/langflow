@@ -242,6 +242,12 @@ async def update_server(
         else:
             raise HTTPException(status_code=500, detail="Server not found.")
     else:
+        existing_config = server_list["mcpServers"].get(server_name, {})
+        if "env" in existing_config and "env" not in server_config:
+            server_config["env"] = existing_config["env"]
+        if "args" in existing_config and "args" not in server_config:
+            server_config["args"] = existing_config["args"]
+
         server_list["mcpServers"][server_name] = server_config
 
     # Remove the existing file
