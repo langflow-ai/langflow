@@ -194,13 +194,19 @@ class RunFlowBaseComponent(Component):
 
     async def get_required_data(self, flow_name_selected):
         self.flow_data = await self.alist_flows()
-        for flow_data in self.flow_data:
-            if flow_data.data["name"] == flow_name_selected:
-                graph = Graph.from_payload(flow_data.data["data"])
+        for flow_data in self.flow_data["items"]:
+            if flow_data.flow_name == flow_name_selected:
+                flow = await load_flow(
+                    user_id=self.user_id, flow_id=str(flow_data.flow_id)
+                )
+                flow_data.flow_data = flow
+                graph = flow
                 new_fields = self.get_new_fields_from_graph(graph)
                 new_fields = self.update_input_types(new_fields)
 
-                return flow_data.data["description"], [field for field in new_fields if field.get("tool_mode") is True]
+                return flow_data.description, [
+                    field for field in new_fields if field.get("tool_mode") is True
+                ]
         return None
 
     def update_input_types(self, fields: list[dotdict]) -> list[dotdict]:
