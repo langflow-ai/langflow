@@ -1,4 +1,4 @@
-import type { Preview } from "@storybook/react";
+import type { Preview } from "@storybook/react-vite";
 import * as React from "react";
 import { useEffect } from "react";
 // Import all CSS files to match the app's styling
