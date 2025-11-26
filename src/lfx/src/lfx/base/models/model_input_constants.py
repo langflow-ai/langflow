@@ -46,9 +46,8 @@ def process_inputs(component_data: Input, provider_name: str | None = None):
             component_data.required = False
     elif component_data.name == "tool_model_enabled":
         # Keep hidden/advanced and default to False. Agent or tool-using
-        # components can enable this dynamically when needed.
         component_data.advanced = True
-        component_data.value = False
+        component_data.value = True
     elif component_data.name in {"temperature", "base_url"}:
         if provider_name not in ["IBM watsonx.ai", "Ollama"]:
             component_data = set_advanced_true(component_data)
@@ -400,10 +399,6 @@ MODEL_DYNAMIC_UPDATE_FIELDS = [
 
 MODELS_METADATA = {name: {"icon": prov["icon"]} for name, prov in ACTIVE_MODEL_PROVIDERS_DICT.items()}
 
-<<<<<<< HEAD
-MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "OpenAI", "IBM watsonx.ai", "Ollama"]
-=======
-MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "Helicone", "OpenAI"]
->>>>>>> 5e273bb6bd (integrate helicone as a bundle and as an agent provider)
+MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "Helicone", "OpenAI", "IBM watsonx.ai", "Ollama"]
 
 MODEL_OPTIONS_METADATA = [MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA]
