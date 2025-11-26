@@ -100,10 +100,16 @@
     "serve": "vite preview",
     "format": "npx @biomejs/biome format --write",
     "lint": "npx @biomejs/biome lint",
+    "lint:changed": "bash scripts/lint-changed.sh",
     "lint:types": "npx @biomejs/biome lint --diagnostic-level=error",
     "lint:types:staged": "npx @biomejs/biome lint --staged --diagnostic-level=error",
+    "lint:types:changed": "bash scripts/lint-changed.sh",
     "check-format": "npx @biomejs/biome check",
-    "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite"
+    "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite",
+    "storybook": "storybook dev -p 6006",
+    "storybook:network": "storybook dev -p 6006 --host 0.0.0.0",
+    "build-storybook": "storybook build",
+    "chromatic": "chromatic --project-token=${CHROMATIC_PROJECT_TOKEN}"
   },
   "browserslist": {
     "production": [
@@ -121,6 +127,10 @@
   "devDependencies": {
     "@biomejs/biome": "2.1.1",
     "@jest/types": "^30.0.1",
+    "@storybook/addon-docs": "^10.1.0",
+    "@storybook/addon-links": "^10.1.0",
+    "@storybook/react": "^10.1.0",
+    "@storybook/react-vite": "^10.1.0",
     "@modelcontextprotocol/server-everything": "^0.6.2",
     "@playwright/test": "^1.56.0",
     "@swc/cli": "^0.5.2",
@@ -142,6 +152,7 @@
     "jest-environment-jsdom": "^30.0.2",
     "jest-junit": "^16.0.0",
     "postcss": "^8.4.38",
+    "storybook": "^10.1.0",
     "tailwindcss": "^3.4.4",
     "tailwindcss-dotted-background": "^1.1.0",
     "ts-jest": "^29.4.0",
