@@ -137,7 +137,8 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             display_name="Fail-Safe Mode",
             value=False,
             advanced=True,
-            info="When enabled, errors will be logged instead of raising exceptions. The component will return None on error.",
+            info="When enabled, errors will be logged instead of raising exceptions. "
+            "The component will return None on error.",
             real_time_refresh=True,
         ),
     ]
@@ -161,7 +162,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             return WATSONX_EMBEDDING_MODEL_NAMES
     async def fetch_ollama_models(self) -> list[str]:
         try:
-            return await self.get_ollama_models(
+            return await get_ollama_models(
                 base_url_value=self.ollama_base_url,
                 desired_capability=DESIRED_CAPABILITY,
                 json_models_key=JSON_MODELS_KEY,
@@ -194,25 +195,11 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                     return None
                 raise ValueError(msg)
 
-            # Create the primary embedding instance
-            embeddings_instance = OpenAIEmbeddings(
-                model=model,
-                dimensions=dimensions or None,
-                base_url=api_base or None,
-                api_key=api_key,
-                chunk_size=chunk_size,
-                max_retries=max_retries,
-                timeout=request_timeout or None,
-                show_progress_bar=show_progress_bar,
-                model_kwargs=model_kwargs,
-            )
-
-            # Create dedicated instances for each available model
-            available_models_dict = {}
-            for model_name in OPENAI_EMBEDDING_MODEL_NAMES:
-                available_models_dict[model_name] = OpenAIEmbeddings(
-                    model=model_name,
-                    dimensions=dimensions or None,  # Use same dimensions config for all
+            try:
+                # Create the primary embedding instance
+                embeddings_instance = OpenAIEmbeddings(
+                    model=model,
+                    dimensions=dimensions or None,
                     base_url=api_base or None,
                     api_key=api_key,
                     chunk_size=chunk_size,
@@ -222,10 +209,31 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                     model_kwargs=model_kwargs,
                 )
 
-            return EmbeddingsWithModels(
-                embeddings=embeddings_instance,
-                available_models=available_models_dict,
-            )
+                # Create dedicated instances for each available model
+                available_models_dict = {}
+                for model_name in OPENAI_EMBEDDING_MODEL_NAMES:
+                    available_models_dict[model_name] = OpenAIEmbeddings(
+                        model=model_name,
+                        dimensions=dimensions or None,  # Use same dimensions config for all
+                        base_url=api_base or None,
+                        api_key=api_key,
+                        chunk_size=chunk_size,
+                        max_retries=max_retries,
+                        timeout=request_timeout or None,
+                        show_progress_bar=show_progress_bar,
+                        model_kwargs=model_kwargs,
+                    )
+
+                return EmbeddingsWithModels(
+                    embeddings=embeddings_instance,
+                    available_models=available_models_dict,
+                )
+            except Exception as e:
+                msg = f"Failed to initialize OpenAI embeddings: {e}"
+                if self.fail_safe_mode:
+                    logger.error(msg)
+                    return None
+                raise
 
         if provider == "Ollama":
             try:
@@ -240,44 +248,51 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                         return None
                     raise ImportError(msg) from None
 
-            transformed_base_url = transform_localhost_url(ollama_base_url)
+            try:
+                transformed_base_url = transform_localhost_url(ollama_base_url)
 
-            # Check if URL contains /v1 suffix (OpenAI-compatible mode)
-            if transformed_base_url and transformed_base_url.rstrip("/").endswith("/v1"):
-                # Strip /v1 suffix and log warning
-                transformed_base_url = transformed_base_url.rstrip("/").removesuffix("/v1")
-                logger.warning(
-                    "Detected '/v1' suffix in base URL. The Ollama component uses the native Ollama API, "
-                    "not the OpenAI-compatible API. The '/v1' suffix has been automatically removed. "
-                    "If you want to use the OpenAI-compatible API, please use the OpenAI component instead. "
-                    "Learn more at https://docs.ollama.com/openai#openai-compatibility"
-                )
+                # Check if URL contains /v1 suffix (OpenAI-compatible mode)
+                if transformed_base_url and transformed_base_url.rstrip("/").endswith("/v1"):
+                    # Strip /v1 suffix and log warning
+                    transformed_base_url = transformed_base_url.rstrip("/").removesuffix("/v1")
+                    logger.warning(
+                        "Detected '/v1' suffix in base URL. The Ollama component uses the native Ollama API, "
+                        "not the OpenAI-compatible API. The '/v1' suffix has been automatically removed. "
+                        "If you want to use the OpenAI-compatible API, please use the OpenAI component instead. "
+                        "Learn more at https://docs.ollama.com/openai#openai-compatibility"
+                    )
 
-            final_base_url = transformed_base_url or "http://localhost:11434"
+                final_base_url = transformed_base_url or "http://localhost:11434"
 
-            # Create the primary embedding instance
-            embeddings_instance = OllamaEmbeddings(
-                model=model,
-                base_url=final_base_url,
-                **model_kwargs,
-            )
-
-            # Fetch available Ollama models
-            available_model_names = await self.fetch_ollama_models()
-
-            # Create dedicated instances for each available model
-            available_models_dict = {}
-            for model_name in available_model_names:
-                available_models_dict[model_name] = OllamaEmbeddings(
-                    model=model_name,
+                # Create the primary embedding instance
+                embeddings_instance = OllamaEmbeddings(
+                    model=model,
                     base_url=final_base_url,
                     **model_kwargs,
                 )
 
-            return EmbeddingsWithModels(
-                embeddings=embeddings_instance,
-                available_models=available_models_dict,
-            )
+                # Fetch available Ollama models
+                available_model_names = await self.fetch_ollama_models()
+
+                # Create dedicated instances for each available model
+                available_models_dict = {}
+                for model_name in available_model_names:
+                    available_models_dict[model_name] = OllamaEmbeddings(
+                        model=model_name,
+                        base_url=final_base_url,
+                        **model_kwargs,
+                    )
+
+                return EmbeddingsWithModels(
+                    embeddings=embeddings_instance,
+                    available_models=available_models_dict,
+                )
+            except Exception as e:
+                msg = f"Failed to initialize Ollama embeddings: {e}"
+                if self.fail_safe_mode:
+                    logger.error(msg)
+                    return None
+                raise
 
         if provider == "IBM watsonx.ai":
             try:
@@ -305,47 +320,54 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                     return None
                 raise ValueError(msg)
 
-            from ibm_watsonx_ai import APIClient, Credentials
+            try:
+                from ibm_watsonx_ai import APIClient, Credentials
 
-            final_url = base_url_ibm_watsonx or "https://us-south.ml.cloud.ibm.com"
+                final_url = base_url_ibm_watsonx or "https://us-south.ml.cloud.ibm.com"
 
-            credentials = Credentials(
-                api_key=self.api_key,
-                url=final_url,
-            )
+                credentials = Credentials(
+                    api_key=self.api_key,
+                    url=final_url,
+                )
 
-            api_client = APIClient(credentials)
+                api_client = APIClient(credentials)
 
-            params = {
-                EmbedTextParamsMetaNames.TRUNCATE_INPUT_TOKENS: self.truncate_input_tokens,
-                EmbedTextParamsMetaNames.RETURN_OPTIONS: {"input_text": self.input_text},
-            }
+                params = {
+                    EmbedTextParamsMetaNames.TRUNCATE_INPUT_TOKENS: self.truncate_input_tokens,
+                    EmbedTextParamsMetaNames.RETURN_OPTIONS: {"input_text": self.input_text},
+                }
 
-            # Create the primary embedding instance
-            embeddings_instance = WatsonxEmbeddings(
-                model_id=model,
-                params=params,
-                watsonx_client=api_client,
-                project_id=project_id,
-            )
-
-            # Fetch available IBM watsonx.ai models
-            available_model_names = self.fetch_ibm_models(final_url)
-
-            # Create dedicated instances for each available model
-            available_models_dict = {}
-            for model_name in available_model_names:
-                available_models_dict[model_name] = WatsonxEmbeddings(
-                    model_id=model_name,
+                # Create the primary embedding instance
+                embeddings_instance = WatsonxEmbeddings(
+                    model_id=model,
                     params=params,
                     watsonx_client=api_client,
                     project_id=project_id,
                 )
 
-            return EmbeddingsWithModels(
-                embeddings=embeddings_instance,
-                available_models=available_models_dict,
-            )
+                # Fetch available IBM watsonx.ai models
+                available_model_names = self.fetch_ibm_models(final_url)
+
+                # Create dedicated instances for each available model
+                available_models_dict = {}
+                for model_name in available_model_names:
+                    available_models_dict[model_name] = WatsonxEmbeddings(
+                        model_id=model_name,
+                        params=params,
+                        watsonx_client=api_client,
+                        project_id=project_id,
+                    )
+
+                return EmbeddingsWithModels(
+                    embeddings=embeddings_instance,
+                    available_models=available_models_dict,
+                )
+            except Exception as e:
+                msg = f"Failed to authenticate with IBM watsonx.ai: {e}"
+                if self.fail_safe_mode:
+                    logger.error(msg)
+                    return None
+                raise
 
         msg = f"Unknown provider: {provider}"
         if self.fail_safe_mode:
@@ -360,13 +382,13 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         if field_name == "fail_safe_mode":
             if field_value:  # If fail_safe_mode is enabled
                 build_config["api_key"]["required"] = False
-            else:  # If fail_safe_mode is disabled, restore required flags based on provider
-                if hasattr(self, "provider"):
-                    if self.provider in ["OpenAI", "IBM watsonx.ai"]:
-                        build_config["api_key"]["required"] = True
-                    else:  # Ollama
-                        build_config["api_key"]["required"] = False
-        
+            elif hasattr(self, "provider"):
+                # If fail_safe_mode is disabled, restore required flags based on provider
+                if self.provider in ["OpenAI", "IBM watsonx.ai"]:
+                    build_config["api_key"]["required"] = True
+                else:  # Ollama
+                    build_config["api_key"]["required"] = False
+
         if field_name == "provider":
             if field_value == "OpenAI":
                 build_config["model"]["options"] = OPENAI_EMBEDDING_MODEL_NAMES
