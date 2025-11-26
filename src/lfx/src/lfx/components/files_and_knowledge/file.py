@@ -346,7 +346,6 @@ class FileComponent(BaseFileComponent):
             ".ppsm",
             ".pptx",
             ".tiff",
-            ".txt",
             ".xls",
             ".xlsx",
             ".xhtml",
