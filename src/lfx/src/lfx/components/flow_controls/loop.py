@@ -88,7 +88,7 @@ class LoopComponent(Component):
         data_length = len(self.ctx.get(f"{self._id}_data", []))
         return current_index > data_length
 
-    def item_output(self) -> Data:
+    async def item_output(self) -> Data:
         """Output the next item in the list or stop if done."""
         self.initialize_data()
         current_item = Data(text="")
@@ -107,18 +107,22 @@ class LoopComponent(Component):
             self.aggregated_output()
             self.update_ctx({f"{self._id}_index": current_index + 1})
 
-        # Now we need to update the dependencies for the next run
-        self.update_dependency()
+        # Update dependencies using centralized graph API
+        await self.update_dependency()
+
         return current_item
 
-    def update_dependency(self):
+    async def update_dependency(self):
+        """Update loop dependencies using centralized graph API.
+
+        This ensures run_predecessors and run_map stay synchronized.
+        """
         item_dependency_id = self.get_incoming_edge_by_target_param("item")
-        if item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:
-            self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)
-            # CRITICAL: Also update run_map so remove_from_predecessors() works correctly
-            # run_map[predecessor] = list of vertices that depend on predecessor
-            if self._id not in self.graph.run_manager.run_map[item_dependency_id]:
-                self.graph.run_manager.run_map[item_dependency_id].append(self._id)
+        if item_dependency_id and item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:
+            # CRITICAL: Both run_predecessors and run_map must be updated together.
+            # run_map[predecessor] = list of vertices that depend on predecessor.
+            # This is required for remove_from_predecessors() to work correctly.
+            await self.graph.add_dynamic_dependency(self._id, item_dependency_id)
 
     def done_output(self) -> DataFrame:
         """Trigger the done output when iteration is complete."""
@@ -161,3 +165,21 @@ class LoopComponent(Component):
             aggregated.append(loop_input)
             self.update_ctx({f"{self._id}_aggregated": aggregated})
         return aggregated
+
+    def reset_loop_state(self) -> None:
+        """Reset loop internal state for fresh execution.
+
+        This should be called before starting a new independent iteration
+        of the graph to ensure the loop starts from a clean state.
+
+        This method clears all loop-specific context variables including:
+        - initialization flag
+        - current index
+        - aggregated results
+        - stored data
+        """
+        loop_id = self._id
+        self.ctx.pop(f"{loop_id}_initialized", None)
+        self.ctx.pop(f"{loop_id}_index", None)
+        self.ctx.pop(f"{loop_id}_aggregated", None)
+        self.ctx.pop(f"{loop_id}_data", None)

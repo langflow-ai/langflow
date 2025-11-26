@@ -150,11 +150,12 @@ def test_are_all_predecessors_fulfilled__wrong(data):
     assert result is False
 
 
-def test_remove_from_predecessors(data):
+@pytest.mark.asyncio
+async def test_remove_from_predecessors(data):
     manager = RunnableVerticesManager.from_dict(data)
     vertex_id = "A"
 
-    manager.remove_from_predecessors(vertex_id)
+    await manager.remove_from_predecessors(vertex_id)
 
     assert all(vertex_id not in predecessors for predecessors in manager.run_predecessors.values())
 
@@ -190,11 +191,12 @@ def test_update_vertex_run_state__bad_case(data):
     assert vertex_id not in manager.vertices_being_run
 
 
-def test_remove_vertex_from_runnables(data):
+@pytest.mark.asyncio
+async def test_remove_vertex_from_runnables(data):
     manager = RunnableVerticesManager.from_dict(data)
     vertex_id = "C"
 
-    manager.remove_vertex_from_runnables(vertex_id)
+    await manager.remove_vertex_from_runnables(vertex_id)
 
     assert vertex_id not in manager.vertices_being_run
 

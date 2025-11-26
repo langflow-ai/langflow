@@ -400,14 +400,16 @@ class Component(CustomComponent):
         try:
             module = inspect.getmodule(self.__class__)
             if module is None:
-                msg = "Could not find module for class"
-                raise ValueError(msg)
+                # Module not found - likely defined in notebook or REPL
+                self._code = f"# Component defined in {self.__class__.__name__}"
+                return
 
             class_code = inspect.getsource(module)
             self._code = class_code
-        except (OSError, TypeError) as e:
-            msg = f"Could not find source code for {self.__class__.__name__}"
-            raise ValueError(msg) from e
+        except (OSError, TypeError):
+            # Source code not available (e.g., defined in notebook, REPL, or dynamically)
+            # This is fine - just use a placeholder
+            self._code = f"# Component {self.__class__.__name__} (source code not available)"
 
     def set(self, **kwargs):
         """Connects the component to other components or sets parameters and attributes.
