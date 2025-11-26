@@ -88,7 +88,7 @@ class LoopComponent(Component):
         data_length = len(self.ctx.get(f"{self._id}_data", []))
         return current_index > data_length
 
-    def item_output(self) -> Data:
+    async def item_output(self) -> Data:
         """Output the next item in the list or stop if done."""
         self.initialize_data()
         current_item = Data(text="")
@@ -107,26 +107,22 @@ class LoopComponent(Component):
             self.aggregated_output()
             self.update_ctx({f"{self._id}_index": current_index + 1})
 
-        # Update dependencies - call sync version for now
-        # TODO: Make this async when component output methods support async
-        self.update_dependency()
+        # Update dependencies using centralized graph API
+        await self.update_dependency()
 
         return current_item
 
-    def update_dependency(self):
-        """Update loop dependencies using centralized graph API (sync).
+    async def update_dependency(self):
+        """Update loop dependencies using centralized graph API.
 
         This ensures run_predecessors and run_map stay synchronized.
-        Uses the fast path (no events) since called from sync context.
         """
         item_dependency_id = self.get_incoming_edge_by_target_param("item")
         if item_dependency_id and item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:
-            # Call the fast path directly (no events since sync)
-            self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)
-            # CRITICAL: Also update run_map so remove_from_predecessors() works correctly
-            # run_map[predecessor] = list of vertices that depend on predecessor
-            if self._id not in self.graph.run_manager.run_map[item_dependency_id]:
-                self.graph.run_manager.run_map[item_dependency_id].append(self._id)
+            # CRITICAL: Both run_predecessors and run_map must be updated together.
+            # run_map[predecessor] = list of vertices that depend on predecessor.
+            # This is required for remove_from_predecessors() to work correctly.
+            await self.graph.add_dynamic_dependency(self._id, item_dependency_id)
 
     def done_output(self) -> DataFrame:
         """Trigger the done output when iteration is complete."""
