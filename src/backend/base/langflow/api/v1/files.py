@@ -185,6 +185,26 @@ async def list_profile_pictures(
     return {"files": files}
 
 
+def is_file_used(flow_data: dict | None, file_name: str) -> bool:
+    """Check if a file is used in the flow."""
+    if not flow_data or "nodes" not in flow_data:
+        return False
+
+    for node in flow_data["nodes"]:
+        node_data = node.get("data", {}).get("node", {})
+        template = node_data.get("template", {})
+        for field in template.values():
+            if isinstance(field, dict) and "value" in field:
+                value = field["value"]
+                if isinstance(value, str) and file_name in value:
+                    return True
+                if isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, str) and file_name in item:
+                            return True
+    return False
+
+
 @router.get("/list/{flow_id}")
 async def list_files(
     flow: Annotated[Flow, Depends(get_flow)],
@@ -192,6 +212,9 @@ async def list_files(
 ):
     try:
         files = await storage_service.list_files(flow_id=str(flow.id))
+        # Add is_used flag to each file
+        for file in files:
+            file["is_used"] = is_file_used(flow.data, file["name"])
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

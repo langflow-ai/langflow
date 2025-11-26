@@ -58,6 +58,7 @@ async def files_active_user(files_client):  # noqa: ARG001
             password=get_password_hash("testpassword"),
             is_active=True,
             is_superuser=False,
+            optins=None,
         )
         stmt = select(User).where(User.username == user.username)
         if active_user := (await session.exec(stmt)).first():
@@ -204,7 +205,13 @@ async def test_list_files(files_client, files_created_api_key, files_flow):
     assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.json()}"
     files = response.json()["files"]
     assert len(files) == 1
-    assert files[0].endswith("test.txt")
+    # Verify the response format
+    assert "name" in files[0]
+    assert "size" in files[0]
+    assert "is_used" in files[0]
+    assert files[0]["name"].endswith("test.txt")
+    assert files[0]["size"] == 12  # "test content" is 12 bytes
+    assert isinstance(files[0]["is_used"], bool)
 
 
 async def test_delete_file(files_client, files_created_api_key, files_flow):
@@ -242,7 +249,9 @@ async def test_file_operations(files_client, files_created_api_key, files_flow):
     # Step 2: List files in the folder
     response = await files_client.get(f"api/v1/files/list/{files_flow.id}", headers=headers)
     assert response.status_code == 200
-    assert full_file_name in response.json()["files"]
+    files = response.json()["files"]
+    file_names = [f["name"] for f in files]
+    assert full_file_name in file_names
 
     # Step 3: Download the file and verify its content
     response = await files_client.get(f"api/v1/files/download/{files_flow.id}/{full_file_name}", headers=headers)
@@ -257,7 +266,9 @@ async def test_file_operations(files_client, files_created_api_key, files_flow):
 
     # Verify that the file is indeed deleted
     response = await files_client.get(f"api/v1/files/list/{files_flow.id}", headers=headers)
-    assert full_file_name not in response.json()["files"]
+    files = response.json()["files"]
+    file_names = [f["name"] for f in files]
+    assert full_file_name not in file_names
 
 
 @pytest.mark.usefixtures("max_file_size_upload_fixture")

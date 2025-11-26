@@ -222,14 +222,14 @@ class S3StorageService(StorageService):
             logger.exception(f"Error streaming file {file_name} from S3 in flow {flow_id}")
             raise
 
-    async def list_files(self, flow_id: str) -> list[str]:
+    async def list_files(self, flow_id: str) -> list[dict]:
         """List all files in a specified S3 prefix (flow namespace).
 
         Args:
             flow_id: The flow/user identifier for namespacing
 
         Returns:
-            list[str]: A list of file names (without the prefix)
+            list[dict]: A list of file metadata dicts with 'name' and 'size' keys
 
         Raises:
             Exception: If there's an error listing files from S3
@@ -252,7 +252,7 @@ class S3StorageService(StorageService):
                             # Remove the flow_id prefix to get just the filename
                             file_name = full_key[len(prefix) :]
                             if file_name:  # Skip the directory marker if it exists
-                                files.append(file_name)
+                                files.append({"name": file_name, "size": obj["Size"]})
 
             await logger.ainfo(f"Listed {len(files)} files in S3 flow {flow_id}")
         except Exception:

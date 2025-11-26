@@ -392,7 +392,13 @@ class TestS3StorageServiceListOperations:
             listed = await s3_storage_service.list_files(test_flow_id)
 
             assert len(listed) == 3
-            assert set(listed) == set(file_names)
+            listed_names = [f["name"] for f in listed]
+            assert set(listed_names) == set(file_names)
+            # Verify all files have size field
+            for file_info in listed:
+                assert "name" in file_info
+                assert "size" in file_info
+                assert file_info["size"] == 7  # "content" is 7 bytes
         finally:
             # Cleanup
             for file_name in file_names:
@@ -417,10 +423,12 @@ class TestS3StorageServiceListOperations:
             files_flow2 = await s3_storage_service.list_files(other_flow_id)
 
             # Verify isolation
-            assert "file1.txt" in files_flow1
-            assert "file1.txt" not in files_flow2
-            assert "file2.txt" in files_flow2
-            assert "file2.txt" not in files_flow1
+            names_flow1 = [f["name"] for f in files_flow1]
+            names_flow2 = [f["name"] for f in files_flow2]
+            assert "file1.txt" in names_flow1
+            assert "file1.txt" not in names_flow2
+            assert "file2.txt" in names_flow2
+            assert "file2.txt" not in names_flow1
         finally:
             # Cleanup
             with contextlib.suppress(Exception):
