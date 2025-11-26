@@ -8,6 +8,7 @@ from lfx.log.logger import logger
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
+from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
 from langflow.api.utils import CurrentActiveMCPUser
 from langflow.api.v1.mcp_utils import (
@@ -18,19 +19,10 @@ from langflow.api.v1.mcp_utils import (
     handle_mcp_errors,
     handle_read_resource,
 )
-from langflow.services.deps import get_settings_service
 
 router = APIRouter(prefix="/mcp", tags=["mcp"])
 
 server = Server("langflow-mcp-server")
-
-
-# Define constants
-MAX_RETRIES = 2
-
-
-def get_enable_progress_notifications() -> bool:
-    return get_settings_service().settings.mcp_server_enable_progress_notifications
 
 
 @server.list_prompts()
@@ -64,7 +56,7 @@ async def handle_global_call_tool(name: str, arguments: dict) -> list[types.Text
 
 
 sse = SseServerTransport("/api/v1/mcp/")
-
+streamable_http_manager = StreamableHTTPSessionManager(server)
 
 def find_validation_error(exc):
     """Searches for a pydantic.ValidationError in the exception chain."""
@@ -135,3 +127,36 @@ async def handle_messages(request: Request):
     except Exception as e:
         await logger.aerror(f"Internal server error: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}") from e
+
+
+async def _dispatch_streamable_http(
+    request: Request,
+    current_user: CurrentActiveMCPUser,
+) -> Response:
+    """Common handler for Streamable HTTP requests with user context propagation."""
+    await logger.adebug(
+        "Handling %s %s via Streamable HTTP for user %s",
+        request.method,
+        request.url.path,
+        current_user.id,
+    )
+
+    context_token = current_user_ctx.set(current_user)
+    try:
+        await streamable_http_manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001
+    except HTTPException:
+        raise
+    except Exception as exc:
+        await logger.aexception(f"Error handling Streamable HTTP request: {exc!s}")
+        raise HTTPException(status_code=500, detail="Internal server error in Streamable HTTP transport") from exc
+    finally:
+        current_user_ctx.reset(context_token)
+
+    return Response()
+
+streamable_http_methods = ["GET", "POST", "DELETE"]
+@router.api_route("/streamable", methods=streamable_http_methods)
+@router.api_route("/streamable/", methods=streamable_http_methods)
+async def handle_streamable_http(request: Request, current_user: CurrentActiveMCPUser):
+    """Streamable HTTP endpoint for MCP clients that support the new transport."""
+    return await _dispatch_streamable_http(request, current_user)

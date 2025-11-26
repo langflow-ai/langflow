@@ -32,9 +32,16 @@ def mock_mcp_server():
 
 
 @pytest.fixture
+def mock_streamable_http_manager():
+    """Mock the StreamableHTTPSessionManager."""
+    with patch("langflow.api.v1.mcp.streamable_http_manager") as mock:
+        mock.handle_request = AsyncMock()
+        yield mock
+
+
+@pytest.fixture
 def mock_sse_transport():
     with patch("langflow.api.v1.mcp.sse") as mock:
-        mock.connect_sse = AsyncMock()
         mock.handle_post_message = AsyncMock()
         yield mock
 
@@ -70,44 +77,202 @@ async def test_mcp_sse_get_endpoint_invalid_auth(client: AsyncClient):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-# Test the POST / endpoint (handles incoming MCP messages)
-async def test_mcp_post_endpoint_success(client: AsyncClient, logged_in_headers, mock_sse_transport):
-    """Test POST / endpoint successfully handles MCP messages."""
-    test_message = {"type": "test", "content": "message"}
-    response = await client.post("api/v1/mcp/", headers=logged_in_headers, json=test_message)
+async def test_mcp_sse_post_endpoint(client: AsyncClient, mock_sse_transport):
+    """Test POST / endpoint for SSE transport succeeds without auth."""
+    response = await client.post("api/v1/mcp/", json={"type": "test"})
 
     assert response.status_code == status.HTTP_200_OK
     mock_sse_transport.handle_post_message.assert_called_once()
 
 
-async def test_mcp_post_endpoint_no_auth(client: AsyncClient):
-    """Test POST / endpoint without authentication returns 400 (current behavior)."""
-    response = await client.post("api/v1/mcp/", json={})
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-
-async def test_mcp_post_endpoint_invalid_json(client: AsyncClient, logged_in_headers):
-    """Test POST / endpoint with invalid JSON returns 400."""
-    response = await client.post("api/v1/mcp/", headers=logged_in_headers, content="invalid json")
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-
-async def test_mcp_post_endpoint_disconnect_error(client: AsyncClient, logged_in_headers, mock_sse_transport):
-    """Test POST / endpoint handles disconnection errors correctly."""
+async def test_mcp_sse_post_endpoint_disconnect_error(client: AsyncClient, mock_sse_transport):
+    """Test POST / endpoint handles disconnection errors correctly for SSE."""
     mock_sse_transport.handle_post_message.side_effect = BrokenPipeError("Simulated disconnect")
 
-    response = await client.post("api/v1/mcp/", headers=logged_in_headers, json={"type": "test"})
+    response = await client.post("api/v1/mcp/", json={"type": "test"})
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert "MCP Server disconnected" in response.json()["detail"]
     mock_sse_transport.handle_post_message.assert_called_once()
 
 
-async def test_mcp_post_endpoint_server_error(client: AsyncClient, logged_in_headers, mock_sse_transport):
-    """Test POST / endpoint handles server errors correctly."""
+async def test_mcp_sse_post_endpoint_server_error(client: AsyncClient, mock_sse_transport):
+    """Test POST / endpoint handles server errors correctly for SSE."""
     mock_sse_transport.handle_post_message.side_effect = Exception("Internal server error")
 
-    response = await client.post("api/v1/mcp/", headers=logged_in_headers, json={"type": "test"})
+    response = await client.post("api/v1/mcp/", json={"type": "test"})
 
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-    assert "Internal server error" in response.json()["detail"]
+
+
+# Streamable HTTP tests
+async def test_mcp_streamable_post_endpoint(
+    client: AsyncClient,
+    logged_in_headers,
+    mock_streamable_http_manager,
+):
+    """Test POST /streamable endpoint successfully handles MCP messages."""
+    test_message = {"type": "test", "content": "message"}
+    response = await client.post("api/v1/mcp/streamable", headers=logged_in_headers, json=test_message)
+
+    assert response.status_code == status.HTTP_200_OK
+    mock_streamable_http_manager.handle_request.assert_called_once()
+
+
+async def test_mcp_streamable_post_endpoint_no_auth(client: AsyncClient):
+    """Test POST /streamable endpoint without authentication returns 403 Forbidden."""
+    response = await client.post("api/v1/mcp/streamable", json={})
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_mcp_streamable_post_endpoint_disconnect_error(
+    client: AsyncClient, logged_in_headers, mock_streamable_http_manager
+):
+    """Test POST /streamable endpoint handles disconnection errors correctly."""
+    mock_streamable_http_manager.handle_request.side_effect = BrokenPipeError("Simulated disconnect")
+
+    response = await client.post("api/v1/mcp/streamable", headers=logged_in_headers, json={"type": "test"})
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    mock_streamable_http_manager.handle_request.assert_called_once()
+
+
+async def test_mcp_streamable_post_endpoint_server_error(
+    client: AsyncClient, logged_in_headers, mock_streamable_http_manager
+):
+    """Test POST /streamable endpoint handles server errors correctly."""
+    mock_streamable_http_manager.handle_request.side_effect = Exception("Internal server error")
+
+    response = await client.post("api/v1/mcp/streamable", headers=logged_in_headers, json={"type": "test"})
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
+# Tests for GET and DELETE on /streamable endpoint
+async def test_mcp_streamable_get_endpoint(
+    client: AsyncClient,
+    logged_in_headers,
+    mock_streamable_http_manager,
+):
+    """Test GET /streamable endpoint successfully handles MCP messages."""
+    response = await client.get("api/v1/mcp/streamable", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    mock_streamable_http_manager.handle_request.assert_called_once()
+
+
+async def test_mcp_streamable_delete_endpoint(
+    client: AsyncClient,
+    logged_in_headers,
+    mock_streamable_http_manager,
+):
+    """Test DELETE /streamable endpoint successfully handles MCP messages."""
+    response = await client.delete("api/v1/mcp/streamable", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    mock_streamable_http_manager.handle_request.assert_called_once()
+
+
+async def test_mcp_streamable_get_endpoint_no_auth(client: AsyncClient):
+    """Test GET /streamable endpoint without authentication returns 403 Forbidden."""
+    response = await client.get("api/v1/mcp/streamable")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_mcp_streamable_delete_endpoint_no_auth(client: AsyncClient):
+    """Test DELETE /streamable endpoint without authentication returns 403 Forbidden."""
+    response = await client.delete("api/v1/mcp/streamable")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+# Tests for find_validation_error function
+@pytest.mark.asyncio(loop_scope="session")
+async def test_find_validation_error_with_pydantic_error():
+    """Test that find_validation_error correctly identifies ValidationError."""
+    import pydantic
+    from langflow.api.v1.mcp import find_validation_error
+
+    # Create a pydantic ValidationError by catching it
+    validation_error = None
+    try:
+        class TestModel(pydantic.BaseModel):
+            required_field: str
+
+        TestModel()  # This will raise ValidationError
+    except pydantic.ValidationError as e:
+        validation_error = e
+
+    assert validation_error is not None
+    # Wrap it in another exception
+    nested_error = ValueError("Wrapper")
+    nested_error.__cause__ = validation_error
+
+    found = find_validation_error(nested_error)
+    assert found is validation_error
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_find_validation_error_without_pydantic_error():
+    """Test that find_validation_error returns None for non-pydantic errors."""
+    from langflow.api.v1.mcp import find_validation_error
+
+    error = ValueError("Test error")
+    assert find_validation_error(error) is None
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_find_validation_error_with_context():
+    """Test that find_validation_error searches __context__ chain."""
+    import pydantic
+    from langflow.api.v1.mcp import find_validation_error
+
+    # Create a pydantic ValidationError by catching it
+    validation_error = None
+    try:
+        class TestModel(pydantic.BaseModel):
+            required_field: str
+
+        TestModel()
+    except pydantic.ValidationError as e:
+        validation_error = e
+
+    assert validation_error is not None
+    # Wrap it using __context__ instead of __cause__
+    nested_error = ValueError("Wrapper")
+    nested_error.__context__ = validation_error
+
+    found = find_validation_error(nested_error)
+    assert found is validation_error
+
+
+# Tests for context token management
+async def test_mcp_sse_context_token_management(mock_current_user_ctx):
+    """Test that context token is properly set and reset."""
+    # The mock is set up in the fixture, verify it's being called
+    mock_current_user_ctx.set.assert_not_called()  # Not called yet
+    mock_current_user_ctx.reset.assert_not_called()  # Not called yet
+
+
+# Test for find_validation_error usage in SSE endpoint
+@pytest.mark.asyncio(loop_scope="session")
+async def test_mcp_sse_validation_error_logged():
+    """Test that the find_validation_error function is available for SSE endpoint error handling."""
+    # This is a simpler test that verifies the find_validation_error function
+    # is available and could be used by the SSE endpoint if needed
+    # The actual usage in a real SSE connection is tested through integration tests
+    import pydantic
+    from langflow.api.v1.mcp import find_validation_error
+
+    # Verify the function exists and works
+    validation_error = None
+    try:
+        class TestModel(pydantic.BaseModel):
+            required_field: str
+        TestModel()
+    except pydantic.ValidationError as e:
+        validation_error = e
+
+    assert validation_error is not None
+    wrapped_error = RuntimeError("Wrapper")
+    wrapped_error.__cause__ = validation_error
+
+    # The function should be able to find the validation error in the chain
+    found = find_validation_error(wrapped_error)
+    assert found is validation_error

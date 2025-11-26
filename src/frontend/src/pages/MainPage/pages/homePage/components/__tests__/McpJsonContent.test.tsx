@@ -43,35 +43,50 @@ jest.mock("@/components/ui/button", () => ({
   ),
 }));
 
-jest.mock("@/components/ui/tabs-button", () => ({
-  Tabs: ({
-    children,
-    onValueChange,
-  }: {
-    children: React.ReactNode;
-    onValueChange: (v: string) => void;
-  }) => (
-    <div data-testid="tabs" data-onchange={onValueChange}>
-      {children}
-    </div>
-  ),
-  TabsList: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
-  TabsTrigger: ({
-    children,
-    value,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    value: string;
-    onClick?: () => void;
-  }) => (
-    <button data-testid={`tab-${value}`} onClick={onClick}>
-      {children}
-    </button>
-  ),
-}));
+jest.mock("@/components/ui/tabs-button", () => {
+  const React = require("react");
+  
+  // Store the onValueChange callback for each Tabs instance
+  let currentOnValueChange: ((v: string) => void) | null = null;
+  
+  return {
+    Tabs: ({
+      children,
+      onValueChange,
+    }: {
+      children: React.ReactNode;
+      onValueChange: (v: string) => void;
+    }) => {
+      // Store the callback in a closure that TabsTrigger can access
+      currentOnValueChange = onValueChange;
+      return <div data-testid="tabs">{children}</div>;
+    },
+    TabsList: ({ children }: { children: React.ReactNode }) => (
+      <div>{children}</div>
+    ),
+    TabsTrigger: ({
+      children,
+      value,
+      onClick,
+    }: {
+      children: React.ReactNode;
+      value: string;
+      onClick?: () => void;
+    }) => (
+      <button
+        data-testid={`tab-${value}`}
+        onClick={() => {
+          onClick?.();
+          if (currentOnValueChange) {
+            currentOnValueChange(value);
+          }
+        }}
+      >
+        {children}
+      </button>
+    ),
+  };
+});
 
 jest.mock("@/utils/utils", () => ({
   cn: (...args: (string | boolean | undefined)[]) =>
@@ -81,6 +96,8 @@ jest.mock("@/utils/utils", () => ({
 const defaultProps = {
   selectedPlatform: "macoslinux",
   setSelectedPlatform: jest.fn(),
+  selectedTransport: "sse",
+  setSelectedTransport: jest.fn(),
   isDarkMode: false,
   isCopied: false,
   copyToClipboard: jest.fn(),
@@ -115,7 +132,8 @@ describe("McpJsonContent", () => {
 
   it("renders with selected platform", () => {
     render(<McpJsonContent {...defaultProps} selectedPlatform="windows" />);
-    expect(screen.getByTestId("tabs")).toBeInTheDocument();
+    // There are multiple tabs elements (platform and transport), so check for both
+    expect(screen.getAllByTestId("tabs")).toHaveLength(2);
   });
 
   it("renders with dark mode", () => {
@@ -143,5 +161,13 @@ describe("McpJsonContent", () => {
     const icon = screen.getByTestId("icon-check");
     expect(icon).toBeInTheDocument();
     expect(icon).toHaveTextContent("Check");
+  });
+
+  it("invokes setSelectedTransport when transport tab clicked", () => {
+    render(<McpJsonContent {...defaultProps} />);
+    fireEvent.click(screen.getByTestId("tab-streamablehttp"));
+    expect(defaultProps.setSelectedTransport).toHaveBeenCalledWith(
+      "streamablehttp",
+    );
   });
 });
