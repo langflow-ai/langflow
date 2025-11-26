@@ -98,7 +98,7 @@ class TestLfxReexportModules:
     @classmethod
     def _discover_langflow_modules(cls) -> list[str]:
         """Dynamically discover all langflow modules."""
-        langflow_modules = []
+        langflow_modules: list[str] = []
         try:
             import langflow
 
