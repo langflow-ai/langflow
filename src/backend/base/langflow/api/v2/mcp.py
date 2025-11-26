@@ -2,6 +2,8 @@ import contextlib
 import json
 from io import BytesIO
 from typing import Annotated
+from urllib.parse import urlparse
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
@@ -18,6 +20,9 @@ from langflow.api.v2.files import (
     upload_user_file,
 )
 from langflow.logging import logger
+from langflow.services.database.models import Folder
+from langflow.services.database.models.api_key.crud import create_api_key
+from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.deps import get_settings_service, get_shared_component_cache_service, get_storage_service
 from langflow.services.settings.service import SettingsService
 from langflow.services.storage.service import StorageService
@@ -106,6 +111,35 @@ async def get_server_list(
         servers = json.loads(server_config_bytes)
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Invalid server configuration file format.") from None
+
+    servers_updated = False
+    created_api_key = False
+    mcp_servers = servers.get("mcpServers", {})
+
+    for server_name, server_config in list(mcp_servers.items()):
+        updated_config, config_changed, created_key = await _ensure_mcp_server_config(
+            server_name=server_name,
+            server_config=server_config,
+            current_user=current_user,
+            session=session,
+            settings_service=settings_service,
+        )
+        if config_changed:
+            servers_updated = True
+            created_api_key = created_api_key or created_key
+            mcp_servers[server_name] = updated_config
+
+    if servers_updated:
+        servers["mcpServers"] = mcp_servers
+        if created_api_key:
+            await session.commit()
+        await upload_server_config(
+            servers,
+            current_user,
+            session,
+            storage_service=storage_service,
+            settings_service=settings_service,
+        )
 
     return servers
 
@@ -273,6 +307,157 @@ async def update_server(
         settings_service,
         server_list=server_list,
     )
+
+
+def _extract_project_id_from_url(url: str) -> UUID | None:
+    """Return project UUID from a Langflow MCP URL if present."""
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return None
+
+    path_parts = [part for part in parsed.path.split("/") if part]
+    for idx, part in enumerate(path_parts):
+        if part == "project" and idx + 1 < len(path_parts):
+            candidate = path_parts[idx + 1]
+            try:
+                return UUID(candidate)
+            except (ValueError, TypeError):
+                return None
+    return None
+
+
+async def _ensure_mcp_server_config(
+    *,
+    server_name: str,
+    server_config: dict,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    settings_service: SettingsService,
+) -> tuple[dict, bool, bool]:
+    """Normalize stored MCP server configs and ensure auth headers when required."""
+    args = server_config.get("args")
+    if not isinstance(args, list) or not args:
+        return server_config, False, False
+
+    command = server_config.get("command")
+    if command != "uvx":
+        return server_config, False, False
+
+    if "mcp-proxy" not in args:
+        return server_config, False, False
+
+    url_arg = next((arg for arg in reversed(args) if isinstance(arg, str) and arg.startswith("http")), None)
+    if not url_arg:
+        return server_config, False, False
+
+    project_id = _extract_project_id_from_url(url_arg)
+    if project_id is None:
+        return server_config, False, False
+
+    project: Folder | None = await session.get(Folder, project_id)
+    if project is None:
+        return server_config, False, False
+
+    generated_api_key = False
+    should_generate_api_key = False
+
+    if settings_service.settings.mcp_composer_enabled:
+        if project.auth_settings and project.auth_settings.get("auth_type") == "apikey":
+            should_generate_api_key = True
+    elif project.auth_settings:
+        if project.auth_settings.get("auth_type") == "apikey":
+            should_generate_api_key = True
+    elif not settings_service.auth_settings.AUTO_LOGIN:
+        should_generate_api_key = True
+
+    if settings_service.auth_settings.AUTO_LOGIN and not settings_service.auth_settings.SUPERUSER:
+        should_generate_api_key = True
+
+    existing_header_tokens: list[str] | None = None
+    preserved_args: list[str] = []
+    uses_streamable = False
+
+    start_index = 1 if args[0] == "mcp-proxy" else 0
+    if start_index == 0:
+        preserved_args.append(args[0])
+
+    idx = start_index
+    while idx < len(args):
+        arg_item = args[idx]
+        if arg_item == "--transport":
+            uses_streamable = True
+            idx += 2
+            continue
+        if arg_item == "--headers":
+            existing_header_tokens = args[idx : idx + 3]
+            idx += 3
+            continue
+        if isinstance(arg_item, str) and arg_item.startswith("http"):
+            idx += 1
+            continue
+        preserved_args.append(arg_item)
+        idx += 1
+
+    if isinstance(url_arg, str) and not url_arg.endswith("/sse"):
+        uses_streamable = True
+
+    if not uses_streamable:
+        if existing_header_tokens is None and should_generate_api_key:
+            api_key_name = f"MCP Server {project.name}"
+            new_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), current_user.id)
+            header_tokens = ["--headers", "x-api-key", new_api_key.api_key]
+            generated_api_key = True
+
+            url_index = len(args) - 1
+            for idx_arg in range(len(args) - 1, -1, -1):
+                if args[idx_arg] == url_arg:
+                    url_index = idx_arg
+                    break
+
+            final_args = list(args)
+            final_args[url_index:url_index] = header_tokens
+            server_config["args"] = final_args
+            await logger.adebug(
+                "Added authentication headers for MCP server '%s' (project %s) while preserving SSE transport.",
+                server_name,
+                project_id,
+            )
+            return server_config, True, generated_api_key
+
+        return server_config, False, generated_api_key
+
+    streamable_http_url = url_arg.removesuffix("/sse")
+    if not streamable_http_url.endswith("/streamable"):
+        streamable_http_url = streamable_http_url.rstrip("/") + "/streamable"
+    final_args: list[str] = ["mcp-proxy", "--transport", "streamablehttp"]
+
+    if preserved_args:
+        final_args.extend(preserved_args)
+
+    header_tokens = existing_header_tokens
+    if header_tokens is None and should_generate_api_key:
+        api_key_name = f"MCP Server {project.name}"
+        new_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), current_user.id)
+        header_tokens = ["--headers", "x-api-key", new_api_key.api_key]
+        generated_api_key = True
+
+    if header_tokens:
+        final_args.extend(header_tokens)
+
+    final_args.append(streamable_http_url)
+
+    config_updated = final_args != args
+
+    if config_updated:
+        server_config["args"] = final_args
+        await logger.adebug(
+            "Normalized MCP server '%s' configuration for project %s (streamable HTTP + auth header).",
+            server_name,
+            project_id,
+        )
+
+    return server_config, config_updated, generated_api_key
 
 
 @router.post("/servers/{server_name}")
