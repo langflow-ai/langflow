@@ -10,18 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class ModelHubSettings(BaseSettings):
     """ModelHub settings configuration"""
 
-    # =============================================================================
-    # Genesis ModelHub Core Configuration
-    # =============================================================================
-    BASE_URL: str = Field(
-        default=os.getenv("BASE_URL", "http://localhost:8000"),
-        description="Base URL for Genesis ModelHub API",
-    )
 
-    MODELHUB_SERVICE_URL: str = Field(
-        default=os.getenv("MODELHUB_SERVICE_URL", "http://localhost:8004/modelhub/api"),
-        description="Base URL for Genesis ModelHub API",
-    )
 
     API_TIMEOUT: int = 120
     CACHE_TTL_PROVIDERS: int = Field(
