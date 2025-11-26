@@ -1,4 +1,6 @@
 import asyncio
+import json
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -6,11 +8,10 @@ import pytest
 from fastapi import HTTPException, status
 from httpx import AsyncClient
 from langflow.api.v1.mcp_projects import (
+    ProjectMCPServer,
     get_project_mcp_server,
-    get_project_sse,
     init_mcp_servers,
     project_mcp_servers,
-    project_sse_transports,
 )
 from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
 from langflow.services.database.models.flow import Flow
@@ -18,7 +19,6 @@ from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
 from lfx.services.deps import session_scope
-from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 
 # Mark all tests in this module as asyncio
@@ -70,15 +70,22 @@ class AsyncContextManagerMock:
 
 
 @pytest.fixture
-def mock_sse_transport():
-    with patch("langflow.api.v1.mcp_projects.SseServerTransport") as mock:
-        transport_instance = MagicMock()
-        # Create an async context manager for connect_sse
-        connect_sse_mock = AsyncContextManagerMock()
-        transport_instance.connect_sse = MagicMock(return_value=connect_sse_mock)
-        transport_instance.handle_post_message = AsyncMock()
-        mock.return_value = transport_instance
-        yield transport_instance
+def mock_streamable_http_manager():
+    """Mock StreamableHTTPSessionManager used by ProjectMCPServer."""
+    with patch("langflow.api.v1.mcp_projects.StreamableHTTPSessionManager") as mock_class:
+        manager_instance = MagicMock()
+        
+        # Mock the run() method to return an async context manager
+        async_cm = AsyncContextManagerMock()
+        manager_instance.run = MagicMock(return_value=async_cm)
+        
+        # Mock handle_request as an async method (this is what gets called, not handle_post_message)
+        manager_instance.handle_request = AsyncMock()
+        
+        # Make the class constructor return our mocked instance
+        mock_class.return_value = manager_instance
+        
+        yield manager_instance
 
 
 @pytest.fixture(autouse=True)
@@ -178,17 +185,18 @@ def enable_mcp_composer():
         yield True
 
 
-async def test_handle_project_messages_success(
-    client: AsyncClient, user_test_project, mock_sse_transport, logged_in_headers
+async def test_handle_project_streamable_messages_success(
+    client: AsyncClient, user_test_project, mock_streamable_http_manager, logged_in_headers
 ):
-    """Test successful handling of project messages."""
+    """Test successful handling of project messages over Streamable HTTP."""
     response = await client.post(
-        f"api/v1/mcp/project/{user_test_project.id}",
+        f"api/v1/mcp/project/{user_test_project.id}/streamable",
         headers=logged_in_headers,
         json={"type": "test", "content": "message"},
     )
     assert response.status_code == status.HTTP_200_OK
-    mock_sse_transport.handle_post_message.assert_called_once()
+    # With StreamableHTTPSessionManager, it calls handle_request, not handle_post_message
+    mock_streamable_http_manager.handle_request.assert_called_once()
 
 
 async def test_update_project_mcp_settings_invalid_json(client: AsyncClient, user_test_project, logged_in_headers):
@@ -562,24 +570,12 @@ async def test_update_project_auth_settings_encryption(
 
 
 async def test_project_sse_creation(user_test_project):
-    """Test that SSE transport and MCP server are correctly created for a project."""
-    # Test getting an SSE transport for the first time
+    """Test that MCP server is correctly created for a project."""
+    # Test getting an MCP server for the first time
     project_id = user_test_project.id
     project_id_str = str(project_id)
 
-    # Ensure there's no SSE transport for this project yet
-    if project_id_str in project_sse_transports:
-        del project_sse_transports[project_id_str]
-
-    # Get an SSE transport
-    sse_transport = get_project_sse(project_id)
-
-    # Verify the transport was created correctly
-    assert project_id_str in project_sse_transports
-    assert sse_transport is project_sse_transports[project_id_str]
-    assert isinstance(sse_transport, SseServerTransport)
-
-    # Test getting an MCP server for the first time
+    # Ensure there's no MCP server for this project yet
     if project_id_str in project_mcp_servers:
         del project_mcp_servers[project_id_str]
 
@@ -589,43 +585,116 @@ async def test_project_sse_creation(user_test_project):
     # Verify the server was created correctly
     assert project_id_str in project_mcp_servers
     assert mcp_server is project_mcp_servers[project_id_str]
+    assert isinstance(mcp_server, ProjectMCPServer)
     assert mcp_server.project_id == project_id
     assert mcp_server.server.name == f"langflow-mcp-project-{project_id}"
 
-    # Test that getting the same SSE transport and MCP server again returns the cached instances
-    sse_transport2 = get_project_sse(project_id)
+    # Test that getting the same MCP server again returns the cached instance
     mcp_server2 = get_project_mcp_server(project_id)
 
-    assert sse_transport2 is sse_transport
     assert mcp_server2 is mcp_server
     # Yield control to the event loop to satisfy async usage in this test
     await asyncio.sleep(0)
 
 
+def _prepare_install_test_env(monkeypatch, tmp_path, filename="cursor.json"):
+    config_path = tmp_path / filename
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_client_ip", lambda request: "127.0.0.1")
+    async def fake_get_config_path(client_name):
+        return config_path
+
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_config_path", fake_get_config_path)
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.platform.system", lambda: "Linux")
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.should_use_mcp_composer", lambda project: False)
+
+    async def fake_streamable(project_id):
+        return f"https://langflow.local/api/v1/mcp/project/{project_id}/streamable"
+
+    async def fake_sse(project_id):
+        return f"https://langflow.local/api/v1/mcp/project/{project_id}/sse"
+
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_project_streamable_http_url", fake_streamable)
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_project_sse_url", fake_sse)
+
+    class DummyAuth:
+        AUTO_LOGIN = True
+        SUPERUSER = True
+
+    dummy_settings = SimpleNamespace(host="localhost", port=9999, mcp_composer_enabled=False)
+    dummy_service = SimpleNamespace(settings=dummy_settings, auth_settings=DummyAuth())
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_settings_service", lambda: dummy_service)
+
+    return config_path
+
+
+async def test_install_mcp_config_defaults_to_sse_transport(
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    tmp_path,
+    monkeypatch,
+):
+    config_path = _prepare_install_test_env(monkeypatch, tmp_path, "cursor_sse.json")
+
+    response = await client.post(
+        f"/api/v1/mcp/project/{user_test_project.id}/install",
+        headers=logged_in_headers,
+        json={"client": "cursor"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    installed_config = json.loads(config_path.read_text())
+    server_name = "lf-user_test_project"
+    args = installed_config["mcpServers"][server_name]["args"]
+    assert "--transport" not in args
+    assert args[-1].endswith("/sse")
+
+
+async def test_install_mcp_config_streamable_transport(
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    tmp_path,
+    monkeypatch,
+):
+    config_path = _prepare_install_test_env(monkeypatch, tmp_path, "cursor_streamable.json")
+
+    response = await client.post(
+        f"/api/v1/mcp/project/{user_test_project.id}/install",
+        headers=logged_in_headers,
+        json={"client": "cursor", "transport": "streamablehttp"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    installed_config = json.loads(config_path.read_text())
+    server_name = "lf-user_test_project"
+    args = installed_config["mcpServers"][server_name]["args"]
+    assert "--transport" in args
+    assert "streamablehttp" in args
+    assert args[-1].endswith("/streamable")
+
+
 async def test_init_mcp_servers(user_test_project, other_test_project):
     """Test the initialization of MCP servers for all projects."""
     # Clear existing caches
-    project_sse_transports.clear()
     project_mcp_servers.clear()
 
     # Test the initialization function
     await init_mcp_servers()
 
-    # Verify that both test projects have SSE transports and MCP servers initialized
+    # Verify that both test projects have MCP servers initialized
     project1_id = str(user_test_project.id)
     project2_id = str(other_test_project.id)
-
-    # Both projects should have SSE transports created
-    assert project1_id in project_sse_transports
-    assert project2_id in project_sse_transports
 
     # Both projects should have MCP servers created
     assert project1_id in project_mcp_servers
     assert project2_id in project_mcp_servers
 
     # Verify the correct configuration
-    assert isinstance(project_sse_transports[project1_id], SseServerTransport)
-    assert isinstance(project_sse_transports[project2_id], SseServerTransport)
+    assert isinstance(project_mcp_servers[project1_id], ProjectMCPServer)
+    assert isinstance(project_mcp_servers[project2_id], ProjectMCPServer)
 
     assert project_mcp_servers[project1_id].project_id == user_test_project.id
     assert project_mcp_servers[project2_id].project_id == other_test_project.id
@@ -634,21 +703,20 @@ async def test_init_mcp_servers(user_test_project, other_test_project):
 async def test_init_mcp_servers_error_handling():
     """Test that init_mcp_servers handles errors correctly and continues initialization."""
     # Clear existing caches
-    project_sse_transports.clear()
     project_mcp_servers.clear()
 
     # Create a mock to simulate an error when initializing one project
-    original_get_project_sse = get_project_sse
+    original_get_project_mcp_server = get_project_mcp_server
 
-    def mock_get_project_sse(project_id):
+    def mock_get_project_mcp_server(project_id):
         # Raise an exception for the first project only
-        if not project_sse_transports:  # Only for the first project
-            msg = "Test error for project SSE creation"
+        if not project_mcp_servers:  # Only for the first project
+            msg = "Test error for project MCP server creation"
             raise ValueError(msg)
-        return original_get_project_sse(project_id)
+        return original_get_project_mcp_server(project_id)
 
     # Apply the patch
-    with patch("langflow.api.v1.mcp_projects.get_project_sse", side_effect=mock_get_project_sse):
+    with patch("langflow.api.v1.mcp_projects.get_project_mcp_server", side_effect=mock_get_project_mcp_server):
         # This should not raise any exception, as the error should be caught
         await init_mcp_servers()
 
