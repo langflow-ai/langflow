@@ -1127,7 +1127,7 @@
             ],
             "frozen": false,
             "icon": "bot",
-            "last_updated": "2025-11-26T21:34:05.796Z",
+            "last_updated": "2025-11-26T21:59:02.132Z",
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
@@ -2428,8 +2428,8 @@
           "width": 192
         },
         "position": {
-          "x": -1672.2831468661675,
-          "y": 3227.6193766511587
+          "x": -1748.84833587488,
+          "y": 2903.800025025657
         },
         "selected": false,
         "type": "genericNode"
@@ -2459,7 +2459,7 @@
             ],
             "frozen": false,
             "icon": "Mcp",
-            "last_updated": "2025-11-26T21:34:05.798Z",
+            "last_updated": "2025-11-26T21:59:02.135Z",
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
@@ -2771,7 +2771,7 @@
             ],
             "frozen": false,
             "icon": "Mcp",
-            "last_updated": "2025-11-26T21:43:22.557Z",
+            "last_updated": "2025-11-26T21:59:02.136Z",
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
@@ -2818,6 +2818,12 @@
             ],
             "pinned": false,
             "template": {
+              "_frontend_node_flow_id": {
+                "value": "5dcb355c-fbdc-4df9-84e7-4ea1a30dda6b"
+              },
+              "_frontend_node_folder_id": {
+                "value": "a0c2de8c-e30e-46ad-94eb-63216ff2179b"
+              },
               "_type": "Component",
               "code": {
                 "advanced": true,
@@ -2887,6 +2893,7 @@
                 "type": "str",
                 "value": "FLOW_ID"
               },
+              "is_refresh": false,
               "mcp_server": {
                 "_input_type": "McpInput",
                 "advanced": false,
@@ -3120,7 +3127,7 @@
             ],
             "frozen": false,
             "icon": "AstraDB",
-            "last_updated": "2025-11-26T21:53:15.907Z",
+            "last_updated": "2025-11-26T21:59:02.137Z",
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
@@ -3210,7 +3217,9 @@
                 "external_options": {},
                 "info": "The API Endpoint for the Astra DB instance. Supercedes database selection.",
                 "name": "api_endpoint",
-                "options": [],
+                "options": [
+                  "https://58f4000f-e814-45a0-8067-79f8d5331efd-us-east-2.apps.astra.datastax.com"
+                ],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -3222,7 +3231,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "str",
-                "value": ""
+                "value": "https://58f4000f-e814-45a0-8067-79f8d5331efd-us-east-2.apps.astra.datastax.com"
               },
               "astradb_vectorstore_kwargs": {
                 "_input_type": "NestedDictInput",
@@ -3416,8 +3425,24 @@
                 "external_options": {},
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
                 "name": "collection_name",
-                "options": [],
-                "options_metadata": [],
+                "options": [
+                  "components",
+                  "templates"
+                ],
+                "options_metadata": [
+                  {
+                    "icon": "NVIDIA",
+                    "model": "nvidia/nv-embedqa-e5-v5",
+                    "provider": "nvidia",
+                    "records": 2796
+                  },
+                  {
+                    "icon": "NVIDIA",
+                    "model": "nvidia/nv-embedqa-e5-v5",
+                    "provider": "nvidia",
+                    "records": 33
+                  }
+                ],
                 "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -3429,14 +3454,14 @@
                   "provider": "nvidia",
                   "records": 2796
                 },
-                "show": false,
+                "show": true,
                 "title_case": false,
                 "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "str",
-                "value": ""
+                "value": "components"
               },
               "content_field": {
                 "_input_type": "StrInput",
@@ -3599,7 +3624,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "str",
-                "value": ""
+                "value": "agenticux"
               },
               "deletion_field": {
                 "_input_type": "StrInput",
@@ -4065,7 +4090,7 @@
         "dragging": false,
         "id": "AstraDB-5mGdA",
         "measured": {
-          "height": 565,
+          "height": 647,
           "width": 320
         },
         "position": {
@@ -4100,7 +4125,7 @@
             ],
             "frozen": false,
             "icon": "Mcp",
-            "last_updated": "2025-11-26T21:48:25.614Z",
+            "last_updated": "2025-11-26T21:59:02.138Z",
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
@@ -4937,9 +4962,9 @@
       }
     ],
     "viewport": {
-      "x": 1343.6909399879207,
-      "y": -1209.9553201005513,
-      "zoom": 0.5795025395059133
+      "x": 1481.5416830445465,
+      "y": -874.6520747087402,
+      "zoom": 0.475439688591981
     }
   },
   "description": "SuggestNextComponent",
@@ -4947,6 +4972,6 @@
   "id": "5dcb355c-fbdc-4df9-84e7-4ea1a30dda6b",
   "is_component": false,
   "last_tested_version": "1.7.0",
-  "name": "NextComponentSuggestion",
+  "name": "SuggestNextComponent",
   "tags": []
 }
