@@ -82,66 +82,9 @@ def __getattr__(name: str) -> Any:
 
         return RangeSpec
     if name in _CONSTANTS_NAMES:
-        from .constants import (
-            AgentExecutor,
-            BaseChatMemory,
-            BaseChatModel,
-            BaseDocumentCompressor,
-            BaseLanguageModel,
-            BaseLLM,
-            BaseLoader,
-            BaseMemory,
-            BaseOutputParser,
-            BasePromptTemplate,
-            BaseRetriever,
-            Callable,
-            Chain,
-            ChatPromptTemplate,
-            Code,
-            Data,
-            Document,
-            Embeddings,
-            LanguageModel,
-            NestedDict,
-            Object,
-            PromptTemplate,
-            Retriever,
-            Text,
-            TextSplitter,
-            Tool,
-            VectorStore,
-        )
+        from . import constants
 
-        _exports = {
-            "AgentExecutor": AgentExecutor,
-            "BaseChatMemory": BaseChatMemory,
-            "BaseChatModel": BaseChatModel,
-            "BaseDocumentCompressor": BaseDocumentCompressor,
-            "BaseLLM": BaseLLM,
-            "BaseLanguageModel": BaseLanguageModel,
-            "BaseLoader": BaseLoader,
-            "BaseMemory": BaseMemory,
-            "BaseOutputParser": BaseOutputParser,
-            "BasePromptTemplate": BasePromptTemplate,
-            "BaseRetriever": BaseRetriever,
-            "Callable": Callable,
-            "Chain": Chain,
-            "ChatPromptTemplate": ChatPromptTemplate,
-            "Code": Code,
-            "Data": Data,
-            "Document": Document,
-            "Embeddings": Embeddings,
-            "LanguageModel": LanguageModel,
-            "NestedDict": NestedDict,
-            "Object": Object,
-            "PromptTemplate": PromptTemplate,
-            "Retriever": Retriever,
-            "Text": Text,
-            "TextSplitter": TextSplitter,
-            "Tool": Tool,
-            "VectorStore": VectorStore,
-        }
-        return _exports[name]
+        return getattr(constants, name)
 
     msg = f"module {__name__!r} has no attribute {name!r}"
     raise AttributeError(msg)
