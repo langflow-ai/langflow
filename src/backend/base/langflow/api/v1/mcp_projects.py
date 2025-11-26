@@ -3,17 +3,19 @@ import json
 import os
 import platform
 from asyncio.subprocess import create_subprocess_exec
+from contextlib import AsyncExitStack
 from contextvars import ContextVar
 from datetime import datetime, timezone
 from ipaddress import ip_address
 from pathlib import Path
 from subprocess import CalledProcessError
+from types import MethodType
 from typing import Annotated, Any, cast
 from uuid import UUID
 
 from anyio import BrokenResourceError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
 from lfx.log import logger
@@ -23,12 +25,18 @@ from lfx.services.schema import ServiceType
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
+from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveMCPUser, extract_global_variables_from_headers
-from langflow.api.utils.mcp import auto_configure_starter_projects_mcp, get_project_sse_url, get_url_by_os
+from langflow.api.utils.mcp import (
+    auto_configure_starter_projects_mcp,
+    get_project_sse_url,
+    get_project_streamable_http_url,
+    get_url_by_os,
+)
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.mcp_utils import (
     current_request_variables_ctx,
@@ -59,6 +67,30 @@ from langflow.services.deps import get_service
 ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
+
+DEFAULT_NOTIFICATION_OPTIONS = NotificationOptions(
+    prompts_changed=True,
+    resources_changed=True,
+    tools_changed=True,
+)
+
+
+def _configure_server_notification_defaults(server: Server) -> None:
+    """Ensure MCP servers advertise change notifications by default."""
+
+    def _create_initialization_options(
+        self,
+        notification_options: NotificationOptions | None = None,
+        experimental_capabilities: dict[str, dict[str, Any]] | None = None,
+    ):
+        options = notification_options or DEFAULT_NOTIFICATION_OPTIONS
+        return Server.create_initialization_options(
+            self,
+            notification_options=options,
+            experimental_capabilities=experimental_capabilities,
+        )
+
+    server.create_initialization_options = MethodType(_create_initialization_options, server)
 
 
 async def verify_project_auth(
@@ -180,12 +212,12 @@ async def verify_project_auth_conditional(
 # Create project-specific context variable
 current_project_ctx: ContextVar[UUID | None] = ContextVar("current_project_ctx", default=None)
 
-# Create a mapping of project-specific SSE transports
+# Legacy SSE transports (kept for backward compatibility)
 project_sse_transports = {}
 
 
 def get_project_sse(project_id: UUID | None) -> SseServerTransport:
-    """Get or create an SSE transport for a specific project."""
+    """Get or create an SSE transport for a specific project (legacy, kept for backward compatibility)."""
     if not project_id:
         raise HTTPException(status_code=400, detail="Project ID is required to start MCP server")
 
@@ -195,14 +227,13 @@ def get_project_sse(project_id: UUID | None) -> SseServerTransport:
     return project_sse_transports[project_id_str]
 
 
-@router.get("/{project_id}")
-async def list_project_tools(
+async def _build_project_tools_response(
     project_id: UUID,
     current_user: CurrentActiveMCPUser,
     *,
-    mcp_enabled: bool = True,
-) -> MCPProjectResponse | None:
-    """List all tools in a project that are enabled for MCP."""
+    mcp_enabled: bool,
+) -> MCPProjectResponse:
+    """Return tool metadata for a project."""
     tools: list[MCPSettings] = []
     try:
         async with session_scope() as session:
@@ -277,6 +308,55 @@ async def list_project_tools(
     return MCPProjectResponse(tools=tools, auth_settings=auth_settings)
 
 
+@router.get("/{project_id}")
+async def list_project_tools(
+    project_id: UUID,
+    request: Request,
+    current_user: CurrentActiveMCPUser,
+    *,
+    mcp_enabled: bool = True,
+) -> Response:
+    """List project MCP tools, or open a Streamable HTTP/SSE stream when requested."""
+    accept_header = (request.headers.get("accept") or "").lower()
+
+    if "text/event-stream" in accept_header:
+        # Stream requests must honor project-specific authentication (API keys, OAuth, etc.).
+        auth_user = await verify_project_auth_conditional(project_id, request)
+        return await _dispatch_project_streamable_http(project_id, request, auth_user)
+
+    metadata = await _build_project_tools_response(project_id, current_user, mcp_enabled=mcp_enabled)
+    return JSONResponse(content=metadata.model_dump(mode="json"))
+
+
+async def _dispatch_project_streamable_http(
+    project_id: UUID,
+    request: Request,
+    current_user: User,
+) -> Response:
+    """Common handler for project-specific Streamable HTTP requests."""
+    project_server = get_project_mcp_server(project_id)
+    await project_server.ensure_session_manager_running()
+
+    user_token = current_user_ctx.set(current_user)
+    project_token = current_project_ctx.set(project_id)
+    variables = extract_global_variables_from_headers(request.headers)
+    request_vars_token = current_request_variables_ctx.set(variables or None)
+
+    try:
+        await project_server.session_manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001
+    except HTTPException:
+        raise
+    except Exception as exc:
+        await logger.aexception(f"Error handling Streamable HTTP request for project {project_id}: {exc!s}")
+        raise HTTPException(status_code=500, detail="Internal server error in project MCP transport") from exc
+    finally:
+        current_request_variables_ctx.reset(request_vars_token)
+        current_project_ctx.reset(project_token)
+        current_user_ctx.reset(user_token)
+
+    return Response()
+
+
 @router.head("/{project_id}/sse", response_class=HTMLResponse, include_in_schema=False)
 async def im_alive(project_id: str):  # noqa: ARG001
     return Response()
@@ -288,86 +368,21 @@ async def handle_project_sse(
     request: Request,
     current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
-    """Handle SSE connections for a specific project."""
-    # Verify project exists and user has access
-
-    async with session_scope() as session:
-        project = (
-            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
-        ).first()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    # Get project-specific SSE transport and MCP server
-    sse = get_project_sse(project_id)
-    project_server = get_project_mcp_server(project_id)
-    await logger.adebug("Project MCP server name: %s", project_server.server.name)
-
-    # Set context variables
-    user_token = current_user_ctx.set(current_user)
-    project_token = current_project_ctx.set(project_id)
-    # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
-    variables = extract_global_variables_from_headers(request.headers)
-    req_vars_token = current_request_variables_ctx.set(variables or None)
-
-    try:
-        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:  # noqa: SLF001
-            try:
-                await logger.adebug("Starting SSE connection for project %s", project_id)
-
-                notification_options = NotificationOptions(
-                    prompts_changed=True, resources_changed=True, tools_changed=True
-                )
-                init_options = project_server.server.create_initialization_options(notification_options)
-
-                try:
-                    await project_server.server.run(streams[0], streams[1], init_options)
-                except Exception:  # noqa: BLE001
-                    await logger.aexception("Error in project MCP")
-            except BrokenResourceError:
-                await logger.ainfo("Client disconnected from project SSE connection")
-            except asyncio.CancelledError:
-                await logger.ainfo("Project SSE connection was cancelled")
-                raise
-            except Exception:
-                await logger.aexception("Error in project MCP")
-                raise
-    finally:
-        current_user_ctx.reset(user_token)
-        current_project_ctx.reset(project_token)
-        current_request_variables_ctx.reset(req_vars_token)
-
-    return Response(status_code=200)
+    """Handle Streamable HTTP/SSE connections for a specific project."""
+    return await _dispatch_project_streamable_http(project_id, request, current_user)
 
 
-@router.post("/{project_id}")
+@router.api_route("/{project_id}", methods=["POST", "DELETE"])
 async def handle_project_messages(
     project_id: UUID,
     request: Request,
     current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
-    """Handle POST messages for a project-specific MCP server."""
-    # Set context variables
-    user_token = current_user_ctx.set(current_user)
-    project_token = current_project_ctx.set(project_id)
-    # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
-    variables = extract_global_variables_from_headers(request.headers)
-    req_vars_token = current_request_variables_ctx.set(variables or None)
-
-    try:
-        sse = get_project_sse(project_id)
-        await sse.handle_post_message(request.scope, request.receive, request._send)  # noqa: SLF001
-    except BrokenResourceError as e:
-        await logger.ainfo("Project MCP Server disconnected for project %s", project_id)
-        raise HTTPException(status_code=404, detail=f"Project MCP Server disconnected, error: {e}") from e
-    finally:
-        current_user_ctx.reset(user_token)
-        current_project_ctx.reset(project_token)
-        current_request_variables_ctx.reset(req_vars_token)
+    """Handle POST/DELETE messages for a project-specific MCP server."""
+    return await _dispatch_project_streamable_http(project_id, request, current_user)
 
 
-@router.post("/{project_id}/")
+@router.api_route("/{project_id}/", methods=["POST", "DELETE"])
 async def handle_project_messages_with_slash(
     project_id: UUID,
     request: Request,
@@ -663,10 +678,11 @@ async def install_mcp_config(
                 "oauth",
             ]
         else:
-            # For non-OAuth (API key or no auth), use mcp-proxy
-            sse_url = await get_project_sse_url(project_id)
+            # For non-OAuth (API key or no auth), use mcp-proxy with Streamable HTTP
+            streamable_http_url = await get_project_streamable_http_url(project_id)
+            legacy_sse_url = await get_project_sse_url(project_id)
             command = "uvx"
-            args = ["mcp-proxy"]
+            args = ["mcp-proxy", "--transport", "streamablehttp"]
             # Check if we need to add Langflow API key headers
             # Necessary only when Project API Key Authentication is enabled
 
@@ -680,8 +696,10 @@ async def install_mcp_config(
                     langflow_api_key = api_key_response.api_key
                     args.extend(["--headers", "x-api-key", langflow_api_key])
 
-            # Add the SSE URL for mcp-proxy
-            args.append(sse_url)
+            # Add the Streamable HTTP URL for mcp-proxy
+            args.append(streamable_http_url)
+            # Use streamable_http_url for removal check, but keep sse_url for backward compatibility
+            sse_url = streamable_http_url
 
         if os_type == "Windows" and not use_mcp_composer:
             # Only wrap in cmd for Windows when using mcp-proxy
@@ -1051,6 +1069,12 @@ class ProjectMCPServer:
     def __init__(self, project_id: UUID):
         self.project_id = project_id
         self.server = Server(f"langflow-mcp-project-{project_id}")
+        _configure_server_notification_defaults(self.server)
+
+        self.session_manager = StreamableHTTPSessionManager(self.server)
+        self._manager_lock = asyncio.Lock()
+        self._manager_stack: AsyncExitStack | None = None
+        self._manager_started = False
 
         # Register handlers that filter by project
         @self.server.list_tools()
@@ -1085,6 +1109,31 @@ class ProjectMCPServer:
                 is_action=True,
             )
 
+    async def ensure_session_manager_running(self) -> None:
+        """Start the project's Streamable HTTP manager if needed."""
+        if self._manager_started:
+            return
+
+        async with self._manager_lock:
+            if self._manager_started:
+                return
+
+            self._manager_stack = AsyncExitStack()
+            await self._manager_stack.enter_async_context(self.session_manager.run())
+            self._manager_started = True
+            await logger.adebug("Streamable HTTP manager started for project %s", self.project_id)
+
+    async def stop_session_manager(self) -> None:
+        """Stop the project's Streamable HTTP manager if it is running."""
+        async with self._manager_lock:
+            if not self._manager_started or self._manager_stack is None:
+                return
+
+            await self._manager_stack.aclose()
+            self._manager_stack = None
+            self._manager_started = False
+            await logger.adebug("Streamable HTTP manager stopped for project %s", self.project_id)
+
 
 # Cache of project MCP servers
 project_mcp_servers = {}
@@ -1100,6 +1149,16 @@ def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:
     if project_id_str not in project_mcp_servers:
         project_mcp_servers[project_id_str] = ProjectMCPServer(project_id)
     return project_mcp_servers[project_id_str]
+
+
+@router.on_event("shutdown")
+async def _shutdown_project_session_managers() -> None:
+    """Ensure all per-project session managers are cleanly stopped."""
+    for server in project_mcp_servers.values():
+        try:
+            await server.stop_session_manager()
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(f"Error stopping Streamable HTTP manager for project {server.project_id}: {exc!s}")
 
 
 async def register_project_with_composer(project: Folder):
