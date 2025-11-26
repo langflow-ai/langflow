@@ -7,7 +7,7 @@ from langflow.custom.custom_component.component import Component, _get_component
 from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import Vertex
-from langflow.helpers.flow import get_flow_inputs
+from langflow.helpers.flow import get_flow_inputs, load_flow
 from langflow.inputs.inputs import DropdownInput, InputTypes, MessageInput
 from langflow.logging.logger import logger
 from langflow.schema.data import Data
@@ -110,13 +110,13 @@ class RunFlowBaseComponent(Component):
     async def get_flow_names(self) -> list[str]:
         # TODO: get flfow ID with flow name
         flow_data = await self.alist_flows()
-        return [flow_data.data["name"] for flow_data in flow_data]
+        return [flow_data.flow_name for flow_data in flow_data['items']]
 
     async def get_flow(self, flow_name_selected: str) -> Data | None:
         # get flow from flow id
         flow_datas = await self.alist_flows()
-        for flow_data in flow_datas:
-            if flow_data.data["name"] == flow_name_selected:
+        for flow_data in flow_datas['items']:
+            if flow_data.flow_name == flow_name_selected:
                 return flow_data
         return None
 
@@ -124,7 +124,8 @@ class RunFlowBaseComponent(Component):
         if flow_name_selected:
             flow_data = await self.get_flow(flow_name_selected)
             if flow_data:
-                return Graph.from_payload(flow_data.data["data"])
+                flow = await load_flow(user_id=self.user_id,flow_id=str(flow_data.flow_id))
+                return flow
             msg = "Flow not found"
             raise ValueError(msg)
         # Ensure a Graph is always returned or an exception is raised

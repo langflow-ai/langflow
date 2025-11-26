@@ -721,6 +721,30 @@ async def list_all_published_flows(
     Public endpoint - no authentication required.
     Returns paginated list with denormalized flow and publisher information.
     """
+    return await _list_all_published_flows(
+        session=session,
+        page=page,
+        limit=limit,
+        search=search,
+        category=category,
+        tags=tags,  # This is now a string, not a Query object
+        status_filter=status_filter,
+        sort_by=sort_by,
+        order=order,
+    )
+
+
+async def _list_all_published_flows(
+    session: AsyncSession,
+    page: int = 1,
+    limit: int = 10,
+    search: str | None = None,
+    category: str | None = None,
+    tags: str | None = None,
+    status_filter: str | None = None,
+    sort_by: str = "published_at",
+    order: str = "desc",
+):
     # Base query - apply status filter
     if status_filter == "published":
         query = (
@@ -740,7 +764,12 @@ async def list_all_published_flows(
     # Apply search filter on denormalized flow_name and description
     if search:
         search_pattern = f"%{search}%"
-        query = query.where(or_(PublishedFlow.flow_name.ilike(search_pattern), PublishedFlow.description.ilike(search_pattern)))
+        query = query.where(
+            or_(
+                PublishedFlow.flow_name.ilike(search_pattern),
+                PublishedFlow.description.ilike(search_pattern),
+            )
+        )
 
     # Apply category filter
     if category:
@@ -756,9 +785,13 @@ async def list_all_published_flows(
 
     # Count total with same status filter
     if status_filter == "published":
-        count_query = select(func.count(PublishedFlow.id)).where(PublishedFlow.status == PublishStatusEnum.PUBLISHED)
+        count_query = select(func.count(PublishedFlow.id)).where(
+            PublishedFlow.status == PublishStatusEnum.PUBLISHED
+        )
     elif status_filter == "unpublished":
-        count_query = select(func.count(PublishedFlow.id)).where(PublishedFlow.status == PublishStatusEnum.UNPUBLISHED)
+        count_query = select(func.count(PublishedFlow.id)).where(
+            PublishedFlow.status == PublishStatusEnum.UNPUBLISHED
+        )
     else:  # "all" or None - count all flows (default)
         count_query = select(func.count(PublishedFlow.id))
 
@@ -766,7 +799,10 @@ async def list_all_published_flows(
     if search:
         search_pattern = f"%{search}%"
         count_query = count_query.where(
-            or_(PublishedFlow.flow_name.ilike(search_pattern), PublishedFlow.description.ilike(search_pattern))
+            or_(
+                PublishedFlow.flow_name.ilike(search_pattern),
+                PublishedFlow.description.ilike(search_pattern),
+            )
         )
     if category:
         count_query = count_query.where(PublishedFlow.category == category)
@@ -774,7 +810,9 @@ async def list_all_published_flows(
         tag_list = [tag.strip() for tag in tags.split(",")]
         for tag in tag_list:
             # Cast JSON to text and check if tag is in the stringified array
-            count_query = count_query.where(cast(PublishedFlow.tags, Text).contains(f'"{tag}"'))
+            count_query = count_query.where(
+                cast(PublishedFlow.tags, Text).contains(f'"{tag}"')
+            )
 
     total_result = await session.exec(count_query)
     total = total_result.one()
@@ -804,7 +842,10 @@ async def list_all_published_flows(
     rows = results.all()
 
     # Format response - all fields already denormalized in PublishedFlow
-    items = [PublishedFlowRead.model_validate(published_flow, from_attributes=True) for published_flow in rows]
+    items = [
+        PublishedFlowRead.model_validate(published_flow, from_attributes=True)
+        for published_flow in rows
+    ]
 
     pages = (total + limit - 1) // limit if limit > 0 else 0
 
