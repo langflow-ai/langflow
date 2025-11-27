@@ -7,8 +7,9 @@ The fix ensures that Loop components always execute their build() method
 even when frozen, because they need to iterate through their data correctly.
 """
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
 
 
 class TestVertexIsLoopProperty:
@@ -169,10 +170,10 @@ class TestBuildVertexLoopException:
         """Test all combinations of frozen states for Loop component."""
         test_cases = [
             # (frozen, is_loop, expected_should_build)
-            (False, False, True),   # Not frozen, not loop -> build
-            (False, True, True),    # Not frozen, loop -> build
-            (True, False, False),   # Frozen, not loop -> don't build (use cache)
-            (True, True, True),     # Frozen, loop -> build (our fix!)
+            (False, False, True),  # Not frozen, not loop -> build
+            (False, True, True),  # Not frozen, loop -> build
+            (True, False, False),  # Frozen, not loop -> don't build (use cache)
+            (True, True, True),  # Frozen, loop -> build (our fix!)
         ]
 
         for frozen, is_loop, expected in test_cases:
@@ -185,8 +186,7 @@ class TestBuildVertexLoopException:
             should_build = not vertex.frozen or is_loop_component
 
             assert should_build == expected, (
-                f"Failed for frozen={frozen}, is_loop={is_loop}: "
-                f"expected {expected}, got {should_build}"
+                f"Failed for frozen={frozen}, is_loop={is_loop}: expected {expected}, got {should_build}"
             )
 
 
@@ -258,13 +258,13 @@ class TestVertexBuildLoopException:
         test_cases = [
             # (frozen, built, is_loop, expected_return_cached)
             (False, False, False, False),  # Not frozen, not built -> continue
-            (False, False, True, False),   # Not frozen, not built, loop -> continue
-            (False, True, False, False),   # Not frozen, built -> continue
-            (False, True, True, False),    # Not frozen, built, loop -> continue
-            (True, False, False, False),   # Frozen, not built -> continue
-            (True, False, True, False),    # Frozen, not built, loop -> continue
-            (True, True, False, True),     # Frozen, built, not loop -> return cached
-            (True, True, True, False),     # Frozen, built, loop -> continue (our fix!)
+            (False, False, True, False),  # Not frozen, not built, loop -> continue
+            (False, True, False, False),  # Not frozen, built -> continue
+            (False, True, True, False),  # Not frozen, built, loop -> continue
+            (True, False, False, False),  # Frozen, not built -> continue
+            (True, False, True, False),  # Frozen, not built, loop -> continue
+            (True, True, False, True),  # Frozen, built, not loop -> return cached
+            (True, True, True, False),  # Frozen, built, loop -> continue (our fix!)
         ]
 
         for frozen, built, is_loop, expected in test_cases:
@@ -294,10 +294,7 @@ class TestLoopComponentOutputsConfig:
         outputs = component.outputs
 
         # Find the item output
-        item_output = next(
-            (o for o in outputs if o.name == "item"),
-            None
-        )
+        item_output = next((o for o in outputs if o.name == "item"), None)
 
         assert item_output is not None
         assert item_output.allows_loop is True
@@ -310,10 +307,7 @@ class TestLoopComponentOutputsConfig:
         outputs = component.outputs
 
         # Find the done output
-        done_output = next(
-            (o for o in outputs if o.name == "done"),
-            None
-        )
+        done_output = next((o for o in outputs if o.name == "done"), None)
 
         assert done_output is not None
         # done output should not have allows_loop=True
@@ -329,16 +323,16 @@ class TestLoopEvaluateStopLoop:
 
         test_cases = [
             # (current_index, data_length, expected_stop)
-            (0, 3, False),   # At start, don't stop
-            (1, 3, False),   # In middle, don't stop
-            (2, 3, False),   # At last item, don't stop
-            (3, 3, False),   # At length, don't stop (equal, not greater)
-            (4, 3, True),    # Past length, stop
-            (0, 0, False),   # Empty data, index 0, don't stop
-            (1, 0, True),    # Empty data, index 1, stop
-            (0, 1, False),   # Single item, at start
-            (1, 1, False),   # Single item, at length
-            (2, 1, True),    # Single item, past length
+            (0, 3, False),  # At start, don't stop
+            (1, 3, False),  # In middle, don't stop
+            (2, 3, False),  # At last item, don't stop
+            (3, 3, False),  # At length, don't stop (equal, not greater)
+            (4, 3, True),  # Past length, stop
+            (0, 0, False),  # Empty data, index 0, don't stop
+            (1, 0, True),  # Empty data, index 1, stop
+            (0, 1, False),  # Single item, at start
+            (1, 1, False),  # Single item, at length
+            (2, 1, True),  # Single item, past length
         ]
 
         for current_index, data_length, expected_stop in test_cases:
@@ -346,8 +340,7 @@ class TestLoopEvaluateStopLoop:
             result = current_index > data_length
 
             assert result == expected_stop, (
-                f"Failed for index={current_index}, length={data_length}: "
-                f"expected {expected_stop}, got {result}"
+                f"Failed for index={current_index}, length={data_length}: expected {expected_stop}, got {result}"
             )
 
 
