@@ -10,7 +10,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from lfx.log.logger import logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from lfx.services.settings.utils import (
-    RSAKeyError,
     derive_public_key_from_private,
     generate_rsa_key_pair,
     read_secret_from_file,
