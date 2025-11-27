@@ -519,7 +519,7 @@ class CustomComponent(BaseComponent):
             from langflow.api.v1.published_flows import _list_all_published_flows
             async with session_scope() as session:
                 return await _list_all_published_flows(
-                    session=session, status_filter="published"
+                    session=session, status_filter="published", limit=300
                 )
             return await list_flows(user_id=str(self.user_id))
         except Exception as e:
