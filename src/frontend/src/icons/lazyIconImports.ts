@@ -371,6 +371,8 @@ export const lazyIconsMapping = {
     import("@/icons/PerplexityComposio").then((mod) => ({
       default: mod.PerplexityIconComposio,
     })),
+  Plain: () =>
+    import("@/icons/Plain").then((mod) => ({ default: mod.PlainIcon })),
   Pinecone: () =>
     import("@/icons/Pinecone").then((mod) => ({ default: mod.PineconeIcon })),
   Postgres: () =>

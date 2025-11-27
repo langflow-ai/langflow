@@ -63,6 +63,7 @@ if TYPE_CHECKING:
     from .pandadoc_composio import ComposioPandadocAPIComponent
     from .peopledatalabs_composio import ComposioPeopleDataLabsAPIComponent
     from .perplexityai_composio import ComposioPerplexityAIAPIComponent
+    from .plain_composio import ComposioPlainAPIComponent
     from .reddit_composio import ComposioRedditAPIComponent
     from .serpapi_composio import ComposioSerpAPIComponent
     from .slack_composio import ComposioSlackAPIComponent
@@ -88,6 +89,7 @@ _dynamic_imports = {
     "ComposioSlackbotAPIComponent": "slackbot_composio",
     "ComposioPeopleDataLabsAPIComponent": "peopledatalabs_composio",
     "ComposioPerplexityAIAPIComponent": "perplexityai_composio",
+    "ComposioPlainAPIComponent": "plain_composio",
     "ComposioSupabaseAPIComponent": "supabase_composio",
     "ComposioSynthFlowAIAPIComponent": "synthflowai_composio",
     "ComposioSerpAPIComponent": "serpapi_composio",
@@ -214,6 +216,7 @@ __all__ = [
     "ComposioPandadocAPIComponent",
     "ComposioPeopleDataLabsAPIComponent",
     "ComposioPerplexityAIAPIComponent",
+    "ComposioPlainAPIComponent",
     "ComposioRedditAPIComponent",
     "ComposioSerpAPIComponent",
     "ComposioSlackAPIComponent",
