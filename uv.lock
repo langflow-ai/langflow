@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -28,7 +28,10 @@ members = [
     "langflow-base",
     "lfx",
 ]
-overrides = [{ name = "python-pptx", specifier = ">=1.0.2" }]
+overrides = [
+    { name = "backports-strenum", marker = "python_full_version < '3.11'" },
+    { name = "python-pptx", specifier = ">=1.0.2" },
+]
 
 [[package]]
 name = "accelerate"
@@ -7567,7 +7570,7 @@ name = "nestful-wrapper"
 version = "0.1.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "backports-strenum" },
+    { name = "backports-strenum", marker = "python_full_version < '3.11'" },
     { name = "faker" },
     { name = "genson" },
     { name = "hypothesis-jsonschema" },
