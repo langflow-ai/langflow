@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import Depends, Request, Security, WebSocket
@@ -155,7 +156,7 @@ def encrypt_api_key(api_key: str) -> str:
 
 
 def decrypt_api_key(encrypted_api_key: str) -> str:
-    return _auth_service().decrypt_api_key(encrypted_api_key)
+    return _cached_auth_service().decrypt_api_key(encrypted_api_key)
 
 
 async def get_current_user_mcp(
@@ -169,3 +170,11 @@ async def get_current_user_mcp(
 
 async def get_current_active_user_mcp(current_user: Annotated[User, Depends(get_current_user_mcp)]) -> User:
     return await _auth_service().get_current_active_user_mcp(current_user)
+
+
+@lru_cache(maxsize=1)
+def _cached_auth_service():
+    # Caches the auth service instance for faster access
+    from langflow.services.deps import get_auth_service
+
+    return get_auth_service()
