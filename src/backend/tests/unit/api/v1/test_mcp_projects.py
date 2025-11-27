@@ -76,17 +76,17 @@ def mock_streamable_http_manager():
     """Mock StreamableHTTPSessionManager used by ProjectMCPServer."""
     with patch("langflow.api.v1.mcp_projects.StreamableHTTPSessionManager") as mock_class:
         manager_instance = MagicMock()
-        
+
         # Mock the run() method to return an async context manager
         async_cm = AsyncContextManagerMock()
         manager_instance.run = MagicMock(return_value=async_cm)
-        
+
         # Mock handle_request as an async method (this is what gets called, not handle_post_message)
         manager_instance.handle_request = AsyncMock()
-        
+
         # Make the class constructor return our mocked instance
         mock_class.return_value = manager_instance
-        
+
         yield manager_instance
 
 
