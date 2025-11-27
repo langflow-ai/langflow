@@ -213,11 +213,20 @@ class MigrationValidator:
         warnings = []
 
         # Check if downgrade might lose data
+
+        # Optimization: Unparse node only once & cache all comparisons for all matching ast.Call children.
+        op_calls = []
         for child in ast.walk(node):
             if isinstance(child, ast.Call) and self._is_op_call(child, "alter_column"):
-                # Check if there's a backup mechanism
-                func_content = ast.unparse(node)
-                if "backup" not in func_content.lower() and "SELECT" not in func_content:
+                op_calls.append(child)
+
+        if op_calls:
+            # ast.unparse is extremely expensive; only call once per function
+            func_content = ast.unparse(node)
+            func_content_lower = func_content.lower()
+            backup_not_present = "backup" not in func_content_lower and "SELECT" not in func_content
+            if backup_not_present:
+                for child in op_calls:
                     warnings.append(
                         Violation(
                             "UNSAFE_ROLLBACK",
@@ -229,7 +238,9 @@ class MigrationValidator:
 
         # CONTRACT phase special handling
         if phase == MigrationPhase.CONTRACT:
-            func_content = ast.unparse(node)
+            # ast.unparse is already done if above, else do once here
+            if not op_calls:
+                func_content = ast.unparse(node)
             if "NotImplementedError" not in func_content and "raise" not in func_content:
                 warnings.append(
                     Violation(
