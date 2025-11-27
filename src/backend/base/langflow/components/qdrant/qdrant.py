@@ -36,8 +36,8 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="collection_name", display_name="Collection Name", required=True, real_time_refresh=True),
         MessageTextInput(name="document_hash", display_name="Document Hash", required=False, tool_mode=True),
         StrInput(name="host", display_name="Host", value="localhost", advanced=True),
-        IntInput(name="port", display_name="Port", value=6333, advanced=True),
-        IntInput(name="grpc_port", display_name="gRPC Port", value=6334, advanced=True),
+        IntInput(name="port", display_name="Port", value=443, advanced=True),
+        IntInput(name="grpc_port", display_name="gRPC Port", value=443, advanced=True),
         SecretStrInput(name="api_key", display_name="Qdrant API Key", required=False),
         StrInput(name="prefix", display_name="Prefix", advanced=True),
         IntInput(name="timeout", display_name="Timeout", advanced=True),
@@ -130,6 +130,9 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
         """Update build config when collection_name changes to set API key default."""
         if field_name == "collection_name":
             # Set API key default from environment variable
+            build_config["host"]["value"] = os.environ.get("QUADRANT_HOST", "")
+            build_config["port"]["value"] = os.environ.get("QUADRANT_PORT", "")
+            build_config["grpc_port"]["value"] = os.environ.get("QUADRANT_GRPC_PORT", "")
             build_config["api_key"]["value"] = os.environ.get("QUADRANT_API_KEY", "")
         return build_config
 

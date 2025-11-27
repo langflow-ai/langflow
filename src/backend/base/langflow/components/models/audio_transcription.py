@@ -9,7 +9,7 @@ from langflow.inputs.inputs import (
 from langflow.template import Output
 from langflow.schema.message import Message
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 import requests
 import tempfile
 import os
@@ -51,12 +51,13 @@ class AudioTranscriptionComponent(Component):
             options=[
                 "azure_openai",
                 # Add more providers here as you extend
-                # "openai",
+                "openai",
                 # "deepgram",
                 # "assemblyai",
             ],
             value="azure_openai",
             info="Select the audio transcription provider",
+            real_time_refresh=True,
         ),
         # Azure OpenAI Configuration
         SecretStrInput(
@@ -126,6 +127,16 @@ class AudioTranscriptionComponent(Component):
             method="transcribe_audio",
         ),
     ]
+
+    def update_build_config(self, build_config, field_value, field_name = None):
+
+        if field_name == "model_provider":
+            build_config["azure_endpoint"]["value"] = os.environ.get("OPENAI_WHISPER_API_ENDPOINT", "")
+            build_config["azure_api_key"]["value"] = os.environ.get("OPENAI_WHISPER_API_KEY", "")
+            build_config["azure_api_version"]["value"] = os.environ.get("OPENAI_WHISPER_API_VERSION", "")
+            build_config["azure_deployment_name"]["value"] = os.environ.get("OPENAI_WHISPER_API_DEPLOYMENT_NAME", "whisper")
+        
+        return build_config
 
     def transcribe_audio(self) -> Message:
         """Main transcription method - routes to appropriate provider"""
