@@ -4,7 +4,7 @@ const MIN_WIDTH = 300;
 const MAX_WIDTH_RATIO = 0.8;
 const DEFAULT_WIDTH = 400;
 
-interface SlidingContainerStoreType {
+export interface SlidingContainerStoreType {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   toggle: () => void;
