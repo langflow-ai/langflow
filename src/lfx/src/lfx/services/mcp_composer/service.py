@@ -73,7 +73,9 @@ class MCPComposerService(Service):
 
     def __init__(self):
         super().__init__()
-        self.project_composers: dict[str, dict] = {}  # project_id -> {process, host, port, streamable_http_url, auth_config}
+        self.project_composers: dict[
+            str, dict
+        ] = {}  # project_id -> {process, host, port, streamable_http_url, auth_config}
         self._start_locks: dict[
             str, asyncio.Lock
         ] = {}  # Lock to prevent concurrent start operations for the same project
@@ -1045,9 +1047,7 @@ class MCPComposerService(Service):
 
         project_host = auth_config.get("oauth_host") if auth_config else "unknown"
         project_port = auth_config.get("oauth_port") if auth_config else "unknown"
-        await logger.adebug(
-            f"Starting MCP Composer for project {project_id} on {project_host}:{project_port}"
-        )
+        await logger.adebug(f"Starting MCP Composer for project {project_id} on {project_host}:{project_port}")
 
         # Use a per-project lock to prevent race conditions
         if project_id not in self._start_locks:
