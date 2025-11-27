@@ -24,10 +24,14 @@ def generate_rsa_key_pair() -> tuple[str, str]:
         encryption_algorithm=serialization.NoEncryption(),
     ).decode("utf-8")
 
-    public_key_pem = private_key.public_key().public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-    ).decode("utf-8")
+    public_key_pem = (
+        private_key.public_key()
+        .public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode("utf-8")
+    )
 
     return private_key_pem, public_key_pem
 

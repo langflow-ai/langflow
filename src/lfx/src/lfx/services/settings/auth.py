@@ -166,10 +166,14 @@ class AuthSettings(BaseSettings):
                 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
                 private_key = load_pem_private_key(private_key_value.encode(), password=None)
-                public_key_pem = private_key.public_key().public_bytes(
-                    encoding=serialization.Encoding.PEM,
-                    format=serialization.PublicFormat.SubjectPublicKeyInfo,
-                ).decode("utf-8")
+                public_key_pem = (
+                    private_key.public_key()
+                    .public_bytes(
+                        encoding=serialization.Encoding.PEM,
+                        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+                    )
+                    .decode("utf-8")
+                )
                 object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
             return self
 
@@ -186,42 +190,49 @@ class AuthSettings(BaseSettings):
                 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
                 private_key = load_pem_private_key(private_key_value.encode(), password=None)
-                public_key_pem = private_key.public_key().public_bytes(
-                    encoding=serialization.Encoding.PEM,
-                    format=serialization.PublicFormat.SubjectPublicKeyInfo,
-                ).decode("utf-8")
+                public_key_pem = (
+                    private_key.public_key()
+                    .public_bytes(
+                        encoding=serialization.Encoding.PEM,
+                        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+                    )
+                    .decode("utf-8")
+                )
+                object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
+                public_key_path.write_text(public_key_pem, encoding="utf-8")
+        # No private key provided - load from file or generate
+        elif private_key_path.exists():
+            logger.debug("Loading RSA keys from files")
+            private_key_pem = read_secret_from_file(private_key_path)
+            object.__setattr__(self, "PRIVATE_KEY", SecretStr(private_key_pem))
+
+            if public_key_path.exists():
+                public_key_pem = public_key_path.read_text(encoding="utf-8")
+                object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
+            else:
+                # Derive public key from private key
+                from cryptography.hazmat.primitives import serialization
+                from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+                private_key = load_pem_private_key(private_key_pem.encode(), password=None)
+                public_key_pem = (
+                    private_key.public_key()
+                    .public_bytes(
+                        encoding=serialization.Encoding.PEM,
+                        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+                    )
+                    .decode("utf-8")
+                )
                 object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
                 public_key_path.write_text(public_key_pem, encoding="utf-8")
         else:
-            # No private key provided - load from file or generate
-            if private_key_path.exists():
-                logger.debug("Loading RSA keys from files")
-                private_key_pem = read_secret_from_file(private_key_path)
-                object.__setattr__(self, "PRIVATE_KEY", SecretStr(private_key_pem))
-
-                if public_key_path.exists():
-                    public_key_pem = public_key_path.read_text(encoding="utf-8")
-                    object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
-                else:
-                    # Derive public key from private key
-                    from cryptography.hazmat.primitives import serialization
-                    from cryptography.hazmat.primitives.serialization import load_pem_private_key
-
-                    private_key = load_pem_private_key(private_key_pem.encode(), password=None)
-                    public_key_pem = private_key.public_key().public_bytes(
-                        encoding=serialization.Encoding.PEM,
-                        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-                    ).decode("utf-8")
-                    object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
-                    public_key_path.write_text(public_key_pem, encoding="utf-8")
-            else:
-                # Generate new RSA key pair
-                logger.debug("Generating new RSA key pair")
-                private_key_pem, public_key_pem = generate_rsa_key_pair()
-                write_secret_to_file(private_key_path, private_key_pem)
-                public_key_path.write_text(public_key_pem, encoding="utf-8")
-                object.__setattr__(self, "PRIVATE_KEY", SecretStr(private_key_pem))
-                object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
-                logger.debug("RSA key pair generated and saved")
+            # Generate new RSA key pair
+            logger.debug("Generating new RSA key pair")
+            private_key_pem, public_key_pem = generate_rsa_key_pair()
+            write_secret_to_file(private_key_path, private_key_pem)
+            public_key_path.write_text(public_key_pem, encoding="utf-8")
+            object.__setattr__(self, "PRIVATE_KEY", SecretStr(private_key_pem))
+            object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
+            logger.debug("RSA key pair generated and saved")
 
         return self

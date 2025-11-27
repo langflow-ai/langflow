@@ -102,7 +102,7 @@ class TestAuthSettingsAlgorithms:
             settings2 = AuthSettings(CONFIG_DIR=tmpdir, ALGORITHM="RS256")
 
             assert settings2.PRIVATE_KEY.get_secret_value() == original_private
-            assert settings2.PUBLIC_KEY == original_public
+            assert original_public == settings2.PUBLIC_KEY
 
     def test_custom_private_key_derives_public_key(self):
         """When custom private key is provided, public key should be derived."""
@@ -119,7 +119,7 @@ class TestAuthSettingsAlgorithms:
             )
 
             assert settings.PRIVATE_KEY.get_secret_value() == custom_private
-            assert settings.PUBLIC_KEY == expected_public
+            assert expected_public == settings.PUBLIC_KEY
 
     def test_no_config_dir_generates_keys_in_memory(self):
         """Without CONFIG_DIR, keys should be generated in memory."""
@@ -147,13 +147,11 @@ class TestAuthSettingsAlgorithms:
 
     def test_invalid_algorithm_rejected(self):
         """Invalid algorithm should be rejected by pydantic."""
+        from lfx.services.settings.auth import AuthSettings
         from pydantic import ValidationError
 
-        from lfx.services.settings.auth import AuthSettings
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with pytest.raises(ValidationError):
-                AuthSettings(CONFIG_DIR=tmpdir, ALGORITHM="INVALID")
+        with tempfile.TemporaryDirectory() as tmpdir, pytest.raises(ValidationError):
+            AuthSettings(CONFIG_DIR=tmpdir, ALGORITHM="INVALID")
 
 
 class TestRSAKeyGeneration:
@@ -492,7 +490,9 @@ class TestAuthenticationFailures:
 
                 assert exc_info.value.status_code == 401
                 # jose library raises JWTError for expired tokens before our custom check
-                assert "expired" in exc_info.value.detail.lower() or "could not validate" in exc_info.value.detail.lower()
+                assert (
+                    "expired" in exc_info.value.detail.lower() or "could not validate" in exc_info.value.detail.lower()
+                )
 
     @pytest.mark.asyncio
     async def test_token_without_user_id_raises_401(self):
