@@ -690,7 +690,7 @@ async def test_download_profile_picture_content_is_valid_svg(empty_config_dir, f
     content = response.content
 
     # Verify it's valid XML/SVG
-    assert content.startswith(b"<") or content.startswith(b"<?xml"), "Should start with XML/SVG tag"
+    assert content.startswith((b"<", b"<?xml")), "Should start with XML/SVG tag"
     assert b"<svg" in content.lower(), "Should contain svg tag"
     assert b"</svg>" in content.lower(), "Should have closing svg tag"
 
