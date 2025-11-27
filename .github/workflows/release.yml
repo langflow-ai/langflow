@@ -145,9 +145,9 @@ jobs:
           python-version: "3.13"
           prune-cache: false
       - name: Install the project
-        run: uv sync
+        run: uv sync --directory src/backend/base
       - name: Check for dependency incompatibility
-        run: uv pip check
+        run: uv pip check --directory src/backend/base
       - name: Check Version
         id: check-version
         run: |
