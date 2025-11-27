@@ -77,7 +77,6 @@ DEFAULT_NOTIFICATION_OPTIONS = NotificationOptions(
 )
 
 
-
 async def verify_project_auth(
     db: AsyncSession,
     project_id: UUID,
@@ -212,7 +211,6 @@ def get_project_sse(project_id: UUID | None) -> SseServerTransport:
     return project_sse_transports[project_id_str]
 
 
-
 async def _build_project_tools_response(
     project_id: UUID,
     current_user: CurrentActiveMCPUser,
@@ -337,9 +335,7 @@ async def _dispatch_project_streamable_http(
     except HTTPException:
         raise
     except Exception as exc:
-        await logger.aexception(
-            f"Error handling Streamable HTTP request for project {project_id}: {exc!s}"
-        )
+        await logger.aexception(f"Error handling Streamable HTTP request for project {project_id}: {exc!s}")
         raise HTTPException(status_code=500, detail="Internal server error in project MCP transport") from exc
     finally:
         current_request_variables_ctx.reset(request_vars_token)
