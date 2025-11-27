@@ -1,4 +1,5 @@
 import secrets
+from enum import Enum
 from pathlib import Path
 from typing import Literal
 
@@ -9,6 +10,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from lfx.log.logger import logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from lfx.services.settings.utils import generate_rsa_key_pair, read_secret_from_file, write_secret_to_file
+
+
+class JWTAlgorithm(str, Enum):
+    """JWT signing algorithm options."""
+
+    HS256 = "HS256"
+    RS256 = "RS256"
+    RS512 = "RS512"
 
 
 class AuthSettings(BaseSettings):
@@ -28,8 +37,8 @@ class AuthSettings(BaseSettings):
         default="",
         description="RSA public key for JWT verification (RS256/RS512). Derived from private key if not provided.",
     )
-    ALGORITHM: Literal["HS256", "RS256", "RS512"] = Field(
-        default="HS256",
+    ALGORITHM: JWTAlgorithm = Field(
+        default=JWTAlgorithm.HS256,
         description="JWT signing algorithm. Use RS256 or RS512 for asymmetric signing (recommended for production).",
     )
     ACCESS_TOKEN_EXPIRE_SECONDS: int = 60 * 60  # 1 hour
@@ -147,7 +156,7 @@ class AuthSettings(BaseSettings):
     @model_validator(mode="after")
     def setup_rsa_keys(self):
         """Generate or load RSA keys when using RS256/RS512 algorithm."""
-        if self.ALGORITHM not in ("RS256", "RS512"):
+        if self.ALGORITHM not in (JWTAlgorithm.RS256, JWTAlgorithm.RS512):
             return self
 
         config_dir = self.CONFIG_DIR
