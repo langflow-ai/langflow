@@ -23,7 +23,7 @@ from langflow.services.database.models.user.crud import (
     update_user_last_login_at,
 )
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_db_service, session_scope
+from langflow.services.deps import session_scope
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
@@ -297,7 +297,7 @@ class AuthService(AuthServiceBase):
         api_key = api_key_header_val or api_key_query_val
 
         try:
-            async with get_db_service().with_session() as db:
+            async with session_scope() as db:
                 result = await check_key(db, api_key)
                 if not result:
                     logger.warning("Invalid API key provided for webhook")
