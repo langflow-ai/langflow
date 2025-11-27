@@ -1,3 +1,5 @@
+"""Storage service for langflow - redirects to lfx implementation."""
+
 from __future__ import annotations
 
 from abc import abstractmethod
@@ -8,12 +10,13 @@ import anyio
 from langflow.services.base import Service
 
 if TYPE_CHECKING:
-    from lfx.services.settings.service import SettingsService
-
     from langflow.services.session.service import SessionService
+    from langflow.services.settings.service import SettingsService
 
 
 class StorageService(Service):
+    """Storage service for langflow."""
+
     name = "storage_service"
 
     def __init__(self, session_service: SessionService, settings_service: SettingsService):
@@ -29,7 +32,7 @@ class StorageService(Service):
         self.ready = True
 
     @abstractmethod
-    async def save_file(self, flow_id: str, file_name: str, data) -> None:
+    async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:
         raise NotImplementedError
 
     @abstractmethod

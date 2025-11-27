@@ -1,5 +1,5 @@
 import Markdown from "react-markdown";
-import rehypeMathjax from "rehype-mathjax";
+import rehypeMathjax from "rehype-mathjax/browser";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import { EMPTY_OUTPUT_SEND_MESSAGE } from "@/constants/constants";

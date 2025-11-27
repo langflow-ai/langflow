@@ -55,13 +55,14 @@ test(
     });
 
     const disclosureTestIds = [
-      "disclosure-input / output",
-      "disclosure-data",
-      "disclosure-models",
-      "disclosure-helpers",
-      "disclosure-agents",
-      "disclosure-logic",
-      "disclosure-tools",
+      "disclosure-input & output",
+      "disclosure-data sources",
+      "disclosure-models & agents",
+      "disclosure-llm operations",
+      "disclosure-files",
+      "disclosure-processing",
+      "disclosure-flow control",
+      "disclosure-utilities",
       "disclosure-bundles-langchain",
       "disclosure-bundles-assemblyai",
       "disclosure-bundles-datastax",
@@ -69,11 +70,11 @@ test(
 
     const elementTestIds = [
       "input_outputChat Output",
-      "dataAPI Request",
+      "data_sourceAPI Request",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
       "mem0Mem0 Chat Memory",
-      "logicCondition",
+      "flow_controlsCondition",
       "langchain_utilitiesSelf Query Retriever",
       "langchain_utilitiesCharacter Text Splitter",
     ];
@@ -135,7 +136,7 @@ test(
       force: true,
     });
 
-    await expect(page.getByTestId("disclosure-models")).toBeVisible();
+    await expect(page.getByTestId("disclosure-models & agents")).toBeVisible();
 
     const rqaChainInputElements0 = await page
       .getByTestId("handle-retrievalqa-shownode-template-left")
@@ -150,8 +151,8 @@ test(
 
     await visibleElementHandle.click();
 
-    await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
-    await expect(page.getByTestId("disclosure-agents")).toBeVisible();
-    await expect(page.getByTestId("disclosure-logic")).toBeVisible();
+    await expect(page.getByTestId("disclosure-input & output")).toBeVisible();
+    await expect(page.getByTestId("disclosure-data sources")).toBeVisible();
+    await expect(page.getByTestId("disclosure-models & agents")).toBeVisible();
   },
 );

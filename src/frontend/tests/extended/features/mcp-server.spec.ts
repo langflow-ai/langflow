@@ -17,12 +17,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("mcp tools");
 
-    await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
+    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("agentsMCP Tools")
+      .getByTestId("models_and_agentsMCP Tools")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -90,6 +90,8 @@ test(
         state: "visible",
       },
     );
+
+    await page.getByText("Select a tool");
 
     await page.getByTestId("dropdown_str_tool").click();
 
@@ -283,6 +285,8 @@ test(
       },
     );
 
+    await page.getByText("Select a tool");
+
     await page.getByTestId("dropdown_str_tool").click();
 
     const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
@@ -295,7 +299,7 @@ test(
     await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await page.waitForSelector('[data-testid="int_int_max_length"]', {
       state: "visible",
@@ -365,12 +369,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("mcp tools");
 
-    await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
+    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("agentsMCP Tools")
+      .getByTestId("models_and_agentsMCP Tools")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -535,12 +539,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("mcp tools");
 
-    await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
+    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("agentsMCP Tools")
+      .getByTestId("models_and_agentsMCP Tools")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -711,12 +715,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("mcp tools");
 
-    await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
+    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("agentsMCP Tools")
+      .getByTestId("models_and_agentsMCP Tools")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -726,7 +730,7 @@ test(
     await page.getByTestId("fit_view").click();
 
     await zoomOut(page, 3);
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
@@ -769,6 +773,8 @@ test(
       },
     );
 
+    await page.getByText("Select a tool");
+
     await page.getByTestId("dropdown_str_tool").click();
 
     const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
@@ -781,7 +787,7 @@ test(
     await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await page.waitForSelector('[data-testid="int_int_max_length"]', {
       state: "visible",
@@ -977,6 +983,8 @@ test(
       },
     );
 
+    await page.getByText("Select a tool");
+
     await page.getByTestId("dropdown_str_tool").click();
 
     const fetchOptionCount2 = await page.getByTestId("fetch-0-option").count();
@@ -1000,12 +1008,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("mcp tools");
 
-    await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
+    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("agentsMCP Tools")
+      .getByTestId("models_and_agentsMCP Tools")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -1106,12 +1114,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("mcp tools");
 
-    await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
+    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("agentsMCP Tools")
+      .getByTestId("models_and_agentsMCP Tools")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -1161,6 +1169,8 @@ test(
         state: "visible",
       },
     );
+
+    await page.getByText("Select a tool");
 
     await page.getByTestId("dropdown_str_tool").click();
 

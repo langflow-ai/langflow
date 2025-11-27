@@ -258,6 +258,22 @@ const NodeToolbarComponent = memo(
       });
     }, [data.id, data.node?.documentation]);
 
+    const handleDownloadNode = useCallback(async () => {
+      try {
+        await downloadNode(flowComponent!);
+        setSuccessData({
+          title: `${flowComponent?.name || "Node"} downloaded successfully`,
+        });
+      } catch (error) {
+        console.error("Error downloading node:", error);
+        const nodeName = flowComponent?.name || "Node";
+        setErrorData({
+          title: `Failed to download ${nodeName}`,
+          list: [error instanceof Error ? error.message : "Unknown error"],
+        });
+      }
+    }, [flowComponent]);
+
     useShortcuts({
       showOverrideModal,
       showModalAdvanced,
@@ -349,7 +365,7 @@ const NodeToolbarComponent = memo(
             shareComponent();
             break;
           case "Download":
-            downloadNode(flowComponent!);
+            handleDownloadNode();
             break;
           case "SaveAll":
             addFlow({

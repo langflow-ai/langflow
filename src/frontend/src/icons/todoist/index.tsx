@@ -5,5 +5,17 @@ export const TodoistIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <TodoistIconSVG ref={ref} {...props} />;
+  return (
+    <span
+      style={{
+        display: "inline-grid",
+        width: 22,
+        height: 22,
+        placeItems: "center",
+        flexShrink: 0,
+      }}
+    >
+      <TodoistIconSVG ref={ref} {...props} />
+    </span>
+  );
 });

@@ -32,7 +32,8 @@ from sqlmodel import select
 from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.main import setup_app
-from langflow.services.auth.utils import check_key, get_current_user_by_jwt
+from langflow.services.auth.utils import get_current_user_from_access_token
+from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.deps import get_db_service, get_settings_service, is_settings_service_initialized, session_scope
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
@@ -736,7 +737,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
                 # Try JWT first
                 user = None
                 try:
-                    user = await get_current_user_by_jwt(auth_token, session)
+                    user = await get_current_user_from_access_token(auth_token, session)
                 except (JWTError, HTTPException):
                     # Try API key
                     api_key_result = await check_key(session, auth_token)
@@ -891,9 +892,7 @@ def api_key(
                 await delete_api_key(session, api_key.id)
 
             api_key_create = ApiKeyCreate(name="CLI")
-            unmasked_api_key = await create_api_key(session, api_key_create, user_id=superuser.id)
-            await session.commit()
-            return unmasked_api_key
+            return await create_api_key(session, api_key_create, user_id=superuser.id)
 
     unmasked_api_key = asyncio.run(aapi_key())
     # Create a banner to display the API key and tell the user it won't be shown again

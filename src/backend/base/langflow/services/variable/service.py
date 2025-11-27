@@ -32,10 +32,29 @@ class DatabaseVariableService(VariableService, Service):
             return
 
         for var_name in self.settings_service.settings.variables_to_get_from_environment:
+            # Check if session is still usable before processing each variable
+            if not session.is_active:
+                await logger.awarning(
+                    "Session is no longer active during variable initialization. "
+                    "Some environment variables may not have been processed."
+                )
+                break
+
             if var_name in os.environ and os.environ[var_name].strip():
                 value = os.environ[var_name].strip()
                 query = select(Variable).where(Variable.user_id == user_id, Variable.name == var_name)
-                existing = (await session.exec(query)).first()
+                try:
+                    existing = (await session.exec(query)).first()
+                except Exception as e:  # noqa: BLE001
+                    await logger.aexception(f"Error querying {var_name} variable: {e!s}")
+                    # If session got rolled back during query, stop processing
+                    if not session.is_active:
+                        await logger.awarning(
+                            f"Session rolled back during {var_name} query. Stopping variable initialization."
+                        )
+                        break
+                    continue
+
                 try:
                     if existing:
                         await self.update_variable(user_id, var_name, value, session)
@@ -51,6 +70,12 @@ class DatabaseVariableService(VariableService, Service):
                     await logger.adebug(f"Processed {var_name} variable from environment.")
                 except Exception as e:  # noqa: BLE001
                     await logger.aexception(f"Error processing {var_name} variable: {e!s}")
+                    # If session got rolled back due to error, stop processing
+                    if not session.is_active:
+                        await logger.awarning(
+                            f"Session rolled back after error processing {var_name}. Stopping variable initialization."
+                        )
+                        break
 
     async def get_variable(
         self,
@@ -76,7 +101,7 @@ class DatabaseVariableService(VariableService, Service):
             raise TypeError(msg)
 
         # we decrypt the value
-        return auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+        return auth_utils.decrypt_api_key(variable.value)
 
     async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
         stmt = select(Variable).where(Variable.user_id == user_id)
@@ -88,7 +113,7 @@ class DatabaseVariableService(VariableService, Service):
             value = None
             if variable.type == GENERIC_TYPE:
                 try:
-                    value = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+                    value = auth_utils.decrypt_api_key(variable.value)
                 except Exception as e:  # noqa: BLE001
                     await logger.adebug(
                         f"Decryption of {variable.type} failed for variable '{variable.name}': {e}. Assuming plaintext."
@@ -115,10 +140,10 @@ class DatabaseVariableService(VariableService, Service):
         if not variable:
             msg = f"{name} variable not found."
             raise ValueError(msg)
-        encrypted = auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
+        encrypted = auth_utils.encrypt_api_key(value)
         variable.value = encrypted
         session.add(variable)
-        await session.commit()
+        await session.flush()
         await session.refresh(variable)
         return variable
 
@@ -134,7 +159,7 @@ class DatabaseVariableService(VariableService, Service):
         db_variable.updated_at = datetime.now(timezone.utc)
 
         variable.value = variable.value or ""
-        encrypted = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
+        encrypted = auth_utils.encrypt_api_key(variable.value)
         variable.value = encrypted
 
         variable_data = variable.model_dump(exclude_unset=True)
@@ -142,7 +167,7 @@ class DatabaseVariableService(VariableService, Service):
             setattr(db_variable, key, value)
 
         session.add(db_variable)
-        await session.commit()
+        await session.flush()
         await session.refresh(db_variable)
         return db_variable
 
@@ -159,7 +184,6 @@ class DatabaseVariableService(VariableService, Service):
             msg = f"{name} variable not found."
             raise ValueError(msg)
         await session.delete(variable)
-        await session.commit()
 
     @override
     async def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: AsyncSession) -> None:
@@ -169,7 +193,6 @@ class DatabaseVariableService(VariableService, Service):
             msg = f"{variable_id} variable not found."
             raise ValueError(msg)
         await session.delete(variable)
-        await session.commit()
 
     async def create_variable(
         self,
@@ -184,11 +207,11 @@ class DatabaseVariableService(VariableService, Service):
         variable_base = VariableCreate(
             name=name,
             type=type_,
-            value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
+            value=auth_utils.encrypt_api_key(value),
             default_fields=list(default_fields),
         )
         variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
         session.add(variable)
-        await session.commit()
+        await session.flush()
         await session.refresh(variable)
         return variable

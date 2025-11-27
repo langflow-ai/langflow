@@ -21,12 +21,12 @@ test(
         await page.getByTestId("sidebar-search-input").click();
         await page.getByTestId("sidebar-search-input").fill("api request");
 
-        await page.waitForSelector('[data-testid="dataAPI Request"]', {
+        await page.waitForSelector('[data-testid="data_sourceAPI Request"]', {
           timeout: 3000,
         });
 
         await page
-          .getByTestId("dataAPI Request")
+          .getByTestId("data_sourceAPI Request")
           .hover()
           .then(async () => {
             await page.getByTestId("add-component-button-api-request").click();
@@ -246,12 +246,15 @@ test(
         await page.getByTestId("sidebar-search-input").click();
         await page.getByTestId("sidebar-search-input").fill("mcp");
 
-        await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
-          timeout: 30000,
-        });
+        await page.waitForSelector(
+          '[data-testid="models_and_agentsMCP Tools"]',
+          {
+            timeout: 30000,
+          },
+        );
 
         await page
-          .getByTestId("agentsMCP Tools")
+          .getByTestId("models_and_agentsMCP Tools")
           .dragTo(page.locator('//*[@id="react-flow-id"]'), {
             targetPosition: { x: 50, y: 50 },
           });

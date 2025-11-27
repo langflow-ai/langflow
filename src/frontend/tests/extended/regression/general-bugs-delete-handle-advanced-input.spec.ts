@@ -20,7 +20,7 @@ test(
     await page.getByTestId("sidebar-search-input").fill("if else");
 
     await page
-      .getByTestId("logicIf-Else")
+      .getByTestId("flow_controlsIf-Else")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-if-else").click();

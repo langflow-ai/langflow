@@ -17,9 +17,15 @@ from lfx.inputs.inputs import (
     SortableListInput,
 )
 from lfx.io import Output
+from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
 # TODO: We get the list from the API but we need to filter it
 enabled_tools = ["confluence", "discord", "dropbox", "github", "gmail", "linkedin", "notion", "slack", "youtube"]
+
+disable_component_in_astra_cloud_msg = (
+    "Composio tools are not supported in Astra cloud environment. "
+    "Please use local storage mode or cloud-based versions of the tools."
+)
 
 
 class ComposioAPIComponent(LCToolComponent):
@@ -229,6 +235,8 @@ class ComposioAPIComponent(LCToolComponent):
         Returns:
             Sequence[Tool]: List of configured Composio tools.
         """
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
         composio = self._build_wrapper()
         action_names = [action["name"] for action in self.actions]
 
@@ -257,6 +265,8 @@ class ComposioAPIComponent(LCToolComponent):
         Raises:
             ValueError: If the API key is not found or invalid.
         """
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
         try:
             if not self.api_key:
                 msg = "Composio API Key is required"

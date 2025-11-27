@@ -5,7 +5,6 @@ import axios, {
 } from "axios";
 import * as fetchIntercept from "fetch-intercept";
 import { useEffect } from "react";
-import { Cookies } from "react-cookie";
 import { IS_AUTO_LOGIN } from "@/constants/constants";
 import { baseURL } from "@/customization/constants";
 import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
@@ -22,8 +21,6 @@ import { useLogout, useRefreshAccessToken } from "./queries/auth";
 const api: AxiosInstance = axios.create({
   baseURL: baseURL,
 });
-
-const _cookies = new Cookies();
 function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);

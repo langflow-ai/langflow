@@ -12,11 +12,11 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("url");
 
-    await page.waitForSelector('[data-testid="dataURL"]', {
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,
     });
     await page
-      .getByTestId("dataURL")
+      .getByTestId("data_sourceURL")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-url").click();

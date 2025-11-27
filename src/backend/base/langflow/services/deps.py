@@ -3,8 +3,6 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
-from lfx.log.logger import logger
-
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
@@ -13,6 +11,7 @@ if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
+    from langflow.services.auth.base import AuthServiceBase
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
@@ -148,14 +147,8 @@ def get_db_service() -> DatabaseService:
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    """Retrieves an async session from the database service.
-
-    Yields:
-        AsyncSession: An async session object.
-
-    """
-    async with session_scope() as session:
-        yield session
+    msg = "get_session is deprecated, use session_scope instead"
+    raise NotImplementedError(msg)
 
 
 @asynccontextmanager
@@ -173,15 +166,10 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         Exception: If an error occurs during the session scope.
 
     """
-    db_service = get_db_service()
-    async with db_service.with_session() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception as e:
-            await logger.aexception("An error occurred during the session scope.", exception=e)
-            await session.rollback()
-            raise
+    from lfx.services.deps import session_scope as lfx_session_scope
+
+    async with lfx_session_scope() as session:
+        yield session
 
 
 def get_cache_service() -> CacheService | AsyncBaseCacheService:
@@ -252,3 +240,10 @@ def get_queue_service() -> JobQueueService:
     from langflow.services.job_queue.factory import JobQueueServiceFactory
 
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
+
+
+def get_auth_service() -> AuthServiceBase:
+    """Retrieve the authentication service."""
+    from langflow.services.auth.factory import AuthServiceFactory
+
+    return get_service(ServiceType.AUTH_SERVICE, AuthServiceFactory())

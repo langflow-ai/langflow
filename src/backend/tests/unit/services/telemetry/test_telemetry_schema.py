@@ -3,9 +3,12 @@
 Testing library and framework: pytest
 """
 
+import re
+
 import pytest
 from langflow.services.telemetry.schema import (
     ComponentPayload,
+    EmailPayload,
     PlaygroundPayload,
     RunPayload,
     ShutdownPayload,
@@ -19,7 +22,12 @@ class TestRunPayload:
     def test_run_payload_initialization_with_valid_data(self):
         """Test RunPayload initialization with valid parameters."""
         payload = RunPayload(
-            run_is_webhook=True, run_seconds=120, run_success=True, run_error_message="", client_type="oss"
+            run_is_webhook=True,
+            run_seconds=120,
+            run_success=True,
+            run_error_message="",
+            client_type="oss",
+            run_id=None,
         )
 
         assert payload.run_is_webhook is True
@@ -27,21 +35,33 @@ class TestRunPayload:
         assert payload.run_success is True
         assert payload.run_error_message == ""
         assert payload.client_type == "oss"
+        assert payload.run_id is None
 
     def test_run_payload_initialization_with_defaults(self):
         """Test RunPayload initialization with default values."""
-        payload = RunPayload(run_seconds=60, run_success=False, run_error_message="Test error")
+        payload = RunPayload(
+            run_seconds=60,
+            run_success=False,
+            run_error_message="Test error",
+            run_id=None,
+        )
 
         assert payload.run_is_webhook is False  # Default value
         assert payload.run_seconds == 60
         assert payload.run_success is False
         assert payload.run_error_message == "Test error"
         assert payload.client_type is None  # Default value
+        assert payload.run_id is None
 
     def test_run_payload_serialization(self):
         """Test RunPayload serialization to dictionary."""
         payload = RunPayload(
-            run_is_webhook=True, run_seconds=180, run_success=True, run_error_message="", client_type="desktop"
+            run_is_webhook=True,
+            run_seconds=180,
+            run_success=True,
+            run_error_message="",
+            client_type="desktop",
+            run_id=None,
         )
 
         data = payload.model_dump(by_alias=True)
@@ -51,17 +71,29 @@ class TestRunPayload:
         assert data["runSuccess"] is True
         assert data["runErrorMessage"] == ""
         assert data["clientType"] == "desktop"
+        assert data["runId"] is None
 
     def test_run_payload_with_negative_seconds(self):
         """Test RunPayload accepts negative seconds (no validation in schema)."""
-        payload = RunPayload(run_seconds=-10, run_success=True)
+        payload = RunPayload(
+            run_seconds=-10,
+            run_success=True,
+            run_error_message="",
+            run_id=None,
+        )
         assert payload.run_seconds == -10
         assert payload.run_success is True
 
     def test_run_payload_with_long_error_message(self):
         """Test RunPayload with long error message."""
         long_error = "x" * 1000
-        payload = RunPayload(run_seconds=30, run_success=False, run_error_message=long_error, client_type="oss")
+        payload = RunPayload(
+            run_seconds=30,
+            run_success=False,
+            run_error_message=long_error,
+            client_type="oss",
+            run_id=None,
+        )
 
         assert payload.run_error_message == long_error
         assert len(payload.run_error_message) == 1000
@@ -102,6 +134,59 @@ class TestShutdownPayload:
         """Test ShutdownPayload with zero time running."""
         payload = ShutdownPayload(time_running=0)
         assert payload.time_running == 0
+
+
+class TestEmailPayload:
+    """Test cases for EmailPayload."""
+
+    CLIENT_TYPE_DESKTOP: str = "desktop"
+    TEST_EMAIL_1: str = "test@ibm.com"
+
+    def test_email_payload_initialization(self):
+        """Test EmailPayload initialization with valid parameters."""
+        payload = EmailPayload(
+            client_type=self.CLIENT_TYPE_DESKTOP,
+            email=self.TEST_EMAIL_1,
+        )
+
+        assert payload.client_type == self.CLIENT_TYPE_DESKTOP
+        assert payload.email == self.TEST_EMAIL_1
+
+    def test_email_payload_initialization_without_client_type(self):
+        """Test EmailPayload initialization without client_type."""
+        payload = EmailPayload(
+            email=self.TEST_EMAIL_1,
+        )
+
+        assert payload.client_type is None
+        assert payload.email == self.TEST_EMAIL_1
+
+    def test_email_payload_initialization_with_invalid_email(self):
+        """Test EmailPayload initialization with an invalid email."""
+        payload = None
+        error_message: str = (
+            "value is not a valid email address: The part after the @-sign is not valid. It should have a period."
+        )
+
+        with pytest.raises(ValueError, match=re.escape(error_message)):
+            payload = EmailPayload(
+                client_type=self.CLIENT_TYPE_DESKTOP,
+                email="test@ibm",
+            )
+
+        assert payload is None
+
+    def test_email_payload_serialization(self):
+        """Test EmailPayload serialization to dictionary."""
+        payload = EmailPayload(
+            client_type=self.CLIENT_TYPE_DESKTOP,
+            email=self.TEST_EMAIL_1,
+        )
+
+        data = payload.model_dump(by_alias=True)
+
+        assert data["clientType"] == self.CLIENT_TYPE_DESKTOP
+        assert data["email"] == self.TEST_EMAIL_1
 
 
 class TestVersionPayload:
@@ -203,6 +288,7 @@ class TestPlaygroundPayload:
             playground_success=True,
             playground_error_message="",
             client_type="oss",
+            playground_run_id=None,
         )
 
         assert payload.playground_seconds == 45
@@ -210,10 +296,17 @@ class TestPlaygroundPayload:
         assert payload.playground_success is True
         assert payload.playground_error_message == ""
         assert payload.client_type == "oss"
+        assert payload.playground_run_id is None
 
     def test_playground_payload_initialization_with_none_component_count(self):
         """Test PlaygroundPayload initialization with None component count."""
-        payload = PlaygroundPayload(playground_seconds=30, playground_component_count=None, playground_success=True)
+        payload = PlaygroundPayload(
+            playground_seconds=30,
+            playground_component_count=None,
+            playground_success=True,
+            playground_error_message="",
+            playground_run_id=None,
+        )
 
         assert payload.playground_seconds == 30
         assert payload.playground_component_count is None
@@ -227,6 +320,7 @@ class TestPlaygroundPayload:
             playground_success=False,
             playground_error_message="Component failed",
             client_type="desktop",
+            playground_run_id=None,
         )
 
         data = payload.model_dump(by_alias=True)
@@ -236,16 +330,29 @@ class TestPlaygroundPayload:
         assert data["playgroundSuccess"] is False
         assert data["playgroundErrorMessage"] == "Component failed"
         assert data["clientType"] == "desktop"
+        assert data["playgroundRunId"] is None
 
     def test_playground_payload_with_negative_seconds(self):
         """Test PlaygroundPayload accepts negative seconds (no validation in schema)."""
-        payload = PlaygroundPayload(playground_seconds=-10, playground_success=True)
+        payload = PlaygroundPayload(
+            playground_seconds=-10,
+            playground_component_count=0,
+            playground_success=True,
+            playground_error_message="",
+            playground_run_id=None,
+        )
         assert payload.playground_seconds == -10
         assert payload.playground_success is True
 
     def test_playground_payload_with_negative_component_count(self):
         """Test PlaygroundPayload accepts negative component count (no validation in schema)."""
-        payload = PlaygroundPayload(playground_seconds=30, playground_component_count=-5, playground_success=True)
+        payload = PlaygroundPayload(
+            playground_seconds=30,
+            playground_component_count=-5,
+            playground_success=True,
+            playground_error_message="",
+            playground_run_id=None,
+        )
         assert payload.playground_component_count == -5
         assert payload.playground_success is True
 
@@ -257,6 +364,7 @@ class TestPlaygroundPayload:
             playground_success=False,
             playground_error_message="Timeout occurred",
             client_type="oss",
+            playground_run_id=None,
         )
 
         assert payload.playground_success is False
@@ -270,10 +378,12 @@ class TestComponentPayload:
         """Test ComponentPayload initialization with valid parameters."""
         payload = ComponentPayload(
             component_name="TextInput",
+            component_id="comp-123",
             component_seconds=2,
             component_success=True,
             component_error_message=None,
             client_type="oss",
+            component_run_id=None,
         )
 
         assert payload.component_name == "TextInput"
@@ -281,15 +391,18 @@ class TestComponentPayload:
         assert payload.component_success is True
         assert payload.component_error_message is None
         assert payload.client_type == "oss"
+        assert payload.component_run_id is None
 
     def test_component_payload_initialization_with_error(self):
         """Test ComponentPayload initialization with error message."""
         payload = ComponentPayload(
             component_name="LLMChain",
+            component_id="comp-456",
             component_seconds=5,
             component_success=False,
             component_error_message="API rate limit exceeded",
             client_type="desktop",
+            component_run_id=None,
         )
 
         assert payload.component_name == "LLMChain"
@@ -297,15 +410,18 @@ class TestComponentPayload:
         assert payload.component_success is False
         assert payload.component_error_message == "API rate limit exceeded"
         assert payload.client_type == "desktop"
+        assert payload.component_run_id is None
 
     def test_component_payload_serialization(self):
         """Test ComponentPayload serialization to dictionary."""
         payload = ComponentPayload(
             component_name="OpenAI",
+            component_id="comp-789",
             component_seconds=3,
             component_success=True,
             component_error_message=None,
             client_type="oss",
+            component_run_id=None,
         )
 
         data = payload.model_dump(by_alias=True)
@@ -315,11 +431,17 @@ class TestComponentPayload:
         assert data["componentSuccess"] is True
         assert data["componentErrorMessage"] is None
         assert data["clientType"] == "oss"
+        assert data["componentRunId"] is None
 
     def test_component_payload_with_negative_seconds(self):
         """Test ComponentPayload accepts negative seconds (no validation in schema)."""
         payload = ComponentPayload(
-            component_name="TestComponent", component_seconds=-1, component_success=True, component_error_message=None
+            component_name="TestComponent",
+            component_id="comp-neg",
+            component_seconds=-1,
+            component_success=True,
+            component_error_message=None,
+            component_run_id=None,
         )
         assert payload.component_seconds == -1
         assert payload.component_success is True
@@ -327,7 +449,12 @@ class TestComponentPayload:
     def test_component_payload_with_empty_name(self):
         """Test ComponentPayload with empty component name."""
         payload = ComponentPayload(
-            component_name="", component_seconds=1, component_success=True, component_error_message=None
+            component_name="",
+            component_id="comp-empty",
+            component_seconds=1,
+            component_success=True,
+            component_error_message=None,
+            component_run_id=None,
         )
         assert payload.component_name == ""
         assert payload.component_success is True
@@ -336,9 +463,11 @@ class TestComponentPayload:
         """Test ComponentPayload with special characters in component name."""
         payload = ComponentPayload(
             component_name="Custom-Component_v1.0",
+            component_id="comp-special",
             component_seconds=1,
             component_success=True,
             component_error_message=None,
+            component_run_id=None,
         )
 
         assert payload.component_name == "Custom-Component_v1.0"
@@ -351,7 +480,12 @@ class TestPayloadEdgeCases:
         """Test RunPayload with extremely large values."""
         large_seconds = 2**31 - 1  # Max int32 value
 
-        payload = RunPayload(run_seconds=large_seconds, run_success=True, run_error_message="x" * 10000)
+        payload = RunPayload(
+            run_seconds=large_seconds,
+            run_success=True,
+            run_error_message="x" * 10000,
+            run_id=None,
+        )
 
         assert payload.run_seconds == large_seconds
         assert len(payload.run_error_message) == 10000
@@ -382,7 +516,13 @@ class TestPayloadEdgeCases:
 
     def test_playground_payload_with_zero_values(self):
         """Test PlaygroundPayload with zero values."""
-        payload = PlaygroundPayload(playground_seconds=0, playground_component_count=0, playground_success=True)
+        payload = PlaygroundPayload(
+            playground_seconds=0,
+            playground_component_count=0,
+            playground_success=True,
+            playground_error_message="",
+            playground_run_id=None,
+        )
 
         assert payload.playground_seconds == 0
         assert payload.playground_component_count == 0
@@ -392,7 +532,12 @@ class TestPayloadEdgeCases:
         long_name = "x" * 1000
 
         payload = ComponentPayload(
-            component_name=long_name, component_seconds=1, component_success=True, component_error_message=None
+            component_name=long_name,
+            component_id="comp-long",
+            component_seconds=1,
+            component_success=True,
+            component_error_message=None,
+            component_run_id=None,
         )
 
         assert payload.component_name == long_name
@@ -402,7 +547,13 @@ class TestPayloadEdgeCases:
     def test_all_payloads_with_different_client_types(self, client_type):
         """Test all payloads with different client types."""
         # Test RunPayload
-        run_payload = RunPayload(run_seconds=60, run_success=True, client_type=client_type)
+        run_payload = RunPayload(
+            run_seconds=60,
+            run_success=True,
+            client_type=client_type,
+            run_error_message="",
+            run_id=None,
+        )
         assert run_payload.client_type == client_type
 
         # Test ShutdownPayload
@@ -424,23 +575,32 @@ class TestPayloadEdgeCases:
         assert version_payload.client_type == client_type
 
         # Test PlaygroundPayload
-        playground_payload = PlaygroundPayload(playground_seconds=30, playground_success=True, client_type=client_type)
+        playground_payload = PlaygroundPayload(
+            playground_seconds=30,
+            playground_component_count=0,
+            playground_success=True,
+            client_type=client_type,
+            playground_error_message="",
+            playground_run_id=None,
+        )
         assert playground_payload.client_type == client_type
 
         # Test ComponentPayload
         component_payload = ComponentPayload(
             component_name="TestComponent",
+            component_id="comp-test",
             component_seconds=1,
             component_success=True,
             component_error_message=None,
             client_type=client_type,
+            component_run_id=None,
         )
         assert component_payload.client_type == client_type
 
     def test_payload_serialization_with_none_values(self):
         """Test payload serialization when optional fields are None."""
         # Test with client_type as None
-        run_payload = RunPayload(run_seconds=60, run_success=True, client_type=None)
+        run_payload = RunPayload(run_seconds=60, run_success=True, client_type=None, run_error_message="", run_id=None)
 
         data = run_payload.model_dump(by_alias=True, exclude_none=True)
         assert "clientType" not in data  # Should be excluded when None
@@ -452,6 +612,7 @@ class TestPayloadEdgeCases:
             run_success=True,
             run_error_message="",
             client_type="oss",  # Empty string
+            run_id=None,
         )
 
         data = run_payload.model_dump(by_alias=True)
@@ -461,11 +622,21 @@ class TestPayloadEdgeCases:
         """Test payload validation with invalid data types."""
         # Test RunPayload with string instead of int
         with pytest.raises((ValueError, TypeError)):
-            RunPayload(run_seconds="not_a_number", run_success=True)
+            RunPayload(
+                run_seconds="not_a_number",  # type: ignore  # noqa: PGH003
+                run_success=True,
+                run_error_message="",
+                run_id=None,
+            )
 
         # Test with boolean instead of string for error message
         with pytest.raises((ValueError, TypeError)):
-            RunPayload(run_seconds=60, run_success=True, run_error_message=True)
+            RunPayload(
+                run_seconds=60,
+                run_success=True,
+                run_error_message=True,  # type: ignore  # noqa: PGH003
+                run_id=None,
+            )
 
 
 class TestPayloadIntegration:
@@ -487,36 +658,53 @@ class TestPayloadIntegration:
         )
 
         # 2. Run payload (flow execution)
-        run_payload = RunPayload(run_seconds=120, run_success=True, client_type="oss")
+        run_payload = RunPayload(
+            run_seconds=120,
+            run_success=True,
+            client_type="oss",
+            run_error_message="",
+            run_id=None,
+        )
 
         # 3. Component payloads (individual components)
         component_payloads = [
             ComponentPayload(
                 component_name="TextInput",
+                component_id="comp-input",
                 component_seconds=1,
                 component_success=True,
                 component_error_message=None,
                 client_type="oss",
+                component_run_id=None,
             ),
             ComponentPayload(
                 component_name="OpenAI",
+                component_id="comp-openai",
                 component_seconds=5,
                 component_success=True,
                 component_error_message=None,
                 client_type="oss",
+                component_run_id=None,
             ),
             ComponentPayload(
                 component_name="TextOutput",
+                component_id="comp-output",
                 component_seconds=1,
                 component_success=True,
                 component_error_message=None,
                 client_type="oss",
+                component_run_id=None,
             ),
         ]
 
         # 4. Playground payload (testing)
         playground_payload = PlaygroundPayload(
-            playground_seconds=30, playground_component_count=3, playground_success=True, client_type="oss"
+            playground_seconds=30,
+            playground_component_count=3,
+            playground_success=True,
+            client_type="oss",
+            playground_error_message="",
+            playground_run_id=None,
         )
 
         # 5. Shutdown payload (cleanup)
@@ -536,10 +724,12 @@ class TestPayloadIntegration:
         # Component that fails
         failed_component = ComponentPayload(
             component_name="OpenAI",
+            component_id="comp-failed",
             component_seconds=5,
             component_success=False,
             component_error_message="API rate limit exceeded",
             client_type="oss",
+            component_run_id=None,
         )
 
         # Run fails due to component failure
@@ -548,6 +738,7 @@ class TestPayloadIntegration:
             run_success=False,
             run_error_message="Component 'OpenAI' failed: API rate limit exceeded",
             client_type="oss",
+            run_id=None,
         )
 
         # Playground fails
@@ -557,13 +748,14 @@ class TestPayloadIntegration:
             playground_success=False,
             playground_error_message="Test failed due to component error",
             client_type="oss",
+            playground_run_id=None,
         )
 
         # Verify error consistency
         assert not failed_component.component_success
         assert not failed_run.run_success
         assert not failed_playground.playground_success
-        assert "API rate limit exceeded" in failed_component.component_error_message
+        assert "API rate limit exceeded" in (failed_component.component_error_message or "")
         assert "API rate limit exceeded" in failed_run.run_error_message
 
 
@@ -571,7 +763,14 @@ class TestPayloadIntegration:
 @pytest.fixture
 def sample_run_payload():
     """Fixture providing sample run payload for tests."""
-    return RunPayload(run_is_webhook=False, run_seconds=120, run_success=True, run_error_message="", client_type="oss")
+    return RunPayload(
+        run_is_webhook=False,
+        run_seconds=120,
+        run_success=True,
+        run_error_message="",
+        client_type="oss",
+        run_id=None,
+    )
 
 
 @pytest.fixture
@@ -605,6 +804,7 @@ def sample_playground_payload():
         playground_success=True,
         playground_error_message="",
         client_type="oss",
+        playground_run_id=None,
     )
 
 
@@ -613,10 +813,12 @@ def sample_component_payload():
     """Fixture providing sample component payload for tests."""
     return ComponentPayload(
         component_name="TextInput",
+        component_id="comp-fixture",
         component_seconds=2,
         component_success=True,
         component_error_message=None,
         client_type="oss",
+        component_run_id=None,
     )
 
 
@@ -633,7 +835,7 @@ class TestPayloadPerformance:
         # Create 1000 payload objects
         payloads = []
         for i in range(1000):
-            payload = RunPayload(run_seconds=i, run_success=True, client_type="oss")
+            payload = RunPayload(run_seconds=i, run_success=True, client_type="oss", run_id=None, run_error_message="")
             payloads.append(payload)
 
         creation_time = time.time() - start_time

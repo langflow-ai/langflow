@@ -7,6 +7,7 @@ interface DurationState {
   setDuration: (chatId: string, duration: number) => void;
   startTimer: (chatId: string) => void;
   clearInterval: (chatId: string) => void;
+  clearStartTime: (chatId: string) => void;
   setInterval: (chatId: string, intervalId: NodeJS.Timeout) => void;
 }
 
@@ -29,9 +30,15 @@ export const useDurationStore = create<DurationState>((set) => ({
         clearInterval(state.intervals[chatId]);
       }
       const { [chatId]: _interval, ...restIntervals } = state.intervals;
-      const { [chatId]: _startTime, ...restStartTimes } = state.startTimes;
+      // Don't remove startTime - preserve it so timer can resume when component remounts
       return {
         intervals: restIntervals,
+      };
+    }),
+  clearStartTime: (chatId) =>
+    set((state) => {
+      const { [chatId]: _startTime, ...restStartTimes } = state.startTimes;
+      return {
         startTimes: restStartTimes,
       };
     }),

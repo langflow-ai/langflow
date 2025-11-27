@@ -2,8 +2,8 @@ const Icon = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 48 48"
-    width="23px"
-    height="23px"
+    width="21px"
+    height="21px"
   >
     <path
       fill="#43a047"

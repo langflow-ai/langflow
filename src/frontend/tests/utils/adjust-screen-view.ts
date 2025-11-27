@@ -1,4 +1,4 @@
-import type { Page } from "playwright/test";
+import type { Page } from "@playwright/test";
 
 export async function adjustScreenView(
   page: Page,
@@ -31,6 +31,6 @@ export async function adjustScreenView(
     }
   }
   if (fitViewButton > 0) {
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
   }
 }

@@ -2,7 +2,7 @@ from lfx.base.composio.composio_base import ComposioBaseComponent
 
 
 class ComposioGoogleSheetsAPIComponent(ComposioBaseComponent):
-    display_name: str = "Google Sheets"
+    display_name: str = "GoogleSheets"
     icon = "Googlesheets"
     documentation: str = "https://docs.composio.dev"
     app_name = "googlesheets"

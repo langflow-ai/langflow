@@ -45,7 +45,7 @@ test(
 
     await page.getByTestId("sidebar-search-input").fill("agent");
 
-    await page.getByTestId("agentsAgent").hover();
+    await page.getByTestId("models_and_agentsAgent").hover();
     await page.getByTestId("add-component-button-agent").click();
     await adjustScreenView(page);
 

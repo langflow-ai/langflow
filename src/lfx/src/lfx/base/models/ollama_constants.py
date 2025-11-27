@@ -47,3 +47,6 @@ URL_LIST = [
     "http://127.0.0.1:11434",
     "http://0.0.0.0:11434",
 ]
+
+
+DEFAULT_OLLAMA_API_URL = "https://ollama.com"

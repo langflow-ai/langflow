@@ -27,7 +27,7 @@ from langflow.api.v1.schemas import FlowListCreate
 from langflow.api.v2.mcp import update_server
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
-from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.database.models.api_key.crud import create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
@@ -94,7 +94,7 @@ async def create_project(
             )
 
         session.add(new_project)
-        await session.commit()
+        await session.flush()
         await session.refresh(new_project)
 
         # Auto-register MCP server for this project with configured default auth
@@ -184,21 +184,22 @@ async def create_project(
                 update(Flow).where(Flow.id.in_(project.components_list)).values(folder_id=new_project.id)  # type: ignore[attr-defined]
             )
             await session.exec(update_statement_components)
-            await session.commit()
 
         if project.flows_list:
             update_statement_flows = (
                 update(Flow).where(Flow.id.in_(project.flows_list)).values(folder_id=new_project.id)  # type: ignore[attr-defined]
             )
             await session.exec(update_statement_flows)
-            await session.commit()
+
+        # Convert to FolderRead while session is still active to avoid detached instance errors
+        folder_read = FolderRead.model_validate(new_project, from_attributes=True)
     except HTTPException:
         # Re-raise HTTP exceptions (like 409 conflicts) without modification
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    return new_project
+    return folder_read
 
 
 @router.get("/", response_model=list[FolderRead], status_code=200)
@@ -216,7 +217,10 @@ async def read_projects(
             )
         ).all()
         projects = [project for project in projects if project.name != STARTER_FOLDER_NAME]
-        return sorted(projects, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
+        sorted_projects = sorted(projects, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
+
+        # Convert to FolderRead while session is still active to avoid detached instance errors
+        return [FolderRead.model_validate(project, from_attributes=True) for project in sorted_projects]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -277,7 +281,9 @@ async def read_project(
         # If no pagination requested, return all flows for the current user
         flows_from_current_user_in_project = [flow for flow in project.flows if flow.user_id == current_user.id]
         project.flows = flows_from_current_user_in_project
-        return project  # noqa: TRY300
+
+        # Convert to FolderReadWithFlows while session is still active to avoid detached instance errors
+        return FolderReadWithFlows.model_validate(project, from_attributes=True)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -415,7 +421,7 @@ async def update_project(
             existing_project.parent_id = project.parent_id
 
         session.add(existing_project)
-        await session.commit()
+        await session.flush()
         await session.refresh(existing_project)
 
         # Start MCP Composer if auth changed to OAuth
@@ -453,14 +459,15 @@ async def update_project(
                 update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_project.id)  # type: ignore[attr-defined]
             )
             await session.exec(update_statement_my_collection)
-            await session.commit()
 
         if concat_project_components:
             update_statement_components = (
                 update(Flow).where(Flow.id.in_(concat_project_components)).values(folder_id=existing_project.id)  # type: ignore[attr-defined]
             )
             await session.exec(update_statement_components)
-            await session.commit()
+
+        # Convert to FolderRead while session is still active to avoid detached instance errors
+        folder_read = FolderRead.model_validate(existing_project, from_attributes=True)
 
     except HTTPException:
         # Re-raise HTTP exceptions (like 409 conflicts) without modification
@@ -468,7 +475,7 @@ async def update_project(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    return existing_project
+    return folder_read
 
 
 @router.delete("/{project_id}", status_code=204)
@@ -494,6 +501,15 @@ async def delete_project(
 
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    # Prevent deletion of the Langflow Assistant folder
+    if project.name == ASSISTANT_FOLDER_NAME:
+        msg = f"Cannot delete the '{ASSISTANT_FOLDER_NAME}' folder, that contains pre-built flows."
+        await logger.adebug(msg)
+        raise HTTPException(
+            status_code=403,
+            detail=msg,
+        )
 
     # Check if project has OAuth authentication and stop MCP Composer if needed
     if project.auth_settings and project.auth_settings.get("auth_type") == "oauth":
@@ -553,7 +569,6 @@ async def delete_project(
 
     try:
         await session.delete(project)
-        await session.commit()
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -646,7 +661,7 @@ async def upload_file(
         )
 
     session.add(new_project)
-    await session.commit()
+    await session.flush()
     await session.refresh(new_project)
     del data["folder_name"]
     del data["folder_description"]
