@@ -3,11 +3,8 @@ import { useBlocker, useParams } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
-import { FlowPageSlidingContainerContent } from "@/customization/components/custom-flow-page-sliding-container";
-import { SlidingContainer } from "@/customization/components/custom-sliding-container";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { useSlidingContainerStore } from "@/customization/stores/sliding-container-store";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
@@ -162,19 +159,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const isMobile = useIsMobile();
 
-  // Sliding container state
-  const isSlidingContainerOpen = useSlidingContainerStore(
-    (state) => state.isOpen,
-  );
-  const slidingContainerWidth = useSlidingContainerStore(
-    (state) => state.width,
-  );
-  const setSlidingContainerWidth = useSlidingContainerStore(
-    (state) => state.setWidth,
-  );
-  const isFullscreen = useSlidingContainerStore((state) => state.isFullscreen);
-  const hasIO = useFlowStore((state) => state.hasIO);
-
   return (
     <>
       <div className="flow-page-positioning">
@@ -188,21 +172,8 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
               <FlowSearchProvider>
                 {!view && <FlowSidebarComponent isLoading={isLoading} />}
                 <main className="flex w-full overflow-hidden">
-                  <div className="h-full w-full flex">
-                    <div className="flex-1 overflow-hidden">
-                      <Page setIsLoading={setIsLoading} />
-                    </div>
-                    {hasIO && (
-                      <SlidingContainer
-                        isOpen={isSlidingContainerOpen}
-                        width={slidingContainerWidth}
-                        onWidthChange={setSlidingContainerWidth}
-                        resizable={true}
-                        isFullscreen={isFullscreen}
-                      >
-                        <FlowPageSlidingContainerContent />
-                      </SlidingContainer>
-                    )}
+                  <div className="h-full w-full">
+                    <Page setIsLoading={setIsLoading} />
                   </div>
                 </main>
               </FlowSearchProvider>

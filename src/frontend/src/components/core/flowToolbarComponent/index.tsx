@@ -1,7 +1,6 @@
 import { Panel } from "@xyflow/react";
 import { memo, useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useSlidingContainerStore } from "@/customization/stores/sliding-container-store";
 import { track } from "@/customization/utils/analytics";
 import ExportModal from "@/modals/exportModal";
 import useFlowStore from "../../../stores/flowStore";
@@ -19,14 +18,10 @@ const FlowToolbar = memo(function FlowToolbar(): JSX.Element {
     setOpenApiModal((oldOpen) => !oldOpen);
   };
 
-  const toggleSlidingContainer = useSlidingContainerStore(
-    (state) => state.toggle,
-  );
-
   const handleChatWShortcut = (e: KeyboardEvent) => {
-    if (isThereModal()) return;
+    if (isThereModal() && !open) return;
     if (useFlowStore.getState().hasIO) {
-      toggleSlidingContainer();
+      setOpen((oldState) => !oldState);
     }
   };
 

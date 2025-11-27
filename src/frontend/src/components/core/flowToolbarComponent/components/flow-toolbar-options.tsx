@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
-import { PlaygroundButtonSliding } from "@/customization/components/custom-playground-button-sliding";
 import useFlowStore from "@/stores/flowStore";
 import PublishDropdown from "./deploy-dropdown";
+import PlaygroundButton from "./playground-button";
 
 type FlowToolbarOptionsProps = {
   open: boolean;
@@ -20,7 +20,12 @@ const FlowToolbarOptions = ({
   return (
     <div className="flex items-center gap-1.5">
       <div className="flex h-full w-full gap-1.5 rounded-sm transition-all">
-        <PlaygroundButtonSliding hasIO={hasIO} />
+        <PlaygroundButton
+          hasIO={hasIO}
+          open={open}
+          setOpen={setOpen}
+          canvasOpen
+        />
       </div>
       <PublishDropdown
         openApiModal={openApiModal}
