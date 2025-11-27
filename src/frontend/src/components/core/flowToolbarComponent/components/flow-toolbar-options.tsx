@@ -1,9 +1,4 @@
 import type { Dispatch, SetStateAction } from "react";
-// NOTE: Changes commented out just for review, will be reverted when approved before merging
-// so it won't affect the current implementation
-// OLD: Modal-based playground button
-// import PlaygroundButton from "./playground-button";
-// NEW: Sliding container playground button
 import { PlaygroundButtonSliding } from "@/customization/components/custom-playground-button-sliding";
 import useFlowStore from "@/stores/flowStore";
 import PublishDropdown from "./deploy-dropdown";
@@ -25,16 +20,6 @@ const FlowToolbarOptions = ({
   return (
     <div className="flex items-center gap-1.5">
       <div className="flex h-full w-full gap-1.5 rounded-sm transition-all">
-        {/* NOTE: Changes commented out just for review, will be reverted when approved before merging
-            so it won't affect the current implementation */}
-        {/* OLD: Modal-based implementation - commented out */}
-        {/* <PlaygroundButton
-          hasIO={hasIO}
-          open={open}
-          setOpen={setOpen}
-          canvasOpen
-        /> */}
-        {/* NEW: Sliding container implementation */}
         <PlaygroundButtonSliding hasIO={hasIO} />
       </div>
       <PublishDropdown

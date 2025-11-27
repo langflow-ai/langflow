@@ -1,8 +1,6 @@
 import { Panel } from "@xyflow/react";
 import { memo, useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-// NOTE: Changes commented out just for review, will be reverted when approved before merging
-// so it won't affect the current implementation
 import { useSlidingContainerStore } from "@/customization/stores/sliding-container-store";
 import { track } from "@/customization/utils/analytics";
 import ExportModal from "@/modals/exportModal";
@@ -26,10 +24,6 @@ const FlowToolbar = memo(function FlowToolbar(): JSX.Element {
   );
 
   const handleChatWShortcut = (e: KeyboardEvent) => {
-    // NOTE: Changes commented out just for review, will be reverted when approved before merging
-    // so it won't affect the current implementation
-    // OLD: This opened the IOModal via setOpen
-    // NEW: This now toggles the sliding container instead
     if (isThereModal()) return;
     if (useFlowStore.getState().hasIO) {
       toggleSlidingContainer();

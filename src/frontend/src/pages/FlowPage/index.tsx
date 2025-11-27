@@ -4,8 +4,6 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import { FlowPageSlidingContainerContent } from "@/customization/components/custom-flow-page-sliding-container";
-// NOTE: Changes commented out just for review, will be reverted when approved before merging
-// so it won't affect the current implementation
 import { SlidingContainer } from "@/customization/components/custom-sliding-container";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -194,9 +192,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                     <div className="flex-1 overflow-hidden">
                       <Page setIsLoading={setIsLoading} />
                     </div>
-                    {/* NOTE: Changes commented out just for review, will be reverted when approved before merging
-                        so it won't affect the current implementation */}
-                    {/* NEW: Sliding container implementation */}
                     {hasIO && (
                       <SlidingContainer
                         isOpen={isSlidingContainerOpen}
@@ -208,9 +203,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                         <FlowPageSlidingContainerContent />
                       </SlidingContainer>
                     )}
-                    {/* OLD: IOModal implementation - commented out
-                    The old IOModal was rendered through CustomIOModal in playground-button.tsx
-                    It's now replaced by the sliding container above */}
                   </div>
                 </main>
               </FlowSearchProvider>
