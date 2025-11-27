@@ -28,6 +28,25 @@ The Docling dependency is required to use the Docling components in Langflow.
     For Langflow Desktop, add the Docling dependency to Langflow Desktop's `requirements.txt`.
     For more information, see [Install custom dependencies](/install-custom-dependencies).
 
+* **Linux system dependencies (manual installation or custom Docker images)**:
+
+    When installing Langflow manually on Linux (including custom Docker containers based on Ubuntu/Debian), you must install the following system packages for EasyOCR to work properly with image processing:
+
+    ```bash
+    apt-get update && apt-get install -y \
+        libgl1-mesa-glx \
+        libglib2.0-0 \
+        libsm6 \
+        libxext6 \
+        libxrender1
+    ```
+
+    These packages provide the OpenCV dependencies required by EasyOCR for OCR (Optical Character Recognition) on images. Without these packages, you may encounter errors like `EasyOCR is not installed` or `Could not extract content from the provided file(s)` when processing images.
+
+    :::note
+    The official Langflow Docker images (`langflowai/langflow`) include these dependencies by default. This step is only required for manual installations or custom Docker builds.
+    :::
+
 ## Use Docling components in a flow
 
 :::tip
