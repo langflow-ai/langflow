@@ -54,45 +54,61 @@ class AuthService(AuthServiceBase):
     def settings(self) -> SettingsService:
         return self.settings_service
 
-    async def api_key_security(self, query_param: str | None, header_param: str | None) -> UserRead | None:
+    async def api_key_security(
+        self, query_param: str | None, header_param: str | None, db: AsyncSession | None = None
+    ) -> UserRead | None:
         settings_service = self.settings
+
+        # Use provided session or create a new one
+        if db is not None:
+            return await self._api_key_security_impl(query_param, header_param, db, settings_service)
+
+        async with session_scope() as new_db:
+            return await self._api_key_security_impl(query_param, header_param, new_db, settings_service)
+
+    async def _api_key_security_impl(
+        self,
+        query_param: str | None,
+        header_param: str | None,
+        db: AsyncSession,
+        settings_service,
+    ) -> UserRead | None:
         result: ApiKey | User | None
 
-        async with session_scope() as db:
-            if settings_service.auth_settings.AUTO_LOGIN:
-                if not settings_service.auth_settings.SUPERUSER:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Missing first superuser credentials",
-                    )
-                if not query_param and not header_param:
-                    if settings_service.auth_settings.skip_auth_auto_login:
-                        result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
-                        logger.warning(AUTO_LOGIN_WARNING)
-                        return UserRead.model_validate(result, from_attributes=True)
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail=AUTO_LOGIN_ERROR,
-                    )
-                result = await check_key(db, query_param or header_param)
-
-            elif not query_param and not header_param:
+        if settings_service.auth_settings.AUTO_LOGIN:
+            if not settings_service.auth_settings.SUPERUSER:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Missing first superuser credentials",
+                )
+            if not query_param and not header_param:
+                if settings_service.auth_settings.skip_auth_auto_login:
+                    result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+                    logger.warning(AUTO_LOGIN_WARNING)
+                    return UserRead.model_validate(result, from_attributes=True)
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="An API key must be passed as query or header",
+                    detail=AUTO_LOGIN_ERROR,
                 )
+            result = await check_key(db, query_param or header_param)
 
-            else:
-                result = await check_key(db, query_param or header_param)
+        elif not query_param and not header_param:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="An API key must be passed as query or header",
+            )
 
-            if not result:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Invalid or missing API key",
-                )
+        else:
+            result = await check_key(db, query_param or header_param)
 
-            if isinstance(result, User):
-                return UserRead.model_validate(result, from_attributes=True)
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid or missing API key",
+            )
+
+        if isinstance(result, User):
+            return UserRead.model_validate(result, from_attributes=True)
 
         msg = "Invalid result type"
         raise ValueError(msg)
@@ -146,10 +162,11 @@ class AuthService(AuthServiceBase):
         query_param: str | None,
         header_param: str | None,
         db: AsyncSession,
-    ) -> User:
+    ) -> User | UserRead:
         if token:
             return await self.get_current_user_from_access_token(token, db)
-        user = await self.api_key_security(query_param, header_param)
+        # Pass db session to api_key_security for transactional consistency
+        user = await self.api_key_security(query_param, header_param, db)
         if user:
             return user
 
@@ -245,12 +262,12 @@ class AuthService(AuthServiceBase):
             code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
         )
 
-    async def get_current_active_user(self, current_user: User) -> User:
+    async def get_current_active_user(self, current_user: User | UserRead) -> User | UserRead:
         if not current_user.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
         return current_user
 
-    async def get_current_active_superuser(self, current_user: User) -> User:
+    async def get_current_active_superuser(self, current_user: User | UserRead) -> User | UserRead:
         if not current_user.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
         if not current_user.is_superuser:
@@ -520,7 +537,7 @@ class AuthService(AuthServiceBase):
         query_param: str | None,
         header_param: str | None,
         db: AsyncSession,
-    ) -> User:
+    ) -> User | UserRead:
         if token:
             return await self.get_current_user_from_access_token(token, db)
 
@@ -567,7 +584,7 @@ class AuthService(AuthServiceBase):
             detail="Invalid authentication result",
         )
 
-    async def get_current_active_user_mcp(self, current_user: User) -> User:
+    async def get_current_active_user_mcp(self, current_user: User | UserRead) -> User | UserRead:
         if not current_user.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
         return current_user
