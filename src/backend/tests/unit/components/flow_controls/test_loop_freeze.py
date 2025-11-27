@@ -459,6 +459,7 @@ class TestEdgeCasesForLoopDetection:
         should_build = not vertex.frozen or is_loop_component
 
         assert is_loop_component is None  # None or None = None
+        assert should_build is None  # False or None = None
         # But in boolean context, None is falsy
         should_build_bool = not vertex.frozen or bool(is_loop_component)
         assert should_build_bool is False
