@@ -527,8 +527,7 @@ async def test_download_profile_picture_fallback_to_package(empty_config_dir, fi
     # The 046-rocket.svg should be found in the package's bundled directory
     response = await files_client.get("api/v1/files/profile_pictures/Space/046-rocket.svg")
     assert response.status_code == 200, (
-        f"Expected 200, got {response.status_code}. "
-        "Fallback to package profile pictures should work."
+        f"Expected 200, got {response.status_code}. Fallback to package profile pictures should work."
     )
 
     # Verify content type
@@ -621,7 +620,7 @@ async def test_list_profile_pictures_config_dir_takes_precedence(setup_profile_p
     # Ensure we have a file in config_dir
     space_dir = config_path / "profile_pictures" / "Space"
     space_dir.mkdir(parents=True, exist_ok=True)
-    (space_dir / "custom-test-file.svg").write_bytes(b'<svg></svg>')
+    (space_dir / "custom-test-file.svg").write_bytes(b"<svg></svg>")
 
     response = await files_client.get("api/v1/files/profile_pictures/list")
     assert response.status_code == 200
@@ -708,7 +707,7 @@ async def partial_config_dir(monkeypatch):
     # Create only People directory with a file
     people_dir = config_path / "profile_pictures" / "People"
     people_dir.mkdir(parents=True, exist_ok=True)
-    (people_dir / "test-person.svg").write_bytes(b'<svg><circle/></svg>')
+    (people_dir / "test-person.svg").write_bytes(b"<svg><circle/></svg>")
 
     # Note: Space directory is NOT created intentionally
 
