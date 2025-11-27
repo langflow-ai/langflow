@@ -101,7 +101,7 @@ class DatabaseVariableService(VariableService, Service):
             raise TypeError(msg)
 
         # we decrypt the value
-        return auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+        return auth_utils.decrypt_api_key(variable.value)
 
     async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
         stmt = select(Variable).where(Variable.user_id == user_id)
@@ -113,7 +113,7 @@ class DatabaseVariableService(VariableService, Service):
             value = None
             if variable.type == GENERIC_TYPE:
                 try:
-                    value = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+                    value = auth_utils.decrypt_api_key(variable.value)
                 except Exception as e:  # noqa: BLE001
                     await logger.adebug(
                         f"Decryption of {variable.type} failed for variable '{variable.name}': {e}. Assuming plaintext."
@@ -140,7 +140,7 @@ class DatabaseVariableService(VariableService, Service):
         if not variable:
             msg = f"{name} variable not found."
             raise ValueError(msg)
-        encrypted = auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
+        encrypted = auth_utils.encrypt_api_key(value)
         variable.value = encrypted
         session.add(variable)
         await session.flush()
@@ -159,7 +159,7 @@ class DatabaseVariableService(VariableService, Service):
         db_variable.updated_at = datetime.now(timezone.utc)
 
         variable.value = variable.value or ""
-        encrypted = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
+        encrypted = auth_utils.encrypt_api_key(variable.value)
         variable.value = encrypted
 
         variable_data = variable.model_dump(exclude_unset=True)
@@ -207,7 +207,7 @@ class DatabaseVariableService(VariableService, Service):
         variable_base = VariableCreate(
             name=name,
             type=type_,
-            value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
+            value=auth_utils.encrypt_api_key(value),
             default_fields=list(default_fields),
         )
         variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
