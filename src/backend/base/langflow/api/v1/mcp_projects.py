@@ -1035,6 +1035,10 @@ def _normalize_url_list(urls: Sequence[str] | str) -> list[str]:
     """Ensure URL inputs are always handled as a list of strings."""
     if isinstance(urls, str):
         return [urls]
+    # Instead of list comprehension, use built-in list if already of correct type
+    if isinstance(urls, list) and all(isinstance(url, str) for url in urls):
+        return urls[:]
+    # Otherwise fallback to original logic
     try:
         return [str(url) for url in urls]
     except TypeError as exc:
@@ -1046,12 +1050,23 @@ def _args_reference_urls(args: Sequence[Any] | None, urls: list[str]) -> bool:
     """Check whether the given args list references any of the provided URLs."""
     if not args or not urls:
         return False
-    args_strings = [arg for arg in args if isinstance(arg, str)]
+    # Convert all args that are strings to a set in a single pass for fast lookup
+    args_strings = []
+    args_set = set()
+    for arg in args:
+        if isinstance(arg, str):
+            args_strings.append(arg)
+            args_set.add(arg)
     if not args_strings:
         return False
-    args_set = set(args_strings)
     last_arg = args_strings[-1]
-    return any((url == last_arg) or (url in args_set) for url in urls)
+    # Instead of using "any" and set check for every url, use set intersection for O(1) lookup
+    # This turns the inner loop from O(M*N) to O(M) if many urls
+    # We still need to check `url == last_arg` for each url in urls
+    args_set_has_url = args_set.intersection(urls)
+    if args_set_has_url:
+        return True
+    return last_arg in urls
 
 
 def config_contains_server_url(config_data: dict, urls: Sequence[str] | str) -> bool:
@@ -1155,22 +1170,20 @@ def remove_server_by_urls(config_data: dict, urls: Sequence[str] | str) -> tuple
     if not normalized_urls:
         return config_data, []
 
-    if "mcpServers" not in config_data:
+    mcp_servers = config_data.get("mcpServers")
+    if not mcp_servers:
         return config_data, []
 
     removed_servers: list[str] = []
-    servers_to_remove: list[str] = []
 
-    # Find servers to remove
-    for server_name, server_config in config_data["mcpServers"].items():
+    # Avoid storing servers_to_remove if not necessary, remove directly in loop over copy
+    # Iterate over list of keys so we can mutate during iteration
+    for server_name in list(mcp_servers.keys()):
+        server_config = mcp_servers[server_name]
         if _args_reference_urls(server_config.get("args", []), normalized_urls):
-            servers_to_remove.append(server_name)
-
-    # Remove the servers
-    for server_name in servers_to_remove:
-        del config_data["mcpServers"][server_name]
-        removed_servers.append(server_name)
-        logger.debug("Removed existing server with matching SSE URL: %s", server_name)
+            del mcp_servers[server_name]
+            removed_servers.append(server_name)
+            logger.debug("Removed existing server with matching SSE URL: %s", server_name)
 
     return config_data, removed_servers
 
