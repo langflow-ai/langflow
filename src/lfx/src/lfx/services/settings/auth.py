@@ -9,7 +9,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from lfx.log.logger import logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
-from lfx.services.settings.utils import generate_rsa_key_pair, read_secret_from_file, write_secret_to_file
+from lfx.services.settings.utils import (
+    RSAKeyError,
+    derive_public_key_from_private,
+    generate_rsa_key_pair,
+    read_secret_from_file,
+    write_public_key_to_file,
+    write_secret_to_file,
+)
 
 
 class JWTAlgorithm(str, Enum):
@@ -171,18 +178,7 @@ class AuthSettings(BaseSettings):
                 object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
             elif not self.PUBLIC_KEY:
                 # Derive public key from private key
-                from cryptography.hazmat.primitives import serialization
-                from cryptography.hazmat.primitives.serialization import load_pem_private_key
-
-                private_key = load_pem_private_key(private_key_value.encode(), password=None)
-                public_key_pem = (
-                    private_key.public_key()
-                    .public_bytes(
-                        encoding=serialization.Encoding.PEM,
-                        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-                    )
-                    .decode("utf-8")
-                )
+                public_key_pem = derive_public_key_from_private(private_key_value)
                 object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
             return self
 
@@ -195,20 +191,9 @@ class AuthSettings(BaseSettings):
             write_secret_to_file(private_key_path, private_key_value)
 
             if not self.PUBLIC_KEY:
-                from cryptography.hazmat.primitives import serialization
-                from cryptography.hazmat.primitives.serialization import load_pem_private_key
-
-                private_key = load_pem_private_key(private_key_value.encode(), password=None)
-                public_key_pem = (
-                    private_key.public_key()
-                    .public_bytes(
-                        encoding=serialization.Encoding.PEM,
-                        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-                    )
-                    .decode("utf-8")
-                )
+                public_key_pem = derive_public_key_from_private(private_key_value)
                 object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
-                public_key_path.write_text(public_key_pem, encoding="utf-8")
+                write_public_key_to_file(public_key_path, public_key_pem)
         # No private key provided - load from file or generate
         elif private_key_path.exists():
             logger.debug("Loading RSA keys from files")
@@ -220,26 +205,15 @@ class AuthSettings(BaseSettings):
                 object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
             else:
                 # Derive public key from private key
-                from cryptography.hazmat.primitives import serialization
-                from cryptography.hazmat.primitives.serialization import load_pem_private_key
-
-                private_key = load_pem_private_key(private_key_pem.encode(), password=None)
-                public_key_pem = (
-                    private_key.public_key()
-                    .public_bytes(
-                        encoding=serialization.Encoding.PEM,
-                        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-                    )
-                    .decode("utf-8")
-                )
+                public_key_pem = derive_public_key_from_private(private_key_pem)
                 object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
-                public_key_path.write_text(public_key_pem, encoding="utf-8")
+                write_public_key_to_file(public_key_path, public_key_pem)
         else:
             # Generate new RSA key pair
             logger.debug("Generating new RSA key pair")
             private_key_pem, public_key_pem = generate_rsa_key_pair()
             write_secret_to_file(private_key_path, private_key_pem)
-            public_key_path.write_text(public_key_pem, encoding="utf-8")
+            write_public_key_to_file(public_key_path, public_key_pem)
             object.__setattr__(self, "PRIVATE_KEY", SecretStr(private_key_pem))
             object.__setattr__(self, "PUBLIC_KEY", public_key_pem)
             logger.debug("RSA key pair generated and saved")

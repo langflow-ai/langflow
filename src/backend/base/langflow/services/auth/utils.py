@@ -498,8 +498,20 @@ async def create_refresh_token(refresh_token: str, db: AsyncSession):
     # Use appropriate key based on algorithm
     if algorithm in ("RS256", "RS512"):
         verification_key = settings_service.auth_settings.PUBLIC_KEY
+        if not verification_key:
+            logger.error("Public key is not set in settings for RS256/RS512.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication failure: Verify authentication settings.",
+            )
     else:
         verification_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
+        if verification_key is None:
+            logger.error("Secret key is not set in settings.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication failure: Verify authentication settings.",
+            )
 
     try:
         # Ignore warning about datetime.utcnow
