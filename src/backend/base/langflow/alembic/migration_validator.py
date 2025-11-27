@@ -9,6 +9,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+_PHASE_PATTERN = re.compile(r"Phase:\s*(EXPAND|MIGRATE|CONTRACT)", re.IGNORECASE)
+
 
 class MigrationPhase(Enum):
     EXPAND = "EXPAND"
@@ -304,13 +306,11 @@ class MigrationValidator:
         # TODO: Support phase detection from inline comments and function
         # annotations, not just docstrings or top-level comments.
         # Look in docstring or comments
-        phase_pattern = r"Phase:\s*(EXPAND|MIGRATE|CONTRACT)"
-        match = re.search(phase_pattern, content, re.IGNORECASE)
+        match = _PHASE_PATTERN.search(content)
 
         if match:
             phase_str = match.group(1).upper()
             return MigrationPhase[phase_str]
-
         return MigrationPhase.UNKNOWN
 
     def _find_function(self, tree: ast.Module, name: str) -> ast.FunctionDef | None:
