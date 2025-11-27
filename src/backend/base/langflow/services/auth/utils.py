@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import TYPE_CHECKING, Annotated
-from uuid import UUID
 
 from fastapi import Depends, Request, Security, WebSocket
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
+from lfx.services.deps import injectable_session_scope
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth.service import (
     AUTO_LOGIN_ERROR as SERVICE_AUTO_LOGIN_ERROR,
@@ -13,14 +13,13 @@ from langflow.services.auth.service import (
 from langflow.services.auth.service import (
     AUTO_LOGIN_WARNING as SERVICE_AUTO_LOGIN_WARNING,
 )
-from langflow.services.deps import get_auth_service, get_session
+from langflow.services.database.models.user.model import User, UserRead
+from langflow.services.deps import get_auth_service
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
-
-    from sqlmodel.ext.asyncio.session import AsyncSession
-
-    from langflow.services.database.models.user.model import User, UserRead
+    from datetime import timedelta
+    from uuid import UUID
 
 oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
 
@@ -50,11 +49,12 @@ async def ws_api_key_security(api_key: str | None) -> UserRead:
 
 
 async def get_current_user(
-    token: Annotated[str | None, Security(oauth2_login)],
-    query_param: Annotated[str | None, Security(api_key_query)],
-    header_param: Annotated[str | None, Security(api_key_header)],
-    db: Annotated[AsyncSession, Depends(get_session)],
+    token: Annotated[str, Security(oauth2_login)],
+    query_param: Annotated[str, Security(api_key_query)],
+    header_param: Annotated[str, Security(api_key_header)],
+    db: Annotated[AsyncSession, Depends(injectable_session_scope)],
 ) -> User:
+    # Delegate to the pluggable auth service
     return await _auth_service().get_current_user(token, query_param, header_param, db)
 
 
@@ -88,6 +88,21 @@ async def get_current_active_superuser(current_user: Annotated[User, Depends(get
 
 
 async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
+    """Get the user for webhook execution.
+
+    When WEBHOOK_AUTH_ENABLE=false, allows execution as the flow owner without API key.
+    When WEBHOOK_AUTH_ENABLE=true, requires API key authentication and validates flow ownership.
+
+    Args:
+        flow_id: The ID of the flow being executed
+        request: The FastAPI request object
+
+    Returns:
+        UserRead: The user to execute the webhook as
+
+    Raises:
+        HTTPException: If authentication fails or user doesn't have permission
+    """
     return await _auth_service().get_webhook_user(flow_id, request)
 
 
@@ -144,10 +159,10 @@ def decrypt_api_key(encrypted_api_key: str) -> str:
 
 
 async def get_current_user_mcp(
-    token: Annotated[str | None, Security(oauth2_login)],
-    query_param: Annotated[str | None, Security(api_key_query)],
-    header_param: Annotated[str | None, Security(api_key_header)],
-    db: Annotated[AsyncSession, Depends(get_session)],
+    token: Annotated[str, Security(oauth2_login)],
+    query_param: Annotated[str, Security(api_key_query)],
+    header_param: Annotated[str, Security(api_key_header)],
+    db: Annotated[AsyncSession, Depends(injectable_session_scope)],
 ) -> User:
     return await _auth_service().get_current_user_mcp(token, query_param, header_param, db)
 
