@@ -14,7 +14,7 @@ import useAlertStore from "@/stores/alertStore";
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import { useTypesStore } from "@/stores/typesStore";
 import type { ResponseErrorDetailAPI } from "@/types/api";
-import type { GlobalVariable } from "@/types/global_variables";
+import type { GlobalVariable, TAB_TYPES } from "@/types/global_variables";
 import InputComponent from "../parameterRenderComponent/components/inputComponent";
 import sortByName from "./utils/sort-by-name";
 
@@ -39,7 +39,9 @@ export default function GlobalVariableModal({
 }): JSX.Element {
   const [key, setKey] = useState(initialData?.name ?? "");
   const [value, setValue] = useState(initialData?.value ?? "");
-  const [type, setType] = useState(initialData?.type ?? "Credential");
+  const [type, setType] = useState<TAB_TYPES>(
+    initialData?.type ?? "Credential",
+  );
   const [fields, setFields] = useState<string[]>(
     initialData?.default_fields ?? [],
   );
@@ -92,7 +94,7 @@ export default function GlobalVariableModal({
         const { name } = res;
         setKey("");
         setValue("");
-        setType("");
+        setType("Credential");
         setFields([]);
         setOpen(false);
 
@@ -131,6 +133,17 @@ export default function GlobalVariableModal({
     }
   }
 
+  const assignTab = (tab: string) => {
+    switch (tab.toLowerCase()) {
+      case "credential":
+        return "Credential";
+      case "generic":
+        return "Generic";
+      default:
+        return "Credential";
+    }
+  };
+
   return (
     <BaseModal
       open={open}
@@ -156,7 +169,9 @@ export default function GlobalVariableModal({
             <Label>Type*</Label>
             <Tabs
               defaultValue={type}
-              onValueChange={setType}
+              onValueChange={(value) => {
+                setType(assignTab(value) as TAB_TYPES);
+              }}
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-2">
