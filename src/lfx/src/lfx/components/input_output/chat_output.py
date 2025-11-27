@@ -117,7 +117,7 @@ class ChatOutput(ChatComponent):
         source, _, display_name, source_id = self.get_properties_from_source_component()
 
         # Create or use existing Message object
-        if isinstance(self.input_value, Message):
+        if isinstance(self.input_value, Message) and not self.is_connected_to_chat_input():
             message = self.input_value
             # Update message properties
             message.text = text
@@ -127,13 +127,13 @@ class ChatOutput(ChatComponent):
         # Set message properties
         message.sender = self.sender
         message.sender_name = self.sender_name
-        message.session_id = self.session_id
+        message.session_id = self.session_id or self.graph.session_id or ""
         message.context_id = self.context_id
         message.flow_id = self.graph.flow_id if hasattr(self, "graph") else None
         message.properties.source = self._build_source(source_id, display_name, source)
 
         # Store message if needed
-        if self.session_id and self.should_store_message:
+        if message.session_id and self.should_store_message:
             stored_message = await self.send_message(message)
             self.message.value = stored_message
             message = stored_message
