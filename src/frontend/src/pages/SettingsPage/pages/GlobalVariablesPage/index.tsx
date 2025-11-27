@@ -62,6 +62,9 @@ export default function GlobalVariablesPage() {
     },
     {
       field: "value",
+      valueFormatter: (params) => {
+        return params.value == null ? "*****" : params.value;
+      },
     },
     {
       headerName: "Apply To Fields",
