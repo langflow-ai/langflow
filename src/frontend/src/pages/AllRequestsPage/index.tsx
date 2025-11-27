@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import IconComponent from "@/components/common/genericIconComponent";
 import { useGetAllFlowVersions } from "@/controllers/API/queries/flow-versions";
 import CustomLoader from "@/customization/components/custom-loader";
@@ -24,6 +25,7 @@ import FlowPagination from "@/pages/MarketplacePage/components/FlowPagination";
 export default function AllRequestsPage() {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
   // Pagination state
   const [pageIndex, setPageIndex] = useState(1);
@@ -157,11 +159,25 @@ export default function AllRequestsPage() {
               <TableCell className="text-center">
                 {getStatusBadge(version.status_name || "")}
               </TableCell>
-              <TableCell className="max-w-xs truncate">
+              <TableCell>
                 {version.status_name === "Rejected" && version.rejection_reason ? (
-                  <span className="text-muted-foreground">
-                    {version.rejection_reason}
-                  </span>
+                  <ShadTooltip
+                    content={version.rejection_reason}
+                    side="bottom"
+                    open={openTooltipId === version.id}
+                    setOpen={(isOpen) => setOpenTooltipId(isOpen ? version.id : null)}
+                    delayDuration={0}
+                  >
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenTooltipId(openTooltipId === version.id ? null : version.id);
+                      }}
+                      className="inline-flex items-center gap-1 text-muted-foreground cursor-pointer"
+                    >
+                      {version.rejection_reason.split(' ').slice(0, 2).join(' ')}...
+                    </span>
+                  </ShadTooltip>
                 ) : (
                   <span>-</span>
                 )}
