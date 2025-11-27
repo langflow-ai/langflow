@@ -30,41 +30,39 @@ export default function PageLayout({
         <div className="flex flex-col gap-4">
           <CustomBanner />
           <div className="flex w-full items-center justify-between gap-4 space-y-0.5">
-            <div className="flex w-full flex-col">
-              <div className="flex items-center gap-2">
-                {backTo && (
-                  <Button
-                    unstyled
-                    onClick={() => {
-                      navigate(backTo);
-                    }}
-                    data-testid="back_page_button"
-                  >
-                    <ForwardedIconComponent
-                      name="ChevronLeft"
-                      className="flex cursor-pointer text-[#350E84] dark:text-white"
-                    />
-                  </Button>
-                )}
-                <h2
-                  className="text-[#350E84] dark:text-white text-[18px] font-medium"
+            <div className="flex gap-2">
+              {backTo && (
+                <Button
+                  unstyled
+                  onClick={() => {
+                    navigate(backTo);
+                  }}
+                  data-testid="back_page_button"
+                >
+                  <ForwardedIconComponent
+                    name="ChevronLeft"
+                    className="flex cursor-pointer text-menu"
+                  />
+                </Button>
+              )}
+              <div>
+                <h1
+                  className="text-menu text-xl font-medium"
                   data-testid="mainpage_title"
                 >
                   {title}
                   {betaIcon && <span className="store-beta-icon">Beta</span>}
-                </h2>
+                </h1>
+                <p className="text-secondary-font text-sm">{description}</p>
               </div>
-              <p className="text-muted-foreground dark:text-white/80 pl-8">
-                {description}
-              </p>
             </div>
             <div className="flex-shrink-0">{button && button}</div>
           </div>
         </div>
-        <div className="flex shrink-0 px-6">
+        {/* <div className="flex shrink-0 px-6">
           {showSeparator && <Separator className="flex" />}
-        </div>
-        <div className="flex flex-1">{children}</div>
+        </div> */}
+        <div className="flex flex-1 mt-1">{children}</div>
       </div>
     </div>
   );

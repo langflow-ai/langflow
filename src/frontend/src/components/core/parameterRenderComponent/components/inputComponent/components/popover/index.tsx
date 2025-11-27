@@ -63,7 +63,7 @@ const OptionBadge = ({
         onRemove(e as unknown as React.MouseEvent<HTMLButtonElement>)
       }
     >
-      <X className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive" />
+      <X className="h-3 w-3 cursor-pointer bg-transparent hover:text-error" />
     </div>
   </Badge>
 );
@@ -103,7 +103,7 @@ const SelectionIndicator = ({ isSelected }: { isSelected: boolean }) => (
   <div
     className={cn(
       "relative mr-2 h-4 w-4",
-      isSelected ? "opacity-100" : "opacity-0",
+      isSelected ? "opacity-100" : "opacity-0"
     )}
   >
     <div className="absolute opacity-100 transition-all group-hover:opacity-0">
@@ -116,7 +116,7 @@ const SelectionIndicator = ({ isSelected }: { isSelected: boolean }) => (
     <div className="absolute opacity-0 transition-all group-hover:opacity-100">
       <ForwardedIconComponent
         name="X"
-        className="mr-2 h-4 w-4 text-status-red"
+        className="mr-2 h-4 w-4 text-error"
         aria-hidden="true"
       />
     </div>
@@ -128,32 +128,31 @@ const getInputClassName = (
   disabled: boolean,
   password: boolean,
   selectedOptions: string[],
-  blockAddNewGlobalVariable: boolean = false,
+  blockAddNewGlobalVariable: boolean = false
 ) => {
   return cn(
-    "popover-input nodrag w-full truncate px-1 pr-4",
-    editNode && "pl-2 pr-6",
-    editNode && disabled && "h-fit w-fit",
+    "popover-input nodrag w-full truncate px-2 pr-4",
+    editNode && " min-h-9",
+    editNode && disabled && "w-fit",
     disabled &&
-      "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
+      "disabled:text-secondary-font disabled:opacity-100 placeholder:disabled:text-secondary-font",
     password && "text-clip pr-14",
     blockAddNewGlobalVariable && "text-clip pr-8",
-    selectedOptions?.length > 0 && "cursor-default",
+    selectedOptions?.length > 0 && "cursor-default"
   );
 };
 
 const getAnchorClassName = (
   editNode: boolean,
   disabled: boolean,
-  isFocused: boolean,
+  isFocused: boolean
 ) => {
   return cn(
-    "primary-input noflow nopan nodelete nodrag border-1 flex h-full min-h-[2.375rem] cursor-default flex-wrap items-center px-2",
-    editNode && "min-h-7 p-0 px-1",
-    editNode && disabled && "min-h-5 border-muted",
-    disabled && "bg-muted text-muted",
-    isFocused &&
-      "border-foreground ring-1 ring-foreground hover:border-foreground",
+    "nopan nodelete nodrag noflow nowheel border hover:border-secondary-border focus:border-secondary-border w-full py-2 px-3 bg-background-surface rounded-md border-primary-border min-h-[38px] text-primary-font text-sm placeholder:opacity-70",
+    editNode && "p-0 px-1",
+    editNode && disabled && "min-h-5 border-primary-border",
+    disabled && "bg-muted text-secondary-font",
+    isFocused && "border-secondary-border"
   );
 };
 
@@ -205,12 +204,12 @@ const CustomInputPopover = ({
 
   const handleRemoveOption = (
     optionToRemove: string,
-    e: React.MouseEvent<HTMLButtonElement>,
+    e: React.MouseEvent<HTMLButtonElement>
   ) => {
     e.stopPropagation();
     if (setSelectedOptions) {
       setSelectedOptions(
-        selectedOptions.filter((option) => option !== optionToRemove),
+        selectedOptions.filter((option) => option !== optionToRemove)
       );
     } else if (setSelectedOption) {
       setSelectedOption("");
@@ -225,7 +224,7 @@ const CustomInputPopover = ({
       setSelectedOptions(
         selectedOptions?.includes(currentValue)
           ? selectedOptions.filter((item) => item !== currentValue)
-          : [...(selectedOptions || []), currentValue],
+          : [...(selectedOptions || []), currentValue]
       );
     }
     !setSelectedOptions && setShowOptions(false);
@@ -266,7 +265,7 @@ const CustomInputPopover = ({
                     nodeStyle
                       ? "max-w-56 rounded-[3px] px-1 font-mono"
                       : "bg-muted",
-                    hasRefreshButton && "max-w-48",
+                    hasRefreshButton && "max-w-48"
                   )}
                 />
               </div>
@@ -293,7 +292,7 @@ const CustomInputPopover = ({
                 disabled,
                 password,
                 selectedOptions,
-                blockAddNewGlobalVariable,
+                blockAddNewGlobalVariable
               )}
               placeholder={
                 !disabled && (selectedOptions?.length > 0 || selectedOption)

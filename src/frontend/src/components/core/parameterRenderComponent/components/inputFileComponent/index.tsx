@@ -100,29 +100,29 @@ export default function InputFileComponent({
                         });
                         resolve(null);
                       },
-                    },
+                    }
                   );
                   resolve({
                     file_name: file.name,
                     file_path: data.file_path,
                   });
-                },
-              ),
-          ),
+                }
+              )
+          )
         )
           .then((results) => {
             console.warn(results);
             // Filter out any failed uploads
             const successfulUploads = results.filter(
-              (r): r is { file_name: string; file_path: string } => r !== null,
+              (r): r is { file_name: string; file_path: string } => r !== null
             );
 
             if (successfulUploads.length > 0) {
               const fileNames = successfulUploads.map(
-                (result) => result.file_name,
+                (result) => result.file_name
               );
               const filePaths = successfulUploads.map(
-                (result) => result.file_path,
+                (result) => result.file_path
               );
 
               // For single file mode, just use the first result
@@ -137,7 +137,7 @@ export default function InputFileComponent({
             console.error(e);
             // Error handling is done in the onError callback above
           });
-      },
+      }
     );
   };
 
@@ -152,11 +152,11 @@ export default function InputFileComponent({
       ? Array.isArray(file_path)
         ? file_path.filter((value) => value !== "")
         : typeof file_path === "string"
-          ? [file_path]
-          : []
+        ? [file_path]
+        : []
       : Array.isArray(file_path)
-        ? (file_path ?? [])
-        : [file_path ?? ""]
+      ? file_path ?? []
+      : [file_path ?? ""]
   ).filter((value) => value !== "");
 
   useEffect(() => {
@@ -182,15 +182,15 @@ export default function InputFileComponent({
       }
       handleOnNewValue({
         value: isList
-          ? (files
+          ? files
               ?.filter((f) => selectedFiles.includes(f.path))
-              .map((f) => f.name) ?? [])
-          : (files?.find((f) => selectedFiles.includes(f.path))?.name ?? ""),
+              .map((f) => f.name) ?? []
+          : files?.find((f) => selectedFiles.includes(f.path))?.name ?? "",
         file_path: isList
-          ? (files
+          ? files
               ?.filter((f) => selectedFiles.includes(f.path))
-              .map((f) => f.path) ?? [])
-          : (files?.find((f) => selectedFiles.includes(f.path))?.path ?? ""),
+              .map((f) => f.path) ?? []
+          : files?.find((f) => selectedFiles.includes(f.path))?.path ?? "",
       });
     }
   }, [files, value, file_path]);
@@ -205,23 +205,22 @@ export default function InputFileComponent({
                 <div className="nopan nowheel flex max-h-44 flex-col overflow-y-auto">
                   <FilesRendererComponent
                     files={files.filter((file) =>
-                      selectedFiles.includes(file.path),
+                      selectedFiles.includes(file.path)
                     )}
                     handleRemove={(path) => {
                       const newSelectedFiles = selectedFiles.filter(
-                        (file) => file !== path,
+                        (file) => file !== path
                       );
                       handleOnNewValue({
                         value: isList
                           ? newSelectedFiles.map(
-                              (file) =>
-                                files.find((f) => f.path === file)?.name,
+                              (file) => files.find((f) => f.path === file)?.name
                             )
-                          : (files.find((f) => f.path == newSelectedFiles[0]) ??
-                            ""),
+                          : files.find((f) => f.path == newSelectedFiles[0]) ??
+                            "",
                         file_path: isList
                           ? newSelectedFiles
-                          : (newSelectedFiles[0] ?? ""),
+                          : newSelectedFiles[0] ?? "",
                       });
                     }}
                   />
@@ -233,12 +232,12 @@ export default function InputFileComponent({
                     handleOnNewValue({
                       value: isList
                         ? selectedFiles.map(
-                            (file) => files.find((f) => f.path === file)?.name,
+                            (file) => files.find((f) => f.path === file)?.name
                           )
-                        : (files.find((f) => f.path == selectedFiles[0]) ?? ""),
+                        : files.find((f) => f.path == selectedFiles[0]) ?? "",
                       file_path: isList
                         ? selectedFiles
-                        : (selectedFiles[0] ?? ""),
+                        : selectedFiles[0] ?? "",
                     });
                   }}
                   disabled={isDisabled}
@@ -257,7 +256,7 @@ export default function InputFileComponent({
                           selectedFiles.length !== 0
                             ? "hit-area-icon absolute -top-8 right-0"
                             : "w-full",
-                          "font-semibold",
+                          "font-semibold"
                         )}
                         data-testid="button_open_file_management"
                       >
@@ -283,9 +282,9 @@ export default function InputFileComponent({
                   data-testid="input-file-component"
                   type="text"
                   className={cn(
-                    "primary-input h-9 w-full cursor-pointer rounded-r-none text-sm focus:border-border focus:outline-none focus:ring-0",
+                    "primary-input h-9 w-full cursor-pointer rounded-r-none text-sm focus:border-secondary-border focus:outline-none focus:ring-0",
                     !value && "text-placeholder-foreground",
-                    editNode && "h-6",
+                    editNode && "h-6"
                   )}
                   value={value || "Upload a file..."}
                   readOnly
@@ -301,7 +300,7 @@ export default function InputFileComponent({
                       "bg-accent-emerald-foreground ring-accent-emerald-foreground hover:bg-accent-emerald-foreground",
                     isDisabled &&
                       "relative top-[1px] h-9 ring-1 ring-border ring-offset-0 hover:ring-border",
-                    editNode && "h-6",
+                    editNode && "h-6"
                   )}
                   onClick={handleButtonClick}
                   disabled={isDisabled}
@@ -313,7 +312,7 @@ export default function InputFileComponent({
                     className={cn(
                       value && "text-background",
                       isDisabled && "text-muted-foreground",
-                      "h-4 w-4",
+                      "h-4 w-4"
                     )}
                     strokeWidth={2}
                   />

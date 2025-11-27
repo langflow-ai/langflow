@@ -5,8 +5,7 @@ import { cn } from "../../../utils/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 
 // Extract static styles
-const BASE_TOOLTIP_CLASSES =
-  "z-[99] max-w-96 bg-tooltip text-xs text-tooltip-foreground";
+const BASE_TOOLTIP_CLASSES = "z-[99] max-w-96 bg-primary text-xs text-white";
 
 // Memoize the tooltip content component
 const MemoizedTooltipContent = memo(
@@ -30,7 +29,7 @@ const MemoizedTooltipContent = memo(
     >
       {props.children}
     </TooltipContent>
-  )),
+  ))
 );
 
 MemoizedTooltipContent.displayName = "MemoizedTooltipContent";
@@ -51,7 +50,7 @@ const ShadTooltip = memo(
         setOpen,
         avoidCollisions = false,
       },
-      ref,
+      ref
     ) => {
       // Early return if no content
       if (!content) {
@@ -61,7 +60,7 @@ const ShadTooltip = memo(
       // Memoize className concatenation
       const tooltipClassName = useMemo(
         () => cn(BASE_TOOLTIP_CLASSES, styleClasses),
-        [styleClasses],
+        [styleClasses]
       );
 
       // Memoize tooltip props
@@ -72,7 +71,7 @@ const ShadTooltip = memo(
           onOpenChange: setOpen,
           delayDuration,
         }),
-        [children, open, setOpen, delayDuration],
+        [children, open, setOpen, delayDuration]
       );
 
       return (
@@ -89,8 +88,8 @@ const ShadTooltip = memo(
           </MemoizedTooltipContent>
         </Tooltip>
       );
-    },
-  ),
+    }
+  )
 );
 
 // Add display name for dev tools

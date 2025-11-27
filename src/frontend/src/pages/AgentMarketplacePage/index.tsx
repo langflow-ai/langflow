@@ -3,7 +3,11 @@ import { debounce } from "lodash";
 import { Search, Grid3x3, List, Filter, Moon, Sun } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -122,7 +126,8 @@ export default function AgentMarketplacePage() {
         ? [String((item as any).spec?.tag)]
         : [];
 
-      const tagsToUse = staticTags && staticTags.length > 0 ? staticTags : currentTags;
+      const tagsToUse =
+        staticTags && staticTags.length > 0 ? staticTags : currentTags;
 
       if (item.spec) {
         return { ...item, spec: { ...item.spec, tags: tagsToUse } };
@@ -213,21 +218,20 @@ export default function AgentMarketplacePage() {
     setPageIndex(1); // Reset to first page when changing page size
   }, []);
 
-
   return (
-    <div className="flex h-full w-full flex-col overflow-y-auto bg-[#FBFAFF] dark:bg-black dark:text-white">
+    <div className="flex h-full w-full flex-col overflow-y-auto dark:bg-black dark:text-white">
       <div className="flex h-full w-full flex-col">
         <div className="flex w-full flex-1 flex-col gap-4 p-4 md:p-6">
           {/* Header + Controls Row */}
           <div className="flex w-full items-center justify-between gap-4">
             {/* Left: Title + Search */}
             <div className="flex items-center gap-4">
-              <h1
-                className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic"
-              >
+              <h1 className="text-primary dark:text-white text-[21px] font-medium leading-normal not-italic">
                 Marketplace
               </h1>
-              <span className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic">({total} Agents)</span>
+              <span className="text-primary dark:text-white text-[21px] font-medium leading-normal not-italic">
+                ({total} Agents)
+              </span>
             </div>
 
             {/* Right: Sort + Filter + View Toggle */}
@@ -254,8 +258,12 @@ export default function AgentMarketplacePage() {
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent className="dark:bg-black dark:text-white">
-                    <SelectItem value="name" className="dark:text-white">Name</SelectItem>
-                    <SelectItem value="status" className="dark:text-white">Status</SelectItem>
+                    <SelectItem value="name" className="dark:text-white">
+                      Name
+                    </SelectItem>
+                    <SelectItem value="status" className="dark:text-white">
+                      Status
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -288,9 +296,15 @@ export default function AgentMarketplacePage() {
                           <SelectValue placeholder="All Tags" />
                         </SelectTrigger>
                         <SelectContent className="max-h-64 overflow-y-auto dark:bg-black dark:text-white">
-                          <SelectItem value="all" className="dark:text-white">All Tags</SelectItem>
+                          <SelectItem value="all" className="dark:text-white">
+                            All Tags
+                          </SelectItem>
                           {allTags.map((t) => (
-                            <SelectItem key={t} value={t} className="dark:text-white">
+                            <SelectItem
+                              key={t}
+                              value={t}
+                              className="dark:text-white"
+                            >
                               {t}
                             </SelectItem>
                           ))}
@@ -312,7 +326,7 @@ export default function AgentMarketplacePage() {
                       </Button>
                       <Button
                         size="sm"
-                        className="h-9 rounded-md bg-[#350E84] text-white hover:bg-[#2D0B6E]"
+                        className="h-9 rounded-md bg-primary text-white hover:bg-[#2D0B6E]"
                         onClick={() => {
                           setTagFilter(pendingTag);
                           setPageIndex(1);
@@ -367,7 +381,9 @@ export default function AgentMarketplacePage() {
               <div
                 className={
                   viewMode === "grid"
-                    ? `grid ${expandCards ? "auto-rows-fr" : "auto-rows-auto"} grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 min-h-[calc(100vh-280px)]`
+                    ? `grid ${
+                        expandCards ? "auto-rows-fr" : "auto-rows-auto"
+                      } grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 min-h-[calc(100vh-280px)]`
                     : "flex flex-col gap-4 flex-1 min-h-[calc(100vh-280px)]"
                 }
               >

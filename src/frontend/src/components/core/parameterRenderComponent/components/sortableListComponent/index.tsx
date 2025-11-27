@@ -33,7 +33,7 @@ const SortableListItem = memo(
     <li
       className={cn(
         "inline-flex h-12 w-full items-center gap-2 text-sm font-medium",
-        limit === 1 ? "h-6 rounded-md bg-muted" : "group cursor-grab",
+        limit === 1 ? "h-6 rounded-md bg-muted" : "group cursor-grab"
       )}
     >
       {limit !== 1 && (
@@ -53,7 +53,7 @@ const SortableListItem = memo(
         <span
           className={cn(
             "truncate text-xxs font-medium text-muted-foreground",
-            limit === 1 ? "max-w-56 pl-2" : "max-w-48",
+            limit === 1 ? "max-w-56 pl-2" : "max-w-48"
           )}
         >
           {data.name}
@@ -66,14 +66,14 @@ const SortableListItem = memo(
           "ml-auto h-6 w-6 text-muted-foreground opacity-0 transition-opacity duration-200",
           limit === 1
             ? "group pr-1 opacity-100 hover:text-foreground"
-            : "hover:text-destructive group-hover:opacity-100",
+            : "hover:text-destructive group-hover:opacity-100"
         )}
         onClick={onRemove}
       >
         <ForwardedIconComponent name="x" className={cn("h-6 w-6")} />
       </Button>
     </li>
-  ),
+  )
 );
 
 const SortableListComponent = ({
@@ -98,14 +98,14 @@ const SortableListComponent = ({
       const newList = listData.filter((_, i) => i !== index);
       handleOnNewValue({ value: newList });
     },
-    [listData, handleOnNewValue],
+    [listData, handleOnNewValue]
   );
 
   const setListDataHandler = useCallback(
     (newList: any[]) => {
       handleOnNewValue({ value: newList });
     },
-    [handleOnNewValue],
+    [handleOnNewValue]
   );
 
   const handleCloseListSelectionDialog = useCallback(() => {
@@ -141,15 +141,15 @@ const SortableListComponent = ({
             role="combobox"
             onClick={handleOpenListSelectionDialog}
             className={cn(
-              "dropdown-component-outline input-edit-node w-full",
-              editNode ? "py-1" : "py-2",
+              "dropdown-component-outline input-edit-node w-full ",
+              editNode ? "py-1" : "py-2"
             )}
             data-testid="button_open_list_selection"
           >
             <div
               className={cn(
                 "flex items-center",
-                editNode ? "text-xs" : "text-sm",
+                editNode ? "text-xs" : "text-sm"
               )}
             >
               {placeholder}

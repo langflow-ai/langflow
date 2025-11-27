@@ -44,34 +44,42 @@ export default function FlowPagination({
       {/* Navigation Controls */}
       <div className="flex items-center gap-2">
         <Button
-          variant="outline"
+          variant="link"
           size="sm"
           onClick={handlePrevious}
           disabled={currentPage === 1}
-          className="h-8 w-8 p-0"
+          className={`text-secondary-font hover:text-menu h-[28px] w-[28px] p-0 ${
+            currentPage === 1 ? "opacity-10" : ""
+          }`}
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-6 w-6" />
         </Button>
 
-        <div className="flex h-8 min-w-[40px] items-center justify-center rounded-md border border-border bg-background px-3 text-sm font-medium">
+        <div className="flex h-[28px] min-w-[28px] items-center justify-center rounded-sm border border-primary-border bg-background-surface text-primary-font text-sm font-medium">
           {formattedPage}
         </div>
 
         <Button
-          variant="outline"
+          variant="link"
           size="sm"
           onClick={handleNext}
           disabled={currentPage === totalPages}
-          className="h-8 w-8 p-0"
+          className={`text-secondary-font hover:text-menu h-[28px] w-[28px] p-0 ${
+            currentPage === totalPages ? "opacity-10" : ""
+          }`}
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-6 w-6" />
         </Button>
       </div>
 
       {/* Page Size Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-8 gap-2 px-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-[30px] gap-2 px-3 text-secondary-font border-primary-border"
+          >
             <span className="text-sm">{pageSize} / page</span>
             <ChevronDown className="h-4 w-4" />
           </Button>

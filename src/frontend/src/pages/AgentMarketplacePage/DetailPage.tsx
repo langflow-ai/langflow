@@ -223,11 +223,11 @@ export default function AgentMarketplaceDetailPage() {
                   </div>
                 </div>
               ) : flowLoaded ? (
-                <div className="h-[calc(100vh-200px)] w-full overflow-hidden rounded-lg border border-border dark:border-white/20">
+                <div className="h-[calc(100vh-200px)] w-full overflow-hidden rounded-lg border border-primary-border">
                   <FlowPage view={true} flowId={flowId} />
                 </div>
               ) : (
-                <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center rounded-lg border border-border dark:border-white/20 bg-card dark:bg-black dark:text-white">
+                <div className="flex h-[calc(100vh-200px)] w-full items-center justify-center rounded-lg border border-primary-border bg-background-surface">
                   <div className="flex max-w-[640px] flex-col items-center gap-3 text-center">
                     <ForwardedIconComponent
                       name="GitBranch"

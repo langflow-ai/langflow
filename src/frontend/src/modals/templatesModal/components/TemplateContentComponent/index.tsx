@@ -50,7 +50,7 @@ export default function TemplateContentComponent({
 
   const fuse = useMemo(
     () => new Fuse(examples, { keys: ["name", "description"] }),
-    [examples],
+    [examples]
   );
 
   useEffect(() => {
@@ -91,12 +91,8 @@ export default function TemplateContentComponent({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="flex flex-1 flex-col gap-6">
-      <div className="relative mx-3 flex-1 grow-0 py-px">
-        <ForwardedIconComponent
-          name="Search"
-          className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-        />
+    <div className="flex flex-1 flex-col gap-4">
+      <div className="relative">
         <Input
           type="search"
           placeholder="Search..."
@@ -105,13 +101,10 @@ export default function TemplateContentComponent({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           ref={searchInputRef}
-          className="w-3/4 rounded-lg bg-background lg:w-2/3"
+          className="w-[412px]"
         />
       </div>
-      <div
-        ref={scrollContainerRef}
-        className="flex flex-1 flex-col gap-6 overflow-auto scrollbar-hide"
-      >
+      <div ref={scrollContainerRef}>
         {currentTabItem && filteredExamples.length > 0 ? (
           <TemplateCategoryComponent
             examples={filteredExamples}
@@ -119,10 +112,10 @@ export default function TemplateContentComponent({
           />
         ) : (
           <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
-            <p className="text-sm text-secondary-foreground">
+            <p className="pt-24 text-lg text-secondary-font font-medium opacity-50">
               No templates found.{" "}
               <a
-                className="cursor-pointer underline underline-offset-4"
+                className="cursor-pointer underline underline-offset-4 text-secondary"
                 onClick={handleClearSearch}
               >
                 Clear your search

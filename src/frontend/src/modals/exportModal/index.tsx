@@ -15,6 +15,7 @@ import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
+import { Label } from "@/components/ui/label";
 
 const ExportModal = forwardRef(
   (
@@ -24,7 +25,7 @@ const ExportModal = forwardRef(
       setOpen?: (open: boolean) => void;
       flowData?: FlowType;
     },
-    ref,
+    ref
   ): JSX.Element => {
     const version = useDarkStore((state) => state.version);
     const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -39,7 +40,7 @@ const ExportModal = forwardRef(
     }, [currentFlow?.name, currentFlow?.description]);
     const [name, setName] = useState(currentFlow?.name ?? "");
     const [description, setDescription] = useState(
-      currentFlow?.description ?? "",
+      currentFlow?.description ?? ""
     );
 
     const [customOpen, customSetOpen] = useState(false);
@@ -50,7 +51,7 @@ const ExportModal = forwardRef(
 
     return (
       <BaseModal
-        size="smaller-h-full"
+        className="!min-w-[650px] !max-w-[650px] !h-auto"
         open={open}
         setOpen={setOpen}
         onSubmit={async () => {
@@ -68,7 +69,7 @@ const ExportModal = forwardRef(
                   tags: currentFlow!.tags,
                 },
                 name!,
-                description,
+                description
               );
 
               setNoticeData({
@@ -89,7 +90,7 @@ const ExportModal = forwardRef(
                   tags: currentFlow!.tags,
                 }),
                 name!,
-                description,
+                description
               );
 
               setSuccessData({
@@ -106,11 +107,11 @@ const ExportModal = forwardRef(
         <BaseModal.Trigger asChild>{props.children ?? <></>}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
           <span className="pr-2">Export</span>
-          <IconComponent
+          {/* <IconComponent
             name="Download"
             className="h-6 w-6 pl-1 text-foreground"
             aria-hidden="true"
-          />
+          /> */}
         </BaseModal.Header>
         <BaseModal.Content>
           <EditFlowSettings
@@ -119,21 +120,27 @@ const ExportModal = forwardRef(
             setName={setName}
             setDescription={setDescription}
           />
-          <div className="mt-3 flex items-center space-x-2">
+          <div className="mt-6 flex gap-3">
             <Checkbox
               id="terms"
               checked={checked}
               onCheckedChange={(event: boolean) => {
                 setChecked(event);
               }}
+              className="mt-1"
             />
-            <label htmlFor="terms" className="export-modal-save-api text-sm">
-              {SAVE_WITH_API_CHECKBOX}
-            </label>
+            <div className="flex flex-col">
+              <label
+                htmlFor="terms"
+                className="text-sm font-medium text-secondary-font leading-none"
+              >
+                {SAVE_WITH_API_CHECKBOX}
+              </label>
+              <span className="mt-1 text-xs font-medium text-error">
+                {ALERT_SAVE_WITH_API}
+              </span>
+            </div>
           </div>
-          <span className="mt-1 text-xs text-destructive">
-            {ALERT_SAVE_WITH_API}
-          </span>
         </BaseModal.Content>
 
         <BaseModal.Footer
@@ -145,6 +152,6 @@ const ExportModal = forwardRef(
         />
       </BaseModal>
     );
-  },
+  }
 );
 export default ExportModal;

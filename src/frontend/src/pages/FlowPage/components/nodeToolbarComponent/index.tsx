@@ -62,10 +62,10 @@ const NodeToolbarComponent = memo(
     const [showconfirmShare, setShowconfirmShare] = useState(false);
     const [showOverrideModal, setShowOverrideModal] = useState(false);
     const [flowComponent, setFlowComponent] = useState<FlowType>(
-      createFlowComponent(cloneDeep(data), version),
+      createFlowComponent(cloneDeep(data), version)
     );
     const updateFreezeStatus = useFlowStore(
-      (state) => state.updateFreezeStatus,
+      (state) => state.updateFreezeStatus
     );
     const { hasStore, hasApiKey, validApiKey } = useStoreStore((state) => ({
       hasStore: state.hasStore,
@@ -100,27 +100,27 @@ const NodeToolbarComponent = memo(
     });
 
     const isSaved = flows?.some((flow) =>
-      Object.values(flow).includes(data.node?.display_name!),
+      Object.values(flow).includes(data.node?.display_name!)
     );
 
     const nodeLength = useMemo(() => getNodeLength(data), [data]);
     const hasCode = useMemo(
       () => Object.keys(data.node!.template).includes("code"),
-      [data.node],
+      [data.node]
     );
     const isGroup = useMemo(
       () => (data.node?.flow ? true : false),
-      [data.node],
+      [data.node]
     );
 
     const hasToolMode = useMemo(
       () => checkHasToolMode(data.node?.template ?? {}) && !isGroup,
-      [data.node?.template, isGroup],
+      [data.node?.template, isGroup]
     );
     const addFlow = useAddFlow();
 
     const hasGroupOutputs = data.node?.outputs?.some?.(
-      (output) => output.group_outputs,
+      (output) => output.group_outputs
     );
     const hasOutputs =
       data.node?.outputs?.length && data.node?.outputs?.length > 1;
@@ -134,9 +134,9 @@ const NodeToolbarComponent = memo(
       () =>
         data.node?.tool_mode ||
         data.node?.outputs?.some(
-          (output) => output.name === "component_as_tool",
+          (output) => output.name === "component_as_tool"
         ) ||
-        false,
+        false
     );
 
     useEffect(() => {
@@ -144,15 +144,15 @@ const NodeToolbarComponent = memo(
         setToolMode(
           data.node?.tool_mode ||
             data.node?.outputs?.some(
-              (output) => output.name === "component_as_tool",
+              (output) => output.name === "component_as_tool"
             ) ||
-            false,
+            false
         );
       }
     }, [data.node?.tool_mode, data.node?.outputs]);
 
     const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
-      data.id,
+      data.id
     );
 
     const handleNodeClass = (newNodeClass: APIClassType, type: string) => {
@@ -171,7 +171,7 @@ const NodeToolbarComponent = memo(
         setErrorData,
         "tool_mode",
         () => updateNodeInternals(data.id),
-        newValue,
+        newValue
       );
     };
 
@@ -204,7 +204,7 @@ const NodeToolbarComponent = memo(
           data.node!.template,
           setNodes,
           setEdges,
-          data.node?.outputs,
+          data.node?.outputs
         );
       }
     }, [
@@ -282,7 +282,7 @@ const NodeToolbarComponent = memo(
     }, [showModalAdvanced]);
 
     const setLastCopiedSelection = useFlowStore(
-      (state) => state.setLastCopiedSelection,
+      (state) => state.setLastCopiedSelection
     );
 
     const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -373,7 +373,7 @@ const NodeToolbarComponent = memo(
                 y: 10,
                 paneX: nodes.find((node) => node.id === data.id)?.position.x,
                 paneY: nodes.find((node) => node.id === data.id)?.position.y,
-              },
+              }
             );
             break;
           case "toolMode":
@@ -401,7 +401,7 @@ const NodeToolbarComponent = memo(
         paste,
         handleActivateToolMode,
         toolMode,
-      ],
+      ]
     );
 
     const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue({
@@ -442,7 +442,7 @@ const NodeToolbarComponent = memo(
               label="Code"
               onClick={() => setOpenModal(true)}
               shortcut={shortcuts.find((s) =>
-                s.name.toLowerCase().startsWith("code"),
+                s.name.toLowerCase().startsWith("code")
               )}
               dataTestId="code-button-modal"
             />
@@ -453,7 +453,7 @@ const NodeToolbarComponent = memo(
               label="Controls"
               onClick={() => setShowModalAdvanced(true)}
               shortcut={shortcuts.find((s) =>
-                s.name.toLowerCase().startsWith("advanced"),
+                s.name.toLowerCase().startsWith("advanced")
               )}
               dataTestId="edit-button-modal"
             />
@@ -471,7 +471,7 @@ const NodeToolbarComponent = memo(
                 });
               }}
               shortcut={shortcuts.find((s) =>
-                s.name.toLowerCase().startsWith("freeze"),
+                s.name.toLowerCase().startsWith("freeze")
               )}
               className={cn("node-toolbar-buttons", frozen && "text-blue-500")}
             />
@@ -481,7 +481,7 @@ const NodeToolbarComponent = memo(
               content={
                 <ShortcutDisplay
                   {...shortcuts.find(
-                    ({ name }) => name.toLowerCase() === "tool mode",
+                    ({ name }) => name.toLowerCase() === "tool mode"
                   )!}
                 />
               }
@@ -490,7 +490,7 @@ const NodeToolbarComponent = memo(
               <Button
                 className={cn(
                   "node-toolbar-buttons h-[2rem]",
-                  toolMode && "text-primary",
+                  toolMode && "text-menu"
                 )}
                 variant="ghost"
                 onClick={(event) => {
@@ -505,7 +505,7 @@ const NodeToolbarComponent = memo(
                   name="Hammer"
                   className={cn(
                     "h-4 w-4 transition-all",
-                    toolMode ? "text-primary" : "",
+                    toolMode ? "text-menu" : ""
                   )}
                 />
                 <span className="text-mmd font-medium">Tool Mode</span>
@@ -538,13 +538,13 @@ const NodeToolbarComponent = memo(
         shortcuts,
         frozen,
         handleSelectChange,
-      ],
+      ]
     );
 
     return (
       <>
         <div className="noflow nopan nodelete nodrag">
-          <div className="toolbar-wrapper">
+          <div className="toolbar-wrapper flex items-center bg-background-surface border border-primary-border rounded-lg gap-2 p-2 h-auto">
             {renderToolbarButtons}
             <Select
               onValueChange={handleSelectChange}
@@ -687,7 +687,7 @@ const NodeToolbarComponent = memo(
                     <ToolbarSelectItem
                       shortcut={
                         shortcuts.find((obj) =>
-                          obj.name.toLowerCase().startsWith("freeze"),
+                          obj.name.toLowerCase().startsWith("freeze")
                         )?.shortcut!
                       }
                       value={"Freeze"}
@@ -751,7 +751,7 @@ const NodeToolbarComponent = memo(
         </div>
       </>
     );
-  },
+  }
 );
 
 NodeToolbarComponent.displayName = "NodeToolbarComponent";

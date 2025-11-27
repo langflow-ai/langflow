@@ -16,6 +16,12 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { envConfig } from "@/config/env";
 import useAuthStore from "@/stores/authStore";
 import { USER_ROLES } from "@/types/auth";
+import { AiStudioIcon } from "@/assets/icons/AiStudioIcon";
+import { MarketplaceIcon } from "@/assets/icons/MarketplaceIcon";
+import { IntegrationIcon } from "@/assets/icons/IntegrationIcon";
+import { MonitorIcon } from "@/assets/icons/MonitorIcon";
+import { ExpandIcon } from "@/assets/icons/ExpandIcon";
+import { Button } from "@/components/ui/button";
 
 interface SidebarItem {
   id: string;
@@ -27,23 +33,40 @@ interface SidebarItem {
 }
 
 const sidebarItems: SidebarItem[] = [
-  { id: "aistudio", icon: Home, path: "/agent-builder", label: "AI Studio" },
+  {
+    id: "aistudio",
+    icon: AiStudioIcon,
+    path: "/agent-builder",
+    label: "AI Studio",
+  },
   // { id: 'agentmarketplace', icon: Workflow, path: '/agent-marketplace', label: 'Agent Marketplace' },
   {
     id: "marketplace",
-    icon: Workflow,
+    icon: MarketplaceIcon,
     path: "/marketplace",
-    label: "Marketplace",
+    label: "Agent Marketplace",
   },
   {
     id: "integration",
-    icon: Package,
+    icon: IntegrationIcon,
     path: "/components",
     label: "Integration",
   },
-  { id: "monitor", icon: Store, path: "/store", label: "Monitor" },
-  { id: "prompt-management", icon: FolderCode, path: envConfig.promptsUrl ?? "prompt-management", label: "Prompts", external: true },
-  { id: "all-requests", icon: ClipboardList, path: "/all-requests", label: "All Requests", requiredRoles: [USER_ROLES.MARKETPLACE_ADMIN] },
+  { id: "monitor", icon: MonitorIcon, path: "/store", label: "Monitor" },
+  {
+    id: "prompt-management",
+    icon: FolderCode,
+    path: envConfig.promptsUrl ?? "prompt-management",
+    label: "Prompts",
+    external: true,
+  },
+  {
+    id: "all-requests",
+    icon: ClipboardList,
+    path: "/all-requests",
+    label: "All Requests",
+    requiredRoles: [USER_ROLES.MARKETPLACE_ADMIN],
+  },
 ];
 
 export default function MainSidebar(): JSX.Element {
@@ -82,13 +105,12 @@ export default function MainSidebar(): JSX.Element {
 
   return (
     <div
-      className={`
-        flex h-full flex-col bg-white dark:bg-background z-[1] shadow-[0px_4px_10px_0px_#00000014] transition-all duration-300 ease-in-out
-        ${isCollapsed ? "w-16" : "w-60"}
-      `}
+      className={`flex h-full flex-col bg-background-surface z-[1] shadow-[0_1px_8px_0_rgba(var(--boxshadow),0.1)] transition-all duration-300 ease-in-out
+          ${isCollapsed ? "w-14" : "w-[192px]"}
+        `}
     >
       <div
-        className={`flex flex-col gap-1 py-4 ${
+        className={`flex flex-col gap-2 py-4 px-3 ${
           isCollapsed ? "items-center px-1.5" : "px-3"
         }`}
       >
@@ -100,33 +122,39 @@ export default function MainSidebar(): JSX.Element {
           const buttonElement = (
             <button
               key={item.id}
-              onClick={disabled ? undefined : () => handleNavigate(item.path, item?.external)}
+              onClick={
+                disabled
+                  ? undefined
+                  : () => handleNavigate(item.path, item?.external)
+              }
               disabled={disabled}
               className={`
-                flex items-center rounded-md transition-all duration-200
-                ${
-                  isCollapsed
-                    ? "h-11 w-11 justify-center"
-                    : "h-12 w-full justify-start gap-3 px-3"
-                }
-                ${
-                  disabled
-                    ? "opacity-50 cursor-not-allowed"
-                    : active
-                    ? "bg-[#E6E0F5] dark:bg-primary/10 text-[#350E84] dark:text-primary"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-accent hover:text-[#350E84] dark:hover:text-primary"
-                }
+              flex items-center rounded-md transition-all duration-200
+              ${
+                isCollapsed
+                  ? "h-8 w-8 justify-center"
+                  : "h-8 w-full justify-start gap-3 px-2"
+              }
+              ${
+                disabled
+                  ? "opacity-30 cursor-not-allowed"
+                  : active
+                  ? "bg-accent text-menu"
+                  : "text-secondary-font hover:bg-accent hover:text-menu"
+              }
               `}
             >
               <Icon
-                className={`${
-                  isCollapsed ? "h-5 w-5" : "h-5 w-5"
-                } flex-shrink-0 ${
-                  active ? "text-[#350E84] dark:text-white" : ""
+                className={`h-3.5 w-4 flex-shrink-0 ${
+                  active ? "text-menu" : "hover:text-menu"
                 }`}
               />
               {!isCollapsed && (
-                <span className="text-sm font-medium truncate">
+                <span
+                  className={`text-sm truncate ${
+                    active ? "font-medium" : "font-normal"
+                  }`}
+                >
                   {item.label}
                 </span>
               )}
@@ -146,30 +174,43 @@ export default function MainSidebar(): JSX.Element {
       </div>
 
       {/* Bottom Toggle */}
-      <div
-        className={`mt-auto ${
-          isCollapsed ? "items-center px-1.5" : "px-3"
-        } py-3`}
-      >
-        {isCollapsed ? (
+      <div className={`mt-auto p-3 items-center`}>
+        <ShadTooltip content="Expand sidebar" side="right">
+          <button
+            onClick={toggleSidebar}
+            className={`px-2 flex items-center rounded-md transition-all duration-200 text-secondary-font hover:bg-accent hover:text-menu ${
+              isCollapsed
+                ? "h-8 w-8 justify-center"
+                : "h-8 w-full justify-start"
+            }`}
+            data-testid="main-sidebar-toggle"
+          >
+            {isCollapsed ? (
+              <ExpandIcon />
+            ) : (
+              <ExpandIcon className="rotate-180" />
+            )}
+          </button>
+        </ShadTooltip>
+        {/* {isCollapsed ? (
           <ShadTooltip content="Expand sidebar" side="right">
             <button
               onClick={toggleSidebar}
-              className="h-11 w-11 flex items-center justify-center rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-accent hover:text-[#350E84] dark:hover:text-primary"
+              className="h-8 w-8 flex items-center justify-center rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-accent hover:text-primary dark:hover:text-primary"
               data-testid="main-sidebar-toggle"
             >
-              <PanelLeftOpen className="h-5 w-5" />
+              <ExpandIcon />
             </button>
           </ShadTooltip>
         ) : (
           <button
             onClick={toggleSidebar}
-            className="h-10 w-full flex items-center justify-start gap-3 px-3 rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-accent hover:text-[#350E84] dark:hover:text-primary"
+            className="h-8 w-full flex items-center justify-start gap-3 px-3 rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-accent hover:text-primary dark:hover:text-primary"
             data-testid="main-sidebar-toggle"
           >
             <PanelLeftClose className="h-5 w-5 flex-shrink-0" />
           </button>
-        )}
+        )} */}
       </div>
     </div>
   );

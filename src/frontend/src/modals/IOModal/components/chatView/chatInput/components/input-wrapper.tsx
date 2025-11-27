@@ -71,7 +71,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
     inputRef.current?.focus();
     inputRef.current?.setSelectionRange(
       inputRef.current.value.length,
-      inputRef.current.value.length,
+      inputRef.current.value.length
     );
   };
 
@@ -88,7 +88,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
     <div className="flex w-full flex-col-reverse">
       <div
         data-testid="input-wrapper"
-        className="flex w-full flex-col rounded-md border cursor-text border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary"
+        className="flex w-full flex-col rounded-lg bg-transparent border-accent cursor-text border p-4 hover:border-secondary-border has-[:focus]:border-secondary-border text-primary-font"
         onClick={onClick}
         onMouseDown={onMouseDown}
       >
@@ -130,7 +130,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
                     handleFileChange={handleFileChange}
                     handleButtonClick={handleButtonClick}
                   />
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-secondary-font opacity-70">
                     Max file size: 5 MB
                     <br />
                     Disclaimer: Please do not upload or enter PII/PHI data.

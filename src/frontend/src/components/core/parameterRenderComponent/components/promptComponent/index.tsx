@@ -10,7 +10,7 @@ import type { InputProps, PromptAreaComponentType } from "../../types";
 const promptContentClasses = {
   base: "overflow-hidden text-clip whitespace-nowrap bg-background h-fit max-h-28",
   editNode: "input-edit-node input-dialog py-2",
-  normal: "primary-input text-primary",
+  normal: "primary-input text-menu",
   disabled: "disabled-state",
 };
 
@@ -62,7 +62,7 @@ export default function PromptAreaComponent({
       className={cn(
         promptContentClasses.base,
         editNode ? promptContentClasses.editNode : promptContentClasses.normal,
-        disabled && !editNode && promptContentClasses.disabled,
+        disabled && !editNode && promptContentClasses.disabled
       )}
     >
       {value !== "" ? (
@@ -72,7 +72,7 @@ export default function PromptAreaComponent({
           suppressWarning={true}
         />
       ) : (
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm text-secondary-font">
           {getPlaceholder(disabled, "Type your prompt here...")}
         </span>
       )}
@@ -85,7 +85,7 @@ export default function PromptAreaComponent({
         name={disabled ? "lock" : "Scan"}
         className={cn(
           "icons-parameters-comp pointer-events-none absolute right-3 top-1/2 h-4 w-4 shrink-0 -translate-y-1/2",
-          disabled ? "text-placeholder-foreground" : "text-foreground",
+          disabled ? "text-placeholder-foreground" : "text-foreground"
         )}
       />
     ) : (

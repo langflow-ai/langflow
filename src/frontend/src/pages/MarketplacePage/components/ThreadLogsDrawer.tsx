@@ -70,8 +70,8 @@ export default function ThreadLogsDrawer({
   return (
     <div
       className={`
-          fixed right-4 top-[148px] bottom-[16px]
-          w-[300px]
+          fixed right-4 top-[141px] bottom-[16px]
+          w-[302px]
           bg-background border rounded-md
           flex flex-col
           transition-all duration-300 ease-out
@@ -79,7 +79,7 @@ export default function ThreadLogsDrawer({
         `}
     >
       <div className="flex items-center justify-between pt-4 px-4">
-        <h3 className="font-medium text-primary text-sm">Thread Logs</h3>
+        <h3 className="font-medium text-menu text-sm">Thread Logs</h3>
         <Button variant="ghost" size="iconSm" onClick={onClose} title="Close">
           <ForwardedIconComponent name="X" className="h-4 w-4" />
         </Button>

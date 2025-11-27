@@ -11,7 +11,12 @@ import {
 } from "@/components/ui/dialog";
 import { Upload, X } from "lucide-react";
 import LoadingIcon from "@/components/ui/loading";
-import { usePostReadPresignedUrl, usePostUploadPresignedUrl, useUploadToBlob } from "@/controllers/API/queries/flexstore";
+import {
+  usePostReadPresignedUrl,
+  usePostUploadPresignedUrl,
+  useUploadToBlob,
+} from "@/controllers/API/queries/flexstore";
+import { RiUploadCloud2Fill } from "react-icons/ri";
 
 interface FileInputComponent {
   id: string;
@@ -49,8 +54,12 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
   onError,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
-  const [currentUploadComponentId, setCurrentUploadComponentId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>(
+    {}
+  );
+  const [currentUploadComponentId, setCurrentUploadComponentId] = useState<
+    string | null
+  >(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadPresignedUrlMutation = usePostUploadPresignedUrl();
@@ -59,20 +68,26 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
 
   const handleFileUpload = async (componentId: string) => {
     if (!fileInputRef.current) return;
-    
+
     setCurrentUploadComponentId(componentId);
-    fileInputRef.current.accept = ".json,.png,.pdf,application/json,image/png,application/pdf";
+    fileInputRef.current.accept =
+      ".json,.png,.pdf,application/json,image/png,application/pdf";
     fileInputRef.current.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
       // Validate file type
-      const allowedTypes = ['application/json', 'image/png', 'application/pdf'];
-      const allowedExtensions = ['.json', '.png', '.pdf'];
-      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-      
-      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
-        onError('Invalid file type. Only JSON, PNG, and PDF files are accepted.');
+      const allowedTypes = ["application/json", "image/png", "application/pdf"];
+      const allowedExtensions = [".json", ".png", ".pdf"];
+      const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
+
+      if (
+        !allowedTypes.includes(file.type) &&
+        !allowedExtensions.includes(fileExtension)
+      ) {
+        onError(
+          "Invalid file type. Only JSON, PNG, and PDF files are accepted."
+        );
         setCurrentUploadComponentId(null);
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
@@ -89,9 +104,12 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
           sourceType: "azureblobstorage",
           fileName,
           sourceDetails: {
-            containerName: process.env.FLEXSTORE_DEFAULT_CONTAINERNAME || "ai-studio-v2",
-            storageAccount: process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT || "autonomizestorageaccount"
-          }
+            containerName:
+              process.env.FLEXSTORE_DEFAULT_CONTAINERNAME || "ai-studio-v2",
+            storageAccount:
+              process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT ||
+              "autonomizestorageaccount",
+          },
         });
 
         const uploadUrl = uploadUrlResponse.presignedUrl.data.signedUrl;
@@ -99,7 +117,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
 
         await uploadToBlobMutation.mutateAsync({
           presignedUrl: uploadUrl,
-          file
+          file,
         });
 
         setUploadProgress({ [componentId]: 75 });
@@ -108,9 +126,12 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
           sourceType: "azureblobstorage",
           fileName,
           sourceDetails: {
-            containerName: process.env.FLEXSTORE_DEFAULT_CONTAINERNAME || "ai-studio-v2",
-            storageAccount: process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT || "autonomizestorageaccount"
-          }
+            containerName:
+              process.env.FLEXSTORE_DEFAULT_CONTAINERNAME || "ai-studio-v2",
+            storageAccount:
+              process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT ||
+              "autonomizestorageaccount",
+          },
         });
 
         const readUrl = readUrlResponse.presignedUrl.data.signedUrl;
@@ -119,22 +140,28 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
         // Replace existing file URL for this component
         onFileUrlChange(componentId, readUrl);
 
-        console.log(`File uploaded successfully for component ${componentId}:`, {
-          fileName,
-          readUrl,
-          fileSize: file.size,
-          fileType: file.type
-        });
+        console.log(
+          `File uploaded successfully for component ${componentId}:`,
+          {
+            fileName,
+            readUrl,
+            fileSize: file.size,
+            fileType: file.type,
+          }
+        );
 
         // Close modal after successful upload
         setTimeout(() => {
           setUploadProgress({});
           onClose();
         }, 500);
-
       } catch (error) {
         console.error("File upload failed:", error);
-        onError(`File upload failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+        onError(
+          `File upload failed: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
         setUploadProgress({});
       } finally {
         setIsUploading(false);
@@ -157,11 +184,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
   return (
     <>
       {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        style={{ display: 'none' }}
-      />
+      <input ref={fileInputRef} type="file" style={{ display: "none" }} />
 
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -169,41 +192,45 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
             <DialogTitle>Manage File Inputs</DialogTitle>
             <DialogDescription>
               Upload files for components that require file inputs.
-              <br />
-              <span className="text-xs text-muted-foreground mt-1 inline-block">
-                Accepted file types: JSON, PNG, PDF
-              </span>
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
             {fileInputComponents.map((component) => (
-              <div key={component.id} className="space-y-3 border rounded-lg p-4">
-                <div className="flex items-center justify-between">
+              <div key={component.id} className="space-y-3">
+                <div className="mt-4">
                   <Label className="text-sm font-medium">
                     {component.display_name}
                   </Label>
-                  
+
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleFileUpload(component.id)}
                     disabled={isUploading}
-                    className="flex items-center gap-2"
+                    className={`flex flex-col h-auto !py-10 mt-2 w-full cursor-pointer items-center justify-center gap-2 rounded-lg hover:bg-transparent border-2 border-primary-border hover:border-secondary-border border-dashed p-8 transition-colors `}
                   >
-                    {isUploading && currentUploadComponentId === component.id ? (
-                      <LoadingIcon className="h-4 w-4" />
+                    {isUploading &&
+                    currentUploadComponentId === component.id ? (
+                      <LoadingIcon className="h!h-14 !w-14" />
                     ) : (
-                      <Upload className="h-4 w-4" />
+                      <RiUploadCloud2Fill className="!h-14 !w-14 text-secondary-font opacity-70" />
                     )}
-                    Upload File
+                    <p>
+                      <span className="text-sm font-medium text-secondary-font block">
+                        Upload File
+                      </span>
+                      <span className="text-[11px] text-secondary-font italic opacity-70 block">
+                        Accepted file types: JSON, PNG, PDF
+                      </span>
+                    </p>
                   </Button>
                 </div>
 
                 {/* Upload Progress */}
                 {uploadProgress[component.id] !== undefined && (
                   <div className="w-full bg-secondary rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-primary h-2 rounded-full transition-all duration-300"
                       style={{ width: `${uploadProgress[component.id]}%` }}
                     />

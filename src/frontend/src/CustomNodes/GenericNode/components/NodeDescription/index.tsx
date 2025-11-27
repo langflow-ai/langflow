@@ -36,7 +36,7 @@ export default function NodeDescription({
   setHasChangedNodeDescription?: (value: boolean) => void;
 }) {
   const [nodeDescription, setNodeDescription] = useState<string>(
-    description ?? "",
+    description ?? ""
   );
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const setNode = useFlowStore((state) => state.setNode);
@@ -80,7 +80,7 @@ export default function NodeDescription({
         className={cn(
           "markdown prose flex w-full flex-col leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
           stickyNote ? "text-mmd" : "text-xs",
-          mdClassName,
+          mdClassName
         )}
       >
         {String(description)}
@@ -146,7 +146,7 @@ export default function NodeDescription({
         !editNameDescription ? "overflow-auto" : "overflow-hidden",
         hasScroll ? "nowheel" : "",
         charLimit ? "flex flex-col" : "",
-        "w-full",
+        "w-full"
       )}
     >
       {editNameDescription ? (
@@ -158,7 +158,7 @@ export default function NodeDescription({
               stickyNote
                 ? "overflow-auto p-0 px-2 pt-0.5 !text-mmd"
                 : "px-2 py-0.5",
-              inputClassName,
+              inputClassName
             )}
             autoFocus
             style={style}
@@ -174,7 +174,7 @@ export default function NodeDescription({
                 (nodeDescription?.length ?? 0) >= charLimit
                   ? "text-error"
                   : "text-primary",
-                placeholderClassName,
+                placeholderClassName
               )}
               data-testid="note_char_limit"
             >
@@ -187,9 +187,9 @@ export default function NodeDescription({
           data-testid="generic-node-desc"
           ref={overflowRef}
           className={cn(
-            "nodoubleclick generic-node-desc-text h-full cursor-grab text-muted-foreground word-break-break-word",
+            "nodoubleclick generic-node-desc-text h-full cursor-grab text-secondary-font word-break-break-word",
             description === "" || !description ? "font-light italic" : "",
-            placeholderClassName,
+            placeholderClassName
           )}
           onDoubleClick={handleDoubleClickFn}
         >

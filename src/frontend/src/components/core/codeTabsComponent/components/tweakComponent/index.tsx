@@ -14,7 +14,7 @@ export function TweakComponent({
   node: AllNodeType;
 }) {
   const [nodeClass, setNodeClass] = useState<APIClassType | undefined>(
-    node.data?.node,
+    node.data?.node
   );
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export function TweakComponent({
     <AccordionComponent
       trigger={
         <ShadTooltip side="top" styleClasses="z-50" content={node.data.id}>
-          <div className="text-primary">{node.data.node?.display_name}</div>
+          <div className="text-menu">{node.data.node?.display_name}</div>
         </ShadTooltip>
       }
       keyValue={node.data.id}

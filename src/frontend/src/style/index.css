@@ -2,29 +2,102 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "NeueMontreal";
+  src: url("../assets/fonts/NeueMontreal-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "NeueMontreal";
+  src: url("../assets/fonts/NeueMontreal-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: "NeueMontreal";
+  src: url("../assets/fonts/NeueMontreal-Medium.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: "NeueMontreal";
+  src: url("../assets/fonts/NeueMontreal-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "NeueMontreal";
+  src: url("../assets/fonts/NeueMontreal-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "NeueMontreal";
+  src: url("../assets/fonts/NeueMontreal-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: "NeueMontreal";
+  src: url("../assets/fonts/NeueMontreal-Medium.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: "NeueMontreal";
+  src: url("../assets/fonts/NeueMontreal-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+}
+
 /* TODO: Confirm that all colors here are found in tailwind config */
 
 @layer base {
   :root {
+    --font-NeueMontreal: "NeueMontreal", sans-serif;
     --font-sans: "Inter", sans-serif;
     --font-mono: "JetBrains Mono", monospace;
     --font-chivo: "Chivo", sans-serif;
 
+    /* Ai-studio default theme colors */
+    --mainBg: #fbfaff;
+    --background-surface: #ffffff;
+    /* --background-light: #ffffff; */
+    --primary: #350e84;
+    --secondary: #731fe3;
+    --tx-primary: #444444;
+    --tx-secondary: #64616a;
+    --primary-light: #f7f6ff;
+    --tx-link: var(--secondary);
+    --menu: #350e84;
+    --accent: #ebe8ff;
+    --accent-light: #f5f2ff;
+    --border-primary: #efefef;
+    --border-secondary: #c0b1ff;
+    --border-secondary-rgb: 192, 177, 255;
+    --boxshadow: 0, 0, 0;
+    --boxshadow-30: rgba(237, 229, 250, 0.3);
+    --error: #f75260;
+    --error-bg: rgba(247, 82, 96, 0.08);
+    --error-notification-bg: #fdf4f3;
+
     --foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
-    --background: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --background: 0 0% 100%; /*hsl(0, 0%, 100%) */
     --muted: 240 5% 96%; /* hsl(240, 5%, 96%) */
-    --muted-foreground: #6f6f6f;/* hsl(240, 4%, 46%) */
+    --muted-foreground: #6f6f6f; /* hsl(240, 4%, 46%) */
     --card: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --card-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --popover: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --popover-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
-    --border: 240 6% 90%; /* hsl(240, 6%, 90%) */
-    --input: #EBE8FF; /* hsl(240, 6%, 90%) */
+    --border: 0 0% 94%; /* hsl(240, 6%, 90%) */
+    --input: #ebe8ff; /* hsl(240, 6%, 90%) */
     --primary-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
-    --primary: #350E84; /* hsl(0, 0%, 0%) */
-    --secondary: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    /* hsl(0, 0%, 0%) */
+    /* --secondary: 0 0% 100%; hsl(0, 0%, 100%) */
     --secondary-foreground: 240 4% 16%; /* hsl(240, 4%, 16%) */
-    --accent: 240 5% 96%; /* hsl(240, 5%, 96%) */
+    /* --accent: 240 5% 96%; hsl(240, 5%, 96%) */
     --accent-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --destructive: 0 72% 51%; /* hsl(0, 72%, 51%) */
     --destructive-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
@@ -51,11 +124,15 @@
     /* Autonomize branding colors */
     --autonomize-primary: 262 97% 57%; /* Deep purple */
     --autonomize-secondary: 295 100% 75%; /* Light purple */
-    --autonomize-gradient: linear-gradient(135deg, hsl(262, 97%, 57%) 0%, hsl(295, 100%, 75%) 100%);
+    --autonomize-gradient: linear-gradient(
+      135deg,
+      hsl(262, 97%, 57%) 0%,
+      hsl(295, 100%, 75%) 100%
+    );
     --autonomize-header-bg: 262 97% 57%; /* Header background */
     --autonomize-sidebar-bg: 262 85% 45%; /* Sidebar background */
     --autonomize-text-on-purple: 0 0% 100%; /* White text on purple */
-    
+
     /* Additional Autonomize classes for Tailwind */
     --autonomize-sidebar: 262 85% 45%; /* For bg-autonomize-sidebar */
     --autonomize-header: 262 97% 57%; /* For bg-autonomize-header */
@@ -90,7 +167,7 @@
 
     --error-background: #fef2f2;
     --error-foreground: #991b1b;
-    --error: #991b1b;
+    /* --error: #991b1b; */
 
     --success-background: #f0fdf4;
     --success-foreground: #14532d;
@@ -474,4 +551,133 @@
     --red-foreground: 0 72.2% 50.6%;
     --indigo-foreground: 234.5 89.5% 73.9%;
   }
+}
+
+/* 
+--mainBg: #fbfaff;
+    --background-surface: #ffffff;
+    --primary: #350e84;
+    --secondary: #731fe3;
+    --tx-primary: #444444;
+    --tx-secondary: #64616a;
+    --tx-link: var(--secondary);
+    --menu: #350e84;
+    --accent: #ebe8ff;
+    --accent-light: #f5f2ff;
+    --border-primary: #efefef;
+    --border-secondary: #c0b1ff;
+    --border-secondary-rgb: 192, 177, 255;
+    --boxshadow: 0, 0, 0;
+    --boxshadow-30: rgba(237, 229, 250, 0.3);
+    --error: #f75260;    
+    */
+
+.dark {
+  --mainBg: #1b1a1c;
+  --background-surface: #302e32;
+  --primary: #350e84;
+  --primary-light: #4e4855;
+  --secondary: #875cff;
+  --tx-primary: #efe7ff;
+  --tx-secondary: #bdbac4;
+  --tx-link: var(--secondary);
+  --menu: #ffffff;
+  --accent: #635473;
+  --accent-light: #564b62;
+  --border-primary: #4a484c;
+  --border-secondary: #c0b1ff;
+  --border-secondary-rgb: 192, 177, 255;
+  --boxshadow: 255, 255, 255;
+  --boxshadow-30: rgba(237, 229, 250, 0.3);
+  --error: #f75260;
+}
+
+.purple {
+  --mainBg: #f9f5ff;
+  --background-surface: #ffffff;
+  --primary: #4c1d95;
+  --secondary: #7e22ce;
+  --tx-primary: #3b0764;
+  --tx-secondary: #6b21a8;
+  --tx-link: var(--secondary);
+  --accent: #ede9fe;
+  --border: #e9d5ff;
+  --colored-border: #c084fc;
+  --boxshadow: #7e22ce;
+  --boxshadow-30: rgba(126, 34, 206, 0.3);
+}
+
+.contrast {
+  --mainBg: #fff8f0;
+  --background-surface: #ffffff;
+  --primary: #7c2d12;
+  --secondary: #ff9900;
+  --tx-primary: #1a1a1a;
+  --tx-secondary: #4b5563;
+  --tx-link: var(--secondary);
+  --accent: #ffedd5;
+  --border: #fed7aa;
+  --colored-border: #f97316;
+  --boxshadow: #92400e;
+  --boxshadow-30: rgba(249, 115, 22, 0.3);
+}
+
+.teal {
+  --mainBg: #f0fdfa;
+  --background-surface: #ffffff;
+  --primary: #115e59;
+  --secondary: #14b8a6;
+  --tx-primary: #0f172a;
+  --tx-secondary: #334155;
+  --tx-link: var(--secondary);
+  --accent: #ccfbf1;
+  --border: #99f6e4;
+  --colored-border: #2dd4bf;
+  --boxshadow: #14b8a6;
+  --boxshadow-30: rgba(20, 184, 166, 0.3);
+}
+
+.blue {
+  --mainBg: #eff6ff;
+  --background-surface: #ffffff;
+  --primary: #1e3a8a;
+  --secondary: #2563eb;
+  --tx-primary: #0f172a;
+  --tx-secondary: #334155;
+  --tx-link: var(--secondary);
+  --accent: #dbeafe;
+  --border: #bfdbfe;
+  --colored-border: #60a5fa;
+  --boxshadow: #2563eb;
+  --boxshadow-30: rgba(37, 99, 235, 0.3);
+}
+
+.green {
+  --mainBg: #f0fdf4;
+  --background-surface: #ffffff;
+  --primary: #14532d;
+  --secondary: #22c55e;
+  --tx-primary: #052e16;
+  --tx-secondary: #166534;
+  --tx-link: var(--secondary);
+  --accent: #dcfce7;
+  --border: #bbf7d0;
+  --colored-border: #4ade80;
+  --boxshadow: #22c55e;
+  --boxshadow-30: rgba(34, 197, 94, 0.3);
+}
+
+.red {
+  --mainBg: #fef2f2;
+  --background-surface: #ffffff;
+  --primary: #7f1d1d;
+  --secondary: #ef4444;
+  --tx-primary: #450a0a;
+  --tx-secondary: #991b1b;
+  --tx-link: var(--secondary);
+  --accent: #fee2e2;
+  --border: #fecaca;
+  --colored-border: #f87171;
+  --boxshadow: #ef4444;
+  --boxshadow-30: rgba(239, 68, 68, 0.3);
 }

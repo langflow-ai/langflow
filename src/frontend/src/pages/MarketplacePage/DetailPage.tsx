@@ -137,11 +137,11 @@ export default function MarketplaceDetailPage() {
             className="w-full h-full"
             onValueChange={(val) => setActiveTab(val)}
           >
-            <div className="flex items-center justify-between mt-1 relative">
-              <TabsList className="justify-start gap-2 border-b border-border dark:border-white/20 p-0">
+            <div className="flex items-center justify-between relative">
+              <TabsList className="justify-start gap-2 border-b border-primary-border p-0">
                 <TabsTrigger
                   value="playground"
-                  className="px-4 py-2.5 text-sm dark:text-white"
+                  className="px-4 py-2.5 text-sm text-secondary-font"
                 >
                   <ForwardedIconComponent
                     name="Play"
@@ -151,7 +151,7 @@ export default function MarketplaceDetailPage() {
                 </TabsTrigger>
                 <TabsTrigger
                   value="flow"
-                  className="px-4 py-2.5 text-sm dark:text-white"
+                  className="px-4 py-2.5 text-sm text-secondary-font"
                 >
                   <ForwardedIconComponent
                     name="Network"
@@ -161,7 +161,7 @@ export default function MarketplaceDetailPage() {
                 </TabsTrigger>
                 <TabsTrigger
                   value="spec"
-                  className="px-4 py-2.5 text-sm dark:text-white"
+                  className="px-4 py-2.5 text-sm text-secondary-font"
                 >
                   <ForwardedIconComponent
                     name="FileText"
@@ -190,7 +190,7 @@ export default function MarketplaceDetailPage() {
 
             <TabsContent value="flow" className="mt-3 w-full">
               {isLoadingPublishedFlow ? (
-                <div className="flex h-[calc(100vh-164px)] w-full items-center justify-center rounded-lg border border-border dark:border-white/20 bg-card dark:bg-black dark:text-white">
+                <div className="flex h-[calc(100vh-158px)] w-full items-center justify-center rounded-lg border border-border dark:border-white/20 bg-card dark:bg-black dark:text-white">
                   <div className="flex flex-col items-center gap-3">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                     <p className="text-sm text-muted-foreground dark:text-white/70">
@@ -199,7 +199,7 @@ export default function MarketplaceDetailPage() {
                   </div>
                 </div>
               ) : publishedFlowData?.flow_id ? (
-                <div className="h-[calc(100vh-164px)] w-full overflow-hidden rounded-lg border border-border dark:border-white/20">
+                <div className="h-[calc(100vh-164px)] w-full overflow-hidden rounded-lg border border-primary-border bg-background-surface">
                   <FlowPage
                     flowId={publishedFlowData.flow_id}
                     view={true}
@@ -217,9 +217,9 @@ export default function MarketplaceDetailPage() {
             </TabsContent>
 
             <TabsContent value="spec" className="mt-3 w-full">
-              <div className="flex h-[calc(100vh-164px)] w-full flex-col overflow-hidden rounded-lg border border-border dark:border-white/20 bg-white">
-                <div className="flex items-center justify-between border-b border-border dark:border-white/20 px-3 py-2">
-                  <p className="text-xs font-medium text-[#444] dark:text-white">
+              <div className="flex h-[calc(100vh-158px)] w-full flex-col overflow-hidden rounded-lg border border-primary-border bg-background-surface">
+                <div className="flex items-center justify-between border-b border-primary-border px-3 py-2">
+                  <p className="text-xs font-medium text-primary-font">
                     YAML Specification
                   </p>
                   <div className="flex items-center gap-2">
@@ -253,7 +253,7 @@ export default function MarketplaceDetailPage() {
                     <SyntaxHighlighter
                       language="yaml"
                       style={dark ? oneDark : oneLight}
-                      customStyle={{ margin: 0, background: "transparent" }}
+                      customStyle={{ margin: 0, background: "#fff" }}
                       wrapLongLines
                     >
                       {specYaml}
@@ -264,7 +264,7 @@ export default function MarketplaceDetailPage() {
             </TabsContent>
 
             <TabsContent value="playground" className="mt-3 w-full" forceMount>
-              <div className="h-[calc(100vh-164px)] w-full overflow-hidden">
+              <div className="h-[calc(100vh-158px)] w-full overflow-hidden">
                 <PlaygroundTab publishedFlowData={publishedFlowData} />
               </div>
             </TabsContent>

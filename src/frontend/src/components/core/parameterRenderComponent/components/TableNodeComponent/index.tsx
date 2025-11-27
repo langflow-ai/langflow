@@ -45,7 +45,7 @@ export default function TableNodeComponent({
             ? new Date(
                 parseInt(dateParts[2]),
                 parseInt(dateParts[1]) - 1,
-                parseInt(dateParts[0]),
+                parseInt(dateParts[0])
               )
             : null;
         },
@@ -158,8 +158,7 @@ export default function TableNodeComponent({
       };
     })
     .filter(
-      (col) =>
-        columns?.find((c) => c.name === col.field)?.disable_edit !== true,
+      (col) => columns?.find((c) => c.name === col.field)?.disable_edit !== true
     );
 
   function parseTSVorMarkdownTable(clipboard: string, columns: any[]) {
@@ -171,7 +170,7 @@ export default function TableNodeComponent({
       // More robust header detection - check if first line contains column names
       const firstLineCells = lines[0].split("\t");
       const hasHeader = firstLineCells.some((cell) =>
-        columns.some((col) => col.name === cell.trim()),
+        columns.some((col) => col.name === cell.trim())
       );
       const dataLines = hasHeader ? lines.slice(1) : lines;
 
@@ -292,8 +291,8 @@ export default function TableNodeComponent({
         >
           <Button
             disabled={disabled}
-            variant="primary"
-            size={editNode ? "xs" : "default"}
+            variant="outline"
+            size={editNode ? "sm" : "default"}
             className={
               "w-full " +
               (disabled ? "pointer-events-none cursor-not-allowed" : "")

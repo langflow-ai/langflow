@@ -59,11 +59,11 @@ const DialogContent = React.forwardRef<
 >(
   (
     { className, children, hideTitle = false, closeButtonClassName, ...props },
-    ref,
+    ref
   ) => {
     // Check if DialogTitle is included in children
     const hasDialogTitle = React.Children.toArray(children).some(
-      (child) => React.isValidElement(child) && child.type === DialogTitle,
+      (child) => React.isValidElement(child) && child.type === DialogTitle
     );
 
     return (
@@ -72,8 +72,8 @@ const DialogContent = React.forwardRef<
         <DialogPrimitive.Content
           ref={ref}
           className={cn(
-            "fixed z-50 flex w-full max-w-lg flex-col gap-4 rounded-xl border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]",
-            className,
+            "fixed z-50 w-full max-w-lg rounded-md bg-background-surface p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]",
+            className
           )}
           {...props}
         >
@@ -91,8 +91,8 @@ const DialogContent = React.forwardRef<
           >
             <DialogPrimitive.Close
               className={cn(
-                "absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-sm ring-offset-background transition-opacity hover:bg-secondary-hover hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
-                closeButtonClassName,
+                "absolute right-2 top-2 flex h-8 w-8 text-primary-font items-center justify-center rounded-sm transition-opacity disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-primary-font",
+                closeButtonClassName
               )}
             >
               <Cross2Icon className="h-[18px] w-[18px]" />
@@ -102,7 +102,7 @@ const DialogContent = React.forwardRef<
         </DialogPrimitive.Content>
       </DialogPortal>
     );
-  },
+  }
 );
 
 const DialogHeader = ({
@@ -110,11 +110,20 @@ const DialogHeader = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("flex flex-col space-y-1 text-left", className)}
+    className={cn(
+      "relative flex flex-col text-left justify-between gap-2",
+      className
+    )}
     {...props}
   />
 );
 DialogHeader.displayName = "DialogHeader";
+
+const DialogCloseButton = ({ className }: { className?: string }) => (
+  <DialogPrimitive.Close className={cn("flex ", className)}>
+    <Cross2Icon className="h-[18px] w-[18px] text-secondary-font" />
+  </DialogPrimitive.Close>
+);
 
 const DialogFooter = ({
   className,
@@ -122,8 +131,8 @@ const DialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
-      className,
+      "flex flex-col-reverse sm:flex-row sm:justify-end gap-4",
+      className
     )}
     {...props}
   />
@@ -136,10 +145,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn(
-      "text-lg font-semibold leading-none tracking-tight",
-      className,
-    )}
+    className={cn("text-lg font-medium leading-none text-menu", className)}
     {...props}
   />
 ));
@@ -151,7 +157,7 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-sm text-secondary-font", className)}
     {...props}
   />
 ));
@@ -164,6 +170,7 @@ export {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogCloseButton,
   DialogTitle,
   DialogTrigger,
   VisuallyHidden,

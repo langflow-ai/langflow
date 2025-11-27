@@ -37,13 +37,13 @@ export const SampleTextModal: React.FC<SampleTextModalProps> = ({
 
   // Check if text is JSON and format it
   const isJsonString = (str: string): boolean => {
-    if (!str || typeof str !== 'string') return false;
+    if (!str || typeof str !== "string") return false;
     const trimmed = str.trim();
     if (!trimmed) return false;
-    
+
     if (
-      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-      (trimmed.startsWith('[') && trimmed.endsWith(']'))
+      (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+      (trimmed.startsWith("[") && trimmed.endsWith("]"))
     ) {
       try {
         JSON.parse(trimmed);
@@ -70,8 +70,8 @@ export const SampleTextModal: React.FC<SampleTextModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <div className="flex items-center justify-between">
+        <DialogHeader className="flex-shrink-0 w-full">
+          <div className="flex items-center justify-between w-full pr-4">
             <DialogTitle className="text-lg font-semibold">
               {title ?? `Sample Input Text ${index + 1}`}
             </DialogTitle>
@@ -106,7 +106,9 @@ export const SampleTextModal: React.FC<SampleTextModalProps> = ({
         <div className="flex-1 overflow-auto mt-4">
           {isJson ? (
             <pre className="bg-gray-50 dark:bg-gray-900 p-4 rounded-md text-xs font-mono border border-gray-200 dark:border-gray-700 overflow-x-auto">
-              <code className="text-gray-800 dark:text-gray-200">{displayText}</code>
+              <code className="text-gray-800 dark:text-gray-200">
+                {displayText}
+              </code>
             </pre>
           ) : (
             <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-md border border-gray-200 dark:border-gray-700 overflow-auto">

@@ -109,14 +109,15 @@ const config = {
         "border-beam": "border-beam calc(var(--duration)*1s) infinite linear",
       },
       colors: {
-        "primary-blue":"#350E84",
-        "secondary-blue":"#8453FF",
-        "secondary-bg":"#EBE8FF",
-        "success-bg":"#EBF7E980",
-        "main-bg":"#fbfaff",
-        "title":"#444",
-        "text-grey":"#6f6f6f",
-        "success-text":"#3FA33C",
+        // "primary-blue": "#350E84",
+        "secondary-blue": "#8453FF",
+        "secondary-bg": "#EBE8FF",
+        "success-bg": "#EBF7E980",
+        "main-bg": "#fbfaff",
+        title: "#444",
+        "text-grey": "#6f6f6f",
+        "success-text": "#3FA33C",
+
         "frozen-blue": "rgba(128, 190, 219, 0.86)", // Custom blue color for the frozen effect
         "frosted-glass": "rgba(255, 255, 255, 0.8)", // Custom frosted glass effect
         "component-icon": "var(--component-icon)",
@@ -223,16 +224,50 @@ const config = {
         "hard-zinc": "hsl(var(--hard-zinc))",
         "smooth-red": "hsl(var(--smooth-red))",
         "placeholder-foreground": "hsl(var(--placeholder-foreground))",
+
+        // Ai Studio Theme Colors start
+        background: {
+          DEFAULT: "var(--background-surface)",
+          mainBg: "var(--mainBg)",
+          surface: "var(--background-surface)",
+        },
         primary: {
-          DEFAULT: "#350E84",
-          foreground: "hsl(var(--primary-foreground))",
-          hover: "#350E84",
+          DEFAULT: "var(--primary)",
+          font: "var(--tx-primary)",
+          border: "var(--border-primary)",
+          light: "var(--primary-light)",
+          // foreground: "hsl(var(--primary-foreground))",
+          // hover: "#350E84",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-          hover: "hsl(var(--secondary-hover))",
+          DEFAULT: "var(--secondary)",
+          font: "var(--tx-secondary)",
+          border: "var(--border-secondary)",
+          // foreground: "hsl(var(--secondary-foreground))",
+          // hover: "hsl(var(--secondary-hover))",
         },
+        link: {
+          DEFAULT: "var(--tx-link)",
+        },
+        error: {
+          DEFAULT: "var(--error)",
+          bg: "var(--error-bg)",
+          notificationBg: "var(--error-notification-bg)",
+        },
+        // status: {
+        //   error: "var(--error)",
+        //   "error-bg": "var(--error-bg)",
+        // },
+        menu: {
+          DEFAULT: "var(--menu)",
+        },
+        accent: {
+          DEFAULT: "var(--accent)",
+          light: " var(--accent-light)",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        // Ai Studio Theme Colors end
+
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
@@ -240,10 +275,6 @@ const config = {
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "#6f6f6f",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
         },
         "accent-amber": {
           DEFAULT: "hsl(var(--accent-amber))",
@@ -336,19 +367,19 @@ const config = {
         "indigo-foreground": "hsl(var(--indigo-foreground))",
         "discord-color": "var(--discord-color)",
       },
-      borderRadius: {
-        lg: `var(--radius)`,
-        md: `calc(var(--radius) - 2px)`,
-        sm: "calc(var(--radius) - 4px)",
-      },
+      // borderRadius: {
+      //   lg: `var(--radius)`,
+      //   md: `calc(var(--radius) - 2px)`,
+      //   sm: "calc(var(--radius) - 4px)",
+      // },
       borderWidth: {
         1.75: "1.75px",
         1.5: "1.5px",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", ...fontFamily.sans],
-        mono: ["var(--font-mono)", ...fontFamily.mono],
-        chivo: ["var(--font-chivo)", ...fontFamily.sans],
+        sans: ["var(--font-NeueMontreal)", ...fontFamily.sans],
+        // mono: ["var(--font-mono)", ...fontFamily.mono],
+        // chivo: ["var(--font-chivo)", ...fontFamily.sans],
       },
       boxShadow: {
         "frozen-ring": "0 0 10px 2px rgba(128, 190, 230, 0.5)",
@@ -434,14 +465,14 @@ const config = {
             height: "8px",
           },
           "&::-webkit-scrollbar-track": {
-            backgroundColor: "hsl(var(--muted))",
+            backgroundColor: "var(--border-primary)",
           },
           "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "hsl(var(--border))",
+            backgroundColor: "var(--primary)",
             borderRadius: "999px",
           },
           "&::-webkit-scrollbar-thumb:hover": {
-            backgroundColor: "hsl(var(--placeholder-foreground))",
+            backgroundColor: "var(--secondary)",
           },
           "&::-webkit-scrollbar-corner": {
             backgroundColor: "transparent",

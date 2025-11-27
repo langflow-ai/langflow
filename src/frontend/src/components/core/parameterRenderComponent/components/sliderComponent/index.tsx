@@ -92,7 +92,7 @@ export default function SliderComponent({
   const getNormalizedValue = (
     value: number,
     min: number,
-    max: number,
+    max: number
   ): number => {
     return (value - min) / (max - min);
   };
@@ -100,7 +100,7 @@ export default function SliderComponent({
   const getColor = (
     optionValue: number,
     normalizedValue: number,
-    colorType: ColorType,
+    colorType: ColorType
   ): string => {
     const colors = colorType === "background" ? BACKGROUND_COLORS : TEXT_COLORS;
     const defaultColor = isDark
@@ -108,8 +108,8 @@ export default function SliderComponent({
         ? DARK_COLOR_BACKGROUND
         : DARK_COLOR_TEXT
       : colorType === "background"
-        ? LIGHT_COLOR_BACKGROUND
-        : LIGHT_COLOR_TEXT;
+      ? LIGHT_COLOR_BACKGROUND
+      : LIGHT_COLOR_TEXT;
 
     if (normalizedValue <= THRESHOLDS[0] && optionValue === 0) {
       return colors[0];
@@ -174,11 +174,11 @@ export default function SliderComponent({
   }
 
   const accentIndigoForeground = getComputedStyle(
-    document.documentElement,
+    document.documentElement
   ).getPropertyValue("--accent-indigo-foreground");
 
   const accentPinkForeground = getComputedStyle(
-    document.documentElement,
+    document.documentElement
   ).getPropertyValue("--accent-pink-foreground");
 
   const getThumbColor = (percentage) => {
@@ -186,13 +186,13 @@ export default function SliderComponent({
       return buildColorByName(
         accentIndigoForeground,
         accentPinkForeground,
-        percentage,
+        percentage
       );
     }
     return buildColorByName(
       DEFAULT_ACCENT_INDIGO_FOREGROUND_COLOR,
       DEFAULT_ACCENT_PINK_FOREGROUND_COLOR,
-      percentage,
+      percentage
     );
   };
 
@@ -206,7 +206,7 @@ export default function SliderComponent({
             className={clsx(
               "input-slider-text",
               (isGrabbing || isEditing) && ringClassInputClass,
-              editNode && "relative left-0.5",
+              editNode && "relative left-0.5"
             )}
           >
             {isEditing ? (
@@ -226,7 +226,9 @@ export default function SliderComponent({
                   setIsEditing(true);
                   setInputValue(valueAsNumber.toFixed(2));
                 }}
-                data-testid={`default_slider_display_value${editNode ? "_advanced" : ""}`}
+                data-testid={`default_slider_display_value${
+                  editNode ? "_advanced" : ""
+                }`}
                 className="relative bottom-[1px] font-mono text-sm hover:cursor-text"
               >
                 {valueAsNumber.toFixed(2)}
@@ -238,7 +240,9 @@ export default function SliderComponent({
       <Case condition={sliderButtons}>
         <div className="relative bottom-1 flex items-center pb-2">
           <span
-            data-testid={`button_slider_display_value${editNode ? "_advanced" : ""}`}
+            data-testid={`button_slider_display_value${
+              editNode ? "_advanced" : ""
+            }`}
             className="font-mono text-2xl"
           >
             {valueAsNumber.toFixed(2)}
@@ -260,14 +264,16 @@ export default function SliderComponent({
             data-testid={`slider_track${editNode ? "_advanced" : ""}`}
             className={clsx(
               "relative h-1 w-full grow rounded-full",
-              isDark ? "bg-muted" : "bg-border",
+              isDark ? "bg-primary-border" : "bg-primary-border"
             )}
           >
             <SliderPrimitive.Range
               className="absolute h-full rounded-full bg-gradient-to-r from-accent-indigo-foreground to-accent-pink-foreground"
               style={{
                 width: `${percentage}%`,
-                background: `linear-gradient(to right, rgb(79, 70, 229) 0%, ${getThumbColor(percentage)} ${percentage}%)`,
+                background: `linear-gradient(to right, rgb(79, 70, 229) 0%, ${getThumbColor(
+                  percentage
+                )} ${percentage}%)`,
               }}
             />
           </SliderPrimitive.Track>
@@ -276,7 +282,7 @@ export default function SliderComponent({
             className={clsx(
               "block h-6 w-6 rounded-full border-2 border-background shadow-lg",
               isGrabbing ? "cursor-grabbing" : "cursor-grab",
-              valueAsNumber === max && "relative left-1",
+              valueAsNumber === max && "relative left-1"
             )}
             onPointerDown={() => setIsGrabbing(true)}
             onPointerUp={() => setIsGrabbing(false)}
@@ -299,7 +305,7 @@ export default function SliderComponent({
                   color: getButtonTextColor(option.id),
                 }}
                 className={clsx(
-                  "h-9 flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-200",
+                  "h-9 flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-200"
                 )}
                 disabled={disabled}
               >

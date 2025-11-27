@@ -31,7 +31,7 @@ export default function EditShortcutButton({
   const shortcutInitialValue =
     defaultShortcuts.length > 0
       ? defaultShortcuts.find(
-          (s) => toCamelCase(s.name) === toCamelCase(shortcut[0]),
+          (s) => toCamelCase(s.name) === toCamelCase(shortcut[0])
         )?.shortcut
       : "";
   const [key, setKey] = useState<string | null>(null);
@@ -50,7 +50,7 @@ export default function EditShortcutButton({
   }
 
   const setUniqueShortcut = useShortcutsStore(
-    (state) => state.updateUniqueShortcut,
+    (state) => state.updateUniqueShortcut
   );
 
   function editCombination(): void {
@@ -82,7 +82,7 @@ export default function EditShortcutButton({
         setShortcuts(newCombination);
         localStorage.setItem(
           "langflow-shortcuts",
-          JSON.stringify(newCombination),
+          JSON.stringify(newCombination)
         );
         setKey(null);
         setOpen(false);
@@ -124,7 +124,7 @@ export default function EditShortcutButton({
     const keysArr = keys.split(" ");
     const _hasNewKey = false;
     return keysArr.some(
-      (k) => k.toLowerCase().trim() === keyToCompare.toLowerCase().trim(),
+      (k) => k.toLowerCase().trim() === keyToCompare.toLowerCase().trim()
     );
   }
 
@@ -145,7 +145,7 @@ export default function EditShortcutButton({
         if (checkForKeys(key, fixedKey)) return;
       }
       setKey((oldKey) =>
-        getFixedCombination({ oldKey: oldKey!, key: fixedKey }),
+        getFixedCombination({ oldKey: oldKey!, key: fixedKey })
       );
     }
 
@@ -162,7 +162,7 @@ export default function EditShortcutButton({
         <span className="pr-2"> Key Combination </span>
         <ForwardedIconComponent
           name="Keyboard"
-          className="h-6 w-6 pl-1 text-primary"
+          className="h-5 w-5 text-menu"
           aria-hidden="true"
         />
       </BaseModal.Header>
@@ -176,15 +176,11 @@ export default function EditShortcutButton({
           </div>
         </div>
       </BaseModal.Content>
-      <BaseModal.Footer>
-        <Button variant={"default"} onClick={editCombination}>
+      <BaseModal.Footer className="gap-4">
+        <Button variant="default" size="sm" onClick={editCombination}>
           Apply
         </Button>
-        <Button
-          className="mr-5"
-          variant={"destructive"}
-          onClick={() => setKey(null)}
-        >
+        <Button variant="outline" size="sm" onClick={() => setKey(null)}>
           Reset
         </Button>
       </BaseModal.Footer>

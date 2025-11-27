@@ -26,7 +26,7 @@ export default function PaginatorComponent({
 }: PaginatorComponentType) {
   const [size, setPageSize] = useState(pageSize);
   const [maxIndex, setMaxPageIndex] = useState(
-    Math.ceil(totalRowsCount / pageSize),
+    Math.ceil(totalRowsCount / pageSize)
   );
 
   useEffect(() => {
@@ -43,28 +43,33 @@ export default function PaginatorComponent({
   };
 
   return (
-    <div className="flex flex-1 items-center justify-between px-6">
-      <div className="flex items-center justify-end gap-1 text-mmd text-secondary-foreground">
-        {(pageIndex - 1) * pageSize + 1}-
-        {Math.min(totalRowsCount, (pageIndex - 1) * pageSize + pageSize)}{" "}
-        <span className="text-muted-foreground">
+    <div className="flex flex-1 items-center justify-between">
+      <p className="flex items-center justify-end text-sm text-primary-font font-medium">
+        {`Showing ${(pageIndex - 1) * pageSize + 1} - ${Math.min(
+          totalRowsCount,
+          (pageIndex - 1) * pageSize + pageSize
+        )} `}
+        {/* Showing {(pageIndex - 1) * pageSize + 1}-
+        {Math.min(totalRowsCount, (pageIndex - 1) * pageSize + pageSize)}{" "} */}
+        <span className="ml-1">
+          {" "}
           of {totalRowsCount}{" "}
           {isComponent === undefined
             ? "items"
             : isComponent
-              ? "components"
-              : "flows"}
+            ? "components"
+            : "flows"}
         </span>
-      </div>
-      <div className={"flex items-center gap-2"}>
+      </p>
+      <div className="flex items-center gap-1">
         <div className="flex items-center gap-1 text-mmd text-secondary-foreground">
           <Select
             onValueChange={(value) => paginate(Number(value), size)}
             value={pageIndex.toString()}
           >
             <SelectTrigger
-              direction="up"
-              className="h-7 w-fit gap-1 border-none p-1 pl-1.5 text-mmd focus:border-none focus:ring-0 focus:!ring-offset-0"
+              direction="down"
+              className="h-[30px] gap-2 px-3 text-secondary-font border-primary-border bg-background-surface hover:bg-accent-light font-medium rounded-[4px]"
             >
               <SelectValue placeholder="1" />
             </SelectTrigger>
@@ -76,18 +81,23 @@ export default function PaginatorComponent({
               ))}
             </SelectContent>
           </Select>
-          <span className="text-muted-foreground">of {maxIndex} pages</span>
+          <span className="text-secondary-font font-medium text-sm ml-1">
+            of {maxIndex} pages
+          </span>
         </div>
         <div className="flex items-center gap-1">
           <Button
+            variant="outline"
+            size="sm"
             disabled={disableFirstPage}
             onClick={() => {
               if (pageIndex > 0) {
                 paginate(pageIndex - 1, size);
               }
             }}
-            variant="ghost"
-            size={"iconMd"}
+            className={`text-secondary-font hover:text-menu h-[28px] w-[28px] p-0 ${
+              disableFirstPage ? "opacity-10" : ""
+            }`}
           >
             <span className="sr-only">Go to previous page</span>
             <IconComponent name="ChevronLeft" className="h-4 w-4" />
@@ -97,10 +107,15 @@ export default function PaginatorComponent({
             onClick={() => {
               paginate(pageIndex + 1, size);
             }}
-            variant="ghost"
-            size={"iconMd"}
+            variant="outline"
+            size="sm"
+            className={`text-secondary-font hover:text-menu h-[28px] w-[28px] p-0 ${
+              disableLastPage ? "opacity-10" : ""
+            }`}
           >
-            <span className="sr-only">Go to next page</span>
+            <span className="sr-only text-secondary-font font-medium text-sm mx-1">
+              Go to next page
+            </span>
             <IconComponent name="ChevronRight" className="h-4 w-4" />
           </Button>
         </div>

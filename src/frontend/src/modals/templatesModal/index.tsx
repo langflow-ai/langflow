@@ -34,69 +34,70 @@ export default function TemplatesModal({
     },
     {
       title: "Use Cases",
-      items: MARKETPLACE_TAGS.map(tag => ({
+      items: MARKETPLACE_TAGS.map((tag) => ({
         title: tag.title,
         icon: tag.icon,
-        id: tag.id
-      }))
+        id: tag.id,
+      })),
     },
   ];
 
-  const useCaseIds = categories
-    .find((c) => c.title === "Use Cases")?.items.map((i) => i.id) ?? [];
+  const useCaseIds =
+    categories.find((c) => c.title === "Use Cases")?.items.map((i) => i.id) ??
+    [];
 
   return (
     <BaseModal size="templates" open={open} setOpen={setOpen} className="p-0">
-      <BaseModal.Content className="flex flex-col p-0">
-        <div className="flex h-full">
-          <SidebarProvider width="15rem" defaultOpen={false}>
-            <Nav
-              categories={categories}
-              currentTab={currentTab}
-              setCurrentTab={setCurrentTab}
-            />
-            <main className="flex flex-1 flex-col gap-4 overflow-auto p-6 md:gap-8">
-              {currentTab === "get-started" ? (
-                <GetStartedComponent />
-              ) : (
-                <TemplateContentComponent
-                  currentTab={currentTab}
-                  categories={categories.flatMap((category) => category.items)}
-                  useCaseIds={useCaseIds}
-                />
-              )}
-              <BaseModal.Footer>
-                <div className="flex w-full flex-col justify-between gap-4 pb-4 sm:flex-row sm:items-center">
-                  <div className="flex flex-col items-start justify-center">
-                    <div className="font-semibold text-title">Start from scratch</div>
-                    <div className="text-sm text-muted-foreground">
-                      Begin with a fresh flow to build from scratch.
-                    </div>
-                  </div>
-                  <Button
-                    onClick={() => {
-                      addFlow().then((id) => {
-                        navigate(
-                          `/flow/${id}${folderId ? `/folder/${folderId}` : ""}`
-                        );
-                      });
-                      track("New Flow Created", { template: "Blank Flow" });
-                    }}
-                    size="sm"
-                    data-testid="blank-flow"
-                    className="shrink-0"
-                  >
-                    <ForwardedIconComponent
-                      name="Plus"
-                      className="h-4 w-4 shrink-0"
-                    />
-                    Blank Flow
-                  </Button>
+      <BaseModal.Content className="flex flex-col p-6">
+        <SidebarProvider width="15rem" defaultOpen={false}>
+          <Nav
+            categories={categories}
+            currentTab={currentTab}
+            setCurrentTab={setCurrentTab}
+          />
+          <div className="flex flex-1 flex-col gap-4 pl-6 md:gap-8">
+            {currentTab === "get-started" ? (
+              <GetStartedComponent />
+            ) : (
+              <TemplateContentComponent
+                currentTab={currentTab}
+                categories={categories.flatMap((category) => category.items)}
+                useCaseIds={useCaseIds}
+              />
+            )}
+            <BaseModal.Footer>
+              <div className="flex w-full flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                <div className="">
+                  <p className="font-medium text-primary-font">
+                    Start from scratch
+                  </p>
+                  <p className="text-sm text-secondary-font">
+                    Begin with a fresh flow to build from scratch.
+                  </p>
                 </div>
-              </BaseModal.Footer>
-            </main>
-          </SidebarProvider>
-        </div>
+                <Button
+                  onClick={() => {
+                    addFlow().then((id) => {
+                      navigate(
+                        `/flow/${id}${folderId ? `/folder/${folderId}` : ""}`
+                      );
+                    });
+                    track("New Flow Created", { template: "Blank Flow" });
+                  }}
+                  size="sm"
+                  data-testid="blank-flow"
+                  className="shrink-0"
+                >
+                  <ForwardedIconComponent
+                    name="Plus"
+                    className="h-4 w-4 shrink-0"
+                  />
+                  Blank Flow
+                </Button>
+              </div>
+            </BaseModal.Footer>
+          </div>
+        </SidebarProvider>
       </BaseModal.Content>
     </BaseModal>
   );

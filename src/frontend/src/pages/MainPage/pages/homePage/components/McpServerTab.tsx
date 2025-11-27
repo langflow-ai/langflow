@@ -55,7 +55,7 @@ const MemoizedApiKeyButton = memo(
       />
       <span>{apiKey === "" ? "Generate API key" : "API key generated"}</span>
     </Button>
-  ),
+  )
 );
 MemoizedApiKeyButton.displayName = "MemoizedApiKeyButton";
 
@@ -107,7 +107,7 @@ const MemoizedCodeTag = memo(
         <span>{children}</span>
       </div>
     </div>
-  ),
+  )
 );
 MemoizedCodeTag.displayName = "MemoizedCodeTag";
 
@@ -178,7 +178,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     {
       projectId,
     },
-    { enabled: !!projectId && shouldQueryComposerUrl },
+    { enabled: !!projectId && shouldQueryComposerUrl }
   );
 
   const { mutate: patchInstallMCP } = usePatchInstallMCP({
@@ -195,7 +195,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const [selectedPlatform, setSelectedPlatform] = useState(
     operatingSystemTabs.find((tab) => tab.name.includes(getOS() || "windows"))
-      ?.name,
+      ?.name
   );
 
   const isAutoLogin = useAuthStore((state) => state.autoLogin);
@@ -207,7 +207,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const isLocalConnection = useCustomIsLocalConnection();
 
   const [selectedMode, setSelectedMode] = useState(
-    isLocalConnection ? "Auto install" : "JSON",
+    isLocalConnection ? "Auto install" : "JSON"
   );
 
   const handleOnNewValue = (value: any) => {
@@ -278,7 +278,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     isOAuthProject &&
       !!composerUrlData?.sse_url &&
       composerUrlData?.uses_composer,
-    composerUrlData?.sse_url,
+    composerUrlData?.sse_url
   );
 
   // Generate auth headers based on authentication type
@@ -317,8 +317,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         selectedPlatform === "windows"
           ? "cmd"
           : selectedPlatform === "wsl"
-            ? "wsl"
-            : "uvx"
+          ? "wsl"
+          : "uvx"
       }",
       "args": [
         ${
@@ -327,27 +327,27 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "uvx",
         `
             : selectedPlatform === "wsl"
-              ? `"uvx",
+            ? `"uvx",
         `
-              : ""
+            : ""
         }${
-          isOAuthProject ? '"mcp-composer",' : '"mcp-proxy",'
-        }${getAuthHeaders()}${
-          isOAuthProject
-            ? `
+    isOAuthProject ? '"mcp-composer",' : '"mcp-proxy",'
+  }${getAuthHeaders()}${
+    isOAuthProject
+      ? `
         "--mode",
         "stdio",
         "--sse-url",`
-            : ""
-        }
+      : ""
+  }
         "${apiUrl}"${
-          isOAuthProject
-            ? `,
+    isOAuthProject
+      ? `,
         "--disable-composer-tools",
         "--client_auth_type",
         "oauth"`
-            : ""
-        }
+      : ""
+  }
       ]
     }
   }
@@ -392,26 +392,27 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const isLoadingMCPProjectAuth = isLoadingMCPProjectData || isPatchingFlowsMCP;
 
   return (
-    <div>
+    <div className="p-4 bg-background-surface rounded-md border border-primary-border">
       <div className="flex justify-between gap-4 items-start">
-        <div>
-          <div className="pb-2 font-medium" data-testid="mcp-server-title">
-            MCP Server
-          </div>
-          <div className="pb-4 text-mmd text-muted-foreground">
-            Access your Project's flows as Tools within a MCP Server. Learn more
-            in our
-            <a
-              className="text-accent-pink-foreground"
-              href={MCP_SERVER_DEPLOY_TUTORIAL_LINK}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {" "}
-              Projects as MCP Servers guide.
-            </a>
-          </div>
-        </div>
+        <h3
+          className="pb-2 font-medium text-primary-font"
+          data-testid="mcp-server-title"
+        >
+          MCP Server
+        </h3>
+        <p className="pb-4 text-xs text-secondary-font">
+          Access your Project's flows as Tools within a MCP Server. Learn more
+          in our
+          <a
+            className="text-accent-pink-foreground"
+            href={MCP_SERVER_DEPLOY_TUTORIAL_LINK}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {" "}
+            Projects as MCP Servers guide.
+          </a>
+        </p>
       </div>
       <div className="flex flex-col justify-between gap-8 xl:flex-row">
         <div className="w-full xl:w-2/5">
@@ -471,8 +472,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                         isLoadingMCPProjectAuth
                           ? "text-muted-foreground"
                           : !composerUrlData?.error_message
-                            ? "text-accent-emerald-foreground"
-                            : "text-accent-amber-foreground",
+                          ? "text-accent-emerald-foreground"
+                          : "text-accent-amber-foreground"
                       )}
                     >
                       <ForwardedIconComponent
@@ -480,12 +481,12 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                           isLoadingMCPProjectAuth
                             ? "Loader2"
                             : !composerUrlData?.error_message
-                              ? "Check"
-                              : "AlertTriangle"
+                            ? "Check"
+                            : "AlertTriangle"
                         }
                         className={cn(
                           "h-4 w-4 shrink-0",
-                          isLoadingMCPProjectAuth && "animate-spin",
+                          isLoadingMCPProjectAuth && "animate-spin"
                         )}
                       />
                       {isLoadingMCPProjectAuth
@@ -630,10 +631,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                   key={installer.name}
                   content={
                     !installedMCPData?.find(
-                      (client) => client.name === installer.name,
+                      (client) => client.name === installer.name
                     )?.available
                       ? `Install ${toSpaceCase(
-                          installer.name,
+                          installer.name
                         )} to enable auto-install.`
                       : ""
                   }
@@ -647,7 +648,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                         loadingMCP.includes(installer.name) ||
                         !isLocalConnection ||
                         !installedMCPData?.find(
-                          (client) => client.name === installer.name,
+                          (client) => client.name === installer.name
                         )?.available
                       }
                       onClick={() => {
@@ -663,8 +664,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                               });
                               setLoadingMCP(
                                 loadingMCP.filter(
-                                  (name) => name !== installer.name,
-                                ),
+                                  (name) => name !== installer.name
+                                )
                               );
                             },
                             onError: (e) => {
@@ -674,11 +675,11 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                               });
                               setLoadingMCP(
                                 loadingMCP.filter(
-                                  (name) => name !== installer.name,
-                                ),
+                                  (name) => name !== installer.name
+                                )
                               );
                             },
-                          },
+                          }
                         );
                       }}
                     >
@@ -696,22 +697,22 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                             installedMCP?.includes(installer.name)
                               ? "Check"
                               : loadingMCP.includes(installer.name)
-                                ? "Loader2"
-                                : "Plus"
+                              ? "Loader2"
+                              : "Plus"
                           }
                           className={cn(
                             "h-4 w-4 absolute top-0 left-0 opacity-100",
                             loadingMCP.includes(installer.name) &&
                               "animate-spin",
                             installedMCP?.includes(installer.name) &&
-                              "group-hover:opacity-0",
+                              "group-hover:opacity-0"
                           )}
                         />
                         {installedMCP?.includes(installer.name) && (
                           <ForwardedIconComponent
                             name={"RefreshCw"}
                             className={cn(
-                              "h-4 w-4 absolute top-0 left-0 opacity-0 group-hover:opacity-100",
+                              "h-4 w-4 absolute top-0 left-0 opacity-0 group-hover:opacity-100"
                             )}
                           />
                         )}

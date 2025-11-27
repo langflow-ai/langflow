@@ -31,12 +31,14 @@ import { validateFlowForPublish } from "@/utils/flowValidation";
 import { incrementPatchVersion } from "@/utils/versionUtils";
 import type { AllNodeType, EdgeType } from "@/types/flow";
 import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
-import { Upload, X, AlertCircle } from "lucide-react";
+import { Upload, X, AlertCircle, MessageSquareWarningIcon } from "lucide-react";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { ALLOWED_IMAGE_INPUT_EXTENSIONS } from "@/constants/constants";
 import { AgentLogo } from "@/components/AgentLogo";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import type { FlowLatestStatusResponse } from "@/controllers/API/queries/flow-versions";
+import { cn } from "@/utils/utils";
+import { RiUploadCloud2Fill } from "react-icons/ri";
 
 interface PublishFlowModalProps {
   open: boolean;
@@ -71,24 +73,31 @@ export default function PublishFlowModal({
   const [isDragging, setIsDragging] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [logoRemoved, setLogoRemoved] = useState(false);
-  const [approvedLogoBlobPath, setApprovedLogoBlobPath] = useState<string | null>(null);
+  const [approvedLogoBlobPath, setApprovedLogoBlobPath] = useState<
+    string | null
+  >(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sample input state
   const DEFAULT_STORAGE_ACCOUNT = "autonomizestorageaccount";
   const DEFAULT_CONTAINER_NAME = "ai-studio-v2";
   const [isUploadingSamples, setIsUploadingSamples] = useState(false);
-  const [uploadedSampleFiles, setUploadedSampleFiles] = useState<{ name: string; path: string }[]>([]);
+  const [uploadedSampleFiles, setUploadedSampleFiles] = useState<
+    { name: string; path: string }[]
+  >([]);
   const sampleFilesInputRef = useRef<HTMLInputElement>(null);
   const [sampleTexts, setSampleTexts] = useState<string[]>([""]); // show one placeholder by default
   // Removed Sample Output state: modal no longer manages sample output here
 
   const { mutate: publishFlow, isPending } = usePublishFlow();
   // Ensure `publishedFlowId` is `string | undefined` (coerce possible `null` to `undefined`)
-  const publishedFlowId: string | undefined = existingPublishedData?.published_flow_id ?? undefined;
+  const publishedFlowId: string | undefined =
+    existingPublishedData?.published_flow_id ?? undefined;
   const { mutate: patchInputSample } = usePatchInputSample(publishedFlowId);
-  const { mutate: deleteInputSampleFile } = useDeleteInputSampleFile(publishedFlowId);
-  const { mutate: deleteInputSampleText } = useDeleteInputSampleText(publishedFlowId);
+  const { mutate: deleteInputSampleFile } =
+    useDeleteInputSampleFile(publishedFlowId);
+  const { mutate: deleteInputSampleText } =
+    useDeleteInputSampleText(publishedFlowId);
   const { mutateAsync: getUploadUrl } = usePostUploadPresignedUrl();
   const { mutateAsync: uploadToBlob } = useUploadToBlob();
   const { mutateAsync: getFlow } = useGetFlow();
@@ -97,13 +106,16 @@ export default function PublishFlowModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
-  const setCurrentFlowInFlowStore = useFlowStore((state) => state.setCurrentFlow);
+  const setCurrentFlowInFlowStore = useFlowStore(
+    (state) => state.setCurrentFlow
+  );
 
   // Fetch existing published flow details (including input samples) if available
   const { data: publishedFlowData } = useGetPublishedFlow(publishedFlowId);
 
   // Derived lists for existing sample files and texts grouped by sample record
-  const existingSampleRecords = (publishedFlowData?.input_samples ?? []) as Array<{
+  const existingSampleRecords = (publishedFlowData?.input_samples ??
+    []) as Array<{
     id: string;
     file_names?: string[] | null;
     sample_text?: string[] | null;
@@ -137,15 +149,13 @@ export default function PublishFlowModal({
   }, [currentFlow]);
 
   // Validate marketplace name with debouncing to reduce API calls
-  const {
-    data: nameValidation,
-    isLoading: isValidatingName,
-  } = useValidateMarketplaceName({
-    marketplaceName: debouncedMarketplaceName,
-    excludeFlowId: flowId, // Exclude current flow when re-publishing
-    folderId: currentFlow?.folder_id, // Include folder_id for folder-scoped validation
-    enabled: open && debouncedMarketplaceName.trim().length > 0,
-  });
+  const { data: nameValidation, isLoading: isValidatingName } =
+    useValidateMarketplaceName({
+      marketplaceName: debouncedMarketplaceName,
+      excludeFlowId: flowId, // Exclude current flow when re-publishing
+      folderId: currentFlow?.folder_id, // Include folder_id for folder-scoped validation
+      enabled: open && debouncedMarketplaceName.trim().length > 0,
+    });
 
   // Pre-fill form fields when modal opens
   useEffect(() => {
@@ -157,7 +167,9 @@ export default function PublishFlowModal({
 
         // Auto-increment version only if currently published, otherwise keep same version
         if (existingPublishedData.is_published) {
-          const newVersion = incrementPatchVersion(existingPublishedData.version);
+          const newVersion = incrementPatchVersion(
+            existingPublishedData.version
+          );
           setVersion(newVersion);
         } else {
           // Unpublished: Keep the same version (user can edit)
@@ -221,7 +233,14 @@ export default function PublishFlowModal({
       setLogoFile(null);
       setLogoPreviewUrl(null);
     }
-  }, [open, existingPublishedData, approvalData, flowName, currentFlow?.name, currentFlow?.description]);
+  }, [
+    open,
+    existingPublishedData,
+    approvalData,
+    flowName,
+    currentFlow?.name,
+    currentFlow?.description,
+  ]);
 
   // Run validation when modal opens
   useEffect(() => {
@@ -237,11 +256,16 @@ export default function PublishFlowModal({
   const handleFileSelect = (file: File) => {
     // Validate file type
     const fileExtension = file.name.split(".").pop()?.toLowerCase();
-    if (!fileExtension || !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)) {
+    if (
+      !fileExtension ||
+      !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
+    ) {
       setErrorData({
         title: "Invalid File Type",
         list: [
-          `Please upload an image file (${ALLOWED_IMAGE_INPUT_EXTENSIONS.join(", ")})`,
+          `Please upload an image file (${ALLOWED_IMAGE_INPUT_EXTENSIONS.join(
+            ", "
+          )})`,
         ],
       });
       return;
@@ -363,7 +387,10 @@ export default function PublishFlowModal({
         });
 
         uploaded.push(fileName);
-        setUploadedSampleFiles((prev) => [...prev, { name: file.name, path: fileName }]);
+        setUploadedSampleFiles((prev) => [
+          ...prev,
+          { name: file.name, path: fileName },
+        ]);
       }
     } catch (error: any) {
       console.error("Sample upload error:", error);
@@ -420,7 +447,9 @@ export default function PublishFlowModal({
     if (nameValidation && !nameValidation.available) {
       setErrorData({
         title: "Cannot publish flow",
-        list: [nameValidation.message || "This marketplace name is already taken"],
+        list: [
+          nameValidation.message || "This marketplace name is already taken",
+        ],
       });
       return;
     }
@@ -453,7 +482,9 @@ export default function PublishFlowModal({
     // Sample Output removed: no parsing or patching on publish
 
     // Upload logo if a new one was selected
-    let finalLogoUrl = logoRemoved ? null : (logoUrl || existingPublishedData?.flow_icon || null);
+    let finalLogoUrl = logoRemoved
+      ? null
+      : logoUrl || existingPublishedData?.flow_icon || null;
     if (logoFile && !logoUrl && !logoRemoved) {
       const uploadedLogoUrl = await uploadLogoToAzure();
       if (uploadedLogoUrl) {
@@ -477,7 +508,9 @@ export default function PublishFlowModal({
           // Sample input payload
           storage_account: DEFAULT_STORAGE_ACCOUNT,
           container_name: DEFAULT_CONTAINER_NAME,
-          file_names: uploadedSampleFiles.length ? uploadedSampleFiles.map((f) => f.path) : undefined,
+          file_names: uploadedSampleFiles.length
+            ? uploadedSampleFiles.map((f) => f.path)
+            : undefined,
           sample_text: sampleTexts.filter((t) => t.trim().length > 0),
           // sample_output removed from publish payload
         },
@@ -492,8 +525,8 @@ export default function PublishFlowModal({
           try {
             const updatedFlow = await getFlow({ id: flowId });
             if (updatedFlow) {
-              setCurrentFlow(updatedFlow);  // Update flowsManagerStore
-              setCurrentFlowInFlowStore(updatedFlow);  // Update flowStore
+              setCurrentFlow(updatedFlow); // Update flowsManagerStore
+              setCurrentFlowInFlowStore(updatedFlow); // Update flowStore
             }
           } catch (error) {
             console.error("Failed to refetch flow after publish:", error);
@@ -524,15 +557,15 @@ export default function PublishFlowModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-hidden">
+      <DialogContent className="sm:max-w-[900px] max-h-[95vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Publish the Agent to Marketplace</DialogTitle>
+          <DialogTitle>Publish the Agent to MarketPlace</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4 overflow-y-auto pr-2">
+        <div className="space-y-4 my-6 overflow-y-auto pr-2 max-h-[calc(100vh-192px)] ">
           <div className="space-y-2">
             <Label htmlFor="marketplace-name">
-              Name <span className="text-destructive">*</span>
+              Name <span className="text-error">*</span>
             </Label>
             <div className="relative">
               <Input
@@ -543,28 +576,32 @@ export default function PublishFlowModal({
                 required
                 className={
                   nameValidation && !nameValidation.available
-                    ? "border-destructive focus-visible:ring-destructive"
+                    ? "border-error focus-visible:ring-error"
                     : ""
                 }
               />
-              {(isValidatingName || marketplaceName !== debouncedMarketplaceName) && marketplaceName.trim().length > 0 && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                </div>
-              )}
+              {(isValidatingName ||
+                marketplaceName !== debouncedMarketplaceName) &&
+                marketplaceName.trim().length > 0 && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  </div>
+                )}
             </div>
             <div className="h-4">
               {nameValidation && !nameValidation.available && (
-                <div className="flex items-start gap-2 text-sm text-destructive">
+                <div className="flex items-start gap-2 text-sm text-error">
                   <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <span>{nameValidation.message}</span>
                 </div>
               )}
-              {nameValidation && nameValidation.available && marketplaceName.trim().length > 0 && (
-                <p className="text-sm text-green-600 dark:text-green-500">
-                  ✓ This name is available
-                </p>
-              )}
+              {nameValidation &&
+                nameValidation.available &&
+                marketplaceName.trim().length > 0 && (
+                  <p className="text-sm text-green-600 dark:text-green-500">
+                    ✓ This name is available
+                  </p>
+                )}
             </div>
             <p className="text-xs text-muted-foreground">
               Name for workflow in the marketplace
@@ -574,7 +611,7 @@ export default function PublishFlowModal({
           <div className="flex gap-4">
             <div className="space-y-2 flex-[2]">
               <Label htmlFor="version">
-                Version <span className="text-destructive">*</span>
+                Version <span className="text-error">*</span>
               </Label>
               <Input
                 id="version"
@@ -611,7 +648,7 @@ export default function PublishFlowModal({
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-secondary-font">
               Describe what this agent does and how to use it
             </p>
           </div>
@@ -621,55 +658,70 @@ export default function PublishFlowModal({
             <Label htmlFor="agent-logo">Agent Logo (Optional)</Label>
             <div className="flex gap-4 items-start">
               {/* Logo Preview */}
-              {!logoRemoved && (logoPreviewUrl || existingPublishedData?.flow_icon || approvedLogoBlobPath) && (
-                <div className="relative h-24 w-24 rounded-lg border bg-muted flex-shrink-0">
-                  {logoPreviewUrl ? (
-                    // Local file preview (before upload)
-                    <img
-                      src={logoPreviewUrl}
-                      alt="Agent logo preview"
-                      className="h-full w-full object-contain rounded-lg p-1"
-                    />
-                  ) : (
-                    // Existing logo (from published data or approved submission) - generate signed URL
-                    <div className="h-full w-full">
-                      <AgentLogo
-                        blobPath={existingPublishedData?.flow_icon || approvedLogoBlobPath || null}
-                        updatedAt={existingPublishedData?.flow_icon_updated_at || null}
-                        altText="Agent logo preview"
-                        className="h-full w-full"
+              {!logoRemoved &&
+                (logoPreviewUrl ||
+                  existingPublishedData?.flow_icon ||
+                  approvedLogoBlobPath) && (
+                  <div className="flex h-[60px] w-[70px] items-center justify-center rounded-lg border relative">
+                    {logoPreviewUrl ? (
+                      // Local file preview (before upload)
+                      <img
+                        src={logoPreviewUrl}
+                        alt="Agent logo preview"
+                        className="h-full w-full object-contain rounded-lg p-1"
                       />
-                    </div>
-                  )}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 p-0"
-                    onClick={handleRemoveLogo}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+                    ) : (
+                      // Existing logo (from published data or approved submission) - generate signed URL
+                      <div className="h-full w-full">
+                        <AgentLogo
+                          blobPath={
+                            existingPublishedData?.flow_icon ||
+                            approvedLogoBlobPath ||
+                            null
+                          }
+                          updatedAt={
+                            existingPublishedData?.flow_icon_updated_at || null
+                          }
+                          altText="Agent logo preview"
+                          className="h-full w-full"
+                        />
+                      </div>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 p-0"
+                      onClick={handleRemoveLogo}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
 
               {/* Upload Dropzone */}
-              {(logoRemoved || (!logoPreviewUrl && !existingPublishedData?.flow_icon && !approvedLogoBlobPath)) && (
+              {(logoRemoved ||
+                (!logoPreviewUrl && !existingPublishedData?.flow_icon)) && (
                 <div
-                  className={`flex h-24 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed transition-colors ${
-                    isDragging
-                      ? "border-primary bg-primary/10"
-                      : "border-muted-foreground/25 hover:border-primary hover:bg-muted"
-                  }`}
+                  className={`flex flex-col py-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-primary-border hover:border-secondary-border border-dashed p-8 transition-colors `}
                   onClick={() => fileInputRef.current?.click()}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                 >
-                  <Upload className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    {isDragging ? "Drop logo here" : "Drag and drop or click to upload"}
-                  </span>
+                  {/* <Upload className="h-5 w-5 text-muted-foreground" /> */}
+                  <RiUploadCloud2Fill className="h-14 w-14 text-secondary-font opacity-70" />
+                  <p className="text-center">
+                    <span className="text-[13px] font-medium text-secondary-font block">
+                      {isDragging
+                        ? "Drop logo here"
+                        : "Drag and drop or click to upload"}
+                    </span>
+                    <span className="text-[10px] text-secondary-font italic opacity-70 block">
+                      Supported formats:{" "}
+                      {ALLOWED_IMAGE_INPUT_EXTENSIONS.join(", ").toUpperCase()}
+                    </span>
+                  </p>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -683,20 +735,23 @@ export default function PublishFlowModal({
                 </div>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Upload a logo for your agent (PNG, JPG, JPEG). This will be displayed in the marketplace.
-            </p>
+            {/* <p className="text-xs text-muted-foreground">
+              Upload a logo for your agent (PNG, JPG, JPEG). This will be
+              displayed in the marketplace.
+            </p> */}
           </div>
 
           {/* Sample Inputs Section */}
           {(hasFilePathInput || hasTextOrChatInput) && (
-            <div className="space-y-4">
+            <div className="space-y-1">
               <Label>Sample Inputs (Optional)</Label>
               {/* Sample Input Files */}
               {hasFilePathInput && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Sample Input files</span>
+                    <span className="text-sm text-muted-foreground">
+                      Sample Input files
+                    </span>
                     <div className="flex items-center gap-2">
                       <Button
                         type="button"
@@ -712,8 +767,7 @@ export default function PublishFlowModal({
                         className="text-sm text-primary hover:underline"
                         onClick={() => sampleFilesInputRef.current?.click()}
                         disabled={isUploadingSamples}
-                      >
-                      </button>
+                      ></button>
                     </div>
                     <input
                       ref={sampleFilesInputRef}
@@ -726,7 +780,10 @@ export default function PublishFlowModal({
                   {uploadedSampleFiles.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {uploadedSampleFiles.map((f, idx) => (
-                        <div key={`${f.path}-${idx}`} className="flex items-center gap-2 bg-muted px-2 py-1 rounded">
+                        <div
+                          key={`${f.path}-${idx}`}
+                          className="flex items-center gap-2 bg-muted px-2 py-1 rounded"
+                        >
                           <span className="text-xs">{f.name}</span>
                           <Button
                             type="button"
@@ -735,7 +792,7 @@ export default function PublishFlowModal({
                             className="h-6 w-6 p-0"
                             onClick={() => removeSampleFile(idx)}
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-4 w-4 !text-error" />
                           </Button>
                         </div>
                       ))}
@@ -745,28 +802,37 @@ export default function PublishFlowModal({
                   {/* Existing Sample Files (from published data) */}
                   {existingFiles.length > 0 && (
                     <div className="mt-2 space-y-1">
-                      <p className="text-xs text-muted-foreground">Existing files</p>
+                      <p className="text-xs text-muted-foreground">
+                        Existing files
+                      </p>
                       <div className="flex flex-wrap gap-2">
                         {existingFiles.map((f) => (
-                          <div key={`${f.sampleId}-${f.rawName}`} className="flex items-center gap-2 bg-muted px-2 py-1 rounded">
+                          <div
+                            key={`${f.sampleId}-${f.rawName}`}
+                            className="flex items-center gap-2 bg-muted px-2 py-1 rounded"
+                          >
                             <span className="text-xs">{f.displayName}</span>
                             <Button
                               type="button"
                               size="sm"
                               variant="ghost"
                               className="h-6 w-6 p-0"
-                            onClick={() =>
-                              deleteInputSampleFile(
-                                { sample_id: f.sampleId, name: f.rawName },
-                                {
-                                  onError: (error: any) =>
-                                    setErrorData({
-                                      title: "Failed to remove file",
-                                      list: [error?.response?.data?.detail || error?.message || "Unknown error"],
-                                    }),
-                                }
-                              )
-                            }
+                              onClick={() =>
+                                deleteInputSampleFile(
+                                  { sample_id: f.sampleId, name: f.rawName },
+                                  {
+                                    onError: (error: any) =>
+                                      setErrorData({
+                                        title: "Failed to remove file",
+                                        list: [
+                                          error?.response?.data?.detail ||
+                                            error?.message ||
+                                            "Unknown error",
+                                        ],
+                                      }),
+                                  }
+                                )
+                              }
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -782,22 +848,38 @@ export default function PublishFlowModal({
               {hasTextOrChatInput && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Sample Input Text</span>
-                    <button type="button" className="text-sm text-primary hover:underline" onClick={addSampleText}>
+                    <span className="text-sm text-secondary-font">
+                      Sample Input Text
+                    </span>
+                    <button
+                      type="button"
+                      className="text-sm text-menu hover:underline"
+                      onClick={addSampleText}
+                    >
                       + Add More
                     </button>
                   </div>
                   {sampleTexts.length > 0 && (
                     <div className="space-y-3">
                       {sampleTexts.map((text, idx) => (
-                        <div key={`sample-text-${idx}`} className="flex items-center gap-2">
+                        <div
+                          key={`sample-text-${idx}`}
+                          className="flex items-center gap-2"
+                        >
                           <Input
                             value={text}
-                            onChange={(e) => updateSampleText(idx, e.target.value)}
+                            onChange={(e) =>
+                              updateSampleText(idx, e.target.value)
+                            }
                             placeholder="Enter Sample Input Text"
                           />
-                          <Button type="button" size="sm" variant="ghost" onClick={() => removeSampleText(idx)}>
-                            <X className="h-4 w-4" />
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removeSampleText(idx)}
+                          >
+                            <X className="h-4 w-4 text-error" />
                           </Button>
                         </div>
                       ))}
@@ -807,23 +889,38 @@ export default function PublishFlowModal({
                   {/* Existing Sample Texts (grouped by sample record) */}
                   {existingSampleRecords.length > 0 && (
                     <div className="mt-2 space-y-2">
-                      <p className="text-xs text-muted-foreground">Existing sample texts</p>
+                      <p className="text-xs text-muted-foreground">
+                        Existing sample texts
+                      </p>
                       {existingSampleRecords.map((rec) => (
-                        <div key={`existing-sample-texts-${rec.id}`} className="space-y-2">
+                        <div
+                          key={`existing-sample-texts-${rec.id}`}
+                          className="space-y-2"
+                        >
                           {(rec.sample_text ?? []).map((txt, index) => (
-                            <div key={`${rec.id}-${index}`} className="flex items-center gap-2">
+                            <div
+                              key={`${rec.id}-${index}`}
+                              className="flex items-center gap-2"
+                            >
                               <Input
                                 defaultValue={txt}
                                 onBlur={(e) => {
                                   const next = [...(rec.sample_text ?? [])];
                                   next[index] = e.target.value;
                                   patchInputSample(
-                                    { sample_id: rec.id, data: { sample_text: next } },
+                                    {
+                                      sample_id: rec.id,
+                                      data: { sample_text: next },
+                                    },
                                     {
                                       onError: (error: any) =>
                                         setErrorData({
                                           title: "Failed to update sample text",
-                                          list: [error?.response?.data?.detail || error?.message || "Unknown error"],
+                                          list: [
+                                            error?.response?.data?.detail ||
+                                              error?.message ||
+                                              "Unknown error",
+                                          ],
                                         }),
                                     }
                                   );
@@ -840,7 +937,11 @@ export default function PublishFlowModal({
                                       onError: (error: any) =>
                                         setErrorData({
                                           title: "Failed to remove sample text",
-                                          list: [error?.response?.data?.detail || error?.message || "Unknown error"],
+                                          list: [
+                                            error?.response?.data?.detail ||
+                                              error?.message ||
+                                              "Unknown error",
+                                          ],
                                         }),
                                     }
                                   )
@@ -856,28 +957,32 @@ export default function PublishFlowModal({
                   )}
                 </div>
               )}
-
             </div>
           )}
 
           {validationErrors.length === 0 && (
-            <div className="rounded-lg bg-muted p-4 text-sm space-y-2">
-              <p className="font-medium">What happens when you publish?</p>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                <li>Your flow will be visible to all users in the Marketplace</li>
+            <div className="rounded-lg bg-accent-light p-4 text-sm space-y-2">
+              <p className="font-medium text-primary-font">
+                What happens when you publish?
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-secondary-font">
+                <li>
+                  Your flow will be visible to all users in the Marketplace
+                </li>
                 <li>To update the marketplace, you'll need to re-publish</li>
               </ul>
             </div>
           )}
 
           {validationErrors.length > 0 && (
-            <div className="rounded-md bg-red-50 p-4 border border-red-200">
-              <h4 className="text-sm font-semibold text-red-800 mb-2">
-                ⚠️ Cannot Publish - Please Fix These Issues:
+            <div className="rounded-md bg-error-bg p-4 border border-error">
+              <h4 className="flex items-center gap-2 text-sm font-medium text-error mb-2">
+                <MessageSquareWarningIcon />
+                <span>Cannot Publish - Please Fix These Issues:</span>
               </h4>
               <ul className="list-disc list-inside space-y-1">
                 {validationErrors.map((error, index) => (
-                  <li key={index} className="text-sm text-red-700">
+                  <li key={index} className="text-sm text-error">
                     {error}
                   </li>
                 ))}

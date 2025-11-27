@@ -70,7 +70,7 @@ export default function FloatComponent({
   const getInputClassName = () => {
     return cn(
       editNode ? "input-edit-node" : "",
-      "nopan nodelete nodrag noflow primary-input",
+      "nopan nodelete nodrag noflow primary-input"
     );
   };
 

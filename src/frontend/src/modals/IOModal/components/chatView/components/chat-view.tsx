@@ -45,14 +45,14 @@ export default function ChatView({
   const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const currentFlowId = useGetFlowId();
   const [chatHistory, setChatHistory] = useState<ChatMessageType[] | undefined>(
-    undefined,
+    undefined
   );
   const messages = useMessagesStore((state) => state.messages);
   const nodes = useFlowStore((state) => state.nodes);
   const chatInput = inputs.find((input) => input.type === "ChatInput");
   const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
   const displayLoadingMessage = useMessagesStore(
-    (state) => state.displayLoadingMessage,
+    (state) => state.displayLoadingMessage
   );
 
   const isBuilding = useFlowStore((state) => state.isBuilding);
@@ -68,7 +68,7 @@ export default function ChatView({
       .filter(
         (message) =>
           message.flow_id === currentFlowId &&
-          (visibleSession === message.session_id || visibleSession === null),
+          (visibleSession === message.session_id || visibleSession === null)
       )
       .map((message) => {
         let files = message.files;
@@ -103,12 +103,12 @@ export default function ChatView({
       });
 
     const finalChatHistory = [...messagesFromMessagesStore].sort(
-      sortSenderMessages,
+      sortSenderMessages
     );
 
     if (messages.length === 0 && !isBuilding && chatInputNode && isTabHidden) {
       setChatValueStore(
-        chatInputNode.data.node.template["input_value"].value ?? "",
+        chatInputNode.data.node.template["input_value"].value ?? ""
       );
     }
 
@@ -139,7 +139,7 @@ export default function ChatView({
 
   const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
     setIsDragging,
-    !!playgroundPage,
+    !!playgroundPage
   );
 
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -158,7 +158,7 @@ export default function ChatView({
 
   const flowRunningSkeletonMemo = useMemo(() => <FlowRunningSqueleton />, []);
   const isVoiceAssistantActive = useVoiceStore(
-    (state) => state.isVoiceAssistantActive,
+    (state) => state.isVoiceAssistantActive
   );
 
   return (
@@ -168,7 +168,7 @@ export default function ChatView({
         visibleSession ? "h-[95%]" : "h-full",
         sidebarOpen &&
           !isVoiceAssistantActive &&
-          "pointer-events-none blur-sm lg:pointer-events-auto lg:blur-0",
+          "pointer-events-none blur-sm lg:pointer-events-auto lg:blur-0"
       )}
       onDragOver={dragOver}
       onDragEnter={dragEnter}
@@ -200,11 +200,11 @@ export default function ChatView({
                     className="h-10 w-10 scale-[1.5]"
                   />
                   <div className="flex flex-col items-center justify-center">
-                    <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
+                    <h3 className="mt-2 text-2xl font-semibold text-menu">
                       New chat
                     </h3>
                     <p
-                      className="text-lg text-muted-foreground"
+                      className="text-md text-secondary-font"
                       data-testid="new-chat-text"
                     >
                       <TextEffectPerChar>

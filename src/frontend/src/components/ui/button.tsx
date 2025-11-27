@@ -5,42 +5,43 @@ import { cn } from "../../utils/utils";
 import ForwardedIconComponent from "../common/genericIconComponent";
 
 const buttonVariants = cva(
-  "noflow nopan nodelete nodrag inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-70 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "noflow nopan nodelete nodrag inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[4px] text-sm font-medium cursor-pointer transition-colors disabled:opacity-70 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground  hover:bg-primary-hover",
-        destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        default: "bg-primary hover:bg-secondary text-white",
+        // destructive:
+        //   "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border border-input hover:bg-input hover:text-accent-foreground ",
-        outlineAmber:
-          "border border-accent-amber-foreground hover:bg-accent-amber",
-        primary:
-          "border bg-background text-secondary-foreground hover:bg-muted hover:shadow-sm",
-        warning:
-          "bg-warning-foreground text-warning-text hover:bg-warning-foreground/90 hover:shadow-sm",
-        secondary:
-          "border border-muted bg-muted text-secondary-foreground hover:bg-secondary-foreground/5",
-        ghost:
-          "text-foreground hover:bg-accent hover:text-accent-foreground disabled:!bg-transparent",
-        ghostActive:
-          "bg-muted text-foreground hover:bg-secondary-hover hover:text-accent-foreground",
-        menu: "hover:bg-muted hover:text-accent-foreground focus:!ring-0 focus-visible:!ring-0",
-        "menu-active":
-          "font-semibold hover:bg-muted hover:text-accent-foreground focus-visible:!ring-offset-0",
-        link: "underline-offset-4 text-primary",
+          "bg-background-surface hover:bg-accent border border-accent text-primary-font",
+        icon: "bg-white/10 hover:bg-white/50 text-white rounded-full",
+        // outlineAmber:
+        //   "border border-accent-amber-foreground hover:bg-accent-amber",
+        // primary:
+        //   "border bg-background text-secondary-foreground hover:bg-muted hover:shadow-sm",
+        // warning:
+        //   "bg-warning-foreground text-warning-text hover:bg-warning-foreground/90 hover:shadow-sm",
+        // secondary:
+        //   "border border-muted bg-muted text-secondary-foreground hover:bg-secondary-foreground/5",
+        ghost: "text-secondary-font border border-accent !font-normal",
+        // ghostActive:
+        //   "bg-muted text-foreground hover:bg-secondary-hover hover:text-accent-foreground",
+        // menu: "hover:bg-muted hover:text-accent-foreground focus:!ring-0 focus-visible:!ring-0",
+        // "menu-active":
+        //   "font-semibold hover:bg-muted hover:text-accent-foreground focus-visible:!ring-offset-0",
+        link: "text-link font-medium",
+        error: "text-error font-medium border border-error hover:bg-error-bg",
       },
       size: {
         default: "h-10 py-2 px-4",
+        xs: "py-0.5 px-3",
+        sm: "h-9 px-3",
         md: "h-8 py-2 px-4",
-        sm: "h-9 px-3 rounded-md",
-        xs: "py-0.5 px-3 rounded-md",
-        lg: "h-11 px-8 rounded-md",
-        iconMd: "p-1.5 rounded-md",
-        icon: "p-1 rounded-md",
-        iconSm: "p-0.5 rounded-md",
-        "node-toolbar": "py-[6px] px-[6px] rounded-md",
+        lg: "h-[38px] text-sm px-4",
+        icon: "p-1",
+        iconSm: "p-0.5",
+        iconMd: "p-1..5",
+        "node-toolbar": "py-[6px] px-[6px]",
       },
     },
     defaultVariants: {

@@ -65,17 +65,18 @@ export default function PublishDropdown() {
   const isFlowOwner = flowUserId && userData?.id && flowUserId === userData.id;
 
   // Download YAML mutation
-  const { mutate: downloadYaml, isPending: isDownloadingYaml } = useDownloadYaml({
-    onSuccess: () => {
-      // No need to show success message as the file download is self-evident
-    },
-    onError: (error) => {
-      setErrorData({
-        title: "Failed to download YAML",
-        list: [(error as Error).message],
-      });
-    },
-  });
+  const { mutate: downloadYaml, isPending: isDownloadingYaml } =
+    useDownloadYaml({
+      onSuccess: () => {
+        // No need to show success message as the file download is self-evident
+      },
+      onError: (error) => {
+        setErrorData({
+          title: "Failed to download YAML",
+          list: [(error as Error).message],
+        });
+      },
+    });
   const isPublishedToMarketplace = publishCheck?.is_published;
 
   const handlePublishedSwitch = async (checked: boolean) => {
@@ -93,7 +94,7 @@ export default function PublishDropdown() {
                   return updatedFlow;
                 }
                 return flow;
-              }),
+              })
             );
             setCurrentFlow(updatedFlow);
           } else {
@@ -108,7 +109,7 @@ export default function PublishDropdown() {
             list: [e.message],
           });
         },
-      },
+      }
     );
   };
 
@@ -162,7 +163,7 @@ export default function PublishDropdown() {
             </DropdownMenuItem>
           )} */}
           <DropdownMenuItem
-            className="deploy-dropdown-item group"
+            className=""
             onClick={() => setOpenApiModal(true)}
             data-testid="api-access-item"
           >
@@ -170,19 +171,21 @@ export default function PublishDropdown() {
             <span>API access</span>
           </DropdownMenuItem>
           <DropdownMenuItem
-            className="deploy-dropdown-item group"
+            className=""
             onClick={() => setOpenExportModal(true)}
           >
             <IconComponent name="Download" className={`icon-size mr-2`} />
             <span>Export</span>
           </DropdownMenuItem>
           <DropdownMenuItem
-            className="deploy-dropdown-item group"
+            className=""
             onClick={handleExportYaml}
             disabled={isDownloadingYaml || !flowId}
           >
             <IconComponent name="FileText" className={`icon-size mr-2`} />
-            <span>{isDownloadingYaml ? "Downloading..." : "Export Specification"}</span>
+            <span>
+              {isDownloadingYaml ? "Downloading..." : "Export Specification"}
+            </span>
           </DropdownMenuItem>
           <CustomLink
             className={cn("flex-1")}
@@ -190,7 +193,7 @@ export default function PublishDropdown() {
             target={customMcpOpen()}
           >
             <DropdownMenuItem
-              className="deploy-dropdown-item group"
+              className=""
               onClick={() => {}}
               data-testid="mcp-server-item"
             >
@@ -205,7 +208,7 @@ export default function PublishDropdown() {
           {ENABLE_WIDGET && (
             <DropdownMenuItem
               onClick={() => setOpenEmbedModal(true)}
-              className="deploy-dropdown-item group"
+              className=""
             >
               <IconComponent name="Columns2" className={`icon-size mr-2`} />
               <span>Embed into site</span>
@@ -213,7 +216,6 @@ export default function PublishDropdown() {
           )}
 
           {/* Shareable Playground section has been removed */}
-
         </DropdownMenuContent>
       </DropdownMenu>
       <ApiModal open={openApiModal} setOpen={setOpenApiModal}>

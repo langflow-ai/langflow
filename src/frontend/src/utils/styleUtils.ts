@@ -74,7 +74,7 @@ export const toolModeGradient =
   "linear-gradient(-60deg,var(--tool-mode-gradient-1) 0%,var(--tool-mode-gradient-2) 100%)";
 
 export const swatchColors = [
-  "bg-secondary-bg text-secondary-blue",
+  // "bg-secondary-bg text-secondary-blue",
   // "bg-neon-fuschia text-white",
   // "bg-digital-orchid text-plasma-purple",
   // "bg-plasma-purple text-digital-orchid",

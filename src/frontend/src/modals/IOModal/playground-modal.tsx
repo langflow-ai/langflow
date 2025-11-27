@@ -47,10 +47,10 @@ export default function IOModal({
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const newChatOnPlayground = useFlowStore(
-    (state) => state.newChatOnPlayground,
+    (state) => state.newChatOnPlayground
   );
   const setNewChatOnPlayground = useFlowStore(
-    (state) => state.setNewChatOnPlayground,
+    (state) => state.setNewChatOnPlayground
   );
 
   const { flowIcon, flowId, flowGradient, flowName } = useFlowStore(
@@ -59,18 +59,18 @@ export default function IOModal({
       flowId: state.currentFlow?.id,
       flowGradient: state.currentFlow?.gradient,
       flowName: state.currentFlow?.name,
-    })),
+    }))
   );
   const filteredInputs = inputs.filter((input) => input.type !== "ChatInput");
   const chatInput = inputs.find((input) => input.type === "ChatInput");
   const filteredOutputs = outputs.filter(
-    (output) => output.type !== "ChatOutput",
+    (output) => output.type !== "ChatOutput"
   );
   const chatOutput = outputs.find((output) => output.type === "ChatOutput");
   const filteredNodes = nodes.filter(
     (node) =>
       inputs.some((input) => input.id === node.id) ||
-      filteredOutputs.some((output) => output.id === node.id),
+      filteredOutputs.some((output) => output.id === node.id)
   );
   const haveChat = chatInput || chatOutput;
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -82,7 +82,7 @@ export default function IOModal({
   const { mutate: deleteSessionFunction } = useDeleteSession();
 
   const [visibleSession, setvisibleSession] = useState<string | undefined>(
-    currentFlowId,
+    currentFlowId
   );
   const PlaygroundTitle = playgroundPage && flowName ? flowName : "Playground";
 
@@ -94,7 +94,7 @@ export default function IOModal({
     {
       id: currentFlowId,
     },
-    { enabled: open },
+    { enabled: open }
   );
 
   useEffect(() => {
@@ -157,7 +157,7 @@ export default function IOModal({
             title: "Error deleting session.",
           });
         },
-      },
+      }
     );
   }
 
@@ -182,7 +182,7 @@ export default function IOModal({
   const [sessions, setSessions] = useState<string[]>([]);
   const [sessionId, setSessionId] = useState<string>(currentFlowId);
   const setCurrentSessionId = useUtilityStore(
-    (state) => state.setCurrentSessionId,
+    (state) => state.setCurrentSessionId
   );
 
   const { isFetched: messagesFetched, refetch: refetchMessages } =
@@ -194,7 +194,7 @@ export default function IOModal({
           session_id: visibleSession,
         },
       },
-      { enabled: open },
+      { enabled: open }
     );
 
   const chatValue = useUtilityStore((state) => state.chatValueStore);
@@ -225,7 +225,7 @@ export default function IOModal({
         });
       }
     },
-    [isBuilding, setIsBuilding, chatValue, chatInput?.id, sessionId, buildFlow],
+    [isBuilding, setIsBuilding, chatValue, chatInput?.id, sessionId, buildFlow]
   );
 
   useEffect(() => {
@@ -238,7 +238,7 @@ export default function IOModal({
           const result = await refetchSessions();
           if (result.data?.sessions && result.data.sessions.length > 0) {
             setvisibleSession(
-              result.data.sessions[result.data.sessions.length - 1],
+              result.data.sessions[result.data.sessions.length - 1]
             );
           }
         } catch (error) {
@@ -268,7 +268,7 @@ export default function IOModal({
   }, [visibleSession]);
 
   const setPlaygroundScrollBehaves = useUtilityStore(
-    (state) => state.setPlaygroundScrollBehaves,
+    (state) => state.setPlaygroundScrollBehaves
   );
 
   useEffect(() => {
@@ -361,32 +361,32 @@ export default function IOModal({
                 "flex h-full flex-shrink-0 flex-col justify-start overflow-hidden transition-all duration-300",
                 sidebarOpen
                   ? "absolute z-50 lg:relative lg:w-1/5 lg:max-w-[280px]"
-                  : "w-0",
+                  : "w-0"
               )}
             >
               <div
                 className={cn(
-                  "relative flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-4 text-center custom-scroll dark:bg-canvas",
-                  playgroundPage ? "pt-[15px]" : "pt-3.5",
+                  "relative flex h-full flex-col overflow-y-auto border-r border-primary-border bg-background-mainBg p-4 text-center custom-scroll",
+                  playgroundPage ? "pt-[15px]" : "pt-3.5"
                 )}
               >
-                <div className="flex items-center justify-between gap-2 pb-8 align-middle">
+                <div className="flex items-center justify-between gap-2 pb-6 align-middle">
                   <div className="flex items-center gap-2">
                     <div
                       className={cn(
-                        `flex rounded p-1`,
-                        swatchColors[swatchIndex],
+                        `flex rounded p-1 bg-accent`,
+                        swatchColors[swatchIndex]
                       )}
                     >
                       <IconComponent
                         name={flowIcon ?? "Workflow"}
-                        className="h-3.5 w-3.5"
+                        className="h-3.5 w-3.5 text-secondary"
                       />
                     </div>
                     {sidebarOpen && (
-                      <div className="truncate font-semibold">
+                      <h2 className="truncate font-medium text-primary-font">
                         {PlaygroundTitle}
-                      </div>
+                      </h2>
                     )}
                   </div>
                   <ShadTooltip
@@ -395,13 +395,13 @@ export default function IOModal({
                     content="Hide sidebar"
                   >
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       className="flex h-8 w-8 items-center justify-center !p-0"
                       onClick={() => setSidebarOpen(!sidebarOpen)}
                     >
                       <IconComponent
                         name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
-                        className="h-[18px] w-[18px] text-ring"
+                        className="h-[18px] w-[18px] text-menu"
                       />
                     </Button>
                   </ShadTooltip>
@@ -426,7 +426,7 @@ export default function IOModal({
                     </div>
                     <Button
                       onClick={LangflowButtonClick}
-                      variant="primary"
+                      variant="outline"
                       className="w-full !rounded-xl shadow-lg"
                     >
                       <AutonomizeIcon />
@@ -444,11 +444,11 @@ export default function IOModal({
                   content="Built with Ai Studio"
                 >
                   <Button
-                    variant="primary"
+                    variant="outline"
                     className="h-12 w-12 !rounded-xl !p-4 shadow-lg"
                     onClick={LangflowButtonClick}
                   >
-                    <AutonomizeIcon  />
+                    <AutonomizeIcon />
                   </Button>
                 </ShadTooltip>
               </div>

@@ -41,7 +41,7 @@ export default function ErrorAlert({
             removeAlert(id);
           }, 500);
         }}
-        className="error-build-message noflow nowheel nopan nodelete nodrag"
+        className="error-build-message noflow nowheel nopan nodelete nodrag bg-error-notificationBg"
       >
         <div className="flex">
           <div className="flex-shrink-0">
@@ -52,10 +52,12 @@ export default function ErrorAlert({
             />
           </div>
           <div className="ml-3">
-            <h3 className="error-build-foreground line-clamp-2">{title}</h3>
+            <h3 className="error-build-foreground text-error line-clamp-2">
+              {title}
+            </h3>
             {list?.length !== 0 &&
             list?.some((item) => item !== null && item !== undefined) ? (
-              <div className="mt-2 text-sm text-error-foreground">
+              <div className="mt-2 text-sm text-secondary-font">
                 <ul className="list-disc space-y-1 pl-5 align-top">
                   {list.map((item, index) => (
                     <li key={index} className="word-break-break-word">

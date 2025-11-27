@@ -17,24 +17,21 @@ const ApiKeyHeaderComponent = ({
   const modalProps = getModalPropsApiKey();
   return (
     <>
-      <div className="flex w-full items-start justify-between gap-6">
-        <div className="flex w-full flex-col">
-          <h2 className="flex items-center text-lg font-semibold tracking-tight">
-            AI Studio API Keys
-            <ForwardedIconComponent
-              name="Key"
-              className="ml-2 h-5 w-5 text-primary"
-            />
+      <div className="flex w-full items-center justify-between gap-4">
+        <div className="flex flex-col w-full">
+          <h2 className="text-primary-font flex gap-2 items-center text-lg font-medium">
+            Ai Studio API Keys
+            <ForwardedIconComponent name="Key" className="h-4 w-4 text-menu" />
           </h2>
-          <p className="text-sm text-muted-foreground">{API_PAGE_PARAGRAPH}</p>
+          <p className="text-sm text-secondary-font">{API_PAGE_PARAGRAPH}</p>
         </div>
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex items-center gap-2">
           <SecretKeyModal
             modalProps={modalProps}
             data={userId}
             onCloseModal={fetchApiKeys}
           >
-            <Button data-testid="api-key-button-store" variant="primary">
+            <Button data-testid="api-key-button-store" variant="default">
               <ForwardedIconComponent name="Plus" className="w-4" />
               Add New
             </Button>

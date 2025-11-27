@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import useDragStart from "@/components/core/cardComponent/hooks/use-on-drag-start";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -48,7 +48,9 @@ const ListComponent = ({
 
   const { getIcon } = useGetTemplateStyle(flowData);
 
-  const editFlowLink = `/flow/${flowData.id}${folderId ? `/folder/${folderId}` : ""}`;
+  const editFlowLink = `/flow/${flowData.id}${
+    folderId ? `/folder/${folderId}` : ""
+  }`;
 
   const handleClick = async () => {
     if (shiftPressed) {
@@ -79,7 +81,7 @@ const ListComponent = ({
 
   const descriptionModal = useDescriptionModal(
     [flowData?.id],
-    flowData.is_component ? "component" : "flow",
+    flowData.is_component ? "component" : "flow"
   );
 
   const swatchIndex =
@@ -110,105 +112,107 @@ const ListComponent = ({
         draggable
         onDragStart={onDragStart}
         onClick={handleClick}
-        className={`flex flex-row bg-background ${
+        className={`flex bg-background border border-primary-border ${
           isComponent ? "cursor-default" : "cursor-pointer"
-        } group justify-between rounded-lg border-none px-4 py-3 shadow-none hover:bg-muted`}
+        } group justify-between rounded-lg shadow-none hover:shadow-md`}
         data-testid="list-card"
       >
-        <div
-          className={`flex min-w-0 ${
-            isComponent ? "cursor-default" : "cursor-pointer"
-          } items-center gap-4`}
-        >
-          <div className="group/checkbox relative flex items-center">
-            <div
-              className={cn(
-                "z-20 flex w-0 items-center transition-all duration-300",
-                selected && "w-10",
-              )}
-            >
-              <Checkbox
-                checked={selected}
-                onCheckedChange={(checked) => setSelected(checked as boolean)}
-                onClick={(e) => e.stopPropagation()}
-                className={cn(
-                  "ml-2 transition-opacity focus-visible:ring-0",
-                  !selected && "opacity-0 group-hover/checkbox:opacity-100",
-                )}
-                data-testid={`checkbox-${flowData.id}`}
-              />
-            </div>
-            <div
-              className={cn(
-                `item-center flex justify-center rounded-lg p-1.5 transition-opacity duration-200`,
-                swatchColors[swatchIndex],
-                selected
-                  ? "duration-300"
-                  : "group-hover/checkbox:pointer-events-none group-hover/checkbox:opacity-0",
-              )}
-            >
-              <ForwardedIconComponent
-                name={flowData?.icon || icon}
-                aria-hidden="true"
-                className="flex h-5 w-5 items-center justify-center"
-              />
-            </div>
-          </div>
-
-          <div className="flex min-w-0 flex-col justify-start">
-            <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+        <CardContent className="grid grid-cols-[1fr_auto] gap-3 h-full">
+          <div
+            className={`flex min-w-0 ${
+              isComponent ? "cursor-default" : "cursor-pointer"
+            } items-center gap-4`}
+          >
+            <div className="group/checkbox relative flex items-center">
               <div
-                className="flex min-w-0 flex-shrink truncate text-sm font-semibold"
-                data-testid={`flow-name-div`}
+                className={cn(
+                  "z-20 flex w-0 items-center transition-all duration-300",
+                  selected && "w-10"
+                )}
               >
-                <span
-                  className="truncate"
-                  data-testid={`flow-name-${flowData.id}`}
-                >
-                  {flowData.name}
-                </span>
+                <Checkbox
+                  checked={selected}
+                  onCheckedChange={(checked) => setSelected(checked as boolean)}
+                  onClick={(e) => e.stopPropagation()}
+                  className={cn(
+                    "ml-2 transition-opacity focus-visible:ring-0",
+                    !selected && "opacity-0 group-hover/checkbox:opacity-100"
+                  )}
+                  data-testid={`checkbox-${flowData.id}`}
+                />
               </div>
-              <div className="flex min-w-0 flex-shrink text-xs text-muted-foreground">
-                <span className="truncate">
-                  Edited {timeElapsed(flowData.updated_at)} ago
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="ml-5 flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="iconMd"
-                data-testid="home-dropdown-menu"
-                className="group"
+              <div
+                className={cn(
+                  `item-center flex h-6 w-6 shrink-0 items-center justify-center rounded-[4px] p-1 bg-accent transition-opacity duration-200`,
+                  swatchColors[swatchIndex],
+                  selected
+                    ? "duration-300"
+                    : "group-hover/checkbox:pointer-events-none group-hover/checkbox:opacity-0"
+                )}
               >
                 <ForwardedIconComponent
-                  name="Ellipsis"
+                  name={flowData?.icon || icon}
                   aria-hidden="true"
-                  className="h-5 w-5 text-muted-foreground group-hover:text-foreground"
+                  className="flex h-5 w-5 items-center justify-center"
                 />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              className="w-[185px]"
-              sideOffset={5}
-              side="bottom"
-            >
-              <DropdownComponent
-                flowData={flowData}
-                setOpenDelete={setOpenDelete}
-                handleExport={handleExport}
-                handleEdit={() => {
-                  setOpenSettings(true);
-                }}
-              />
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+              </div>
+            </div>
+
+            <div className="flex min-w-0 flex-col justify-start">
+              <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+                <div
+                  className="flex min-w-0 flex-shrink truncate text-sm font-medium text-primary-font"
+                  data-testid={`flow-name-div`}
+                >
+                  <span
+                    className="truncate"
+                    data-testid={`flow-name-${flowData.id}`}
+                  >
+                    {flowData.name}
+                  </span>
+                </div>
+                <div className="flex min-w-0 flex-shrink text-xs text-secondary-font">
+                  <span className="truncate">
+                    Edited {timeElapsed(flowData.updated_at)} ago
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="ml-5 flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="link"
+                  size="icon"
+                  data-testid="home-dropdown-menu"
+                  className="group"
+                >
+                  <ForwardedIconComponent
+                    name="Ellipsis"
+                    aria-hidden="true"
+                    className="text-secondary"
+                  />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-[185px]"
+                sideOffset={5}
+                side="bottom"
+              >
+                <DropdownComponent
+                  flowData={flowData}
+                  setOpenDelete={setOpenDelete}
+                  handleExport={handleExport}
+                  handleEdit={() => {
+                    setOpenSettings(true);
+                  }}
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardContent>
       </Card>
       {openDelete && (
         <DeleteConfirmationModal

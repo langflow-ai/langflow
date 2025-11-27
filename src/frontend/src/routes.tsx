@@ -150,12 +150,35 @@ const router = createBrowserRouter(
                     path="marketplace/detail/:publishedFlowId"
                     element={<MarketplaceDetailPage />}
                   />
+                  <Route path="settings" element={<SettingsPage />}>
+                    <Route
+                      index
+                      element={<CustomNavigate replace to={"general"} />}
+                    />
+                    <Route
+                      path="global-variables"
+                      element={<GlobalVariablesPage />}
+                    />
+                    <Route path="mcp-servers" element={<MCPServersPage />} />
+                    <Route path="api-keys" element={<ApiKeysPage />} />
+                    <Route
+                      path="general/:scrollId?"
+                      element={
+                        <AuthSettingsGuard>
+                          <GeneralPage />
+                        </AuthSettingsGuard>
+                      }
+                    />
+                    <Route path="shortcuts" element={<ShortcutsPage />} />
+                    <Route path="messages" element={<MessagesPage />} />
+                    {CustomRoutesStore()}
+                  </Route>
                 </Route>
                 <Route
                   path="agent-marketplace/detail/:flowId"
                   element={<AgentMarketplaceDetailPage />}
                 />
-                <Route path="settings" element={<SettingsPage />}>
+                {/* <Route path="settings" element={<SettingsPage />}>
                   <Route
                     index
                     element={<CustomNavigate replace to={"general"} />}
@@ -177,7 +200,7 @@ const router = createBrowserRouter(
                   <Route path="shortcuts" element={<ShortcutsPage />} />
                   <Route path="messages" element={<MessagesPage />} />
                   {CustomRoutesStore()}
-                </Route>
+                </Route> */}
                 {CustomRoutesStorePages()}
                 <Route path="agent-builder" element={<AgentBuilderPage />} />
                 <Route

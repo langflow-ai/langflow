@@ -45,7 +45,7 @@ const _EyeIcon = memo(
       strokeWidth={ICON_STROKE_WIDTH}
       name={hidden ? "EyeOff" : "Eye"}
     />
-  ),
+  )
 );
 
 const SnowflakeIcon = memo(() => (
@@ -74,7 +74,7 @@ const InspectButton = memo(
         onClick: () => void;
         id: string;
       },
-      ref: React.ForwardedRef<HTMLButtonElement>,
+      ref: React.ForwardedRef<HTMLButtonElement>
     ) => (
       <Button
         ref={ref}
@@ -90,17 +90,17 @@ const InspectButton = memo(
             "icon-size",
             isToolMode
               ? displayOutputPreview && !unknownOutput && !disabled
-                ? "text-background hover:text-secondary-hover"
-                : "cursor-not-allowed text-placeholder-foreground opacity-80"
+                ? "text-  hover:text-secondary-hover"
+                : "cursor-not-allowed text-primary-font opacity-80"
               : displayOutputPreview && !unknownOutput && !disabled
-                ? "text-foreground hover:text-primary-hover"
-                : "cursor-not-allowed text-placeholder-foreground opacity-60",
-            errorOutput ? "text-destructive" : "",
+              ? "text-primary-font hover:text-primary-hover"
+              : "cursor-not-allowed text-primary-font opacity-60",
+            errorOutput ? "text-error" : ""
           )}
         />
       </Button>
-    ),
-  ),
+    )
+  )
 );
 InspectButton.displayName = "InspectButton";
 
@@ -140,7 +140,7 @@ function NodeOutputField({
       const realOutput = getGroupOutputNodeId(
         data.node.flow,
         outputProxy.name,
-        outputProxy.id,
+        outputProxy.id
       );
       if (realOutput) {
         return {
@@ -165,24 +165,24 @@ function NodeOutputField({
       unknownOutput: logTypeIsUnknown(flowPoolNode?.data, internalOutputName),
       errorOutput: logTypeIsError(flowPoolNode?.data, internalOutputName),
     }),
-    [flowPool, flowPoolId, flowPoolNode?.data, internalOutputName],
+    [flowPool, flowPoolId, flowPoolNode?.data, internalOutputName]
   );
 
   const emptyOutput = useMemo(() => {
     return Object.keys(flowPoolNode?.data?.outputs ?? {})?.every(
-      (key) => flowPoolNode?.data?.outputs[key]?.message?.length === 0,
+      (key) => flowPoolNode?.data?.outputs[key]?.message?.length === 0
     );
   }, [flowPoolNode?.data?.outputs]);
 
   const disabledOutput = useMemo(
     () => edges.some((edge) => edge.sourceHandle === scapedJSONStringfy(id)),
-    [edges, id],
+    [edges, id]
   );
 
   const looping = useMemo(() => {
     return edges.some((edge) => {
       const targetHandleObject: targetHandleType = scapeJSONParse(
-        edge.targetHandle!,
+        edge.targetHandle!
       );
       return (
         targetHandleObject.output_types &&
@@ -212,7 +212,7 @@ function NodeOutputField({
       });
       updateNodeInternals(data.id);
     },
-    [data.id, index, setNode, updateNodeInternals],
+    [data.id, index, setNode, updateNodeInternals]
   );
 
   useEffect(() => {
@@ -240,11 +240,11 @@ function NodeOutputField({
       .toSorted((a, b) => {
         const indexA =
           data?.node?.outputs?.findIndex(
-            (output) => output.name === a.data?.sourceHandle?.name,
+            (output) => output.name === a.data?.sourceHandle?.name
           ) ?? 0;
         const indexB =
           data?.node?.outputs?.findIndex(
-            (output) => output.name === b.data?.sourceHandle?.name,
+            (output) => output.name === b.data?.sourceHandle?.name
           ) ?? 0;
         return indexA - indexB;
       });
@@ -283,7 +283,9 @@ function NodeOutputField({
           colors={colors}
           setFilterEdge={setFilterEdge}
           showNode={showNode}
-          testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+          testIdComplement={`${data?.type?.toLowerCase()}-${
+            showNode ? "shownode" : "noshownode"
+          }`}
           colorName={colorName}
         />
       );
@@ -313,7 +315,9 @@ function NodeOutputField({
         colors={colors}
         setFilterEdge={setFilterEdge}
         showNode={showNode}
-        testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+        testIdComplement={`${data?.type?.toLowerCase()}-${
+          showNode ? "shownode" : "noshownode"
+        }`}
         colorName={colorName}
       />
     ),
@@ -328,7 +332,7 @@ function NodeOutputField({
       showNode,
       data?.type,
       colorName,
-    ],
+    ]
   );
 
   const disabledInspectButton =
@@ -341,9 +345,9 @@ function NodeOutputField({
     <div
       ref={ref}
       className={cn(
-        "relative flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
+        "relative flex h-11 w-full flex-wrap items-center justify-between px-5 py-2 bg-accent text-primary-font",
         lastOutput ? "rounded-b-[0.69rem]" : "",
-        isToolMode && "bg-primary",
+        isToolMode && ""
       )}
     >
       {LoopHandle}
@@ -351,7 +355,10 @@ function NodeOutputField({
         <div className="flex flex-1">
           {data.node?.outputs![index].allows_loop && (
             <Badge variant="pinkStatic" size="xq" className="mr-2 px-1">
-              <ForwardedIconComponent name="Infinity" className="h-4 w-4" />
+              <ForwardedIconComponent
+                name="Infinity"
+                className="h-4 w-4 text-secondary-font"
+              />
             </Badge>
           )}
         </div>

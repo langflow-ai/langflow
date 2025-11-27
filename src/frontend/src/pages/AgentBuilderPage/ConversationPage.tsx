@@ -190,7 +190,7 @@ export default function ConversationPage() {
       {/* Header Section */}
       <div className="bg-[#FBFAFF] mb-4">
         {/* AI Studio Title */}
-          <h1 className="text-xl font-medium text-[#350E84]">
+          <h1 className="text-xl font-medium text-primary">
             AI Studio
           </h1>
       </div>

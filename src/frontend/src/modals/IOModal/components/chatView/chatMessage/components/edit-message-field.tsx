@@ -18,7 +18,9 @@ export default function EditMessageField({
   const adjustTextareaHeight = () => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight + 3}px`;
+      textareaRef.current.style.height = `${
+        textareaRef.current.scrollHeight + 3
+      }px`;
     }
   };
   useEffect(() => {
@@ -26,10 +28,10 @@ export default function EditMessageField({
   }, []);
 
   return (
-    <div className="flex h-fit w-full flex-col rounded-md bg-muted px-4 py-2">
+    <div className="flex h-fit w-full flex-col rounded-md bg-background-mainBg px-4 py-2">
       <Textarea
         ref={textareaRef}
-        className="max-h-[400px] w-full resize-none rounded-none border-0 bg-muted shadow-none focus:ring-0"
+        className="max-h-[400px] w-full resize-none rounded-none border-0 bg-background-mainBg shadow-none focus:ring-0"
         // onBlur={() => {
         //   if (!isButtonClicked) {
         //     onCancel();
@@ -43,30 +45,31 @@ export default function EditMessageField({
         <div className="flex w-full flex-row-reverse items-center justify-between">
           <div className="flex min-w-fit flex-row-reverse gap-2">
             <Button
+              variant="default"
               data-testid="save-button"
               onMouseDown={() => setIsButtonClicked(true)}
               onClick={() => {
                 onEdit(message);
                 setIsButtonClicked(false);
               }}
-              className="mt-2 bg-primary text-background hover:bg-primary-hover hover:text-secondary"
+              className="mt-2"
             >
               Save
             </Button>
             <Button
-              variant={"secondary"}
+              variant="outline"
               data-testid="cancel-button"
               onMouseDown={() => setIsButtonClicked(true)}
               onClick={() => {
                 onCancel();
                 setIsButtonClicked(false);
               }}
-              className="mt-2 !bg-transparent text-foreground hover:!bg-secondary-hover"
+              className="mt-2"
             >
               Cancel
             </Button>
           </div>
-          <div className="text-mmd font-medium text-muted-foreground word-break-break-word">
+          <div className="text-mmd font-medium text-secondary-font word-break-break-word">
             Editing messages will update the memory but won't restart the
             conversation.
           </div>

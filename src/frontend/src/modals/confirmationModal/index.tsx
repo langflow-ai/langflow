@@ -61,10 +61,10 @@ function ConfirmationModal({
   }, [modalOpen]);
 
   const triggerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Trigger,
+    (child) => (child as React.ReactElement).type === Trigger
   );
   const ContentChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Content,
+    (child) => (child as React.ReactElement).type === Content
   );
 
   const shouldShowConfirm = confirmationText && onConfirm;
@@ -81,11 +81,11 @@ function ConfirmationModal({
     <BaseModal {...props} open={open} setOpen={setModalOpen}>
       <BaseModal.Trigger>{triggerChild}</BaseModal.Trigger>
       <BaseModal.Header description={titleHeader ?? null}>
-        <span className="pr-2">{title}</span>
+        <span>{title}</span>
         {icon && (
           <GenericIconComponent
             name={icon}
-            className="h-6 w-6 pl-1 text-foreground"
+            className="h-6 w-6 pl-1 text-menu"
             aria-hidden="true"
           />
         )}

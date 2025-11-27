@@ -109,7 +109,7 @@ export default function CodeAreaModal({
             list: [error.response.data.detail],
           });
         },
-      },
+      }
     );
   }
 
@@ -130,7 +130,7 @@ export default function CodeAreaModal({
         onError: (error) => {
           setError(error.response.data);
         },
-      },
+      }
     );
   }
 
@@ -193,10 +193,10 @@ export default function CodeAreaModal({
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
-        <span className="pr-2"> {EDIT_CODE_TITLE} </span>
+        <span> {EDIT_CODE_TITLE} </span>
         <IconComponent
           name="prompts"
-          className="h-6 w-6 pl-1 text-primary"
+          className="h-6 w-6 pl-1 text-menu"
           aria-hidden="true"
         />
       </BaseModal.Header>

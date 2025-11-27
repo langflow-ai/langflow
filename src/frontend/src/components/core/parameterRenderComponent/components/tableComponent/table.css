@@ -1,0 +1,21 @@
+.ag-root-wrapper {
+  font-family: var(--font-NeueMontreal);
+  @apply rounded-md border-0;
+}
+
+.ag-root.ag-layout-normal {
+  @apply border border-primary-border rounded-md;
+}
+
+.ag-header {
+  @apply rounded-t-md bg-primary-light text-primary-font;
+}
+
+.ag-row {
+  @apply text-secondary-font;
+}
+
+/* ag-filter */
+.ag-simple-filter-body-wrapper {
+  @apply bg-primary-border;
+}

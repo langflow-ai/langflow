@@ -20,10 +20,20 @@ import { useGetAllPublishedFlows } from "@/controllers/API/queries/published-flo
 import ListSkeleton from "../MainPage/components/listSkeleton";
 import { debounce } from "lodash";
 import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { SortByDropdown } from "@/components/ui/SortByDropdown";
+import { ViewToggle } from "@/components/ui/ViewToggle";
+import { FilterIcon } from "@/assets/icons/FilterIcon";
 
 const sortedTags = [...MARKETPLACE_TAGS].sort((a, b) =>
   a.title.localeCompare(b.title)
 );
+
+const sortOptions = [
+  { label: "Name", value: "name" },
+  { label: "Published Date", value: "date" },
+  { label: "All Domain", value: "tags" },
+];
 
 // Storage keys for persisting filter state
 const STORAGE_KEYS = {
@@ -187,32 +197,35 @@ export default function MarketplacePage() {
   }, []);
 
   return (
-    <div className="flex h-full w-full overflow-y-auto dark:bg-black dark:text-white">
+    <div className="flex h-full w-full overflow-y-auto">
       <div className="flex h-full w-full flex-col">
         <div className="flex w-full flex-1 flex-col gap-4">
           <div className="flex w-full items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <h1 className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic">
-                Marketplace
-              </h1>
-              <span className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal not-italic">
-                ({total} Agents)
-              </span>
-            </div>
+            <h1 className="text-menu text-xl font-medium leading-normal">
+              Marketplace <span>({total} Agents)</span>
+            </h1>
 
             <div className="flex items-center gap-3">
-              <div className="relative w-[500px] max-w-[500px]">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <div className="relative w-[350px]">
                 <Input
-                  type="text"
+                  type="search"
+                  icon={"Search"}
                   placeholder="Search Agents..."
                   value={debouncedSearch}
                   onChange={(e) => setDebouncedSearch(e.target.value)}
-                  className="h-9 rounded-md border border-[#EBE8FF] dark:border-white/20 dark:bg-black dark:text-white placeholder:text-muted-foreground dark:placeholder:text-white/60 focus:border-1 focus:border-primary"
                 />
               </div>
 
               <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Sort By</span>
+                <SortByDropdown
+                  value={sortBy}
+                  onChange={(v) => setSortBy(v as typeof sortBy)}
+                  options={sortOptions}
+                />
+              </div>
+
+              {/* <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Sort By</span>
                 <Select
                   value={sortBy}
@@ -233,20 +246,20 @@ export default function MarketplacePage() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </div> */}
 
               <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className="h-8 gap-2 rounded-md border border-[#EBE8FF] dark:border-white/20"
+                    size="xs"
+                    className="min-w-[80px] h-8 px-2 !justify-start"
                     aria-label="Filter"
                   >
-                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <FilterIcon className="!h-3 !w-3 text-secondary-font" />
                     Filter
                     {tagFilter !== "all" && (
-                      <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-white">
+                      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-menu text-[10px] text-background-surface">
                         1
                       </span>
                     )}
@@ -254,28 +267,24 @@ export default function MarketplacePage() {
                 </PopoverTrigger>
                 <PopoverContent
                   align="end"
-                  className="w-[360px] rounded-md border border-[#EBE8FF] dark:border-white/20 bg-white dark:bg-black dark:text-white p-4 shadow-md"
+                  className="w-[230px] rounded-md border border-primary-border bg-background-surface p-4 shadow-[0px_0px_12px_0px_rgba(var(--boxshadow),0.12)]"
                 >
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <div className="text-base font-semibold">Domain</div>
+                      <div className="text-sm font-medium text-primary-font">
+                        Domain
+                      </div>
                       <Select
                         value={tagFilter}
                         onValueChange={handleTagFilterChange}
                       >
-                        <SelectTrigger className="h-10 w-full rounded-md border border-[#EBE8FF] dark:border-white/20 text-sm dark:text-white">
+                        <SelectTrigger className="h-8 w-full rounded-md border border-primary-border text-sm">
                           <SelectValue placeholder="All Domain" />
                         </SelectTrigger>
-                        <SelectContent className="max-h-64 overflow-y-auto dark:bg-black dark:text-white">
-                          <SelectItem value="all" className="dark:text-white">
-                            All Domain
-                          </SelectItem>
+                        <SelectContent className="w-[230px] max-h-64 overflow-y-auto">
+                          <SelectItem value="all">All Domain</SelectItem>
                           {sortedTags.map((tag) => (
-                            <SelectItem
-                              key={tag.id}
-                              value={tag.id}
-                              className="dark:text-white"
-                            >
+                            <SelectItem key={tag.id} value={tag.id}>
                               {tag.title}
                             </SelectItem>
                           ))}
@@ -283,23 +292,36 @@ export default function MarketplacePage() {
                       </Select>
                     </div>
 
-                    <div className="flex items-center justify-end pt-2">
+                    <div className="flex gap-4 items-center justify-between pt-2">
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-9 rounded-md border border-[#EBE8FF] dark:border-white/20"
+                        variant="outline"
+                        size="md"
+                        className="w-full"
                         onClick={() => {
                           setIsFilterOpen(false);
                         }}
                       >
-                        Close
+                        Cancel
                       </Button>
+                      {/* <Button
+                        size="md"
+                        className="w-full"
+                        onClick={() => {
+                          setTagFilter(pendingTag);
+                          setPageIndex(1);
+                          setIsFilterOpen(false);
+                        }}
+                      >
+                        Apply
+                      </Button> */}
                     </div>
                   </div>
                 </PopoverContent>
               </Popover>
 
-              <div className="flex items-center gap-1 rounded-md border border-[#EBE8FF] dark:border-white/20 p-1">
+              <ViewToggle value={viewMode} onChange={setViewMode} />
+
+              {/* <div className="flex items-center gap-1 rounded-md border border-[#EBE8FF] dark:border-white/20 p-1">
                 <Button
                   variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="sm"
@@ -316,7 +338,7 @@ export default function MarketplacePage() {
                 >
                   <Grid3x3 className="h-4 w-4" />
                 </Button>
-              </div>
+              </div> */}
             </div>
           </div>
 
@@ -334,32 +356,12 @@ export default function MarketplacePage() {
             </div>
           ) : (
             <>
-              {/* {items.length > 0 && (
-                <div
-                  className={
-                    viewMode === "grid"
-                      ? `grid ${
-                          expandCards ? "" : "auto-rows-auto"
-                        } grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-h-[calc(100vh-212px)] overflow-y-auto place-items-start`
-                      : "flex flex-col gap-4 flex-1 min-h-[calc(100vh-280px)]"
-                  }
-                >
-                  {visibleItems.map((item: any) => (
-                    <MarketplaceFlowCard
-                      key={item.id}
-                      item={item}
-                      viewMode={viewMode}
-                      expand={viewMode === "grid" && expandCards}
-                    />
-                  ))}
-                </div>
-              )} */}
               {items.length > 0 && (
                 <div
-                  className={`max-h-[calc(100vh-212px)] overflow-auto
+                  className={`max-h-[calc(100vh-172px)] overflow-auto
                     ${
                       viewMode === "grid"
-                        ? "grid grid-cols-2 lg:grid-cols-3 gap-4 "
+                        ? "grid grid-cols-2 md:grid-cols-3 3xl:grid-cols-4 gap-4 "
                         : "flex flex-col gap-2 flex-1"
                     }`}
                 >
@@ -375,7 +377,7 @@ export default function MarketplacePage() {
               )}
 
               {items.length === 0 && (
-                <div className="flex h-full items-center justify-center text-[24px] font-medium text-muted-foreground/60">
+                <div className="flex h-full items-center justify-center text-[24px] font-medium text-secondary-font opacity-40">
                   {searchQuery
                     ? "No marketplace flows match your search."
                     : "No marketplace flows available yet."}
@@ -385,9 +387,9 @@ export default function MarketplacePage() {
           )}
 
           {!isLoading && total > 0 && (
-            <div className="flex justify-between gap-4 pt-4 mt-auto">
+            <div className="flex justify-between gap-4 mt-auto">
               {!isLoading && total > 0 && (
-                <div className="flex items-center justify-end text-xs text-[#444444] dark:text-white/60">
+                <div className="flex items-center justify-end text-sm text-primary-font font-medium">
                   {`Showing ${start + 1} - ${Math.min(
                     end,
                     total

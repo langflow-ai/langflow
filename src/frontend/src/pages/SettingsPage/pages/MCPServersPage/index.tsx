@@ -17,6 +17,7 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import type { MCPServerInfoType } from "@/types/mcp";
 import { cn } from "@/utils/utils";
+import GeneralPageHeaderComponent from "../GeneralPage/components/GeneralPageHeader";
 
 export default function MCPServersPage() {
   const { data: servers } = useGetMCPServers();
@@ -47,7 +48,7 @@ export default function MCPServersPage() {
       {
         onError: (e: any) =>
           setErrorData({ title: "Error deleting server", list: [e.message] }),
-      },
+      }
     );
   };
 
@@ -57,8 +58,8 @@ export default function MCPServersPage() {
   };
 
   return (
-    <div className="flex h-full w-full flex-col gap-6">
-      <div className="flex w-full items-start justify-between gap-6">
+    <div className="flex h-full w-full flex-col gap-4">
+      {/* <div className="flex w-full items-start justify-between gap-6">
         <div className="flex flex-col">
           <h2 className="flex items-center text-lg font-semibold tracking-tight">
             MCP Servers
@@ -67,7 +68,7 @@ export default function MCPServersPage() {
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-secondary-font">
             Manage MCP Servers for use in your flows.
           </p>
         </div>
@@ -80,18 +81,30 @@ export default function MCPServersPage() {
             <ForwardedIconComponent name="Plus" className="w-4" />
             <span>Add MCP Server</span>
           </Button>
-          <AddMcpServerModal open={addOpen} setOpen={setAddOpen} />
         </div>
-      </div>
-      <div className="flex h-full flex-col gap-2">
+      </div> */}
+      <GeneralPageHeaderComponent
+        title="MCP Servers"
+        subtitle="Manage MCP Servers for use in your flows."
+        iconName="Mcp"
+        actionButton={{
+          label: "Add MCP Server",
+          iconName: "Plus",
+          onClick: () => setAddOpen(true),
+          testId: "add-mcp-server-button-page",
+        }}
+      />
+      <AddMcpServerModal open={addOpen} setOpen={setAddOpen} />
+
+      <div className="flex h-full flex-col gap-2 bg-background-surface border border-primary-border rounded-lg p-4">
         {servers ? (
           <>
             {servers.length === 0 ? (
-              <div className="w-full pt-8 text-center text-sm text-muted-foreground">
+              <div className="w-full h-full pt-8 text-center text-xl font-medium opacity-30 text-secondary-font flex items-center justify-center">
                 No MCP servers added
               </div>
             ) : (
-              <div className="text-sm font-medium text-muted-foreground">
+              <div className="text-sm font-medium text-secondary-font">
                 Added MCP Servers
               </div>
             )}
@@ -106,8 +119,8 @@ export default function MCPServersPage() {
                     <ShadTooltip content={server.error}>
                       <span
                         className={cn(
-                          "cursor-default select-none !text-mmd text-muted-foreground",
-                          server.error && "text-accent-red-foreground",
+                          "cursor-default select-none !text-mmd text-secondary-font",
+                          server.error && "text-accent-red-foreground"
                         )}
                       >
                         {server.toolsCount === null
@@ -117,10 +130,10 @@ export default function MCPServersPage() {
                               : "Error"
                             : "Loading..."
                           : !server.toolsCount
-                            ? "No tools found"
-                            : `${server.toolsCount} tool${
-                                server.toolsCount === 1 ? "" : "s"
-                              }`}
+                          ? "No tools found"
+                          : `${server.toolsCount} tool${
+                              server.toolsCount === 1 ? "" : "s"
+                            }`}
                       </span>
                     </ShadTooltip>
                   </div>
@@ -130,7 +143,7 @@ export default function MCPServersPage() {
                         variant="ghost"
                         size="iconSm"
                         data-testid={`mcp-server-menu-button-${server.name}`}
-                        className="text-muted-foreground hover:bg-accent"
+                        className="text-secondary-font hover:bg-accent"
                       >
                         <ForwardedIconComponent
                           name="Ellipsis"

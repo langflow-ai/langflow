@@ -33,5 +33,5 @@ export const ToolbarButton = memo(
         {label && <span className="text-mmd font-medium">{label}</span>}
       </Button>
     </ShadTooltip>
-  ),
+  )
 );

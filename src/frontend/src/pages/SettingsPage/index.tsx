@@ -79,7 +79,7 @@ export default function SettingsPage(): JSX.Element {
           className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
         />
       ),
-    },
+    }
   );
 
   // TODO: Remove this on cleanup
@@ -90,18 +90,18 @@ export default function SettingsPage(): JSX.Element {
 
   return (
     <SidebarProvider>
-    <PageLayout
-      backTo={-1 as To}
-      title="Settings"
-      description="Manage the general settings for AI Studio."
-    >
-      <SideBarButtonsComponent items={sidebarNavItems} />
-      <main className="flex flex-1 overflow-hidden">
-        <div className="flex flex-1 flex-col overflow-x-hidden pt-1">
-          <Outlet />
+      <PageLayout
+        backTo={-1 as To}
+        title="Settings"
+        description="Manage the general settings for AI Studio."
+      >
+        <SideBarButtonsComponent items={sidebarNavItems} />
+        <div className="flex flex-1 overflow-hidden">
+          <div className="flex flex-1 flex-col overflow-x-hidden">
+            <Outlet />
+          </div>
         </div>
-      </main>
-    </PageLayout>
+      </PageLayout>
     </SidebarProvider>
   );
 }

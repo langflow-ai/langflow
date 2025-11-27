@@ -11,6 +11,7 @@ import { ENABLE_MCP } from "@/customization/feature-flags";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
+import { ViewToggle } from "@/components/ui/ViewToggle";
 
 interface HeaderComponentProps {
   flowType: "flows" | "components" | "mcp";
@@ -43,7 +44,7 @@ const HeaderComponent = ({
     debounce((value: string) => {
       setSearch(value);
     }, 1000),
-    [setSearch],
+    [setSearch]
   );
 
   const { mutate: downloadFlows, isPending: isDownloading } =
@@ -87,18 +88,19 @@ const HeaderComponent = ({
         onSuccess: () => {
           setSuccessData({ title: "Flows deleted successfully" });
         },
-      },
+      }
     );
   };
 
   return (
     <>
       <div
-        className="flex items-center pb-4 text-sm font-medium"
+        className="flex items-center pb-2 text-md font-medium"
         data-testid="mainpage_title"
       >
-
-        {folderName}
+        <h1 className="text-menu text-xl font-medium leading-normal">
+          {folderName}
+        </h1>
       </div>
       {!isEmptyFolder && (
         <>
@@ -106,6 +108,8 @@ const HeaderComponent = ({
             <div className="w-full border-b dark:border-border" />
             {tabTypes.map((type) => (
               <Button
+                variant="default"
+                size="sm"
                 key={type}
                 unstyled
                 id={`${type}-btn`}
@@ -115,9 +119,9 @@ const HeaderComponent = ({
                 }}
                 className={`border-b ${
                   flowType === type
-                    ? "border-b-2 border-foreground text-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                } text-nowrap px-2 pb-2 pt-1 text-mmd`}
+                    ? "border-b-2 border-menu text-menu font-medium"
+                    : "border-primary-border text-secondary-font hover:text-menu"
+                } text-nowrap px-2 pb-2 pt-1 text-sm`}
               >
                 <div className={flowType === type ? "-mb-px" : ""}>
                   {type === "mcp"
@@ -129,20 +133,20 @@ const HeaderComponent = ({
           </div>
           {/* Search and filters */}
           {flowType !== "mcp" && (
-            <div className="flex justify-between">
-              <div className="flex w-full xl:w-5/12">
+            <div className="flex items-center justify-between">
+              <div className="relative flex items-center gap-3">
                 <Input
                   icon="Search"
                   data-testid="search-store-input"
-                  type="text"
+                  type="search"
                   placeholder={`Search ${flowType}...`}
-                  className="mr-2 !text-mmd"
-                  inputClassName="!text-mmd"
+                  className="w-[300px]"
                   value={debouncedSearch}
                   onChange={handleSearch}
                 />
-                <div className="relative mr-2 flex h-fit rounded-lg border border-muted bg-muted">
-                  {/* Sliding Indicator */}
+                <ViewToggle value={view} onChange={setView} />
+
+                {/* <div className="relative mr-2 flex h-fit rounded-lg border border-muted bg-muted">
                   <div
                     className={`absolute top-[2px] h-[32px] w-8 transform rounded-md bg-background shadow-md transition-transform duration-300 ${
                       view === "list"
@@ -151,7 +155,6 @@ const HeaderComponent = ({
                     }`}
                   ></div>
 
-                  {/* Buttons */}
                   {["list", "grid"].map((viewType) => (
                     <Button
                       key={viewType}
@@ -171,26 +174,15 @@ const HeaderComponent = ({
                       />
                     </Button>
                   ))}
-                </div>
+                </div> */}
               </div>
-              <div className="flex items-center">
+              <div className="flex items-center gap-1.5">
                 <div
                   className={cn(
-                    "flex w-0 items-center gap-2 overflow-hidden opacity-0 transition-all duration-300",
-                    selectedFlows.length > 0 && "w-36 opacity-100",
+                    "flex w-0 items-center gap-2.5 overflow-hidden opacity-0 transition-all duration-300",
+                    selectedFlows.length > 0 && "w-36 opacity-100"
                   )}
                 >
-                  <Button
-                    variant="outline"
-                    size="iconMd"
-                    className="h-8 w-8"
-                    data-testid="download-bulk-btn"
-                    onClick={handleDownload}
-                    loading={isDownloading}
-                  >
-                    <ForwardedIconComponent name="Download" />
-                  </Button>
-
                   <DeleteConfirmationModal
                     onConfirm={handleDelete}
                     description={"flow" + (selectedFlows.length > 1 ? "s" : "")}
@@ -201,22 +193,32 @@ const HeaderComponent = ({
                     }
                   >
                     <Button
-                      variant="destructive"
-                      size="iconMd"
-                      className="px-2.5 !text-mmd"
+                      variant="outline"
+                      size="sm"
                       data-testid="delete-bulk-btn"
                       loading={isDeleting}
                     >
-                      <ForwardedIconComponent name="Trash2" />
+                      <ForwardedIconComponent
+                        name="Trash2"
+                        className="text-error"
+                      />
                       Delete
                     </Button>
                   </DeleteConfirmationModal>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    data-testid="download-bulk-btn"
+                    onClick={handleDownload}
+                    loading={isDownloading}
+                  >
+                    <ForwardedIconComponent name="Download" />
+                  </Button>
                 </div>
                 <ShadTooltip content="New Flow" side="bottom">
                   <Button
                     variant="default"
-                    size="iconMd"
-                    className="z-50 px-2.5 !text-mmd"
+                    size="sm"
                     onClick={() => setNewProjectModal(true)}
                     id="new-project-btn"
                     data-testid="new-project-btn"

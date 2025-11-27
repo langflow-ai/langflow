@@ -35,17 +35,17 @@ export const HeaderMenuItemLink = ({
   newPage = false,
   icon = "external-link",
 }) => (
-  <DropdownMenuItem className="cursor-pointer rounded-none p-3 px-4" asChild>
+  <DropdownMenuItem className="cursor-pointer rounded-none" asChild>
     <a
       href={href}
       className="group flex w-full items-center justify-between"
       {...(newPage ? { rel: "noreferrer", target: "_blank" } : {})}
     >
-      {children}
+      {children}{" "}
       {icon && (
         <ForwardedIconComponent
           name={icon}
-          className="side-bar-button-size h-[18px] w-[18px] opacity-0 group-hover:opacity-100  group-focus-visible:opacity-100"
+          className="side-bar-button-size h-[18px] w-[18px] opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
         />
       )}
     </a>
@@ -54,14 +54,14 @@ export const HeaderMenuItemLink = ({
 
 export const HeaderMenuItemButton = ({ icon = "", onClick, children }) => (
   <DropdownMenuItem
-    className="group flex cursor-pointer items-center justify-between p-3 px-4"
+    className="group flex cursor-pointer items-center justify-between"
     onClick={onClick}
   >
     {children}
     {icon && (
       <ForwardedIconComponent
         name={icon}
-        className="side-bar-button-size mr-3 h-[18px] w-[18px] opacity-0 transition-all duration-300 group-hover:translate-x-3 group-hover:opacity-100 group-focus-visible:translate-x-3 group-focus-visible:opacity-100"
+        className="side-bar-button-size mr-3 text-menu h-[18px] w-[18px] opacity-0 transition-all duration-300 group-hover:translate-x-3 group-hover:opacity-100 group-focus-visible:translate-x-3 group-focus-visible:opacity-100"
       />
     )}
   </DropdownMenuItem>

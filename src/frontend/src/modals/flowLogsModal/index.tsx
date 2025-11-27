@@ -65,8 +65,11 @@ export default function FlowLogsModal({
       <BaseModal.Header description="Inspect component executions.">
         <div className="flex w-full justify-between">
           <div className="flex h-fit w-32 items-center">
-            <span className="pr-2">Logs</span>
-            <IconComponent name="ScrollText" className="mr-2 h-4 w-4" />
+            <span>Logs</span>
+            <IconComponent
+              name="ScrollText"
+              className="text-menu mr-2 h-4 w-4"
+            />
           </div>
           <div className="flex h-fit w-32 items-center"></div>
         </div>
@@ -83,7 +86,7 @@ export default function FlowLogsModal({
           headerHeight={rows.length === 0 ? 0 : undefined}
         ></TableComponent>
         {!isLoading && (data?.pagination.total ?? 0) >= 10 && (
-          <div className="flex justify-end px-3 py-4">
+          <div>
             <PaginatorComponent
               pageIndex={data?.pagination.page ?? 1}
               pageSize={data?.pagination.size ?? 10}

@@ -15,11 +15,13 @@ export default function ToolbarSelectItem({
     <div className={`flex ${style}`} data-testid={dataTestId}>
       <ForwardedIconComponent
         name={icon}
-        className={`mr-2 mt-[0.15em] h-4 w-4 ${ping && "animate-pulse text-green-500"}`}
+        className={`mr-2 mt-[0.15em] h-4 w-4 ${
+          ping && "animate-pulse text-green-500"
+        }`}
       />
       <span>{value}</span>
       <span
-        className={`absolute right-2 top-[0.43em] flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-muted-foreground`}
+        className={`absolute right-2 top-[0.43em] flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-secondary-font`}
       >
         <RenderIcons filteredShortcut={fixedShortcut} />
       </span>

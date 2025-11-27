@@ -45,11 +45,11 @@ export default function ApiModal({
   const initialSetup = useTweaksStore((state) => state.initialSetup);
 
   const flowEndpointName = useFlowStore(
-    useShallow((state) => state.currentFlow?.endpoint_name),
+    useShallow((state) => state.currentFlow?.endpoint_name)
   );
 
   const currentFlowId = useFlowStore(
-    useShallow((state) => state.currentFlow?.id),
+    useShallow((state) => state.currentFlow?.id)
   );
 
   const [endpointName, setEndpointName] = useState(flowEndpointName ?? "");
@@ -106,7 +106,6 @@ export default function ApiModal({
         open={open}
         setOpen={setOpen}
         size="medium"
-        className="pt-4"
       >
         <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
         <BaseModal.Header
@@ -115,7 +114,7 @@ export default function ApiModal({
               API access requires an API key. You can{" "}
               <CustomLink
                 to="/settings/api-keys"
-                className="text-accent-pink-foreground"
+                className="text-menu font-medium mt-0.5"
               >
                 {" "}
                 create an API key
@@ -124,12 +123,12 @@ export default function ApiModal({
             </span>
           }
         >
-          <IconComponent
+          {/* <IconComponent
             name="Code2"
             className="h-6 w-6 text-gray-800 dark:text-white"
             aria-hidden="true"
-          />
-          <span className="pl-2">API access</span>
+          /> */}
+          <span className="">API access</span>
           {nodes.length > 0 && (
             <div className="border-r-1 absolute right-12 flex items-center text-mmd font-medium leading-[16px]">
               <Button
@@ -197,13 +196,15 @@ export default function ApiModal({
           )}
           <div className="flex flex-1 flex-col gap-2 overflow-hidden">
             <div className="flex flex-col gap-1">
-              <span className="shrink-0 text-sm font-medium">Expose API</span>
-              <span className="text-mmd text-muted-foreground">
+              <span className="shrink-0 text-sm font-medium text-primary-font">
+                Expose API
+              </span>
+              <span className="text-mmd text-secondary-font">
                 Select which component fields to expose as inputs in this flow's
                 API schema.
               </span>
             </div>
-            <div className="min-h-0 w-full flex-1 flex-col overflow-y-auto overflow-x-hidden rounded-lg bg-muted custom-scroll">
+            <div className="min-h-0 w-full flex-1 flex-col overflow-y-auto overflow-x-hidden rounded-lg bg-muted/50 custom-scroll">
               <TweaksComponent open={openTweaks} />
             </div>
           </div>

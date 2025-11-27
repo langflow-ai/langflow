@@ -34,8 +34,8 @@ const externalLinkIconClasses = {
     disabled
       ? "gradient-fade-input-edit-node"
       : editNode
-        ? "gradient-fade-input-edit-node"
-        : "gradient-fade-input",
+      ? "gradient-fade-input-edit-node"
+      : "gradient-fade-input",
   background: ({
     editNode,
     disabled,
@@ -46,10 +46,10 @@ const externalLinkIconClasses = {
     disabled
       ? ""
       : editNode
-        ? "background-fade-input-edit-node"
-        : "background-fade-input",
+      ? "background-fade-input-edit-node"
+      : "background-fade-input",
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
-  editNodeTop: "top-[-1.4rem] h-5",
+  editNodeTop: "-top-[37px] h-[36px]",
   normalTop: "top-[-2.1rem] h-7",
   iconTop: "top-[-1.7rem]",
 };
@@ -81,7 +81,7 @@ export default function CopyFieldAreaComponent({
     return cn(
       inputClasses.base({ isFocused }),
       editNode ? inputClasses.editNode : inputClasses.normal({ isFocused }),
-      isFocused && "pr-10",
+      isFocused && "pr-10"
     );
   };
 
@@ -112,11 +112,11 @@ export default function CopyFieldAreaComponent({
             }),
             editNode
               ? externalLinkIconClasses.editNodeTop
-              : externalLinkIconClasses.normalTop,
+              : externalLinkIconClasses.normalTop
           )}
           style={{
             pointerEvents: "none",
-            background: isFocused ? undefined : GRADIENT_CLASS_DISABLED,
+            // background: isFocused ? undefined : GRADIENT_CLASS_DISABLED,
           }}
           aria-hidden="true"
         />
@@ -133,7 +133,7 @@ export default function CopyFieldAreaComponent({
             editNode
               ? externalLinkIconClasses.editNodeTop
               : externalLinkIconClasses.iconTop,
-            "bg-muted text-foreground",
+            "bg-muted text-foreground"
           )}
         />
       </div>

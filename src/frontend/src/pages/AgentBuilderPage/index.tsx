@@ -51,7 +51,12 @@ import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import useTheme from "@/customization/hooks/use-custom-theme";
-import { Moon, Sun } from "lucide-react";
+import { AlertTriangle, ChevronRight, Moon, Sun } from "lucide-react";
+import { AiStudioIcon } from "@/assets/icons/AiStudioIcon";
+import { ChatIcon } from "@/assets/icons/ChatIcon";
+import { ChatboxIcon } from "@/assets/icons/ChatboxIcon";
+import { SortByDropdown } from "@/components/ui/SortByDropdown";
+import { ViewToggle } from "@/components/ui/ViewToggle";
 
 // Delete Confirmation Modal Component
 const DeleteConfirmationModal = ({
@@ -71,18 +76,19 @@ const DeleteConfirmationModal = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+          <DialogTitle className="flex items-center gap-3 text-error">
+            {/* <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
               <ForwardedIconComponent
                 name="AlertTriangle"
-                className="h-5 w-5 text-destructive"
+                className="h-5 w-5 text-error"
               />
-            </div>
+            </div> */}
+            <AlertTriangle className="text-error w-5 h-5" />
             Delete Agent
           </DialogTitle>
         </DialogHeader>
-        <div className="py-4">
-          <p className="text-sm text-muted-foreground">
+        <div className="py-8">
+          <p className="text-md text-primary-font">
             Are you sure you want to delete "{agentName}"? This action cannot be
             undone.
           </p>
@@ -92,7 +98,7 @@ const DeleteConfirmationModal = ({
             Cancel
           </Button>
           <Button
-            variant="destructive"
+            // variant="destructive"
             onClick={onConfirm}
             disabled={isDeleting}
           >
@@ -139,32 +145,26 @@ const AgentCard = ({
 
   return (
     <Card
-      className="group cursor-pointer hover:shadow-md transition-all duration-200 h-full bg-background dark:bg-black dark:text-white border border-[#efefef] dark:border-white/20"
+      className="group cursor-pointer hover:shadow-md transition-all duration-200 h-full bg-background border border-primary-border"
       onClick={() => navigate(`/flow/${flow.id}/folder/${folderId}/`)}
     >
-      <CardHeader className="pb-3 pr-2">
+      {/* <CardHeader className="pb-3 pr-2">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-lg shrink-0",
+                "flex h-6 w-6 items-center justify-center rounded-md shrink-0",
                 swatchColors[swatchIndex]
               )}
             >
-              <ForwardedIconComponent
-                name={flow?.icon || icon}
-                aria-hidden="true"
-                className="h-5 w-5"
-              />
+              <ChatboxIcon className="text-secondary-font" />
             </div>
-            <div className="min-w-0 flex-1 overflow-hidden">
-              <CardTitle
-                className="text-sm md:text-base font-semibold leading-snug whitespace-normal dark:text-white"
-                title={flow.name}
-              >
-                {flow.name}
-              </CardTitle>
-            </div>
+            <CardTitle
+              className="text-sm font-medium leading-snug whitespace-normal"
+              title={flow.name}
+            >
+              {flow.name}
+            </CardTitle>
           </div>
           <Button
             variant="ghost"
@@ -179,12 +179,60 @@ const AgentCard = ({
             <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
           </Button>
         </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <CardDescription className="text-sm text-muted-foreground mb-3 line-clamp-2 dark:text-white/70">
+      </CardHeader> */}
+      <CardContent>
+        <div className="grid grid-cols-[auto_1fr] gap-3 h-full">
+          <div
+            className={cn(
+              "flex h-6 w-6 items-center justify-center rounded-md shrink-0 bg-accent",
+              swatchColors[swatchIndex]
+            )}
+          >
+            <ChatboxIcon className="text-secondary-font" />
+          </div>
+          <div className="flex flex-col h-full">
+            <div className="flex items-start justify-between gap-1.5 mb-1">
+              <CardTitle
+                className="text-sm font-medium leading-snug text-secondary-font whitespace-normal"
+                title={flow.name}
+              >
+                {flow.name}
+              </CardTitle>
+              <Button
+                variant="link"
+                size="iconSm"
+                className="!p-0 text-secondary-font hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                aria-label="Delete"
+              >
+                <ForwardedIconComponent name="Trash2" className="h-3 w-3" />
+              </Button>
+            </div>
+            <CardDescription className="text-sm text-secondary-font line-clamp-2 mb-1">
+              {flow.description || "No description available"}
+            </CardDescription>
+            <div className="flex items-center justify-between text-xs text-secondary-font !mt-auto">
+              <span className="text-xs">
+                {flow.updated_at
+                  ? `Edited ${timeElapsed(flow.updated_at)} ago`
+                  : "Never edited"}
+              </span>
+              <Badge
+                variant="secondary"
+                className="text-xs py-[3px] bg-success-bg text-success-text hover:bg-success-bg hover:text-success-text"
+              >
+                Draft
+              </Badge>
+            </div>
+          </div>
+        </div>
+        {/* <CardDescription className="text-sm text-muted-foreground mb-3 line-clamp-2 dark:text-white/70">
           {flow.description || "No description available"}
-        </CardDescription>
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+        </CardDescription> */}
+        {/* <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>
             {flow.updated_at
               ? `Edited ${timeElapsed(flow.updated_at)} ago`
@@ -196,7 +244,7 @@ const AgentCard = ({
           >
             Draft
           </Badge>
-        </div>
+        </div> */}
       </CardContent>
     </Card>
   );
@@ -229,47 +277,47 @@ const AgentListItem = ({
     <Card
       key={flow.id}
       onClick={() => navigate(`/flow/${flow.id}/folder/${folderId}/`)}
-      className="flex flex-row bg-background dark:bg-black dark:text-white cursor-pointer justify-between rounded-lg border-none px-4 py-3 shadow-none hover:bg-muted"
+      className="flex flex-row no-wrap gap-4 items-start bg-background-surface cursor-pointer justify-between border-t-0 border-l-0 border-r-0 rounded-none border-b last:border-0 border-primary-border py-3 shadow-none"
       data-testid="list-card"
     >
-      <div className="flex min-w-0 items-start gap-4">
+      <div className="flex w-full items-start gap-4">
         <div
           className={cn(
-            "item-center flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5",
+            "item-center flex h-6 w-6 shrink-0 items-center justify-center rounded-[4px] p-1 bg-accent",
             swatchColors[swatchIndex]
           )}
         >
-          <ForwardedIconComponent
+          <ChatboxIcon className="text-secondary-font" />
+          {/* <ForwardedIconComponent
             name={flow?.icon || icon}
             aria-hidden="true"
             className="h-4 w-4"
-          />
+          /> */}
         </div>
 
-        <div className="flex min-w-0 flex-col">
-          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
-            <div className="flex min-w-0 flex-shrink truncate text-sm font-semibold">
-              <span className="truncate" title={flow.name}>
-                {flow.name}
-              </span>
-            </div>
-            <div className="flex min-w-0 flex-shrink text-xs text-muted-foreground dark:text-white/70">
-              <span className="truncate">
-                {flow.updated_at
-                  ? `Edited ${timeElapsed(flow.updated_at)} ago`
-                  : "Never edited"}
-              </span>
-            </div>
+        <div className="flex w-full flex-col">
+          <div className="flex w-full flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+            <h3
+              className="truncate font-medium text-sm text-primary-font"
+              title={flow.name}
+            >
+              {flow.name}
+            </h3>
+            <p className="truncate text-[12px] text-secondary-font">
+              {flow.updated_at
+                ? `Edited ${timeElapsed(flow.updated_at)} ago`
+                : "Never edited"}
+            </p>
           </div>
-          <div className="mt-1 text-xs text-muted-foreground dark:text-white/70 line-clamp-2">
+          <div className="mt-1.5 text-sm text-secondary-font line-clamp-2">
             {flow.description || "No description available"}
           </div>
         </div>
       </div>
 
-      <div className="ml-5 flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
         <Button
-          variant="ghost"
+          variant="link"
           size="iconSm"
           className="group"
           onClick={(e) => {
@@ -281,7 +329,7 @@ const AgentListItem = ({
           <ForwardedIconComponent
             name="Trash2"
             aria-hidden="true"
-            className="h-4 w-4 text-muted-foreground group-hover:text-foreground"
+            className="h-4 w-4 text-secondary-font group-hover:text-error"
           />
         </Button>
       </div>
@@ -328,7 +376,7 @@ export default function AgentBuilderPage() {
   const [isSavingProject, setIsSavingProject] = useState(false);
   const [showAllAgents, setShowAllAgents] = useState(false);
   const [view, setView] = useState<"list" | "grid">("list");
-  const [sortOpen, setSortOpen] = useState(false);
+  // const [sortOpen, setSortOpen] = useState(false);
   const [sortBy, setSortBy] = useState<"most_recent" | "recently_created">(
     "most_recent"
   );
@@ -467,55 +515,52 @@ export default function AgentBuilderPage() {
   };
 
   return (
-    <div className="flex h-full w-full overflow-y-auto dark:bg-black dark:text-white">
-      <div className="w-full p-4">
+    <div className="flex h-full w-full overflow-y-auto">
+      <div className="w-full">
         {/* AI Agent Builder Title */}
         <div className="mb-6">
           {/* Project Selector */}
           <div className="flex items-center gap-2 justify-end">
-            <div className="text-sm text-muted-foreground">Project</div>
+            <div className="text-xs font-medium text-secondary-font">
+              Project
+            </div>
             <Select onValueChange={handleSelectProject} value={folderId}>
-              <SelectTrigger className="w-[220px] h-9 dark:border-white/20 dark:text-white">
-                <SelectValue placeholder="Select project" />
+              <SelectTrigger className="w-[180px] h-9">
+                <SelectValue
+                  placeholder="Select project"
+                  className="font-medium"
+                />
               </SelectTrigger>
-              <SelectContent
-                align="end"
-                className="dark:bg-black dark:text-white"
-              >
+              <SelectContent align="end">
                 {folders
                   .filter((f) => f.name !== "Builder Agent")
                   .map((f) => (
-                    <SelectItem
-                      key={f.id}
-                      value={f.id!}
-                      className="text-sm dark:text-white"
-                    >
+                    <SelectItem key={f.id} value={f.id!} className="text-sm">
                       {f.name}
                     </SelectItem>
                   ))}
               </SelectContent>
             </Select>
             <Button
-              variant="outline"
+              // variant="outline"
               size="sm"
-              className="h-9"
+              className=""
               onClick={handleOpenCreateProjectModal}
               disabled={isCreatingFolder}
             >
-              <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
+              <ForwardedIconComponent name="Plus" className="h-4 w-4" />
               New Project
             </Button>
           </div>
         </div>
 
         {/* Hero Section */}
-        <div className="flex flex-col items-center justify-center mt-8 mb-8 max-w-[876px] mx-auto">
-          <RiChatAiLine size={36} opacity={0.5} className="mb-2" />
-          <p className="text-xl mb-2">
-            Hi <span className="font-medium">{displayName}</span>, What can I
-            help you today?
+        <div className="flex flex-col gap-2 items-center justify-center mt-6 mb-6 max-w-[876px] mx-auto">
+          <AiStudioIcon className="w-[28px] h-[28px] text-secondary-font" />
+          <p className="text-xl text-primary-font font-medium leading-5">
+            Hi <span>{displayName}</span>, What can I help you today?
           </p>
-          <p className="text-sm text-muted-foreground text-center max-w-2xl">
+          <p className="text-md font-medium text-muted-foreground text-center max-w-2xl leading-5">
             Build workflows from the library of AI Agents, or author your own
             custom AI Agent
           </p>
@@ -524,12 +569,25 @@ export default function AgentBuilderPage() {
         {/* Prompt Input Section */}
         <div className="max-w-[876px] mx-auto">
           <div className="relative">
-            <textarea
+            {/* <textarea
               value={promptValue}
               rows={1}
               onChange={(e) => setPromptValue(e.target.value)}
               placeholder="Describe your agent... e.g., 'Create an agent that can create a clinical summary from a patient chart'"
-              className="w-full p-4 pr-12 rounded-lg border border-input dark:border-white/20 bg-background dark:bg-black text-sm dark:text-white placeholder:text-muted-foreground dark:placeholder:text-white/60 focus:outline-none"
+              className="w-full p-4 pr-12 rounded-lg border border-secondary-border bg-background-surface text-sm shadow-[0_0_4px_2px_rgba(var(--border-secondary-rgb),0.3)] focus:outline-none"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  // Disabled until conversation page is ready
+                  // handlePromptSubmit();
+                }
+              }}
+            /> */}
+            <input
+              value={promptValue}
+              onChange={(e) => setPromptValue(e.target.value)}
+              placeholder="Describe your agent... e.g., 'Create an agent that can create a clinical summary from a patient chart'"
+              className="w-full h-[52px] p-4 pr-12 rounded-lg border border-secondary-border bg-background-surface text-sm text-primary-font shadow-[0_0_4px_2px_rgba(var(--border-secondary-rgb),0.3)] focus:outline-none"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -538,93 +596,121 @@ export default function AgentBuilderPage() {
                 }
               }}
             />
-            <button
+            {/* <button
               onClick={handlePromptSubmit}
-              className="absolute right-3 bottom-4 p-2 rounded-md bg-primary-blue text-primary-foreground disabled:opacity-50 disabled:pointer-events-none"
+              className="absolute right-3 bottom-4 p-2 rounded-md bg-primary text-primary-foreground disabled:opacity-50 disabled:pointer-events-none"
               disabled={!promptValue.trim()}
               // disabled={true} //disabling temporarily
               aria-label="Submit prompt"
             >
               <VscSend name="Send" className="h-4 w-4" />
-            </button>
+            </button> */}
+
+            <Button
+              size="md"
+              onClick={handlePromptSubmit}
+              className="absolute w-8 right-3 top-2.5 p-0 rounded-md bg-primary text-background-surface disabled:opacity-50 disabled:pointer-events-none"
+              disabled={!promptValue.trim()}
+              // disabled={true} //disabling temporarily
+              aria-label="Submit prompt"
+            >
+              <VscSend
+                name="Send"
+                className="h-4 w-4 disabled:cursor-not-allowed"
+              />
+            </Button>
           </div>
           <div className="mt-3 text-center">
-            <button
+            <Button
+              variant="link"
+              size="iconSm"
               onClick={() => setShowTemplatesModal(true)}
-              className="text-sm text-primary-blue dark:text-white font-medium"
+              // className="absolute w-8 right-3 top-2.5 p-0 rounded-md bg-primary text-background-surface disabled:opacity-50 disabled:pointer-events-none"
+            >
+              Or Get Started Step-by-Step
+            </Button>
+
+            {/* <button
+              onClick={() => setShowTemplatesModal(true)}
+              className="text-sm text-primary dark:text-white font-medium"
             >
               <span className="not-italic font-medium text-xs tracking-[0] text-[var(--text-link,#671EE3)]">
                 Or Get Started Step-by-Step
               </span>
-            </button>
+            </button> */}
           </div>
         </div>
 
         {/* Recent Agents Section */}
-        <div className="mt-4 pt-4 max-w-[876px] mx-auto border-t border-[#efefef] dark:border-white/20">
-          <div className="flex items-center justify-between mb-6">
-            <div className="text-base font-semibold">
+        <div className="mt-4 pt-4 max-w-[876px] mx-auto border-t border-primary-border">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-md font-medium text-primary-font">
               Top {folderData?.flows?.items.length || 0} Agents
             </div>
             <div className="flex items-center gap-2">
               {/* Sort By Dropdown */}
-              <DropdownMenu open={sortOpen} onOpenChange={setSortOpen}>
+              <SortByDropdown
+                value={sortBy}
+                onChange={(v) => setSortBy(v as typeof sortBy)}
+                // onChange={setSortBy}
+                options={[
+                  { label: "Most Recent", value: "most_recent" },
+                  { label: "Recently Created", value: "recently_created" },
+                ]}
+              />
+              {/* <DropdownMenu open={sortOpen} onOpenChange={setSortOpen}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className={cn(
-                      "h-8 px-2 text-sm gap-1 border border-solid border-[#efefef] dark:border-white/20 rounded-lg",
-                      sortOpen && "bg-muted text-foreground"
-                    )}
+                    size="xs"
+                    className={cn("w-[120px] h-8 px-2 gap-1 justify-between")}
                     aria-haspopup="menu"
                     aria-expanded={sortOpen}
                   >
-                    <ForwardedIconComponent
-                      name="ArrowUpDown"
-                      className="h-4 w-4"
-                    />
-                    <span>Sort By</span>
+                    <p className="flex items-center gap-2">
+                      <ForwardedIconComponent
+                        name="ArrowUpDown"
+                        className="!h-3 !w-3"
+                      />
+                      <span>Sort By</span>
+                    </p>
                     <ForwardedIconComponent
                       name="ChevronDown"
-                      className="h-4 w-4"
+                      className="!h-4 !w-4"
                     />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="p-1 dark:bg-black dark:text-white"
-                >
+                <DropdownMenuContent align="end">
                   <DropdownMenuItem
                     className={cn(
-                      "flex items-center justify-between gap-4 text-sm dark:text-white dark:hover:text-white",
+                      "flex items-center justify-between gap-4 text-sm cursor-pointer",
                       sortBy === "most_recent" && "bg-accent"
                     )}
                     onClick={() => setSortBy("most_recent")}
                     aria-selected={sortBy === "most_recent"}
                   >
-                    <span className="dark:text-white">Most Recent</span>
-                    <div className="flex items-center gap-1">
+                    <span className="">Most Recent</span>
+                    <div className="flex items-center">
                       <ForwardedIconComponent
                         name="ArrowUp"
-                        className="h-3 w-3 dark:text-white"
+                        className="h-3 w-3"
                       />
                       <ForwardedIconComponent
                         name="ArrowDown"
-                        className="h-3 w-3 dark:text-white"
+                        className="h-3 w-3"
                       />
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className={cn(
-                      "flex items-center justify-between gap-4 text-sm dark:text-white dark:hover:text-white",
+                      "flex items-center justify-between gap-4 text-sm cursor-pointer",
                       sortBy === "recently_created" && "bg-accent"
                     )}
                     onClick={() => setSortBy("recently_created")}
                     aria-selected={sortBy === "recently_created"}
                   >
                     <span className="dark:text-white">Recently Created</span>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center">
                       <ForwardedIconComponent
                         name="ArrowUp"
                         className="h-3 w-3 dark:text-white"
@@ -636,13 +722,16 @@ export default function AgentBuilderPage() {
                     </div>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
-              </DropdownMenu>
-              <div className="relative flex h-fit rounded-lg border border-muted bg-muted">
+              </DropdownMenu> */}
+
+              {/* list and grid view */}
+
+              <ViewToggle value={view} onChange={setView} />
+
+              {/* <div className="relative flex h-fit rounded-lg border border-accent">
                 <div
-                  className={`absolute top-[2px] h-[32px] w-8 transform rounded-md bg-background shadow-md transition-transform duration-300 ${
-                    view === "list"
-                      ? "left-[2px] translate-x-0"
-                      : "left-[6px] translate-x-full"
+                  className={`absolute h-[30px] w-[30px] transform rounded-md bg-accent transition-transform duration-300 ${
+                    view === "list" ? "translate-x-0" : "translate-x-full"
                   }`}
                 ></div>
                 {(["list", "grid"] as const).map((viewType) => (
@@ -650,30 +739,28 @@ export default function AgentBuilderPage() {
                     key={viewType}
                     unstyled
                     size="icon"
-                    className={`group relative z-10 m-[2px] flex-1 rounded-lg p-2 ${
-                      view === viewType
-                        ? "text-foreground"
-                        : "text-muted-foreground hover:bg-muted"
-                    }`}
+                    className={`group relative z-10 flex-1 rounded-lg p-[7px] text-secondary-font`}
                     onClick={() => setView(viewType)}
                     aria-label={`Switch to ${viewType} view`}
                   >
                     <ForwardedIconComponent
                       name={viewType === "list" ? "Menu" : "LayoutGrid"}
                       aria-hidden="true"
-                      className="h-4 w-4 group-hover:text-foreground"
+                      className="h-4 w-4"
                     />
                   </Button>
                 ))}
-              </div>
+              </div> */}
+
               {(folderData?.flows?.items ?? []).length >= 9 && (
                 <Button
                   variant="link"
                   type="button"
-                  size="sm"
+                  size="xs"
                   onClick={() => navigate("/flows")}
                 >
-                  {"View All >"}
+                  <span>View All</span>
+                  <ChevronRight />
                 </Button>
               )}
             </div>
@@ -694,7 +781,7 @@ export default function AgentBuilderPage() {
           {!agentsLoading &&
             agentsToShow.length > 0 &&
             (view === "grid" ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[calc(100vh-408px)] overflow-y-auto">
                 {agentsToShow.map((flow) => (
                   <AgentCard
                     key={flow.id}
@@ -705,7 +792,7 @@ export default function AgentBuilderPage() {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col bg-background-surface px-4 py-3 border border-accent rounded-xl max-h-[calc(100vh-408px)] overflow-y-auto">
                 {agentsToShow.map((flow) => (
                   <AgentListItem
                     key={flow.id}
@@ -730,31 +817,43 @@ export default function AgentBuilderPage() {
         open={showCreateProjectModal}
         onOpenChange={setShowCreateProjectModal}
       >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-[650px]">
+          <DialogHeader className="pb-6 flex-row justify-between gap-1">
             <DialogTitle>Create New Project</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="project-name">Project Name</Label>
-              <Input
-                id="project-name"
-                value={projectName}
-                onChange={(e) => {
-                  setProjectName(e.target.value);
-                  if (nameError) setNameError(null);
-                }}
-                placeholder="Enter project name"
-                aria-invalid={!!nameError}
-              />
-              {nameError && (
-                <p className="text-xs text-destructive" role="alert">
-                  {nameError}
-                </p>
-              )}
+              <Label htmlFor="project-name" className="text-secondary-font">
+                Project Name
+              </Label>
+              <div className="relative">
+                <Input
+                  id="project-name"
+                  value={projectName}
+                  onChange={(e) => {
+                    setProjectName(e.target.value);
+                    if (nameError) setNameError(null);
+                  }}
+                  placeholder="Enter project name"
+                  aria-invalid={!!nameError}
+                />
+                {nameError && (
+                  <p
+                    className="absolute text-xs text-error left-[2px] -bottom-[18px]"
+                    role="alert"
+                  >
+                    {nameError}
+                  </p>
+                )}
+              </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="project-description">Project Description</Label>
+              <Label
+                htmlFor="project-description"
+                className="text-secondary-font"
+              >
+                Project Description
+              </Label>
               <Input
                 id="project-description"
                 value={projectDescription}
@@ -763,20 +862,22 @@ export default function AgentBuilderPage() {
               />
             </div>
           </div>
-          <DialogFooter className="mt-4">
+          <DialogFooter className="mt-6">
             <Button
               variant="outline"
+              size="lg"
               onClick={() => setShowCreateProjectModal(false)}
               disabled={isSavingProject}
             >
               Cancel
             </Button>
             <Button
-              variant="primary"
+              variant="default"
+              size="lg"
               onClick={handleSaveProject}
               disabled={isSavingProject}
             >
-              {isSavingProject ? "Saving..." : "Save"}
+              {isSavingProject ? "Saving..." : "Save Project"}
             </Button>
           </DialogFooter>
         </DialogContent>

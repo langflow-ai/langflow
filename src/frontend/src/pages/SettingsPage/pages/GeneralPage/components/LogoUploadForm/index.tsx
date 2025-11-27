@@ -20,6 +20,7 @@ import { useUpdateAppConfig } from "@/controllers/API/queries/application-config
 import useAlertStore from "@/stores/alertStore";
 import { AppLogoDisplay } from "@/components/AppLogoDisplay";
 import { UseRequestProcessor } from "@/controllers/API/services/request-processor";
+import { RiUploadCloud2Fill } from "react-icons/ri";
 
 const LogoUploadForm = () => {
   const { logoUrl, setLogoUrl } = useLogoStore();
@@ -41,10 +42,17 @@ const LogoUploadForm = () => {
   const handleFileSelect = (file: File) => {
     // Validate file type
     const fileExtension = file.name.split(".").pop()?.toLowerCase();
-    if (!fileExtension || !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)) {
+    if (
+      !fileExtension ||
+      !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
+    ) {
       setErrorData({
         title: "Invalid File Type",
-        list: [`Please upload an image file (${ALLOWED_IMAGE_INPUT_EXTENSIONS.join(", ")})`],
+        list: [
+          `Please upload an image file (${ALLOWED_IMAGE_INPUT_EXTENSIONS.join(
+            ", "
+          )})`,
+        ],
       });
       return;
     }
@@ -126,7 +134,9 @@ const LogoUploadForm = () => {
         setLogoUrl(null);
 
         // Invalidate the GET query cache so all users get the updated logo state
-        queryClient.invalidateQueries({ queryKey: ["useGetAppConfig", "app-logo"] });
+        queryClient.invalidateQueries({
+          queryKey: ["useGetAppConfig", "app-logo"],
+        });
 
         setSuccessData({
           title: "Logo Removed Successfully",
@@ -177,7 +187,7 @@ const LogoUploadForm = () => {
       // Frontend will generate fresh signed URLs on-demand when displaying the logo
       await updateAppConfig({
         key: "app-logo",
-        value: fileName,  // Store blob path like "app-logo/logo-xxxxx.png"
+        value: fileName, // Store blob path like "app-logo/logo-xxxxx.png"
         description: "Application logo blob path",
       });
 
@@ -185,7 +195,9 @@ const LogoUploadForm = () => {
       setLogoUrl(fileName);
 
       // Invalidate the GET query cache so all users get the updated logo state
-      queryClient.invalidateQueries({ queryKey: ["useGetAppConfig", "app-logo"] });
+      queryClient.invalidateQueries({
+        queryKey: ["useGetAppConfig", "app-logo"],
+      });
 
       setSuccessData({
         title: "Logo Uploaded Successfully",
@@ -218,7 +230,7 @@ const LogoUploadForm = () => {
           {/* Preview Area - shows local preview or uploaded logo */}
           {!isLogoRemoved && (previewUrl || logoUrl) && (
             <div className="flex items-center gap-4">
-              <div className="flex h-20 w-20 items-center justify-center rounded-lg border bg-muted">
+              <div className="flex h-[60px] w-[60px] items-center justify-center rounded-lg border bg-accent-light">
                 {previewUrl ? (
                   // Local file preview (before upload)
                   <img
@@ -236,8 +248,8 @@ const LogoUploadForm = () => {
               </div>
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
+                variant="error"
+                size="md"
                 onClick={handleRemoveLogo}
               >
                 Remove Logo
@@ -247,7 +259,7 @@ const LogoUploadForm = () => {
 
           {/* Upload Area */}
           <div
-            className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${
+            className={`flex flex-col items-center justify-center rounded-lg border-2 border-primary-border hover:border-secondary-border border-dashed p-8 transition-colors ${
               isDragging
                 ? "border-primary bg-primary/5"
                 : "border-border hover:border-primary/50"
@@ -256,23 +268,25 @@ const LogoUploadForm = () => {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <ForwardedIconComponent
+            {/* <ForwardedIconComponent
               name="Upload"
               className="mb-4 h-12 w-12 text-muted-foreground"
-            />
-            <p className="mb-2 text-sm text-muted-foreground">
-              Drag and drop your logo here, or
-            </p>
+            /> */}
+            <RiUploadCloud2Fill className="h-14 w-14 text-secondary-font opacity-70" />
             <Button
-              type="button"
               variant="outline"
-              size="sm"
+              size="md"
               onClick={handleBrowseClick}
+              className="my-3"
             >
               Browse Files
             </Button>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Supported formats: {ALLOWED_IMAGE_INPUT_EXTENSIONS.join(", ").toUpperCase()}
+            <p className="text-[13px] font-medium text-secondary-font">
+              Drag and drop your logo here, or
+            </p>
+            <p className="text-[10px] mt-0.5 text-secondary-font italic opacity-70">
+              Supported formats:{" "}
+              {ALLOWED_IMAGE_INPUT_EXTENSIONS.join(", ").toUpperCase()}
             </p>
           </div>
 
@@ -280,14 +294,17 @@ const LogoUploadForm = () => {
           <input
             ref={fileInputRef}
             type="file"
-            accept={ALLOWED_IMAGE_INPUT_EXTENSIONS.map((ext) => `.${ext}`).join(",")}
+            accept={ALLOWED_IMAGE_INPUT_EXTENSIONS.map((ext) => `.${ext}`).join(
+              ","
+            )}
             onChange={handleFileInputChange}
             className="hidden"
           />
         </div>
       </CardContent>
-      <CardFooter className="border-t px-6 py-4">
+      <CardFooter className="border-t px-6 py-4 justify-end">
         <Button
+          variant="default"
           onClick={handleSaveLogo}
           disabled={(!selectedFile && !isLogoRemoved) || isUploading}
           className="w-full sm:w-auto"

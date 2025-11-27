@@ -1,16 +1,15 @@
 body {
   margin: 0;
-  font-family:
-    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
+  font-family: "NeueMontreal", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
+    "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family:
-    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
 }
 pre {
   font-family: inherit;
@@ -204,9 +203,7 @@ textarea[class^="ag-"]:focus {
   max-width: 28rem;
 
   background-repeat: no-repeat;
-  background-position:
-    100% 100%,
-    0 0;
+  background-position: 100% 100%, 0 0;
 
   background-image: linear-gradient(
     var(--shine-deg),
@@ -218,16 +215,12 @@ textarea[class^="ag-"]:focus {
     transparent 100%
   );
 
-  background-size:
-    250% 250%,
-    100% 100%;
+  background-size: 250% 250%, 100% 100%;
   transition: background-position 0s ease;
 }
 
 .card-shine-effect:hover {
-  background-position:
-    -100% -100%,
-    0 0;
+  background-position: -100% -100%, 0 0;
   transition-duration: 1.5s;
 }
 

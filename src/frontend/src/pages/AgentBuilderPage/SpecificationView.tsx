@@ -3,7 +3,10 @@ interface SpecificationViewProps {
   yamlSpec: string;
 }
 
-export default function SpecificationView({ flowData, yamlSpec }: SpecificationViewProps) {
+export default function SpecificationView({
+  flowData,
+  yamlSpec,
+}: SpecificationViewProps) {
   return (
     <div className="h-full overflow-auto p-6">
       <div className="rounded-lg border bg-card">
@@ -11,7 +14,7 @@ export default function SpecificationView({ flowData, yamlSpec }: SpecificationV
           <h3 className="font-semibold text-lg">Agent Specification (YAML)</h3>
         </div>
         <div className="p-4">
-          <pre className="p-4 bg-muted rounded text-sm overflow-auto whitespace-pre font-mono">
+          <pre className="p-4 bg-background-surface rounded text-sm overflow-auto whitespace-pre font-mono">
             {yamlSpec || "No YAML specification available"}
           </pre>
         </div>

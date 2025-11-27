@@ -17,31 +17,34 @@ export const SidebarOpenView = ({
   setActiveSession,
 }: SidebarOpenViewProps) => {
   const setNewSessionCloseVoiceAssistant = useVoiceStore(
-    (state) => state.setNewSessionCloseVoiceAssistant,
+    (state) => state.setNewSessionCloseVoiceAssistant
   );
 
   const setNewChatOnPlayground = useFlowStore(
-    (state) => state.setNewChatOnPlayground,
+    (state) => state.setNewChatOnPlayground
   );
 
   return (
     <>
-      <div className="flex flex-col pl-3">
+      <div className="flex flex-col pl-1">
         <div className="flex flex-col gap-2 pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <IconComponent
                 name="MessagesSquare"
-                className="h-[18px] w-[18px] text-ring"
+                className="h-[18px] w-[18px] text-secondary-font"
               />
-              <div className="text-mmd font-normal">Chat</div>
+              <div className="text-mmd font-medium text-secondary-font">
+                Chat
+              </div>
             </div>
             <ShadTooltip styleClasses="z-50" content="New Chat">
               <div>
                 <Button
                   data-testid="new-chat"
-                  variant="ghost"
+                  variant="outline"
                   className="flex h-8 w-8 items-center justify-center !p-0 hover:bg-secondary-hover"
+                  size="xs"
                   onClick={(_) => {
                     setvisibleSession(undefined);
                     setSelectedViewField(undefined);
@@ -51,7 +54,7 @@ export const SidebarOpenView = ({
                 >
                   <IconComponent
                     name="Plus"
-                    className="h-[18px] w-[18px] text-ring"
+                    className="h-[18px] w-[18px] text-menu"
                   />
                 </Button>
               </div>

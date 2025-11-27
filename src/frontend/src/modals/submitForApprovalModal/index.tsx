@@ -10,7 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { useSubmitFlowForApproval, useGetFlowLatestStatus } from "@/controllers/API/queries/flow-versions";
+import {
+  useSubmitFlowForApproval,
+  useGetFlowLatestStatus,
+} from "@/controllers/API/queries/flow-versions";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { incrementPatchVersion } from "@/utils/versionUtils";
 import {
@@ -27,6 +30,7 @@ import { Upload, X } from "lucide-react";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { ALLOWED_IMAGE_INPUT_EXTENSIONS } from "@/constants/constants";
 import { AgentLogo } from "@/components/AgentLogo";
+import { RiUploadCloud2Fill } from "react-icons/ri";
 
 interface SubmitForApprovalModalProps {
   open: boolean;
@@ -53,14 +57,18 @@ export default function SubmitForApprovalModal({
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-  const [existingLogoBlobPath, setExistingLogoBlobPath] = useState<string | null>(null);
+  const [existingLogoBlobPath, setExistingLogoBlobPath] = useState<
+    string | null
+  >(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sample input state
   const DEFAULT_STORAGE_ACCOUNT = "autonomizestorageaccount";
   const DEFAULT_CONTAINER_NAME = "ai-studio-v2";
   const [isUploadingSamples, setIsUploadingSamples] = useState(false);
-  const [uploadedSampleFiles, setUploadedSampleFiles] = useState<{ name: string; path: string }[]>([]);
+  const [uploadedSampleFiles, setUploadedSampleFiles] = useState<
+    { name: string; path: string }[]
+  >([]);
   const sampleFilesInputRef = useRef<HTMLInputElement>(null);
   const [sampleTexts, setSampleTexts] = useState<string[]>([""]);
 
@@ -74,7 +82,9 @@ export default function SubmitForApprovalModal({
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const { mutateAsync: getFlow } = useGetFlow();
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
-  const setCurrentFlowInFlowStore = useFlowStore((state) => state.setCurrentFlow);
+  const setCurrentFlowInFlowStore = useFlowStore(
+    (state) => state.setCurrentFlow
+  );
 
   // Detect presence of inputs in the current flow to conditionally render sections
   const hasTextOrChatInput = useMemo(() => {
@@ -137,7 +147,13 @@ export default function SubmitForApprovalModal({
         setUploadedSampleFiles([]);
       }
     }
-  }, [open, flowName, currentFlow?.name, currentFlow?.description, latestStatus]);
+  }, [
+    open,
+    flowName,
+    currentFlow?.name,
+    currentFlow?.description,
+    latestStatus,
+  ]);
 
   // Run validation when modal opens
   useEffect(() => {
@@ -152,11 +168,16 @@ export default function SubmitForApprovalModal({
   // Logo upload handlers
   const handleFileSelect = (file: File) => {
     const fileExtension = file.name.split(".").pop()?.toLowerCase();
-    if (!fileExtension || !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)) {
+    if (
+      !fileExtension ||
+      !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
+    ) {
       setErrorData({
         title: "Invalid File Type",
         list: [
-          `Please upload an image file (${ALLOWED_IMAGE_INPUT_EXTENSIONS.join(", ")})`,
+          `Please upload an image file (${ALLOWED_IMAGE_INPUT_EXTENSIONS.join(
+            ", "
+          )})`,
         ],
       });
       return;
@@ -269,7 +290,10 @@ export default function SubmitForApprovalModal({
         });
 
         uploaded.push(fileName);
-        setUploadedSampleFiles((prev) => [...prev, { name: file.name, path: fileName }]);
+        setUploadedSampleFiles((prev) => [
+          ...prev,
+          { name: file.name, path: fileName },
+        ]);
       }
     } catch (error: any) {
       console.error("Sample upload error:", error);
@@ -365,7 +389,9 @@ export default function SubmitForApprovalModal({
           agent_logo: finalLogoUrl || undefined,
           storage_account: DEFAULT_STORAGE_ACCOUNT,
           container_name: DEFAULT_CONTAINER_NAME,
-          file_names: uploadedSampleFiles.length ? uploadedSampleFiles.map((f) => f.path) : undefined,
+          file_names: uploadedSampleFiles.length
+            ? uploadedSampleFiles.map((f) => f.path)
+            : undefined,
           sample_text: sampleTexts.filter((t) => t.trim().length > 0),
         },
       },
@@ -379,8 +405,8 @@ export default function SubmitForApprovalModal({
           try {
             const updatedFlow = await getFlow({ id: flowId });
             if (updatedFlow) {
-              setCurrentFlow(updatedFlow);  // Update flowsManagerStore
-              setCurrentFlowInFlowStore(updatedFlow);  // Update flowStore
+              setCurrentFlow(updatedFlow); // Update flowsManagerStore
+              setCurrentFlowInFlowStore(updatedFlow); // Update flowStore
             }
           } catch (error) {
             console.error("Failed to refetch flow after submit:", error);
@@ -415,7 +441,7 @@ export default function SubmitForApprovalModal({
           <DialogTitle>Submit Agent for Approval</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4 overflow-y-auto pr-2">
+        <div className="space-y-4 my-4 overflow-y-auto pr-2 max-h-[calc(90vh-130px)]">
           <div className="space-y-2">
             <Label htmlFor="title">
               Title <span className="text-destructive">*</span>
@@ -522,19 +548,28 @@ export default function SubmitForApprovalModal({
               {/* Upload Dropzone */}
               {!logoPreviewUrl && !existingLogoBlobPath && (
                 <div
-                  className={`flex h-24 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed transition-colors ${
-                    isDragging
-                      ? "border-primary bg-primary/10"
-                      : "border-muted-foreground/25 hover:border-primary hover:bg-muted"
-                  }`}
+                  className={`flex flex-col py-5 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-primary-border hover:border-secondary-border border-dashed p-8 transition-colors `}
+                  // className={`flex h-24 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed transition-colors ${
+                  //   isDragging
+                  //     ? "border-primary bg-primary/10"
+                  //     : "border-muted-foreground/25 hover:border-primary hover:bg-muted"
+                  // }
+                  // `}
                   onClick={() => fileInputRef.current?.click()}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                 >
-                  <Upload className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    {isDragging ? "Drop logo here" : "Drag and drop or click to upload"}
+                  {/* <Upload className="h-5 w-5 text-muted-foreground" /> */}
+                  <RiUploadCloud2Fill className="h-14 w-14 text-secondary-font opacity-70" />
+                  <span className="text-[13px] font-medium text-secondary-font block">
+                    {isDragging
+                      ? "Drop logo here"
+                      : "Drag and drop or click to upload"}
+                  </span>
+                  <span className="text-[10px] text-secondary-font italic opacity-70 block">
+                    Supported formats:{" "}
+                    {ALLOWED_IMAGE_INPUT_EXTENSIONS.join(", ").toUpperCase()}
                   </span>
                   <input
                     ref={fileInputRef}
@@ -549,9 +584,10 @@ export default function SubmitForApprovalModal({
                 </div>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Upload a logo for your agent (PNG, JPG, JPEG). This will be displayed during review.
-            </p>
+            {/* <p className="text-xs text-muted-foreground">
+              Upload a logo for your agent (PNG, JPG, JPEG). This will be
+              displayed during review.
+            </p> */}
           </div>
 
           {/* Sample Inputs Section */}
@@ -562,7 +598,9 @@ export default function SubmitForApprovalModal({
               {hasFilePathInput && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Sample Input files</span>
+                    <span className="text-sm text-muted-foreground">
+                      Sample Input files
+                    </span>
                     <div className="flex items-center gap-2">
                       <Button
                         type="button"
@@ -585,7 +623,10 @@ export default function SubmitForApprovalModal({
                   {uploadedSampleFiles.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {uploadedSampleFiles.map((f, idx) => (
-                        <div key={`${f.path}-${idx}`} className="flex items-center gap-2 bg-muted px-2 py-1 rounded">
+                        <div
+                          key={`${f.path}-${idx}`}
+                          className="flex items-center gap-2 bg-muted px-2 py-1 rounded"
+                        >
                           <span className="text-xs">{f.name}</span>
                           <Button
                             type="button"
@@ -607,21 +648,37 @@ export default function SubmitForApprovalModal({
               {hasTextOrChatInput && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Sample Input Text</span>
-                    <button type="button" className="text-sm text-primary hover:underline" onClick={addSampleText}>
+                    <span className="text-sm text-muted-foreground">
+                      Sample Input Text
+                    </span>
+                    <button
+                      type="button"
+                      className="text-sm text-primary hover:underline"
+                      onClick={addSampleText}
+                    >
                       + Add More
                     </button>
                   </div>
                   {sampleTexts.length > 0 && (
                     <div className="space-y-3">
                       {sampleTexts.map((text, idx) => (
-                        <div key={`sample-text-${idx}`} className="flex items-center gap-2">
+                        <div
+                          key={`sample-text-${idx}`}
+                          className="flex items-center gap-2"
+                        >
                           <Input
                             value={text}
-                            onChange={(e) => updateSampleText(idx, e.target.value)}
+                            onChange={(e) =>
+                              updateSampleText(idx, e.target.value)
+                            }
                             placeholder="Enter Sample Input Text"
                           />
-                          <Button type="button" size="sm" variant="ghost" onClick={() => removeSampleText(idx)}>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removeSampleText(idx)}
+                          >
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
@@ -635,10 +692,14 @@ export default function SubmitForApprovalModal({
 
           {validationErrors.length === 0 && (
             <div className="rounded-lg bg-muted p-4 text-sm space-y-2">
-              <p className="font-medium">What happens when you submit for approval?</p>
+              <p className="font-medium">
+                What happens when you submit for approval?
+              </p>
               <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                 <li>Your flow will be sent to an admin for review</li>
-                <li>You will not be able to edit the flow while it is under review</li>
+                <li>
+                  You will not be able to edit the flow while it is under review
+                </li>
                 <li>Once approved, you can publish it to the marketplace</li>
               </ul>
             </div>

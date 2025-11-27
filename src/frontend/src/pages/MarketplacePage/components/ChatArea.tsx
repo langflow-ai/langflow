@@ -104,39 +104,39 @@ export function ChatArea({
   onSelectSampleFile,
 }: ChatAreaProps) {
   return (
-    <div className="flex flex-col h-full border rounded-lg p-2 bg-white">
+    <div className="flex flex-col h-full border rounded-lg p-2 bg-background-surface">
       {/* Thread Header */}
-      <div className="flex items-center justify-between px-3 py-1 bg-[#FBFAFF] rounded-lg">
+      <div className="flex items-center justify-between px-3 py-1 bg-accent-light rounded-lg">
         <div
-          className="text-xs text-[#444] font-medium truncate max-w-[60%]"
+          className="text-xs text-primary-font font-medium truncate max-w-[60%]"
           title={threadId || ""}
         >
           {threadId ? `thread_${threadId}` : "thread"}
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-primary !gap-1"
+            variant="link"
+            size="xs"
+            className="h-7 px-2 !gap-1"
             onClick={onNewThread}
           >
             <ChatIcon /> New Thread
           </Button>
           <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-primary !gap-1"
+            variant="link"
+            size="xs"
+            className="h-7 px-2 !gap-1"
             onClick={disableThreadLogs ? undefined : onOpenThreadLogs}
             disabled={!!disableThreadLogs}
           >
-            <ClockFading className="text-[#444]" /> Thread Logs
+            <ClockFading className="text-primary-font" /> Thread Logs
           </Button>
         </div>
       </div>
       <div
         ref={chatContainerRef}
         onScroll={onScroll}
-        className="bg-white py-1 flex-1 overflow-y-auto scrollbar-hide"
+        className="bg-background-surface py-1 flex-1 overflow-y-auto scrollbar-hide"
       >
         {messages.length === 0 && (
           <div className="flex h-full items-center justify-center text-muted-foreground">
@@ -149,11 +149,11 @@ export function ChatArea({
               </div>
               {hasChatInput ? (
                 <>
-                  <p className="text-sm mt-2">
+                  <p className="text-sm mt-2 text-primary-font">
                     Send a message to see how your agent responds
                   </p>
                   {fileInputComponents.length > 0 && (
-                    <p className="text-xs mt-2 text-muted-foreground">
+                    <p className="text-xs mt-1 text-secondary-font">
                       This agent accepts file inputs. Use the attachment button
                       to provide files.
                     </p>
@@ -188,7 +188,7 @@ export function ChatArea({
       </div>
 
       {/* Input Area */}
-      <div className="bg-white">
+      <div className="bg-background-surface">
         {error && <div className="mb-2 text-sm text-destructive">{error}</div>}
 
         {selectedFiles.length > 0 && (
@@ -247,7 +247,7 @@ export function ChatArea({
                     variant="outline"
                     size="sm"
                     disabled={isLoading || !!streamingMessageId}
-                    className="!h-7 w-7 !rounded-full border-[#EFEFEF] text-[#731FE3] hover:text-[#731FE3] bg-[#F7F6FF] hover:bg-[#EBE8FF]"
+                    className="!h-7 w-7 !rounded-full border-primary-border text-secondary hover:text-secondary bg-primary-light hover:bg-accent items-center"
                     onClick={onOpenFileModal}
                   >
                     <Upload className="h-4 w-4" />
@@ -268,7 +268,7 @@ export function ChatArea({
               />
 
               <div className="absolute right-2 bottom-[6px] flex items-center gap-1">
-                <button
+                <Button
                   onClick={streamingMessageId ? onStop : onSend}
                   disabled={
                     !streamingMessageId &&
@@ -277,7 +277,7 @@ export function ChatArea({
                       : false) ||
                       isLoading)
                   }
-                  className={`p-2 rounded-md transition-colors ${
+                  className={`w-8 h-8 rounded-md transition-colors ${
                     streamingMessageId
                       ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       : "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -296,7 +296,7 @@ export function ChatArea({
                       className="h-4 w-4"
                     />
                   )}
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
@@ -352,14 +352,14 @@ export function ChatArea({
           selectedFiles.length === 0 &&
           showSampleSection && (
             <div className="mt-4">
-              <p className="text-sm text-[#444] font-medium mb-2 pl-1">
+              <p className="text-sm text-primary-font font-medium mb-2 pl-1">
                 Or Choose from Sample Input files below
               </p>
               <div className="flex flex-wrap gap-2">
                 {sampleFileNames.map((name, idx) => (
                   <div
                     key={`${name}-${idx}`}
-                    className="flex items-center gap-2 bg-[#F5F2FF] rounded-md p-2 px-3 text-xs text-[#350E84] cursor-pointer"
+                    className="flex items-center gap-2 bg-accent rounded-md p-2 px-3 text-xs text-menu cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
                       onSelectSampleFile(sampleFilePaths[idx]);

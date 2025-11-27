@@ -29,12 +29,13 @@ import GeneralPageHeaderComponent from "./components/GeneralPageHeader";
 import LogoUploadForm from "./components/LogoUploadForm";
 import PasswordFormComponent from "./components/PasswordForm";
 import ProfilePictureFormComponent from "./components/ProfilePictureForm";
+import ThemeSwitcher from "../ThemeSwitcher/ThemeSwitcher";
 
 export const GeneralPage = () => {
   const { scrollId } = useParams();
 
   const [inputState, setInputState] = useState<patchUserInputStateType>(
-    CONTROL_PATCH_USER_STATE,
+    CONTROL_PATCH_USER_STATE
   );
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -75,7 +76,7 @@ export const GeneralPage = () => {
               list: [(error as any)?.response?.data?.detail],
             });
           },
-        },
+        }
       );
     }
   };
@@ -99,7 +100,7 @@ export const GeneralPage = () => {
               list: [(error as any)?.response?.data?.detail],
             });
           },
-        },
+        }
       );
     }
   };
@@ -139,8 +140,12 @@ export const GeneralPage = () => {
   }
 
   return (
-    <div className="flex h-full w-full flex-col gap-6 overflow-x-hidden">
-      <GeneralPageHeaderComponent />
+    <div className="flex h-full w-full flex-col gap-4 overflow-x-hidden">
+      <GeneralPageHeaderComponent
+        title="General"
+        subtitle="Manage settings related to Langflow and your account."
+        iconName="SlidersHorizontal"
+      />
 
       <div className="flex w-full flex-col gap-6">
         {/* Logo Upload - Application logo for header */}
@@ -167,6 +172,7 @@ export const GeneralPage = () => {
           />
         )} */}
       </div>
+      {/* <ThemeSwitcher /> */}
 
       <CustomTermsLinks />
     </div>

@@ -57,12 +57,12 @@ export default function EmbedModal({
   return (
     <BaseModal open={open} setOpen={setOpen} size="retangular">
       <BaseModal.Header>
-        <div className="flex items-center gap-2 text-base font-semibold">
-          <IconComponent name="Columns2" className="icon-size" />
-          Embed into site
-        </div>
+        {/* <div className="flex items-center gap-2 text-base font-semibold"> */}
+        {/* <IconComponent name="Columns2" className="icon-size" /> */}
+        Embed into site
+        {/* </div> */}
       </BaseModal.Header>
-      <BaseModal.Content className="">
+      <BaseModal.Content>
         <div className="relative flex h-full w-full">
           <Button
             variant="ghost"
@@ -72,15 +72,9 @@ export default function EmbedModal({
             className="!hover:bg-foreground group absolute right-2 top-2"
           >
             {isCopied ? (
-              <IconComponent
-                name="Check"
-                className="h-5 w-5 text-muted-foreground"
-              />
+              <IconComponent name="Check" className="h-5 w-5 text-menu" />
             ) : (
-              <IconComponent
-                name="Copy"
-                className="!h-5 !w-5 text-muted-foreground"
-              />
+              <IconComponent name="Copy" className="!h-5 !w-5 text-menu" />
             )}
           </Button>
           <SyntaxHighlighter
@@ -88,7 +82,7 @@ export default function EmbedModal({
             wrapLongLines={true}
             language="html"
             style={isDark ? oneDark : oneLight}
-            className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
+            className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-primary-border text-left !custom-scroll"
           >
             {embedCode}
           </SyntaxHighlighter>

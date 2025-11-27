@@ -55,15 +55,15 @@ const _HiddenOutputsButton = memo(
   }) => (
     <Button
       unstyled
-      className="group flex h-[1.25rem] w-[1.25rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
+      className="group flex h-[1.25rem] w-[1.25rem] items-center justify-center rounded-full border text-secondary-font"
       onClick={onClick}
     >
       <ForwardedIconComponent
         name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
-        className="h-3 w-3 text-placeholder-foreground group-hover:text-foreground"
+        className="h-3 w-3"
       />
     </Button>
-  ),
+  )
 );
 
 function GenericNode({
@@ -96,23 +96,23 @@ function GenericNode({
   const dismissedNodes = useFlowStore((state) => state.dismissedNodes);
   const addDismissedNodes = useFlowStore((state) => state.addDismissedNodes);
   const removeDismissedNodes = useFlowStore(
-    (state) => state.removeDismissedNodes,
+    (state) => state.removeDismissedNodes
   );
 
   const dismissedNodesLegacy = useFlowStore(
-    (state) => state.dismissedNodesLegacy,
+    (state) => state.dismissedNodesLegacy
   );
   const addDismissedNodesLegacy = useFlowStore(
-    (state) => state.addDismissedNodesLegacy,
+    (state) => state.addDismissedNodesLegacy
   );
 
   const dismissAll = useMemo(
     () => dismissedNodes.includes(data.id),
-    [dismissedNodes, data.id],
+    [dismissedNodes, data.id]
   );
   const dismissAllLegacy = useMemo(
     () => dismissedNodesLegacy.includes(data.id),
-    [dismissedNodesLegacy, data.id],
+    [dismissedNodesLegacy, data.id]
   );
 
   const showNode = data.showNode ?? true;
@@ -129,8 +129,8 @@ function GenericNode({
 
   const componentUpdate = useFlowStore(
     useShallow((state: FlowStoreType) =>
-      state.componentsToUpdate.find((component) => component.id === data.id),
-    ),
+      state.componentsToUpdate.find((component) => component.id === data.id)
+    )
   );
 
   const {
@@ -147,7 +147,7 @@ function GenericNode({
     data?.id,
     data.node!,
     setNode,
-    updateNodeInternals,
+    updateNodeInternals
   );
 
   useEffect(() => {
@@ -188,7 +188,7 @@ function GenericNode({
                 const newNode = processNodeAdvancedFields(
                   resData,
                   edges,
-                  data.id,
+                  data.id
                 );
                 updateNodeCode(newNode, currentCode, "code", type);
                 removeDismissedNodes([data.id]);
@@ -206,7 +206,7 @@ function GenericNode({
               console.error(error);
               setLoadingUpdate(false);
             },
-          },
+          }
         );
       }
     },
@@ -219,7 +219,7 @@ function GenericNode({
       validateComponentCode,
       setErrorData,
       takeSnapshot,
-    ],
+    ]
   );
 
   const handleUpdateCodeWShortcut = useCallback(() => {
@@ -234,16 +234,16 @@ function GenericNode({
   const isToolMode = useMemo(
     () =>
       data.node?.outputs?.some(
-        (output) => output.name === "component_as_tool",
+        (output) => output.name === "component_as_tool"
       ) ??
       data.node?.tool_mode ??
       false,
-    [data.node?.outputs, data.node?.tool_mode],
+    [data.node?.outputs, data.node?.tool_mode]
   );
 
   const hasOutputs = useMemo(
     () => data.node?.outputs && data.node.outputs.length > 0,
-    [data.node?.outputs],
+    [data.node?.outputs]
   );
 
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -274,8 +274,8 @@ function GenericNode({
   const [selectedOutput, setSelectedOutput] = useState<OutputFieldType | null>(
     () =>
       data.node?.outputs?.find(
-        (output) => output.name === data?.selected_output,
-      ) || null,
+        (output) => output.name === data?.selected_output
+      ) || null
   );
 
   const handleSelectOutput = useCallback(
@@ -317,7 +317,7 @@ function GenericNode({
           });
 
           const outputIndex = newNode.data.node.outputs.findIndex(
-            (o) => o.name === output.name,
+            (o) => o.name === output.name
           );
           if (outputIndex !== -1) {
             const outputTypes = output.types || [];
@@ -335,7 +335,7 @@ function GenericNode({
       });
       updateNodeInternals(data.id);
     },
-    [data.id, setNode, setEdges, updateNodeInternals],
+    [data.id, setNode, setEdges, updateNodeInternals]
   );
 
   useEffect(() => {
@@ -346,7 +346,7 @@ function GenericNode({
     )
       return;
     handleSelectOutput(
-      data.node?.outputs?.find((output) => output.selected) || null,
+      data.node?.outputs?.find((output) => output.selected) || null
     );
   }, [data.node?.outputs, data?.selected_output, handleSelectOutput]);
 
@@ -366,12 +366,12 @@ function GenericNode({
 
   const shouldShowUpdateComponent = useMemo(
     () => (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
-    [isOutdated, hasBreakingChange, isUserEdited, dismissAll],
+    [isOutdated, hasBreakingChange, isUserEdited, dismissAll]
   );
 
   const shouldShowLegacyComponent = useMemo(
     () => (data.node?.legacy || data.node?.replacement) && !dismissAllLegacy,
-    [data.node?.legacy, data.node?.replacement, dismissAllLegacy],
+    [data.node?.legacy, data.node?.replacement, dismissAllLegacy]
   );
 
   const memoizedNodeToolbarComponent = useMemo(() => {
@@ -379,8 +379,8 @@ function GenericNode({
       <>
         <div
           className={cn(
-            "absolute -top-12 left-1/2 z-50 -translate-x-1/2",
-            "transform transition-all duration-300 ease-out",
+            "absolute -top-14 left-1/2 z-50 -translate-x-1/2",
+            "transform transition-all duration-300 ease-out"
           )}
         >
           <NodeToolbarComponent
@@ -418,9 +418,7 @@ function GenericNode({
               showNode
                 ? "top-2 translate-x-[10.4rem]"
                 : "top-0 translate-x-[6.4rem]",
-              editedNameDescription
-                ? "bg-accent-emerald"
-                : "bg-zinc-foreground",
+              editedNameDescription ? "bg-accent-emerald" : "bg-secondary"
             )}
             data-testid={
               editedNameDescription
@@ -434,8 +432,8 @@ function GenericNode({
               className={cn(
                 editedNameDescription
                   ? "text-accent-emerald-foreground"
-                  : "text-muted-foreground",
-                "icon-size",
+                  : "text-white",
+                "icon-size"
               )}
             />
           </Button>
@@ -468,16 +466,16 @@ function GenericNode({
 
   const memoizedOnUpdateNode = useCallback(
     () => handleUpdateCode(true),
-    [handleUpdateCode],
+    [handleUpdateCode]
   );
   const memoizedSetDismissAll = useCallback(
     () => addDismissedNodes([data.id]),
-    [addDismissedNodes, data.id],
+    [addDismissedNodes, data.id]
   );
 
   const memoizedSetDismissAllLegacy = useCallback(
     () => addDismissedNodesLegacy([data.id]),
-    [addDismissedNodesLegacy, data.id],
+    [addDismissedNodesLegacy, data.id]
   );
 
   return (
@@ -487,7 +485,7 @@ function GenericNode({
           borderColor,
           showNode ? "w-80" : `w-48`,
           "generic-node-div group/node relative rounded-xl border shadow-sm hover:shadow-md",
-          !hasOutputs && "pb-4",
+          !hasOutputs && "pb-4"
         )}
       >
         {openUpdateModal && (
@@ -521,13 +519,13 @@ function GenericNode({
           data-testid={`${data.id}-main-node`}
           className={cn(
             "grid text-wrap leading-5",
-            showNode ? "border-b" : "relative",
+            showNode ? "border-b" : "relative"
           )}
         >
           <div
             data-testid={"div-generic-node"}
             className={cn(
-              "flex w-full flex-1 items-center justify-between gap-2 overflow-hidden px-4 py-3",
+              "flex w-full flex-1 items-center justify-between gap-2 overflow-hidden px-4 py-3"
             )}
           >
             <div
@@ -627,7 +625,7 @@ function GenericNode({
               <div
                 className={classNames(
                   Object.keys(data.node!.template).length < 1 ? "hidden" : "",
-                  "flex-max-width justify-center",
+                  "flex-max-width justify-center"
                 )}
               >
                 {" "}

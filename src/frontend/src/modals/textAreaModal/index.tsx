@@ -78,7 +78,7 @@ export default function ComponentTextModal({
           <Textarea
             password={password}
             ref={textRef}
-            className="form-input h-full w-full resize-none overflow-auto rounded-lg focus-visible:ring-1"
+            className="form-input h-full w-full resize-none overflow-auto rounded-lg focus-visible:ring-0"
             value={inputValue}
             onChange={(event) => {
               setInputValue(event.target.value);

@@ -64,7 +64,7 @@ export const EditFlowSettings: React.FC<
   };
 
   const handleDescriptionChange = (
-    event: React.ChangeEvent<HTMLTextAreaElement>,
+    event: React.ChangeEvent<HTMLTextAreaElement>
   ) => {
     const { value } = event.target;
     if (value.length >= descriptionMaxLength) {
@@ -76,7 +76,7 @@ export const EditFlowSettings: React.FC<
   };
 
   const handleDescriptionKeyDown = (
-    event: React.KeyboardEvent<HTMLTextAreaElement>,
+    event: React.KeyboardEvent<HTMLTextAreaElement>
   ) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -88,22 +88,24 @@ export const EditFlowSettings: React.FC<
   const handleFocus = (event) => event.target.select();
 
   return (
-    <>
-      <Form.Field name="name">
-        <div className="edit-flow-arrangement">
-          <Form.Label className="text-mmd font-medium">
+    <div className="space-y-6">
+      <Form.Field name="name" className="relative">
+        <div className="relative">
+          <Form.Label className="text-sm font-medium text-secondary-font leading-none">
             Name{setName ? "" : ":"}
           </Form.Label>
           {isMaxLength && (
-            <span className="edit-flow-span">Character limit reached</span>
+            <span className="text-xs font-medium text-error absolute right-0">
+              Character limit reached
+            </span>
           )}
           {isMinLength && (
-            <span className="edit-flow-span">
+            <span className="text-xs font-medium text-error absolute right-0">
               Minimum {minLength} character(s) required
             </span>
           )}
           {isInvalidName && (
-            <span className="edit-flow-span">
+            <span className="text-xs font-medium text-error">
               Flow name already exists in this folder
             </span>
           )}
@@ -132,23 +134,28 @@ export const EditFlowSettings: React.FC<
             {name}
           </span>
         )}
-        <Form.Message match="valueMissing" className="field-invalid">
+        <Form.Message
+          match="valueMissing"
+          className="absolute -bottom-4 text-xs font-medium text-error"
+        >
           Please enter a name
         </Form.Message>
         <Form.Message
           match={(value) => !!(value && invalidNameList.includes(value))}
-          className="field-invalid"
+          className="absolute -bottom-4 text-xs font-medium text-error"
         >
           Flow name already exists in this folder
         </Form.Message>
       </Form.Field>
-      <Form.Field name="description">
-        <div className="edit-flow-arrangement mt-2">
-          <Form.Label className="text-mmd font-medium">
+      <Form.Field name="description" className="relative">
+        <div className="relative">
+          <Form.Label className="text-sm font-medium text-secondary-font leading-none">
             Description{setDescription ? "" : ":"}
           </Form.Label>
           {isMaxDescriptionLength && (
-            <span className="edit-flow-span">Character limit reached</span>
+            <span className="text-xs font-medium text-error absolute right-0">
+              Character limit reached
+            </span>
           )}
         </div>
         {setDescription ? (
@@ -160,7 +167,7 @@ export const EditFlowSettings: React.FC<
               value={description!}
               placeholder="Flow description"
               data-testid="input-flow-description"
-              className="mt-2 max-h-[250px] resize-none font-normal"
+              className="mt-2 resize-none font-normal"
               rows={5}
               maxLength={descriptionMaxLength}
               onDoubleClickCapture={handleFocus}
@@ -172,13 +179,16 @@ export const EditFlowSettings: React.FC<
           <div
             className={cn(
               "max-h-[250px] overflow-auto pt-2 font-normal text-muted-foreground word-break-break-word",
-              description === "" ? "font-light italic" : "",
+              description === "" ? "font-light italic" : ""
             )}
           >
             {description === "" ? "No description" : description}
           </div>
         )}
-        <Form.Message match="valueMissing" className="field-invalid">
+        <Form.Message
+          match="valueMissing"
+          className="absolute -bottom-4 text-xs font-medium text-error"
+        >
           Please enter a description
         </Form.Message>
         {/* <div className="mt-3">
@@ -189,16 +199,16 @@ export const EditFlowSettings: React.FC<
                   Lock Workflow
                 </Form.Label>
 
-                <ForwardedIconComponent
-                  name={locked ? "Lock" : "Unlock"}
-                  className="text-muted-foreground !w-5 !h-5"
-                />
-              </div>
-
-              <p className="text-xs text-muted-foreground/70 mt-1 font-normal">
-                Lock your flow to prevent edits or accidental changes.
-              </p>
+              <ForwardedIconComponent
+                name={locked ? "Lock" : "Unlock"}
+                className="text-muted-foreground !w-4 !h-4"
+              />
             </div>
+
+            <p className="text-xs text-secondary-font mt-1 font-normal">
+              Lock your flow to prevent edits or accidental changes.
+            </p>
+          </div>
 
             <Switch
               checked={!!locked}
@@ -209,7 +219,7 @@ export const EditFlowSettings: React.FC<
           </div>
         </div> */}
       </Form.Field>
-    </>
+    </div>
   );
 };
 

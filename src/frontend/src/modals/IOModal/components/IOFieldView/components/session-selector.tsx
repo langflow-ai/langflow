@@ -44,7 +44,7 @@ export default function SessionSelector({
   const { mutate: updateSessionName } = useUpdateSessionName();
   const inputRef = useRef<HTMLInputElement>(null);
   const _setNewChatOnPlayground = useFlowStore(
-    (state) => state.setNewChatOnPlayground,
+    (state) => state.setNewChatOnPlayground
   );
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export default function SessionSelector({
               setSelectedView({ type: "Session", id: editedSession.trim() });
             }
           },
-        },
+        }
       );
     }
   };
@@ -119,7 +119,7 @@ export default function SessionSelector({
   };
 
   const setNewSessionCloseVoiceAssistant = useVoiceStore(
-    (state) => state.setNewSessionCloseVoiceAssistant,
+    (state) => state.setNewSessionCloseVoiceAssistant
   );
 
   return (
@@ -131,14 +131,16 @@ export default function SessionSelector({
         else toggleVisibility();
       }}
       className={cn(
-        "file-component-accordion-div group cursor-pointer rounded-md text-left text-mmd hover:bg-secondary-hover",
-        isVisible ? "bg-secondary-hover font-semibold" : "font-normal",
+        "file-component-accordion-div group cursor-pointer text-left py-1 pl-2 text-xs rounded-t-md hover:bg-accent-light mb-1",
+        isVisible
+          ? "!font-semibold bg-accent text-menu rounded-md"
+          : "font-normal text-primary-font border-b border-accent"
       )}
     >
-      <div className="flex w-full items-center justify-between overflow-hidden px-2 py-1 align-middle">
+      <div className="flex w-full items-center justify-between overflow-hidden align-middle">
         <div className="flex w-full min-w-0 items-center">
           {isEditing ? (
-            <div className="flex items-center">
+            <div className={`flex items-center ${isVisible ? "px-0" : "px-1"}`}>
               <Input
                 ref={inputRef}
                 value={editedSession}
@@ -146,7 +148,7 @@ export default function SessionSelector({
                 onChange={handleInputChange}
                 onBlur={handleOnBlur}
                 autoFocus
-                className="h-6 flex-grow px-1 py-0"
+                className="h-6 w-full !min-h-6 !px-1"
               />
               <button
                 onClick={handleCancel}
@@ -170,15 +172,15 @@ export default function SessionSelector({
                 </span>
                 <div
                   className={cn(
-                    "pointer-events-none absolute left-0 right-0 top-0 h-full whitespace-nowrap",
+                    "pointer-events-none absolute left-0 right-0 top-0 h-full whitespace-nowrap"
                   )}
                 >
                   <div
                     className={cn(
-                      "h-full w-full group-hover:truncate-secondary-hover",
-                      isVisible
-                        ? "truncate-secondary-hover"
-                        : "truncate-muted dark:truncate-canvas",
+                      "h-full w-full group-hover:truncate-secondary-hover"
+                      // isVisible
+                      //   ? "truncate-secondary-hover"
+                      //   : "truncate-muted dark:truncate-canvas"
                     )}
                   ></div>
                 </div>
@@ -198,7 +200,7 @@ export default function SessionSelector({
               data-confirm="true"
               className={cn(
                 "h-8 w-fit border-none bg-transparent p-2 focus:ring-0",
-                isVisible ? "visible" : "invisible group-hover:visible",
+                isVisible ? "visible" : "invisible group-hover:visible"
               )}
             >
               <IconComponent name="MoreHorizontal" className="h-4 w-4" />

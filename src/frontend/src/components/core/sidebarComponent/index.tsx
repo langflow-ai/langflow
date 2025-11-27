@@ -27,8 +27,11 @@ const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
   const isMobile = useIsMobile();
 
   return (
-    <Sidebar collapsible={isMobile ? "icon" : "none"} className="border-none">
-      <SidebarContent className="pr-6">
+    <Sidebar
+      collapsible={isMobile ? "icon" : "none"}
+      className="border border-primary-border p-4 rounded-lg shadow-[0_1px_8px_0_rgba(var(--boxshadow),0.1)] mr-4"
+    >
+      <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -43,9 +46,7 @@ const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
                       data-testid={`sidebar-nav-${item.title}`}
                       tooltip={item.title}
                     >
-                      <span className="text-muted-foreground dark:text-white/80 peer-hover/menu-button:text-accent-foreground peer-data-[active=true]/menu-button:text-accent-foreground dark:peer-data-[active=true]/menu-button:text-white">
-                        {item.icon}
-                      </span>
+                      <span>{item.icon}</span>
                       <span className="block max-w-full truncate">
                         {item.title}
                       </span>

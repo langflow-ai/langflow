@@ -37,7 +37,7 @@ export default function ChatMessage({
   // We need to check if message is not undefined because
   // we need to run .toString() on it
   const [chatMessage, setChatMessage] = useState(
-    chat.message ? chat.message.toString() : "",
+    chat.message ? chat.message.toString() : ""
   );
   const [isStreaming, setIsStreaming] = useState(false);
   const eventSource = useRef<EventSource | undefined>(undefined);
@@ -161,7 +161,7 @@ export default function ChatMessage({
             title: "Error updating messages.",
           });
         },
-      },
+      }
     );
   };
 
@@ -189,7 +189,7 @@ export default function ChatMessage({
             title: "Error updating messages.",
           });
         },
-      },
+      }
     );
   };
 
@@ -221,15 +221,13 @@ export default function ChatMessage({
         <div
           className={cn(
             "group relative flex w-full gap-4 rounded-md p-2",
-            editMessage ? "" : "hover:bg-muted",
+            editMessage ? "" : "hover:bg-accent-light"
           )}
         >
           <div
             className={cn(
               "relative flex h-[32px] w-[32px] items-center justify-center overflow-hidden rounded-md text-2xl",
-              !chat.isSend
-                ? "bg-muted"
-                : "border border-border hover:border-input",
+              !chat.isSend ? "bg-muted" : "border border-primary-border"
             )}
             style={
               chat.properties?.background_color
@@ -238,10 +236,10 @@ export default function ChatMessage({
             }
           >
             {!chat.isSend ? (
-              <div className="flex h-[18px] w-[18px] items-center justify-center">
+              <div className="flex h-6 w-6 items-center justify-center bg-primary">
                 {chat.properties?.icon ? (
                   chat.properties.icon.match(
-                    /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
+                    /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/
                   ) ? (
                     <span className="">{chat.properties.icon}</span>
                   ) : (
@@ -256,10 +254,10 @@ export default function ChatMessage({
                 )}
               </div>
             ) : (
-              <div className="flex h-[18px] w-[18px] items-center justify-center">
+              <div className="flex h-6 w-6 items-center justify-center bg-primary rounded-full">
                 {chat.properties?.icon ? (
                   chat.properties.icon.match(
-                    /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
+                    /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/
                   ) ? (
                     <div className="">{chat.properties.icon}</div>
                   ) : (
@@ -279,7 +277,7 @@ export default function ChatMessage({
             <div>
               <div
                 className={cn(
-                  "flex max-w-full items-baseline gap-3 truncate pb-2 text-sm font-semibold",
+                  "flex max-w-full items-baseline gap-3 truncate pb-2 text-sm font-semibold text-primary-font"
                 )}
                 style={
                   chat.properties?.text_color
@@ -293,10 +291,10 @@ export default function ChatMessage({
                 <span className="flex items-center gap-2">
                   {displaySenderName}
                   {isAudioMessage && (
-                    <div className="flex h-5 w-5 items-center justify-center rounded-sm bg-muted">
+                    <div className="flex h-5 w-5 items-center justify-center rounded-sm bg-primary">
                       <ForwardedIconComponent
                         name="mic"
-                        className="h-3 w-3 text-muted-foreground"
+                        className="h-3 w-3 text-white"
                       />
                     </div>
                   )}
@@ -346,7 +344,10 @@ export default function ChatMessage({
                     >
                       <div
                         data-testid={
-                          "chat-message-" + displaySenderName + "-" + chatMessage
+                          "chat-message-" +
+                          displaySenderName +
+                          "-" +
+                          chatMessage
                         }
                         className="flex w-full flex-col"
                       >
@@ -399,7 +400,7 @@ export default function ChatMessage({
                       <div
                         className={cn(
                           "w-full items-baseline whitespace-pre-wrap break-words text-sm font-normal",
-                          isEmpty ? "text-muted-foreground" : "text-primary",
+                          isEmpty ? "text-secondary-font" : "text-menu"
                         )}
                         data-testid={`chat-message-${displaySenderName}-${chatMessage}`}
                       >

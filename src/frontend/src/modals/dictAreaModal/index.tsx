@@ -90,12 +90,10 @@ export default function DictAreaModal({
 
   const renderHeader = () => (
     <BaseModal.Header description={onChange ? IteractiveReader() : null}>
-      <span className="pr-2">
-        {onChange ? "Edit Dictionary" : "View Dictionary"}
-      </span>
+      <span>{onChange ? "Edit Dictionary" : "View Dictionary"}</span>
       <IconComponent
         name="BookMarked"
-        className="h-6 w-6 pl-1 text-primary"
+        className="h-4 w-4 text-menu"
         aria-hidden="true"
       />
     </BaseModal.Header>

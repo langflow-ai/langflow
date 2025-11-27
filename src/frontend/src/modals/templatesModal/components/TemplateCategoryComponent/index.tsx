@@ -7,7 +7,7 @@ export function TemplateCategoryComponent({
 }: TemplateCategoryProps) {
   return (
     <>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 max-h-[calc(100vh-315px)] overflow-auto">
         {examples.map((example, index) => (
           <TemplateExampleCard
             key={index}

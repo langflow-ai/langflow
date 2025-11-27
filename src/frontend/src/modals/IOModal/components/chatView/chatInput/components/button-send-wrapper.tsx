@@ -9,9 +9,8 @@ const BUTTON_STATES = {
   NO_INPUT: "bg-high-indigo text-background",
   HAS_CHAT_VALUE: "text-primary",
   SHOW_STOP:
-    "bg-muted hover:bg-secondary-hover dark:hover:bg-input text-foreground cursor-pointer",
-  DEFAULT:
-    "bg-primary text-primary-foreground hover:bg-primary-hover hover:text-secondary",
+    "bg-background-surface hover:bg-accent border border-accent text-primary-font",
+  DEFAULT: "bg-primary hover:bg-secondary text-white",
 };
 
 type ButtonSendWrapperProps = {
@@ -55,6 +54,8 @@ const ButtonSendWrapper = ({
 
   return (
     <Button
+      variant="default"
+      size="sm"
       className={buttonClasses}
       onClick={handleClick}
       unstyled
@@ -75,11 +76,7 @@ const ButtonSendWrapper = ({
         />
       </Case> */}
 
-      <Case condition={showSendButton}>
-        <div className="flex h-fit w-fit items-center gap-2 text-sm font-medium">
-          Send
-        </div>
-      </Case>
+      <Case condition={showSendButton}>Send</Case>
     </Button>
   );
 };

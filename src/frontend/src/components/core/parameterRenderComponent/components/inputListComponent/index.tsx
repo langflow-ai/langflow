@@ -40,7 +40,7 @@ export default function InputListComponent({
       newInputList[index] = newValue;
       handleOnNewValue({ value: newInputList });
     },
-    [value, handleOnNewValue],
+    [value, handleOnNewValue]
   );
 
   const addNewInput = useCallback(
@@ -50,7 +50,7 @@ export default function InputListComponent({
       newInputList.push("");
       handleOnNewValue({ value: newInputList });
     },
-    [value, handleOnNewValue],
+    [value, handleOnNewValue]
   );
 
   const removeInput = useCallback(
@@ -61,7 +61,7 @@ export default function InputListComponent({
       handleOnNewValue({ value: newInputList });
       setDropdownOpen(null);
     },
-    [value, handleOnNewValue],
+    [value, handleOnNewValue]
   );
 
   // const handleDuplicateInput = useCallback(
@@ -121,7 +121,7 @@ export default function InputListComponent({
                   <div
                     className={cn(
                       "flex-1 cursor-text select-text text-nowrap pl-3 text-sm text-muted-foreground truncate-background",
-                      value.length > 1 ? "mr-10" : "mr-3",
+                      value.length > 1 ? "mr-10" : "mr-3"
                     )}
                   >
                     <span className="opacity-0">{singleValue}</span>

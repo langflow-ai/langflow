@@ -7,7 +7,7 @@ export const HeaderRender = ({ title, showIcon }) => {
       {showIcon && (
         <IconComponent
           name="Key"
-          className="h-6 w-6 pl-1 text-foreground"
+          className="h-6 w-6 pl-1 text-menu"
           aria-hidden="true"
         />
       )}

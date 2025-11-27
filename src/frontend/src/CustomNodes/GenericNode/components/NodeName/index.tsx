@@ -92,9 +92,9 @@ export default function NodeName({
       <div
         data-testid={"title-" + display_name}
         className={cn(
-          "nodoubleclick truncate font-medium text-primary",
-          showNode ? "cursor-text" : "cursor-default",
-        )}
+          "nodoubleclick truncate font-medium text-menu",
+          showNode ? "cursor-text" : "cursor-default"
+        )} 
       >
         <div className="flex cursor-grab items-center gap-2">
           <span className={cn("cursor-grab truncate text-sm")}>

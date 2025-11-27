@@ -34,9 +34,7 @@ export default function GetStartedComponent() {
       bgHorizontalImage: multiAgentHorizontal,
       icon: "Bot",
       category: "Agents",
-      flow: filteredExamples.find(
-        (example) => example.name === "Simple Agent"
-      ),
+      flow: filteredExamples.find((example) => example.name === "Simple Agent"),
     },
     {
       bgImage: vectorRag,
@@ -50,11 +48,11 @@ export default function GetStartedComponent() {
   ];
 
   return (
-    <div className="flex flex-1 flex-col gap-4 md:gap-8">
+    <div className="flex flex-1 flex-col gap-3 md:gap-6">
       <BaseModal.Header description="Start with templates showcasing Ask auto, simple extraction and document retrieval agent.">
         Get started
       </BaseModal.Header>
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-3">
         {cardData.map((card, index) => (
           <TemplateGetStartedCardComponent key={index} {...card} />
         ))}

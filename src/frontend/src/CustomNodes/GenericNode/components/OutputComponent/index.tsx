@@ -31,7 +31,7 @@ export default function OutputComponent({
   outputName,
 }: outputComponentType) {
   const nodeType = useFlowStore(
-    (state) => state.nodes.find((node) => node.id === nodeId)?.data?.type,
+    (state) => state.nodes.find((node) => node.id === nodeId)?.data?.type
   );
 
   const displayProxy = (children) => {
@@ -49,13 +49,13 @@ export default function OutputComponent({
   const singleOutput = displayProxy(
     <span
       className={cn(
-        "px-2 py-1 text-[13px] font-medium",
-        isToolMode && "text-secondary",
-        frozen ? "text-ice" : "",
+        "px-2 py-1 text-[13px] font-medium text-primary-font",
+        isToolMode && " ",
+        frozen ? "" : ""
       )}
     >
       {name}
-    </span>,
+    </span>
   );
 
   const hasLoopOutput = outputs?.some?.((output) => output.allows_loop);
@@ -83,7 +83,7 @@ export default function OutputComponent({
                 {name}
                 <ForwardedIconComponent
                   name="ChevronDown"
-                  className="h-4 w-4 text-muted-foreground"
+                  className="h-4 w-4 text-secondary-font"
                 />
               </div>
             </Button>

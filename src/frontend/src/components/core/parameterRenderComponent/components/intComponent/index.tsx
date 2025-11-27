@@ -61,7 +61,7 @@ export default function IntComponent({
   };
 
   const DISABLED_INPUT_CLASS =
-    "cursor-default bg-secondary border-border border rounded-md py-2 px-3 text-sm text-input placeholder:text-input";
+    "cursor-default bg-secondary border-primary-border border rounded-md py-2 px-3 text-sm text-input placeholder:text-input";
 
   const handleNumberChange = (newValue) => {
     handleOnNewValue({ value: Number(newValue) });

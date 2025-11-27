@@ -27,14 +27,14 @@ export const ChatViewWrapper = ({
   return (
     <div
       className={cn(
-        "flex h-full w-full flex-col justify-between px-4 pb-4 pt-2",
-        selectedViewField ? "hidden" : "",
+        "flex h-full w-full flex-col justify-between px-4 pb-6 pt-2",
+        selectedViewField ? "hidden" : ""
       )}
     >
       <div
         className={cn(
           "flex h-10 shrink-0 items-center text-base font-semibold",
-          playgroundPage ? "justify-between" : "lg:justify-start",
+          playgroundPage ? "justify-between" : "lg:justify-start"
         )}
       >
         <div className={cn(sidebarOpen ? "lg:hidden" : "left-4")}>
@@ -55,9 +55,9 @@ export const ChatViewWrapper = ({
         {visibleSession && sessions.length > 0 && (
           <div
             className={cn(
-              "truncate text-center font-semibold",
+              "truncate text-center font-semibold text-primary-font",
               playgroundPage ? "" : "mr-12 flex-grow lg:mr-0",
-              sidebarOpen ? "blur-sm lg:blur-0" : "",
+              sidebarOpen ? "blur-sm lg:blur-0" : ""
             )}
           >
             {visibleSession === currentFlowId
@@ -69,13 +69,13 @@ export const ChatViewWrapper = ({
           className={cn(
             sidebarOpen ? "pointer-events-none opacity-0" : "",
             "flex items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-            playgroundPage ? "right-2 top-4" : "absolute right-12 top-2 h-8",
+            playgroundPage ? "right-2 top-4" : "absolute right-12 top-2 h-8"
           )}
         >
           <ShadTooltip side="bottom" styleClasses="z-50" content="New Chat">
             <Button
-              className="mr-2 h-[32px] w-[32px] hover:bg-secondary-hover"
-              variant="ghost"
+              className="mr-4 h-[32px] w-[32px] hover:bg-secondary-hover"
+              variant="outline"
               size="icon"
               onClick={() => {
                 setvisibleSession(undefined);
@@ -84,7 +84,7 @@ export const ChatViewWrapper = ({
             >
               <IconComponent
                 name="Plus"
-                className="!h-[18px] !w-[18px] text-ring"
+                className="!h-[18px] !w-[18px] text-ring text-menu"
               />
             </Button>
           </ShadTooltip>

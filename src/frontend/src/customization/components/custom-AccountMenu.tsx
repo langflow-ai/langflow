@@ -3,7 +3,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CustomProfileIcon } from "./custom-profile-icon";
-import { HeaderMenuItems, HeaderMenuItemButton } from "@/components/core/appHeaderComponent/components/HeaderMenu";
+import {
+  HeaderMenuItems,
+  HeaderMenuItemButton,
+} from "@/components/core/appHeaderComponent/components/HeaderMenu";
 import { useLogout } from "@/controllers/API/queries/auth";
 import { envConfig } from "@/config/env";
 import KeycloakService from "@/services/keycloak";
@@ -25,10 +28,15 @@ export function CustomAccountMenu() {
         useFlowStore.getState().resetFlowState();
         useFlowsManagerStore.getState().resetStore();
         useFolderStore.getState().resetStore();
-        const redirectToLogin = `${window.location.origin}${BASENAME || ""}/login`;
+        const redirectToLogin = `${window.location.origin}${
+          BASENAME || ""
+        }/login`;
         await KeycloakService.getInstance().logout(redirectToLogin);
       } catch (error) {
-        console.error("Keycloak logout failed, falling back to API logout:", error);
+        console.error(
+          "Keycloak logout failed, falling back to API logout:",
+          error
+        );
         mutationLogout();
       }
       return;
@@ -44,15 +52,18 @@ export function CustomAccountMenu() {
         data-testid="user_menu_button"
         id="user_menu_button"
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors">
+        <div className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-white/30 hover:bg-white/40 transition-colors">
           <div className="h-6 w-6">
             <CustomProfileIcon />
           </div>
         </div>
       </DropdownMenuTrigger>
-      <HeaderMenuItems position="right" classNameSize="w-[200px]">
-        <div className="py-1">
-          <HeaderMenuItemButton onClick={() => navigate("/settings/general")} icon="settings">
+      <HeaderMenuItems position="right" classNameSize="w-[180px]">
+        <div className="py-1 bg-background-surface">
+          <HeaderMenuItemButton
+            onClick={() => navigate("/settings/general")}
+            icon="settings"
+          >
             Settings
           </HeaderMenuItemButton>
           <HeaderMenuItemButton onClick={handleLogout} icon="log-out">

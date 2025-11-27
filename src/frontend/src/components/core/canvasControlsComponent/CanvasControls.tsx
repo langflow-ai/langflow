@@ -9,7 +9,7 @@ import CanvasControlsDropdown from "./CanvasControlsDropdown";
 const CanvasControls = ({ children }: { children?: ReactNode }) => {
   const reactFlowStoreApi = useStoreApi();
   const isFlowLocked = useFlowStore(
-    useShallow((state) => state.currentFlow?.locked),
+    useShallow((state) => state.currentFlow?.locked)
   );
 
   useEffect(() => {
@@ -23,7 +23,7 @@ const CanvasControls = ({ children }: { children?: ReactNode }) => {
   return (
     <Panel
       data-testid="main_canvas_controls"
-      className="react-flow__controls !left-auto !m-2 flex !flex-row rounded-md border border-border bg-background fill-foreground stroke-foreground text-primary [&>button]:border-0"
+      className="react-flow__controls !left-auto !m-2 flex !flex-row rounded-md border border-primary-border bg-background-surface fill-foreground stroke-foreground text-primary [&>button]:border-0"
       position="bottom-right"
     >
       {children}

@@ -76,7 +76,7 @@ const SidebarSegmentedNav = () => {
   }, []);
 
   return (
-    <div className="flex h-full flex-col border-r border-border bg-background">
+    <div className="flex h-full flex-col border-r border-primary-border bg-background-surface">
       <SidebarMenu className="gap-2 py-1">
         {NAV_ITEMS.map((item) => (
           <div key={item.id}>
@@ -117,8 +117,8 @@ const SidebarSegmentedNav = () => {
                         ? isAddNoteActive
                         : activeSection === item.id
                     )
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                      ? "bg-accent !border-b-0"
+                      : "text-secondary-font hover:bg-accent"
                   )}
                   data-testid={`sidebar-nav-${item.id}`}
                 >

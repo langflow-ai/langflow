@@ -19,8 +19,8 @@ const TooltipContent = React.forwardRef<
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        "z-[99] content-center self-center overflow-y-auto rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-50 data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1",
-        className,
+        "z-[99] content-center self-center overflow-y-auto rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-50 data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1",
+        className
       )}
       {...props}
     />
@@ -36,11 +36,18 @@ const TooltipContentWithoutPortal = React.forwardRef<
     ref={ref}
     sideOffset={sideOffset}
     className={cn(
-      "z-[99] content-center self-center overflow-y-auto rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-50 data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1",
-      className,
+      "z-[99] content-center self-center overflow-y-auto rounded-sm px-3 py-1.5 text-sm shadow-md animate-in fade-in-50 data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1",
+      className
     )}
     {...props}
-  />
+  >
+    {props.children}
+    <TooltipPrimitive.Arrow
+      className="fill-popover stroke-border"
+      width={10}
+      height={6}
+    />
+  </TooltipPrimitive.Content>
 ));
 TooltipContentWithoutPortal.displayName = TooltipPrimitive.Content.displayName;
 

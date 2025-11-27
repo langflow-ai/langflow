@@ -27,7 +27,7 @@ export default function TableNodeCellRender({
     edges,
     parameterId,
     parameter,
-    nodeId,
+    nodeId
   );
 
   const { handleOnNewValue } = useHandleOnNewValue({
@@ -39,7 +39,7 @@ export default function TableNodeCellRender({
 
   const { handleNodeClass } = useHandleNodeClass(
     nodeId,
-    isTweaks ? () => {} : undefined,
+    isTweaks ? () => {} : undefined
   );
 
   const nodeInformationMetadata: NodeInfoType = useMemo(() => {
@@ -56,8 +56,8 @@ export default function TableNodeCellRender({
     parameter && (
       <div
         className={cn(
-          "group mx-auto flex h-full max-h-48 w-[300px] items-center justify-center overflow-auto px-1 py-2.5 custom-scroll",
-          isTweaks && "pointer-events-none opacity-30",
+          "group mx-auto flex h-full max-h-48 w-[300px] items-center justify-center overflow-auto px-1 py-2 custom-scroll",
+          isTweaks && "pointer-events-none opacity-30"
         )}
       >
         <ParameterRenderComponent

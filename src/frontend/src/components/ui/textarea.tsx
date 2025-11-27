@@ -14,9 +14,9 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           data-testid="textarea"
           className={cn(
-            "nopan nodelete nodrag noflow textarea-primary nowheel",
+            "nopan nodelete nodrag noflow nowheel border hover:border-secondary-border focus:border-secondary-border w-full py-2 px-3 bg-background-surface rounded-md border-primary-border min-h-[38px] text-primary-font text-sm placeholder:opacity-70",
             className,
-            password ? "password" : "",
+            password ? "password" : ""
           )}
           ref={ref}
           {...props}
@@ -25,7 +25,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         />
       </div>
     );
-  },
+  }
 );
 
 Textarea.displayName = "Textarea";

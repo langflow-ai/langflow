@@ -38,7 +38,7 @@ export default function APITabsComponent() {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [copiedStep, setCopiedStep] = useState<string | null>(null);
   const endpointName = useFlowStore(
-    useShallow((state) => state.currentFlow?.endpoint_name),
+    useShallow((state) => state.currentFlow?.endpoint_name)
   );
   const dark = useDarkStore((state) => state.dark);
   const nodes = useFlowStore((state) => state.nodes);
@@ -58,7 +58,7 @@ export default function APITabsComponent() {
   const streaming = hasStreaming(nodes);
   const tweaks = useTweaksStore((state) => state.tweaks);
   const activeTweaks = Object.values(tweaks).some(
-    (tweak) => Object.keys(tweak).length > 0,
+    (tweak) => Object.keys(tweak).length > 0
   );
 
   const includeTopLevelInputValue = formatPayloadTweaks(tweaks);
@@ -85,8 +85,8 @@ export default function APITabsComponent() {
   // Platform selection for cURL
   const [selectedPlatform, setSelectedPlatform] = useState(
     operatingSystemTabs.find((tab) =>
-      tab.name.includes(getOS() === "windows" ? "windows" : "macoslinux"),
-    )?.name || "macoslinux",
+      tab.name.includes(getOS() === "windows" ? "windows" : "macoslinux")
+    )?.name || "macoslinux"
   );
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -162,21 +162,36 @@ export default function APITabsComponent() {
     <div className="api-modal-tabs inset-0 m-0 h-full overflow-hidden">
       <div className="flex h-full flex-col gap-4 overflow-hidden">
         {/* Main language tabs */}
-        <div className="flex flex-row justify-start border-b border-border">
+        <div className="flex flex-row justify-start border-b border-primary-border">
           {tabsList.map((tab) => (
             <Button
               unstyled
               key={tab.title}
-              className={`flex h-8 select-none flex-row items-center gap-2 text-nowrap border-b-2 border-border border-b-transparent !py-1 font-medium ${
+              className={`flex h-8 flex-row items-center gap-2 text-nowrap border-b-2 border-b-transparent !py-1 font-medium ${
                 selectedTab === tab.title
-                  ? "border-b-2 border-black dark:border-b-white"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "border-b-2 border-secondary"
+                  : "text-secondary-font"
               } px-3 py-2 text-[13px]`}
               onClick={() => setSelectedTab(tab.title)}
               data-testid={`api_tab_${tab.title.toLowerCase()}`}
             >
-              <IconComponent name={tab.icon} className="h-4 w-4" />
-              <span>{tab.title}</span>
+              <IconComponent
+                name={tab.icon}
+                className={`h-4 w-4 ${
+                  selectedTab === tab.title
+                    ? "!text-secondary"
+                    : "text-secondary-font"
+                }`}
+              />
+              <span
+                className={`${
+                  selectedTab === tab.title
+                    ? "text-secondary"
+                    : "text-secondary-font"
+                }`}
+              >
+                {tab.title}
+              </span>
             </Button>
           ))}
         </div>

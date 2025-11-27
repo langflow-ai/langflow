@@ -455,7 +455,7 @@ export default function PlaygroundTab({
       >
         {/* Agent Details Panel */}
         <div
-          className="flex flex-col rounded-lg border border-border dark:border-white/20 h-full"
+          className="flex flex-col rounded-lg border border-primary-border h-full"
           style={{ width: `${leftPanelWidth}%` }}
         >
           <AgentDetailsPanel
@@ -474,7 +474,7 @@ export default function PlaygroundTab({
 
         {/* Drag Handle */}
         <div
-          className="w-3 h-[28px] bg-[#F5F2FF] cursor-col-resize rounded-[4px] text-[#350E84] flex items-center justify-center"
+          className="w-3 h-[28px] bg-background-surface cursor-col-resize rounded-[4px] text-menu flex items-center justify-center"
           onMouseDown={handleDragStart}
         >
           <DragIcon />
@@ -526,9 +526,7 @@ export default function PlaygroundTab({
       </div>
 
       {isThreadLogsOpen && (
-        <div
-        // className="fixed right-4 top-[148px] bottom-[16px] z-50"
-        >
+        <div>
           <ThreadLogsDrawer
             isOpen={isThreadLogsOpen}
             onClose={() => setIsThreadLogsOpen(false)}
@@ -573,15 +571,22 @@ export default function PlaygroundTab({
         open={isConfirmNewThreadOpen}
         onOpenChange={setIsConfirmNewThreadOpen}
       >
-        <DialogContent>
+        <DialogContent className="max-w-[650px]">
           <DialogHeader>
             <DialogTitle>
               Are you sure you want to create a new thread?
             </DialogTitle>
           </DialogHeader>
+          <div className="my-6">
+            <p className="text-secondary-font text-sm">
+              This will clear the previous thread and all its messages from the
+              view. To save them, copy the content to a separate document before
+              creating a new thread.
+            </p>
+          </div>
           <DialogFooter>
             <Button
-              variant="secondary"
+              variant="outline"
               onClick={() => setIsConfirmNewThreadOpen(false)}
             >
               Cancel

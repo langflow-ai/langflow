@@ -26,7 +26,7 @@ const ButtonLabel = () => (
 const ActiveButton = () => (
   <div
     data-testid="playground-btn-flow-io"
-    className="playground-btn-flow-toolbar hover:bg-accent"
+    className="playground-btn-flow-toolbar hover:bg-accent text-primary-font"
   >
     <PlayIcon />
     <ButtonLabel />
@@ -35,7 +35,7 @@ const ActiveButton = () => (
 
 const DisabledButton = () => (
   <div
-    className="playground-btn-flow-toolbar cursor-not-allowed text-muted-foreground duration-150"
+    className="playground-btn-flow-toolbar cursor-not-allowed text-secondary-font duration-150"
     data-testid="playground-btn-flow"
   >
     <PlayIcon />

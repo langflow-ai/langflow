@@ -91,7 +91,7 @@ export default function GlobalVariablesPage() {
               list: [`ID not found for variable: ${row}`],
             });
           },
-        },
+        }
       );
     });
   }
@@ -102,23 +102,23 @@ export default function GlobalVariablesPage() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col justify-between gap-6">
-      <div className="flex w-full items-start justify-between gap-6">
-        <div className="flex w-full flex-col">
-          <h2 className="flex items-center text-lg font-semibold tracking-tight">
+    <div className="flex h-full w-full flex-col gap-4">
+      <div className="flex w-full items-center justify-between gap-4">
+        <div className="flex flex-col w-full">
+          <h2 className="text-primary-font flex gap-2 items-center text-lg font-medium">
             Global Variables
             <ForwardedIconComponent
               name="Globe"
-              className="ml-2 h-5 w-5 text-primary"
+              className="h-4 w-4 text-menu"
             />
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-secondary-font">
             Manage global variables and assign them to fields.
           </p>
         </div>
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex items-center gap-2">
           <GlobalVariableModal asChild>
-            <Button data-testid="api-key-button-store" variant="primary">
+            <Button data-testid="api-key-button-store" variant="default">
               <IconComponent name="Plus" className="w-4" />
               Add New
             </Button>
@@ -126,7 +126,7 @@ export default function GlobalVariablesPage() {
         </div>
       </div>
 
-      <div className="flex h-full w-full flex-col justify-between">
+      <div className="flex h-full flex-col gap-2 bg-background-surface border border-primary-border rounded-lg p-4">
         <TableComponent
           key={"globalVariables"}
           overlayNoRowsTemplate="No data available"

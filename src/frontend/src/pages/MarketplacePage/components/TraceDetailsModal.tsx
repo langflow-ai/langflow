@@ -76,7 +76,7 @@ export default function TraceDetailsModal({
             {/* <div className="flex items-center gap-2">
               {traceId && (
                 <span
-                  className="text-sm truncate max-w-[280px] mr-10 text-[#731FE3]"
+                  className="text-sm truncate max-w-[280px] mr-10 text-secondary"
                   title={traceId}
                 >
                   ID: {traceId}
@@ -100,7 +100,7 @@ export default function TraceDetailsModal({
               />
             </div> */}
             <div className="p-3 border border-[#EFEFEF] flex-1 scroll-y">
-              <h3 className="text-sm font-medium mb-2 text-[#444444]">
+              <h3 className="text-sm font-medium mb-2 text-primary-font">
                 Trace Breakdown
               </h3>
 
@@ -135,7 +135,7 @@ export default function TraceDetailsModal({
             <h3 className="text-[16px] font-medium text-[#350E84]">
               Chat Input (ChatInput-cGagA)
             </h3>
-            <p className="text-xs text-[#64616A] mt-0.5">
+            <p className="text-xs text-secondary-font mt-0.5">
               {trace?.timestamp ? formatDate(trace.timestamp) : "-"}
             </p>
             {loading && (
@@ -172,16 +172,16 @@ function HeaderMeta({ trace }: { trace: any }) {
         Created on: {createdOn}
       </div> */}
       <div className="flex gap-2 text-xs">
-        <span className="px-2 py-1 rounded bg-[#F5F2FF] text-[#64616A] font-medium text-[10px]">
+        <span className="px-2 py-1 rounded bg-accent-light text-secondary-font font-medium text-[10px]">
           Latency: {latency}
         </span>
-        <span className="px-2 py-1 rounded bg-[#F5F2FF] text-[#64616A] font-medium text-[10px]">
+        <span className="px-2 py-1 rounded bg-accent-light text-secondary-font font-medium text-[10px]">
           Env: {env}
         </span>
-        <span className="px-2 py-1 rounded bg-[#F5F2FF] text-[#64616A] font-medium text-[10px]">
+        <span className="px-2 py-1 rounded bg-accent-light text-secondary-font font-medium text-[10px]">
           Cost: {cost}
         </span>
-        <span className="px-2 py-1 rounded bg-[#F5F2FF] text-[#64616A] font-medium text-[10px]">
+        <span className="px-2 py-1 rounded bg-accent-light text-secondary-font font-medium text-[10px]">
           Duration: {duration_ms}
         </span>
       </div>
@@ -279,7 +279,7 @@ function TraceDetailsView({
               value="inputs"
               className="border border-[#efefef] rounded bg-white"
             >
-              <AccordionTrigger className="px-3 py-2 text-sm font-semibold text-[#64616A] hover:no-underline">
+              <AccordionTrigger className="px-3 py-2 text-sm font-semibold text-secondary-font hover:no-underline">
                 Inputs
               </AccordionTrigger>
               <AccordionContent className="px-3 pb-3 pt-0">
@@ -292,7 +292,7 @@ function TraceDetailsView({
               value="outputs"
               className="border border-[#efefef] rounded bg-white"
             >
-              <AccordionTrigger className="px-3 py-2 text-sm font-semibold text-[#64616A] hover:no-underline">
+              <AccordionTrigger className="px-3 py-2 text-sm font-semibold text-secondary-font hover:no-underline">
                 Outputs
               </AccordionTrigger>
               <AccordionContent className="px-3 pb-3 pt-0">
@@ -306,7 +306,7 @@ function TraceDetailsView({
           className="space-y-3 overflow-y-auto max-h-[calc(100vh-390px)]"
         >
           <div className="border border-[#efefef] rounded bg-white px-3 py-2">
-            <div className=" text-sm font-semibold text-[#64616A] mb-2">
+            <div className=" text-sm font-semibold text-secondary-font mb-2">
               Attributes
             </div>
             {renderSection(attributes)}
@@ -376,12 +376,12 @@ function TraceBreakdown({
           title={`${root.name} • ${root.type}`}
         >
           <span
-            className="text-sm font-medium text-[#444444] truncate"
+            className="text-sm font-medium text-primary-font truncate"
             title={root.name}
           >
             {root.name}
           </span>
-          <span className="ml-2 text-[10px] font-medium text-[#64616A]">
+          <span className="ml-2 text-[10px] font-medium text-secondary-font">
             {formatDuration(root.duration_ms)}
           </span>
         </div>
@@ -393,8 +393,8 @@ function TraceBreakdown({
               key={node.node_id}
               className={`node-row text-xs font-medium ${
                 selectedNode === node.node_id
-                  ? "bg-[#F5F2FF] text-[#731FE3]"
-                  : "text-[#64616A]"
+                  ? "bg-accent-light text-secondary"
+                  : "text-secondary-font"
               }`}
               onClick={() => onSelect(node.node_id)}
               title={`${node.name} • ${node.type}`}
@@ -448,7 +448,7 @@ function renderSection(obj: any) {
   if (!obj || typeof obj !== "object" || Object.keys(obj).length === 0) {
     return (
       <div className="p-2">
-        <p className="text-xs text-[#64616A] opacity-60">No data</p>
+        <p className="text-xs text-secondary-font opacity-60">No data</p>
       </div>
     );
   }
@@ -463,10 +463,12 @@ function renderSection(obj: any) {
         return (
           <div
             key={k}
-            className="border border-[#E7ECF4] bg-[#FBFAFF] rounded p-2"
+            className="border border-primary-border bg-background-mainBg rounded p-2"
           >
-            <div className="text-sm font-medium mb-2 text-[#444444]">{k}</div>
-            <pre className="text-sm whitespace-pre-wrap font-sans overflow-x-auto !font-regular !text-[#64616A] !bg-transparent">
+            <div className="text-sm font-medium mb-2 text-primary-font">
+              {k}
+            </div>
+            <pre className="text-sm whitespace-pre-wrap font-sans overflow-x-auto !font-regular !text-secondary-font !bg-transparent">
               {String(display)}
             </pre>
           </div>

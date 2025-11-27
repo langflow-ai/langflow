@@ -115,7 +115,7 @@ export default function ShareModal({
       saveFlowStore(
         flow!,
         getTagsIds(selectedTags, cloneDeep(tags) ?? []),
-        sharePublic,
+        sharePublic
       ).then(successShare, (err) => {
         setErrorData({
           title: "Error sharing " + (is_component ? "component" : "flow"),
@@ -127,7 +127,7 @@ export default function ShareModal({
         flow!,
         getTagsIds(selectedTags, cloneDeep(tags) ?? []),
         sharePublic,
-        unavaliableNames.find((e) => e.name === name)!.id,
+        unavaliableNames.find((e) => e.name === name)!.id
       ).then(successShare, (err) => {
         setErrorData({
           title: "Error sharing " + is_component ? "component" : "flow",
@@ -194,7 +194,7 @@ export default function ShareModal({
         setOpen={internalSetOpen}
         onSubmit={() => {
           const isNameAvailable = !unavaliableNames.some(
-            (element) => element.name === name,
+            (element) => element.name === name
           );
 
           if (isNameAvailable) {
@@ -216,7 +216,7 @@ export default function ShareModal({
           <span className="pr-2">Share</span>
           <IconComponent
             name="Share3"
-            className="-m-0.5 h-6 w-6 text-foreground"
+            className="-m-0.5 h-6 w-6 text-menu"
             aria-hidden="true"
           />
         </BaseModal.Header>

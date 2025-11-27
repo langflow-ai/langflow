@@ -43,7 +43,7 @@ export default function ShortcutsPage() {
 
   const [open, setOpen] = useState(false);
   const updateUniqueShortcut = useShortcutsStore(
-    (state) => state.updateUniqueShortcut,
+    (state) => state.updateUniqueShortcut
   );
 
   function handleRestore() {
@@ -56,63 +56,57 @@ export default function ShortcutsPage() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col gap-6">
-      <div className="flex w-full items-start justify-between gap-6">
-        <div className="flex w-full flex-col">
-          <h2 className="flex items-center text-lg font-semibold tracking-tight">
+    <div className="flex h-full w-full flex-col gap-4">
+      <div className="flex w-full items-center justify-between gap-4">
+        <div className="flex flex-col w-full">
+          <h2 className="text-primary-font flex gap-2 items-center text-lg font-medium">
             Shortcuts
             <ForwardedIconComponent
               name="Keyboard"
-              className="ml-2 h-5 w-5 text-primary"
+              className="h-4 w-4 text-menu"
             />
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-secondary-font">
             Manage Shortcuts for quick access to frequently used actions.
           </p>
         </div>
-        <div>
-          <div className="align-end flex w-full justify-end">
-            <div className="justify center flex items-center">
-              {open && (
-                <EditShortcutButton
-                  disable={selectedRows.length === 0}
-                  shortcut={selectedRows}
-                  defaultShortcuts={shortcuts}
-                  open={open}
-                  setOpen={setOpen}
-                  setSelected={setSelectedRows}
-                >
-                  <div style={{ display: "none" }} />
-                </EditShortcutButton>
-              )}
-              <Button
-                variant="primary"
-                className="flex gap-2"
-                onClick={handleRestore}
-              >
-                <ForwardedIconComponent name="RotateCcw" className="w-4" />
-                Restore
-              </Button>
-            </div>
-          </div>
+        <div className="flex items-center gap-2">
+          {open && (
+            <EditShortcutButton
+              disable={selectedRows.length === 0}
+              shortcut={selectedRows}
+              defaultShortcuts={shortcuts}
+              open={open}
+              setOpen={setOpen}
+              setSelected={setSelectedRows}
+            >
+              <div style={{ display: "none" }} />
+            </EditShortcutButton>
+          )}
+          <Button
+            variant="default"
+            className="flex gap-2"
+            onClick={handleRestore}
+          >
+            <ForwardedIconComponent name="RotateCcw" className="w-4" />
+            Restore
+          </Button>
         </div>
       </div>
-      <div className="grid gap-6 pb-8">
-        <div>
-          {colDefs && nodesRowData.length > 0 && (
-            <TableComponent
-              suppressRowClickSelection={true}
-              domLayout="autoHeight"
-              pagination={false}
-              columnDefs={colDefs}
-              rowData={nodesRowData}
-              onCellDoubleClicked={(e) => {
-                setSelectedRows([e.data.name]);
-                setOpen(true);
-              }}
-            />
-          )}
-        </div>
+      <div className="flex h-full flex-col gap-2 bg-background-surface border border-primary-border rounded-lg p-4">
+        {colDefs && nodesRowData.length > 0 && (
+          <TableComponent
+            suppressRowClickSelection={true}
+            domLayout="autoHeight"
+            pagination={false}
+            columnDefs={colDefs}
+            rowData={nodesRowData}
+            onCellDoubleClicked={(e) => {
+              setSelectedRows([e.data.name]);
+              setOpen(true);
+            }}
+          />
+        )}
       </div>
     </div>
   );

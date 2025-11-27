@@ -41,7 +41,7 @@ export default function GlobalVariableModal({
   const [value, setValue] = useState(initialData?.value ?? "");
   const [type, setType] = useState(initialData?.type ?? "Credential");
   const [fields, setFields] = useState<string[]>(
-    initialData?.default_fields ?? [],
+    initialData?.default_fields ?? []
   );
   const [open, setOpen] =
     mySetOpen !== undefined && myOpen !== undefined
@@ -59,10 +59,10 @@ export default function GlobalVariableModal({
     if (globalVariables && componentFields.size > 0) {
       const unavailableFields = getUnavailableFields(globalVariables);
       const fields = Array.from(componentFields).filter(
-        (field) => !Object.hasOwn(unavailableFields, field.trim()),
+        (field) => !Object.hasOwn(unavailableFields, field.trim())
       );
       setAvailableFields(
-        sortByName(fields.concat(initialData?.default_fields ?? [])),
+        sortByName(fields.concat(initialData?.default_fields ?? []))
       );
       if (referenceField && fields.includes(referenceField)) {
         setFields([referenceField]);
@@ -97,7 +97,9 @@ export default function GlobalVariableModal({
         setOpen(false);
 
         setSuccessData({
-          title: `Variable ${name} ${initialData ? "updated" : "created"} successfully`,
+          title: `Variable ${name} ${
+            initialData ? "updated" : "created"
+          } successfully`,
         });
       },
       onError: (error) => {
@@ -106,7 +108,9 @@ export default function GlobalVariableModal({
           title: `Error ${initialData ? "updating" : "creating"} variable`,
           list: [
             responseError?.response?.data?.detail ??
-              `An unexpected error occurred while ${initialData ? "updating a new" : "creating"} variable. Please try again.`,
+              `An unexpected error occurred while ${
+                initialData ? "updating a new" : "creating"
+              } variable. Please try again.`,
           ],
         });
       },
@@ -136,11 +140,11 @@ export default function GlobalVariableModal({
       disable={disabled}
     >
       <BaseModal.Header description="This variable will be available for use across your flows.">
-        <ForwardedIconComponent
+        {/* <ForwardedIconComponent
           name="Globe"
           className="h-6 w-6 pr-1 text-primary"
           aria-hidden="true"
-        />
+        /> */}
         {initialData ? "Update Variable" : "Create Variable"}
       </BaseModal.Header>
       <BaseModal.Trigger disable={disabled} asChild={asChild}>

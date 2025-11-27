@@ -103,7 +103,7 @@ export default function MarketplaceFlowCard({
 
   return (
     <div
-      className={`group relative border border-[#EFEFEF] p-3 rounded-lg bg-white flex flex-col  ${
+      className={`group relative border border-primary-border p-3 rounded-lg bg-background-surface flex flex-col  ${
         item.flow_id ? "cursor-pointer" : "cursor-default"
       }
       `}
@@ -114,10 +114,10 @@ export default function MarketplaceFlowCard({
       {/* //   onClick={handleCardClick} */}
       {/* // > */}
       {/* Header */}
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div className="grid grid-cols-[1fr_auto] gap-3 items-center mb-1">
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="grid grid-cols-[1fr_auto] gap-3 items-center">
           <h3
-            className="truncate text-base font-semibold text-foreground"
+            className="truncate text-md font-medium text-primary-font"
             title={name}
           >
             {name}
@@ -126,10 +126,9 @@ export default function MarketplaceFlowCard({
             <LiveIcon className="w-[14px] h-[14px]" />
           )}
         </div>
-
         <div className="flex items-center gap-2">
           {version && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs font-medium text-secondary-font whitespace-nowrap">
               Ver. {version}
             </span>
           )}
@@ -137,15 +136,15 @@ export default function MarketplaceFlowCard({
             <DropdownMenuTrigger asChild>
               <Button
                 aria-label="More options"
-                variant="ghost"
+                variant="link"
                 size="icon"
-                className="h-8 w-8"
+                className="h-5 w-5"
                 onClick={(e) => e.stopPropagation()}
               >
-                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[12rem]">
+            <DropdownMenuContent align="end" className="min-w-[8rem]">
               {item.flow_cloned_from && (
                 <DropdownMenuItem
                   onClick={handleEditOriginal}
@@ -159,10 +158,9 @@ export default function MarketplaceFlowCard({
                 <Archive className="h-4 w-4" />
                 Unpublish
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={handleDelete}
-                className="gap-2 text-destructive"
+                className="gap-2 text-error border-t border-primary-border"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete
@@ -173,7 +171,7 @@ export default function MarketplaceFlowCard({
       </div>
 
       {/* Description */}
-      <p className="mb-4 line-clamp-2 text-sm text-muted-foreground">
+      <p className="mb-4 line-clamp-2 text-sm text-secondary-font min-h-[40px]">
         {description}
       </p>
       <div className="flex justify-between items-center mt-auto">
@@ -185,7 +183,7 @@ export default function MarketplaceFlowCard({
                 key={index}
                 variant="secondary"
                 size="xq"
-                className="gap-1 bg-[#F5F2FF] dark:bg-white/10 dark:text-white"
+                className="bg-accent-light text-secondary-font"
               >
                 {getTagTitle(tag)}
               </Badge>
@@ -198,7 +196,7 @@ export default function MarketplaceFlowCard({
           blobPath={item.flow_icon}
           updatedAt={item.flow_icon_updated_at}
           altText={`${name} logo`}
-          className="max-h-[48px] max-w-[85px]"
+          className="max-h-[48px] max-w-[85px] justify-end"
         />
       </div>
     </div>

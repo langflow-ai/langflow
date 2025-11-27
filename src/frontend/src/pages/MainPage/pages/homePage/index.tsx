@@ -34,7 +34,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const navigate = useCustomNavigate();
 
   const [flowType, setFlowType] = useState<"flows" | "components" | "mcp">(
-    type,
+    type
   );
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folders = useFolderStore((state) => state.folders);
@@ -97,7 +97,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     flows?.find(
       (flow) =>
         flow.folder_id === (folderId ?? myCollectionId) &&
-        (ENABLE_MCP ? flow.is_component === false : true),
+        (ENABLE_MCP ? flow.is_component === false : true)
     ) === undefined;
 
   const handleFileDrop = useFileDrop(isEmptyFolder ? undefined : flowType);
@@ -108,14 +108,14 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
       flows?.find(
         (flow) =>
           flow.folder_id === (folderId ?? myCollectionId) &&
-          flow.is_component === (flowType === "components"),
+          flow.is_component === (flowType === "components")
       ) === undefined
     ) {
       const otherTabHasItems =
         flows?.find(
           (flow) =>
             flow.folder_id === (folderId ?? myCollectionId) &&
-            flow.is_component === (flowType === "flows"),
+            flow.is_component === (flowType === "flows")
         ) !== undefined;
 
       if (otherTabHasItems) {
@@ -126,7 +126,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
 
   const [selectedFlows, setSelectedFlows] = useState<string[]>([]);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
-    null,
+    null
   );
   const [isShiftPressed, setIsShiftPressed] = useState(false);
   const [isCtrlPressed, setIsCtrlPressed] = useState(false);
@@ -209,11 +209,11 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
         // Update selection
         if (selected) {
           setSelectedFlows((prev) =>
-            Array.from(new Set([...prev, ...flowsToSelect])),
+            Array.from(new Set([...prev, ...flowsToSelect]))
           );
         } else {
           setSelectedFlows((prev) =>
-            prev.filter((id) => !flowsToSelect.includes(id)),
+            prev.filter((id) => !flowsToSelect.includes(id))
           );
         }
       } else {
@@ -224,12 +224,12 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
         }
       }
     },
-    [selectedFlows, lastSelectedIndex, data.flows, isShiftPressed],
+    [selectedFlows, lastSelectedIndex, data.flows, isShiftPressed]
   );
 
   useEffect(() => {
     setSelectedFlows((old) =>
-      old.filter((id) => data.flows.some((flow) => flow.id === id)),
+      old.filter((id) => data.flows.some((flow) => flow.id === id))
     );
   }, [folderData?.flows?.items]);
 
@@ -244,15 +244,17 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   return (
     <CardsWrapComponent
       onFileDrop={flowType === "mcp" ? undefined : handleFileDrop}
-      dragMessage={`Drop your ${isEmptyFolder ? "flows or components" : flowType} here`}
+      dragMessage={`Drop your ${
+        isEmptyFolder ? "flows or components" : flowType
+      } here`}
     >
       <div
         className="flex h-full w-full flex-col overflow-y-auto"
         data-testid="cards-wrapper"
       >
-        <div className="flex h-full w-full flex-col 3xl:container">
+        <div className="flex h-full w-full flex-col">
           {ENABLE_DATASTAX_LANGFLOW && <CustomBanner />}
-          <div className="flex flex-1 flex-col justify-start p-4">
+          <div className="flex flex-col justify-start">
             <div className="flex h-full flex-col justify-start">
               <HeaderComponent
                 folderName={folderName}
@@ -287,7 +289,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                     data &&
                     data.pagination.total > 0 ? (
                     view === "grid" ? (
-                      <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
+                      <div className="mt-5 grid gap-4 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-h-[calc(100vh-270px)] overflow-y-auto">
                         {data.flows.map((flow, index) => (
                           <ListComponent
                             key={flow.id}
@@ -301,7 +303,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                         ))}
                       </div>
                     ) : (
-                      <div className="mt-4 flex flex-col gap-1">
+                      <div className="mt-5 flex flex-col gap-2 max-h-[calc(100vh-270px)] overflow-y-auto">
                         {data.flows.map((flow, index) => (
                           <ListComponent
                             key={flow.id}
@@ -316,24 +318,24 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                       </div>
                     )
                   ) : flowType === "flows" ? (
-                    <div className="pt-24 text-center text-sm text-secondary-foreground">
+                    <div className="text-center pt-24 text-lg text-secondary-font font-medium opacity-50">
                       No flows in this project.{" "}
                       <a
                         onClick={() => setNewProjectModal(true)}
-                        className="cursor-pointer underline"
+                        className="cursor-pointer underline text-secondary"
                       >
                         Create a new flow
                       </a>
                       , or browse the store.
                     </div>
                   ) : (
-                    <div className="pt-24 text-center text-sm text-secondary-foreground">
+                    <div className="text-center pt-24 text-lg text-secondary-font font-medium opacity-50">
                       No saved or custom components. Learn more about{" "}
                       <a
                         href="https://docs.langflow.org/components-custom-components"
                         target="_blank"
                         rel="noreferrer"
-                        className="underline"
+                        className="cursor-pointer underline text-secondary"
                       >
                         creating custom components
                       </a>
@@ -348,7 +350,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
             !isLoading &&
             !isEmptyFolder &&
             data.pagination.total >= 10 && (
-              <div className="flex justify-end px-3 py-4">
+              <div className="mt-auto">
                 <PaginatorComponent
                   pageIndex={data.pagination.page}
                   pageSize={data.pagination.size}

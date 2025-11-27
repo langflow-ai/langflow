@@ -39,8 +39,8 @@ const externalLinkIconClasses = {
     disabled || password
       ? ""
       : editNode
-        ? "gradient-fade-input-edit-node"
-        : "gradient-fade-input",
+      ? "gradient-fade-input-edit-node"
+      : "gradient-fade-input",
   background: ({
     disabled,
     editNode,
@@ -51,10 +51,10 @@ const externalLinkIconClasses = {
     disabled
       ? ""
       : editNode
-        ? "background-fade-input-edit-node"
-        : "background-fade-input",
+      ? "background-fade-input-edit-node"
+      : "background-fade-input",
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
-  editNodeTop: "top-[-1.4rem] h-5",
+  editNodeTop: "-top-[37px] h-[36px]",
   normalTop: "top-[-2.1rem] h-7",
   iconTop: "top-[-1.7rem]",
 };
@@ -78,12 +78,12 @@ export default function TextAreaComponent({
 
   const isWebhook = useMemo(
     () => nodeInformationMetadata?.nodeType === "webhook",
-    [nodeInformationMetadata?.nodeType],
+    [nodeInformationMetadata?.nodeType]
   );
 
   const _isMCPSSE = useMemo(
     () => nodeInformationMetadata?.nodeType === "mcp_sse",
-    [nodeInformationMetadata?.nodeType],
+    [nodeInformationMetadata?.nodeType]
   );
 
   useEffect(() => {
@@ -114,7 +114,7 @@ export default function TextAreaComponent({
       editNode ? inputClasses.editNode : inputClasses.normal({ isFocused }),
       disabled && inputClasses.disabled,
       password && !passwordVisible && "text-clip",
-      isFocused && "pr-10",
+      isFocused && "pr-10"
     );
   };
 
@@ -147,22 +147,24 @@ export default function TextAreaComponent({
             }),
             editNode
               ? externalLinkIconClasses.editNodeTop
-              : externalLinkIconClasses.normalTop,
+              : externalLinkIconClasses.normalTop
           )}
           style={{
             pointerEvents: "none",
             background: isFocused
               ? undefined
               : disabled
-                ? "bg-background"
-                : GRADIENT_CLASS,
+              ? "bg-background" :""
+              // : GRADIENT_CLASS,
           }}
           aria-hidden="true"
         />
       )}
 
       <IconComponent
-        dataTestId={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
+        dataTestId={`button_open_text_area_modal_${id}${
+          editNode ? "_advanced" : ""
+        }`}
         name={getIconName(disabled, "", "", false, isToolMode) || "Scan"}
         className={cn(
           "cursor-pointer bg-background",
@@ -172,7 +174,7 @@ export default function TextAreaComponent({
             : externalLinkIconClasses.iconTop,
           disabled
             ? "bg-muted text-placeholder-foreground"
-            : "bg-background text-foreground",
+            : "bg-background text-foreground"
         )}
       />
     </div>
@@ -224,7 +226,7 @@ export default function TextAreaComponent({
               disabled
                 ? "text-placeholder"
                 : "text-placeholder-foreground hover:text-foreground",
-              "right-10",
+              "right-10"
             )}
           />
         </div>

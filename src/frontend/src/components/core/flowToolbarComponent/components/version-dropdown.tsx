@@ -125,10 +125,17 @@ export default function VersionDropdown({
                     </Badge>
                   )}
                 </div>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-secondary-font">
                   {moment(version.published_at).fromNow()}
                 </span>
               </div>
+
+              {version.drafted && (
+                <ForwardedIconComponent
+                  name="Check"
+                  className="h-4 w-4 text-menu"
+                />
+              )}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
@@ -143,7 +150,11 @@ export default function VersionDropdown({
             </DialogTitle>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)} disabled={isPending}>
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmDialog(false)}
+              disabled={isPending}
+            >
               Cancel
             </Button>
             <Button onClick={handleConfirmRevert} disabled={isPending}>

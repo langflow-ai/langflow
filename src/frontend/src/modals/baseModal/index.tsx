@@ -41,9 +41,9 @@ const Content: React.FC<ContentProps> = ({
   return (
     <div
       className={cn(
-        `flex flex-1 flex-col rounded-md transition-all duration-300`,
+        `flex flex-col transition-all duration-300 h-full`,
         overflowHidden ? "overflow-hidden" : "overflow-auto",
-        className,
+        className
       )}
     >
       {children}
@@ -78,17 +78,19 @@ const Header: React.FC<{
   clampDescription,
 }: modalHeaderType): JSX.Element => {
   return (
-    <DialogHeader>
-      <DialogTitle className="line-clamp-1 flex items-center pb-0.5 text-base">
-        {children}
-      </DialogTitle>
-      {description && (
-        <DialogDescription
-          className={`line-clamp-${clampDescription ?? 2} text-sm`}
-        >
-          {description}
-        </DialogDescription>
-      )}
+    <DialogHeader className="flex flex-row item-center justify-between gap-2">
+      <div>
+        <DialogTitle className="text-lg font-medium leading-none text-menu flex items-center gap-1">
+          {children}
+        </DialogTitle>
+        {description && (
+          <DialogDescription
+            className={`mt-0.5 line-clamp-${clampDescription ?? 2} text-sm`}
+          >
+            {description}
+          </DialogDescription>
+        )}
+      </div>
     </DialogHeader>
   );
 };
@@ -113,7 +115,7 @@ const Footer: React.FC<{
         centered
           ? "flex flex-shrink-0 justify-center"
           : "flex flex-shrink-0 flex-row-reverse",
-        className,
+        className
       )}
     >
       {submit ? (
@@ -160,7 +162,7 @@ interface BaseModalProps {
         React.ReactElement<ContentProps>,
         React.ReactElement<HeaderProps>?,
         React.ReactElement<TriggerProps>?,
-        React.ReactElement<FooterProps>?,
+        React.ReactElement<FooterProps>?
       ]
     | React.ReactElement<ContentProps>;
   open?: boolean;
@@ -212,16 +214,16 @@ function BaseModal({
   dialogContentWithouFixed = false,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Header,
+    (child) => (child as React.ReactElement).type === Header
   );
   const triggerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Trigger,
+    (child) => (child as React.ReactElement).type === Trigger
   );
   const ContentChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Content,
+    (child) => (child as React.ReactElement).type === Content
   );
   const ContentFooter = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Footer,
+    (child) => (child as React.ReactElement).type === Footer
   );
 
   const { minWidth, height } = switchCaseModalSize(size);
@@ -243,11 +245,11 @@ function BaseModal({
   const contentClasses = cn(
     minWidth,
     height,
-    "flex flex-col flex-1 overflow-hidden max-h-[98dvh]",
-    className,
+    "flex flex-col gap-6 flex-1 overflow-hidden max-h-[98dvh]",
+    className
   );
 
-  const formClasses = "flex flex-col flex-1 gap-6 overflow-hidden";
+  const formClasses = "h-full flex flex-col gap-6 overflow-hidden";
 
   //UPDATE COLORS AND STYLE CLASSSES
   return (

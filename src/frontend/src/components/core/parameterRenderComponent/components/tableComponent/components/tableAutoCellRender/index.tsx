@@ -45,7 +45,7 @@ export default function TableAutoCellRender({
             <Badge
               variant="successStatic"
               size="sq"
-              className={cn("h-[18px] w-full justify-center")}
+              className={cn("h-[18px] w-fit justify-center")}
             >
               {value}
             </Badge>
@@ -55,7 +55,7 @@ export default function TableAutoCellRender({
             <Badge
               variant="errorStatic"
               size="sq"
-              className={cn("h-[18px] w-full justify-center")}
+              className={cn("h-[18px] w-fit justify-center")}
             >
               {value}
             </Badge>
@@ -115,7 +115,7 @@ export default function TableAutoCellRender({
   }
 
   return (
-    <div className="group flex h-full w-full items-center truncate text-align-last-left">
+    <div className="group flex h-full w-full items-center truncate text-align-last-left text-secondary-font">
       {getCellType()}
     </div>
   );
