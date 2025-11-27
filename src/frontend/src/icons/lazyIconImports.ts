@@ -200,6 +200,10 @@ export const lazyIconsMapping = {
     import("@/icons/GitLoader").then((mod) => ({ default: mod.GitLoaderIcon })),
   Github: () =>
     import("@/icons/github").then((mod) => ({ default: mod.GithubIcon })),
+  GithubComposio: () =>
+    import("@/icons/GithubComposio").then((mod) => ({
+      default: mod.GithubIcon,
+    })),
   Glean: () =>
     import("@/icons/Glean").then((mod) => ({ default: mod.GleanIcon })),
   GlobeOk: () =>
