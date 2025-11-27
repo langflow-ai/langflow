@@ -21,12 +21,12 @@ class AuthSettings(BaseSettings):
     )
     PRIVATE_KEY: SecretStr = Field(
         default=SecretStr(""),
-        description="RSA private key for JWT signing (used with RS256/RS512). If not provided, a key pair will be generated.",
+        description="RSA private key for JWT signing (RS256/RS512). Auto-generated if not provided.",
         frozen=False,
     )
     PUBLIC_KEY: str = Field(
         default="",
-        description="RSA public key for JWT verification (used with RS256/RS512). If not provided, derived from private key.",
+        description="RSA public key for JWT verification (RS256/RS512). Derived from private key if not provided.",
     )
     ALGORITHM: Literal["HS256", "RS256", "RS512"] = Field(
         default="HS256",

@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
-from jose import jwt
+from jose import JWTError, jwt
 from pydantic import SecretStr
 
 
@@ -136,7 +136,7 @@ class TestAuthSettingsAlgorithms:
         from lfx.services.settings.auth import AuthSettings
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            settings = AuthSettings(CONFIG_DIR=tmpdir, ALGORITHM="HS256")
+            AuthSettings(CONFIG_DIR=tmpdir, ALGORITHM="HS256")
 
             private_key_path = Path(tmpdir) / "private_key.pem"
             public_key_path = Path(tmpdir) / "public_key.pem"
@@ -637,7 +637,7 @@ class TestRefreshTokenVerification:
 
                 assert "access_token" in new_tokens
                 assert "refresh_token" in new_tokens
-                assert new_tokens["token_type"] == "bearer"
+                assert new_tokens.get("token_type") == "bearer"
 
     @pytest.mark.asyncio
     async def test_refresh_token_wrong_type_raises_401(self):
@@ -682,7 +682,7 @@ class TestAlgorithmMismatch:
             # Try to verify with RS256
             rs256_settings = AuthSettings(CONFIG_DIR=tmpdir2, ALGORITHM="RS256")
 
-            with pytest.raises(Exception):  # JWTError
+            with pytest.raises(JWTError):
                 jwt.decode(token, rs256_settings.PUBLIC_KEY, algorithms=["RS256"])
 
     def test_rs256_token_fails_with_hs256_verification(self):
@@ -702,7 +702,7 @@ class TestAlgorithmMismatch:
             # Try to verify with HS256
             hs256_settings = AuthSettings(CONFIG_DIR=tmpdir2, ALGORITHM="HS256")
 
-            with pytest.raises(Exception):  # JWTError
+            with pytest.raises(JWTError):
                 jwt.decode(
                     token,
                     hs256_settings.SECRET_KEY.get_secret_value(),
