@@ -1,0 +1,36 @@
+---
+title: Helicone
+slug: /bundles-helicone
+keywords: [helicone, heli, helic, helict, helico, lico, cone, icone, elic]
+description: Helicone integration bundle for Langflow components, models, and routing.
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Helicone** bundle.
+
+For more information about Helicone features and functionality used by Helicone components, see the [Helicone documentation](https://docs.helicone.ai).
+
+## Helicone text generation
+
+This component generates text using Helicone's AI routing and observability platform with unified access to multiple AI models from different providers.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a Helicone model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
+
+For more information, see [Language model components](/components-models).
+
+### Helicone text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your Helicone API key for authentication. |
+| model_name | String | Input parameter. The specific model to use for chat completion. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: [0.0, 2.0]. Default: 0.7. |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. |

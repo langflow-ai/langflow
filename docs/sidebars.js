@@ -321,6 +321,7 @@ module.exports = {
             "Components/bundles-glean",
             "Components/bundles-google",
             "Components/bundles-groq",
+            "Components/bundles-helicone",
             "Components/bundles-huggingface",
             "Components/bundles-ibm",
             "Components/bundles-icosacomputing",

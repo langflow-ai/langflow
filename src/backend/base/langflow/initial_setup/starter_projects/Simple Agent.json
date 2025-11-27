@@ -1038,6 +1038,7 @@
                 "options": [
                   "Anthropic",
                   "Google Generative AI",
+                  "Helicone",
                   "OpenAI",
                   "IBM watsonx.ai",
                   "Ollama"

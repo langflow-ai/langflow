@@ -45,6 +45,7 @@ def process_inputs(component_data: Input, provider_name: str | None = None):
         if component_data.name == "api_key":
             component_data.required = False
     elif component_data.name == "tool_model_enabled":
+        # Keep hidden/advanced and default to False. Agent or tool-using
         component_data.advanced = True
         component_data.value = True
     elif component_data.name in {"temperature", "base_url"}:
@@ -199,6 +200,17 @@ def _get_sambanova_inputs_and_fields():
     return sambanova_inputs, create_input_fields_dict(sambanova_inputs, "")
 
 
+def _get_helicone_inputs_and_fields():
+    try:
+        from lfx.components.helicone.helicone import HeliconeComponent
+
+        helicone_inputs = get_filtered_inputs(HeliconeComponent)
+    except ImportError as e:
+        msg = "Helicone is not installed. Please install it with `pip install httpx langchain-openai`."
+        raise ImportError(msg) from e
+    return helicone_inputs, create_input_fields_dict(helicone_inputs, "")
+
+
 MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {}
 
 # Try to add each provider
@@ -347,6 +359,20 @@ try:
         "prefix": "",
         "component_class": ChatOllamaComponent(),
         "icon": ChatOllamaComponent.icon,
+    }
+except ImportError:
+    pass
+
+try:
+    from lfx.components.helicone.helicone import HeliconeComponent
+
+    helicone_inputs, helicone_fields = _get_helicone_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Helicone"] = {
+        "fields": helicone_fields,
+        "inputs": helicone_inputs,
+        "prefix": "",
+        "component_class": HeliconeComponent(),
+        "icon": HeliconeComponent.icon,
         "is_active": True,
     }
 except ImportError:
@@ -373,6 +399,6 @@ MODEL_DYNAMIC_UPDATE_FIELDS = [
 
 MODELS_METADATA = {name: {"icon": prov["icon"]} for name, prov in ACTIVE_MODEL_PROVIDERS_DICT.items()}
 
-MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "OpenAI", "IBM watsonx.ai", "Ollama"]
+MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "Helicone", "OpenAI", "IBM watsonx.ai", "Ollama"]
 
 MODEL_OPTIONS_METADATA = [MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA]
