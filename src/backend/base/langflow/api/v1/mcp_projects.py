@@ -1201,7 +1201,7 @@ class ProjectMCPServer:
         self.server = Server(f"langflow-mcp-project-{project_id}")
         # _configure_server_notification_defaults(self.server)
 
-        self.session_manager = StreamableHTTPSessionManager(self.server)
+        self.session_manager = StreamableHTTPSessionManager(self.server, stateless=True)
         self._manager_lock = asyncio.Lock()
         self._manager_stack: AsyncExitStack | None = None
         self._manager_started = False
