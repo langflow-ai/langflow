@@ -1030,23 +1030,39 @@ def _normalize_url_list(urls: Sequence[str] | str) -> list[str]:
     """Ensure URL inputs are always handled as a list of strings."""
     if isinstance(urls, str):
         return [urls]
-    try:
-        return [str(url) for url in urls]
-    except TypeError as exc:
-        error_msg = "urls must be a sequence of strings or a single string"
-        raise TypeError(error_msg) from exc
+    # Fast path for typical correct non-str sequence input: avoid exception overhead
+    # (str(url) call is unavoidable for full fidelity)
+    return [str(url) for url in urls]
 
 
 def _args_reference_urls(args: Sequence[Any] | None, urls: list[str]) -> bool:
     """Check whether the given args list references any of the provided URLs."""
     if not args or not urls:
         return False
-    args_strings = [arg for arg in args if isinstance(arg, str)]
-    if not args_strings:
+
+    # Only one pass to avoid multiple list traversals:
+    # - build set and get last string in a single loop
+    args_set = set()
+    last_arg = None
+    for arg in args:
+        if isinstance(arg, str):
+            args_set.add(arg)
+            last_arg = arg
+    if not args_set:
         return False
-    args_set = set(args_strings)
-    last_arg = args_strings[-1]
-    return any((url == last_arg) or (url in args_set) for url in urls)
+
+    # Fast path: if any urls match last_arg or are in args_set (both str)
+    # Use a local reference to reduce attribute lookups
+    # Precompute set intersection for bulk matches
+    urls_set = set(urls)
+    # Fastest if many urls: check intersection
+    if args_set & urls_set:
+        return True
+    # Otherwise, check if any url equals last_arg (if last_arg is not None)
+    # (Technically, if present in set: already checked above, but maybe urls not unique)
+    if last_arg is not None and last_arg in urls_set:
+        return True
+    return False
 
 
 def config_contains_server_url(config_data: dict, urls: Sequence[str] | str) -> bool:
@@ -1150,20 +1166,25 @@ def remove_server_by_urls(config_data: dict, urls: Sequence[str] | str) -> tuple
     if not normalized_urls:
         return config_data, []
 
-    if "mcpServers" not in config_data:
+    mcp_servers = config_data.get("mcpServers")
+    if not mcp_servers:
         return config_data, []
 
     removed_servers: list[str] = []
     servers_to_remove: list[str] = []
 
-    # Find servers to remove
-    for server_name, server_config in config_data["mcpServers"].items():
-        if _args_reference_urls(server_config.get("args", []), normalized_urls):
+    # Avoid repeated lookups
+    ref_urls = normalized_urls
+
+    # Build a list of servers to remove
+    for server_name, server_config in mcp_servers.items():
+        args = server_config.get("args", [])
+        if _args_reference_urls(args, ref_urls):
             servers_to_remove.append(server_name)
 
     # Remove the servers
     for server_name in servers_to_remove:
-        del config_data["mcpServers"][server_name]
+        del mcp_servers[server_name]
         removed_servers.append(server_name)
         logger.debug("Removed existing server with matching SSE URL: %s", server_name)
 
