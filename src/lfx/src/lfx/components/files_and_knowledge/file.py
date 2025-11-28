@@ -36,10 +36,12 @@ class FileComponent(BaseFileComponent):
     """File component with optional Docling processing (isolated in a subprocess)."""
 
     display_name = "Read File"
-    description = "Loads content from one or more files."
+    # description is now a dynamic property - see get_tool_description()
+    _base_description = "Loads content from one or more files."
     documentation: str = "https://docs.langflow.org/read-file"
     icon = "file-text"
     name = "File"
+    add_tool_output = True  # Enable tool mode toggle without requiring tool_mode inputs
 
     # Extensions that can be processed without Docling (using standard text parsing)
     TEXT_EXTENSIONS = TEXT_FILE_TYPES
@@ -99,7 +101,7 @@ class FileComponent(BaseFileComponent):
             ),
             show=False,
             advanced=True,
-            tool_mode=True,
+            tool_mode=True,  # Required for Toolset toggle, but _get_tools() ignores this parameter
             required=False,
         ),
         BoolInput(
@@ -182,6 +184,84 @@ class FileComponent(BaseFileComponent):
     outputs = [
         Output(display_name="Raw Content", name="message", method="load_files_message", tool_mode=True),
     ]
+
+    # ------------------------------ Tool description with file names --------------
+
+    def get_tool_description(self) -> str:
+        """Return a dynamic description that includes the names of uploaded files.
+
+        This helps the Agent understand which files are available to read.
+        """
+        base_description = "Loads and returns the content from uploaded files."
+
+        # Get the list of uploaded file paths
+        file_paths = getattr(self, "path", None)
+        if not file_paths:
+            return base_description
+
+        # Ensure it's a list
+        if not isinstance(file_paths, list):
+            file_paths = [file_paths]
+
+        # Extract just the file names from the paths
+        file_names = []
+        for fp in file_paths:
+            if fp:
+                name = Path(fp).name
+                file_names.append(name)
+
+        if file_names:
+            files_str = ", ".join(file_names)
+            return f"{base_description} Available files: {files_str}. Call this tool to read these files."
+
+        return base_description
+
+    @property
+    def description(self) -> str:
+        """Dynamic description property that includes uploaded file names."""
+        return self.get_tool_description()
+
+    async def _get_tools(self) -> list:
+        """Override to create a tool without parameters.
+
+        The Read File component should use the files already uploaded via UI,
+        not accept file paths from the Agent (which wouldn't know the internal paths).
+        """
+        from langchain_core.tools import StructuredTool
+        from pydantic import BaseModel
+
+        # Empty schema - no parameters needed
+        class EmptySchema(BaseModel):
+            """No parameters required - uses pre-uploaded files."""
+
+        async def read_files_tool() -> str:
+            """Read the content of uploaded files."""
+            try:
+                result = self.load_files_message()
+                if hasattr(result, "get_text"):
+                    return result.get_text()
+                if hasattr(result, "text"):
+                    return result.text
+                return str(result)
+            except (FileNotFoundError, ValueError, OSError, RuntimeError) as e:
+                return f"Error reading files: {e}"
+
+        description = self.get_tool_description()
+
+        tool = StructuredTool(
+            name="load_files_message",
+            description=description,
+            coroutine=read_files_tool,
+            args_schema=EmptySchema,
+            handle_tool_error=True,
+            tags=["load_files_message"],
+            metadata={
+                "display_name": "Read File",
+                "display_description": description,
+            },
+        )
+
+        return [tool]
 
     # ------------------------------ UI helpers --------------------------------------
 
