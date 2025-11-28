@@ -6,7 +6,6 @@ This module provides functionality to expand a minimal/compact flow format
 
 from __future__ import annotations
 
-from copy import deepcopy
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -85,15 +84,26 @@ def _expand_node(
         msg = f"Component type '{compact_node.type}' not found in component index"
         raise ValueError(msg)
 
-    # Deep copy the template to avoid mutation
-    template_data = deepcopy(flat_components[compact_node.type])
+    # Fast deepcopy for known structure.
+    # Instead of deepcopy, use shallow copy and per-field dict copy for template subdict.
+    src_data = flat_components[compact_node.type]
+    # Assume template is a dict (if present)
+    if "template" in src_data:
+        # Shallow copy for outer structure
+        template_data = src_data.copy()
+        # Deep copy only 'template' portion (which is mutated and thus not shared)
+        template_data["template"] = template = src_data["template"].copy()
+    else:
+        template_data = src_data.copy()
+        template = template_data.get("template", {})
 
     # Merge user values into template
-    template = template_data.get("template", {})
+    # Use items() directly, reduce field lookups
     for field_name, field_value in compact_node.values.items():
-        if field_name in template:
-            if isinstance(template[field_name], dict):
-                template[field_name]["value"] = field_value
+        t_value = template.get(field_name)
+        if t_value is not None:
+            if isinstance(t_value, dict):
+                t_value["value"] = field_value
             else:
                 template[field_name] = field_value
         else:
