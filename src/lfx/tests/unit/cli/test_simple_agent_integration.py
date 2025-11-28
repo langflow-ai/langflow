@@ -6,7 +6,7 @@ commands fail with module resolution errors.
 
 Requirements:
 - OPENAI_API_KEY environment variable must be set for execution tests
-- Dev dependencies (langchain-openai, langchain-community, etc.) must be installed
+- Integration dependencies must be installed (use: uv sync --group integration)
 
 Note on version compatibility:
 - lfx requires langchain-core>=0.3.66,<1.0.0
@@ -14,6 +14,7 @@ Note on version compatibility:
 - When installing langchain-openai, use: langchain-openai>=0.3.0,<1.0.0
 """
 
+import importlib.util
 import json
 import os
 import subprocess
@@ -25,6 +26,19 @@ from lfx.__main__ import app as lfx_app
 from typer.testing import CliRunner
 
 runner = CliRunner()
+
+
+def has_integration_deps() -> bool:
+    """Check if integration dependencies are installed."""
+    required_modules = ["langchain_openai", "langchain_community", "bs4", "lxml"]
+    return all(importlib.util.find_spec(module) is not None for module in required_modules)
+
+
+# Skip all tests in this module if integration deps are not installed
+pytestmark = pytest.mark.skipif(
+    not has_integration_deps(),
+    reason="Integration dependencies not installed. Run: uv sync --group integration",
+)
 
 
 def get_starter_projects_path() -> Path:
