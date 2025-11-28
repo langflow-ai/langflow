@@ -86,17 +86,21 @@ def _parse_email_registration(registration) -> EmailPayload | None:
 def _create_email_model(email) -> EmailPayload | None:
     """Creates the model for the registered email."""
     # Verify email address is a valid non-zero length string
-    if not isinstance(email, str) or (len(email) == 0):
+    if not (isinstance(email, str) and email):
         logger.error(f"Email is not a valid non-zero length string: {email}.")
         return None
 
-    # Verify email address is syntactically valid
-    email_model: EmailPayload | None = None
-
     try:
-        email_model = EmailPayload(email=email)
+        # EmailPayload validation is the major bottleneck; short-circuit obvious failures
+        # If every invalid input that produces ValueError can be caught faster, do so --
+        # However, actual validation is in EmailPayload. So, we can only bypass expensive constructors
+        # by skipping pathological inputs (e.g. strings lacking '@').
+        # Lightweight syntactic check to avoid expensive EmailPayload validation on obvious non-emails
+        if "@" not in email:
+            logger.error(f"Email is not a valid email address: {email}: missing '@'.")
+            return None
+
+        return EmailPayload(email=email)
     except ValueError as err:
         logger.error(f"Email is not a valid email address: {email}: {err}.")
         return None
-
-    return email_model
