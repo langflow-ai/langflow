@@ -318,5 +318,4 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
         top_fields[fname] = (py_type, Field(default, **field_kwargs))
 
-    final_model = create_model("InputSchema", **top_fields)
-    return final_model
+    return create_model("InputSchema", **top_fields)

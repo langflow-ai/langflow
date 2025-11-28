@@ -307,6 +307,10 @@ def _fill_defaults(arg_schema: type[BaseModel], provided_args: dict) -> None:
     """Fill default values for missing fields in the provided arguments."""
     for field, field_info in arg_schema.model_fields.items():
         if field not in provided_args:
+            # Skip required fields - let Pydantic validation handle them
+            if field_info.is_required():
+                continue
+
             field_type = field_info.annotation
             field_type_str = str(field_type).lower()
 
@@ -332,8 +336,8 @@ def _post_process_arguments(arg_schema: type[BaseModel], arguments: dict) -> Non
     import json
     from typing import get_args, get_origin
 
-    # 1. Normalize types (Union handling and basic string conversion)
-    for field_name, value in arguments.items():
+    for field_name, value in list(arguments.items()):
+        # 1. Normalize types (Union handling and basic string conversion)
         field_info = arg_schema.model_fields.get(field_name)
         if field_info:
             expected_type = field_info.annotation
@@ -341,19 +345,23 @@ def _post_process_arguments(arg_schema: type[BaseModel], arguments: dict) -> Non
                 union_args = get_args(expected_type)
                 if str in union_args and isinstance(value, (int, float, bool)):
                     arguments[field_name] = str(value)
+                    value = arguments[field_name]  # Update value for next steps
                 elif int in union_args and isinstance(value, str):
                     with contextlib.suppress(ValueError):
                         arguments[field_name] = int(value)
+                        value = arguments[field_name]
                 elif float in union_args and isinstance(value, str):
                     with contextlib.suppress(ValueError):
                         arguments[field_name] = float(value)
+                        value = arguments[field_name]
                 elif bool in union_args and isinstance(value, str):
                     arguments[field_name] = value.lower() in ("true", "1", "yes", "on")
+                    value = arguments[field_name]
             elif expected_type is str and isinstance(value, (int, float)):
                 arguments[field_name] = str(value)
+                value = arguments[field_name]
 
-    # 2. Handle JSON string inputs
-    for field_name, value in arguments.items():
+        # 2. Handle JSON string inputs
         if isinstance(value, str):
             try:
                 parsed_value = json.loads(value)
@@ -383,6 +391,7 @@ def _post_process_arguments(arg_schema: type[BaseModel], arguments: dict) -> Non
                     # logger.debug(f"Transformed array records to API format: {parsed_value}")
 
                 arguments[field_name] = parsed_value
+                value = parsed_value  # Update value for next steps
             except json.JSONDecodeError as jde:
                 # Try ast.literal_eval
                 try:
@@ -391,15 +400,18 @@ def _post_process_arguments(arg_schema: type[BaseModel], arguments: dict) -> Non
                     parsed_value = ast.literal_eval(value)
                     if isinstance(parsed_value, (list, dict)):
                         arguments[field_name] = parsed_value
+                        value = parsed_value
                         # logger.debug(f"Parsed {field_name} using ast.literal_eval")
-                        continue
+                        # Continue to next step (although loop continues anyway)
                 except Exception:  # noqa: S110, BLE001
                     pass
-                logger.warning(f"Failed to parse {field_name} as JSON: {jde}, keeping as string")
+                
+                # If parsing failed, check if we should have parsed it
+                if isinstance(value, str): # Only warn if it's still a string
+                     logger.warning(f"Failed to parse {field_name} as JSON: {jde}, keeping as string")
 
                 # If the field is expected to be a list or dict but parsing failed, raise an error
                 # to prevent "Expected array, received string" errors downstream.
-                field_info = arg_schema.model_fields.get(field_name)
                 if field_info:
                     expected_type = field_info.annotation
                     expected_type_str = str(expected_type).lower()
@@ -410,11 +422,25 @@ def _post_process_arguments(arg_schema: type[BaseModel], arguments: dict) -> Non
                         )
                         raise ValueError(msg) from jde
 
-    # 3. Force string conversion for numbers (final safety net)
-    for arg_name, arg_value in list(arguments.items()):
-        if isinstance(arg_value, (int, float)) and not isinstance(arg_value, bool):
-            arguments[arg_name] = str(arg_value)
-            # logger.debug(f"Force converting {arg_name} = {arg_value} ({type(arg_value).__name__}) to string")
+        # 3. Force string conversion for numbers (final safety net)
+        # Only convert if the schema does NOT expect a number
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            # Check if schema expects int or float
+            should_convert = True
+            if field_info:
+                expected_type = field_info.annotation
+                # If expected type is explicitly int or float (or Optional[int/float]), don't convert
+                if expected_type in (int, float) or getattr(expected_type, "__origin__", None) in (int, float):
+                    should_convert = False
+                # Handle Union[int, None] etc.
+                elif get_origin(expected_type) is Union:
+                    union_args = get_args(expected_type)
+                    if int in union_args or float in union_args:
+                        should_convert = False
+
+            if should_convert:
+                arguments[field_name] = str(value)
+                # logger.debug(f"Force converting {field_name} = {value} ({type(value).__name__}) to string")
 
 
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
