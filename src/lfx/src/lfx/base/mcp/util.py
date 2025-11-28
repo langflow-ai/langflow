@@ -336,7 +336,8 @@ def _post_process_arguments(arg_schema: type[BaseModel], arguments: dict) -> Non
     import json
     from typing import get_args, get_origin
 
-    for field_name, value in list(arguments.items()):
+    for field_name, initial_value in list(arguments.items()):
+        value = initial_value
         # 1. Normalize types (Union handling and basic string conversion)
         field_info = arg_schema.model_fields.get(field_name)
         if field_info:
